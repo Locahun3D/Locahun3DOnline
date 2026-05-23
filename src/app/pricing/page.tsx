@@ -54,12 +54,12 @@ const PLANS = [
       "20 端末まで同時ログイン可",
       "案件ごとの 3DGS データ書き出し",
       "請求書一括 (電子帳簿対応)",
-      "3DGS データ ダウンロード 応談",
+      "3DGS データ ダウンロード 20% OFF",
     ],
     cta: "営業に相談",
     href: "https://web.locahun3d.com/locahun3d_contact.html",
     accent: false,
-    note: "3DGS データ自体のダウンロード(再利用権)はライセンス次第のため別途ご相談ください。",
+    note: "3DGS データ自体のダウンロード(再利用権)はスタジオ側ライセンスが必要です。Team プランでは買取価格から 20% 割引が適用されます。",
   },
 ];
 
@@ -77,7 +77,7 @@ const COMPARE_ROWS: Array<{
   { label: "3DGS ウォークスルー",   free: "—", individual: "月 3 件",       team: "月 20 件" },
   { label: "ログイン端末数",        free: "—", individual: "制限なし",      team: "20 端末まで" },
   { label: "見積もり依頼",          free: "月 1 件", individual: "無制限",  team: "無制限" },
-  { label: "3DGS データ DL (再利用権)", free: "—", individual: "—",         team: "応談" },
+  { label: "3DGS データ DL (再利用権)", free: "—", individual: "—",         team: "20% OFF" },
   { label: "請求書 / 電子帳簿対応", free: "—", individual: "—",             team: "✓" },
 ];
 
@@ -239,7 +239,8 @@ export default function PricingPage() {
           </div>
           <p>
             ウォークスルー視聴と異なり、splat / ply データの再利用権はスタジオ側
-            ライセンスが必要です。Team プラン契約者は応談で対応します。
+            ライセンスが必要です。Team プラン契約者は買取価格から
+            <strong className="text-accent"> 20% OFF</strong> が適用されます。
           </p>
         </div>
         <div className="border-t border-line pt-5">
