@@ -8,7 +8,11 @@ import PropertyCard from "@/components/property-card";
 
 export default async function HomePage() {
   const all = await getPublishedProperties();
-  const featured = all.slice(0, 3);
+  // Sort by updatedAt desc explicitly — repo already does this, but be defensive
+  // so the home "Latest" section never silently drifts if the repo's default sort changes.
+  const latest = [...all]
+    .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))
+    .slice(0, 3);
   return (
     <>
       {/* HERO */}
@@ -95,16 +99,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED PROPERTIES */}
+      {/* LATEST PROPERTIES — sorted by updatedAt desc */}
       <section className="frame py-24 border-t border-line">
         <div className="chapter-rule">
           <span className="opacity-60">02</span>
-          <span>Featured Locations</span>
+          <span>Latest Locations</span>
           <span className="flex-1 h-px bg-current opacity-25" />
+          <span className="opacity-60">新着 {latest.length} 件</span>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {featured.map((p) => (
+          {latest.map((p) => (
             <PropertyCard key={p.id} property={p} />
           ))}
         </div>
