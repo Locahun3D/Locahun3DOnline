@@ -248,8 +248,8 @@ export default function AboutPage() {
         </div>
 
         <h2 className="serif text-[clamp(1.5rem,3vw,2.4rem)] font-light leading-[1.5] mb-5">
-          実空間を <em className="not-italic text-accent">3D 空間</em> ごと
-          持ち帰る。
+          オンラインで <em className="not-italic text-accent">ロケハン</em> が
+          出来る時代。
         </h2>
         <p className="text-[13px] text-muted leading-[1.95]">
           ロケハン (撮影前下見) は映像制作で最もコストが高い工程の一つ。
