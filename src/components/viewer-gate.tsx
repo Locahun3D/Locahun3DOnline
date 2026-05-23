@@ -38,7 +38,16 @@ export default function ViewerGate({
 }: Props) {
   const [confirmed, setConfirmed] = useState(false);
 
-  if (!hasSubscription) {
+  // Dev / preview bypass: Clerk isn't wired yet, so we use the same
+  // ADMIN_BYPASS flag that gates /admin to also unlock the viewer for testing.
+  // When Clerk lands, replace this with the real subscription check from
+  // useAuth() / publicMetadata.
+  const devBypass =
+    process.env.NODE_ENV !== "production" ||
+    process.env.NEXT_PUBLIC_ADMIN_BYPASS === "1";
+  const effectiveSubscription = hasSubscription || devBypass;
+
+  if (!effectiveSubscription) {
     return (
       <div className="relative aspect-video border border-line overflow-hidden">
         {/* Blurred placeholder preview */}

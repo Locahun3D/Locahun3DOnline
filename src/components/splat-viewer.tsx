@@ -1,52 +1,53 @@
 "use client";
 
 /**
- * Spark 2.0 (3DGS) viewer placeholder.
+ * Spark 2.0 / 3DGS walkthrough viewer.
  *
- * Implementation plan (deferred until paywall + auth are wired):
- *   1) `npm i @sparkjsdev/spark three`
- *   2) Mount a Three.js renderer in `mountRef`
- *   3) `SplatMesh({ url: src })` from @sparkjsdev/spark
- *   4) Reuse fps-investigation tuning from offline viewer
- *      (FRAME_MS gate removed, splat-active 4s, lerp tail 300ms — see memory)
+ * Implementation: the standalone single-HTML offline viewer
+ * (public/viewer/offline-viewer.html, ~1.2 MB Spark + Three.js + UI bundle)
+ * is embedded in an <iframe>. The splat URL is passed via the
+ * `?autoload=<encoded>` query param the viewer already supports
+ * (see line ~13368 of the viewer source).
  *
- * Until then this renders a clearly-labelled placeholder so the layout works.
+ * Pros of this approach:
+ *  - Zero rebuild risk — same code that runs on viewer.locahun3d.com
+ *  - Isolated scope: viewer's globals, WebGL context, fonts don't
+ *    leak into the parent React tree
+ *  - All FPS tuning + flicker defenses ported automatically
+ *
+ * Cons / future work:
+ *  - Iframe overhead is small but not zero (~30 ms extra mount)
+ *  - Inter-frame communication (e.g. token consumption tracking, annotation
+ *    placement in Phase 2) needs postMessage bridge — TODO when needed
+ *  - The viewer assumes its own URL params (?lod, ?smooth, ?qual etc.).
+ *    Add them to the iframe src when we want power-user controls.
  */
-import { useEffect, useRef } from "react";
+import { useMemo } from "react";
 
-export default function SplatViewer({ src }: { src: string }) {
-  const mountRef = useRef<HTMLDivElement>(null);
+interface Props {
+  src: string;
+}
 
-  useEffect(() => {
-    // intentionally empty — real Spark integration lands in the viewer task.
-    return () => {};
+export default function SplatViewer({ src }: Props) {
+  // Build the iframe URL with the splat autoload param.
+  const iframeSrc = useMemo(() => {
+    if (!src) return "/viewer/offline-viewer.html";
+    return `/viewer/offline-viewer.html?autoload=${encodeURIComponent(src)}`;
   }, [src]);
 
   return (
     <div className="relative aspect-video border border-line bg-black overflow-hidden">
-      <div ref={mountRef} className="absolute inset-0" />
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-3">
-          ● 3DGS PREVIEW
-        </div>
-        <div className="serif text-xl mb-2">Spark 2.0 viewer placeholder</div>
-        <p className="text-[12px] text-muted max-w-[44ch] leading-[1.85] break-all">
-          Splat source: <span className="mono opacity-70">{src}</span>
-        </p>
-        <p className="text-[11px] opacity-50 mt-3 max-w-[44ch]">
-          実装は <code className="mono">components/splat-viewer.tsx</code> のコメント参照。
-          Three.js + Spark のマウントは次フェーズで結線します。
-        </p>
-      </div>
-      <div className="absolute top-3 left-3 mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-        REC ● 3DGS
-      </div>
-      <div className="absolute top-3 right-3 mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-        FOV 50mm
-      </div>
-      <div className="absolute bottom-3 left-3 mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-        WASD / drag — placeholder
-      </div>
+      <iframe
+        src={iframeSrc}
+        title="3DGS walkthrough viewer"
+        className="absolute inset-0 w-full h-full border-0"
+        // Allow fullscreen + pointer/sensor APIs the viewer might need.
+        allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
+        // sandbox kept loose so Spark can do everything it needs;
+        // tighten later if we add untrusted user content.
+        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+        loading="lazy"
+      />
     </div>
   );
 }
