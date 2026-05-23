@@ -33,27 +33,31 @@ interface Props {
   onMarkerHover?: (id: string | null) => void;
 }
 
-function ViewportFitter({
-  items,
-  reference,
-}: {
-  items: Property[];
-  reference: Props["reference"];
-}) {
+/**
+ * Centers the map on the reference point with a ~100 km radius default view.
+ *
+ * 1° latitude ≈ 111 km. 1° longitude ≈ 111 × cos(lat) km.
+ * So a 100 km half-box around `reference` ≈ ±0.9° lat × ±(100 / 111·cosφ)° lng.
+ * Markers outside this box are still rendered — the user can pan / zoom out.
+ *
+ * Re-runs whenever the reference changes (preset click, geolocation, typed search),
+ * which intentionally snaps the view back. If you want to add a manual "fit all
+ * markers" button later, call map.fitBounds(items + reference) from a control.
+ */
+function ViewportFitter({ reference }: { reference: Props["reference"] }) {
   const map = useMap();
   useEffect(() => {
-    const pts: [number, number][] = items
-      .filter((p) => p.coords)
-      .map((p) => [p.coords!.lat, p.coords!.lng]);
-    if (reference) pts.push([reference.lat, reference.lng]);
-    if (pts.length === 0) return;
-    if (pts.length === 1) {
-      map.setView(pts[0], 11);
-      return;
-    }
-    const bounds = L.latLngBounds(pts);
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
-  }, [items, reference, map]);
+    if (!reference) return;
+    const RADIUS_KM = 100;
+    const latDelta = RADIUS_KM / 111;
+    const lngDelta =
+      RADIUS_KM / (111 * Math.cos((reference.lat * Math.PI) / 180));
+    const bounds = L.latLngBounds(
+      [reference.lat - latDelta, reference.lng - lngDelta],
+      [reference.lat + latDelta, reference.lng + lngDelta],
+    );
+    map.fitBounds(bounds, { padding: [20, 20], animate: true });
+  }, [reference, map]);
   return null;
 }
 
@@ -73,8 +77,11 @@ export default function CatalogMap({
       className="relative w-full h-full border border-line bg-[#070707] [&_.leaflet-container]:bg-[#070707] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
     >
       <MapContainer
-        center={[36.2, 138]}
-        zoom={5}
+        // Initial center / zoom — ViewportFitter immediately recenters on `reference`
+        // (Shibuya by default) at ~100 km radius, so these values are just a holdover
+        // before the first effect runs.
+        center={reference ? [reference.lat, reference.lng] : [35.6580, 139.7016]}
+        zoom={9}
         scrollWheelZoom
         style={{ width: "100%", height: "100%" }}
         worldCopyJump
@@ -85,7 +92,7 @@ export default function CatalogMap({
           subdomains={["a", "b", "c", "d"]}
         />
 
-        <ViewportFitter items={withCoords} reference={reference} />
+        <ViewportFitter reference={reference} />
 
         {/* Reference marker */}
         {reference && (
