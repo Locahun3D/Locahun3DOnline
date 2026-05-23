@@ -37,10 +37,13 @@
 
 ### 完成
 - ランディング `/`
-- 物件カタログ `/properties`（モックデータ 6 件 + フィルタ）
+- 物件カタログ `/properties`（フィルタ、`status='published'` のみ表示）
 - 物件詳細 `/properties/[id]`（ギャラリー、ビューアーゲート、関連物件）
 - 料金 `/pricing`（3 プラン）
 - ダッシュボード `/dashboard`、サインイン/サインアップ、マーケットプレイス、About、404
+- **管理 `/admin/properties`** — リスト + status バッジ + 新規作成
+- **エディター `/admin/properties/[id]/edit`** — Google Forms 風 6 ステップ
+  (基本/仕様/紹介文/写真/3DGS/公開)、autosave (⌘S)、Publish チェックリスト、Draft/Publish/Archive/Delete
 
 ### 未配線 (本配線にはアカウント情報が必要)
 - Clerk: ミドルウェア / 認証 UI / `publicMetadata.subscription` 同期
@@ -52,8 +55,27 @@
 - R2: 署名 URL 配信（プレビュー用）、独自ドメイン `cdn.locahun3d.com`
 - `next/image` 用 `images.remotePatterns`（picsum.photos は今モック表示で `<img>` を直書き）
 
-### モックデータ
-`src/lib/properties.ts` に 6 件のサンプル物件。画像は picsum.photos の擬似画像、splat URL は既存 R2 デモファイル `locahun3d_Demo_point_cloud.splat` を指している。
+### データ層
+- 物件データの SOT は **`data/properties.json`** (git 管理)
+- `src/lib/store.ts` の `PropertyRepo` インターフェース + `JsonFilePropertyRepo`
+  実装。D1 に移行する時はこの 1 ファイルを差し替えるだけ。
+- `src/lib/schemas.ts` は server / client 両方が import してよい
+  pure な zod スキーマ + ラベル定数。**`server-only` import を入れないこと**
+  （client component が落ちる）。
+- `src/lib/properties.ts` は server 専用ヘルパー。client component から
+  import しない（リポジトリ経由でしか触らない）。
+
+### エディター運用ワークフロー
+1. `npm run dev` → `/admin/properties` でリスト
+2. 「＋ 新規物件を作成」 or 既存をクリック
+3. 6 ステップに沿って入力 → ⌘S で都度保存（または各種「保存」ボタン）
+4. 「公開する」で `status='published'` に → 公開側 `/properties` に出る
+5. `git add data/properties.json && git commit && git push` で本番反映
+   （Cloudflare デプロイ済の場合）
+
+### モックデータの来歴
+seed 時点の 6 件は `picsum.photos/seed/...` の擬似画像、splat は既存 R2 デモ
+`locahun3d_Demo_point_cloud.splat`。本番では全件差し替え予定。
 
 ## 開発コマンド
 
