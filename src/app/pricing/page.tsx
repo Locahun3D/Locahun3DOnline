@@ -58,81 +58,31 @@ export default function PricingPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="border border-line bg-[#070707] p-7">
-            <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-              SIZE → COST
-            </div>
-            <h3 className="serif text-2xl mb-4">スタジオサイズ別 トークン消費</h3>
-            <table className="w-full text-[13px] mono">
-              <tbody>
-                <tr className="border-b border-line">
-                  <td className="py-3 text-left text-ink">ハウス / 小規模 (〜150㎡)</td>
-                  <td className="py-3 text-right text-accent text-lg">1 トークン</td>
-                </tr>
-                <tr className="border-b border-line">
-                  <td className="py-3 text-left text-ink">中規模スタジオ (150-400㎡)</td>
-                  <td className="py-3 text-right text-accent text-lg">2 トークン</td>
-                </tr>
-                <tr>
-                  <td className="py-3 text-left text-ink">ドーム / 大規模 / 屋外 (400㎡〜)</td>
-                  <td className="py-3 text-right text-accent text-lg">3 トークン</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="text-[11px] text-muted mt-4 leading-[1.7]">
-              トークンは月初リセット。同じ物件の再訪は追加消費なし。
-              月の予算を超えた場合はプラン変更でその場でアップグレード可能です。
-            </p>
+        <div className="border border-line bg-[#070707] p-7 max-w-[680px] mx-auto">
+          <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
+            SIZE → COST
           </div>
-
-          <div className="border border-line bg-[#070707] p-7">
-            <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-              BUDGET → SHOOTS
-            </div>
-            <h3 className="serif text-2xl mb-4">月予算で見られる目安</h3>
-            <table className="w-full text-[12px] mono">
-              <thead>
-                <tr className="border-b border-line text-[10px] tracking-[0.22em] uppercase opacity-60">
-                  <th className="py-2 text-left font-normal">プラン</th>
-                  <th className="py-2 text-right font-normal">ハウス</th>
-                  <th className="py-2 text-right font-normal">中規模</th>
-                  <th className="py-2 text-right font-normal">大規模</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-line text-muted">
-                  <td className="py-2.5 text-left">Free <span className="opacity-60">(登録時 1t 一度のみ)</span></td>
-                  <td className="py-2.5 text-right">1 件</td>
-                  <td className="py-2.5 text-right opacity-50">—</td>
-                  <td className="py-2.5 text-right opacity-50">—</td>
-                </tr>
-                <tr className="border-b border-line">
-                  <td className="py-2.5 text-left">Individual (8t)</td>
-                  <td className="py-2.5 text-right">8 件</td>
-                  <td className="py-2.5 text-right">4 件</td>
-                  <td className="py-2.5 text-right">2 件</td>
-                </tr>
-                <tr className="border-b border-line text-accent">
-                  <td className="py-2.5 text-left">Studio (12t)</td>
-                  <td className="py-2.5 text-right">12 件</td>
-                  <td className="py-2.5 text-right">6 件</td>
-                  <td className="py-2.5 text-right">4 件</td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 text-left">Team (30t)</td>
-                  <td className="py-2.5 text-right">30 件</td>
-                  <td className="py-2.5 text-right">15 件</td>
-                  <td className="py-2.5 text-right">10 件</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="text-[11px] text-muted mt-4 leading-[1.7]">
-              実際は混合 (ハウス + 中規模など) になるため、おおよその上限と考えてください。
-              Free はアカウント作成時の 1 トークン (ハウス 1 件分) のみ — 月次更新はありません。
-              ハウス中心の使い方なら Individual、複合的に使うなら Studio が経済的。
-            </p>
-          </div>
+          <h3 className="serif text-2xl mb-4">スタジオサイズ別 トークン消費</h3>
+          <table className="w-full text-[13px] mono">
+            <tbody>
+              <tr className="border-b border-line">
+                <td className="py-3 text-left text-ink">ハウス / 小規模 (〜150㎡)</td>
+                <td className="py-3 text-right text-accent text-lg">1 トークン</td>
+              </tr>
+              <tr className="border-b border-line">
+                <td className="py-3 text-left text-ink">中規模スタジオ (150-400㎡)</td>
+                <td className="py-3 text-right text-accent text-lg">2 トークン</td>
+              </tr>
+              <tr>
+                <td className="py-3 text-left text-ink">ドーム / 大規模 / 屋外 (400㎡〜)</td>
+                <td className="py-3 text-right text-accent text-lg">3 トークン</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-[11px] text-muted mt-4 leading-[1.7]">
+            トークンは月初リセット。同じ物件の再訪は追加消費なし。
+            月の予算を超えた場合はプラン変更でその場でアップグレード可能です。
+          </p>
         </div>
       </section>
 

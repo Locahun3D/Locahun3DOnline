@@ -1,19 +1,27 @@
 import Link from "next/link";
 
-export const metadata = { title: "アカウント作成" };
+export const metadata = { title: "新規登録" };
 
 export default function SignUpPage() {
   return (
     <div className="frame min-h-[72vh] flex items-center justify-center py-20">
       <div className="border border-line bg-[#070707] p-10 w-full max-w-md">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-          Sign up
+        <div className="flex border-b border-line mb-6">
+          <Link
+            href="/sign-in"
+            className="flex-1 text-center py-2 border-b-2 border-transparent text-muted hover:text-ink mono text-[11px] tracking-[0.22em] uppercase transition"
+          >
+            ログイン
+          </Link>
+          <div className="flex-1 text-center py-2 border-b-2 border-accent text-accent mono text-[11px] tracking-[0.22em] uppercase">
+            新規登録
+          </div>
         </div>
-        <h1 className="serif text-3xl mb-6">アカウントを作成</h1>
 
-        <p className="text-[13px] text-muted leading-[1.85] mb-8">
-          無料枠でも全物件の写真とサマリーは閲覧できます。
-          3DGS ウォークスルーは <Link href="/pricing" className="text-accent">サブスク</Link> 必須です。
+        <h1 className="serif text-3xl mb-3">アカウントを作成</h1>
+        <p className="text-[12px] text-muted leading-[1.85] mb-8">
+          登録時に <strong className="text-accent">1 トークン</strong> 付与 (ハウススタジオ 1 件分の 3DGS が試せる)。
+          3DGS ウォークスルーは <Link href="/pricing" className="text-accent">サブスク</Link> で月次トークンが付与されます。
         </p>
 
         <button
@@ -34,7 +42,7 @@ export default function SignUpPage() {
         <div className="mt-8 text-[12px] text-muted text-center">
           既にアカウントをお持ちですか？{" "}
           <Link href="/sign-in" className="text-accent hover:underline">
-            Sign in
+            ログイン →
           </Link>
         </div>
       </div>

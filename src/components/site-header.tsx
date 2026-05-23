@@ -1,4 +1,5 @@
 import Link from "next/link";
+import UserNav from "@/components/user-nav";
 
 const NAV = [
   { href: "/properties", label: "物件を探す", code: "0.1" },
@@ -43,18 +44,7 @@ export default function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/sign-in"
-            className="hidden sm:inline-block px-3 py-1.5 text-[12px] mono tracking-[0.18em] uppercase text-muted hover:text-ink transition"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up"
-            className="px-4 py-1.5 text-[12px] mono tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
-          >
-            Get started
-          </Link>
+          <UserNav />
           {process.env.NODE_ENV !== "production" && (
             <Link
               href="/admin"

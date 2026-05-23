@@ -34,10 +34,10 @@ interface Props {
 }
 
 /**
- * Centers the map on the reference point with a ~100 km radius default view.
+ * Centers the map on the reference point with a ~50 km radius default view.
  *
  * 1° latitude ≈ 111 km. 1° longitude ≈ 111 × cos(lat) km.
- * So a 100 km half-box around `reference` ≈ ±0.9° lat × ±(100 / 111·cosφ)° lng.
+ * So a 50 km half-box around `reference` ≈ ±0.45° lat × ±(50 / 111·cosφ)° lng.
  * Markers outside this box are still rendered — the user can pan / zoom out.
  *
  * Re-runs whenever the reference changes (preset click, geolocation, typed search),
@@ -48,7 +48,7 @@ function ViewportFitter({ reference }: { reference: Props["reference"] }) {
   const map = useMap();
   useEffect(() => {
     if (!reference) return;
-    const RADIUS_KM = 100;
+    const RADIUS_KM = 50;
     const latDelta = RADIUS_KM / 111;
     const lngDelta =
       RADIUS_KM / (111 * Math.cos((reference.lat * Math.PI) / 180));
@@ -81,7 +81,7 @@ export default function CatalogMap({
         // (Shibuya by default) at ~100 km radius, so these values are just a holdover
         // before the first effect runs.
         center={reference ? [reference.lat, reference.lng] : [35.6580, 139.7016]}
-        zoom={9}
+        zoom={10}
         scrollWheelZoom
         style={{ width: "100%", height: "100%" }}
         worldCopyJump
