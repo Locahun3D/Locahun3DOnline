@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Property } from "@/lib/schemas";
-import { CATEGORY_LABEL } from "@/lib/schemas";
+import { CATEGORY_LABEL, TOKEN_COST_LABEL } from "@/lib/schemas";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
@@ -22,8 +22,16 @@ export default function PropertyCard({ property }: { property: Property }) {
         <div className="absolute top-3 left-3 mono text-[10px] tracking-[0.28em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
           {CATEGORY_LABEL[property.category]}
         </div>
-        <div className="absolute top-3 right-3 mono text-[10px] tracking-[0.28em] uppercase bg-accent text-bg px-2 py-1">
-          3DGS
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+          <div className="mono text-[10px] tracking-[0.28em] uppercase bg-accent text-bg px-2 py-1">
+            3DGS
+          </div>
+          <div
+            className="mono text-[9px] tracking-[0.22em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
+            title={`${property.tokenCost} トークン消費 — ${TOKEN_COST_LABEL[property.tokenCost]}`}
+          >
+            {property.tokenCost}T
+          </div>
         </div>
         <div className="absolute bottom-3 left-3 mono text-[10px] tracking-[0.24em] opacity-80">
           {property.id.toUpperCase()}

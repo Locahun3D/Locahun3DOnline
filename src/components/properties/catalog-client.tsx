@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   CATEGORY_LABEL,
   REFERENCE_PRESETS,
+  TOKEN_COST_LABEL,
   type Property,
   type PropertyCategory,
 } from "@/lib/schemas";
@@ -72,6 +73,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
   const [maxPrice, setMaxPrice] = useState<number | "">("");
   const [maxDailyPrice, setMaxDailyPrice] = useState<number | "">("");
   const [requiresDaily, setRequiresDaily] = useState(false);
+  const [maxToken, setMaxToken] = useState<1 | 2 | 3 | "all">("all");
   const [minCapacity, setMinCapacity] = useState<number | "">("");
   const [minArea, setMinArea] = useState<number | "">("");
   const [minCeiling, setMinCeiling] = useState<number | "">("");
@@ -90,6 +92,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setMaxPrice("");
     setMaxDailyPrice("");
     setRequiresDaily(false);
+    setMaxToken("all");
     setMinCapacity("");
     setMinArea("");
     setMinCeiling("");
@@ -120,6 +123,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
       }
       if (typeof maxPrice === "number" && p.hourlyPrice > maxPrice) return false;
       if (requiresDaily && (!p.dailyPrice || p.dailyPrice <= 0)) return false;
+      if (maxToken !== "all" && p.tokenCost > maxToken) return false;
       if (
         typeof maxDailyPrice === "number" &&
         (!p.dailyPrice || p.dailyPrice > maxDailyPrice)
@@ -181,6 +185,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     requiresParking,
     requires200V,
     maxKmFromRef,
+    maxToken,
     q,
     sort,
   ]);
@@ -242,6 +247,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
         requiresParking={requiresParking} setRequiresParking={setRequiresParking}
         requires200V={requires200V} setRequires200V={setRequires200V}
         maxKmFromRef={maxKmFromRef} setMaxKmFromRef={setMaxKmFromRef}
+        maxToken={maxToken} setMaxToken={setMaxToken}
         reference={reference} setReference={setReference}
         useGeolocation={useGeolocation}
         sort={sort} setSort={setSort}
@@ -316,6 +322,7 @@ interface FiltersProps {
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
   maxKmFromRef: number | ""; setMaxKmFromRef: (v: number | "") => void;
+  maxToken: 1 | 2 | 3 | "all"; setMaxToken: (v: 1 | 2 | 3 | "all") => void;
   reference: Reference; setReference: (v: Reference) => void;
   useGeolocation: () => void;
   sort: SortKey; setSort: (v: SortKey) => void;
@@ -454,6 +461,38 @@ function FiltersBar(props: FiltersProps) {
               placeholder="制限なし"
               step={1}
             />
+          </div>
+        </FilterPopover>
+
+        <FilterPopover
+          label="トークン"
+          display={
+            props.maxToken === "all"
+              ? "—"
+              : `≤ ${props.maxToken}t`
+          }
+          active={props.maxToken !== "all"}
+        >
+          <div className="flex flex-col gap-1 min-w-[220px]">
+            {([
+              ["all", "すべて"],
+              [1, "1 トークン (ハウス)"],
+              [2, "2 トークン以下 (中規模まで)"],
+              [3, "3 トークン以下 (ドーム含む)"],
+            ] as const).map(([v, label]) => (
+              <button
+                key={String(v)}
+                type="button"
+                onClick={() => props.setMaxToken(v as 1 | 2 | 3 | "all")}
+                className={`text-left px-3 py-2 text-[12px] mono transition ${
+                  props.maxToken === v
+                    ? "bg-accent text-bg"
+                    : "hover:bg-[#0d0d0d] hover:text-accent"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </FilterPopover>
 
@@ -698,8 +737,16 @@ function PropertyCardLite({
           {CATEGORY_LABEL[property.category]}
           {property.studioType ? ` · ${property.studioType}` : ""}
         </div>
-        <div className="absolute top-2 right-2 mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">
-          3DGS
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+          <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">
+            3DGS
+          </div>
+          <div
+            className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
+            title={`1 回視聴で ${property.tokenCost} トークン消費 — ${TOKEN_COST_LABEL[property.tokenCost]}`}
+          >
+            {property.tokenCost}T · {property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}
+          </div>
         </div>
         {distanceKm !== null && (
           <div className="absolute bottom-2 right-2 mono text-[10px] tracking-[0.2em] uppercase bg-bg/80 backdrop-blur px-2 py-1 border border-line">
