@@ -325,223 +325,336 @@ interface FiltersProps {
 }
 
 function FiltersBar(props: FiltersProps) {
+  const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
   return (
-    <div className="border border-line bg-[#080808] p-5 space-y-4">
-      {/* Row 1: search + reference + sort */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-end">
-        <LabeledInput label="Keyword">
-          <input
-            type="search"
-            value={props.q}
-            onChange={(e) => props.setQ(e.target.value)}
-            placeholder="白ホリ / 渋谷 / ガレージ ..."
-            className={field}
-          />
-        </LabeledInput>
+    <div className="border border-line bg-[#080808] p-4 space-y-3">
+      {/* Row 1: keyword + reference (popover) + sort */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 items-stretch">
+        <input
+          type="search"
+          value={props.q}
+          onChange={(e) => props.setQ(e.target.value)}
+          placeholder="🔍 キーワード — 白ホリ / 渋谷 / ガレージ ..."
+          className="bg-bg border border-line px-3 py-2 text-[13px] mono focus:outline-none focus:border-accent transition"
+        />
 
-        <LabeledInput label="参照地点 (距離計算)">
+        <FilterPopover
+          label="参照地点"
+          display={props.reference.label}
+          active={props.reference.id !== "shibuya"}
+        >
           <ReferencePicker
             value={props.reference}
             onChange={props.setReference}
             onUseGeolocation={props.useGeolocation}
           />
-        </LabeledInput>
+        </FilterPopover>
 
-        <LabeledInput label="並び替え">
-          <select
-            value={props.sort}
-            onChange={(e) => props.setSort(e.target.value as SortKey)}
-            className={field + " min-w-[160px]"}
-          >
-            <option value="newest" className="bg-bg">新着順</option>
-            <option value="distanceAsc" className="bg-bg">近い順 (参照地点から)</option>
-            <option value="priceAsc" className="bg-bg">時間料金 安い順</option>
-            <option value="priceDesc" className="bg-bg">時間料金 高い順</option>
-            <option value="dailyAsc" className="bg-bg">日料金 安い順</option>
-            <option value="dailyDesc" className="bg-bg">日料金 高い順</option>
-            <option value="ceilingDesc" className="bg-bg">天井高 高い順</option>
-            <option value="areaDesc" className="bg-bg">床面積 広い順</option>
-            <option value="capacityDesc" className="bg-bg">収容 多い順</option>
-          </select>
-        </LabeledInput>
+        <FilterPopover
+          label="並び替え"
+          display={SORT_LABEL[props.sort]}
+          active={props.sort !== "newest"}
+        >
+          <div className="flex flex-col gap-1 min-w-[220px]">
+            {(Object.keys(SORT_LABEL) as SortKey[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => props.setSort(s)}
+                className={`text-left px-3 py-2 text-[12px] mono transition ${
+                  props.sort === s
+                    ? "bg-accent text-bg"
+                    : "hover:bg-[#0d0d0d] hover:text-accent"
+                }`}
+              >
+                {SORT_LABEL[s]}
+              </button>
+            ))}
+          </div>
+        </FilterPopover>
       </div>
 
-      {/* Row 2: structured filters */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <LabeledInput label="カテゴリ">
-          <select
-            value={props.category}
-            onChange={(e) => props.setCategory(e.target.value as PropertyCategory | "all")}
-            className={field}
-          >
-            <option value="all" className="bg-bg">すべて</option>
+      {/* Row 2: collapsed filter buttons */}
+      <div className="flex flex-wrap gap-2">
+        <FilterPopover
+          label="カテゴリ"
+          display={props.category === "all" ? "すべて" : CATEGORY_LABEL[props.category]}
+          active={props.category !== "all"}
+        >
+          <div className="flex flex-col gap-1 min-w-[180px]">
+            <button
+              type="button"
+              onClick={() => props.setCategory("all")}
+              className={`text-left px-3 py-2 text-[12px] mono transition ${
+                props.category === "all"
+                  ? "bg-accent text-bg"
+                  : "hover:bg-[#0d0d0d] hover:text-accent"
+              }`}
+            >
+              すべて
+            </button>
             {(Object.keys(CATEGORY_LABEL) as PropertyCategory[]).map((c) => (
-              <option key={c} value={c} className="bg-bg">{CATEGORY_LABEL[c]}</option>
+              <button
+                key={c}
+                type="button"
+                onClick={() => props.setCategory(c)}
+                className={`text-left px-3 py-2 text-[12px] mono transition ${
+                  props.category === c
+                    ? "bg-accent text-bg"
+                    : "hover:bg-[#0d0d0d] hover:text-accent"
+                }`}
+              >
+                {CATEGORY_LABEL[c]}
+              </button>
             ))}
-          </select>
-        </LabeledInput>
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="スタジオ種類">
-          <ComboPicker
-            value={props.studioType}
-            onChange={props.setStudioType}
-            options={props.studioTypes}
-            placeholder="すべて (打ち込みも可)"
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="スタジオ種類"
+          display={props.studioType === "all" ? "すべて" : props.studioType}
+          active={props.studioType !== "all"}
+        >
+          <div className="min-w-[240px]">
+            <ComboPicker
+              value={props.studioType}
+              onChange={props.setStudioType}
+              options={props.studioTypes}
+              placeholder="すべて (打ち込みも可)"
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="エリア">
-          <ComboPicker
-            value={props.area}
-            onChange={props.setArea}
-            options={props.areas}
-            placeholder="すべて (打ち込みも可)"
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="エリア"
+          display={props.area === "all" ? "すべて" : props.area}
+          active={props.area !== "all"}
+        >
+          <div className="min-w-[240px]">
+            <ComboPicker
+              value={props.area}
+              onChange={props.setArea}
+              options={props.areas}
+              placeholder="すべて (打ち込みも可)"
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="参照から ≤ km">
-          <NumberPicker
-            value={props.maxKmFromRef}
-            onChange={props.setMaxKmFromRef}
-            presets={DISTANCE_PRESETS}
-            formatChip={(n) => `≤ ${n}km`}
-            placeholder="制限なし"
-            step={1}
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="距離"
+          display={props.maxKmFromRef === "" ? "—" : `≤ ${props.maxKmFromRef}km`}
+          active={props.maxKmFromRef !== ""}
+        >
+          <div className="min-w-[240px]">
+            <NumberPicker
+              value={props.maxKmFromRef}
+              onChange={props.setMaxKmFromRef}
+              presets={DISTANCE_PRESETS}
+              formatChip={(n) => `≤ ${n}km`}
+              placeholder="制限なし"
+              step={1}
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="最大 ¥/hr">
-          <NumberPicker
-            value={props.maxPrice}
-            onChange={props.setMaxPrice}
-            presets={HOURLY_PRESETS}
-            formatChip={fmtYenChip}
-            placeholder="上限なし"
-            step={1000}
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="¥/hr"
+          display={props.maxPrice === "" ? "—" : `≤ ${yen(props.maxPrice as number)}`}
+          active={props.maxPrice !== ""}
+        >
+          <div className="min-w-[260px]">
+            <NumberPicker
+              value={props.maxPrice}
+              onChange={props.setMaxPrice}
+              presets={HOURLY_PRESETS}
+              formatChip={fmtYenChip}
+              placeholder="上限なし"
+              step={1000}
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="最大 ¥/day">
-          <NumberPicker
-            value={props.maxDailyPrice}
-            onChange={props.setMaxDailyPrice}
-            presets={DAILY_PRESETS}
-            formatChip={fmtYenChip}
-            placeholder="上限なし"
-            step={5000}
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="¥/day"
+          display={props.maxDailyPrice === "" ? "—" : `≤ ${yen(props.maxDailyPrice as number)}`}
+          active={props.maxDailyPrice !== ""}
+        >
+          <div className="min-w-[260px]">
+            <NumberPicker
+              value={props.maxDailyPrice}
+              onChange={props.setMaxDailyPrice}
+              presets={DAILY_PRESETS}
+              formatChip={fmtYenChip}
+              placeholder="上限なし"
+              step={5000}
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="最低 収容">
-          <NumberPicker
-            value={props.minCapacity}
-            onChange={props.setMinCapacity}
-            presets={CAPACITY_PRESETS}
-            formatChip={(n) => `≥ ${n}名`}
-            placeholder="—"
-            step={1}
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="収容"
+          display={props.minCapacity === "" ? "—" : `≥ ${props.minCapacity}名`}
+          active={props.minCapacity !== ""}
+        >
+          <div className="min-w-[220px]">
+            <NumberPicker
+              value={props.minCapacity}
+              onChange={props.setMinCapacity}
+              presets={CAPACITY_PRESETS}
+              formatChip={(n) => `≥ ${n}名`}
+              placeholder="—"
+              step={1}
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="最低 面積㎡">
-          <NumberPicker
-            value={props.minArea}
-            onChange={props.setMinArea}
-            presets={AREA_PRESETS}
-            formatChip={(n) => `≥ ${n}㎡`}
-            placeholder="—"
-            step={10}
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="面積"
+          display={props.minArea === "" ? "—" : `≥ ${props.minArea}㎡`}
+          active={props.minArea !== ""}
+        >
+          <div className="min-w-[240px]">
+            <NumberPicker
+              value={props.minArea}
+              onChange={props.setMinArea}
+              presets={AREA_PRESETS}
+              formatChip={(n) => `≥ ${n}㎡`}
+              placeholder="—"
+              step={10}
+            />
+          </div>
+        </FilterPopover>
 
-        <LabeledInput label="最低 天井m">
-          <NumberPicker
-            value={props.minCeiling}
-            onChange={props.setMinCeiling}
-            presets={CEILING_PRESETS}
-            formatChip={(n) => `≥ ${n}m`}
-            placeholder="—"
-            step={0.1}
-          />
-        </LabeledInput>
+        <FilterPopover
+          label="天井"
+          display={props.minCeiling === "" ? "—" : `≥ ${props.minCeiling}m`}
+          active={props.minCeiling !== ""}
+        >
+          <div className="min-w-[220px]">
+            <NumberPicker
+              value={props.minCeiling}
+              onChange={props.setMinCeiling}
+              presets={CEILING_PRESETS}
+              formatChip={(n) => `≥ ${n}m`}
+              placeholder="—"
+              step={0.1}
+            />
+          </div>
+        </FilterPopover>
+      </div>
 
-        <LabeledInput label="日料金あり">
-          <ToggleSwitch
-            value={props.requiresDaily}
-            onChange={props.setRequiresDaily}
-            label="必須"
-          />
-        </LabeledInput>
-
-        <LabeledInput label="駐車場あり">
-          <ToggleSwitch
-            value={props.requiresParking}
-            onChange={props.setRequiresParking}
-            label="必須"
-          />
-        </LabeledInput>
-
-        <LabeledInput label="200V 電源">
-          <ToggleSwitch
-            value={props.requires200V}
-            onChange={props.setRequires200V}
-            label="必須"
-          />
-        </LabeledInput>
-
-        <div className="md:col-span-2 flex items-end justify-end">
-          <button
-            type="button"
-            onClick={props.reset}
-            className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
-          >
-            すべてリセット
-          </button>
-        </div>
+      {/* Row 3: toggles + reset */}
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line">
+        <ToggleChip
+          label="日料金あり"
+          value={props.requiresDaily}
+          onChange={props.setRequiresDaily}
+        />
+        <ToggleChip
+          label="駐車場"
+          value={props.requiresParking}
+          onChange={props.setRequiresParking}
+        />
+        <ToggleChip
+          label="200V 電源"
+          value={props.requires200V}
+          onChange={props.setRequires200V}
+        />
+        <button
+          type="button"
+          onClick={props.reset}
+          className="ml-auto mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-ink transition"
+        >
+          ✕ すべてリセット
+        </button>
       </div>
     </div>
   );
 }
 
+const SORT_LABEL: Record<SortKey, string> = {
+  newest:       "新着順",
+  distanceAsc:  "近い順 (参照から)",
+  priceAsc:     "時間料金 安い順",
+  priceDesc:    "時間料金 高い順",
+  dailyAsc:     "日料金 安い順",
+  dailyDesc:    "日料金 高い順",
+  ceilingDesc:  "天井高 高い順",
+  areaDesc:     "床面積 広い順",
+  capacityDesc: "収容 多い順",
+};
+
 const field =
   "w-full bg-transparent border-b border-line py-1.5 text-[13px] mono focus:outline-none focus:border-accent transition";
 
-function LabeledInput({
+// --- FilterPopover ---------------------------------------------------------
+
+function FilterPopover({
   label,
+  display,
+  active,
   children,
 }: {
   label: string;
+  display: string;
+  active: boolean;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <label className="block">
-      <span className="block mono text-[9px] tracking-[0.26em] uppercase opacity-60 mb-0.5">
-        {label}
-      </span>
-      {children}
-    </label>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-2 px-3 py-2 text-[12px] border transition ${
+          active
+            ? "border-accent text-accent bg-[#0c0905]"
+            : "border-line text-ink hover:border-ink"
+        }`}
+      >
+        <span className="mono text-[9px] tracking-[0.24em] uppercase opacity-60">
+          {label}
+        </span>
+        <span className="mono truncate max-w-[180px]">{display}</span>
+        <span className="mono text-[8px] opacity-60">▼</span>
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-20"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div className="absolute z-30 top-full left-0 mt-1 border border-line bg-bg shadow-2xl p-3">
+            {children}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-function ToggleSwitch({
+function ToggleChip({
+  label,
   value,
   onChange,
-  label,
 }: {
+  label: string;
   value: boolean;
   onChange: (v: boolean) => void;
-  label: string;
 }) {
   return (
-    <label className="flex items-center gap-2 mt-0.5 cursor-pointer select-none">
-      <input
-        type="checkbox"
-        checked={value}
-        onChange={(e) => onChange(e.target.checked)}
-        className="accent-[#ffb454]"
-      />
-      <span className="text-[12px]">{label}</span>
-    </label>
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className={`px-3 py-1.5 mono text-[11px] tracking-[0.18em] uppercase border transition ${
+        value
+          ? "border-accent text-accent bg-[#0c0905]"
+          : "border-line text-muted hover:border-ink hover:text-ink"
+      }`}
+    >
+      {value ? "✓ " : ""}{label}
+    </button>
   );
 }
 
