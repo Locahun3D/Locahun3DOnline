@@ -36,10 +36,12 @@ export default async function HomePage() {
           出来る時代。
         </h1>
 
-        <p className="mt-10 max-w-[40ch] text-[15px] text-muted leading-[1.9]">
-          スタジオ・倉庫・住宅・屋外ロケ地を 3D で取り込み、
-          ブラウザだけで構図・レンズ・光・人の流れを撮影前に検証できる
-          オンライン・ロケハンプラットフォーム。
+        <p className="mt-10 max-w-[44ch] text-[15px] text-muted leading-[1.9]">
+          スタジオ・倉庫・住宅・屋外ロケ地を
+          <br />
+          3D で取り込み、ブラウザだけで構図・レンズ・光・人の流れを
+          <br />
+          撮影前に検証できる オンライン・ロケハンプラットフォーム。
         </p>
 
         <div className="mt-12 flex flex-wrap gap-3 justify-center">
