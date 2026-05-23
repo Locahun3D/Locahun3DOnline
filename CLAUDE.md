@@ -60,10 +60,35 @@
 - `src/lib/store.ts` の `PropertyRepo` インターフェース + `JsonFilePropertyRepo`
   実装。D1 に移行する時はこの 1 ファイルを差し替えるだけ。
 - `src/lib/schemas.ts` は server / client 両方が import してよい
-  pure な zod スキーマ + ラベル定数。**`server-only` import を入れないこと**
-  （client component が落ちる）。
+  pure な zod スキーマ + ラベル定数 + 参照地点プリセット。
+  **`server-only` import を入れないこと**（client component が落ちる）。
 - `src/lib/properties.ts` は server 専用ヘルパー。client component から
   import しない（リポジトリ経由でしか触らない）。
+- `src/lib/distance.ts` は Haversine 距離計算 (km) と整形ヘルパー。
+
+### Property フィールド (2026-05-23 拡張版)
+
+| カテゴリ | フィールド | 補足 |
+|---|---|---|
+| 基本 | title / category / studioType / area / prefecture / city | studioType は free-text + datalist 候補 |
+| 位置 | coords ({lat,lng}) | nullable、null だと地図に出ない |
+| 価格 | hourlyPrice | ¥/hr 整数 |
+| 仕様 | capacity / floorAreaSqm / ceilingHeightM | フィルタ・ソート対象 |
+| 設備 | powerVoltage / hasNaturalLight / parking / loadingDock | powerVoltage は free-text、`/200\s*V/i` で 200V フィルタ |
+| 説明 | description / summary / tags | summary は publish 時 10 文字以上 |
+| 写真 | cover / gallery[] | 各 {src, alt, width, height} |
+| 3DGS | splatUrl / splatSizeMb / scannedAt / annotations[] | annotations は Phase 2 で配置 |
+| メタ | id / status / createdAt / updatedAt | status は draft/published/archived |
+
+### カタログ画面 (/properties) の構造
+- `CatalogClient` (Client Component) が状態を集約:
+  hoveredId / reference / 各種フィルタ / sort
+- 2 カラム: 左 = カード一覧 (`<ul>`)、右 = `CatalogMap` (sticky)
+- カード ↔ マーカーのホバー連動は両方向
+- 参照地点: `REFERENCE_PRESETS` (渋谷駅デフォルト + 7 駅) + 📍 ジオロケ
+- ソート: 新着 / 距離近い順 / 料金 / 天井 / 面積 / 収容
+- フィルタ: キーワード / カテゴリ / スタジオ種類 / エリア / 距離上限 /
+  料金上限 / 最低 収容・面積・天井 / 駐車場必須 / 200V 必須
 
 ### エディター運用ワークフロー
 1. `npm run dev` → `/admin/properties` でリスト
