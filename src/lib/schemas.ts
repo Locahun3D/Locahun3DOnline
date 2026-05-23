@@ -103,6 +103,15 @@ export const propertySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD で入力してください")
     .or(z.literal("")),
+  /**
+   * Token cost for one 3DGS walkthrough viewing.
+   *   1 = ハウススタジオ / 小規模 (≤ 150㎡ 目安)
+   *   2 = 中規模スタジオ (150-400㎡ 目安)
+   *   3 = ドーム / 大規模 / 屋外 (400㎡ 超 or 複雑な空間)
+   * Subscription plans grant a monthly token budget; Free gives 1 walk-through
+   * irrespective of cost.
+   */
+  tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
   annotations: z.array(annotationSchema).max(200).default([]),
 
   // Meta
@@ -180,6 +189,27 @@ export const STUDIO_TYPE_SUGGESTIONS = [
   "工場",
   "その他",
 ] as const;
+
+/** Token cost labels and per-plan monthly budgets. */
+export const TOKEN_COST_LABEL: Record<1 | 2 | 3, string> = {
+  1: "ハウス / 小規模",
+  2: "中規模スタジオ",
+  3: "ドーム / 大規模",
+};
+
+export const PLAN_TOKEN_BUDGET = {
+  free: 0, // free has 1 lifetime walkthrough regardless of cost
+  individual: 8,
+  studio: 12,
+  team: 30,
+} as const;
+
+/** 3DGS data resale price by size class (per scan; "ドーム" is per zone/区画). */
+export const DATA_SALE_PRICE: Record<1 | 2 | 3, number> = {
+  1: 100_000,
+  2: 250_000,
+  3: 300_000, // per 区画
+};
 
 /** Reference location presets for the catalog "from X km" feature. */
 export const REFERENCE_PRESETS = [

@@ -33,6 +33,7 @@
       "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
       "splatSizeMb": 410,
       "scannedAt": "2026-04-18",
+      "tokenCost": 2,
       "annotations": [],
       "createdAt": "2026-04-18T00:00:00.000Z",
       "updatedAt": "2026-04-18T00:00:00.000Z"
@@ -68,6 +69,7 @@
       "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
       "splatSizeMb": 410,
       "scannedAt": "2026-03-22",
+      "tokenCost": 3,
       "annotations": [],
       "createdAt": "2026-03-22T00:00:00.000Z",
       "updatedAt": "2026-03-22T00:00:00.000Z"
@@ -103,6 +105,7 @@
       "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
       "splatSizeMb": 410,
       "scannedAt": "2026-05-02",
+      "tokenCost": 1,
       "annotations": [],
       "createdAt": "2026-05-02T00:00:00.000Z",
       "updatedAt": "2026-05-02T00:00:00.000Z"
@@ -138,6 +141,7 @@
       "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
       "splatSizeMb": 410,
       "scannedAt": "2026-05-09",
+      "tokenCost": 1,
       "annotations": [],
       "createdAt": "2026-05-09T00:00:00.000Z",
       "updatedAt": "2026-05-09T00:00:00.000Z"
@@ -172,6 +176,7 @@
       "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
       "splatSizeMb": 410,
       "scannedAt": "2026-04-29",
+      "tokenCost": 3,
       "annotations": [],
       "createdAt": "2026-04-29T00:00:00.000Z",
       "updatedAt": "2026-04-29T00:00:00.000Z"
@@ -207,6 +212,7 @@
       "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
       "splatSizeMb": 410,
       "scannedAt": "2026-05-12",
+      "tokenCost": 3,
       "annotations": [],
       "createdAt": "2026-05-12T00:00:00.000Z",
       "updatedAt": "2026-05-12T00:00:00.000Z"

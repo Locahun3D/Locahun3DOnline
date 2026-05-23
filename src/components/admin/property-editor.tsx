@@ -11,6 +11,8 @@ import {
   STATUS_LABEL,
   PROPERTY_CATEGORIES,
   STUDIO_TYPE_SUGGESTIONS,
+  TOKEN_COST_LABEL,
+  DATA_SALE_PRICE,
   type Property,
 } from "@/lib/schemas";
 import {
@@ -647,6 +649,24 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   />
                 </Field>
               </div>
+
+              <Field
+                label="トークンコスト (1 件視聴の消費数)"
+                hint="閲覧者のサブスクは月次トークン制。データ販売価格もこれで決まる。"
+              >
+                <select
+                  {...register("tokenCost", { valueAsNumber: true })}
+                  className={inputClass}
+                >
+                  {([1, 2, 3] as const).map((n) => (
+                    <option key={n} value={n} className="bg-bg">
+                      {n} トークン — {TOKEN_COST_LABEL[n]}
+                      {" / "}データ販売 ¥{DATA_SALE_PRICE[n].toLocaleString("ja-JP")}
+                      {n === 3 ? " (区画ごと)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
               <div className="border border-dashed border-line p-6 text-center">
                 <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">

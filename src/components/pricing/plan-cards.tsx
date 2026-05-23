@@ -8,8 +8,8 @@ type BillingMode = "monthly" | "annual";
 interface Plan {
   code: string;
   name: string;
-  monthly: number;          // ¥/月 (monthly billing)
-  annualMonthly?: number;   // ¥/月 (annual billing, after -15%)
+  monthly: number;
+  annualMonthly?: number;
   desc: string;
   features: string[];
   cta: string;
@@ -26,7 +26,7 @@ const PLANS: Plan[] = [
     code: "FREE",
     name: "Free",
     monthly: 0,
-    desc: "登録不要で物件カタログを閲覧。3DGS は生涯 1 件お試し付き。",
+    desc: "登録不要で物件カタログを閲覧。3DGS は生涯 1 件無料 (トークン数問わず)。",
     features: [
       "全物件のサムネイル・写真閲覧",
       "地図・フィルタ・距離検索",
@@ -42,9 +42,10 @@ const PLANS: Plan[] = [
     name: "Individual",
     monthly: 5200,
     annualMonthly: Math.round(5200 * (1 - ANNUAL_DISCOUNT)),
-    desc: "個人クリエイター向け。図面 DL とブックマークが解放。",
+    desc: "個人クリエイター向け。月 8 トークンで案件 2-3 件分のロケハンに。",
     features: [
-      "3DGS ウォークスルー 月 5 件まで",
+      "3DGS ウォークスルー 月 8 トークン",
+      "ハウス 1 / 中規模 2 / ドーム 3 トークン消費",
       "図面ダウンロード 無制限",
       "履歴・ブックマーク 永続保存",
       "ログイン端末制限なし",
@@ -59,12 +60,12 @@ const PLANS: Plan[] = [
     name: "Studio",
     monthly: 9800,
     annualMonthly: Math.round(9800 * (1 - ANNUAL_DISCOUNT)),
-    desc: "個人事業の制作会社・小規模チーム向け。5 端末まで共有。",
+    desc: "小規模制作チーム向け。月 12 トークン + データ販売 10% OFF。単発撮影でも余裕。",
     features: [
       "Individual の全機能",
-      "3DGS ウォークスルー 月 8 件まで",
+      "3DGS ウォークスルー 月 12 トークン",
       "5 端末まで同時ログイン",
-      "3DGS データ ダウンロード 10% OFF",
+      "3DGS データ販売 10% OFF",
       "チーム履歴の共有",
     ],
     cta: "Subscribe",
@@ -77,19 +78,18 @@ const PLANS: Plan[] = [
     name: "Team",
     monthly: 29800,
     annualMonthly: Math.round(29800 * (1 - ANNUAL_DISCOUNT)),
-    desc: "プロダクション・スタジオ向け。20 端末 + データ DL 割引。",
+    desc: "プロダクション向け。月 30 トークン + 20 端末 + データ販売 20% OFF。",
     features: [
       "Studio の全機能",
-      "3DGS ウォークスルー 月 20 件まで",
+      "3DGS ウォークスルー 月 30 トークン",
       "20 端末まで同時ログイン",
-      "3DGS データ ダウンロード 20% OFF",
-      "案件ごとの 3DGS データ書き出し",
+      "3DGS データ販売 20% OFF",
       "請求書一括 (電子帳簿対応)",
     ],
     cta: "営業に相談",
     href: "https://web.locahun3d.com/locahun3d_contact.html",
     accent: false,
-    note: "3DGS データ自体のダウンロード(再利用権)はスタジオ側ライセンスが必要。Team で 20% OFF 適用。",
+    note: "ウォークスルー視聴と異なり、splat / ply データの再利用権はスタジオライセンスが別途必要。Team では 20% OFF が適用されます。",
   },
 ];
 
