@@ -136,75 +136,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* 3DGS data sales */}
-      <section className="mt-16">
-        <div className="chapter-rule">
-          <span className="opacity-60">DATA SALES</span>
-          <span>3DGS Data License</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-        </div>
-
-        <div className="border border-accent bg-[#0c0905] p-8">
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8">
-            <div>
-              <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-                ONE-TIME LICENSE
-              </div>
-              <h3 className="serif text-3xl font-light mb-3">
-                3DGS データを買い切る。
-              </h3>
-              <p className="text-[14px] text-muted leading-[1.85] max-w-[60ch] mb-5">
-                ウォークスルー視聴とは別に、splat / ply 形式の生データを
-                オフライン利用 (社内プリビズ、Unreal/Unity 取り込み、自社配布) するための
-                ライセンス販売。スタジオ側との合意済価格表に基づきます。
-              </p>
-              <p className="text-[12px] text-muted leading-[1.85] mb-4">
-                <strong className="text-ink">適用例</strong>: 撮影前のプリビズ用にスタジオ全体の 3DGS を社内取込、
-                Unreal 上でのカメラリハーサル、VFX チームへの空間情報共有、
-                ロケ地写真集の発刊など。
-              </p>
-            </div>
-
-            <div className="border-l border-accent/40 pl-8 space-y-4">
-              <div>
-                <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-1">
-                  ハウス / 小規模
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="serif text-2xl text-accent">¥100,000</span>
-                  <span className="mono text-[10px] opacity-50 ml-1">/ 1 スキャン</span>
-                </div>
-              </div>
-              <div>
-                <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-1">
-                  中規模スタジオ
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="serif text-2xl text-accent">¥250,000</span>
-                  <span className="mono text-[10px] opacity-50 ml-1">/ 1 スキャン</span>
-                </div>
-              </div>
-              <div>
-                <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-1">
-                  ドーム / 大規模
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="serif text-2xl text-accent">¥300,000</span>
-                  <span className="mono text-[10px] opacity-50 ml-1">/ 区画</span>
-                </div>
-                <div className="mono text-[10px] text-muted mt-1">
-                  複数区画ある物件は区画数に応じて
-                </div>
-              </div>
-              <div className="border-t border-accent/40 pt-3 text-[11px] text-muted leading-[1.65]">
-                サブスクの月次トークン (視聴権) とは別商品です。
-                プラン契約有無に関わらず同一価格でご提供します。
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Comparison table */}
       <section className="mt-16">
         <div className="chapter-rule">
@@ -280,16 +211,6 @@ export default function PricingPage() {
             ハウススタジオ中心 → Individual。
             中〜大型を月に複数件見る制作チーム → <strong className="text-accent">Studio (推奨)</strong>。
             大手プロダクション → Team。
-          </p>
-        </div>
-        <div className="border-t border-line pt-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-            データ販売とサブスクの違い
-          </div>
-          <p>
-            <strong className="text-ink">ウォークスルー視聴</strong>はサブスクのトークンで毎月可。
-            <strong className="text-ink">データ販売</strong>は再利用権付きの買い切りで、
-            プリビズ・VFX 取込・社内資料化など二次利用したい場合に。
           </p>
         </div>
         <div className="border-t border-line pt-5">
