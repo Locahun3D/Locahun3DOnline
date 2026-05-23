@@ -79,7 +79,7 @@ export default async function HomePage() {
             {
               n: "03",
               h: "スタジオ検索 + 即予約のオンライン化",
-              p: "条件で物件を絞り込み、即見学（3DGS）・即見積もり。SUUMO のような探し方を、撮影業界に持ち込みます。",
+              p: "条件で物件を絞り込み、即見学（3DGS）・即見積もり。現地をゲームのように検証し、撮影業界に持ち込みます。",
             },
           ].map((it) => (
             <div key={it.n} className="pt-7 border-t border-line">
