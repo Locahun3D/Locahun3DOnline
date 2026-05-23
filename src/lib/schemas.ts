@@ -60,10 +60,23 @@ export const propertySchema = z.object({
     .default(0),
   summary: z.string().max(200, "200 文字以内で入力してください").default(""),
 
+  // 1.5 — Studio kind (subdivides `category`, free-text with suggestions)
+  studioType: z.string().max(40).default(""),
+
+  // 1.6 — Geographic coordinates (for map placement and distance calc)
+  coords: z
+    .object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+    })
+    .nullable()
+    .default(null),
+
   // 2. Specs
   capacity: z.number().int().min(0).max(9999).default(0),
   floorAreaSqm: z.number().min(0).max(99999).default(0),
   ceilingHeightM: z.number().min(0).max(50).default(0),
+  powerVoltage: z.string().max(80).default(""),
   hasNaturalLight: z.boolean().default(false),
   parking: z.boolean().default(false),
   loadingDock: z.boolean().default(false),
@@ -143,3 +156,33 @@ export const ANNOTATION_LABEL: Record<AnnotationKind, string> = {
   loading: "搬入動線",
   measurement: "採寸",
 };
+
+/** Suggested studio types — used by the editor as a datalist, not enforced. */
+export const STUDIO_TYPE_SUGGESTIONS = [
+  "ハウススタジオ",
+  "白ホリゾント",
+  "黒ホリゾント",
+  "ガレージ",
+  "倉庫",
+  "オフィス",
+  "一軒家",
+  "マンション / レジデンス",
+  "商業店舗",
+  "カフェ / レストラン",
+  "屋外 / ロケ地",
+  "工場",
+  "その他",
+] as const;
+
+/** Reference location presets for the catalog "from X km" feature. */
+export const REFERENCE_PRESETS = [
+  { id: "shibuya",   label: "渋谷駅",   lat: 35.6580, lng: 139.7016 },
+  { id: "shinjuku",  label: "新宿駅",   lat: 35.6896, lng: 139.7006 },
+  { id: "tokyo",     label: "東京駅",   lat: 35.6812, lng: 139.7671 },
+  { id: "roppongi",  label: "六本木駅", lat: 35.6628, lng: 139.7314 },
+  { id: "kichijoji", label: "吉祥寺駅", lat: 35.7028, lng: 139.5800 },
+  { id: "yokohama",  label: "横浜駅",   lat: 35.4660, lng: 139.6225 },
+  { id: "osaka",     label: "大阪駅",   lat: 34.7024, lng: 135.4959 },
+] as const;
+
+export type ReferencePresetId = (typeof REFERENCE_PRESETS)[number]["id"];

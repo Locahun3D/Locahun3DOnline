@@ -10,6 +10,7 @@ import {
   CATEGORY_LABEL,
   STATUS_LABEL,
   PROPERTY_CATEGORIES,
+  STUDIO_TYPE_SUGGESTIONS,
   type Property,
 } from "@/lib/schemas";
 import {
@@ -246,7 +247,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 />
               </Field>
 
-              <div className="grid md:grid-cols-2 gap-5">
+              <div className="grid md:grid-cols-3 gap-5">
                 <Field label="カテゴリ" required>
                   <select {...register("category")} className={inputClass}>
                     {PROPERTY_CATEGORIES.map((c) => (
@@ -255,6 +256,23 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       </option>
                     ))}
                   </select>
+                </Field>
+                <Field
+                  label="スタジオ種類"
+                  hint="ハウス / ガレージ / 白ホリ ... (datalist から選択 or 自由入力)"
+                >
+                  <input
+                    type="text"
+                    list="studio-type-suggestions"
+                    {...register("studioType")}
+                    className={inputClass}
+                    placeholder="例: ハウススタジオ"
+                  />
+                  <datalist id="studio-type-suggestions">
+                    {STUDIO_TYPE_SUGGESTIONS.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
                 </Field>
                 <Field
                   label="貸出料金 (¥/hr)"
@@ -287,6 +305,21 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   <input type="text" {...register("city")} className={inputClass} />
                 </Field>
               </div>
+
+              <Field
+                label="座標 (lat, lng) — 地図ピンと距離計算に使用"
+                hint="Google Maps で右クリック → 数値をコピーして貼り付け。空欄でも下書き OK、公開時は地図に出ません。"
+              >
+                <CoordsInput
+                  value={watch("coords")}
+                  onChange={(c) =>
+                    setValue("coords", c, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                />
+              </Field>
 
               <Field
                 label="サマリー (一覧カードに出る短文)"
@@ -333,6 +366,18 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   />
                 </Field>
               </div>
+
+              <Field
+                label="電源仕様"
+                hint="例: 100V 15A / 100V/200V 三相 60A / 簡易電源 (発電機推奨)"
+              >
+                <input
+                  type="text"
+                  {...register("powerVoltage")}
+                  className={inputClass}
+                  placeholder="100V 30A など"
+                />
+              </Field>
 
               <div className="grid md:grid-cols-3 gap-5">
                 <Toggle label="自然光あり" register={register("hasNaturalLight")} />
@@ -819,6 +864,97 @@ function TagsEditor({
           }
         }}
       />
+    </div>
+  );
+}
+
+function CoordsInput({
+  value,
+  onChange,
+}: {
+  value: { lat: number; lng: number } | null | undefined;
+  onChange: (v: { lat: number; lng: number } | null) => void;
+}) {
+  const [paste, setPaste] = useState("");
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+        <input
+          type="number"
+          step="any"
+          value={value?.lat ?? ""}
+          onChange={(e) => {
+            const lat = e.target.value === "" ? null : Number(e.target.value);
+            const lng = value?.lng ?? 0;
+            if (lat === null && (value?.lng === undefined)) onChange(null);
+            else if (lat !== null && !Number.isNaN(lat))
+              onChange({ lat, lng });
+          }}
+          className={inputClass}
+          placeholder="lat (35.6580)"
+        />
+        <input
+          type="number"
+          step="any"
+          value={value?.lng ?? ""}
+          onChange={(e) => {
+            const lng = e.target.value === "" ? null : Number(e.target.value);
+            const lat = value?.lat ?? 0;
+            if (lng === null && (value?.lat === undefined)) onChange(null);
+            else if (lng !== null && !Number.isNaN(lng))
+              onChange({ lat, lng });
+          }}
+          className={inputClass}
+          placeholder="lng (139.7016)"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+        >
+          クリア
+        </button>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={paste}
+          onChange={(e) => setPaste(e.target.value)}
+          placeholder="Google Maps からペースト: 35.6580, 139.7016"
+          className={inputClass}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            const m = paste.match(
+              /(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)/,
+            );
+            if (m) {
+              onChange({ lat: Number(m[1]), lng: Number(m[2]) });
+              setPaste("");
+            }
+          }}
+          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+        >
+          解析
+        </button>
+      </div>
+
+      {value && (
+        <div className="mono text-[10px] text-muted">
+          現在の座標: {value.lat.toFixed(4)}, {value.lng.toFixed(4)} —{" "}
+          <a
+            href={`https://www.google.com/maps?q=${value.lat},${value.lng}`}
+            target="_blank"
+            rel="noopener"
+            className="text-accent hover:underline"
+          >
+            Google Maps で確認 ↗
+          </a>
+        </div>
+      )}
     </div>
   );
 }
