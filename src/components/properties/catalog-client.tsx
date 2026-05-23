@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -8,7 +8,6 @@ import {
   REFERENCE_PRESETS,
   type Property,
   type PropertyCategory,
-  type ReferencePresetId,
 } from "@/lib/schemas";
 import { formatKm, haversineKm } from "@/lib/distance";
 
@@ -306,41 +305,11 @@ function FiltersBar(props: FiltersProps) {
         </LabeledInput>
 
         <LabeledInput label="参照地点 (距離計算)">
-          <div className="flex gap-1">
-            <select
-              value={props.reference.id}
-              onChange={(e) => {
-                const id = e.target.value as ReferencePresetId | "current";
-                const preset = REFERENCE_PRESETS.find((r) => r.id === id);
-                if (preset) {
-                  props.setReference({
-                    id: preset.id,
-                    lat: preset.lat,
-                    lng: preset.lng,
-                    label: preset.label,
-                  });
-                }
-              }}
-              className={field + " min-w-[140px]"}
-            >
-              {REFERENCE_PRESETS.map((r) => (
-                <option key={r.id} value={r.id} className="bg-bg">
-                  {r.label}
-                </option>
-              ))}
-              {props.reference.id === "current" && (
-                <option value="current" className="bg-bg">現在地</option>
-              )}
-            </select>
-            <button
-              type="button"
-              onClick={props.useGeolocation}
-              className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-2 hover:border-accent hover:text-accent transition"
-              title="ブラウザの現在地を取得"
-            >
-              📍
-            </button>
-          </div>
+          <ReferencePicker
+            value={props.reference}
+            onChange={props.setReference}
+            onUseGeolocation={props.useGeolocation}
+          />
         </LabeledInput>
 
         <LabeledInput label="並び替え">
@@ -635,6 +604,232 @@ function Stat({
     <div className="border-l border-line pl-2">
       <div className="opacity-50 text-[9px] uppercase tracking-[0.2em]">{label}</div>
       <div className={accent ? "text-accent" : "text-ink"}>{value}</div>
+    </div>
+  );
+}
+
+// --- ReferencePicker -------------------------------------------------------
+
+interface GeocodeHit {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+function ReferencePicker({
+  value,
+  onChange,
+  onUseGeolocation,
+}: {
+  value: Reference;
+  onChange: (v: Reference) => void;
+  onUseGeolocation: () => void;
+}) {
+  const [query, setQuery] = useState(value.label);
+  const [resolving, setResolving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [results, setResults] = useState<GeocodeHit[]>([]);
+  const lastReqRef = useRef(0);
+
+  // Keep input synced when reference changes externally (e.g. geolocation button).
+  useEffect(() => {
+    setQuery(value.label);
+  }, [value.label]);
+
+  // Debounced live geocoding for non-coord queries (>= 2 chars).
+  useEffect(() => {
+    const trimmed = query.trim();
+    setError(null);
+    if (trimmed === value.label) {
+      // No change, no need to search
+      setResults([]);
+      return;
+    }
+    if (trimmed.length < 2) {
+      setResults([]);
+      return;
+    }
+    if (/(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)/.test(trimmed)) {
+      // Coord format — no geocoding needed, results stay empty
+      setResults([]);
+      return;
+    }
+    const reqId = ++lastReqRef.current;
+    const t = setTimeout(async () => {
+      setResolving(true);
+      try {
+        const url =
+          "https://nominatim.openstreetmap.org/search?format=json&limit=5&q=" +
+          encodeURIComponent(trimmed);
+        const r = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+        const j: GeocodeHit[] = await r.json();
+        if (reqId !== lastReqRef.current) return; // stale
+        setResults(j);
+      } catch {
+        if (reqId === lastReqRef.current) setError("検索に失敗しました");
+      } finally {
+        if (reqId === lastReqRef.current) setResolving(false);
+      }
+    }, 450);
+    return () => clearTimeout(t);
+  }, [query, value.label]);
+
+  const commit = useCallback(
+    (next: Reference) => {
+      onChange(next);
+      setQuery(next.label);
+      setOpen(false);
+      setResults([]);
+    },
+    [onChange],
+  );
+
+  const tryResolveText = useCallback(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    // 1. exact preset
+    const preset = REFERENCE_PRESETS.find(
+      (r) => r.label === trimmed || r.id === trimmed,
+    );
+    if (preset) {
+      commit({
+        id: preset.id,
+        lat: preset.lat,
+        lng: preset.lng,
+        label: preset.label,
+      });
+      return;
+    }
+
+    // 2. lat,lng paste
+    const m = trimmed.match(/(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)/);
+    if (m) {
+      commit({
+        id: "custom",
+        lat: parseFloat(m[1]),
+        lng: parseFloat(m[2]),
+        label: trimmed,
+      });
+      return;
+    }
+
+    // 3. first geocode result, if available
+    if (results.length > 0) {
+      const r = results[0];
+      commit({
+        id: "geocoded",
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+        label: trimmed,
+      });
+    }
+  }, [query, results, commit]);
+
+  return (
+    <div className="relative">
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              tryResolveText();
+            } else if (e.key === "Escape") {
+              setOpen(false);
+            }
+          }}
+          placeholder="渋谷駅 / 大阪駅 / 35.66, 139.70 / 新宿区..."
+          className={field + " min-w-[180px]"}
+        />
+        <button
+          type="button"
+          onClick={onUseGeolocation}
+          className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-2 hover:border-accent hover:text-accent transition"
+          title="ブラウザの現在地を取得"
+        >
+          📍
+        </button>
+      </div>
+
+      {/* Preset chips for quick-pick */}
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {REFERENCE_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() =>
+              commit({
+                id: p.id,
+                lat: p.lat,
+                lng: p.lng,
+                label: p.label,
+              })
+            }
+            className={`mono text-[9px] tracking-[0.16em] uppercase px-1.5 py-0.5 border transition ${
+              value.id === p.id
+                ? "border-accent text-accent"
+                : "border-line text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Dropdown with live results */}
+      {open && (results.length > 0 || resolving || error) && (
+        <div className="absolute z-30 left-0 right-0 top-full mt-1 border border-line bg-bg shadow-2xl max-h-[260px] overflow-auto">
+          {resolving && (
+            <div className="px-3 py-2 mono text-[10px] text-muted">
+              検索中…
+            </div>
+          )}
+          {error && (
+            <div className="px-3 py-2 mono text-[10px] text-accent">
+              {error}
+            </div>
+          )}
+          {results.map((r, i) => (
+            <button
+              key={`${r.lat}-${r.lon}-${i}`}
+              type="button"
+              onClick={() =>
+                commit({
+                  id: "geocoded",
+                  lat: parseFloat(r.lat),
+                  lng: parseFloat(r.lon),
+                  label: r.display_name.split(",").slice(0, 2).join(", "),
+                })
+              }
+              className="block w-full text-left px-3 py-2 text-[12px] hover:bg-[#0d0d0d] hover:text-accent transition border-b border-line last:border-b-0"
+            >
+              <div className="truncate">{r.display_name}</div>
+              <div className="mono text-[9px] opacity-50 mt-0.5">
+                {parseFloat(r.lat).toFixed(4)}, {parseFloat(r.lon).toFixed(4)}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Click-outside backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-20"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
+      )}
     </div>
   );
 }
