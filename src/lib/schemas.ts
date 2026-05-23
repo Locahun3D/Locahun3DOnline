@@ -198,7 +198,7 @@ export const TOKEN_COST_LABEL: Record<1 | 2 | 3, string> = {
 };
 
 export const PLAN_TOKEN_BUDGET = {
-  free: 0, // free has 1 lifetime walkthrough regardless of cost
+  free: 1,       // 1 token / month — house studios only (medium 2t / dome 3t out of reach)
   individual: 8,
   studio: 12,
   team: 30,

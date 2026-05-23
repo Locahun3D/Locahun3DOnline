@@ -18,7 +18,7 @@ const COMPARE_ROWS: Array<{
   { label: "地図 + 距離検索",        free: "✓",       individual: "✓",        studio: "✓",        team: "✓" },
   { label: "図面ダウンロード",       free: "—",       individual: "無制限",   studio: "無制限",   team: "無制限" },
   { label: "履歴・ブックマーク",     free: "—",       individual: "永続",     studio: "永続+共有",team: "永続+共有" },
-  { label: "3DGS ウォークスルー",    free: "生涯 1 件", individual: "月 8 トークン",  studio: "月 12 トークン", team: "月 30 トークン" },
+  { label: "3DGS ウォークスルー",    free: "月 1 トークン", individual: "月 8 トークン",  studio: "月 12 トークン", team: "月 30 トークン" },
   { label: "ログイン端末数",         free: "—",       individual: "制限なし", studio: "5 端末",   team: "20 端末" },
   { label: "見積もり依頼",           free: "月 1 件", individual: "無制限",   studio: "無制限",   team: "無制限" },
   { label: "請求書 / 電子帳簿対応",  free: "—",       individual: "—",        studio: "—",        team: "✓" },
@@ -101,6 +101,12 @@ export default function PricingPage() {
                 </tr>
               </thead>
               <tbody>
+                <tr className="border-b border-line text-muted">
+                  <td className="py-2.5 text-left">Free (1t)</td>
+                  <td className="py-2.5 text-right">1 件</td>
+                  <td className="py-2.5 text-right opacity-50">—</td>
+                  <td className="py-2.5 text-right opacity-50">—</td>
+                </tr>
                 <tr className="border-b border-line">
                   <td className="py-2.5 text-left">Individual (8t)</td>
                   <td className="py-2.5 text-right">8 件</td>
@@ -123,7 +129,8 @@ export default function PricingPage() {
             </table>
             <p className="text-[11px] text-muted mt-4 leading-[1.7]">
               実際は混合 (ハウス + 中規模など) になるため、おおよその上限と考えてください。
-              ハウス中心の使い方なら Individual、複合的に使うなら Studio が経済的です。
+              Free は 1 トークン = ハウス 1 件のみで中規模・ドームは見られません。
+              ハウス中心の使い方なら Individual、複合的に使うなら Studio が経済的。
             </p>
           </div>
         </div>

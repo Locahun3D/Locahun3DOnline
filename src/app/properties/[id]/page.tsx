@@ -157,10 +157,21 @@ export default async function PropertyDetailPage({
               </span>
             </div>
             <div className="text-[11px] text-muted mt-2 leading-[1.7]">
-              Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月{" "}
-              {Math.floor(PLAN_TOKEN_BUDGET.individual / property.tokenCost)} 件、
-              Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月{" "}
-              {Math.floor(PLAN_TOKEN_BUDGET.studio / property.tokenCost)} 件まで視聴可能
+              {property.tokenCost === 1 ? (
+                <>
+                  Free ({PLAN_TOKEN_BUDGET.free}t/月) で月 1 件、
+                  Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月 8 件、
+                  Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月 12 件まで視聴可能
+                </>
+              ) : (
+                <>
+                  Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月{" "}
+                  {Math.floor(PLAN_TOKEN_BUDGET.individual / property.tokenCost)} 件、
+                  Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月{" "}
+                  {Math.floor(PLAN_TOKEN_BUDGET.studio / property.tokenCost)} 件まで視聴可能
+                  <span className="block opacity-70 mt-0.5">※ Free プランでは視聴不可</span>
+                </>
+              )}
             </div>
             <Link
               href="/pricing"
