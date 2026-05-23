@@ -279,7 +279,7 @@ export default async function PropertyDetailPage({
               type="button"
               className="w-full mt-6 px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
             >
-              データ販売を相談
+              3D データを購入 (.obj / .ply / .rad)
             </button>
           </div>
         </div>
