@@ -39,8 +39,12 @@ type SortKey =
   | "capacityDesc"
   | "distanceAsc";
 
-const HOURLY_PRESETS = [5000, 10000, 20000, 30000, 50000, 100000];
-const DAILY_PRESETS  = [50000, 100000, 200000, 300000, 500000];
+const HOURLY_PRESETS   = [5000, 10000, 20000, 30000, 50000, 100000];
+const DAILY_PRESETS    = [50000, 100000, 200000, 300000, 500000];
+const DISTANCE_PRESETS = [5, 10, 30, 50, 100, 200];     // km, max
+const CAPACITY_PRESETS = [10, 20, 50, 100];             // 名, min
+const AREA_PRESETS     = [50, 100, 200, 500, 1000];     // ㎡, min
+const CEILING_PRESETS  = [2.5, 3, 4, 5, 7];             // m, min
 
 interface Reference {
   id: string;
@@ -104,8 +108,16 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
 
     const filtered = withDist.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
-      if (area !== "all" && p.area !== area) return false;
-      if (studioType !== "all" && p.studioType !== studioType) return false;
+      // String filters: substring case-insensitive match so typed input works
+      if (area !== "all" && !p.area.toLowerCase().includes(area.toLowerCase())) {
+        return false;
+      }
+      if (
+        studioType !== "all" &&
+        !p.studioType.toLowerCase().includes(studioType.toLowerCase())
+      ) {
+        return false;
+      }
       if (typeof maxPrice === "number" && p.hourlyPrice > maxPrice) return false;
       if (requiresDaily && (!p.dailyPrice || p.dailyPrice <= 0)) return false;
       if (
@@ -313,7 +325,6 @@ interface FiltersProps {
 }
 
 function FiltersBar(props: FiltersProps) {
-  const numberOrEmpty = (v: string) => (v === "" ? "" : Number(v));
   return (
     <div className="border border-line bg-[#080808] p-5 space-y-4">
       {/* Row 1: search + reference + sort */}
@@ -371,92 +382,86 @@ function FiltersBar(props: FiltersProps) {
         </LabeledInput>
 
         <LabeledInput label="スタジオ種類">
-          <select
+          <ComboPicker
             value={props.studioType}
-            onChange={(e) => props.setStudioType(e.target.value)}
-            className={field}
-          >
-            <option value="all" className="bg-bg">すべて</option>
-            {props.studioTypes.map((s) => (
-              <option key={s} value={s} className="bg-bg">{s}</option>
-            ))}
-          </select>
+            onChange={props.setStudioType}
+            options={props.studioTypes}
+            placeholder="すべて (打ち込みも可)"
+          />
         </LabeledInput>
 
         <LabeledInput label="エリア">
-          <select
+          <ComboPicker
             value={props.area}
-            onChange={(e) => props.setArea(e.target.value)}
-            className={field}
-          >
-            <option value="all" className="bg-bg">すべて</option>
-            {props.areas.map((a) => (
-              <option key={a} value={a} className="bg-bg">{a}</option>
-            ))}
-          </select>
+            onChange={props.setArea}
+            options={props.areas}
+            placeholder="すべて (打ち込みも可)"
+          />
         </LabeledInput>
 
         <LabeledInput label="参照から ≤ km">
-          <input
-            type="number"
-            min={0}
-            step={1}
+          <NumberPicker
             value={props.maxKmFromRef}
-            onChange={(e) => props.setMaxKmFromRef(numberOrEmpty(e.target.value))}
+            onChange={props.setMaxKmFromRef}
+            presets={DISTANCE_PRESETS}
+            formatChip={(n) => `≤ ${n}km`}
             placeholder="制限なし"
-            className={field}
+            step={1}
           />
         </LabeledInput>
 
         <LabeledInput label="最大 ¥/hr">
-          <PricePicker
+          <NumberPicker
             value={props.maxPrice}
             onChange={props.setMaxPrice}
             presets={HOURLY_PRESETS}
+            formatChip={fmtYenChip}
             placeholder="上限なし"
+            step={1000}
           />
         </LabeledInput>
 
         <LabeledInput label="最大 ¥/day">
-          <PricePicker
+          <NumberPicker
             value={props.maxDailyPrice}
             onChange={props.setMaxDailyPrice}
             presets={DAILY_PRESETS}
+            formatChip={fmtYenChip}
             placeholder="上限なし"
+            step={5000}
           />
         </LabeledInput>
 
         <LabeledInput label="最低 収容">
-          <input
-            type="number"
-            min={0}
+          <NumberPicker
             value={props.minCapacity}
-            onChange={(e) => props.setMinCapacity(numberOrEmpty(e.target.value))}
+            onChange={props.setMinCapacity}
+            presets={CAPACITY_PRESETS}
+            formatChip={(n) => `≥ ${n}名`}
             placeholder="—"
-            className={field}
+            step={1}
           />
         </LabeledInput>
 
         <LabeledInput label="最低 面積㎡">
-          <input
-            type="number"
-            min={0}
+          <NumberPicker
             value={props.minArea}
-            onChange={(e) => props.setMinArea(numberOrEmpty(e.target.value))}
+            onChange={props.setMinArea}
+            presets={AREA_PRESETS}
+            formatChip={(n) => `≥ ${n}㎡`}
             placeholder="—"
-            className={field}
+            step={10}
           />
         </LabeledInput>
 
         <LabeledInput label="最低 天井m">
-          <input
-            type="number"
-            min={0}
-            step={0.1}
+          <NumberPicker
             value={props.minCeiling}
-            onChange={(e) => props.setMinCeiling(numberOrEmpty(e.target.value))}
+            onChange={props.setMinCeiling}
+            presets={CEILING_PRESETS}
+            formatChip={(n) => `≥ ${n}m`}
             placeholder="—"
-            className={field}
+            step={0.1}
           />
         </LabeledInput>
 
@@ -655,27 +660,30 @@ function Stat({
   );
 }
 
-// --- PricePicker -----------------------------------------------------------
+// --- NumberPicker (generic: input + preset chips) --------------------------
 
-function PricePicker({
+function NumberPicker({
   value,
   onChange,
   presets,
+  formatChip,
   placeholder,
+  step = 1,
 }: {
   value: number | "";
   onChange: (v: number | "") => void;
   presets: number[];
+  /** How each chip is labelled, e.g. "≤ ¥5万" or "≥ 100㎡" */
+  formatChip: (n: number) => string;
   placeholder: string;
+  step?: number;
 }) {
-  const fmtChip = (n: number) =>
-    n >= 10000 ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万` : `¥${n.toLocaleString("ja-JP")}`;
   return (
     <div>
       <input
         type="number"
         min={0}
-        step={1000}
+        step={step}
         value={value}
         onChange={(e) =>
           onChange(e.target.value === "" ? "" : Number(e.target.value))
@@ -695,7 +703,7 @@ function PricePicker({
                 : "border-line text-muted hover:border-ink hover:text-ink"
             }`}
           >
-            ≤ {fmtChip(p)}
+            {formatChip(p)}
           </button>
         ))}
         {value !== "" && (
@@ -704,10 +712,56 @@ function PricePicker({
             onClick={() => onChange("")}
             className="mono text-[9px] tracking-[0.16em] uppercase px-1.5 py-0.5 border border-line text-muted hover:border-accent hover:text-accent transition"
           >
-            ✕ クリア
+            ✕
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Yen chip formatter — "¥5,000" or "¥5万" for tidy display. */
+const fmtYenChip = (n: number) =>
+  n >= 10000
+    ? `≤ ¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万`
+    : `≤ ¥${n.toLocaleString("ja-JP")}`;
+
+// --- ComboPicker (text input + datalist suggestions) -----------------------
+
+let comboId = 0;
+function ComboPicker({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  /** "all" or any string. Empty string is treated as "all" too. */
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder: string;
+}) {
+  // Stable id per instance for datalist linkage
+  const idRef = useRef<string>("");
+  if (!idRef.current) idRef.current = `combo-${++comboId}`;
+  const displayValue = value === "all" ? "" : value;
+  return (
+    <div>
+      <input
+        type="text"
+        list={idRef.current}
+        value={displayValue}
+        onChange={(e) =>
+          onChange(e.target.value.trim() === "" ? "all" : e.target.value)
+        }
+        placeholder={placeholder}
+        className={field}
+      />
+      <datalist id={idRef.current}>
+        {options.map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
     </div>
   );
 }
