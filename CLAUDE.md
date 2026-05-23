@@ -69,9 +69,24 @@
 1. `npm run dev` → `/admin/properties` でリスト
 2. 「＋ 新規物件を作成」 or 既存をクリック
 3. 6 ステップに沿って入力 → ⌘S で都度保存（または各種「保存」ボタン）
-4. 「公開する」で `status='published'` に → 公開側 `/properties` に出る
-5. `git add data/properties.json && git commit && git push` で本番反映
+4. 写真と 3DGS は **ドラッグ&ドロップで自動アップロード**
+   (UPLOAD_MODE=local なら `public/uploads/{propertyId}/`、R2 移行後は presigned PUT)
+5. 「公開する」で `status='published'` に → 公開側 `/properties` に出る
+6. `git add data/properties.json && git commit && git push` で本番反映
    （Cloudflare デプロイ済の場合）
+
+### スキーマの draft / publish 分離
+- `propertySchema`: 下書き許容（全フィールド空 OK、`default()` でフォールバック）
+- `publishablePropertySchema`: 公開時バリデーション（title>=2, summary>=10,
+  cover.src 必須、splatUrl 必須など）
+- 「公開する」アクションは `publishablePropertySchema.safeParse` で弾く →
+  UI 側で赤いエラーバナー表示
+
+### アップロード
+- `src/lib/uploads.ts` の `UPLOAD_MODE` で切替: `local` (デフォルト) / `r2` (TODO)
+- 制限: 画像 25 MB、splat 1 GB
+- 許可: JPEG/PNG/WebP/AVIF/GIF と `.splat`/`.ply`/`.ksplat`
+- `public/uploads/` は git ignore (`.gitkeep` 以外)。本番アセットは R2 に置く前提
 
 ### モックデータの来歴
 seed 時点の 6 件は `picsum.photos/seed/...` の擬似画像、splat は既存 R2 デモ
