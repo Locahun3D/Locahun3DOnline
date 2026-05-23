@@ -158,7 +158,7 @@ export default async function HomePage() {
       {/* CTA */}
       <section className="frame py-32 border-t border-line text-center">
         <div className="serif text-[clamp(1.6rem,3.2vw,2.6rem)] leading-[1.6] max-w-[28ch] mx-auto">
-          下見の往復を、ブラウザ <em className="not-italic text-accent">1 枚</em> に畳む。
+          下見の往復を、<em className="not-italic text-accent">ブラウザ</em>で。
         </div>
         <p className="mt-8 text-[14px] text-muted leading-[2] max-w-[36ch] mx-auto">
           空気、感覚、記憶、アイデア。
