@@ -12,35 +12,12 @@ import {
 
 function newDraft(): Property {
   const now = new Date().toISOString();
+  // Schema defaults fill in empty strings / zero / empty arrays.
   return propertySchema.parse({
     id: nanoid(8),
     status: "draft",
-    title: "新規物件 (下書き)",
     category: "studio",
-    area: "東京中心エリア",
-    prefecture: "東京都",
-    city: "",
-    hourlyPrice: 0,
-    summary: "summary placeholder for the new draft. Replace me.",
-    capacity: 0,
-    floorAreaSqm: 0,
-    ceilingHeightM: 0,
-    hasNaturalLight: false,
-    parking: false,
-    loadingDock: false,
-    tags: [],
-    description: "",
-    cover: {
-      src: "https://picsum.photos/seed/draft/1600/1000",
-      alt: "未設定",
-      width: 1600,
-      height: 1000,
-    },
-    gallery: [],
-    splatUrl: "",
-    splatSizeMb: 0,
-    scannedAt: "",
-    annotations: [],
+    cover: { src: "", alt: "", width: 1600, height: 1000 },
     createdAt: now,
     updatedAt: now,
   });

@@ -38,6 +38,10 @@ yarn-error.log*
 .wrangler/
 .dev.vars
 
+# Local-mode uploads (UPLOAD_MODE=local). Real assets live on R2, not in git.
+/public/uploads/
+!/public/uploads/.gitkeep
+
 # vercel
 .vercel
 

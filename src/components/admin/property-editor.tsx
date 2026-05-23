@@ -19,6 +19,9 @@ import {
   archiveAction,
   deleteAction,
 } from "@/app/admin/_actions";
+import FileDropzone, {
+  type UploadedFile,
+} from "@/components/admin/file-dropzone";
 
 const STEPS = [
   { id: "basic", label: "基本情報" },
@@ -45,7 +48,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     mode: "onBlur",
   });
 
-  const { register, handleSubmit, watch, control, getValues, formState } = form;
+  const { register, handleSubmit, watch, control, getValues, setValue, formState } = form;
 
   const galleryArray = useFieldArray({
     control,
@@ -374,93 +377,124 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <StepCard
               n="04"
               title="写真"
-              desc="カバー画像 1 枚 + ギャラリー（最大 40 枚）。今は URL 入力、R2 直アップロードは Phase 2 で接続します。"
+              desc="カバー画像 1 枚 + ギャラリー（最大 40 枚）。ドラッグ&ドロップで public/uploads/ に保存されます。"
             >
-              <Field
-                label="カバー画像 URL"
-                error={formState.errors.cover?.src?.message}
-                required
-              >
-                <input
-                  type="url"
-                  {...register("cover.src")}
-                  className={inputClass}
-                  placeholder="https://..."
-                />
-              </Field>
-              <Field label="カバー画像 代替テキスト" required>
-                <input type="text" {...register("cover.alt")} className={inputClass} />
-              </Field>
-
-              {watch("cover.src") && (
-                <div className="border border-line bg-[#0a0a0a] p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={watch("cover.src")}
-                    alt="cover preview"
-                    className="w-full max-h-[280px] object-cover"
-                  />
+              {/* COVER */}
+              <div>
+                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-70 mb-1.5">
+                  カバー画像 <span className="text-accent">*</span>
                 </div>
-              )}
+                {watch("cover.src") ? (
+                  <div className="border border-line bg-[#0a0a0a] p-2 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={watch("cover.src")}
+                      alt="cover preview"
+                      className="w-full max-h-[320px] object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("cover.src", "", { shouldDirty: true });
+                        setValue("cover.alt", "", { shouldDirty: true });
+                      }}
+                      className="absolute top-3 right-3 mono text-[10px] tracking-[0.22em] uppercase border border-line bg-bg/80 px-2 py-1 hover:border-accent hover:text-accent transition"
+                    >
+                      差し替え
+                    </button>
+                  </div>
+                ) : (
+                  <FileDropzone
+                    propertyId={initial.id}
+                    kind="image"
+                    accept="image/*"
+                    label="Cover image"
+                    hint="JPEG / PNG / WebP / AVIF / GIF — 25 MB まで"
+                    onUploaded={(f, name) => {
+                      setValue("cover.src", f.url, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      if (!getValues("cover.alt"))
+                        setValue("cover.alt", name.replace(/\.[^.]+$/, ""), {
+                          shouldDirty: true,
+                        });
+                    }}
+                  />
+                )}
+                <Field
+                  label="カバー画像 代替テキスト"
+                  hint="読み上げ・SEO に使われます"
+                  required
+                >
+                  <input
+                    type="text"
+                    {...register("cover.alt")}
+                    className={inputClass}
+                    placeholder="例: 白ホリゾント全景"
+                  />
+                </Field>
+              </div>
 
+              {/* GALLERY */}
               <div>
                 <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
                   ギャラリー ({galleryArray.fields.length} 枚)
                 </div>
-                <div className="space-y-3">
-                  {galleryArray.fields.map((f, i) => (
-                    <div
-                      key={f.id}
-                      className="grid md:grid-cols-[100px_1fr_1fr_60px] gap-3 items-start border border-line p-3"
-                    >
-                      {watch(`gallery.${i}.src`) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={watch(`gallery.${i}.src`)}
-                          alt=""
-                          className="w-full aspect-[4/3] object-cover bg-[#0a0a0a]"
-                        />
-                      ) : (
-                        <div className="w-full aspect-[4/3] bg-[#0a0a0a] flex items-center justify-center mono text-[10px] opacity-40">
-                          no preview
-                        </div>
-                      )}
-                      <input
-                        type="url"
-                        {...register(`gallery.${i}.src` as const)}
-                        className={inputClass}
-                        placeholder="https://..."
-                      />
-                      <input
-                        type="text"
-                        {...register(`gallery.${i}.alt` as const)}
-                        className={inputClass}
-                        placeholder="代替テキスト"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => galleryArray.remove(i)}
-                        className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-2 py-2 hover:border-accent hover:text-accent transition"
+
+                {galleryArray.fields.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    {galleryArray.fields.map((f, i) => (
+                      <div
+                        key={f.id}
+                        className="relative border border-line bg-[#0a0a0a]"
                       >
-                        削除
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
+                        {watch(`gallery.${i}.src`) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={watch(`gallery.${i}.src`)}
+                            alt=""
+                            className="w-full aspect-[4/3] object-cover"
+                          />
+                        ) : (
+                          <div className="w-full aspect-[4/3] flex items-center justify-center mono text-[10px] opacity-40">
+                            no preview
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => galleryArray.remove(i)}
+                          className="absolute top-1.5 right-1.5 mono text-[9px] tracking-[0.22em] uppercase border border-line bg-bg/80 px-1.5 py-0.5 hover:border-accent hover:text-accent transition"
+                        >
+                          ×
+                        </button>
+                        <input
+                          type="text"
+                          {...register(`gallery.${i}.alt` as const)}
+                          className="w-full bg-transparent border-t border-line px-2 py-1.5 text-[11px] mono focus:outline-none focus:border-accent"
+                          placeholder="代替テキスト"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <FileDropzone
+                  propertyId={initial.id}
+                  kind="image"
+                  accept="image/*"
+                  multiple
+                  label="Gallery photos (multi)"
+                  hint="複数同時 OK"
+                  onUploaded={(f, name) => {
                     galleryArray.append({
-                      src: "",
-                      alt: "",
+                      src: f.url,
+                      alt: name.replace(/\.[^.]+$/, ""),
                       width: 1600,
                       height: 1000,
-                    })
-                  }
-                  className="mt-3 mono text-[10px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-accent hover:text-accent transition"
-                >
-                  ＋ 画像を追加
-                </button>
+                    });
+                  }}
+                />
               </div>
             </StepCard>
           )}
@@ -469,11 +503,57 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <StepCard
               n="05"
               title="3DGS データ"
-              desc="Splat ファイル (.splat / .ply) の URL とメタ。アノテーション (マーカー設置) は Phase 2 で実装します。"
+              desc="Splat ファイル (.splat / .ply / .ksplat) をアップロード。アノテーション設置は Phase 2。"
             >
+              {watch("splatUrl") ? (
+                <div className="border border-line bg-[#0a0a0a] p-4 flex items-center gap-4">
+                  <div className="mono text-[24px] text-accent">●</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-1">
+                      Loaded
+                    </div>
+                    <div className="text-[12px] mono truncate">
+                      {watch("splatUrl")}
+                    </div>
+                    <div className="text-[11px] text-muted mt-1">
+                      {watch("splatSizeMb")} MB
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue("splatUrl", "", { shouldDirty: true });
+                      setValue("splatSizeMb", 0, { shouldDirty: true });
+                    }}
+                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+                  >
+                    差し替え
+                  </button>
+                </div>
+              ) : (
+                <FileDropzone
+                  propertyId={initial.id}
+                  kind="splat"
+                  accept=".splat,.ply,.ksplat"
+                  label="3DGS file (.splat / .ply / .ksplat)"
+                  hint="大容量 OK — 1 GB まで"
+                  onUploaded={(f) => {
+                    setValue("splatUrl", new URL(f.url, window.location.origin).toString(), {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                    setValue(
+                      "splatSizeMb",
+                      Math.max(1, Math.round(f.size / 1024 / 1024)),
+                      { shouldDirty: true },
+                    );
+                  }}
+                />
+              )}
+
               <Field
-                label="Splat URL"
-                hint="R2 公開バケットなど直アクセス可能な URL"
+                label="Splat URL (手入力で上書きも可)"
+                hint="既に R2 などに置いてある場合"
                 error={formState.errors.splatUrl?.message}
               >
                 <input
@@ -483,6 +563,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   placeholder="https://pub-....r2.dev/your_scan.splat"
                 />
               </Field>
+
               <div className="grid md:grid-cols-2 gap-5">
                 <Field label="ファイルサイズ (MB)">
                   <input
@@ -509,13 +590,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               <div className="border border-dashed border-line p-6 text-center">
                 <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
-                  ● Coming in Phase 2
+                  ● Phase 2
                 </div>
                 <div className="serif text-lg mb-2">アノテーション設置</div>
                 <p className="text-[12px] text-muted leading-[1.85] max-w-[44ch] mx-auto">
                   3DGS 上に「📍 イベント / 🅿️ 駐車枠 / 🚪 搬入動線 / 📐 採寸」を
-                  クリックで配置できる UI をここに統合します。
-                  当面はメタデータのみで公開可能です。
+                  クリックで配置できる UI を後で統合します
+                  （既存サービスの実装を参照予定）。
+                  現状はメタデータのみで公開可能です。
                 </p>
               </div>
             </StepCard>

@@ -17,9 +17,16 @@ export const ANNOTATION_KINDS = [
   "measurement",
 ] as const;
 
+// Draft-permissive image: src can be empty (placeholder), alt optional.
 export const propertyImageSchema = z.object({
-  src: z.string().url({ message: "URL 形式で入力してください" }),
-  alt: z.string().min(1, "代替テキストを入力してください").max(200),
+  src: z
+    .string()
+    .max(2000)
+    .refine((s) => s === "" || /^https?:\/\//.test(s), {
+      message: "URL 形式で入力してください",
+    })
+    .default(""),
+  alt: z.string().max(200).default(""),
   width: z.number().int().positive().default(1600),
   height: z.number().int().positive().default(1000),
 });
@@ -39,24 +46,19 @@ export const propertySchema = z.object({
   id: z.string().min(1),
   status: z.enum(PROPERTY_STATUSES).default("draft"),
 
-  // 1. Basic
-  title: z
-    .string()
-    .min(2, "タイトルは 2 文字以上で入力してください")
-    .max(120),
+  // 1. Basic (draft-permissive — strictness applied in publishablePropertySchema)
+  title: z.string().max(120).default(""),
   category: z.enum(PROPERTY_CATEGORIES),
-  area: z.string().min(1, "エリアを入力してください").max(40),
-  prefecture: z.string().min(1).max(20),
-  city: z.string().min(1).max(40),
+  area: z.string().max(40).default(""),
+  prefecture: z.string().max(20).default(""),
+  city: z.string().max(40).default(""),
   hourlyPrice: z
     .number({ message: "数値で入力してください" })
     .int()
     .min(0, "0 以上で入力してください")
-    .max(9999999),
-  summary: z
-    .string()
-    .min(10, "10 文字以上で入力してください")
-    .max(200, "200 文字以内で入力してください"),
+    .max(9999999)
+    .default(0),
+  summary: z.string().max(200, "200 文字以内で入力してください").default(""),
 
   // 2. Specs
   capacity: z.number().int().min(0).max(9999).default(0),
@@ -89,13 +91,28 @@ export const propertySchema = z.object({
 });
 
 /**
- * Schema used when publishing — re-validates with stricter rules
- * (cover image and splat URL required, summary not empty, etc.)
+ * Schema used when publishing — re-validates with stricter rules.
+ * All "required for publish" fields are enforced here, not in the draft schema.
  */
 export const publishablePropertySchema = propertySchema.extend({
+  title: z
+    .string()
+    .min(2, "タイトルは 2 文字以上で入力してください")
+    .max(120),
+  area: z.string().min(1, "エリアを入力してください").max(40),
+  prefecture: z.string().min(1, "都道府県を入力してください").max(20),
+  city: z.string().min(1, "市区町村を入力してください").max(40),
+  hourlyPrice: z.number().int().min(1, "料金を入力してください"),
+  summary: z
+    .string()
+    .min(10, "10 文字以上で入力してください")
+    .max(200),
   splatUrl: z.string().url({ message: "公開には 3DGS の URL が必須です" }),
   cover: propertyImageSchema.extend({
-    src: z.string().url({ message: "公開にはカバー画像が必須です" }),
+    src: z
+      .string()
+      .url({ message: "公開にはカバー画像が必須です" }),
+    alt: z.string().min(1, "カバー画像の代替テキストを入力してください"),
   }),
 });
 
