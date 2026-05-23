@@ -25,13 +25,15 @@ export default async function HomePage() {
         </div>
 
         <h1 className="serif font-light text-[clamp(2.4rem,5.6vw,5.4rem)] leading-[1.3] tracking-[0.03em] max-w-[18ch]">
-          オンラインで <em className="not-italic font-bold">ロケハン</em> が
+          オンラインで
+          <br />
+          <em className="not-italic font-bold">ロケハン</em> が
           <br />
           出来る時代。
         </h1>
 
         <p className="mt-10 max-w-[40ch] text-[15px] text-muted leading-[1.9]">
-          スタジオ・倉庫・住宅・屋外ロケ地を 3D Gaussian Splatting で取り込み、
+          スタジオ・倉庫・住宅・屋外ロケ地を 3D で取り込み、
           ブラウザだけで構図・レンズ・光・人の流れを撮影前に検証できる
           オンライン・ロケハンプラットフォーム。
         </p>
