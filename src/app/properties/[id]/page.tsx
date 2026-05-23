@@ -159,9 +159,9 @@ export default async function PropertyDetailPage({
             <div className="text-[11px] text-muted mt-2 leading-[1.7]">
               {property.tokenCost === 1 ? (
                 <>
-                  Free ({PLAN_TOKEN_BUDGET.free}t/月) で月 1 件、
+                  Free 登録特典の 1 トークンで 1 件視聴可能。<br />
                   Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月 8 件、
-                  Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月 12 件まで視聴可能
+                  Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月 12 件まで継続視聴。
                 </>
               ) : (
                 <>
@@ -169,7 +169,9 @@ export default async function PropertyDetailPage({
                   {Math.floor(PLAN_TOKEN_BUDGET.individual / property.tokenCost)} 件、
                   Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月{" "}
                   {Math.floor(PLAN_TOKEN_BUDGET.studio / property.tokenCost)} 件まで視聴可能
-                  <span className="block opacity-70 mt-0.5">※ Free プランでは視聴不可</span>
+                  <span className="block opacity-70 mt-0.5">
+                    ※ Free の登録時 1 トークンではハウススタジオ (1t) のみ視聴可
+                  </span>
                 </>
               )}
             </div>

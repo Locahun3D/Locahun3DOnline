@@ -197,12 +197,16 @@ export const TOKEN_COST_LABEL: Record<1 | 2 | 3, string> = {
   3: "ドーム / 大規模",
 };
 
+/** Monthly recurring token budget per plan (resets on the 1st). */
 export const PLAN_TOKEN_BUDGET = {
-  free: 1,       // 1 token / month — house studios only (medium 2t / dome 3t out of reach)
+  free: 0,       // free has no monthly budget — only the signup bonus below
   individual: 8,
   studio: 12,
   team: 30,
 } as const;
+
+/** One-time bonus tokens granted at account creation. Currently only used by Free. */
+export const SIGNUP_BONUS_TOKENS = 1;
 
 /** 3DGS data resale price by size class (per scan; "ドーム" is per zone/区画). */
 export const DATA_SALE_PRICE: Record<1 | 2 | 3, number> = {
