@@ -1,9 +1,14 @@
 import Link from "next/link";
-import { PROPERTIES, CATEGORY_LABEL } from "@/lib/properties";
+import {
+  getPublishedProperties,
+  CATEGORY_LABEL,
+} from "@/lib/properties";
+import type { PropertyCategory } from "@/lib/properties";
 import PropertyCard from "@/components/property-card";
 
-export default function HomePage() {
-  const featured = PROPERTIES.slice(0, 3);
+export default async function HomePage() {
+  const all = await getPublishedProperties();
+  const featured = all.slice(0, 3);
   return (
     <>
       {/* HERO */}
@@ -107,7 +112,7 @@ export default function HomePage() {
             href="/properties"
             className="inline-block mono text-[12px] tracking-[0.28em] uppercase pb-1 border-b border-line hover:border-accent hover:text-accent transition"
           >
-            すべての物件を見る ({PROPERTIES.length}件) →
+            すべての物件を見る ({all.length}件) →
           </Link>
         </div>
       </section>
@@ -121,25 +126,23 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-px bg-line">
-          {(Object.keys(CATEGORY_LABEL) as Array<keyof typeof CATEGORY_LABEL>).map(
-            (cat) => (
-              <Link
-                key={cat}
-                href={`/properties?category=${cat}`}
-                className="group bg-bg p-8 flex flex-col gap-3 hover:bg-[#0a0a0a] transition"
-              >
-                <div className="mono text-[10px] tracking-[0.3em] uppercase opacity-50">
-                  {cat}
-                </div>
-                <div className="serif text-xl group-hover:text-accent transition">
-                  {CATEGORY_LABEL[cat]}
-                </div>
-                <div className="mono text-[10px] opacity-40 mt-auto pt-4">
-                  {PROPERTIES.filter((p) => p.category === cat).length} 件
-                </div>
-              </Link>
-            ),
-          )}
+          {(Object.keys(CATEGORY_LABEL) as PropertyCategory[]).map((cat) => (
+            <Link
+              key={cat}
+              href={`/properties?category=${cat}`}
+              className="group bg-bg p-8 flex flex-col gap-3 hover:bg-[#0a0a0a] transition"
+            >
+              <div className="mono text-[10px] tracking-[0.3em] uppercase opacity-50">
+                {cat}
+              </div>
+              <div className="serif text-xl group-hover:text-accent transition">
+                {CATEGORY_LABEL[cat]}
+              </div>
+              <div className="mono text-[10px] opacity-40 mt-auto pt-4">
+                {all.filter((p) => p.category === cat).length} 件
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 

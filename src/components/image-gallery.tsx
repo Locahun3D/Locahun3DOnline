@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { PropertyImage } from "@/lib/properties";
+import type { PropertyImage } from "@/lib/schemas";
 
 export default function ImageGallery({ images }: { images: PropertyImage[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);

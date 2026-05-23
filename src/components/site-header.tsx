@@ -55,6 +55,15 @@ export default function SiteHeader() {
           >
             Get started
           </Link>
+          {process.env.NODE_ENV !== "production" && (
+            <Link
+              href="/admin"
+              title="Dev only"
+              className="hidden md:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line ml-2 pl-3 hover:text-accent transition"
+            >
+              ⚙ Admin
+            </Link>
+          )}
         </div>
       </div>
     </header>

@@ -1,11 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getProperty, PROPERTIES, CATEGORY_LABEL } from "@/lib/properties";
+import {
+  getPublishedProperty,
+  getPublishedProperties,
+  CATEGORY_LABEL,
+} from "@/lib/properties";
 import ImageGallery from "@/components/image-gallery";
 import ViewerGate from "@/components/viewer-gate";
 
-export function generateStaticParams() {
-  return PROPERTIES.map((p) => ({ id: p.id }));
+export async function generateStaticParams() {
+  const all = await getPublishedProperties();
+  return all.map((p) => ({ id: p.id }));
 }
 
 export async function generateMetadata({
@@ -14,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const p = getProperty(id);
+  const p = await getPublishedProperty(id);
   if (!p) return { title: "Not found" };
   return {
     title: p.title,
@@ -29,15 +34,20 @@ export default async function PropertyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const property = getProperty(id);
+  const property = await getPublishedProperty(id);
   if (!property) notFound();
 
+  const others = (await getPublishedProperties())
+    .filter((p) => p.id !== property.id)
+    .slice(0, 3);
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
   return (
     <article className="frame pt-10 pb-24">
       <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-6 flex gap-2 items-center">
-        <Link href="/properties" className="hover:text-accent">CATALOG</Link>
+        <Link href="/properties" className="hover:text-accent">
+          CATALOG
+        </Link>
         <span>/</span>
         <span>{CATEGORY_LABEL[property.category]}</span>
         <span>/</span>
@@ -75,25 +85,47 @@ export default async function PropertyDetailPage({
             </div>
             <div className="mt-1">
               <span className="serif text-4xl text-accent">¥{yen}</span>
-              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
+              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
+                /hr
+              </span>
             </div>
           </div>
 
           <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">面積</dt>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              面積
+            </dt>
             <dd className="text-right">{property.floorAreaSqm} ㎡</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">天井高</dt>
-            <dd className="text-right">{property.ceilingHeightM || "—"} m</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">収容</dt>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              天井高
+            </dt>
+            <dd className="text-right">
+              {property.ceilingHeightM || "—"} m
+            </dd>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              収容
+            </dt>
             <dd className="text-right">{property.capacity} 名</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">自然光</dt>
-            <dd className="text-right">{property.hasNaturalLight ? "あり" : "なし"}</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">駐車</dt>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              自然光
+            </dt>
+            <dd className="text-right">
+              {property.hasNaturalLight ? "あり" : "なし"}
+            </dd>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              駐車
+            </dt>
             <dd className="text-right">{property.parking ? "可" : "不可"}</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">搬入口</dt>
-            <dd className="text-right">{property.loadingDock ? "大" : "通常"}</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">スキャン</dt>
-            <dd className="text-right">{property.scannedAt}</dd>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              搬入口
+            </dt>
+            <dd className="text-right">
+              {property.loadingDock ? "大" : "通常"}
+            </dd>
+            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
+              スキャン
+            </dt>
+            <dd className="text-right">{property.scannedAt || "—"}</dd>
           </dl>
 
           <div className="pt-4 border-t border-line space-y-2">
@@ -136,23 +168,26 @@ export default async function PropertyDetailPage({
       </section>
 
       {/* Related */}
-      <section>
-        <div className="chapter-rule">
-          <span className="opacity-60">RELATED</span>
-          <span>Other Locations</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {PROPERTIES.filter((p) => p.id !== property.id)
-            .slice(0, 3)
-            .map((p) => (
+      {others.length > 0 && (
+        <section>
+          <div className="chapter-rule">
+            <span className="opacity-60">RELATED</span>
+            <span>Other Locations</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {others.map((p) => (
               <Link
                 key={p.id}
                 href={`/properties/${p.id}`}
                 className="group block border border-line overflow-hidden hover:border-accent transition"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.cover.src} alt={p.cover.alt} className="w-full aspect-[16/10] object-cover" />
+                <img
+                  src={p.cover.src}
+                  alt={p.cover.alt}
+                  className="w-full aspect-[16/10] object-cover"
+                />
                 <div className="p-4">
                   <div className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
                     {p.city}
@@ -163,8 +198,9 @@ export default async function PropertyDetailPage({
                 </div>
               </Link>
             ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
     </article>
   );
 }

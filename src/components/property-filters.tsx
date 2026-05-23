@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORY_LABEL, type PropertyCategory } from "@/lib/properties";
+import { CATEGORY_LABEL, type PropertyCategory } from "@/lib/schemas";
 
 interface Defaults {
   category: PropertyCategory | "all";

@@ -1,10 +1,10 @@
 import {
-  PROPERTIES,
-  AREAS,
+  getPublishedProperties,
+  getAllAreas,
   CATEGORY_LABEL,
   filterProperties,
-  type PropertyCategory,
 } from "@/lib/properties";
+import type { PropertyCategory } from "@/lib/properties";
 import PropertyCard from "@/components/property-card";
 import PropertyFilters from "@/components/property-filters";
 
@@ -27,7 +27,8 @@ export default async function PropertiesPage({
   searchParams: Promise<SP>;
 }) {
   const sp = await searchParams;
-  const category = (pick(sp, "category") as PropertyCategory | "all" | undefined) ?? "all";
+  const category =
+    (pick(sp, "category") as PropertyCategory | "all" | undefined) ?? "all";
   const area = pick(sp, "area") ?? "all";
   const q = pick(sp, "q") ?? "";
   const maxPriceRaw = pick(sp, "maxPrice");
@@ -35,7 +36,10 @@ export default async function PropertiesPage({
   const maxPrice = maxPriceRaw ? Number(maxPriceRaw) : undefined;
   const minCeiling = minCeilingRaw ? Number(minCeilingRaw) : undefined;
 
-  const filtered = filterProperties(PROPERTIES, {
+  const all = await getPublishedProperties();
+  const areas = await getAllAreas();
+
+  const filtered = filterProperties(all, {
     category,
     area,
     q,
@@ -49,7 +53,9 @@ export default async function PropertiesPage({
         <span className="opacity-60">CATALOG</span>
         <span>Find a Location</span>
         <span className="flex-1 h-px bg-current opacity-25" />
-        <span className="opacity-60">{filtered.length} / {PROPERTIES.length}</span>
+        <span className="opacity-60">
+          {filtered.length} / {all.length}
+        </span>
       </div>
 
       <header className="mb-10">
@@ -58,13 +64,14 @@ export default async function PropertiesPage({
         </h1>
         <p className="text-[14px] text-muted max-w-[60ch] leading-[1.85]">
           条件で絞り込んで、サムネイルから 3DGS ビューアー付きの物件詳細へ。
-          下見は <em className="not-italic text-accent">画面の中で</em> 完結します。
+          下見は <em className="not-italic text-accent">画面の中で</em>{" "}
+          完結します。
         </p>
       </header>
 
       <PropertyFilters
         defaults={{ category, area, q, maxPrice, minCeiling }}
-        areas={AREAS}
+        areas={areas}
         categories={Object.keys(CATEGORY_LABEL) as PropertyCategory[]}
       />
 

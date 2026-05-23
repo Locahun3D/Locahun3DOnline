@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { Property } from "@/lib/properties";
-import { CATEGORY_LABEL } from "@/lib/properties";
+import type { Property } from "@/lib/schemas";
+import { CATEGORY_LABEL } from "@/lib/schemas";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
