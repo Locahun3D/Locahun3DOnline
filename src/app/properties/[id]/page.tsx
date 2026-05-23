@@ -243,42 +243,28 @@ export default async function PropertyDetailPage({
             </p>
           </div>
 
-          <div className="border-l border-accent/40 pl-6 space-y-3">
+          <div className="border-l border-accent/40 pl-6 flex flex-col justify-center">
             <div>
               <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-1">
-                基準価格
+                ライセンス価格
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="serif text-3xl text-accent">
+                <span className="serif text-4xl text-accent">
                   ¥{DATA_SALE_PRICE[property.tokenCost].toLocaleString("ja-JP")}
                 </span>
               </div>
               {property.tokenCost === 3 && (
-                <div className="mono text-[10px] text-muted">/ 区画</div>
+                <div className="mono text-[10px] text-muted mt-1">/ 区画</div>
               )}
-            </div>
-
-            <div className="border-t border-accent/30 pt-3 space-y-1.5">
-              <div className="mono text-[10px] tracking-[0.24em] uppercase opacity-60">
-                サブスク割引
-              </div>
-              <div className="text-[12px] flex justify-between">
-                <span className="text-muted">Studio 10% OFF:</span>
-                <span className="text-accent">
-                  ¥{Math.round(DATA_SALE_PRICE[property.tokenCost] * 0.9).toLocaleString("ja-JP")}
-                </span>
-              </div>
-              <div className="text-[12px] flex justify-between">
-                <span className="text-muted">Team 20% OFF:</span>
-                <span className="text-accent">
-                  ¥{Math.round(DATA_SALE_PRICE[property.tokenCost] * 0.8).toLocaleString("ja-JP")}
-                </span>
+              <div className="text-[11px] text-muted mt-3 leading-[1.65]">
+                サブスクの月次トークン (視聴権) とは別商品です。
+                プラン契約の有無に関わらず同一価格。
               </div>
             </div>
 
             <button
               type="button"
-              className="w-full mt-4 px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+              className="w-full mt-6 px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
             >
               データ販売を相談
             </button>

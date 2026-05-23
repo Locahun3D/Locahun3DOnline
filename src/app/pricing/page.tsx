@@ -21,7 +21,6 @@ const COMPARE_ROWS: Array<{
   { label: "3DGS ウォークスルー",    free: "生涯 1 件", individual: "月 8 トークン",  studio: "月 12 トークン", team: "月 30 トークン" },
   { label: "ログイン端末数",         free: "—",       individual: "制限なし", studio: "5 端末",   team: "20 端末" },
   { label: "見積もり依頼",           free: "月 1 件", individual: "無制限",   studio: "無制限",   team: "無制限" },
-  { label: "3DGS データ販売 割引",   free: "—",       individual: "—",        studio: "10% OFF",  team: "20% OFF" },
   { label: "請求書 / 電子帳簿対応",  free: "—",       individual: "—",        studio: "—",        team: "✓" },
   { label: "年払 -15% 適用",         free: "—",       individual: "✓",        studio: "✓",        team: "✓" },
 ];
@@ -190,14 +189,9 @@ export default function PricingPage() {
                   複数区画ある物件は区画数に応じて
                 </div>
               </div>
-              <div className="border-t border-accent/40 pt-3">
-                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-1">
-                  サブスク特典
-                </div>
-                <ul className="text-[11px] text-muted space-y-1">
-                  <li>▸ Studio: <span className="text-accent">10% OFF</span></li>
-                  <li>▸ Team: <span className="text-accent">20% OFF</span></li>
-                </ul>
+              <div className="border-t border-accent/40 pt-3 text-[11px] text-muted leading-[1.65]">
+                サブスクの月次トークン (視聴権) とは別商品です。
+                プラン契約有無に関わらず同一価格でご提供します。
               </div>
             </div>
           </div>
