@@ -58,8 +58,15 @@ export default function PropertyCard({ property }: { property: Property }) {
 
         <div className="flex items-baseline justify-between pt-3 border-t border-line">
           <div>
-            <span className="serif text-2xl text-accent">¥{yen}</span>
-            <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
+            <div>
+              <span className="serif text-2xl text-accent">¥{yen}</span>
+              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
+            </div>
+            {property.dailyPrice > 0 && (
+              <div className="mono text-[10px] text-muted mt-0.5">
+                Day: ¥{property.dailyPrice.toLocaleString("ja-JP")}
+              </div>
+            )}
           </div>
           <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60 group-hover:text-accent group-hover:opacity-100 transition">
             詳細を見る →

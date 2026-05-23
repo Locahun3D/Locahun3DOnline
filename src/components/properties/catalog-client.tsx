@@ -32,10 +32,15 @@ type SortKey =
   | "newest"
   | "priceAsc"
   | "priceDesc"
+  | "dailyAsc"
+  | "dailyDesc"
   | "ceilingDesc"
   | "areaDesc"
   | "capacityDesc"
   | "distanceAsc";
+
+const HOURLY_PRESETS = [5000, 10000, 20000, 30000, 50000, 100000];
+const DAILY_PRESETS  = [50000, 100000, 200000, 300000, 500000];
 
 interface Reference {
   id: string;
@@ -61,6 +66,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
   const [area, setArea] = useState<string>("all");
   const [studioType, setStudioType] = useState<string>("all");
   const [maxPrice, setMaxPrice] = useState<number | "">("");
+  const [maxDailyPrice, setMaxDailyPrice] = useState<number | "">("");
+  const [requiresDaily, setRequiresDaily] = useState(false);
   const [minCapacity, setMinCapacity] = useState<number | "">("");
   const [minArea, setMinArea] = useState<number | "">("");
   const [minCeiling, setMinCeiling] = useState<number | "">("");
@@ -77,6 +84,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setArea("all");
     setStudioType("all");
     setMaxPrice("");
+    setMaxDailyPrice("");
+    setRequiresDaily(false);
     setMinCapacity("");
     setMinArea("");
     setMinCeiling("");
@@ -98,6 +107,13 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
       if (area !== "all" && p.area !== area) return false;
       if (studioType !== "all" && p.studioType !== studioType) return false;
       if (typeof maxPrice === "number" && p.hourlyPrice > maxPrice) return false;
+      if (requiresDaily && (!p.dailyPrice || p.dailyPrice <= 0)) return false;
+      if (
+        typeof maxDailyPrice === "number" &&
+        (!p.dailyPrice || p.dailyPrice > maxDailyPrice)
+      ) {
+        return false;
+      }
       if (typeof minCapacity === "number" && p.capacity < minCapacity) return false;
       if (typeof minArea === "number" && p.floorAreaSqm < minArea) return false;
       if (typeof minCeiling === "number" && p.ceilingHeightM < minCeiling) return false;
@@ -121,6 +137,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
       switch (sort) {
         case "priceAsc":      return a.hourlyPrice - b.hourlyPrice;
         case "priceDesc":     return b.hourlyPrice - a.hourlyPrice;
+        case "dailyAsc":      return (a.dailyPrice || Infinity) - (b.dailyPrice || Infinity);
+        case "dailyDesc":     return (b.dailyPrice || 0) - (a.dailyPrice || 0);
         case "ceilingDesc":   return b.ceilingHeightM - a.ceilingHeightM;
         case "areaDesc":      return b.floorAreaSqm - a.floorAreaSqm;
         case "capacityDesc":  return b.capacity - a.capacity;
@@ -143,6 +161,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     area,
     studioType,
     maxPrice,
+    maxDailyPrice,
+    requiresDaily,
     minCapacity,
     minArea,
     minCeiling,
@@ -202,6 +222,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
         area={area} setArea={setArea}
         studioType={studioType} setStudioType={setStudioType}
         maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+        maxDailyPrice={maxDailyPrice} setMaxDailyPrice={setMaxDailyPrice}
+        requiresDaily={requiresDaily} setRequiresDaily={setRequiresDaily}
         minCapacity={minCapacity} setMinCapacity={setMinCapacity}
         minArea={minArea} setMinArea={setMinArea}
         minCeiling={minCeiling} setMinCeiling={setMinCeiling}
@@ -274,6 +296,8 @@ interface FiltersProps {
   area: string; setArea: (v: string) => void;
   studioType: string; setStudioType: (v: string) => void;
   maxPrice: number | ""; setMaxPrice: (v: number | "") => void;
+  maxDailyPrice: number | ""; setMaxDailyPrice: (v: number | "") => void;
+  requiresDaily: boolean; setRequiresDaily: (v: boolean) => void;
   minCapacity: number | ""; setMinCapacity: (v: number | "") => void;
   minArea: number | ""; setMinArea: (v: number | "") => void;
   minCeiling: number | ""; setMinCeiling: (v: number | "") => void;
@@ -320,8 +344,10 @@ function FiltersBar(props: FiltersProps) {
           >
             <option value="newest" className="bg-bg">新着順</option>
             <option value="distanceAsc" className="bg-bg">近い順 (参照地点から)</option>
-            <option value="priceAsc" className="bg-bg">料金 安い順</option>
-            <option value="priceDesc" className="bg-bg">料金 高い順</option>
+            <option value="priceAsc" className="bg-bg">時間料金 安い順</option>
+            <option value="priceDesc" className="bg-bg">時間料金 高い順</option>
+            <option value="dailyAsc" className="bg-bg">日料金 安い順</option>
+            <option value="dailyDesc" className="bg-bg">日料金 高い順</option>
             <option value="ceilingDesc" className="bg-bg">天井高 高い順</option>
             <option value="areaDesc" className="bg-bg">床面積 広い順</option>
             <option value="capacityDesc" className="bg-bg">収容 多い順</option>
@@ -383,14 +409,20 @@ function FiltersBar(props: FiltersProps) {
         </LabeledInput>
 
         <LabeledInput label="最大 ¥/hr">
-          <input
-            type="number"
-            min={0}
-            step={1000}
+          <PricePicker
             value={props.maxPrice}
-            onChange={(e) => props.setMaxPrice(numberOrEmpty(e.target.value))}
+            onChange={props.setMaxPrice}
+            presets={HOURLY_PRESETS}
             placeholder="上限なし"
-            className={field}
+          />
+        </LabeledInput>
+
+        <LabeledInput label="最大 ¥/day">
+          <PricePicker
+            value={props.maxDailyPrice}
+            onChange={props.setMaxDailyPrice}
+            presets={DAILY_PRESETS}
+            placeholder="上限なし"
           />
         </LabeledInput>
 
@@ -425,6 +457,14 @@ function FiltersBar(props: FiltersProps) {
             onChange={(e) => props.setMinCeiling(numberOrEmpty(e.target.value))}
             placeholder="—"
             className={field}
+          />
+        </LabeledInput>
+
+        <LabeledInput label="日料金あり">
+          <ToggleSwitch
+            value={props.requiresDaily}
+            onChange={props.setRequiresDaily}
+            label="必須"
           />
         </LabeledInput>
 
@@ -577,10 +617,17 @@ function PropertyCardLite({
 
         <div className="flex items-baseline justify-between pt-2 border-t border-line">
           <div>
-            <span className="serif text-xl text-accent">¥{yen}</span>
-            <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
-              /hr
-            </span>
+            <div>
+              <span className="serif text-xl text-accent">¥{yen}</span>
+              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
+                /hr
+              </span>
+            </div>
+            {property.dailyPrice > 0 && (
+              <div className="mono text-[10px] text-muted mt-0.5">
+                Day: ¥{property.dailyPrice.toLocaleString("ja-JP")}
+              </div>
+            )}
           </div>
           <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-60">
             詳細 →
@@ -604,6 +651,63 @@ function Stat({
     <div className="border-l border-line pl-2">
       <div className="opacity-50 text-[9px] uppercase tracking-[0.2em]">{label}</div>
       <div className={accent ? "text-accent" : "text-ink"}>{value}</div>
+    </div>
+  );
+}
+
+// --- PricePicker -----------------------------------------------------------
+
+function PricePicker({
+  value,
+  onChange,
+  presets,
+  placeholder,
+}: {
+  value: number | "";
+  onChange: (v: number | "") => void;
+  presets: number[];
+  placeholder: string;
+}) {
+  const fmtChip = (n: number) =>
+    n >= 10000 ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万` : `¥${n.toLocaleString("ja-JP")}`;
+  return (
+    <div>
+      <input
+        type="number"
+        min={0}
+        step={1000}
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value === "" ? "" : Number(e.target.value))
+        }
+        placeholder={placeholder}
+        className={field}
+      />
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {presets.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(p)}
+            className={`mono text-[9px] tracking-[0.16em] uppercase px-1.5 py-0.5 border transition ${
+              value === p
+                ? "border-accent text-accent"
+                : "border-line text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            ≤ {fmtChip(p)}
+          </button>
+        ))}
+        {value !== "" && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="mono text-[9px] tracking-[0.16em] uppercase px-1.5 py-0.5 border border-line text-muted hover:border-accent hover:text-accent transition"
+          >
+            ✕ クリア
+          </button>
+        )}
+      </div>
     </div>
   );
 }

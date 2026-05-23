@@ -58,6 +58,13 @@ export const propertySchema = z.object({
     .min(0, "0 以上で入力してください")
     .max(9999999)
     .default(0),
+  /** Daily rate in JPY. 0 means "not offered as a daily plan" — only hourly. */
+  dailyPrice: z
+    .number({ message: "数値で入力してください" })
+    .int()
+    .min(0)
+    .max(99999999)
+    .default(0),
   summary: z.string().max(200, "200 文字以内で入力してください").default(""),
 
   // 1.5 — Studio kind (subdivides `category`, free-text with suggestions)

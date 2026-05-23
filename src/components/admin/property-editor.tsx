@@ -275,7 +275,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </datalist>
                 </Field>
                 <Field
-                  label="貸出料金 (¥/hr)"
+                  label="時間料金 (¥/hr)"
                   error={formState.errors.hourlyPrice?.message}
                   required
                 >
@@ -288,6 +288,21 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   />
                 </Field>
               </div>
+
+              <Field
+                label="日料金 (¥/day)"
+                hint="日貸しを行う場合のみ入力。0 のままだと「日貸し非対応」扱い。"
+                error={formState.errors.dailyPrice?.message}
+              >
+                <input
+                  type="number"
+                  min={0}
+                  step={5000}
+                  {...register("dailyPrice", { valueAsNumber: true })}
+                  className={inputClass}
+                  placeholder="0 = 日貸しなし"
+                />
+              </Field>
 
               <div className="grid md:grid-cols-3 gap-5">
                 <Field label="エリア" error={formState.errors.area?.message} required>

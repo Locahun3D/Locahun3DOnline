@@ -89,6 +89,14 @@ export default async function PropertyDetailPage({
                 /hr
               </span>
             </div>
+            {property.dailyPrice > 0 ? (
+              <div className="mt-2 mono text-[12px]">
+                日貸し: <span className="text-accent">¥{property.dailyPrice.toLocaleString("ja-JP")}</span>
+                <span className="opacity-50 ml-1">/day</span>
+              </div>
+            ) : (
+              <div className="mt-2 mono text-[10px] opacity-50">日貸し非対応</div>
+            )}
           </div>
 
           <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
