@@ -22,7 +22,6 @@ export default function SiteFooter() {
           <ul className="space-y-2 text-sm">
             <li><Link href="/properties" className="hover:text-accent">物件を探す</Link></li>
             <li><Link href="/pricing" className="hover:text-accent">料金プラン</Link></li>
-            <li><Link href="/marketplace" className="hover:text-accent">3Dデータ販売</Link></li>
             <li><a href="https://viewer.locahun3d.com/Locahun3D_OfflineViewer" className="hover:text-accent" target="_blank" rel="noopener">オフラインビューアー</a></li>
           </ul>
         </div>

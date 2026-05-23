@@ -4,8 +4,7 @@ import UserNav from "@/components/user-nav";
 const NAV = [
   { href: "/properties", label: "物件を探す", code: "0.1" },
   { href: "/pricing", label: "料金", code: "0.2" },
-  { href: "/marketplace", label: "3Dデータ販売", code: "0.3" },
-  { href: "/about", label: "サービスについて", code: "0.4" },
+  { href: "/about", label: "サービスについて", code: "0.3" },
 ];
 
 export default function SiteHeader() {

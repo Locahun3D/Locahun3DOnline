@@ -12,7 +12,6 @@ import {
   PROPERTY_CATEGORIES,
   STUDIO_TYPE_SUGGESTIONS,
   TOKEN_COST_LABEL,
-  DATA_SALE_PRICE,
   type Property,
 } from "@/lib/schemas";
 import {
@@ -652,7 +651,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               <Field
                 label="トークンコスト (1 件視聴の消費数)"
-                hint="閲覧者のサブスクは月次トークン制。データ販売価格もこれで決まる。"
+                hint="閲覧者のサブスクは月次トークン制。サイズが大きいほど消費トークン多。"
               >
                 <select
                   {...register("tokenCost", { valueAsNumber: true })}
@@ -661,8 +660,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   {([1, 2, 3] as const).map((n) => (
                     <option key={n} value={n} className="bg-bg">
                       {n} トークン — {TOKEN_COST_LABEL[n]}
-                      {" / "}データ販売 ¥{DATA_SALE_PRICE[n].toLocaleString("ja-JP")}
-                      {n === 3 ? " (区画ごと)" : ""}
                     </option>
                   ))}
                 </select>

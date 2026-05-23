@@ -7,7 +7,6 @@ import {
 } from "@/lib/properties";
 import {
   TOKEN_COST_LABEL,
-  DATA_SALE_PRICE,
   PLAN_TOKEN_BUDGET,
 } from "@/lib/schemas";
 import ImageGallery from "@/components/image-gallery";
@@ -224,65 +223,6 @@ export default async function PropertyDetailPage({
           <span className="opacity-60">{property.gallery.length} 枚</span>
         </div>
         <ImageGallery images={[property.cover, ...property.gallery]} />
-      </section>
-
-      {/* Data sale */}
-      <section className="mb-16">
-        <div className="chapter-rule">
-          <span className="opacity-60">DATA SALE</span>
-          <span>3DGS データ買い切り</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-        </div>
-
-        <div className="grid lg:grid-cols-[1fr_360px] gap-6 border border-accent bg-[#0c0905] p-7">
-          <div>
-            <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-              ONE-TIME LICENSE
-            </div>
-            <h3 className="serif text-2xl font-light mb-3">
-              このスタジオの 3DGS データを買い切る
-            </h3>
-            <p className="text-[13px] text-muted leading-[1.85] max-w-[58ch] mb-3">
-              splat / ply 形式の生データを、社内プリビズ・Unreal/Unity 取込・自社配布など
-              <strong className="text-ink">二次利用権付き</strong>で販売。
-              ウォークスルー視聴とは別の買い切り商品です。
-            </p>
-            <p className="text-[12px] text-muted leading-[1.75]">
-              スタジオ規模:{" "}
-              <span className="text-ink">{TOKEN_COST_LABEL[property.tokenCost]}</span>
-              {property.tokenCost === 3 && (
-                <span className="opacity-70">（区画ごとの単価）</span>
-              )}
-            </p>
-          </div>
-
-          <div className="border-l border-accent/40 pl-6 flex flex-col justify-center">
-            <div>
-              <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-1">
-                ライセンス価格
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="serif text-4xl text-accent">
-                  ¥{DATA_SALE_PRICE[property.tokenCost].toLocaleString("ja-JP")}
-                </span>
-              </div>
-              {property.tokenCost === 3 && (
-                <div className="mono text-[10px] text-muted mt-1">/ 区画</div>
-              )}
-              <div className="text-[11px] text-muted mt-3 leading-[1.65]">
-                サブスクの月次トークン (視聴権) とは別商品です。
-                プラン契約の有無に関わらず同一価格。
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="w-full mt-6 px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
-            >
-              3D データを購入 (.obj / .ply / .rad)
-            </button>
-          </div>
-        </div>
       </section>
 
       {/* Related */}
