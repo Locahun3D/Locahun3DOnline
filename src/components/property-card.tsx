@@ -1,0 +1,71 @@
+import Link from "next/link";
+import type { Property } from "@/lib/properties";
+import { CATEGORY_LABEL } from "@/lib/properties";
+
+export default function PropertyCard({ property }: { property: Property }) {
+  const yen = property.hourlyPrice.toLocaleString("ja-JP");
+  return (
+    <Link
+      href={`/properties/${property.id}`}
+      className="group block border border-line bg-bg overflow-hidden hover:border-accent transition"
+    >
+      <div className="relative aspect-[16/10] bg-[#0a0a0a] overflow-hidden">
+        {/* Using img instead of next/image to skip remote domain config for the mock data */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={property.cover.src}
+          alt={property.cover.alt}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
+        <div className="absolute top-3 left-3 mono text-[10px] tracking-[0.28em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
+          {CATEGORY_LABEL[property.category]}
+        </div>
+        <div className="absolute top-3 right-3 mono text-[10px] tracking-[0.28em] uppercase bg-accent text-bg px-2 py-1">
+          3DGS
+        </div>
+        <div className="absolute bottom-3 left-3 mono text-[10px] tracking-[0.24em] opacity-80">
+          {property.id.toUpperCase()}
+        </div>
+      </div>
+
+      <div className="p-5 flex flex-col gap-3">
+        <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
+          {property.prefecture} / {property.city}
+        </div>
+        <h3 className="serif text-[1.15rem] leading-[1.5] group-hover:text-accent transition">
+          {property.title}
+        </h3>
+        <p className="text-[13px] leading-[1.7] text-muted line-clamp-2">
+          {property.summary}
+        </p>
+
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] mono text-muted">
+          <div>
+            <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">面積</div>
+            <div className="text-ink">{property.floorAreaSqm}㎡</div>
+          </div>
+          <div>
+            <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">天井</div>
+            <div className="text-ink">{property.ceilingHeightM || "—"}m</div>
+          </div>
+          <div>
+            <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">収容</div>
+            <div className="text-ink">{property.capacity}名</div>
+          </div>
+        </div>
+
+        <div className="flex items-baseline justify-between pt-3 border-t border-line">
+          <div>
+            <span className="serif text-2xl text-accent">¥{yen}</span>
+            <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
+          </div>
+          <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60 group-hover:text-accent group-hover:opacity-100 transition">
+            詳細を見る →
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
