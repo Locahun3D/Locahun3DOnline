@@ -151,10 +151,15 @@ export default async function HomePage() {
       {/* CTA */}
       <section className="frame py-32 border-t border-line text-center">
         <div className="serif text-[clamp(1.6rem,3.2vw,2.6rem)] leading-[1.6] max-w-[28ch] mx-auto">
-          下見の往復を、
-          <br />
-          ブラウザ <em className="not-italic text-accent">1 枚</em> に畳む。
+          下見の往復を、ブラウザ <em className="not-italic text-accent">1 枚</em> に畳む。
         </div>
+        <p className="mt-8 text-[14px] text-muted leading-[2] max-w-[36ch] mx-auto">
+          空気、感覚、記憶、アイデア。
+          <br />
+          現地の時間を、<em className="not-italic text-ink">クリエイティブの拡張</em>のみに充てる。
+          <br />
+          ノイズを省き、<em className="not-italic text-accent">一歩先の挑戦</em>に寄り添う。
+        </p>
         <div className="mt-10 flex justify-center gap-3 flex-wrap">
           <Link
             href="/sign-up"
