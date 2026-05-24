@@ -118,7 +118,7 @@ export default function UserNav() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="block px-4 py-2 hover:bg-[#0d0d0d] hover:text-accent transition"
+                  className="block px-4 py-2 hover:bg-[#262626] hover:text-accent transition"
                 >
                   {item.label}
                 </Link>
@@ -131,7 +131,7 @@ export default function UserNav() {
                 signOut();
                 setOpen(false);
               }}
-              className="block w-full text-left px-4 py-2.5 border-t border-line text-[12px] mono tracking-[0.18em] uppercase text-muted hover:text-accent hover:bg-[#0d0d0d] transition"
+              className="block w-full text-left px-4 py-2.5 border-t border-line text-[12px] mono tracking-[0.18em] uppercase text-muted hover:text-accent hover:bg-[#262626] transition"
             >
               ログアウト
             </button>

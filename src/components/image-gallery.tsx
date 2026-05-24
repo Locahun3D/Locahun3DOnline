@@ -42,7 +42,7 @@ export default function ImageGallery({ images }: { images: PropertyImage[] }) {
             key={img.src}
             type="button"
             onClick={() => setOpenIdx(i)}
-            className="group relative aspect-[4/3] overflow-hidden border border-line bg-[#0a0a0a] focus:outline-none focus:border-accent"
+            className="group relative aspect-[4/3] overflow-hidden border border-line bg-[#141414] focus:outline-none focus:border-accent"
             aria-label={`画像を拡大: ${img.alt}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

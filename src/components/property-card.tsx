@@ -9,7 +9,7 @@ export default function PropertyCard({ property }: { property: Property }) {
       href={`/properties/${property.id}`}
       className="group block border border-line bg-bg overflow-hidden hover:border-accent transition"
     >
-      <div className="relative aspect-[16/10] bg-[#0a0a0a] overflow-hidden">
+      <div className="relative aspect-[16/10] bg-[#141414] overflow-hidden">
         {/* Using img instead of next/image to skip remote domain config for the mock data */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

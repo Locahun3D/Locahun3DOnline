@@ -121,7 +121,7 @@ export default function AboutPage() {
       </header>
 
       {/* Distinct callout: 本体 vs オンライン */}
-      <div className="max-w-[68ch] mx-auto mb-16 border border-line bg-[#070707] p-7 text-center">
+      <div className="max-w-[68ch] mx-auto mb-16 border border-line bg-[#222] p-7 text-center">
         <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-3">
           ご注意
         </div>
@@ -154,10 +154,10 @@ export default function AboutPage() {
                 key={s.code}
                 className={`border p-7 flex flex-col gap-5 ${
                   isFlagship
-                    ? "border-accent bg-[#0c0905]"
+                    ? "border-accent bg-[#2a1f10]"
                     : s.status === "active"
-                      ? "border-line bg-[#070707]"
-                      : "border-line bg-[#050505] opacity-90"
+                      ? "border-line bg-[#222]"
+                      : "border-line bg-[#141414] opacity-90"
                 }`}
               >
                 {/* Header row */}

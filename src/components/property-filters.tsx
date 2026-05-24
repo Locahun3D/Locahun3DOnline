@@ -23,7 +23,7 @@ export default function PropertyFilters({
     <form
       method="get"
       action="/properties"
-      className="grid grid-cols-1 md:grid-cols-6 gap-3 p-5 border border-line bg-[#080808]"
+      className="grid grid-cols-1 md:grid-cols-6 gap-3 p-5 border border-line bg-[#222]"
     >
       <label className="md:col-span-2 flex flex-col gap-1">
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-50">

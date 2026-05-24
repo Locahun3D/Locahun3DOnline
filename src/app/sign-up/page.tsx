@@ -5,7 +5,7 @@ export const metadata = { title: "新規登録" };
 export default function SignUpPage() {
   return (
     <div className="frame min-h-[72vh] flex items-center justify-center py-20">
-      <div className="border border-line bg-[#070707] p-10 w-full max-w-md">
+      <div className="border border-line bg-[#222] p-10 w-full max-w-md">
         <div className="flex border-b border-line mb-6">
           <Link
             href="/sign-in"

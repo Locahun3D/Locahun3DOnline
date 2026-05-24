@@ -149,7 +149,7 @@ export default function FileDropzone({
         className={`relative border-2 border-dashed transition cursor-pointer p-6 text-center ${
           drag
             ? "border-accent bg-[#1a0f00]"
-            : "border-line bg-[#080808] hover:border-ink"
+            : "border-line bg-[#222] hover:border-ink"
         }`}
       >
         <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60">
@@ -180,7 +180,7 @@ export default function FileDropzone({
           {inFlight.map((f) => (
             <div
               key={f.id}
-              className="border border-line bg-[#080808] px-3 py-2 mono text-[11px]"
+              className="border border-line bg-[#222] px-3 py-2 mono text-[11px]"
             >
               <div className="flex justify-between items-baseline gap-3">
                 <span className="truncate flex-1">{f.name}</span>

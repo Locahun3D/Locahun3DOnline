@@ -57,7 +57,7 @@ export default async function AdminPropertiesList({
       </div>
 
       <div className="border border-line">
-        <div className="grid grid-cols-[80px_1fr_120px_120px_160px_120px] gap-3 px-4 py-3 border-b border-line bg-[#080808] mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+        <div className="grid grid-cols-[80px_1fr_120px_120px_160px_120px] gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60">
           <div>Status</div>
           <div>Title</div>
           <div>Category</div>
@@ -74,7 +74,7 @@ export default async function AdminPropertiesList({
           filtered.map((p) => (
             <div
               key={p.id}
-              className="grid grid-cols-[80px_1fr_120px_120px_160px_120px] gap-3 px-4 py-3 border-b border-line items-center hover:bg-[#070707] transition"
+              className="grid grid-cols-[80px_1fr_120px_120px_160px_120px] gap-3 px-4 py-3 border-b border-line items-center hover:bg-[#222] transition"
             >
               <StatusBadge status={p.status} />
               <div className="min-w-0">

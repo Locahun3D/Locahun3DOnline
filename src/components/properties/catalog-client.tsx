@@ -15,7 +15,7 @@ import { formatKm, haversineKm } from "@/lib/distance";
 const CatalogMap = dynamic(() => import("./catalog-map"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full border border-line bg-[#070707] flex items-center justify-center">
+    <div className="w-full h-full border border-line bg-[#222] flex items-center justify-center">
       <span className="mono text-[10px] tracking-[0.3em] uppercase opacity-50 animate-pulse">
         Loading map…
       </span>
@@ -325,7 +325,7 @@ function FiltersPanel(p: FiltersProps) {
       : `¥${n.toLocaleString("ja-JP")}`;
 
   return (
-    <div className="border border-line bg-[#080808] p-5 space-y-4">
+    <div className="border border-line bg-[#222] p-5 space-y-4">
       {/* Keyword search — full width */}
       <Row label="キーワード">
         <input
@@ -489,7 +489,7 @@ function ToggleChip({
       onClick={() => onChange(!value)}
       className={`px-3 py-1.5 mono text-[11px] tracking-[0.18em] uppercase border transition ${
         value
-          ? "border-accent text-accent bg-[#0c0905]"
+          ? "border-accent text-accent bg-[#2a1f10]"
           : "border-line text-muted hover:border-ink hover:text-ink"
       }`}
     >
@@ -736,7 +736,7 @@ function ReferencePicker({
                 id: "geocoded", lat: parseFloat(r.lat), lng: parseFloat(r.lon),
                 label: r.display_name.split(",").slice(0, 2).join(", "),
               })}
-              className="block w-full text-left px-3 py-2 text-[12px] hover:bg-[#0d0d0d] hover:text-accent transition border-b border-line last:border-b-0"
+              className="block w-full text-left px-3 py-2 text-[12px] hover:bg-[#262626] hover:text-accent transition border-b border-line last:border-b-0"
             >
               <div className="truncate">{r.display_name}</div>
               <div className="mono text-[9px] opacity-50 mt-0.5">
@@ -772,7 +772,7 @@ function SortBar({
   resultCount: number; totalCount: number;
 }) {
   return (
-    <div className="mt-4 border border-line bg-[#080808] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] mono">
+    <div className="mt-4 border border-line bg-[#222] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] mono">
       <div className="flex items-baseline gap-2">
         <span className="serif text-2xl text-accent">{resultCount.toLocaleString("ja-JP")}</span>
         <span className="tracking-[0.18em] uppercase opacity-60">件</span>
@@ -847,7 +847,7 @@ function PropertyCardLite({
         highlighted ? "border-accent" : "border-line hover:border-ink"
       }`}
     >
-      <div className="relative aspect-[16/10] bg-[#0a0a0a] overflow-hidden">
+      <div className="relative aspect-[16/10] bg-[#141414] overflow-hidden">
         {property.cover.src ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={property.cover.src} alt={property.cover.alt} loading="lazy" className="w-full h-full object-cover" />

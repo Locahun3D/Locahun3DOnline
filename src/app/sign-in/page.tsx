@@ -5,7 +5,7 @@ export const metadata = { title: "ログイン / 新規登録" };
 export default function SignInPage() {
   return (
     <div className="frame min-h-[72vh] flex items-center justify-center py-20">
-      <div className="border border-line bg-[#070707] p-10 w-full max-w-md">
+      <div className="border border-line bg-[#222] p-10 w-full max-w-md">
         {/* Tab-style switcher: this page is the "log in" tab, signup is its own page */}
         <div className="flex border-b border-line mb-6">
           <div className="flex-1 text-center py-2 border-b-2 border-accent text-accent mono text-[11px] tracking-[0.22em] uppercase">

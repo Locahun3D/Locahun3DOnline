@@ -2,8 +2,8 @@
 
 @theme {
   --color-ink: #fafaf6;
-  --color-bg: #000000;
-  --color-line: rgb(255 255 255 / 0.18);
+  --color-bg: #191919;
+  --color-line: rgb(255 255 255 / 0.14);
   --color-accent: #ffb454;
   --color-muted: rgb(255 255 255 / 0.62);
 

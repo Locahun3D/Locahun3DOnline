@@ -29,7 +29,7 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
-      <aside className="border-r border-line p-6 bg-[#050505] sticky top-16 self-start">
+      <aside className="border-r border-line p-6 bg-[#141414] sticky top-16 self-start">
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-1">
           ● REC
         </div>
@@ -37,7 +37,7 @@ export default function AdminLayout({
         <nav className="flex flex-col gap-1 text-sm">
           <Link
             href="/admin/properties"
-            className="px-3 py-2 hover:bg-[#0c0c0c] hover:text-accent transition rounded-sm"
+            className="px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
           >
             物件
           </Link>

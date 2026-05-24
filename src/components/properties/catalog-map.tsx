@@ -74,7 +74,7 @@ export default function CatalogMap({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full border border-line bg-[#070707] [&_.leaflet-container]:bg-[#070707] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
+      className="relative w-full h-full border border-line bg-[#222] [&_.leaflet-container]:bg-[#222] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
     >
       <MapContainer
         // Initial center / zoom — ViewportFitter immediately recenters on `reference`

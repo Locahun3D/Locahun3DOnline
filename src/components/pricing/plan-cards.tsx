@@ -104,7 +104,7 @@ export default function PlanCards() {
     <>
       {/* Billing mode toggle */}
       <div className="flex justify-center mb-10">
-        <div className="inline-flex border border-line bg-[#080808] p-1">
+        <div className="inline-flex border border-line bg-[#222] p-1">
           <button
             type="button"
             onClick={() => setMode("monthly")}
@@ -138,8 +138,8 @@ export default function PlanCards() {
               className={
                 "relative border p-6 flex flex-col gap-4 " +
                 (p.accent
-                  ? "border-accent bg-[#0c0905]"
-                  : "border-line bg-[#070707]")
+                  ? "border-accent bg-[#2a1f10]"
+                  : "border-line bg-[#222]")
               }
             >
               {p.badge && (

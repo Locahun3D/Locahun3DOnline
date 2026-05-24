@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 const SplatViewer = dynamic(() => import("./splat-viewer"), {
   ssr: false,
   loading: () => (
-    <div className="aspect-video bg-[#070707] flex items-center justify-center">
+    <div className="aspect-video bg-[#222] flex items-center justify-center">
       <div className="mono text-[11px] tracking-[0.3em] uppercase opacity-50 animate-pulse">
         Loading viewer…
       </div>
@@ -52,7 +52,7 @@ export default function ViewerGate({
       <div className="relative aspect-video border border-line overflow-hidden">
         {/* Blurred placeholder preview */}
         <div
-          className="absolute inset-0 bg-[#070707]"
+          className="absolute inset-0 bg-[#222]"
           style={{
             backgroundImage:
               "radial-gradient(ellipse at center, rgba(255,180,84,.18) 0%, transparent 60%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.06) 0%, transparent 50%)",
@@ -98,7 +98,7 @@ export default function ViewerGate({
 
   if (!confirmed) {
     return (
-      <div className="relative aspect-video border border-line overflow-hidden bg-[#070707] flex flex-col items-center justify-center text-center px-6">
+      <div className="relative aspect-video border border-line overflow-hidden bg-[#222] flex flex-col items-center justify-center text-center px-6">
         <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-3">
           ⚠ DATA WARNING · {tokenCost} トークン消費
         </div>

@@ -153,7 +153,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             onClick={() => setStep(s.id)}
             className={`block w-full text-left px-3 py-2.5 border transition ${
               step === s.id
-                ? "border-accent text-accent bg-[#0c0905]"
+                ? "border-accent text-accent bg-[#2a1f10]"
                 : "border-line text-muted hover:text-ink hover:border-ink"
             }`}
           >
@@ -446,7 +446,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   カバー画像 <span className="text-accent">*</span>
                 </div>
                 {watch("cover.src") ? (
-                  <div className="border border-line bg-[#0a0a0a] p-2 relative">
+                  <div className="border border-line bg-[#141414] p-2 relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={watch("cover.src")}
@@ -508,7 +508,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     {galleryArray.fields.map((f, i) => (
                       <div
                         key={f.id}
-                        className="relative border border-line bg-[#0a0a0a]"
+                        className="relative border border-line bg-[#141414]"
                       >
                         {watch(`gallery.${i}.src`) ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -567,7 +567,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               desc="Splat ファイル (.splat / .ply / .ksplat) をアップロード。アノテーション設置は Phase 2。"
             >
               {watch("splatUrl") ? (
-                <div className="border border-line bg-[#0a0a0a] p-4 flex items-center gap-4">
+                <div className="border border-line bg-[#141414] p-4 flex items-center gap-4">
                   <div className="mono text-[24px] text-accent">●</div>
                   <div className="flex-1 min-w-0">
                     <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-1">
@@ -761,7 +761,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 // --- small UI helpers ------------------------------------------------------
 
 const inputClass =
-  "w-full bg-[#0a0a0a] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono";
+  "w-full bg-[#141414] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono";
 
 function Field({
   label,
@@ -805,7 +805,7 @@ function StepCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-line p-7 space-y-5 bg-[#070707]">
+    <div className="border border-line p-7 space-y-5 bg-[#222]">
       <header>
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-1">
           STEP {n}
@@ -862,7 +862,7 @@ function TagsEditor({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="border border-line p-3 bg-[#0a0a0a]">
+    <div className="border border-line p-3 bg-[#141414]">
       <div className="flex flex-wrap gap-2 mb-2">
         {(values ?? []).map((t, i) => (
           <span

@@ -139,7 +139,7 @@ export default async function HomePage() {
             <Link
               key={cat}
               href={`/properties?category=${cat}`}
-              className="group bg-bg p-8 flex flex-col gap-3 hover:bg-[#0a0a0a] transition"
+              className="group bg-bg p-8 flex flex-col gap-3 hover:bg-[#141414] transition"
             >
               <div className="mono text-[10px] tracking-[0.3em] uppercase opacity-50">
                 {cat}

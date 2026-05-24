@@ -58,7 +58,7 @@ export default function PricingPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
 
-        <div className="border border-line bg-[#070707] p-7 max-w-[680px] mx-auto">
+        <div className="border border-line bg-[#222] p-7 max-w-[680px] mx-auto">
           <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
             SIZE → COST
           </div>
@@ -97,7 +97,7 @@ export default function PricingPage() {
         <div className="border border-line overflow-x-auto">
           <table className="w-full text-[12px] mono">
             <thead>
-              <tr className="bg-[#080808] border-b border-line">
+              <tr className="bg-[#222] border-b border-line">
                 <th className="text-left px-3 py-3 mono text-[10px] tracking-[0.24em] uppercase opacity-60 font-normal min-w-[160px]">
                   機能
                 </th>
@@ -119,7 +119,7 @@ export default function PricingPage() {
               {COMPARE_ROWS.map((row, i) => (
                 <tr
                   key={row.label}
-                  className={`border-b border-line ${i % 2 === 1 ? "bg-[#060606]" : ""}`}
+                  className={`border-b border-line ${i % 2 === 1 ? "bg-[#1c1c1c]" : ""}`}
                 >
                   <td className="px-3 py-2.5 text-left text-ink/90">{row.label}</td>
                   <td className="px-3 py-2.5 text-center text-muted">{row.free}</td>
