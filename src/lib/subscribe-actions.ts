@@ -67,6 +67,13 @@ export async function subscribeAction(
     metadata: { userId: user.id, plan },
     subscription_data: { metadata: { userId: user.id, plan } },
     allow_promotion_codes: true,
+    // サブスクは毎月の請求書を自動発行。電子帳簿/インボイス制度対応として
+    // 顧客の登録番号(T番号)・住所を収集し、毎月の請求書へ自動反映する。
+    tax_id_collection: { enabled: true },
+    billing_address_collection: "auto",
+    ...(u?.stripeCustomerId
+      ? { customer_update: { name: "auto", address: "auto" } }
+      : {}),
     success_url: appUrl(`/account?plan=${plan}&checkout=success`),
     cancel_url: appUrl(`/pricing?checkout=cancel`),
   });

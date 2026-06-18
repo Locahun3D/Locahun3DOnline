@@ -22,7 +22,7 @@ const COMPARE_ROWS: Array<{
   { label: "3DGS ウォークスルー",    free: "登録時 1 トークン", individual: "月 8 トークン",  studio: "月 12 トークン", team: "月 30 トークン" },
   { label: "ログイン端末数",         free: "—",       individual: "制限なし", studio: "5 端末",   team: "20 端末" },
   { label: "見積もり依頼",           free: "月 1 件", individual: "無制限",   studio: "無制限",   team: "無制限" },
-  { label: "請求書 / 電子帳簿対応",  free: "—",       individual: "—",        studio: "—",        team: "✓" },
+  { label: "請求書 自動送付 / 電子帳簿対応",  free: "—",       individual: "✓",        studio: "✓",        team: "✓ 一括" },
   { label: "年払 -15% 適用",         free: "—",       individual: "✓",        studio: "✓",        team: "✓" },
 ];
 
@@ -52,6 +52,10 @@ export default async function PricingPage() {
 
       {/* 4 plans + billing mode toggle */}
       <PlanCards signedIn={!!user} currentPlan={user?.plan} />
+      <p className="text-center text-[11px] text-muted mt-5 leading-[1.7]">
+        すべての有料プランは、毎月の<strong className="text-ink">請求書を自動送付</strong>
+        （電子帳簿保存法・インボイス制度対応）。登録番号(T番号)は申込時に入力でき、請求書へ自動反映されます。
+      </p>
       {user && (
         <p className="text-center mono text-[10px] text-muted mt-4 tracking-[0.1em]">
           ※ 決済連携は準備中です。現在はプラン変更が即時反映されます。
