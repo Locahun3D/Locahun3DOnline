@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
 import { ROLE_LABEL } from "@/lib/account-schema";
-import ScanMark from "@/components/scan-mark";
+import HeaderMark from "@/components/header-mark";
 import MobileNav from "@/components/mobile-nav";
 
 const NAV = [
@@ -43,7 +43,7 @@ export default async function SiteHeader() {
             aria-label="ロケハン3D トップへ"
             className="flex items-center gap-2.5"
           >
-            <ScanMark size={22} reticle="#fafaf6" className="flex-none" />
+            <HeaderMark />
             <span className="brand text-base sm:text-lg tracking-[0.01em] whitespace-nowrap">
               ロケハン3D
             </span>
