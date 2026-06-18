@@ -33,7 +33,7 @@ export default function HomePage() {
               ロケハン3D
               <span className="w-9 h-px bg-current opacity-50" />
             </div>
-            <h2 className="font-black text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] group-hover:text-accent transition-colors">
+            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] group-hover:text-accent transition-colors">
               スキャン
             </h2>
             <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2]">
@@ -66,7 +66,7 @@ export default function HomePage() {
               ロケハン3D
               <span className="w-9 h-px bg-current opacity-50" />
             </div>
-            <h2 className="font-black text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] group-hover:text-[#5ec8e8] transition-colors">
+            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] group-hover:text-[#5ec8e8] transition-colors">
               オンライン
             </h2>
             <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2]">
