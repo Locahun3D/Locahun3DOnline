@@ -435,6 +435,23 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   {watch("description")?.length ?? 0} / 4000
                 </div>
               </Field>
+
+              <div className="border border-dashed border-line p-5">
+                <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
+                  ● 入れ込み編集
+                </div>
+                <p className="text-[12px] text-muted leading-[1.85] mb-3">
+                  見出し・本文・画像・ギャラリー・3DGS を並べた
+                  <strong className="text-ink">スタジオ紹介ページ</strong>を組み立てられます。
+                  設定すると、物件詳細はこの構成で表示されます（未設定なら上記の本文＋標準レイアウト）。
+                </p>
+                <a
+                  href={`/admin/properties/${initial.id}/page`}
+                  className="inline-block mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
+                >
+                  スタジオページビルダーを開く →
+                </a>
+              </div>
             </StepCard>
           )}
 
