@@ -9,10 +9,10 @@ export const metadata = { title: "プロフィール" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string; nda?: string }>;
+  searchParams: Promise<{ welcome?: string; nda?: string; plan?: string }>;
 }) {
   const user = await requireOnboarded();
-  const { welcome, nda } = await searchParams;
+  const { welcome, nda, plan } = await searchParams;
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -37,6 +37,15 @@ export default async function AccountPage({
       {nda && (
         <div className="mb-6 border border-green-400/40 bg-green-400/10 px-4 py-3 text-[13px]">
           NDA への同意を記録しました。機密ロケ地の閲覧が可能になりました。
+        </div>
+      )}
+      {plan && (
+        <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">
+          プランを <strong className="text-accent uppercase">{plan}</strong> に変更しました。
+          月次トークンを付与しました。
+          <span className="block mono text-[10px] text-muted mt-1">
+            ※ 決済連携は準備中（現在は即時反映）
+          </span>
         </div>
       )}
 

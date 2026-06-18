@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { subscribeAction } from "@/lib/subscribe-actions";
+import type { AccountPlan } from "@/lib/account-schema";
 
 type BillingMode = "monthly" | "annual";
 
@@ -96,8 +98,15 @@ function priceFor(plan: Plan, mode: BillingMode): number {
   return plan.monthly;
 }
 
-export default function PlanCards() {
+export default function PlanCards({
+  signedIn = false,
+  currentPlan,
+}: {
+  signedIn?: boolean;
+  currentPlan?: string;
+}) {
   const [mode, setMode] = useState<BillingMode>("monthly");
+  const [pending, startTransition] = useTransition();
 
   return (
     <>
@@ -204,17 +213,48 @@ export default function PlanCards() {
               )}
 
               <div className="mt-auto pt-3">
-                <Link
-                  href={p.href}
-                  className={
+                {(() => {
+                  const planKey = p.code.toLowerCase();
+                  const isCurrent = signedIn && currentPlan === planKey;
+                  const cls =
                     "block text-center w-full px-4 py-2.5 mono text-[11px] tracking-[0.22em] uppercase border transition " +
                     (p.accent
                       ? "border-accent text-accent hover:bg-accent hover:text-bg"
-                      : "border-line hover:border-ink")
+                      : "border-line hover:border-ink");
+
+                  if (isCurrent) {
+                    return (
+                      <div className="block text-center w-full px-4 py-2.5 mono text-[11px] tracking-[0.22em] uppercase border border-green-400/50 text-green-400">
+                        ✓ 利用中
+                      </div>
+                    );
                   }
-                >
-                  {p.cta}
-                </Link>
+                  if (signedIn) {
+                    return (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          const msg =
+                            p.monthly === 0
+                              ? "Free プランに変更しますか？"
+                              : `${p.name} プランに変更しますか？（決済は今後対応・現在は即時反映）`;
+                          if (confirm(msg)) {
+                            startTransition(() => subscribeAction(planKey as AccountPlan));
+                          }
+                        }}
+                        className={cls + " disabled:opacity-50"}
+                      >
+                        {pending ? "処理中…" : p.monthly === 0 ? "Free にする" : "このプランにする"}
+                      </button>
+                    );
+                  }
+                  return (
+                    <Link href={p.href} className={cls}>
+                      {p.cta}
+                    </Link>
+                  );
+                })()}
               </div>
             </div>
           );

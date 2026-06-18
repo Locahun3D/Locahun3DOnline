@@ -1,4 +1,5 @@
 import PlanCards from "@/components/pricing/plan-cards";
+import { getCurrentUser } from "@/lib/dal";
 
 export const metadata = {
   title: "料金プラン",
@@ -25,7 +26,9 @@ const COMPARE_ROWS: Array<{
   { label: "年払 -15% 適用",         free: "—",       individual: "✓",        studio: "✓",        team: "✓" },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const user = await getCurrentUser();
+
   return (
     <div className="theme-online frame pt-12 pb-32">
       <div className="chapter-rule">
@@ -48,7 +51,12 @@ export default function PricingPage() {
       </header>
 
       {/* 4 plans + billing mode toggle */}
-      <PlanCards />
+      <PlanCards signedIn={!!user} currentPlan={user?.plan} />
+      {user && (
+        <p className="text-center mono text-[10px] text-muted mt-4 tracking-[0.1em]">
+          ※ 決済連携は準備中です。現在はプラン変更が即時反映されます。
+        </p>
+      )}
 
       {/* Token system explainer */}
       <section className="mt-16">
