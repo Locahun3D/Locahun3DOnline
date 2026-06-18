@@ -58,6 +58,12 @@ export default async function AdminLayout({
           >
             アナリティクス
           </Link>
+          <Link
+            href="/admin/assets"
+            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+          >
+            アセット
+          </Link>
         </nav>
 
         <div className="mt-10 pt-6 border-t border-line text-[11px] text-muted leading-[1.7]">
