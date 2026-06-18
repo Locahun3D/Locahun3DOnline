@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { track } from "@/lib/analytics";
+import { track, parseDevice } from "@/lib/analytics";
 import { repo } from "@/lib/store";
 
 /**
@@ -25,7 +25,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false }, { status: 404 });
     }
     const day = new Date().toISOString().slice(0, 10);
-    await track(propertyId, type, referrer, day);
+    const device = parseDevice(req.headers.get("user-agent") ?? "");
+    await track(propertyId, type, referrer, day, device);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });
