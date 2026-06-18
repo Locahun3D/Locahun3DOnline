@@ -62,7 +62,7 @@ export default function PricingPage() {
           <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
             SIZE → COST
           </div>
-          <h3 className="serif text-2xl mb-4">スタジオサイズ別 トークン消費</h3>
+          <h3 className="serif text-2xl font-bold mb-4">スタジオサイズ別 トークン消費</h3>
           <table className="w-full text-[13px] mono">
             <tbody>
               <tr className="border-b border-line">

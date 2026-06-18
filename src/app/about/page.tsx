@@ -57,7 +57,7 @@ export default function AboutPage() {
               <div className="mono text-[11px] tracking-[0.3em] text-accent mb-3">
                 {f.n}
               </div>
-              <h3 className="serif text-[1.5rem] leading-[1.5] mb-3">{f.h}</h3>
+              <h3 className="serif text-[1.5rem] font-bold leading-[1.5] mb-3">{f.h}</h3>
               <p className="text-[13px] leading-[1.9] text-muted">
                 <Jp>{f.p}</Jp>
               </p>
