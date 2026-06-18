@@ -489,19 +489,22 @@ function FiltersPanel(p: FiltersProps) {
 
   return (
     <div className="border border-line bg-[#222] p-3.5 space-y-2.5">
-      {/* 最近の検索条件: ワンクリックで条件一式を再適用 */}
-      {p.recent.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mr-0.5 shrink-0">
-            最近の条件
-          </span>
-          {p.recent.map((s) => {
+      {/* 最近の検索条件: 常時・1行固定高さ (横スクロール) でパネル高さを安定させ、
+          チップ出現/折り返しによる枠全体のサイズ変動を防ぐ。 */}
+      <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap min-h-[30px]">
+        <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mr-0.5 shrink-0">
+          最近の条件
+        </span>
+        {p.recent.length === 0 ? (
+          <span className="text-[11px] text-muted/60 shrink-0">なし</span>
+        ) : (
+          p.recent.map((s) => {
             const key = snapshotKey(s);
             const label = describeSnapshot(s);
             return (
               <span
                 key={key}
-                className="group inline-flex items-center border border-line bg-[#2c2c2c] hover:border-accent transition rounded-none"
+                className="group inline-flex items-center border border-line bg-[#2c2c2c] hover:border-accent transition rounded-none shrink-0"
               >
                 <button
                   type="button"
@@ -521,9 +524,9 @@ function FiltersPanel(p: FiltersProps) {
                 </button>
               </span>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
 
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
       <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2.5">
