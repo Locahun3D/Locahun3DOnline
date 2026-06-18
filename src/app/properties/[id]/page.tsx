@@ -9,13 +9,9 @@ import TrackView from "@/components/track-view";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 
-// 限定無料期間の開始/終了が時刻指定でも反映されるよう ISR (5分) で再評価。
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  const ids = await getPublishedPropertyIds();
-  return ids.map((id) => ({ id }));
-}
+// 限定無料期間 (getSettings) と現在時刻を毎リクエストで読むため動的レンダリング。
+// これにより静的生成ワーカーを使わず、無料期間の開始/終了も常に即時反映される。
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
