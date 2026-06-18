@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { uploadAsset } from "./upload-client";
 
 export interface UploadedFile {
   url: string;
@@ -38,7 +39,7 @@ function fmtBytes(n: number) {
 }
 
 export default function FileDropzone({
-  propertyId,
+  // propertyId kept in Props for caller compatibility; assets self-bucket by id now.
   kind,
   accept,
   multiple = false,
@@ -58,59 +59,27 @@ export default function FileDropzone({
         ...prev,
         { id: localId, name: file.name, size: file.size, progress: 0 },
       ]);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/admin/upload");
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
+      uploadAsset(file, kind, {
+        onProgress: (pct) =>
           setInFlight((prev) =>
             prev.map((f) => (f.id === localId ? { ...f, progress: pct } : f)),
+          ),
+      })
+        .then((asset) => {
+          onUploaded(
+            { url: asset.url, size: asset.size, contentType: asset.contentType },
+            file.name,
           );
-        }
-      });
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data = JSON.parse(xhr.responseText) as UploadedFile;
-            onUploaded(data, file.name);
-            // remove from in-flight on success
-            setInFlight((prev) => prev.filter((f) => f.id !== localId));
-          } catch (e) {
-            setInFlight((prev) =>
-              prev.map((f) =>
-                f.id === localId
-                  ? { ...f, error: `parse error: ${String(e)}` }
-                  : f,
-              ),
-            );
-          }
-        } else {
-          let msg = `HTTP ${xhr.status}`;
-          try {
-            const data = JSON.parse(xhr.responseText) as { message?: string; error?: string };
-            msg = data.message ?? data.error ?? msg;
-          } catch {}
+          setInFlight((prev) => prev.filter((f) => f.id !== localId));
+        })
+        .catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
           setInFlight((prev) =>
             prev.map((f) => (f.id === localId ? { ...f, error: msg } : f)),
           );
-        }
-      });
-      xhr.addEventListener("error", () => {
-        setInFlight((prev) =>
-          prev.map((f) =>
-            f.id === localId ? { ...f, error: "network error" } : f,
-          ),
-        );
-      });
-
-      const form = new FormData();
-      form.append("file", file);
-      form.append("propertyId", propertyId);
-      form.append("kind", kind);
-      xhr.send(form);
+        });
     },
-    [propertyId, kind, onUploaded],
+    [kind, onUploaded],
   );
 
   const handleFiles = useCallback(
