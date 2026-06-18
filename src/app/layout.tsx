@@ -36,6 +36,8 @@ export const metadata: Metadata = {
   },
   description:
     "ロケハン3D オンラインは、実空間を 3D Gaussian Splatting で持ち帰り、ブラウザだけで現場検証・スタジオ検索・撮影前ロケハンを完結させるサービスです。",
+  // オンライン版の既定ファビコンは青。トップ (/) のみ page.tsx で白に上書きする。
+  icons: { icon: "/icon-blue.svg" },
   openGraph: {
     type: "website",
     siteName: "ロケハン3D",

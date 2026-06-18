@@ -2,6 +2,9 @@ import Link from "next/link";
 import ScanMark from "@/components/scan-mark";
 import Jp from "@/components/jp";
 
+// トップはスキャン/オンライン両義のため、ファビコンは白 (ヘッダーアイコンと連動)。
+export const metadata = { icons: { icon: "/icon-white.svg" } };
+
 export default function HomePage() {
   return (
     <>
