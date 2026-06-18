@@ -638,7 +638,7 @@ function FiltersPanel(p: FiltersProps) {
       {/* Additional conditions */}
       <Row label="追加条件">
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <ToggleChip label="日料金あり" value={p.requiresDaily} onChange={p.setRequiresDaily} />
             <ToggleChip label="駐車場あり" value={p.requiresParking} onChange={p.setRequiresParking} />
             <ToggleChip label="200V 電源" value={p.requires200V} onChange={p.setRequires200V} />
@@ -698,7 +698,7 @@ function ToggleChip({
     <button
       type="button"
       onClick={() => onChange(!value)}
-      className={`px-3 py-1.5 mono text-[11px] tracking-[0.18em] uppercase border transition ${
+      className={`px-2.5 py-1 font-sans text-[11px] border transition ${
         value
           ? "border-accent text-accent bg-[#0e1a20]"
           : "border-line text-muted hover:border-ink hover:text-ink"
