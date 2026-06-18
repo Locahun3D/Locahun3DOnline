@@ -13,6 +13,7 @@ import {
   STUDIO_TYPE_SUGGESTIONS,
   TOKEN_COST_LABEL,
   type Property,
+  type Asset,
 } from "@/lib/schemas";
 import {
   saveDraftAction,
@@ -24,6 +25,7 @@ import {
 import FileDropzone, {
   type UploadedFile,
 } from "@/components/admin/file-dropzone";
+import AssetPickerModal from "./asset-picker-modal";
 
 const STEPS = [
   { id: "basic", label: "基本情報" },
@@ -43,6 +45,8 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [saving, startSave] = useTransition();
   const [publishing, startPublish] = useTransition();
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
+  const [pickSplat, setPickSplat] = useState(false);
 
   const form = useForm<Property>({
     resolver: zodResolver(propertySchema),
@@ -438,8 +442,46 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <StepCard
               n="04"
               title="写真"
-              desc="カバー画像 1 枚 + ギャラリー（最大 40 枚）。ドラッグ&ドロップで public/uploads/ に保存されます。"
+              desc="カバー画像 1 枚 + ギャラリー（最大 40 枚）。ドラッグ&ドロップで public/uploads/ に保存、または既存ライブラリから選択。"
             >
+              {/* Library pickers */}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPickImageFor("cover")}
+                  className="text-[12px] border border-line px-2 py-1 hover:border-accent transition"
+                >
+                  ライブラリからカバーを選択
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickImageFor("gallery")}
+                  className="text-[12px] border border-line px-2 py-1 hover:border-accent transition"
+                >
+                  ライブラリからギャラリーに追加
+                </button>
+              </div>
+              <AssetPickerModal
+                kind="image"
+                open={pickImageFor !== null}
+                onClose={() => setPickImageFor(null)}
+                onPick={(a: Asset) => {
+                  if (pickImageFor === "cover") {
+                    setValue("cover.src", a.url, { shouldDirty: true, shouldValidate: true });
+                    setValue("cover.alt", a.label, { shouldDirty: true });
+                    if (a.width) setValue("cover.width", a.width, { shouldDirty: true });
+                    if (a.height) setValue("cover.height", a.height, { shouldDirty: true });
+                  } else if (pickImageFor === "gallery") {
+                    galleryArray.append({
+                      src: a.url,
+                      alt: a.label,
+                      width: a.width ?? 1600,
+                      height: a.height ?? 1000,
+                    });
+                  }
+                }}
+              />
+
               {/* COVER */}
               <div>
                 <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-70 mb-1.5">
@@ -564,8 +606,27 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <StepCard
               n="05"
               title="3DGS データ"
-              desc="Splat ファイル (.splat / .ply / .ksplat) をアップロード。アノテーション設置は Phase 2。"
+              desc="Splat ファイル (.splat / .ply / .ksplat) をアップロード、または既存ライブラリから選択。アノテーション設置は Phase 2。"
             >
+              <button
+                type="button"
+                onClick={() => setPickSplat(true)}
+                className="text-[12px] border border-line px-2 py-1 hover:border-accent transition"
+              >
+                ライブラリから3DGSを選択
+              </button>
+              <AssetPickerModal
+                kind="splat"
+                open={pickSplat}
+                onClose={() => setPickSplat(false)}
+                onPick={(a: Asset) => {
+                  setValue("splatUrl", a.url, { shouldDirty: true, shouldValidate: true });
+                  setValue("splatSizeMb", Math.max(1, Math.round(a.size / 1024 / 1024)), {
+                    shouldDirty: true,
+                  });
+                }}
+              />
+
               {watch("splatUrl") ? (
                 <div className="border border-line bg-[#141414] p-4 flex items-center gap-4">
                   <div className="mono text-[24px] text-accent">●</div>
