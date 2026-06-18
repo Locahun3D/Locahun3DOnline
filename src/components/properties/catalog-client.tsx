@@ -71,6 +71,10 @@ const FACILITY_TAGS = [
   "高速インターネット", "楽器演奏", "完全遮光",
 ] as const;
 
+// 1段目に出す主要タグ (日料金/駐車場/200V の3トグルと同じ行に並べる)。
+const FACILITY_PRIMARY: string[] = ["クロマキー", "ネット回線"];
+const FACILITY_SECONDARY = FACILITY_TAGS.filter((f) => !FACILITY_PRIMARY.includes(f));
+
 // ── 検索条件の履歴 (localStorage) ───────────────────────────────────────────
 // ユーザーが過去に打ち込んだフィルタ一式を丸ごと保存し、ワンクリックで再適用する。
 type FilterSnapshot = {
@@ -638,27 +642,42 @@ function FiltersPanel(p: FiltersProps) {
       {/* Additional conditions */}
       <Row label="追加条件">
         <div className="space-y-2">
+          {/* 1段目: 主要トグル + 主要設備タグ */}
           <div className="flex flex-wrap items-center gap-1.5">
             <ToggleChip label="日料金あり" value={p.requiresDaily} onChange={p.setRequiresDaily} />
             <ToggleChip label="駐車場あり" value={p.requiresParking} onChange={p.setRequiresParking} />
             <ToggleChip label="200V 電源" value={p.requires200V} onChange={p.setRequires200V} />
+            {FACILITY_PRIMARY.map((f) => (
+              <FacilityChip
+                key={f}
+                label={f}
+                active={p.facilities.includes(f)}
+                onClick={() =>
+                  p.setFacilities(
+                    p.facilities.includes(f)
+                      ? p.facilities.filter((x) => x !== f)
+                      : [...p.facilities, f],
+                  )
+                }
+              />
+            ))}
           </div>
+          {/* 2段目: その他の設備タグ */}
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-line/50">
-            {FACILITY_TAGS.map((f) => {
-              const active = p.facilities.includes(f);
-              return (
-                <FacilityChip
-                  key={f}
-                  label={f}
-                  active={active}
-                  onClick={() =>
-                    p.setFacilities(
-                      active ? p.facilities.filter((x) => x !== f) : [...p.facilities, f],
-                    )
-                  }
-                />
-              );
-            })}
+            {FACILITY_SECONDARY.map((f) => (
+              <FacilityChip
+                key={f}
+                label={f}
+                active={p.facilities.includes(f)}
+                onClick={() =>
+                  p.setFacilities(
+                    p.facilities.includes(f)
+                      ? p.facilities.filter((x) => x !== f)
+                      : [...p.facilities, f],
+                  )
+                }
+              />
+            ))}
           </div>
         </div>
       </Row>
