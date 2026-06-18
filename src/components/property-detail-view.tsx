@@ -60,7 +60,7 @@ export default function PropertyDetailView({
           <div className="mono text-[11px] tracking-[0.3em] uppercase text-accent mb-3">
             {property.prefecture} {property.city}
           </div>
-          <h1 className="serif text-[clamp(1.8rem,3.8vw,3rem)] font-light leading-[1.3] mb-5">
+          <h1 className="serif text-[clamp(1.8rem,3.8vw,3rem)] font-bold leading-[1.3] mb-5">
             {property.title || "（無題の物件）"}
           </h1>
           <p className="text-[15px] leading-[1.9] text-muted whitespace-pre-line max-w-[70ch]">
