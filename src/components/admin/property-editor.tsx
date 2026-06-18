@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray, type SubmitHandler } from "react-hook-form";
+import {
+  useForm,
+  useFieldArray,
+  type SubmitHandler,
+  type Resolver,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   propertySchema,
@@ -49,7 +54,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [pickSplat, setPickSplat] = useState(false);
 
   const form = useForm<Property>({
-    resolver: zodResolver(propertySchema),
+    // zod's input type (fields with .default() are optional) differs from the
+    // output Property type; the resolver is sound at runtime, so pin its type.
+    resolver: zodResolver(propertySchema) as Resolver<Property>,
     defaultValues: initial,
     mode: "onBlur",
   });
@@ -411,7 +418,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               >
                 <TagsEditor
                   values={watch("tags")}
-                  onAdd={(v) => tagsArray.append(v)}
+                  onAdd={(v) => tagsArray.append(v as never)}
                   onRemove={(i) => tagsArray.remove(i)}
                 />
               </Field>

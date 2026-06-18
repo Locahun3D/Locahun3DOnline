@@ -87,7 +87,6 @@ const PLANS: Plan[] = [
     cta: "Subscribe",
     href: "/sign-up?plan=team",
     accent: false,
-    note: null,
   },
 ];
 
