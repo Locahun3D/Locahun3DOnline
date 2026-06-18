@@ -99,6 +99,37 @@ export async function deleteAction(id: string) {
   redirect("/admin/properties");
 }
 
+/** 一括: 選択した物件の status をまとめて変更 (publish/draft/archived)。 */
+export async function bulkSetStatusAction(
+  ids: string[],
+  status: "published" | "draft" | "archived",
+) {
+  await requireAdmin();
+  for (const id of ids) {
+    const existing = await repo.get(id);
+    if (!existing) continue;
+    if (status === "published") {
+      const parsed = publishablePropertySchema.safeParse(existing);
+      if (!parsed.success) continue; // 公開要件を満たさないものはスキップ
+      await repo.upsert({ ...parsed.data, status: "published" });
+    } else {
+      await repo.upsert({ ...existing, status });
+    }
+  }
+  revalidatePath("/admin/properties");
+  revalidatePath("/properties");
+  return { ok: true as const, count: ids.length };
+}
+
+/** 一括: 選択した物件をまとめて削除。 */
+export async function bulkDeleteAction(ids: string[]) {
+  await requireAdmin();
+  for (const id of ids) await repo.remove(id);
+  revalidatePath("/admin/properties");
+  revalidatePath("/properties");
+  return { ok: true as const, count: ids.length };
+}
+
 /** Save the studio page builder blocks for a property (admin only). */
 export async function saveStudioPageAction(id: string, blocks: unknown) {
   await requireAdmin();
