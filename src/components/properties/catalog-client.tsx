@@ -193,7 +193,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
 
   return (
     <div className="frame-wide pt-5 pb-32">
-      <div className="chapter-rule mb-4!">
+      <div className="chapter-rule" style={{ marginBottom: 16 }}>
         <span className="opacity-60">CATALOG</span>
         <span>Find a Location</span>
         <span className="flex-1 h-px bg-current opacity-25" />
