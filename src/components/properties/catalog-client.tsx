@@ -63,6 +63,13 @@ const DEFAULT_REF: Reference = {
   label: REFERENCE_PRESETS[0].label,
 };
 
+// ── 追加条件: 設備・機能タグ ─────────────────────────────────────────────────
+// 物件の tags / summary / studioType に対するテキストマッチで絞り込む (複数選択は AND)。
+const FACILITY_TAGS = [
+  "ライブ使用", "クロマキー", "控室", "同録", "電動昇降トラス",
+  "音響システム", "照明システム", "可動式ステージ", "ネット回線", "音出し",
+] as const;
+
 // ── 検索条件の履歴 (localStorage) ───────────────────────────────────────────
 // ユーザーが過去に打ち込んだフィルタ一式を丸ごと保存し、ワンクリックで再適用する。
 type FilterSnapshot = {
@@ -76,11 +83,12 @@ type FilterSnapshot = {
   minCeiling: number | ""; maxCeiling: number | "";
   maxKmFromRef: number | "";
   requiresDaily: boolean; requiresParking: boolean; requires200V: boolean;
+  facilities: string[];
   reference: Reference;
   sort: SortKey;
 };
 
-const RECENT_KEY = "locahun3d:recent-filters:v1";
+const RECENT_KEY = "locahun3d:recent-filters:v2";
 const RECENT_MAX = 5;
 
 const yenShort = (n: number) =>
@@ -110,6 +118,7 @@ function describeSnapshot(s: FilterSnapshot): string {
   if (s.requiresDaily) parts.push("日貸し可");
   if (s.requiresParking) parts.push("駐車場");
   if (s.requires200V) parts.push("200V");
+  for (const f of s.facilities ?? []) parts.push(f);
   return parts.join(" / ");
 }
 
@@ -120,6 +129,7 @@ function snapshotKey(s: FilterSnapshot): string {
     s.minPrice, s.maxPrice, s.minDailyPrice, s.maxDailyPrice,
     s.minArea, s.maxArea, s.minCeiling, s.maxCeiling,
     s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V,
+    [...(s.facilities ?? [])].sort(),
     typeof s.maxKmFromRef === "number" ? s.reference.id : null,
   ]);
 }
@@ -190,6 +200,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
   const [requiresDaily, setRequiresDaily] = useState(false);
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
+  const [facilities, setFacilities] = useState<string[]>([]);
 
   // Sort
   const [sort, setSort] = useState<SortKey>("newest");
@@ -203,6 +214,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setMinCeiling(""); setMaxCeiling("");
     setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
+    setFacilities([]);
     setSort("newest");
   }, []);
 
@@ -214,12 +226,14 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
     minArea, maxArea, minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
+    facilities,
     reference, sort,
   }), [
     q, category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
     minArea, maxArea, minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
+    facilities,
     reference, sort,
   ]);
 
@@ -238,6 +252,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setMinCeiling(s.minCeiling); setMaxCeiling(s.maxCeiling);
     setMaxKmFromRef(s.maxKmFromRef);
     setRequiresDaily(s.requiresDaily); setRequiresParking(s.requiresParking); setRequires200V(s.requires200V);
+    setFacilities(s.facilities ?? []);
     setReference(s.reference);
     setSort(s.sort);
   }, []);
@@ -280,6 +295,10 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
       if (requiresDaily && (!p.dailyPrice || p.dailyPrice <= 0)) return false;
       if (requiresParking && !p.parking) return false;
       if (requires200V && !/200\s*V/i.test(p.powerVoltage)) return false;
+      if (facilities.length) {
+        const hay = `${p.title} ${p.summary} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
+        if (!facilities.every((f) => hay.includes(f.toLowerCase()))) return false;
+      }
       if (q.trim()) {
         const h = `${p.title} ${p.summary} ${p.city} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!h.includes(q.trim().toLowerCase())) return false;
@@ -315,6 +334,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     minArea, maxArea, minCeiling, maxCeiling,
     maxKmFromRef,
     requiresDaily, requiresParking, requires200V,
+    facilities,
     q, sort,
   ]);
 
@@ -361,6 +381,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
             requiresDaily={requiresDaily} setRequiresDaily={setRequiresDaily}
             requiresParking={requiresParking} setRequiresParking={setRequiresParking}
             requires200V={requires200V} setRequires200V={setRequires200V}
+            facilities={facilities} setFacilities={setFacilities}
             reset={reset}
             recent={recent} applyRecent={applySnapshot} removeRecent={removeRecent}
             resultCount={computed.length} totalCount={items.length}
@@ -438,6 +459,7 @@ interface FiltersProps {
   requiresDaily: boolean; setRequiresDaily: (v: boolean) => void;
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
+  facilities: string[]; setFacilities: (v: string[]) => void;
   reset: () => void;
   recent: FilterSnapshot[];
   applyRecent: (s: FilterSnapshot) => void;
@@ -605,10 +627,29 @@ function FiltersPanel(p: FiltersProps) {
 
       {/* Additional conditions */}
       <Row label="追加条件">
-        <div className="flex flex-wrap items-center gap-2">
-          <ToggleChip label="日料金あり" value={p.requiresDaily} onChange={p.setRequiresDaily} />
-          <ToggleChip label="駐車場あり" value={p.requiresParking} onChange={p.setRequiresParking} />
-          <ToggleChip label="200V 電源" value={p.requires200V} onChange={p.setRequires200V} />
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ToggleChip label="日料金あり" value={p.requiresDaily} onChange={p.setRequiresDaily} />
+            <ToggleChip label="駐車場あり" value={p.requiresParking} onChange={p.setRequiresParking} />
+            <ToggleChip label="200V 電源" value={p.requires200V} onChange={p.setRequires200V} />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-line/50">
+            {FACILITY_TAGS.map((f) => {
+              const active = p.facilities.includes(f);
+              return (
+                <FacilityChip
+                  key={f}
+                  label={f}
+                  active={active}
+                  onClick={() =>
+                    p.setFacilities(
+                      active ? p.facilities.filter((x) => x !== f) : [...p.facilities, f],
+                    )
+                  }
+                />
+              );
+            })}
+          </div>
         </div>
       </Row>
     </div>
@@ -654,6 +695,27 @@ function ToggleChip({
       }`}
     >
       {value ? "✓ " : ""}{label}
+    </button>
+  );
+}
+
+// 設備・機能タグ用チップ (日本語ラベル向けにゴシック・字間控えめ)。
+function FacilityChip({
+  label, active, onClick,
+}: {
+  label: string; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2.5 py-1 font-sans text-[11px] border transition ${
+        active
+          ? "border-accent text-accent bg-[#0e1a20]"
+          : "border-line text-muted hover:border-ink hover:text-ink"
+      }`}
+    >
+      {active ? "✓ " : ""}{label}
     </button>
   );
 }
