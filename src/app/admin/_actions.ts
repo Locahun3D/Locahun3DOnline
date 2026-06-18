@@ -4,7 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
-import { repo } from "@/lib/store";
+import { repo, assetRepo } from "@/lib/store";
+import { deleteR2Object, UPLOAD_MODE } from "@/lib/uploads";
 import { requireAdmin } from "@/lib/dal";
 import {
   propertySchema,
@@ -88,5 +89,31 @@ export async function saveStudioPageAction(id: string, blocks: unknown) {
   await repo.upsert({ ...existing, pageBlocks });
   revalidatePath(`/admin/properties/${id}/page`);
   revalidatePath(`/properties/${id}`);
+  return { ok: true as const };
+}
+
+// ─── Asset library actions ───────────────────────────────────────
+export async function renameAssetAction(id: string, label: string) {
+  await requireAdmin();
+  const a = await assetRepo.get(id);
+  if (!a) return { ok: false as const, reason: "not_found" as const };
+  await assetRepo.upsert({ ...a, label: label.slice(0, 120) });
+  revalidatePath("/admin/assets");
+  return { ok: true as const };
+}
+
+export async function deleteAssetAction(id: string) {
+  await requireAdmin();
+  const a = await assetRepo.get(id);
+  if (!a) return { ok: false as const, reason: "not_found" as const };
+  if (UPLOAD_MODE === "r2" && a.r2Key) {
+    try {
+      await deleteR2Object(a.r2Key);
+    } catch (e) {
+      console.error("[deleteAsset] R2 delete failed", e);
+    }
+  }
+  await assetRepo.remove(id);
+  revalidatePath("/admin/assets");
   return { ok: true as const };
 }
