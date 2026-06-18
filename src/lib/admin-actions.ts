@@ -68,3 +68,30 @@ export async function deleteAccountAction(formData: FormData): Promise<void> {
   await userRepo.remove(id);
   revalidatePath("/admin/accounts");
 }
+
+/** 一括: 選択アカウントの status をまとめて変更。 */
+export async function bulkSetAccountStatusAction(
+  ids: string[],
+  status: AccountStatus,
+) {
+  await requireAdmin();
+  if (!ACCOUNT_STATUSES.includes(status)) return { ok: false as const };
+  for (const id of ids) {
+    const u = await userRepo.get(id);
+    if (!u) continue;
+    await userRepo.upsert({ ...u, status });
+  }
+  revalidatePath("/admin/accounts");
+  return { ok: true as const, count: ids.length };
+}
+
+/** 一括: 選択アカウントを削除 (自分自身は除外)。 */
+export async function bulkDeleteAccountsAction(ids: string[]) {
+  const admin = await requireAdmin();
+  for (const id of ids) {
+    if (id === admin.id) continue;
+    await userRepo.remove(id);
+  }
+  revalidatePath("/admin/accounts");
+  return { ok: true as const };
+}
