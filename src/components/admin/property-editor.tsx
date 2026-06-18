@@ -914,7 +914,7 @@ function Toggle({
 }) {
   return (
     <label className="flex items-center gap-3 border border-line px-4 py-3 cursor-pointer hover:border-ink transition">
-      <input type="checkbox" {...register} className="accent-[#ffb454]" />
+      <input type="checkbox" {...register} className="accent-[#5ec8e8]" />
       <span className="text-[13px]">{label}</span>
     </label>
   );

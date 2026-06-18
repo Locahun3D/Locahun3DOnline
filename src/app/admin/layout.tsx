@@ -15,7 +15,7 @@ export default async function AdminLayout({
   await requireAdmin();
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
+    <div className="theme-online min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
       <aside className="border-r border-line p-6 bg-[#141414] sticky top-16 self-start">
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-1">
           ● REC

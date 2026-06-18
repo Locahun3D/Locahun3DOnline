@@ -40,7 +40,7 @@ export default function OnboardingForm() {
                 value={r}
                 checked={role === r}
                 onChange={() => setRole(r)}
-                className="mt-1 accent-[#ffb454]"
+                className="mt-1 accent-[#5ec8e8]"
               />
               <span>
                 <span className="text-[13px] text-ink">{ROLE_LABEL[r]}</span>
@@ -76,7 +76,7 @@ export default function OnboardingForm() {
 
       {requiresNda(role) && (
         <label className="flex gap-3 items-start border border-accent/40 bg-[#1e1e1e] p-3 text-[12px] leading-[1.7]">
-          <input type="checkbox" name="nda" className="mt-0.5 accent-[#ffb454]" />
+          <input type="checkbox" name="nda" className="mt-0.5 accent-[#5ec8e8]" />
           <span className="text-muted">
             機密ロケ地（倉庫裏・非公開スタジオ等）の閲覧には
             <strong className="text-ink">秘密保持契約（NDA）</strong>

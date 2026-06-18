@@ -9,7 +9,7 @@ export default async function OnboardingPage() {
   if (user.onboarded || user.role === "admin") redirect("/account");
 
   return (
-    <div className="frame min-h-[72vh] flex items-center justify-center py-16">
+    <div className="theme-online frame min-h-[72vh] flex items-center justify-center py-16">
       <div className="border border-line bg-[#222] p-10 w-full max-w-md">
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
           WELCOME
