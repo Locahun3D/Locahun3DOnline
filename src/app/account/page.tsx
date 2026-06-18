@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireOnboarded } from "@/lib/dal";
 import { acceptNdaAction } from "@/lib/auth-actions";
 import { ROLE_LABEL, ACCOUNT_STATUS_LABEL, totalTokens } from "@/lib/account-schema";
+import RedeemGift from "@/components/account/redeem-gift";
 
 export const metadata = { title: "プロフィール" };
 
@@ -142,6 +143,8 @@ export default async function AccountPage({
               </div>
             )}
           </div>
+
+          <RedeemGift />
 
           <div className="border border-line p-5">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">

@@ -64,6 +64,12 @@ export default async function AdminLayout({
           >
             アセット
           </Link>
+          <Link
+            href="/admin/gift-codes"
+            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+          >
+            ギフトコード
+          </Link>
         </nav>
 
         <div className="mt-10 pt-6 border-t border-line text-[11px] text-muted leading-[1.7]">

@@ -61,3 +61,6 @@ next-env.d.ts
 
 # View analytics store (local)
 /data/analytics.json
+
+# Gift code store (local) — redemption records tied to users. Migrates to D1.
+/data/gift-codes.json
