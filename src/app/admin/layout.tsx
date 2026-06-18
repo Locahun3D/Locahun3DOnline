@@ -77,17 +77,6 @@ export default async function AdminLayout({
             限定無料期間
           </Link>
         </nav>
-
-        <div className="mt-10 pt-6 border-t border-line text-[11px] text-muted leading-[1.7]">
-          <div className="mono text-[9px] tracking-[0.28em] uppercase opacity-60 mb-1">
-            データ
-          </div>
-          <p>
-            編集内容は{" "}
-            <code className="mono opacity-80">data/properties.json</code> に
-            保存され、git に commit & push してデプロイで本番反映されます。
-          </p>
-        </div>
       </aside>
 
       <div className="min-w-0">{children}</div>

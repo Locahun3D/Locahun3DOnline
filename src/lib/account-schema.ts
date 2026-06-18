@@ -44,7 +44,7 @@ export const ROLE_LABEL: Record<AccountRole, string> = {
 
 export const ROLE_DESCRIPTION: Record<AccountRole, string> = {
   individual: "撮影前ロケハンに 3D を使う個人・フリーランス。すぐ利用可。",
-  studio: "自社スタジオを掲載・貸し出す事業者。掲載開始には運営の承認が必要。",
+  studio: "自社スタジオを掲載・貸し出す事業者。登録後すぐ利用可。",
   production: "NDA 締結のうえ、倉庫裏など機密ロケ地まで閲覧できるプロアカウント。",
   guest: `招待制の貢献特別枠。作成時に失効しないトークンを ${GUEST_BONUS_TOKENS} 付与。`,
   admin: "サイト運営者。",
@@ -56,9 +56,12 @@ export const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
   suspended: "停止中",
 };
 
-/** studio / production must be approved by an admin before pro features unlock. */
+/**
+ * 承認が必要なのは制作会社 (production = チーム/法人枠) のみ。
+ * 個人・撮影スタジオは登録後すぐに有効。
+ */
 export function requiresApproval(role: AccountRole): boolean {
-  return role === "studio" || role === "production";
+  return role === "production";
 }
 
 /** production must accept an NDA before viewing confidential listings. */
@@ -82,6 +85,8 @@ export const userSchema = z.object({
   tokenBalance: z.number().int().min(0).default(0),
   /** Contribution (貢献特別枠) tokens — never expire. Granted to guests. */
   bonusTokens: z.number().int().min(0).default(0),
+  /** 月次/付与トークン(tokenBalance)の失効予定日 (ISO)。null = 失効予定なし。 */
+  tokenExpiresAt: z.string().nullable().default(null),
   /** ISO timestamp when the NDA was accepted; null = not accepted. */
   ndaAcceptedAt: z.string().nullable().default(null),
   bookmarks: z.array(z.string()).max(500).default([]),
@@ -100,6 +105,13 @@ export function toPublicUser(u: User): PublicUser {
 /** Spendable token total = monthly balance + non-expiring contribution tokens. */
 export function totalTokens(u: Pick<User, "tokenBalance" | "bonusTokens">): number {
   return u.tokenBalance + (u.bonusTokens ?? 0);
+}
+
+/** 付与トークンの標準失効期間 = 付与から1年。 */
+export function oneYearFrom(nowIso: string): string {
+  const d = new Date(nowIso);
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString();
 }
 
 /** Whether this user may view confidential listings right now. */

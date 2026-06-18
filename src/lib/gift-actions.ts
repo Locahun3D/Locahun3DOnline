@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireOnboarded } from "./dal";
 import { userRepo } from "./users";
+import { oneYearFrom } from "./account-schema";
 import { giftCodeRepo, generateGiftCode } from "./gift-codes";
 import {
   GIFT_BUCKETS,
@@ -110,7 +111,12 @@ export async function redeemGiftCodeAction(
   const nextUser =
     code.bucket === "bonus"
       ? { ...user, bonusTokens: user.bonusTokens + granted }
-      : { ...user, tokenBalance: user.tokenBalance + granted };
+      : {
+          ...user,
+          tokenBalance: user.tokenBalance + granted,
+          // 通常トークンは付与から1年で失効。
+          tokenExpiresAt: oneYearFrom(now),
+        };
   await userRepo.upsert(nextUser);
 
   await giftCodeRepo.upsert({

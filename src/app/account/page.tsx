@@ -142,6 +142,12 @@ export default async function AccountPage({
                 <span className="block opacity-60">月次 {user.tokenBalance} ＋ 貢献 {user.bonusTokens}</span>
               </div>
             )}
+            {user.tokenExpiresAt && user.tokenBalance > 0 && (
+              <div className="mono text-[10px] text-amber-400/90 mt-2 leading-[1.6]">
+                月次 {user.tokenBalance} トークンは{" "}
+                <strong>{user.tokenExpiresAt.slice(0, 10)}</strong> に失効予定
+              </div>
+            )}
           </div>
 
           <RedeemGift />

@@ -6,6 +6,7 @@ import { userRepo } from "./users";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
+  oneYearFrom,
   type AccountRole,
   type AccountStatus,
 } from "./account-schema";
@@ -53,7 +54,9 @@ export async function setTokenBalanceAction(formData: FormData): Promise<void> {
   const balance = Math.max(0, Math.trunc(Number(formData.get("balance") ?? 0)));
   const u = await userRepo.get(id);
   if (!u) return;
-  await userRepo.upsert({ ...u, tokenBalance: balance });
+  // 付与トークンは1年で失効。残高 0 なら失効予定もクリア。
+  const tokenExpiresAt = balance > 0 ? oneYearFrom(new Date().toISOString()) : null;
+  await userRepo.upsert({ ...u, tokenBalance: balance, tokenExpiresAt });
   revalidatePath("/admin/accounts");
 }
 
