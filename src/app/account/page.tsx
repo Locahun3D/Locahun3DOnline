@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOnboarded } from "@/lib/dal";
 import { acceptNdaAction } from "@/lib/auth-actions";
-import { ROLE_LABEL, ACCOUNT_STATUS_LABEL } from "@/lib/account-schema";
+import { ROLE_LABEL, ACCOUNT_STATUS_LABEL, totalTokens } from "@/lib/account-schema";
 
 export const metadata = { title: "プロフィール" };
 
@@ -131,10 +131,16 @@ export default async function AccountPage({
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
               トークン残
             </div>
-            <div className="serif text-3xl text-accent">{user.tokenBalance}</div>
+            <div className="serif text-3xl text-accent">{totalTokens(user)}</div>
             <div className="mono text-[10px] text-muted mt-1">
               3DGS ウォークスルーで消費
             </div>
+            {user.bonusTokens > 0 && (
+              <div className="mono text-[10px] text-accent/80 mt-2 leading-[1.6]">
+                うち {user.bonusTokens} は<strong>失効しない</strong>貢献特別枠
+                <span className="block opacity-60">月次 {user.tokenBalance} ＋ 貢献 {user.bonusTokens}</span>
+              </div>
+            )}
           </div>
 
           <div className="border border-line p-5">

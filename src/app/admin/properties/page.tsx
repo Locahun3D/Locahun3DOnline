@@ -6,6 +6,9 @@ import {
   type PropertyStatus,
 } from "@/lib/schemas";
 import { createDraftAction } from "../_actions";
+import PropertyRowActions from "@/components/admin/property-row-actions";
+
+const GRID = "grid-cols-[72px_1fr_96px_96px_140px_minmax(290px,320px)]";
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -56,8 +59,16 @@ export default async function AdminPropertiesList({
         </form>
       </div>
 
-      <div className="border border-line">
-        <div className="grid grid-cols-[80px_1fr_120px_120px_160px_120px] gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+      {/* Status filter tabs */}
+      <div className="flex flex-wrap gap-2 mb-4 mono text-[10px] tracking-[0.22em] uppercase">
+        <FilterTab label={`全て ${all.length}`} href="/admin/properties" active={!status} />
+        <FilterTab label={`公開 ${counts.published}`} href="/admin/properties?status=published" active={status === "published"} />
+        <FilterTab label={`下書き ${counts.draft}`} href="/admin/properties?status=draft" active={status === "draft"} />
+        <FilterTab label={`アーカイブ ${counts.archived}`} href="/admin/properties?status=archived" active={status === "archived"} />
+      </div>
+
+      <div className="border border-line overflow-x-auto">
+        <div className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60 min-w-[820px]`}>
           <div>Status</div>
           <div>Title</div>
           <div>Category</div>
@@ -74,7 +85,7 @@ export default async function AdminPropertiesList({
           filtered.map((p) => (
             <div
               key={p.id}
-              className="grid grid-cols-[80px_1fr_120px_120px_160px_120px] gap-3 px-4 py-3 border-b border-line items-center hover:bg-[#222] transition"
+              className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line items-center hover:bg-[#222] transition min-w-[820px]`}
             >
               <StatusBadge status={p.status} />
               <div className="min-w-0">
@@ -82,7 +93,7 @@ export default async function AdminPropertiesList({
                   href={`/admin/properties/${p.id}/edit`}
                   className="block truncate hover:text-accent transition"
                 >
-                  {p.title}
+                  {p.title || "（無題）"}
                 </Link>
                 <div className="mono text-[10px] opacity-50 mt-0.5">
                   {p.id}
@@ -95,28 +106,35 @@ export default async function AdminPropertiesList({
               <div className="mono text-[11px] text-muted">
                 {p.updatedAt ? p.updatedAt.slice(0, 16).replace("T", " ") : "—"}
               </div>
-              <div className="text-right flex gap-2 justify-end">
-                <Link
-                  href={`/admin/properties/${p.id}/edit`}
-                  className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-2.5 py-1.5 hover:border-accent hover:text-accent transition"
-                >
-                  編集
-                </Link>
-                {p.status === "published" && (
-                  <Link
-                    href={`/properties/${p.id}`}
-                    target="_blank"
-                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-2.5 py-1.5 hover:border-accent hover:text-accent transition"
-                  >
-                    公開↗
-                  </Link>
-                )}
-              </div>
+              <PropertyRowActions id={p.id} status={p.status} />
             </div>
           ))
         )}
       </div>
     </div>
+  );
+}
+
+function FilterTab({
+  label,
+  href,
+  active,
+}: {
+  label: string;
+  href: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`px-3 py-1.5 border transition ${
+        active
+          ? "border-accent text-accent"
+          : "border-line text-muted hover:border-ink hover:text-ink"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 

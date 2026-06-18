@@ -53,6 +53,25 @@ export async function publishAction(input: unknown) {
   return { ok: true as const, id: parsed.id };
 }
 
+/** Publish straight from the list by id — validates the stored record first. */
+export async function publishByIdAction(id: string) {
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false as const, error: "物件が見つかりません" };
+  const parsed = publishablePropertySchema.safeParse(existing);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      error: "公開に必要な項目が未入力です。エディタで入力してください。",
+    };
+  }
+  await repo.upsert({ ...parsed.data, status: "published" });
+  revalidatePath("/admin/properties");
+  revalidatePath("/properties");
+  revalidatePath(`/properties/${id}`);
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
 export async function unpublishAction(id: string) {
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
