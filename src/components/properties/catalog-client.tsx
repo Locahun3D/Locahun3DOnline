@@ -756,18 +756,6 @@ function SortBar({
         <span className="opacity-40">/ {totalCount} 全</span>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setSort("newest")}
-        className={`tracking-[0.22em] uppercase px-2 py-1 transition border ${
-          sort === "newest"
-            ? "border-accent text-accent"
-            : "border-transparent text-muted hover:text-ink"
-        }`}
-      >
-        元の並び順
-      </button>
-
       <div className="flex flex-wrap items-stretch gap-x-3 gap-y-1 ml-auto">
         {SORT_COLS.map((c) => (
           <div key={c.label} className="flex flex-col items-center">
