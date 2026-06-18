@@ -12,7 +12,7 @@ export default function DashboardPage() {
       </div>
 
       <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-light">
+        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
           ようこそ、ゲスト
         </h1>
         <p className="text-[14px] text-muted mt-2">

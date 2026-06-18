@@ -35,7 +35,7 @@ export default function PricingPage() {
       </div>
 
       <header className="text-center mb-12">
-        <h1 className="serif text-[clamp(2rem,4vw,3.6rem)] font-light leading-[1.3] max-w-[26ch] mx-auto">
+        <h1 className="serif text-[clamp(2rem,4vw,3.6rem)] font-bold leading-[1.3] max-w-[26ch] mx-auto">
           下見の往復を、
           <br />
           <em className="not-italic text-accent">サブスク</em> 一枚に。

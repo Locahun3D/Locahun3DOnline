@@ -62,7 +62,7 @@ export default function ViewerGate({
           <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-4">
             ● Subscriber only · {tokenCost} トークン消費
           </div>
-          <div className="serif text-2xl md:text-3xl font-light leading-[1.5] max-w-[26ch] mb-4">
+          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] mb-4">
             3DGS ウォークスルーは
             <br />
             メンバー限定です。
@@ -112,7 +112,7 @@ export default function ViewerGate({
           ● 3DGS WALKTHROUGH READY
         </div>
 
-        <div className="serif text-2xl md:text-3xl font-light leading-[1.4] max-w-[28ch] mb-3">
+        <div className="serif text-2xl md:text-3xl font-bold leading-[1.4] max-w-[28ch] mb-3">
           {openedAt ? (
             <>別タブで開いています。</>
           ) : (

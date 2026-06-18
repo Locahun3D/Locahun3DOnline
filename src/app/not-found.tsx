@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-3">
         NO SIGNAL — 404
       </div>
-      <h1 className="serif text-[clamp(2.4rem,6vw,5rem)] font-light leading-[1.2]">
+      <h1 className="serif text-[clamp(2.4rem,6vw,5rem)] font-bold leading-[1.2]">
         フレームが見つかりません。
       </h1>
       <p className="mt-6 text-[14px] text-muted max-w-[40ch] leading-[1.85]">

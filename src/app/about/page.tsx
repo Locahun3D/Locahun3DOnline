@@ -33,7 +33,7 @@ export default function AboutPage() {
         <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mb-3">
           LOCAHUN 3D / ONLINE
         </div>
-        <h1 className="serif text-[clamp(2rem,4vw,3.4rem)] font-light leading-[1.3] mb-5">
+        <h1 className="serif text-[clamp(2rem,4vw,3.4rem)] font-bold leading-[1.3] mb-5">
           サービスについて
         </h1>
         <p className="text-[14px] text-muted leading-[1.95]">

@@ -40,7 +40,7 @@ export default async function AccountPage({
       )}
 
       <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-light">
+        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
           {user.name}
         </h1>
         <p className="text-[13px] text-muted mt-2 flex items-center gap-2">
