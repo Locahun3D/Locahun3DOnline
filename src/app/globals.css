@@ -7,7 +7,8 @@
   --color-accent: #ffb454;
   --color-muted: rgb(255 255 255 / 0.62);
 
-  --font-serif: "Noto Serif JP", ui-serif, Georgia, serif;
+  /* 明朝体は全面禁止: --font-serif もゴシック (Noto Sans JP) にフォールバックさせる。 */
+  --font-serif: "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
 

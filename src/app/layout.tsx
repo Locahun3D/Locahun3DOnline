@@ -1,14 +1,16 @@
 import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
-import { Noto_Serif_JP, Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
+import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 
-const serif = Noto_Serif_JP({
+// 明朝体は全面禁止。`--font-serif` も Noto Sans JP（ゴシック）に振り替え、
+// `serif` ユーティリティ / Tailwind `font-serif` / `.leader` をすべてゴシックで描画する。
+const serif = Noto_Sans_JP({
   variable: "--font-serif",
   subsets: ["latin"],
-  weight: ["200", "400", "700", "900"],
+  weight: ["200", "300", "400", "700", "900"],
   display: "swap",
 });
 
