@@ -1,22 +1,57 @@
 import Link from "next/link";
+import { requireOnboarded } from "@/lib/dal";
+import { acceptNdaAction } from "@/lib/auth-actions";
+import { ROLE_LABEL, ACCOUNT_STATUS_LABEL } from "@/lib/account-schema";
 
 export const metadata = { title: "プロフィール" };
 
-export default function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string; nda?: string }>;
+}) {
+  const user = await requireOnboarded();
+  const { welcome, nda } = await searchParams;
+
   return (
-    <div className="frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">ACCOUNT</span>
         <span>Profile</span>
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
 
+      {welcome && (
+        <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">
+          {welcome === "pending" ? (
+            <>
+              ようこそ。<strong className="text-accent">{ROLE_LABEL[user.role]}</strong>
+              アカウントは現在<strong>承認待ち</strong>です。運営の承認後にプロ機能が有効化されます。
+            </>
+          ) : (
+            <>登録が完了しました。<strong className="text-accent">1 トークン</strong>を付与しました。</>
+          )}
+        </div>
+      )}
+      {nda && (
+        <div className="mb-6 border border-green-400/40 bg-green-400/10 px-4 py-3 text-[13px]">
+          NDA への同意を記録しました。機密ロケ地の閲覧が可能になりました。
+        </div>
+      )}
+
       <header className="mb-10">
         <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-light">
-          プロフィール
+          {user.name}
         </h1>
-        <p className="text-[13px] text-muted mt-2">
-          Clerk 配線後に実データに切替。今はダミー表示。
+        <p className="text-[13px] text-muted mt-2 flex items-center gap-2">
+          <span className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-1.5 py-0.5">
+            {ROLE_LABEL[user.role]}
+          </span>
+          {user.status !== "active" && (
+            <span className="mono text-[10px] tracking-[0.2em] uppercase border border-amber-400/40 text-amber-400 px-1.5 py-0.5">
+              {ACCOUNT_STATUS_LABEL[user.status]}
+            </span>
+          )}
         </p>
       </header>
 
@@ -30,19 +65,21 @@ export default function AccountPage() {
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
                 氏名
               </dt>
-              <dd>中村 航</dd>
+              <dd>{user.name}</dd>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
                 Email
               </dt>
-              <dd className="mono text-[11px]">nakamurakou1108@gmail.com</dd>
+              <dd className="mono text-[11px]">{user.email}</dd>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
                 所属
               </dt>
-              <dd>—</dd>
+              <dd>{user.company || "—"}</dd>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
                 登録日
               </dt>
-              <dd className="mono text-[11px]">2026-05-24</dd>
+              <dd className="mono text-[11px]">
+                {(user.createdAt ?? "").slice(0, 10) || "—"}
+              </dd>
             </dl>
           </div>
 
@@ -52,9 +89,9 @@ export default function AccountPage() {
             </div>
             <div className="flex items-baseline justify-between">
               <div>
-                <div className="serif text-2xl">Individual</div>
+                <div className="serif text-2xl uppercase">{user.plan}</div>
                 <div className="mono text-[10px] text-muted mt-1">
-                  ¥5,200 / 月 · 次回更新 2026-06-24
+                  {user.plan === "free" ? "無料プラン" : "サブスクリプション"}
                 </div>
               </div>
               <Link
@@ -65,17 +102,38 @@ export default function AccountPage() {
               </Link>
             </div>
           </div>
+
+          {user.role === "production" && (
+            <div className="pt-5 border-t border-line">
+              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
+                NDA（秘密保持契約）
+              </div>
+              {user.ndaAcceptedAt ? (
+                <p className="text-[13px] text-green-400">
+                  ✓ 締結済（{user.ndaAcceptedAt.slice(0, 10)}）— 機密ロケ地を閲覧できます。
+                </p>
+              ) : (
+                <form action={acceptNdaAction} className="space-y-3">
+                  <p className="text-[12px] text-muted leading-[1.8]">
+                    倉庫裏・非公開スタジオ等の機密ロケ地を閲覧するには、NDA への同意が必要です。
+                  </p>
+                  <button className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition">
+                    NDA に同意する
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </section>
 
         <aside className="space-y-5">
           <div className="border border-line p-5">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-              今月のトークン
+              トークン残
             </div>
-            <div className="serif text-3xl text-accent">8 / 8</div>
-            <div className="mono text-[10px] text-muted mt-1">月初リセット</div>
-            <div className="h-1 bg-line mt-3 relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 bg-accent" style={{ width: "100%" }} />
+            <div className="serif text-3xl text-accent">{user.tokenBalance}</div>
+            <div className="mono text-[10px] text-muted mt-1">
+              3DGS ウォークスルーで消費
             </div>
           </div>
 
@@ -83,7 +141,7 @@ export default function AccountPage() {
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
               ブックマーク
             </div>
-            <div className="serif text-3xl">0</div>
+            <div className="serif text-3xl">{user.bookmarks.length}</div>
             <Link
               href="/properties"
               className="mt-3 inline-block mono text-[10px] tracking-[0.22em] uppercase text-accent hover:underline"
@@ -92,27 +150,6 @@ export default function AccountPage() {
             </Link>
           </div>
         </aside>
-      </div>
-
-      <div className="mt-8 grid md:grid-cols-2 gap-4 text-[12px]">
-        <Link
-          href="/account/billing"
-          className="border border-line p-5 hover:border-accent hover:text-accent transition"
-        >
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-1">
-            💳 課金 / 領収書
-          </div>
-          <div className="text-[13px]">支払履歴・領収書ダウンロード</div>
-        </Link>
-        <Link
-          href="/account/history"
-          className="border border-line p-5 hover:border-accent hover:text-accent transition"
-        >
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-1">
-            🕒 視聴履歴
-          </div>
-          <div className="text-[13px]">3DGS を開いた物件と日時</div>
-        </Link>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Noto_Serif_JP, Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -14,7 +15,7 @@ const serif = Noto_Serif_JP({
 const sans = Noto_Sans_JP({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["200", "300", "400", "600", "700"],
+  weight: ["200", "300", "400", "600", "700", "900"],
   display: "swap",
 });
 
@@ -49,9 +50,11 @@ export default function RootLayout({
       className={`${serif.variable} ${sans.variable} ${mono.variable}`}
     >
       <body className="min-h-screen flex flex-col">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        <ClerkProvider>
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </ClerkProvider>
       </body>
     </html>
   );

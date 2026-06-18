@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CATEGORY_LABEL,
   REFERENCE_PRESETS,
@@ -29,7 +30,6 @@ const CatalogMap = dynamic(() => import("./catalog-map"), {
 // to 100+ properties of future variety (white cyc walls / outdoor / mansion).
 const PRICE_HR_OPTS  = [5000, 10000, 15000, 20000, 30000, 50000, 100000];
 const PRICE_DAY_OPTS = [30000, 50000, 100000, 200000, 300000, 500000, 1000000];
-const CAPACITY_OPTS  = [5, 10, 20, 30, 50, 100, 200, 500];
 const AREA_OPTS      = [30, 50, 100, 200, 500, 1000, 2000];
 const CEILING_OPTS   = [2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0];
 const DISTANCE_OPTS  = [5, 10, 30, 50, 100, 200, 500];
@@ -64,6 +64,7 @@ const DEFAULT_REF: Reference = {
 };
 
 export default function CatalogClient({ items, areas, studioTypes }: Props) {
+  const router = useRouter();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [reference, setReference] = useState<Reference>(DEFAULT_REF);
 
@@ -76,14 +77,11 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
   const [maxPrice, setMaxPrice] = useState<number | "">("");
   const [minDailyPrice, setMinDailyPrice] = useState<number | "">("");
   const [maxDailyPrice, setMaxDailyPrice] = useState<number | "">("");
-  const [minCapacity, setMinCapacity] = useState<number | "">("");
-  const [maxCapacity, setMaxCapacity] = useState<number | "">("");
   const [minArea, setMinArea] = useState<number | "">("");
   const [maxArea, setMaxArea] = useState<number | "">("");
   const [minCeiling, setMinCeiling] = useState<number | "">("");
   const [maxCeiling, setMaxCeiling] = useState<number | "">("");
   const [maxKmFromRef, setMaxKmFromRef] = useState<number | "">("");
-  const [maxToken, setMaxToken] = useState<1 | 2 | 3 | "all">("all");
   const [requiresDaily, setRequiresDaily] = useState(false);
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
@@ -96,10 +94,9 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setCategory("all"); setArea("all"); setStudioType("all");
     setMinPrice(""); setMaxPrice("");
     setMinDailyPrice(""); setMaxDailyPrice("");
-    setMinCapacity(""); setMaxCapacity("");
     setMinArea(""); setMaxArea("");
     setMinCeiling(""); setMaxCeiling("");
-    setMaxKmFromRef(""); setMaxToken("all");
+    setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
     setSort("newest");
   }, []);
@@ -129,10 +126,6 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
         if (typeof minDailyPrice === "number" && (p.dailyPrice ?? 0) < minDailyPrice) return false;
         if (typeof maxDailyPrice === "number" && ((p.dailyPrice ?? 0) === 0 || (p.dailyPrice ?? 0) > maxDailyPrice)) return false;
       }
-      if (rangeOk(minCapacity, maxCapacity)) {
-        if (typeof minCapacity === "number" && p.capacity < minCapacity) return false;
-        if (typeof maxCapacity === "number" && p.capacity > maxCapacity) return false;
-      }
       if (rangeOk(minArea, maxArea)) {
         if (typeof minArea === "number" && p.floorAreaSqm < minArea) return false;
         if (typeof maxArea === "number" && p.floorAreaSqm > maxArea) return false;
@@ -143,7 +136,6 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
       }
       if (typeof maxKmFromRef === "number" &&
           (p.distanceKm === null || p.distanceKm > maxKmFromRef)) return false;
-      if (maxToken !== "all" && p.tokenCost > maxToken) return false;
       if (requiresDaily && (!p.dailyPrice || p.dailyPrice <= 0)) return false;
       if (requiresParking && !p.parking) return false;
       if (requires200V && !/200\s*V/i.test(p.powerVoltage)) return false;
@@ -179,8 +171,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     items, reference,
     category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
-    minCapacity, maxCapacity, minArea, maxArea, minCeiling, maxCeiling,
-    maxKmFromRef, maxToken,
+    minArea, maxArea, minCeiling, maxCeiling,
+    maxKmFromRef,
     requiresDaily, requiresParking, requires200V,
     q, sort,
   ]);
@@ -200,90 +192,83 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
   }, []);
 
   return (
-    <div className="frame pt-12 pb-32">
+    <div className="frame-wide pt-12 pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">CATALOG</span>
         <span>Find a Location</span>
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
 
-      <header className="mb-8">
-        <h1 className="serif text-[clamp(2rem,4vw,3.4rem)] font-light leading-[1.3] mb-3">
-          撮影現場を探す。
-        </h1>
-        <p className="text-[14px] text-muted max-w-[60ch] leading-[1.85]">
-          地図と一覧を行き来して、レンズ・天井・搬入・距離まで撮影前に詰める。
-          カードにカーソルを合わせると地図上にハイライトされます。
-        </p>
-      </header>
-
-      <FiltersPanel
-        q={q} setQ={setQ}
-        category={category} setCategory={setCategory}
-        area={area} setArea={setArea} areas={areas}
-        studioType={studioType} setStudioType={setStudioType} studioTypes={studioTypes}
-        reference={reference} setReference={setReference} useGeolocation={useGeolocation}
-        minPrice={minPrice} setMinPrice={setMinPrice}
-        maxPrice={maxPrice} setMaxPrice={setMaxPrice}
-        minDailyPrice={minDailyPrice} setMinDailyPrice={setMinDailyPrice}
-        maxDailyPrice={maxDailyPrice} setMaxDailyPrice={setMaxDailyPrice}
-        minCapacity={minCapacity} setMinCapacity={setMinCapacity}
-        maxCapacity={maxCapacity} setMaxCapacity={setMaxCapacity}
-        minArea={minArea} setMinArea={setMinArea}
-        maxArea={maxArea} setMaxArea={setMaxArea}
-        minCeiling={minCeiling} setMinCeiling={setMinCeiling}
-        maxCeiling={maxCeiling} setMaxCeiling={setMaxCeiling}
-        maxKmFromRef={maxKmFromRef} setMaxKmFromRef={setMaxKmFromRef}
-        maxToken={maxToken} setMaxToken={setMaxToken}
-        requiresDaily={requiresDaily} setRequiresDaily={setRequiresDaily}
-        requiresParking={requiresParking} setRequiresParking={setRequiresParking}
-        requires200V={requires200V} setRequires200V={setRequires200V}
-        reset={reset}
-        resultCount={computed.length} totalCount={items.length}
-      />
-
-      <SortBar sort={sort} setSort={setSort} resultCount={computed.length} totalCount={items.length} />
-
-      <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] gap-6">
-        <div>
-          {computed.length === 0 ? (
-            <div className="border border-line p-12 text-center">
-              <div className="mono text-[12px] tracking-[0.3em] uppercase opacity-60 mb-3">
-                No results
-              </div>
-              <p className="text-muted text-[14px]">
-                条件に合致する物件が見つかりません。フィルタを緩めてください。
-              </p>
-            </div>
-          ) : (
-            <ul className="grid sm:grid-cols-2 gap-5">
-              {computed.map((p) => (
-                <li
-                  key={p.id}
-                  onMouseEnter={() => setHoveredId(p.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  className={`transition ${hoveredId === p.id ? "outline outline-1 outline-accent" : ""}`}
-                >
-                  <PropertyCardLite
-                    property={p}
-                    distanceKm={p.distanceKm}
-                    referenceLabel={reference.label}
-                    highlighted={hoveredId === p.id}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+      {/* Top band: search panel (left) + map (right), flush to the same height */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] gap-6">
+        <div className="min-w-0">
+          <FiltersPanel
+            q={q} setQ={setQ}
+            category={category} setCategory={setCategory}
+            area={area} setArea={setArea} areas={areas}
+            studioType={studioType} setStudioType={setStudioType} studioTypes={studioTypes}
+            reference={reference} setReference={setReference} useGeolocation={useGeolocation}
+            minPrice={minPrice} setMinPrice={setMinPrice}
+            maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+            minDailyPrice={minDailyPrice} setMinDailyPrice={setMinDailyPrice}
+            maxDailyPrice={maxDailyPrice} setMaxDailyPrice={setMaxDailyPrice}
+            minArea={minArea} setMinArea={setMinArea}
+            maxArea={maxArea} setMaxArea={setMaxArea}
+            minCeiling={minCeiling} setMinCeiling={setMinCeiling}
+            maxCeiling={maxCeiling} setMaxCeiling={setMaxCeiling}
+            maxKmFromRef={maxKmFromRef} setMaxKmFromRef={setMaxKmFromRef}
+            requiresDaily={requiresDaily} setRequiresDaily={setRequiresDaily}
+            requiresParking={requiresParking} setRequiresParking={setRequiresParking}
+            requires200V={requires200V} setRequires200V={setRequires200V}
+            reset={reset}
+            resultCount={computed.length} totalCount={items.length}
+          />
         </div>
 
-        <div className="lg:sticky lg:top-20 self-start h-[60vh] lg:h-[calc(100vh-7rem)]">
+        {/* Map: stretches to match the panel height (面一), no scroll-follow */}
+        <div className="h-[60vh] lg:h-auto">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}
             reference={reference}
             onMarkerHover={(id) => setHoveredId(id)}
+            onMarkerClick={(id) => router.push(`/properties/${id}`)}
           />
         </div>
+      </div>
+
+      <SortBar sort={sort} setSort={setSort} resultCount={computed.length} totalCount={items.length} />
+
+      {/* Cards span the full width below the band → maximum card area */}
+      <div className="mt-4">
+        {computed.length === 0 ? (
+          <div className="border border-line p-12 text-center">
+            <div className="mono text-[12px] tracking-[0.3em] uppercase opacity-60 mb-3">
+              No results
+            </div>
+            <p className="text-muted text-[14px]">
+              条件に合致する物件が見つかりません。フィルタを緩めてください。
+            </p>
+          </div>
+        ) : (
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {computed.map((p) => (
+              <li
+                key={p.id}
+                onMouseEnter={() => setHoveredId(p.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                className={`transition ${hoveredId === p.id ? "outline outline-1 outline-accent" : ""}`}
+              >
+                <PropertyCardLite
+                  property={p}
+                  distanceKm={p.distanceKm}
+                  referenceLabel={reference.label}
+                  highlighted={hoveredId === p.id}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
@@ -303,14 +288,11 @@ interface FiltersProps {
   maxPrice: number | ""; setMaxPrice: (v: number | "") => void;
   minDailyPrice: number | ""; setMinDailyPrice: (v: number | "") => void;
   maxDailyPrice: number | ""; setMaxDailyPrice: (v: number | "") => void;
-  minCapacity: number | ""; setMinCapacity: (v: number | "") => void;
-  maxCapacity: number | ""; setMaxCapacity: (v: number | "") => void;
   minArea: number | ""; setMinArea: (v: number | "") => void;
   maxArea: number | ""; setMaxArea: (v: number | "") => void;
   minCeiling: number | ""; setMinCeiling: (v: number | "") => void;
   maxCeiling: number | ""; setMaxCeiling: (v: number | "") => void;
   maxKmFromRef: number | ""; setMaxKmFromRef: (v: number | "") => void;
-  maxToken: 1 | 2 | 3 | "all"; setMaxToken: (v: 1 | 2 | 3 | "all") => void;
   requiresDaily: boolean; setRequiresDaily: (v: boolean) => void;
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
@@ -326,45 +308,56 @@ function FiltersPanel(p: FiltersProps) {
 
   return (
     <div className="border border-line bg-[#222] p-5 space-y-4">
-      {/* Keyword search — full width */}
-      <Row label="キーワード">
-        <input
-          type="search"
-          value={p.q}
-          onChange={(e) => p.setQ(e.target.value)}
-          placeholder="白ホリ / 渋谷 / ガレージ / 倉庫 ..."
-          className={inputCls + " w-full"}
-        />
-      </Row>
-
-      <Divider />
-
-      {/* Reference + Distance */}
-      <Row label="参照地点 / 距離">
-        <div className="grid md:grid-cols-[2fr_1fr] gap-3">
-          <ReferencePicker
-            value={p.reference}
-            onChange={p.setReference}
-            onUseGeolocation={p.useGeolocation}
-          />
-          <div className="flex items-center gap-2">
-            <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
-              から
-            </span>
-            <ChoiceSelect
-              value={p.maxKmFromRef}
-              onChange={p.setMaxKmFromRef}
-              options={DISTANCE_OPTS}
-              format={(v) => `${v}km`}
-              emptyLabel="制限なし"
-              className="flex-1"
+      {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
+      <div className="grid lg:grid-cols-2 gap-x-6 gap-y-4">
+        <div className="space-y-4">
+          <Row label="キーワード">
+            <input
+              type="search"
+              value={p.q}
+              onChange={(e) => p.setQ(e.target.value)}
+              placeholder="白ホリ / 渋谷 / ガレージ ..."
+              className={inputWhiteCls + " w-full max-w-xs"}
             />
-            <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
-              以内
-            </span>
-          </div>
+          </Row>
+
+          <Row label="">
+            <button
+              type="button"
+              onClick={p.reset}
+              className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-ink transition"
+            >
+              ✕ すべてリセット
+            </button>
+          </Row>
         </div>
-      </Row>
+
+        <Row label="参照地点 / 距離">
+          <div className="grid md:grid-cols-[2fr_1fr] gap-3">
+            <ReferencePicker
+              value={p.reference}
+              onChange={p.setReference}
+              onUseGeolocation={p.useGeolocation}
+            />
+            <div className="flex items-center gap-2">
+              <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
+                から
+              </span>
+              <ChoiceSelect
+                value={p.maxKmFromRef}
+                onChange={p.setMaxKmFromRef}
+                options={DISTANCE_OPTS}
+                format={(v) => `${v}km`}
+                emptyLabel="制限なし"
+                className="flex-1"
+              />
+              <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
+                以内
+              </span>
+            </div>
+          </div>
+        </Row>
+      </div>
 
       <Divider />
 
@@ -378,11 +371,11 @@ function FiltersPanel(p: FiltersProps) {
             format={(v) => CATEGORY_LABEL[v as PropertyCategory]}
             emptyLabel="カテゴリ すべて"
           />
-          <ComboPicker
-            value={p.studioType}
-            onChange={p.setStudioType}
+          <ChoiceSelect
+            value={p.studioType === "all" ? "" : p.studioType}
+            onChange={(v) => p.setStudioType(v === "" ? "all" : v)}
             options={p.studioTypes}
-            placeholder="スタジオ種類 (打ち込みも可)"
+            emptyLabel="スタジオ種類 すべて"
           />
           <ComboPicker
             value={p.area}
@@ -395,73 +388,59 @@ function FiltersPanel(p: FiltersProps) {
 
       <Divider />
 
-      {/* Range filters */}
-      <div className="space-y-3">
-        <RangeRow
-          label="時間料金 (¥/hr)"
-          min={p.minPrice} max={p.maxPrice}
-          setMin={p.setMinPrice} setMax={p.setMaxPrice}
-          options={PRICE_HR_OPTS} format={yenFmt}
-        />
-        <RangeRow
-          label="日料金 (¥/day)"
-          min={p.minDailyPrice} max={p.maxDailyPrice}
-          setMin={p.setMinDailyPrice} setMax={p.setMaxDailyPrice}
-          options={PRICE_DAY_OPTS} format={yenFmt}
-        />
-        <RangeRow
-          label="収容人数 (名)"
-          min={p.minCapacity} max={p.maxCapacity}
-          setMin={p.setMinCapacity} setMax={p.setMaxCapacity}
-          options={CAPACITY_OPTS} format={(v) => `${v}名`}
-        />
-        <RangeRow
-          label="床面積 (㎡)"
-          min={p.minArea} max={p.maxArea}
-          setMin={p.setMinArea} setMax={p.setMaxArea}
-          options={AREA_OPTS} format={(v) => `${v}㎡`}
-        />
-        <RangeRow
-          label="天井高 (m)"
-          min={p.minCeiling} max={p.maxCeiling}
-          setMin={p.setMinCeiling} setMax={p.setMaxCeiling}
-          options={CEILING_OPTS} format={(v) => `${v}m`}
-        />
-        <RangeRow
-          label="トークン上限"
-          min=""  // unused
-          max={p.maxToken === "all" ? "" : p.maxToken}
-          setMin={() => {}}
-          setMax={(v) => p.setMaxToken(v === "" ? "all" : (v as 1 | 2 | 3))}
-          options={[1, 2, 3]}
-          format={(v) => `${v}t (${TOKEN_COST_LABEL[v as 1 | 2 | 3]})`}
-          singleMax
-        />
+      {/* Range filters — two columns: top 3 on the left, bottom 3 on the right */}
+      <div className="grid lg:grid-cols-2 gap-x-6 gap-y-3">
+        <div className="space-y-3">
+          <RangeRow
+            label="時間料金 (¥/hr)"
+            min={p.minPrice} max={p.maxPrice}
+            setMin={p.setMinPrice} setMax={p.setMaxPrice}
+            options={PRICE_HR_OPTS} format={yenFmt}
+          />
+          <RangeRow
+            label="日料金 (¥/day)"
+            min={p.minDailyPrice} max={p.maxDailyPrice}
+            setMin={p.setMinDailyPrice} setMax={p.setMaxDailyPrice}
+            options={PRICE_DAY_OPTS} format={yenFmt}
+          />
+        </div>
+        <div className="space-y-3">
+          <RangeRow
+            label="床面積 (㎡)"
+            min={p.minArea} max={p.maxArea}
+            setMin={p.setMinArea} setMax={p.setMaxArea}
+            options={AREA_OPTS} format={(v) => `${v}㎡`}
+          />
+          <RangeRow
+            label="天井高 (m)"
+            min={p.minCeiling} max={p.maxCeiling}
+            setMin={p.setMinCeiling} setMax={p.setMaxCeiling}
+            options={CEILING_OPTS} format={(v) => `${v}m`}
+          />
+        </div>
       </div>
 
       <Divider />
 
-      {/* Toggles + reset */}
+      {/* Additional conditions */}
       <Row label="追加条件">
         <div className="flex flex-wrap items-center gap-2">
           <ToggleChip label="日料金あり" value={p.requiresDaily} onChange={p.setRequiresDaily} />
           <ToggleChip label="駐車場あり" value={p.requiresParking} onChange={p.setRequiresParking} />
           <ToggleChip label="200V 電源" value={p.requires200V} onChange={p.setRequires200V} />
-          <button
-            type="button"
-            onClick={p.reset}
-            className="ml-auto mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-ink transition"
-          >
-            ✕ すべてリセット
-          </button>
         </div>
       </Row>
     </div>
   );
 }
 
+// All filter inputs/selects use a light-gray field — dark text on gray so every
+// entry point reads as "type/pick here" against the dark panel.
 const inputCls =
-  "bg-bg border border-line px-3 py-2 text-[13px] mono focus:outline-none focus:border-accent transition";
+  "bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] mono focus:outline-none focus:border-accent transition placeholder:text-black/40";
+
+// Alias kept for the keyword search (identical gray style).
+const inputWhiteCls = inputCls;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -489,7 +468,7 @@ function ToggleChip({
       onClick={() => onChange(!value)}
       className={`px-3 py-1.5 mono text-[11px] tracking-[0.18em] uppercase border transition ${
         value
-          ? "border-accent text-accent bg-[#2a1f10]"
+          ? "border-accent text-accent bg-[#0e1a20]"
           : "border-line text-muted hover:border-ink hover:text-ink"
       }`}
     >
@@ -576,9 +555,9 @@ function ChoiceSelect<T extends string | number>({
       }}
       className={`${inputCls} cursor-pointer ${className}`}
     >
-      <option value="" className="bg-bg">{emptyLabel}</option>
+      <option value="" className="bg-neutral-300 text-black">{emptyLabel}</option>
       {options.map((o) => (
-        <option key={String(o)} value={String(o)} className="bg-bg">
+        <option key={String(o)} value={String(o)} className="bg-neutral-300 text-black">
           {format ? format(o) : String(o)}
         </option>
       ))}
@@ -590,26 +569,24 @@ function ChoiceSelect<T extends string | number>({
 // ComboPicker — text input + datalist (substring match in filter logic)
 // ──────────────────────────────────────────────────────────────────────────
 
-let comboId = 0;
 function ComboPicker({
   value, onChange, options, placeholder,
 }: {
   value: string; onChange: (v: string) => void; options: string[]; placeholder: string;
 }) {
-  const idRef = useRef<string>("");
-  if (!idRef.current) idRef.current = `combo-${++comboId}`;
+  const id = useId();
   const displayValue = value === "all" ? "" : value;
   return (
     <>
       <input
         type="text"
-        list={idRef.current}
+        list={id}
         value={displayValue}
         onChange={(e) => onChange(e.target.value.trim() === "" ? "all" : e.target.value)}
         placeholder={placeholder}
         className={`${inputCls} w-full`}
       />
-      <datalist id={idRef.current}>
+      <datalist id={id}>
         {options.map((o) => <option key={o} value={o} />)}
       </datalist>
     </>

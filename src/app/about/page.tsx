@@ -1,260 +1,112 @@
 import Link from "next/link";
+import Jp from "@/components/jp";
 
 export const metadata = {
   title: "サービスについて",
-  description: "ロケハン3D ファミリーの各サービス紹介。本体 / オンライン版 / 将来構想。",
+  description:
+    "ロケハン3D オンラインは、スタジオ・ロケ地を地図検索 + 3DGS で下見し、ブラウザだけで撮影前ロケハンを完結するオンライン・プラットフォームです。",
 };
 
-type ServiceStatus = "active" | "developing" | "planned";
-
-const STATUS_META: Record<ServiceStatus, { label: string; cls: string }> = {
-  active:     { label: "運営中",   cls: "bg-accent text-bg" },
-  developing: { label: "開発中",   cls: "border border-accent text-accent" },
-  planned:    { label: "構想中",   cls: "border border-line text-muted" },
-};
-
-interface Service {
-  code: string;
-  name: string;
-  tagline: string;
-  status: ServiceStatus;
-  description: string;
-  audience: string;
-  highlights: string[];
-  links: { href: string; label: string; external?: boolean }[];
-}
-
-const SERVICES: Service[] = [
+const FEATURES = [
   {
-    code: "01",
-    name: "ロケハン3D",
-    tagline: "撮影前ロケハンを 3DGS で再発明する 本体プラットフォーム",
-    status: "active",
-    description:
-      "PortalCam で実空間をスキャンし、3D Gaussian Splatting データとして提供する本体サービス。" +
-      "撮影前にブラウザ・PC で空間を歩き回って下見できる、撮影業界のための総合プラットフォーム。",
-    audience: "プロダクション / 撮影監督 / 美術 / ロケコーディネーター",
-    highlights: [
-      "PortalCam による現地スキャン",
-      "オフラインビューアー (単体 HTML 配布)",
-      "撮影委託 / 個別案件対応",
-    ],
-    links: [
-      { href: "https://web.locahun3d.com/", label: "公式サイト ↗", external: true },
-      { href: "https://viewer.locahun3d.com/Locahun3D_OfflineViewer", label: "オフラインビューアー ↗", external: true },
-    ],
+    n: "01",
+    h: "探す",
+    p: "全国のスタジオ・倉庫・住宅・屋外ロケ地を、地図とフィルタで横断検索。料金・天井高・搬入・距離の条件で絞り込めます。",
   },
   {
-    code: "02",
-    name: "ロケハン3D オンライン",
-    tagline: "スタジオカタログ + ブラウザ視聴 SaaS",
-    status: "active",
-    description:
-      "ロケハン3D ファミリーの SaaS サービス。スタジオ・ロケ地を地図検索 + 3DGS で下見し、" +
-      "月額サブスクで継続利用できるブラウザ完結のプラットフォーム。" +
-      "「SUUMO の撮影業界版」を目指す。",
-    audience: "個人クリエイター / 制作プロダクション / スタジオ運営者",
-    highlights: [
-      "全国スタジオの地図 + フィルタ検索",
-      "月次トークン制で 3DGS 視聴",
-      "スタジオ運営者のセルフ掲載 (将来)",
-    ],
-    links: [
-      { href: "/properties", label: "物件を探す" },
-      { href: "/pricing", label: "料金プラン" },
-    ],
+    n: "02",
+    h: "下見する",
+    p: "3D Gaussian Splatting の実寸空間をブラウザで歩き、レンズ画角・光・天井・人の動線を現地に行かず検証できます。",
   },
   {
-    code: "03",
-    name: "ロケハン3D Mobile",
-    tagline: "現場での 3DGS 閲覧 / AR 重ね合わせアプリ",
-    status: "planned",
-    description:
-      "iOS / Android アプリ。撮影現場でのオフライン 3DGS 閲覧、" +
-      "AR 重ね合わせによるカメラポジション検証、その場でのカット割り共有。",
-    audience: "撮影現場スタッフ / 監督 / アシスタント",
-    highlights: [
-      "オフライン閲覧 (事前同期)",
-      "AR ライブビュー",
-      "メモ・スクショの共有",
-    ],
-    links: [],
-  },
-  {
-    code: "04",
-    name: "ロケハン3D Enterprise",
-    tagline: "大手プロダクション・代理店向け統合プラン",
-    status: "planned",
-    description:
-      "Adobe / Unreal / Houdini / Maya パイプラインへの API 統合、" +
-      "専用 SLA、データ専有契約、社内研修。チーム数百名規模を想定。",
-    audience: "TV 局 / 大手プロダクション / 広告代理店",
-    highlights: [
-      "API + SDK 提供",
-      "専有ライセンス",
-      "オンサイト撮影 + 育成",
-    ],
-    links: [],
+    n: "03",
+    h: "決める",
+    p: "チーム全員が同じ 3D を見て意思決定。そのまま見積もり・問い合わせへ。撮影前の往復をブラウザの中へ。",
   },
 ];
 
-const ROADMAP_NOTE =
-  "ロケハン3D ファミリーは「撮影に必要なすべての空間を、3DGS で持ち帰る」を共通テーマに、" +
-  "本体プラットフォーム → オンライン SaaS → モバイル → 大企業向けと順次展開していきます。";
-
 export default function AboutPage() {
   return (
-    <div className="frame pt-12 pb-32">
-      {/* Center title block */}
-      <header className="text-center max-w-[58ch] mx-auto mb-16">
+    <div className="theme-online frame pt-12 pb-32">
+      {/* Title block */}
+      <header className="text-center max-w-[60ch] mx-auto mb-16">
         <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mb-3">
-          ロケハン3D FAMILY
+          LOCAHUN 3D / ONLINE
         </div>
         <h1 className="serif text-[clamp(2rem,4vw,3.4rem)] font-light leading-[1.3] mb-5">
           サービスについて
         </h1>
         <p className="text-[14px] text-muted leading-[1.95]">
-          ロケハン3D は <em className="not-italic text-accent">複数のサービス</em> から構成されるファミリー
-          ブランドです。「実空間を 3D ごと持ち帰る」を共通テーマに、それぞれ異なる
-          ユーザー層と用途に向けて設計されています。
+          <Jp>
+            ロケハン3D オンラインは、撮影前ロケハンをブラウザだけで完結するオンライン・プラットフォームです。スタジオ・倉庫・住宅・屋外ロケ地を
+            3D で検索・下見し、現場に行かず構図・レンズ・光・動線を検証できます。
+          </Jp>
         </p>
       </header>
 
-      {/* Distinct callout: 本体 vs オンライン */}
-      <div className="max-w-[68ch] mx-auto mb-16 border border-line bg-[#222] p-7 text-center">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-3">
-          ご注意
-        </div>
-        <p className="text-[14px] leading-[1.95]">
-          <strong className="text-ink">「ロケハン3D」</strong> と{" "}
-          <strong className="text-accent">「ロケハン3D オンライン」</strong>
-          は <em className="not-italic text-accent">別サービス</em> です。
-          <br />
-          本体は撮影委託・スキャン制作、オンラインはスタジオ検索 SaaS。
-          <br />
-          ご利用前に、目的に合うサービスを下記からお選びください。
-        </p>
-      </div>
-
-      {/* Service grid — 2 cols now, extends to 3 cols (lg) when family grows */}
-      <section className="max-w-[1100px] mx-auto">
+      {/* What you can do */}
+      <section className="max-w-[1000px] mx-auto">
         <div className="chapter-rule justify-center">
-          <span className="opacity-60">SERVICES</span>
-          <span>ファミリー一覧</span>
+          <span className="opacity-60">01</span>
+          <span>What Locahun3D Online does</span>
           <span className="flex-1 h-px bg-current opacity-25" />
-          <span className="opacity-60">{SERVICES.length} サービス</span>
         </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {SERVICES.map((s) => {
-            const meta = STATUS_META[s.status];
-            const isFlagship = s.code === "01";
-            return (
-              <article
-                key={s.code}
-                className={`border p-7 flex flex-col gap-5 ${
-                  isFlagship
-                    ? "border-accent bg-[#2a1f10]"
-                    : s.status === "active"
-                      ? "border-line bg-[#222]"
-                      : "border-line bg-[#141414] opacity-90"
-                }`}
-              >
-                {/* Header row */}
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mb-1">
-                      {s.code} {isFlagship && "/ FLAGSHIP"}
-                    </div>
-                    <h3 className="serif text-2xl leading-[1.3]">{s.name}</h3>
-                  </div>
-                  <span
-                    className={`mono text-[9px] tracking-[0.24em] uppercase px-2 py-1 ${meta.cls}`}
-                  >
-                    {meta.label}
-                  </span>
-                </div>
-
-                {/* Tagline */}
-                <p className="text-[13px] text-accent leading-[1.7]">
-                  {s.tagline}
-                </p>
-
-                {/* Description */}
-                <p className="text-[12px] text-muted leading-[1.85]">
-                  {s.description}
-                </p>
-
-                {/* Audience */}
-                <div>
-                  <div className="mono text-[9px] tracking-[0.28em] uppercase opacity-60 mb-1.5">
-                    対象
-                  </div>
-                  <div className="text-[12px]">{s.audience}</div>
-                </div>
-
-                {/* Highlights */}
-                <div>
-                  <div className="mono text-[9px] tracking-[0.28em] uppercase opacity-60 mb-1.5">
-                    主な機能
-                  </div>
-                  <ul className="text-[12px] text-muted space-y-1">
-                    {s.highlights.map((h) => (
-                      <li key={h} className="flex gap-2">
-                        <span className="text-accent">▸</span>
-                        <span>{h}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Links */}
-                {s.links.length > 0 ? (
-                  <div className="mt-auto pt-2 flex flex-wrap gap-2">
-                    {s.links.map((l) => (
-                      <Link
-                        key={l.href}
-                        href={l.href}
-                        target={l.external ? "_blank" : undefined}
-                        rel={l.external ? "noopener" : undefined}
-                        className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
-                      >
-                        {l.label}
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-auto pt-2 mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-                    Coming later
-                  </div>
-                )}
-              </article>
-            );
-          })}
+        <div className="grid md:grid-cols-3 gap-10">
+          {FEATURES.map((f) => (
+            <div key={f.n} className="pt-7 border-t border-line text-center">
+              <div className="mono text-[11px] tracking-[0.3em] text-accent mb-3">
+                {f.n}
+              </div>
+              <h3 className="serif text-[1.5rem] leading-[1.5] mb-3">{f.h}</h3>
+              <p className="text-[13px] leading-[1.9] text-muted">
+                <Jp>{f.p}</Jp>
+              </p>
+            </div>
+          ))}
         </div>
-
-        {/* Roadmap note */}
-        <p className="mt-10 text-center text-[12px] text-muted leading-[1.85] max-w-[58ch] mx-auto">
-          {ROADMAP_NOTE}
-        </p>
       </section>
 
-      {/* Common theme block */}
+      {/* Pricing teaser */}
       <section className="mt-24 max-w-[60ch] mx-auto text-center">
         <div className="chapter-rule justify-center">
-          <span className="opacity-60">SHARED VISION</span>
-          <span>共通テーマ</span>
+          <span className="opacity-60">02</span>
+          <span>Plans</span>
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
+        <p className="text-[14px] text-muted leading-[1.95] mb-7">
+          <Jp>
+            3DGS ウォークスルーはトークン制。Free / Individual / Studio / Team
+            の月額プランから、利用規模に合わせて選べます。年払いで割引も。
+          </Jp>
+        </p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <Link
+            href="/properties"
+            className="px-6 py-3 mono text-[12px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+          >
+            物件を探す →
+          </Link>
+          <Link
+            href="/pricing"
+            className="px-6 py-3 mono text-[12px] tracking-[0.24em] uppercase border border-line hover:border-ink transition"
+          >
+            料金プラン
+          </Link>
+        </div>
+      </section>
 
-        <h2 className="serif text-[clamp(1.5rem,3vw,2.4rem)] font-light leading-[1.5] mb-5">
-          オンラインで <em className="not-italic text-accent">ロケハン</em> が
-          出来る時代。
-        </h2>
-        <p className="text-[13px] text-muted leading-[1.95]">
-          ロケハン (撮影前下見) は映像制作で最もコストが高い工程の一つ。
-          ロケハン3D ファミリーは、3D Gaussian Splatting でこの工程を再発明し、
-          「行かなければ分からない」を「画面の中で分かる」に変換します。
+      {/* Audience */}
+      <section className="mt-24 max-w-[60ch] mx-auto text-center">
+        <div className="chapter-rule justify-center">
+          <span className="opacity-60">03</span>
+          <span>For</span>
+          <span className="flex-1 h-px bg-current opacity-25" />
+        </div>
+        <p className="text-[14px] leading-[1.95]">
+          <Jp>
+            個人クリエイター・制作プロダクション・スタジオ運営者のためのサービスです。撮影監督・カメラマン・美術が同じ
+            3D 空間で打合せできます。
+          </Jp>
         </p>
       </section>
 
@@ -289,7 +141,7 @@ export default function AboutPage() {
         </dl>
 
         <p className="mt-6 text-[11px] text-muted leading-[1.75]">
-          各サービスの詳細・契約・カスタム要望はお気軽にご連絡ください。
+          ご利用・契約・カスタム要望はお気軽にご連絡ください。
         </p>
       </section>
     </div>

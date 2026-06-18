@@ -54,7 +54,7 @@ export default function ViewerGate({
           className="absolute inset-0 bg-[#222]"
           style={{
             backgroundImage:
-              "radial-gradient(ellipse at center, rgba(255,180,84,.18) 0%, transparent 60%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.06) 0%, transparent 50%)",
+              "radial-gradient(ellipse at center, rgba(94,200,232,.18) 0%, transparent 60%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.06) 0%, transparent 50%)",
             filter: "blur(1px)",
           }}
         />
@@ -103,7 +103,7 @@ export default function ViewerGate({
         className="absolute inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse at center, rgba(255,180,84,.10) 0%, transparent 65%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.04) 0%, transparent 50%)",
+            "radial-gradient(ellipse at center, rgba(94,200,232,.10) 0%, transparent 65%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.04) 0%, transparent 50%)",
         }}
       />
 
@@ -136,7 +136,19 @@ export default function ViewerGate({
           href={viewerUrl}
           target="_blank"
           rel="noopener"
-          onClick={() => setOpenedAt(Date.now())}
+          onClick={() => {
+            setOpenedAt(Date.now());
+            fetch("/api/track", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                propertyId,
+                type: "viewer_open",
+                referrer: document.referrer,
+              }),
+              keepalive: true,
+            }).catch(() => {});
+          }}
           className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
         >
           {openedAt

@@ -4,7 +4,7 @@ export const metadata = { title: "ダッシュボード" };
 
 export default function DashboardPage() {
   return (
-    <div className="frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">ACCOUNT</span>
         <span>Dashboard</span>

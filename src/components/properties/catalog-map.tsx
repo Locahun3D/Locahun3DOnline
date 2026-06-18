@@ -74,7 +74,12 @@ export default function CatalogMap({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full border border-line bg-[#222] [&_.leaflet-container]:bg-[#222] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
+      // Middle-button (wheel) click over the map would otherwise trigger the
+      // browser's autoscroll, scrolling the whole page. Suppress its default.
+      onMouseDown={(e) => {
+        if (e.button === 1) e.preventDefault();
+      }}
+      className="relative w-full h-full overscroll-contain border border-line bg-[#222] [&_.leaflet-container]:bg-[#222] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
     >
       <MapContainer
         // Initial center / zoom — ViewportFitter immediately recenters on `reference`
@@ -123,9 +128,9 @@ export default function CatalogMap({
               center={[p.coords!.lat, p.coords!.lng]}
               radius={active ? 11 : 6}
               pathOptions={{
-                color: active ? "#ffb454" : "#ffb454",
+                color: "#5ec8e8",
                 weight: active ? 3 : 1,
-                fillColor: active ? "#ffb454" : "#1a1a1a",
+                fillColor: active ? "#5ec8e8" : "#1a1a1a",
                 fillOpacity: active ? 0.95 : 0.9,
               }}
               eventHandlers={{

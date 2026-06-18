@@ -138,7 +138,7 @@ export default function PlanCards() {
               className={
                 "relative border p-6 flex flex-col gap-4 " +
                 (p.accent
-                  ? "border-accent bg-[#2a1f10]"
+                  ? "border-accent bg-[#0e1a20]"
                   : "border-line bg-[#222]")
               }
             >

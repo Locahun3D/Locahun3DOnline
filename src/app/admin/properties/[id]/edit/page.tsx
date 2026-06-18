@@ -14,12 +14,18 @@ export default async function EditPropertyPage({
 
   return (
     <div className="p-8">
-      <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4 flex items-center gap-2">
+      <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4 flex items-center gap-2 flex-wrap">
         <Link href="/admin/properties" className="hover:text-accent">
           ← Properties
         </Link>
         <span>/</span>
         <span className="opacity-50">{property.id}</span>
+        <Link
+          href={`/admin/properties/${property.id}/page`}
+          className="ml-auto border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition"
+        >
+          ページを組む →
+        </Link>
       </nav>
 
       <PropertyEditor initial={property} />

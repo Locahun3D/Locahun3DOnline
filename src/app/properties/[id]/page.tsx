@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   getPublishedProperty,
   getPublishedProperties,
+  getPublishedPropertyIds,
   CATEGORY_LABEL,
 } from "@/lib/properties";
 import {
@@ -11,10 +12,12 @@ import {
 } from "@/lib/schemas";
 import ImageGallery from "@/components/image-gallery";
 import ViewerGate from "@/components/viewer-gate";
+import StudioPageBlocks from "@/components/studio/studio-page-blocks";
+import TrackView from "@/components/track-view";
 
 export async function generateStaticParams() {
-  const all = await getPublishedProperties();
-  return all.map((p) => ({ id: p.id }));
+  const ids = await getPublishedPropertyIds();
+  return ids.map((id) => ({ id }));
 }
 
 export async function generateMetadata({
@@ -47,7 +50,8 @@ export default async function PropertyDetailPage({
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
   return (
-    <article className="frame pt-10 pb-24">
+    <article className="theme-online frame pt-10 pb-24">
+      <TrackView propertyId={property.id} />
       <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-6 flex gap-2 items-center">
         <Link href="/properties" className="hover:text-accent">
           CATALOG
@@ -158,7 +162,7 @@ export default async function PropertyDetailPage({
             <div className="text-[11px] text-muted mt-2 leading-[1.7]">
               {property.tokenCost === 1 ? (
                 <>
-                  Free 登録特典の 1 トークンで 1 件視聴可能。<br />
+                  Free 登録特典の 1 トークンで 1 件視聴可能。<br className="pc" />
                   Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月 8 件、
                   Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月 12 件まで継続視聴。
                 </>
@@ -199,31 +203,40 @@ export default async function PropertyDetailPage({
         </aside>
       </header>
 
-      {/* 3DGS Viewer (paywalled) */}
-      <section className="mb-16">
-        <div className="chapter-rule">
-          <span className="opacity-60">3DGS</span>
-          <span>Virtual Walkthrough</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-          <span className="opacity-60">{property.splatSizeMb} MB</span>
-        </div>
-        <ViewerGate
-          splatUrl={property.splatUrl}
-          propertyId={property.id}
-          tokenCost={property.tokenCost}
-        />
-      </section>
+      {property.pageBlocks && property.pageBlocks.length > 0 ? (
+        /* Custom page composed in the studio page builder */
+        <section className="mb-16">
+          <StudioPageBlocks blocks={property.pageBlocks} property={property} />
+        </section>
+      ) : (
+        <>
+          {/* 3DGS Viewer (paywalled) */}
+          <section className="mb-16">
+            <div className="chapter-rule">
+              <span className="opacity-60">3DGS</span>
+              <span>Virtual Walkthrough</span>
+              <span className="flex-1 h-px bg-current opacity-25" />
+              <span className="opacity-60">{property.splatSizeMb} MB</span>
+            </div>
+            <ViewerGate
+              splatUrl={property.splatUrl}
+              propertyId={property.id}
+              tokenCost={property.tokenCost}
+            />
+          </section>
 
-      {/* Image Gallery */}
-      <section className="mb-16">
-        <div className="chapter-rule">
-          <span className="opacity-60">STILLS</span>
-          <span>Reference Photos</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-          <span className="opacity-60">{property.gallery.length} 枚</span>
-        </div>
-        <ImageGallery images={[property.cover, ...property.gallery]} />
-      </section>
+          {/* Image Gallery */}
+          <section className="mb-16">
+            <div className="chapter-rule">
+              <span className="opacity-60">STILLS</span>
+              <span>Reference Photos</span>
+              <span className="flex-1 h-px bg-current opacity-25" />
+              <span className="opacity-60">{property.gallery.length} 枚</span>
+            </div>
+            <ImageGallery images={[property.cover, ...property.gallery]} />
+          </section>
+        </>
+      )}
 
       {/* Related */}
       {others.length > 0 && (

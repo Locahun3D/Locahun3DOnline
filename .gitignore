@@ -42,9 +42,22 @@ yarn-error.log*
 /public/uploads/
 !/public/uploads/.gitkeep
 
+# Local-auth user store — contains password hashes. Each env seeds its own
+# admin from ADMIN_EMAIL / ADMIN_PASSWORD. Never commit. (Migrates to D1/Clerk.)
+/data/users.json
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# Playwright QA screenshots
+/shots/
+
+# View analytics store (local)
+/data/analytics.json

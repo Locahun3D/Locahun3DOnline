@@ -1,0 +1,123 @@
+/**
+ * Account / user schema — PURE (no server-only, no node imports).
+ * Identity (login, password, Google OAuth, 2FA) is owned by Clerk.
+ * This record holds the APP-level data Clerk doesn't: role, approval status,
+ * NDA, tokens, bookmarks — keyed by the Clerk userId (`id`).
+ *
+ * Five account types:
+ *   individual  個人        — instant active, sees public listings
+ *   studio      撮影スタジオ  — lists/rents own studios, needs admin approval
+ *   production  制作会社      — pro; NDA + approval → can see confidential listings
+ *   guest       ゲスト        — invite-only 貢献特別枠; granted 100 non-expiring tokens
+ *   admin       管理者        — site operator, full /admin access
+ */
+import { z } from "zod";
+
+export const ACCOUNT_ROLES = [
+  "individual",
+  "studio",
+  "production",
+  "guest",
+  "admin",
+] as const;
+export type AccountRole = (typeof ACCOUNT_ROLES)[number];
+
+/** Non-expiring tokens granted once to a guest (貢献特別枠) at creation. */
+export const GUEST_BONUS_TOKENS = 100;
+
+export const ACCOUNT_STATUSES = ["active", "pending", "suspended"] as const;
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
+
+export const ACCOUNT_PLANS = ["free", "individual", "studio", "team"] as const;
+export type AccountPlan = (typeof ACCOUNT_PLANS)[number];
+
+/** Roles a visitor can pick during onboarding (admin is assigned, not chosen). */
+export const SELF_SIGNUP_ROLES = ["individual", "studio", "production"] as const;
+
+export const ROLE_LABEL: Record<AccountRole, string> = {
+  individual: "個人",
+  studio: "撮影スタジオ",
+  production: "制作会社",
+  guest: "ゲスト",
+  admin: "管理者",
+};
+
+export const ROLE_DESCRIPTION: Record<AccountRole, string> = {
+  individual: "撮影前ロケハンに 3D を使う個人・フリーランス。すぐ利用可。",
+  studio: "自社スタジオを掲載・貸し出す事業者。掲載開始には運営の承認が必要。",
+  production: "NDA 締結のうえ、倉庫裏など機密ロケ地まで閲覧できるプロアカウント。",
+  guest: `招待制の貢献特別枠。作成時に失効しないトークンを ${GUEST_BONUS_TOKENS} 付与。`,
+  admin: "サイト運営者。",
+};
+
+export const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
+  active: "有効",
+  pending: "承認待ち",
+  suspended: "停止中",
+};
+
+/** studio / production must be approved by an admin before pro features unlock. */
+export function requiresApproval(role: AccountRole): boolean {
+  return role === "studio" || role === "production";
+}
+
+/** production must accept an NDA before viewing confidential listings. */
+export function requiresNda(role: AccountRole): boolean {
+  return role === "production";
+}
+
+export const userSchema = z.object({
+  /** Clerk userId (e.g. "user_2ab..."). */
+  id: z.string().min(1),
+  email: z.email(),
+  name: z.string().min(1).max(80),
+  role: z.enum(ACCOUNT_ROLES).default("individual"),
+  status: z.enum(ACCOUNT_STATUSES).default("active"),
+  /** Has the user completed the role/NDA onboarding step? */
+  onboarded: z.boolean().default(false),
+  company: z.string().max(120).default(""),
+  phone: z.string().max(40).default(""),
+  plan: z.enum(ACCOUNT_PLANS).default("free"),
+  /** Monthly/plan tokens — subject to the 1-year expiry policy. */
+  tokenBalance: z.number().int().min(0).default(0),
+  /** Contribution (貢献特別枠) tokens — never expire. Granted to guests. */
+  bonusTokens: z.number().int().min(0).default(0),
+  /** ISO timestamp when the NDA was accepted; null = not accepted. */
+  ndaAcceptedAt: z.string().nullable().default(null),
+  bookmarks: z.array(z.string()).max(500).default([]),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+export type User = z.infer<typeof userSchema>;
+
+/** No secrets live in this record anymore (Clerk owns identity), so the */
+/** public-facing shape equals the stored shape. Helpers kept for call sites. */
+export type PublicUser = User;
+export function toPublicUser(u: User): PublicUser {
+  return u;
+}
+
+/** Spendable token total = monthly balance + non-expiring contribution tokens. */
+export function totalTokens(u: Pick<User, "tokenBalance" | "bonusTokens">): number {
+  return u.tokenBalance + (u.bonusTokens ?? 0);
+}
+
+/** Whether this user may view confidential listings right now. */
+export function canViewConfidential(u: PublicUser | null): boolean {
+  if (!u || u.status !== "active") return false;
+  if (u.role === "admin") return true;
+  return u.role === "production" && !!u.ndaAcceptedAt;
+}
+
+/** Captured on the /onboarding step after Clerk sign-up. */
+export const onboardingSchema = z.object({
+  role: z.enum(SELF_SIGNUP_ROLES),
+  company: z.string().max(120).optional().default(""),
+  phone: z.string().max(40).optional().default(""),
+  nda: z.boolean().optional().default(false),
+});
+
+/** Shared return type for form Server Actions. */
+export type ActionState =
+  | { errors?: Record<string, string[] | undefined>; message?: string }
+  | undefined;

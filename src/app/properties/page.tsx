@@ -14,5 +14,9 @@ export default async function PropertiesPage() {
     new Set(items.map((p) => p.studioType).filter((s) => s)),
   ).sort();
 
-  return <CatalogClient items={items} areas={areas} studioTypes={studioTypes} />;
+  return (
+    <div className="theme-online">
+      <CatalogClient items={items} areas={areas} studioTypes={studioTypes} />
+    </div>
+  );
 }

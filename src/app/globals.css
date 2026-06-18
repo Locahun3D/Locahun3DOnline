@@ -2,8 +2,8 @@
 
 @theme {
   --color-ink: #fafaf6;
-  --color-bg: #191919;
-  --color-line: rgb(255 255 255 / 0.14);
+  --color-bg: #000;
+  --color-line: rgb(255 255 255 / 0.18);
   --color-accent: #ffb454;
   --color-muted: rgb(255 255 255 / 0.62);
 
@@ -25,10 +25,33 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-weight: 300;
-  line-height: 1.7;
+  /* Japanese web typography: roomy 行間 + slight 字間 for legibility,
+     proper kinsoku (禁則) line breaking, and no mid-word overflow. */
+  line-height: 1.8;
+  letter-spacing: 0.04em;
+  line-break: strict;
+  /* Phrase-aware Japanese wrapping (Chrome/Edge run BudouX natively).
+     Other browsers fall back to the <Jp> component on key text. */
+  word-break: auto-phrase;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+}
+
+/* PC-intent line breaks: faithful on desktop, reflow on mobile so phrases
+   don't break awkwardly on narrow screens. Use <br className="pc" />. */
+br.pc {
+  display: inline;
+}
+@media (max-width: 640px) {
+  br.pc {
+    display: none;
+  }
+  body {
+    letter-spacing: 0.02em;
+  }
 }
 
 body::before {
@@ -44,9 +67,75 @@ body::before {
 
 @utility serif {
   font-family: var(--font-serif);
+  /* Balance multi-line headings so no single trailing word dangles. */
+  text-wrap: balance;
 }
 @utility mono {
   font-family: var(--font-mono);
+}
+/* Brand wordmark "ロケハン3D" — gothic black, matching the 3DGS viewer. */
+@utility brand {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+/* Japanese phrase-aware wrapping: breaks only at BudouX <wbr> boundaries,
+   never mid-word. Pair with the <Jp> component. */
+@utility jp {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Online product = blue accent. Override the accent CSS var on a page wrapper;
+   all descendant `*-accent` utilities (text/border/bg) inherit the blue.
+   SCAN / brand stays amber. */
+@utility theme-online {
+  --color-accent: #5ec8e8;
+}
+
+/* Manifesto motifs ─────────────────────────────── */
+@keyframes scrollPulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateY(6px);
+  }
+}
+@utility scroll-hint {
+  animation: scrollPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes recBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+@utility rec-dot {
+  animation: recBlink 1.6s ease-in-out infinite;
+}
+
+/* Giant translucent "film leader" numeral behind a hero */
+@utility leader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-serif);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: rgb(255 255 255 / 0.025);
+  pointer-events: none;
+  user-select: none;
 }
 
 @utility chapter-rule {
@@ -73,5 +162,11 @@ body::before {
 @utility frame {
   position: relative;
   padding-inline: max(48px, calc((100vw - var(--container-frame)) / 2));
+}
+
+/* Wider container for data-dense pages (catalog) — more columns on PC. */
+@utility frame-wide {
+  position: relative;
+  padding-inline: max(48px, calc((100vw - 1760px) / 2));
 }
 

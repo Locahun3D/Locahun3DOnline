@@ -27,7 +27,7 @@ const COMPARE_ROWS: Array<{
 
 export default function PricingPage() {
   return (
-    <div className="frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">PRICING</span>
         <span>Plans</span>
@@ -94,8 +94,11 @@ export default function PricingPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
 
+        <p className="md:hidden mono text-[10px] tracking-[0.2em] uppercase text-muted mb-2 text-right">
+          ← 横にスクロール →
+        </p>
         <div className="border border-line overflow-x-auto">
-          <table className="w-full text-[12px] mono">
+          <table className="w-full min-w-[600px] text-[12px] mono">
             <thead>
               <tr className="bg-[#222] border-b border-line">
                 <th className="text-left px-3 py-3 mono text-[10px] tracking-[0.24em] uppercase opacity-60 font-normal min-w-[160px]">
@@ -137,30 +140,11 @@ export default function PricingPage() {
       <div className="mt-16 grid md:grid-cols-3 gap-6 text-[12px] text-muted">
         <div className="border-t border-line pt-5">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-            年払い -15% について
+            トークンの有効期限
           </div>
           <p>
-            年払いは初月にまとめて 12 ヶ月分を請求。途中解約の日割り返金はありません。
-            キャッシュフロー前倒し + 解約率低下を狙う設計です。
-          </p>
-        </div>
-        <div className="border-t border-line pt-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-            トークンの月次運用
-          </div>
-          <p>
-            月初リセット式。同じ物件を再訪してもトークンは追加消費されません。
-            月内に上限超過した場合は Studio / Team へのアップグレードで即解放できます。
-          </p>
-        </div>
-        <div className="border-t border-line pt-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-            プランの選び方
-          </div>
-          <p>
-            ハウススタジオ中心 → Individual。
-            中〜大型を月に複数件見る制作チーム → <strong className="text-accent">Studio (推奨)</strong>。
-            大手プロダクション → Team。
+            トークンは付与（追加）から 1 年で有効期限。期限が来たものから順にリセット（失効）します。
+            同じ物件を再訪してもトークンは追加消費されません。
           </p>
         </div>
         <div className="border-t border-line pt-5">

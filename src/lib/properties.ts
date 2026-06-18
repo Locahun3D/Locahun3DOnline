@@ -1,4 +1,6 @@
 import { repo } from "./store";
+import { getCurrentUser } from "./dal";
+import { canViewConfidential } from "./account-schema";
 import type { Property, PropertyCategory } from "./schemas";
 
 export type {
@@ -9,6 +11,29 @@ export type {
 } from "./schemas";
 
 export { CATEGORY_LABEL, STATUS_LABEL } from "./schemas";
+
+/**
+ * Resolve the viewer, but tolerate non-request contexts (e.g.
+ * `generateStaticParams` at build time) where Clerk's `auth()` is unavailable
+ * — there we treat the viewer as anonymous.
+ */
+async function currentUserSafe() {
+  try {
+    return await getCurrentUser();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Drop confidential (NDA-only) listings unless the current viewer is allowed
+ * to see them (admin, or an NDA-signed production account).
+ */
+async function filterVisible(list: Property[]): Promise<Property[]> {
+  const user = await currentUserSafe();
+  if (canViewConfidential(user)) return list;
+  return list.filter((p) => p.visibility !== "confidential");
+}
 
 export interface PropertyFilters {
   q?: string;
@@ -44,11 +69,22 @@ export function filterProperties(
 }
 
 export async function getPublishedProperties(): Promise<Property[]> {
-  return repo.list({ status: "published" });
+  return filterVisible(await repo.list({ status: "published" }));
+}
+
+/**
+ * Build-safe list of published property IDs for `generateStaticParams`.
+ * Must NOT touch Clerk `auth()` (no request context at build time), so it
+ * skips viewer-based visibility filtering — confidential pages are still
+ * access-gated at request time by `getPublishedProperty`.
+ */
+export async function getPublishedPropertyIds(): Promise<string[]> {
+  const all = await repo.list({ status: "published" });
+  return all.map((p) => p.id);
 }
 
 export async function getAllAreas(): Promise<string[]> {
-  const all = await repo.list({ status: "published" });
+  const all = await getPublishedProperties();
   return Array.from(new Set(all.map((p) => p.area))).sort();
 }
 
@@ -57,5 +93,9 @@ export async function getPublishedProperty(
 ): Promise<Property | null> {
   const p = await repo.get(id);
   if (!p || p.status !== "published") return null;
+  if (p.visibility === "confidential") {
+    const user = await currentUserSafe();
+    if (!canViewConfidential(user)) return null;
+  }
   return p;
 }

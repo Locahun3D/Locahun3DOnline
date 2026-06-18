@@ -1,31 +1,18 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-
-/**
- * Dev-only admin gate.
- *
- * For production this will be replaced with Clerk role check:
- *   const { sessionClaims } = await auth();
- *   if (sessionClaims?.metadata?.role !== "admin") notFound();
- *
- * For now, set NEXT_PUBLIC_ADMIN_BYPASS=1 in .env.local (default in dev).
- */
-function isAdminBypass(): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  return process.env.NEXT_PUBLIC_ADMIN_BYPASS === "1";
-}
+import { requireAdmin } from "@/lib/dal";
 
 export const metadata = {
   title: { default: "Admin", template: "%s｜Admin" },
   robots: { index: false, follow: false },
 };
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  if (!isAdminBypass()) notFound();
+  // Real gate: redirects non-admins (proxy.ts also blocks at the edge).
+  await requireAdmin();
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
@@ -52,6 +39,24 @@ export default function AdminLayout({
             className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
           >
             ↳ 公開中のみ
+          </Link>
+          <Link
+            href="/admin/accounts"
+            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+          >
+            アカウント
+          </Link>
+          <Link
+            href="/admin/accounts?status=pending"
+            className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
+          >
+            ↳ 承認待ちのみ
+          </Link>
+          <Link
+            href="/admin/analytics"
+            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+          >
+            アナリティクス
           </Link>
         </nav>
 

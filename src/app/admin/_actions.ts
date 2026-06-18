@@ -1,12 +1,15 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
 import { repo } from "@/lib/store";
+import { requireAdmin } from "@/lib/dal";
 import {
   propertySchema,
   publishablePropertySchema,
+  pageBlockSchema,
   type Property,
 } from "@/lib/schemas";
 
@@ -74,4 +77,16 @@ export async function deleteAction(id: string) {
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   redirect("/admin/properties");
+}
+
+/** Save the studio page builder blocks for a property (admin only). */
+export async function saveStudioPageAction(id: string, blocks: unknown) {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false as const, reason: "not_found" as const };
+  const pageBlocks = z.array(pageBlockSchema).max(60).parse(blocks);
+  await repo.upsert({ ...existing, pageBlocks });
+  revalidatePath(`/admin/properties/${id}/page`);
+  revalidatePath(`/properties/${id}`);
+  return { ok: true as const };
 }

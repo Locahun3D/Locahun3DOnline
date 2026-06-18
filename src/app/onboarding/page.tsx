@@ -1,0 +1,26 @@
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/dal";
+import OnboardingForm from "@/components/onboarding-form";
+
+export const metadata = { title: "アカウント設定" };
+
+export default async function OnboardingPage() {
+  const user = await requireUser();
+  if (user.onboarded || user.role === "admin") redirect("/account");
+
+  return (
+    <div className="frame min-h-[72vh] flex items-center justify-center py-16">
+      <div className="border border-line bg-[#222] p-10 w-full max-w-md">
+        <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
+          WELCOME
+        </div>
+        <h1 className="serif text-3xl mb-2">アカウント種別を選択</h1>
+        <p className="text-[12px] text-muted leading-[1.85] mb-7">
+          ようこそ、{user.name} さん。利用形態に合わせて種別を選んでください。
+          後から運営に相談して変更も可能です。
+        </p>
+        <OnboardingForm />
+      </div>
+    </div>
+  );
+}
