@@ -750,10 +750,10 @@ function SortBar({
 }) {
   return (
     <div className="mt-4 border border-line bg-[#222] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] mono">
-      <div className="flex items-baseline gap-2">
-        <span className="serif text-2xl text-accent">{resultCount.toLocaleString("ja-JP")}</span>
-        <span className="tracking-[0.18em] uppercase opacity-60">件</span>
-        <span className="opacity-40">/ {totalCount} 全</span>
+      <div className="flex items-baseline gap-2 font-sans">
+        <span className="brand text-2xl text-accent">{resultCount.toLocaleString("ja-JP")}</span>
+        <span className="text-[12px] font-medium opacity-70">件</span>
+        <span className="text-[12px] opacity-50">/ {totalCount} 全</span>
       </div>
 
       <div className="flex flex-wrap items-stretch gap-x-3 gap-y-1 ml-auto">
