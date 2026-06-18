@@ -172,12 +172,13 @@ export const propertySchema = z.object({
   gallery: z.array(propertyImageSchema).max(40).default([]),
 
   // 5. 3DGS
-  splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")),
+  splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
   splatSizeMb: z.number().min(0).max(99999).default(0),
   scannedAt: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD で入力してください")
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .default(""),
   /**
    * Token cost for one 3DGS walkthrough viewing.
    *   1 = ハウススタジオ / 小規模 (≤ 150㎡ 目安)
