@@ -307,10 +307,10 @@ function FiltersPanel(p: FiltersProps) {
       : `¥${n.toLocaleString("ja-JP")}`;
 
   return (
-    <div className="border border-line bg-[#222] p-5 space-y-4">
+    <div className="border border-line bg-[#222] p-3.5 space-y-2.5">
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
-      <div className="grid lg:grid-cols-2 gap-x-6 gap-y-4">
-        <div className="space-y-4">
+      <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2.5">
+        <div className="space-y-2.5">
           <Row label="キーワード">
             <input
               type="search"
@@ -389,8 +389,8 @@ function FiltersPanel(p: FiltersProps) {
       <Divider />
 
       {/* Range filters — two columns: top 3 on the left, bottom 3 on the right */}
-      <div className="grid lg:grid-cols-2 gap-x-6 gap-y-3">
-        <div className="space-y-3">
+      <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2">
+        <div className="space-y-2">
           <RangeRow
             label="時間料金 (¥/hr)"
             min={p.minPrice} max={p.maxPrice}
@@ -404,7 +404,7 @@ function FiltersPanel(p: FiltersProps) {
             options={PRICE_DAY_OPTS} format={yenFmt}
           />
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <RangeRow
             label="床面積 (㎡)"
             min={p.minArea} max={p.maxArea}
@@ -437,15 +437,15 @@ function FiltersPanel(p: FiltersProps) {
 // All filter inputs/selects use a light-gray field — dark text on gray so every
 // entry point reads as "type/pick here" against the dark panel.
 const inputCls =
-  "bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] mono focus:outline-none focus:border-accent transition placeholder:text-black/40";
+  "bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition placeholder:text-black/40";
 
 // Alias kept for the keyword search (identical gray style).
 const inputWhiteCls = inputCls;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid md:grid-cols-[140px_1fr] gap-3 items-start">
-      <div className="mono text-[10px] tracking-[0.26em] uppercase opacity-60 pt-2.5">
+    <div className="grid md:grid-cols-[92px_1fr] gap-2.5 items-start">
+      <div className="text-[12px] font-medium text-ink/80 pt-1.5 leading-snug">
         {label}
       </div>
       <div className="min-w-0">{children}</div>
