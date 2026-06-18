@@ -258,6 +258,15 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setSort(s.sort);
   }, []);
 
+  // 初回マウント時、保存済みの最新条件 (= 最後に検索した条件) を自動復元する。
+  // recent は localStorage から非同期で読まれるため、読み込まれ次第 1 度だけ適用。
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || recent.length === 0) return;
+    restoredRef.current = true;
+    applySnapshot(recent[0]);
+  }, [recent, applySnapshot]);
+
   // Validation: invalid ranges (min > max) are silently treated as unset for that pair
   const rangeOk = (lo: number | "", hi: number | "") =>
     !(typeof lo === "number" && typeof hi === "number" && lo > hi);
