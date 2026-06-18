@@ -10,6 +10,8 @@ interface Props {
   tokenCost?: 1 | 2 | 3;
   /** TODO: replace with real subscription check via Clerk publicMetadata */
   hasSubscription?: boolean;
+  /** 限定無料期間中: トークン消費なしで全データを閲覧可能。 */
+  freeAccess?: boolean;
 }
 
 const SIZE_LABEL: Record<1 | 2 | 3, string> = {
@@ -32,6 +34,7 @@ export default function ViewerGate({
   propertyId,
   tokenCost = 1,
   hasSubscription = false,
+  freeAccess = false,
 }: Props) {
   const [openedAt, setOpenedAt] = useState<number | null>(null);
 
@@ -39,7 +42,8 @@ export default function ViewerGate({
   const devBypass =
     process.env.NODE_ENV !== "production" ||
     process.env.NEXT_PUBLIC_ADMIN_BYPASS === "1";
-  const effectiveSubscription = hasSubscription || devBypass;
+  // 限定無料期間中は、プラン・トークンに関わらず誰でも閲覧可能。
+  const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
   // Build the viewer URL once.
   const viewerUrl = splatUrl
@@ -108,8 +112,12 @@ export default function ViewerGate({
       />
 
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-3">
-          ● 3DGS WALKTHROUGH READY
+        <div
+          className={`mono text-[10px] tracking-[0.32em] uppercase mb-3 ${
+            freeAccess ? "text-green-400" : "text-accent"
+          }`}
+        >
+          {freeAccess ? "● 限定無料期間中 · トークン消費なし" : "● 3DGS WALKTHROUGH READY"}
         </div>
 
         <div className="serif text-2xl md:text-3xl font-bold leading-[1.4] max-w-[28ch] mb-3">
@@ -122,8 +130,13 @@ export default function ViewerGate({
 
         <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-2">
           このスタジオ ({SIZE_LABEL[tokenCost]}) は{" "}
-          <span className="text-accent">{tokenCost} トークン</span>
-          {" "}消費 / 視聴
+          {freeAccess ? (
+            <span className="text-green-400">無料期間中 · トークン消費なし</span>
+          ) : (
+            <>
+              <span className="text-accent">{tokenCost} トークン</span> 消費 / 視聴
+            </>
+          )}
         </div>
 
         <p className="text-[11px] text-muted max-w-[44ch] leading-[1.75] mb-6">
@@ -153,7 +166,9 @@ export default function ViewerGate({
         >
           {openedAt
             ? "もう一度開く ↗"
-            : `${tokenCost} トークン使って別タブで開く ↗`}
+            : freeAccess
+              ? "無料で別タブで開く ↗"
+              : `${tokenCost} トークン使って別タブで開く ↗`}
         </a>
 
         {!openedAt && (

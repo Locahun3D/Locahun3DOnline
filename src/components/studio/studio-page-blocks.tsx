@@ -12,14 +12,16 @@ import ViewerGate from "@/components/viewer-gate";
 export default function StudioPageBlocks({
   blocks,
   property,
+  freeAccess = false,
 }: {
   blocks: PageBlock[];
   property: Property;
+  freeAccess?: boolean;
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} />
       ))}
     </div>
   );
@@ -28,9 +30,11 @@ export default function StudioPageBlocks({
 function BlockView({
   block,
   property,
+  freeAccess,
 }: {
   block: PageBlock;
   property: Property;
+  freeAccess: boolean;
 }) {
   switch (block.kind) {
     case "heading":
@@ -84,6 +88,7 @@ function BlockView({
             splatUrl={property.splatUrl}
             propertyId={property.id}
             tokenCost={property.tokenCost}
+            freeAccess={freeAccess}
           />
           {block.caption && (
             <div className="mono text-[10px] tracking-[0.18em] text-muted mt-2">

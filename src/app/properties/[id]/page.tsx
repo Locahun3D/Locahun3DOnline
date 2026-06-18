@@ -6,6 +6,11 @@ import {
 } from "@/lib/properties";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
+import { getSettings } from "@/lib/site-settings";
+import { isFreePeriodActive } from "@/lib/settings-schema";
+
+// 限定無料期間の開始/終了が時刻指定でも反映されるよう ISR (5分) で再評価。
+export const revalidate = 300;
 
 export async function generateStaticParams() {
   const ids = await getPublishedPropertyIds();
@@ -40,10 +45,13 @@ export default async function PropertyDetailPage({
     .filter((p) => p.id !== property.id)
     .slice(0, 3);
 
+  const settings = await getSettings();
+  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
+
   return (
     <>
       <TrackView propertyId={property.id} />
-      <PropertyDetailView property={property} others={others} />
+      <PropertyDetailView property={property} others={others} freeAccess={freeAccess} />
     </>
   );
 }

@@ -20,10 +20,13 @@ export default function PropertyDetailView({
   property,
   others,
   preview = false,
+  freeAccess = false,
 }: {
   property: Property;
   others: Property[];
   preview?: boolean;
+  /** 限定無料期間: 全 3DGS をトークン消費なしで閲覧可能。 */
+  freeAccess?: boolean;
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
@@ -199,7 +202,7 @@ export default function PropertyDetailView({
       {property.pageBlocks && property.pageBlocks.length > 0 ? (
         /* Custom page composed in the studio page builder */
         <section className="mb-16">
-          <StudioPageBlocks blocks={property.pageBlocks} property={property} />
+          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} />
         </section>
       ) : (
         <>
@@ -215,6 +218,7 @@ export default function PropertyDetailView({
               splatUrl={property.splatUrl}
               propertyId={property.id}
               tokenCost={property.tokenCost}
+              freeAccess={freeAccess}
             />
           </section>
 

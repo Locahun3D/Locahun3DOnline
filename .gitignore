@@ -64,3 +64,6 @@ next-env.d.ts
 
 # Gift code store (local) — redemption records tied to users. Migrates to D1.
 /data/gift-codes.json
+
+# Site settings (local) — 限定無料期間 などの運用設定。Migrates to D1.
+/data/site-settings.json

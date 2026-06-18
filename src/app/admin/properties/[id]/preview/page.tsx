@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/dal";
 import { repo } from "@/lib/store";
 import PropertyDetailView from "@/components/property-detail-view";
+import { getSettings } from "@/lib/site-settings";
+import { isFreePeriodActive } from "@/lib/settings-schema";
 
 export const metadata = { title: "プレビュー" };
 
@@ -24,5 +26,10 @@ export default async function PropertyPreviewPage({
     .filter((p) => p.id !== property.id && p.status === "published")
     .slice(0, 3);
 
-  return <PropertyDetailView property={property} others={others} preview />;
+  const settings = await getSettings();
+  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
+
+  return (
+    <PropertyDetailView property={property} others={others} preview freeAccess={freeAccess} />
+  );
 }
