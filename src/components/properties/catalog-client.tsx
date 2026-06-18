@@ -723,7 +723,7 @@ function ToggleChip({
           : "border-line text-muted hover:border-ink hover:text-ink"
       }`}
     >
-      {value ? "✓ " : ""}{label}
+      {label}
     </button>
   );
 }
@@ -744,7 +744,7 @@ function FacilityChip({
           : "border-line text-muted hover:border-ink hover:text-ink"
       }`}
     >
-      {active ? "✓ " : ""}{label}
+      {label}
     </button>
   );
 }
