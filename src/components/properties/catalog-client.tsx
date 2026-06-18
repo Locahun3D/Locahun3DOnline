@@ -63,6 +63,111 @@ const DEFAULT_REF: Reference = {
   label: REFERENCE_PRESETS[0].label,
 };
 
+// ── 検索条件の履歴 (localStorage) ───────────────────────────────────────────
+// ユーザーが過去に打ち込んだフィルタ一式を丸ごと保存し、ワンクリックで再適用する。
+type FilterSnapshot = {
+  q: string;
+  category: PropertyCategory | "all";
+  area: string;
+  studioType: string;
+  minPrice: number | ""; maxPrice: number | "";
+  minDailyPrice: number | ""; maxDailyPrice: number | "";
+  minArea: number | ""; maxArea: number | "";
+  minCeiling: number | ""; maxCeiling: number | "";
+  maxKmFromRef: number | "";
+  requiresDaily: boolean; requiresParking: boolean; requires200V: boolean;
+  reference: Reference;
+  sort: SortKey;
+};
+
+const RECENT_KEY = "locahun3d:recent-filters:v1";
+const RECENT_MAX = 5;
+
+const yenShort = (n: number) =>
+  n >= 10000 ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万` : `¥${n.toLocaleString("ja-JP")}`;
+
+function rangePart(lo: number | "", hi: number | "", label: string, fmt: (n: number) => string): string | null {
+  const hasLo = typeof lo === "number";
+  const hasHi = typeof hi === "number";
+  if (!hasLo && !hasHi) return null;
+  if (hasLo && hasHi) return `${label} ${fmt(lo)}〜${fmt(hi)}`;
+  if (hasHi) return `${label} 〜${fmt(hi)}`;
+  return `${label} ${fmt(lo as number)}〜`;
+}
+
+/** 条件セットを人間可読な短い文字列に要約 (空なら "")。 */
+function describeSnapshot(s: FilterSnapshot): string {
+  const parts: string[] = [];
+  if (s.q.trim()) parts.push(`"${s.q.trim()}"`);
+  if (s.category !== "all") parts.push(CATEGORY_LABEL[s.category]);
+  if (s.studioType !== "all") parts.push(s.studioType);
+  if (s.area !== "all") parts.push(s.area);
+  const pr = rangePart(s.minPrice, s.maxPrice, "時", yenShort); if (pr) parts.push(pr);
+  const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, "日", yenShort); if (dp) parts.push(dp);
+  const ar = rangePart(s.minArea, s.maxArea, "面積", (n) => `${n}㎡`); if (ar) parts.push(ar);
+  const ce = rangePart(s.minCeiling, s.maxCeiling, "天井", (n) => `${n}m`); if (ce) parts.push(ce);
+  if (typeof s.maxKmFromRef === "number") parts.push(`${s.reference.label}≤${s.maxKmFromRef}km`);
+  if (s.requiresDaily) parts.push("日貸し可");
+  if (s.requiresParking) parts.push("駐車場");
+  if (s.requires200V) parts.push("200V");
+  return parts.join(" / ");
+}
+
+/** 重複判定・保存可否のための安定キー (条件のみ。sort は無視)。 */
+function snapshotKey(s: FilterSnapshot): string {
+  return JSON.stringify([
+    s.q.trim(), s.category, s.area, s.studioType,
+    s.minPrice, s.maxPrice, s.minDailyPrice, s.maxDailyPrice,
+    s.minArea, s.maxArea, s.minCeiling, s.maxCeiling,
+    s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V,
+    typeof s.maxKmFromRef === "number" ? s.reference.id : null,
+  ]);
+}
+
+/** 最近の検索条件を localStorage に保持するフック。 */
+function useRecentFilters() {
+  const [recent, setRecent] = useState<FilterSnapshot[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setRecent(parsed.slice(0, RECENT_MAX));
+      }
+    } catch {
+      /* ignore corrupt storage */
+    }
+  }, []);
+
+  const persist = useCallback((next: FilterSnapshot[]) => {
+    setRecent(next);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* quota / private mode */ }
+  }, []);
+
+  const record = useCallback((s: FilterSnapshot) => {
+    if (!describeSnapshot(s)) return; // 空条件は保存しない
+    const key = snapshotKey(s);
+    setRecent((prev) => {
+      const next = [s, ...prev.filter((x) => snapshotKey(x) !== key)].slice(0, RECENT_MAX);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  }, []);
+
+  const remove = useCallback((key: string) => {
+    setRecent((prev) => {
+      const next = prev.filter((x) => snapshotKey(x) !== key);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  }, []);
+
+  const clear = useCallback(() => persist([]), [persist]);
+
+  return { recent, record, remove, clear };
+}
+
 export default function CatalogClient({ items, areas, studioTypes }: Props) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -99,6 +204,42 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
     setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
     setSort("newest");
+  }, []);
+
+  // ── 検索条件の履歴 ────────────────────────────────────────────────────────
+  const { recent, record, remove: removeRecent } = useRecentFilters();
+
+  const snapshot = useMemo<FilterSnapshot>(() => ({
+    q, category, area, studioType,
+    minPrice, maxPrice, minDailyPrice, maxDailyPrice,
+    minArea, maxArea, minCeiling, maxCeiling,
+    maxKmFromRef, requiresDaily, requiresParking, requires200V,
+    reference, sort,
+  }), [
+    q, category, area, studioType,
+    minPrice, maxPrice, minDailyPrice, maxDailyPrice,
+    minArea, maxArea, minCeiling, maxCeiling,
+    maxKmFromRef, requiresDaily, requiresParking, requires200V,
+    reference, sort,
+  ]);
+
+  // 入力が 1.2s 落ち着いたら履歴へ自動保存 (空条件は record 側で弾く)
+  useEffect(() => {
+    const t = setTimeout(() => record(snapshot), 1200);
+    return () => clearTimeout(t);
+  }, [snapshot, record]);
+
+  const applySnapshot = useCallback((s: FilterSnapshot) => {
+    setQ(s.q);
+    setCategory(s.category); setArea(s.area); setStudioType(s.studioType);
+    setMinPrice(s.minPrice); setMaxPrice(s.maxPrice);
+    setMinDailyPrice(s.minDailyPrice); setMaxDailyPrice(s.maxDailyPrice);
+    setMinArea(s.minArea); setMaxArea(s.maxArea);
+    setMinCeiling(s.minCeiling); setMaxCeiling(s.maxCeiling);
+    setMaxKmFromRef(s.maxKmFromRef);
+    setRequiresDaily(s.requiresDaily); setRequiresParking(s.requiresParking); setRequires200V(s.requires200V);
+    setReference(s.reference);
+    setSort(s.sort);
   }, []);
 
   // Validation: invalid ranges (min > max) are silently treated as unset for that pair
@@ -221,6 +362,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
             requiresParking={requiresParking} setRequiresParking={setRequiresParking}
             requires200V={requires200V} setRequires200V={setRequires200V}
             reset={reset}
+            recent={recent} applyRecent={applySnapshot} removeRecent={removeRecent}
             resultCount={computed.length} totalCount={items.length}
           />
         </div>
@@ -297,6 +439,9 @@ interface FiltersProps {
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
   reset: () => void;
+  recent: FilterSnapshot[];
+  applyRecent: (s: FilterSnapshot) => void;
+  removeRecent: (key: string) => void;
   resultCount: number; totalCount: number;
 }
 
@@ -308,6 +453,42 @@ function FiltersPanel(p: FiltersProps) {
 
   return (
     <div className="border border-line bg-[#222] p-3.5 space-y-2.5">
+      {/* 最近の検索条件: ワンクリックで条件一式を再適用 */}
+      {p.recent.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mr-0.5 shrink-0">
+            最近の条件
+          </span>
+          {p.recent.map((s) => {
+            const key = snapshotKey(s);
+            const label = describeSnapshot(s);
+            return (
+              <span
+                key={key}
+                className="group inline-flex items-center border border-line bg-[#2c2c2c] hover:border-accent transition rounded-none"
+              >
+                <button
+                  type="button"
+                  onClick={() => p.applyRecent(s)}
+                  title={label}
+                  className="font-sans text-[11px] text-ink/85 group-hover:text-accent transition px-2 py-1 max-w-[220px] truncate text-left"
+                >
+                  {label}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => p.removeRecent(key)}
+                  aria-label="この条件を削除"
+                  className="px-1.5 py-1 text-[12px] leading-none text-muted hover:text-ink border-l border-line/70 transition"
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
       <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2.5">
         <div className="space-y-2.5">
