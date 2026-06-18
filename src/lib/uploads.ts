@@ -1,23 +1,28 @@
 /**
  * Upload abstraction.
- *
- * UPLOAD_MODE=local (default) — writes to public/uploads/{propertyId}/{nanoid}-{filename}.
- *   - Works without any external creds, ideal for early dev and the "form polish" phase.
- *   - Files committed via git get served by Next.js as /uploads/...
- *   - Don't use for 100s of MB of splat data — that's what R2 mode is for.
- *
- * UPLOAD_MODE=r2 — generates presigned PUT URLs against Cloudflare R2.
- *   - TODO: implement when R2 Access Key / Secret are provisioned.
- *   - Browser PUTs directly to R2, no server pipe-through.
- *   - Bucket: locahun3d-assets (existing).
+ *  - UPLOAD_MODE=local : bytes written under public/uploads (dev, no creds).
+ *  - UPLOAD_MODE=r2    : presigned PUT URLs against Cloudflare R2 (browser PUTs direct).
  */
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { nanoid } from "nanoid";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { safeName, buildPublicUrl } from "./asset-keys";
+
+export {
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_SPLAT_EXTENSIONS,
+  MAX_IMAGE_BYTES,
+  MAX_SPLAT_BYTES,
+} from "./asset-keys";
 
 export type UploadMode = "local" | "r2";
-
 export const UPLOAD_MODE: UploadMode =
   process.env.UPLOAD_MODE === "r2" ? "r2" : "local";
 
@@ -32,29 +37,20 @@ export interface SaveResult {
   height?: number;
 }
 
-function safeName(name: string): string {
-  return name
-    .normalize("NFKC")
-    .replace(/[^A-Za-z0-9._-]+/g, "_")
-    .slice(0, 80);
-}
-
+// ── Local mode ──
 export async function saveLocalUpload(
-  propertyId: string,
+  bucketId: string,
   file: File,
 ): Promise<SaveResult> {
-  const id = safeName(propertyId);
+  const id = safeName(bucketId);
   const dir = path.join(PUBLIC_DIR, "uploads", id);
   await fs.mkdir(dir, { recursive: true });
-
   const ext = path.extname(file.name);
   const stem = path.basename(file.name, ext);
   const filename = `${nanoid(6)}-${safeName(stem)}${ext.toLowerCase()}`;
   const abs = path.join(dir, filename);
-
   const buf = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(abs, buf);
-
   return {
     url: `${UPLOADS_ROOT}/${id}/${filename}`,
     size: file.size,
@@ -62,27 +58,70 @@ export async function saveLocalUpload(
   };
 }
 
+// Legacy single-call upload (still used by /api/admin/upload until fully migrated).
 export async function handleUpload(
   propertyId: string,
   file: File,
 ): Promise<SaveResult> {
   if (UPLOAD_MODE === "r2") {
     throw new Error(
-      "UPLOAD_MODE=r2 is not yet wired. Set UPLOAD_MODE=local or provision R2 keys.",
+      "handleUpload(local) called while UPLOAD_MODE=r2 — use the assets presign flow.",
     );
   }
   return saveLocalUpload(propertyId, file);
 }
 
-export const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/avif",
-  "image/gif",
-];
+// ── R2 mode ──
+function r2Env() {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET;
+  const publicBase = process.env.R2_PUBLIC_URL;
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !publicBase) {
+    throw new Error(
+      "R2 env not configured (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET / R2_PUBLIC_URL).",
+    );
+  }
+  return { accountId, accessKeyId, secretAccessKey, bucket, publicBase };
+}
 
-export const ALLOWED_SPLAT_EXTENSIONS = [".splat", ".ply", ".ksplat"];
+let _client: S3Client | null = null;
+function r2Client(): { client: S3Client; bucket: string; publicBase: string } {
+  const env = r2Env();
+  if (!_client) {
+    _client = new S3Client({
+      region: "auto",
+      endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: env.accessKeyId,
+        secretAccessKey: env.secretAccessKey,
+      },
+    });
+  }
+  return { client: _client, bucket: env.bucket, publicBase: env.publicBase };
+}
 
-export const MAX_IMAGE_BYTES = 25 * 1024 * 1024; // 25 MB per photo
-export const MAX_SPLAT_BYTES = 1024 * 1024 * 1024; // 1 GB per splat
+/** Presigned PUT URL the browser uploads to directly. */
+export async function createPresignedUpload(input: {
+  r2Key: string;
+  contentType: string;
+}): Promise<{ putUrl: string; publicUrl: string }> {
+  const { client, bucket, publicBase } = r2Client();
+  const cmd = new PutObjectCommand({
+    Bucket: bucket,
+    Key: input.r2Key,
+    ContentType: input.contentType,
+  });
+  const putUrl = await getSignedUrl(client, cmd, { expiresIn: 600 });
+  return { putUrl, publicUrl: buildPublicUrl(input.r2Key, publicBase) };
+}
+
+export async function deleteR2Object(r2Key: string): Promise<void> {
+  const { client, bucket } = r2Client();
+  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: r2Key }));
+}
+
+export function r2PublicUrlFor(r2Key: string): string {
+  return buildPublicUrl(r2Key, r2Env().publicBase);
+}
