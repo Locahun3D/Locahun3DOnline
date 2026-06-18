@@ -240,7 +240,7 @@ export default function PlanCards({
                               ? "Free プランに変更しますか？"
                               : `${p.name} プランに変更しますか？（決済は今後対応・現在は即時反映）`;
                           if (confirm(msg)) {
-                            startTransition(() => subscribeAction(planKey as AccountPlan));
+                            startTransition(() => subscribeAction(planKey as AccountPlan, mode));
                           }
                         }}
                         className={cls + " disabled:opacity-50"}

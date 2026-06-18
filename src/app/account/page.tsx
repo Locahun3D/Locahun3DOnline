@@ -3,6 +3,7 @@ import { requireOnboarded } from "@/lib/dal";
 import { acceptNdaAction } from "@/lib/auth-actions";
 import { ROLE_LABEL, ACCOUNT_STATUS_LABEL, totalTokens } from "@/lib/account-schema";
 import RedeemGift from "@/components/account/redeem-gift";
+import { openBillingPortalAction } from "@/lib/subscribe-actions";
 
 export const metadata = { title: "プロフィール" };
 
@@ -104,12 +105,21 @@ export default async function AccountPage({
                   {user.plan === "free" ? "無料プラン" : "サブスクリプション"}
                 </div>
               </div>
-              <Link
-                href="/pricing"
-                className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
-              >
-                プラン変更
-              </Link>
+              <div className="flex items-center gap-2">
+                {user.stripeCustomerId && (
+                  <form action={openBillingPortalAction}>
+                    <button className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition">
+                      支払い・解約
+                    </button>
+                  </form>
+                )}
+                <Link
+                  href="/pricing"
+                  className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                >
+                  プラン変更
+                </Link>
+              </div>
             </div>
           </div>
 

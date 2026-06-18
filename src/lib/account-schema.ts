@@ -87,6 +87,8 @@ export const userSchema = z.object({
   bonusTokens: z.number().int().min(0).default(0),
   /** 月次/付与トークン(tokenBalance)の失効予定日 (ISO)。null = 失効予定なし。 */
   tokenExpiresAt: z.string().nullable().default(null),
+  /** Stripe Customer ID (cus_…)。サブスク契約後に紐付け。null = 未連携。 */
+  stripeCustomerId: z.string().nullable().default(null),
   /** ISO timestamp when the NDA was accepted; null = not accepted. */
   ndaAcceptedAt: z.string().nullable().default(null),
   bookmarks: z.array(z.string()).max(500).default([]),
