@@ -820,7 +820,7 @@ function PropertyCardLite({
   return (
     <Link
       href={`/properties/${property.id}`}
-      className={`block border bg-bg overflow-hidden transition ${
+      className={`flex flex-col h-full border bg-bg overflow-hidden transition ${
         highlighted ? "border-accent" : "border-line hover:border-ink"
       }`}
     >
@@ -852,11 +852,11 @@ function PropertyCardLite({
         )}
       </div>
 
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex flex-col flex-1">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {property.prefecture} / {property.city}
         </div>
-        <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2">
+        <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2 min-h-[3.05rem]">
           {property.title}
         </h3>
         <div className="grid grid-cols-4 gap-1.5 text-[10px] mono text-muted">
@@ -868,17 +868,10 @@ function PropertyCardLite({
         {property.powerVoltage && (
           <div className="mono text-[10px] text-muted truncate">⚡ {property.powerVoltage}</div>
         )}
-        <div className="flex items-baseline justify-between pt-2 border-t border-line">
+        <div className="flex items-baseline justify-between pt-2 border-t border-line mt-auto">
           <div>
-            <div>
-              <span className="serif text-xl text-accent">¥{yen}</span>
-              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
-            </div>
-            {property.dailyPrice > 0 && (
-              <div className="mono text-[10px] text-muted mt-0.5">
-                Day: ¥{property.dailyPrice.toLocaleString("ja-JP")}
-              </div>
-            )}
+            <span className="serif text-xl text-accent">¥{yen}</span>
+            <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
           </div>
           <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-60">詳細 →</span>
         </div>
