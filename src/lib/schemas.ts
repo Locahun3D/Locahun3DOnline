@@ -10,6 +10,14 @@ export const PROPERTY_CATEGORIES = [
 
 export const PROPERTY_STATUSES = ["draft", "published", "archived"] as const;
 
+/**
+ * Listing visibility:
+ *   public        — anyone can see it in the catalog and open the detail page.
+ *   confidential  — only NDA-signed production accounts (and admins) can see it.
+ *                   倉庫裏・非公開スタジオ等。カタログにも出さない。
+ */
+export const PROPERTY_VISIBILITIES = ["public", "confidential"] as const;
+
 export const ANNOTATION_KINDS = [
   "event",
   "parking",
@@ -42,9 +50,76 @@ export const annotationSchema = z.object({
     .optional(),
 });
 
+// ── Studio page builder blocks ───────────────────────────────
+// The public studio page (/properties/[id]) can be composed from an ordered
+// list of blocks. Some blocks (gallery/splat/specs) pull from the property
+// record itself; others (heading/text/image/cta) carry their own content.
+export const PAGE_BLOCK_KINDS = [
+  "heading",
+  "text",
+  "image",
+  "gallery",
+  "splat",
+  "specs",
+  "cta",
+  "divider",
+] as const;
+export type PageBlockKind = (typeof PAGE_BLOCK_KINDS)[number];
+
+const blockBase = { id: z.string().min(1) };
+
+export const pageBlockSchema = z.discriminatedUnion("kind", [
+  z.object({
+    ...blockBase,
+    kind: z.literal("heading"),
+    eyebrow: z.string().max(40).default(""),
+    text: z.string().max(120).default(""),
+  }),
+  z.object({
+    ...blockBase,
+    kind: z.literal("text"),
+    body: z.string().max(6000).default(""),
+  }),
+  z.object({
+    ...blockBase,
+    kind: z.literal("image"),
+    src: z.string().max(2000).default(""),
+    alt: z.string().max(200).default(""),
+    caption: z.string().max(200).default(""),
+  }),
+  z.object({ ...blockBase, kind: z.literal("gallery") }),
+  z.object({
+    ...blockBase,
+    kind: z.literal("splat"),
+    caption: z.string().max(200).default(""),
+  }),
+  z.object({ ...blockBase, kind: z.literal("specs") }),
+  z.object({
+    ...blockBase,
+    kind: z.literal("cta"),
+    label: z.string().max(40).default("見積もり依頼"),
+    href: z.string().max(300).default("/pricing"),
+    note: z.string().max(200).default(""),
+  }),
+  z.object({ ...blockBase, kind: z.literal("divider") }),
+]);
+export type PageBlock = z.infer<typeof pageBlockSchema>;
+
+export const PAGE_BLOCK_LABEL: Record<PageBlockKind, string> = {
+  heading: "見出し",
+  text: "本文",
+  image: "画像",
+  gallery: "写真ギャラリー",
+  splat: "3DGS ビューアー",
+  specs: "スペック表",
+  cta: "CTA ボタン",
+  divider: "区切り線",
+};
+
 export const propertySchema = z.object({
   id: z.string().min(1),
   status: z.enum(PROPERTY_STATUSES).default("draft"),
+  visibility: z.enum(PROPERTY_VISIBILITIES).default("public"),
 
   // 1. Basic (draft-permissive — strictness applied in publishablePropertySchema)
   title: z.string().max(120).default(""),
@@ -114,6 +189,10 @@ export const propertySchema = z.object({
   tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
   annotations: z.array(annotationSchema).max(200).default([]),
 
+  // 6. Studio page builder — ordered content blocks for the public page.
+  //    Empty = render the default detail layout (no regression).
+  pageBlocks: z.array(pageBlockSchema).max(60).default([]),
+
   // Meta
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
@@ -150,6 +229,7 @@ export type PropertyImage = z.infer<typeof propertyImageSchema>;
 export type Annotation = z.infer<typeof annotationSchema>;
 export type PropertyCategory = (typeof PROPERTY_CATEGORIES)[number];
 export type PropertyStatus = (typeof PROPERTY_STATUSES)[number];
+export type PropertyVisibility = (typeof PROPERTY_VISIBILITIES)[number];
 export type AnnotationKind = (typeof ANNOTATION_KINDS)[number];
 
 export const CATEGORY_LABEL: Record<PropertyCategory, string> = {
@@ -164,6 +244,11 @@ export const STATUS_LABEL: Record<PropertyStatus, string> = {
   draft: "下書き",
   published: "公開中",
   archived: "アーカイブ",
+};
+
+export const VISIBILITY_LABEL: Record<PropertyVisibility, string> = {
+  public: "一般公開",
+  confidential: "機密（NDA限定）",
 };
 
 export const ANNOTATION_LABEL: Record<AnnotationKind, string> = {
@@ -227,3 +312,27 @@ export const REFERENCE_PRESETS = [
 ] as const;
 
 export type ReferencePresetId = (typeof REFERENCE_PRESETS)[number]["id"];
+
+// ─── Asset library ───────────────────────────────────────────────
+export const assetKindSchema = z.enum(["image", "splat"]);
+export const assetStatusSchema = z.enum(["uploading", "ready"]);
+
+export const assetSchema = z.object({
+  id: z.string(),
+  kind: assetKindSchema,
+  status: assetStatusSchema.default("ready"),
+  label: z.string().max(120).default(""),
+  filename: z.string().default(""),
+  ext: z.string().default(""),
+  r2Key: z.string().default(""),
+  url: z.string().default(""),
+  size: z.number().int().min(0).default(0),
+  contentType: z.string().default("application/octet-stream"),
+  width: z.number().int().min(0).optional(),
+  height: z.number().int().min(0).optional(),
+  uploadedAt: z.string().default(() => new Date().toISOString()),
+});
+
+export type AssetKind = z.infer<typeof assetKindSchema>;
+export type AssetStatus = z.infer<typeof assetStatusSchema>;
+export type Asset = z.infer<typeof assetSchema>;
