@@ -153,6 +153,7 @@ export function usePreviewCapture(): UseCaptureResult {
               const fd = new FormData();
               fd.append("file", cleanBlob, `preview.${ext}`);
               fd.append("propertyId", propertyId);
+              fd.append("itemIdx", String(itemIdx));
               try {
                 const res = await fetch("/api/admin/capture-upload", { method: "POST", body: fd });
                 console.log(`[preview-capture] upload attempt ${i + 1}: ${res.status}`);

@@ -37,10 +37,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no_property_id" }, { status: 400 });
   }
 
-  const id = nanoid(6);
+  const itemIdx = String(form.get("itemIdx") ?? "").trim();
+  const slug = itemIdx || nanoid(6);
   const ext = file.name.endsWith(".mp4") ? "mp4" : "webm";
   const contentType = ext === "mp4" ? "video/mp4" : "video/webm";
-  const key = `uploads/${propertyId}/${id}-preview.${ext}`;
+  const key = `uploads/${propertyId}/${slug}-preview.${ext}`;
 
   try {
     if (process.env.NODE_ENV === "production") {
