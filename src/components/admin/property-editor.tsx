@@ -32,6 +32,7 @@ import FileDropzone, {
   type UploadedFile,
 } from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
+import { usePreviewCapture } from "./use-preview-capture";
 
 const STEPS = [
   { id: "basic", label: "基本情報" },
@@ -56,6 +57,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [previewZip, setPreviewZip] = useState(false);
   const [previewSplat, setPreviewSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
+  const capture = usePreviewCapture();
 
   const form = useForm<Property>({
     // zod's input type (fields with .default() are optional) differs from the
@@ -97,7 +99,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     });
   };
 
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const triggerAutoSave = useCallback(
     (delayMs = 0) => {
       clearTimeout(autoSaveTimer.current);
@@ -110,6 +112,30 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     [handleSubmit],
   );
   useEffect(() => () => clearTimeout(autoSaveTimer.current), []);
+
+  useEffect(() => {
+    if (capture.capturedUrl && capture.capturedIdx !== null) {
+      setValue(`splatItems.${capture.capturedIdx}.previewVideoUrl`, capture.capturedUrl, { shouldDirty: true });
+      triggerAutoSave();
+      capture.clearResult();
+    }
+  }, [capture.capturedUrl, capture.capturedIdx, setValue, triggerAutoSave, capture.clearResult]);
+
+  // Auto-queue video capture for splatItems missing previewVideoUrl
+  const autoQueuedRef = useRef(false);
+  useEffect(() => {
+    if (autoQueuedRef.current) return;
+    const items = initial.splatItems ?? [];
+    const missing = items
+      .map((it, idx) => ({ ...it, idx }))
+      .filter((it) => it.splatUrl && !it.previewVideoUrl);
+    if (missing.length > 0) {
+      autoQueuedRef.current = true;
+      capture.queueCaptures(
+        missing.map((it) => ({ splatUrl: it.splatUrl, propertyId: initial.id, itemIdx: it.idx })),
+      );
+    }
+  }, [initial.splatItems, initial.id, capture.queueCaptures]);
 
   // Debounced auto-save: any form change triggers save after 1.5s of inactivity
   useEffect(() => {
@@ -887,7 +913,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", sizeMb: 0, notes: "" })}
+                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -943,6 +969,15 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           >
                             {previewItemIdx === idx ? "閉じる" : "プレビュー"}
                           </button>
+                          {watch(`splatItems.${idx}.splatUrl`) && capture.state === "idle" && (
+                            <button
+                              type="button"
+                              onClick={() => capture.startCapture(watch(`splatItems.${idx}.splatUrl`), initial.id, idx)}
+                              className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                            >
+                              {watch(`splatItems.${idx}.previewVideoUrl`) ? "再撮影" : "動画生成"}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -965,9 +1000,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           onUploaded={(f) => {
                             const now = new Date();
                             const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+                            const uploadedUrl = new URL(f.url, window.location.origin).toString();
                             setValue(
                               `splatItems.${idx}.splatUrl`,
-                              new URL(f.url, window.location.origin).toString(),
+                              uploadedUrl,
                               { shouldDirty: true, shouldValidate: true },
                             );
                             setValue(
@@ -980,19 +1016,54 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             }
                             setValue("splatDataUpdatedAt", now.toISOString(), { shouldDirty: true });
                             triggerAutoSave();
+                            capture.startCapture(uploadedUrl, initial.id, idx);
                           }}
                         />
                       )}
 
+                      {capture.state !== "idle" && capture.state !== "done" && capture.capturedIdx === idx && (
+                        <div className="py-2">
+                          <div className="flex items-center gap-2 text-[11px] mono text-accent">
+                            <span className="inline-block w-3 h-3 rounded-full bg-accent animate-pulse" />
+                            {capture.progress}
+                            {capture.queueLength > 0 && (
+                              <span className="text-muted text-[9px]">（残り {capture.queueLength} 件）</span>
+                            )}
+                            <button type="button" onClick={capture.cancel} className="text-muted hover:text-ink ml-auto text-[10px]">
+                              キャンセル
+                            </button>
+                          </div>
+                          {capture.state === "recording" && capture.progressPct > 0 && (
+                            <div className="mt-1.5 h-1 bg-[#222] rounded overflow-hidden">
+                              <div
+                                className="h-full bg-accent transition-all duration-700"
+                                style={{ width: `${capture.progressPct}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {previewItemIdx === idx && watch(`splatItems.${idx}.splatUrl`) && (
                         <div className="border border-line bg-black overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                          <iframe
-                            src={`/viewer/offline-viewer.html?autoload=${encodeURIComponent(watch(`splatItems.${idx}.splatUrl`))}`}
-                            title={`3DGS プレビュー: ${watch(`splatItems.${idx}.label`) || `#${idx + 1}`}`}
-                            className="w-full h-full border-0"
-                            allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
-                            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
-                          />
+                          {watch(`splatItems.${idx}.previewVideoUrl`) ? (
+                            <video
+                              src={watch(`splatItems.${idx}.previewVideoUrl`)}
+                              className="w-full h-full object-cover"
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <iframe
+                              src={`/viewer/offline-viewer.html?autoload=${encodeURIComponent(watch(`splatItems.${idx}.splatUrl`))}`}
+                              title={`3DGS プレビュー: ${watch(`splatItems.${idx}.label`) || `#${idx + 1}`}`}
+                              className="w-full h-full border-0"
+                              allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
+                              sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+                            />
+                          )}
                         </div>
                       )}
 
@@ -1061,6 +1132,52 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     ))}
                   </select>
                 </Field>
+              </div>
+
+              {/* ── データ販売設定 ── */}
+              <div className="border-t border-line pt-5 mt-6">
+                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4">
+                  Data Sale Settings
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer mb-4">
+                  <input
+                    type="checkbox"
+                    {...register("dataForSale")}
+                    className="w-4 h-4 accent-accent"
+                  />
+                  <span className="text-sm">3DGSデータを販売する</span>
+                </label>
+
+                {watch("dataForSale") && (
+                  <div className="space-y-4 pl-7">
+                    <Field
+                      label="販売価格 (税込・円)"
+                      hint="購入者はこの金額で3DGSデータのダウンロード権を得る。"
+                    >
+                      <input
+                        type="number"
+                        {...register("dataSalePrice", { valueAsNumber: true })}
+                        className={inputClass}
+                        min={0}
+                        max={99999999}
+                        placeholder="例: 100000"
+                      />
+                    </Field>
+                    <Field
+                      label="販売説明文"
+                      hint="購入パネルに表示される説明。データの用途・含まれる内容など。"
+                    >
+                      <textarea
+                        {...register("dataSaleDescription")}
+                        className={inputClass}
+                        rows={3}
+                        maxLength={1000}
+                        placeholder="例: 高精細3DGSデータ一式。商用利用可。PLY+SPLAT形式。"
+                      />
+                    </Field>
+                  </div>
+                )}
               </div>
             </StepCard>
           )}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/dal";
 import {
   handleUpload,
   ALLOWED_IMAGE_TYPES,
@@ -16,13 +17,13 @@ import {
  *   - kind        : "image" | "splat"
  *
  * Returns: { url: string, size: number, contentType: string }
- *
- * Note: no auth here yet. When Clerk is wired, gate with the same
- * NEXT_PUBLIC_ADMIN_BYPASS / role check used by /admin layout.
  */
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_ADMIN_BYPASS !== "1") {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (process.env.NODE_ENV === "production") {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "admin") {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
   }
 
   let form: FormData;

@@ -71,6 +71,12 @@ export default async function AdminLayout({
             ギフトコード
           </Link>
           <Link
+            href="/admin/purchases"
+            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+          >
+            データ販売
+          </Link>
+          <Link
             href="/admin/free-period"
             className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
           >

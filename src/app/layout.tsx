@@ -1,3 +1,4 @@
+import "@/lib/env";
 import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";

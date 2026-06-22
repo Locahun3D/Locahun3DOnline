@@ -7,6 +7,7 @@ import {
 } from "@/lib/schemas";
 import ImageGallery from "@/components/image-gallery";
 import ViewerGate from "@/components/viewer-gate";
+import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 
 /**
@@ -268,6 +269,21 @@ export default function PropertyDetailView({
         </section>
       ) : (
         <>
+          {/* Data Sale Panel (above viewer) */}
+          {property.dataForSale && property.dataSalePrice > 0 && (
+            <DataSalePanel
+              propertyId={property.id}
+              propertyTitle={property.title}
+              price={property.dataSalePrice}
+              description={property.dataSaleDescription}
+              scannedAt={property.scannedAt}
+              splatSizeMb={property.splatSizeMb}
+              zipSizeMb={property.zipSizeMb}
+              splatItemCount={property.splatItems.length}
+              tokenCost={property.tokenCost}
+            />
+          )}
+
           {/* 3DGS Viewer (paywalled) */}
           <section className="mb-16">
             <div className="chapter-rule">

@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "locahun3d-online",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "r2_buckets": [
+    {
+      "binding": "R2_ASSETS",
+      "bucket_name": "locahun3d-assets"
+    }
+  ],
+  "routes": [
+    { "pattern": "locahun3d.com", "custom_domain": true },
+    { "pattern": "www.locahun3d.com", "custom_domain": true }
+  ]
+}

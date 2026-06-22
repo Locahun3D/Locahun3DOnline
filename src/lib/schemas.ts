@@ -118,6 +118,7 @@ export const PAGE_BLOCK_LABEL: Record<PageBlockKind, string> = {
 
 export const propertySchema = z.object({
   id: z.string().min(1),
+  ownerId: z.string().default(""),
   status: z.enum(PROPERTY_STATUSES).default("draft"),
   visibility: z.enum(PROPERTY_VISIBILITIES).default("public"),
 
@@ -190,6 +191,7 @@ export const propertySchema = z.object({
   splatItems: z.array(z.object({
     label: z.string().max(60).default(""),
     splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+    previewVideoUrl: z.string().url().or(z.literal("")).default(""),
     sizeMb: z.number().min(0).max(99999).default(0),
     notes: z.string().max(500).default(""),
   })).max(20).default([]),
@@ -210,6 +212,11 @@ export const propertySchema = z.object({
    */
   tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
   annotations: z.array(annotationSchema).max(200).default([]),
+
+  // 5.5 Data sale — 3DGS data purchase options
+  dataForSale: z.boolean().default(false),
+  dataSalePrice: z.number().int().min(0).max(99999999).default(0),
+  dataSaleDescription: z.string().max(1000).default(""),
 
   // 6. Studio page builder — ordered content blocks for the public page.
   //    Empty = render the default detail layout (no regression).

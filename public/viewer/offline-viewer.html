@@ -3984,7 +3984,7 @@ renderer = new THREE.WebGLRenderer({
   antialias: !_heavyDisplay && !isMobile && !(typeof _isMac !== 'undefined' && _isMac),
   powerPreference: 'high-performance',
   stencil: false,
-  preserveDrawingBuffer: false,
+  preserveDrawingBuffer: /[?&]capture=1/.test(location.search),
   alpha: false,                    // opaque canvas — no body bleed-through during compositing
   premultipliedAlpha: true,        // matches Three.js default; prevents subpixel halos on splats
   depth: true,
@@ -15954,6 +15954,19 @@ const _SPLAT_ACTIVE_MS = (typeof _isMac !== 'undefined' && _isMac) ? 1800 : 4000
 // never ticks and the splats never finish streaming. Zero effect for normal users
 // (flag is off unless explicitly present in the URL).
 const _headless = /[?&]headless=1/.test(location.search);
+// Keep background tab timers alive by running a silent AudioContext.
+// Chrome throttles setTimeout to 1s minimum in background tabs, but an
+// active audio context prevents this — letting headless render at ~60fps.
+if(_headless){
+  try{
+    const _actx = new (window.AudioContext||window.webkitAudioContext)();
+    const _osc = _actx.createOscillator();
+    const _gain = _actx.createGain();
+    _gain.gain.value = 0;
+    _osc.connect(_gain); _gain.connect(_actx.destination);
+    _osc.start();
+  }catch(_e){}
+}
 function animate(now) {
   if(_headless) setTimeout(()=>animate(performance.now()), 16);
   else          requestAnimationFrame(animate);
@@ -16646,6 +16659,9 @@ if(/[?&]orbit=1/.test(location.search)){
     style.textContent = '#topbar,#hud,#layer-panel,#overlay,#dropzone,#orient-lock,#sun-panel,#immersive-exit,#env-tint,#light-halo-layer,#view-tl-btns,#qp-panel,[id^="lfi-"],[id^="obj-type-menu"]{display:none!important}body{overflow:hidden!important;margin:0!important}#c{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:0!important}';
     document.head.appendChild(style);
 
+    // When capture=1 is also active, capture code drives the orbit itself.
+    if(/[?&]capture=1/.test(location.search)) return;
+
     const ORBIT_DURATION_S = 35;
     const RAD_PER_S = (2 * Math.PI) / ORBIT_DURATION_S;
     let orbitRaf = 0;
@@ -16672,6 +16688,128 @@ if(/[?&]orbit=1/.test(location.search)){
       })(performance.now());
     }
     setTimeout(startOrbit, 200);
+  })();
+}
+
+// ══════════════════════════════════════════════════
+//  ?capture=1 — Record the orbit as a WebM video and postMessage the blob
+//  back to the parent window. Used by the admin editor to auto-generate
+//  lightweight preview videos after 3DGS upload.
+//
+//  Flow: load scene → warmup (5s, GPU settles + splats stream in)
+//        → wait for orbit to be running → record for captureSec → post blob
+// ══════════════════════════════════════════════════
+if(/[?&]capture=1/.test(location.search)){
+  (function(){
+    const params = new URLSearchParams(location.search);
+    const ORBIT_S = parseInt(params.get('orbitSec')||'35', 10);
+    const canvas = document.getElementById('c');
+    if(!canvas) return;
+
+    const target = window.opener || parent;
+    const msg = (type, extra)=> target.postMessage(Object.assign({type}, extra||{}), '*');
+
+    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
+    const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
+
+    async function run(){
+      // Phase 1: wait for scene layer to appear (up to 90s)
+      msg('capture-progress',{phase:'loading', text:'3DGS 読み込み中…'});
+      for(let i=0; i<180 && !hasScene(); i++) await new Promise(r=>setTimeout(r,500));
+      if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
+
+      // Phase 2: wait for RAD splats to actually stream in and stabilise.
+      // Poll __nSplat(); when count > 0 and unchanged for 3s, data is ready.
+      msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
+      let lastCount = 0, stableMs = 0;
+      const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = 60000;
+      let elapsed = 0;
+      while(elapsed < MAX_MS){
+        await new Promise(r=>setTimeout(r, POLL_MS));
+        elapsed += POLL_MS;
+        const c = nSplat();
+        if(c > 0 && c === lastCount){ stableMs += POLL_MS; if(stableMs >= STABLE_MS) break; }
+        else { stableMs = 0; lastCount = c; }
+        msg('capture-progress',{phase:'loading', text:'RAD 読み込み中… '+(c>0?c.toLocaleString()+' splats':'待機中'), pct:Math.min(30, Math.round(elapsed/MAX_MS*30))});
+      }
+      if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
+
+      // Phase 3: start orbit + recording simultaneously for exact 360° loop
+      const RAD_PER_S = (2*Math.PI) / ORBIT_S;
+      const baseYaw = typeof yaw!=='undefined' ? yaw : 0;
+
+      // WebCodecs VideoEncoder + mp4-muxer: frame-by-frame capture that
+      // bypasses MediaRecorder (which produces unplayable output from WebGL canvas).
+      const FPS = 30;
+      const W = canvas.width, H = canvas.height;
+
+      // Load mp4-muxer from CDN
+      const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
+
+      const muxTarget = new ArrayBufferTarget();
+      const muxer = new Muxer({
+        target: muxTarget,
+        video: { codec: 'avc', width: W, height: H },
+        fastStart: 'in-memory',
+        firstTimestampBehavior: 'offset',
+      });
+
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: e => msg('capture-error',{error:'VideoEncoder: '+e.message}),
+      });
+      encoder.configure({
+        codec: 'avc1.42001f',
+        width: W, height: H,
+        bitrate: 4_000_000,
+        framerate: FPS,
+      });
+
+      msg('capture-started',{durationSec: ORBIT_S});
+
+      // Drive orbit via setTimeout (works in background tabs with headless=1)
+      // and encode one frame per step (~30fps).
+      let prev = performance.now(), totalAngle = 0, frameIdx = 0;
+      await new Promise(resolve=>{
+        function step(){
+          const now = performance.now();
+          const dt = Math.min((now-prev)/1000, 0.5);
+          prev = now;
+          const delta = RAD_PER_S * dt;
+          totalAngle += delta;
+          if(typeof _yawTarget!=='undefined') _yawTarget += delta;
+          if(typeof yaw!=='undefined') yaw = _yawTarget;
+          if(typeof markDirty==='function') markDirty(2);
+
+          // Force a synchronous render so the canvas has current content
+          if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
+            renderer.render(scene, camera);
+          }
+
+          // Encode this frame
+          try {
+            const vf = new VideoFrame(canvas, { timestamp: frameIdx * (1_000_000 / FPS) });
+            encoder.encode(vf, { keyFrame: frameIdx % (FPS * 2) === 0 });
+            vf.close();
+            frameIdx++;
+          } catch(e){ /* skip frame on error */ }
+
+          const pct = Math.min(100, Math.round(totalAngle/(2*Math.PI)*100));
+          msg('capture-progress',{phase:'recording', text:'録画中… '+pct+'%', pct:30+Math.round(pct*0.7)});
+          if(totalAngle >= 2*Math.PI) resolve();
+          else setTimeout(step, Math.round(1000/FPS));
+        }
+        setTimeout(step, Math.round(1000/FPS));
+      });
+
+      // Finalize encoding and muxing
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      const blob = new Blob([muxTarget.buffer], {type:'video/mp4'});
+      msg('capture-done',{blob, mimeType:'video/mp4', ext:'mp4'});
+    }
+    setTimeout(run, 300);
   })();
 }
 

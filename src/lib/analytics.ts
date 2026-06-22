@@ -7,6 +7,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import _analyticsFallback from "../../data/analytics.json";
 
 const FILE = path.join(process.cwd(), "data", "analytics.json");
 
@@ -48,27 +49,28 @@ interface Store {
 async function read(): Promise<Store> {
   try {
     const s = JSON.parse(await fs.readFile(FILE, "utf8")) as Store;
-    // 旧データには devices が無いので補完。
     for (const p of Object.values(s.properties)) {
       if (!p.devices) p.devices = {};
     }
     return s;
-  } catch (e: unknown) {
-    if (
-      typeof e === "object" &&
-      e !== null &&
-      "code" in e &&
-      (e as { code: string }).code === "ENOENT"
-    ) {
-      return { version: 1, properties: {} };
+  } catch {
+    const fb = _analyticsFallback as unknown as Store;
+    if (fb.properties) {
+      for (const p of Object.values(fb.properties)) {
+        if (!p.devices) p.devices = {};
+      }
     }
-    throw e;
+    return fb.properties ? fb : { version: 1, properties: {} };
   }
 }
 
 async function write(s: Store): Promise<void> {
-  await fs.mkdir(path.dirname(FILE), { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(s, null, 2), "utf8");
+  try {
+    await fs.mkdir(path.dirname(FILE), { recursive: true });
+    await fs.writeFile(FILE, JSON.stringify(s, null, 2), "utf8");
+  } catch {
+    // Workers: filesystem writes unavailable
+  }
 }
 
 /** Map a referrer URL to a coarse source label. */

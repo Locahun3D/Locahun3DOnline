@@ -171,3 +171,15 @@ body::before {
   padding-inline: max(48px, calc((100vw - 1760px) / 2));
 }
 
+/* Split Gateway — cross-dim: hovering one side fades the other */
+.split-gateway > .split-panel {
+  transition: opacity 0.5s ease, filter 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.split-gateway:has(> .split-panel:hover) > .split-panel:not(:hover) {
+  opacity: 0.3;
+  filter: saturate(0.2) brightness(0.6);
+}
+.split-gateway > .split-panel:hover {
+  z-index: 10;
+}
+

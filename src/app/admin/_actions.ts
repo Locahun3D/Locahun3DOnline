@@ -28,13 +28,16 @@ function newDraft(): Property {
 }
 
 export async function createDraftAction() {
+  const admin = await requireAdmin();
   const draft = newDraft();
+  draft.ownerId = admin.id;
   await repo.upsert(draft);
   revalidatePath("/admin/properties");
   redirect(`/admin/properties/${draft.id}/edit`);
 }
 
 export async function saveDraftAction(input: unknown) {
+  await requireAdmin();
   const parsed = propertySchema.parse(input);
   await repo.upsert(parsed);
   revalidatePath("/admin/properties");
@@ -43,6 +46,7 @@ export async function saveDraftAction(input: unknown) {
 }
 
 export async function publishAction(input: unknown) {
+  await requireAdmin();
   const parsed = publishablePropertySchema.parse(input);
   await repo.upsert({ ...parsed, status: "published" });
   revalidatePath("/admin/properties");
@@ -55,6 +59,7 @@ export async function publishAction(input: unknown) {
 
 /** Publish straight from the list by id — validates the stored record first. */
 export async function publishByIdAction(id: string) {
+  await requireAdmin();
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, error: "物件が見つかりません" };
   const parsed = publishablePropertySchema.safeParse(existing);
@@ -73,6 +78,7 @@ export async function publishByIdAction(id: string) {
 }
 
 export async function unpublishAction(id: string) {
+  await requireAdmin();
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
   await repo.upsert({ ...existing, status: "draft" });
@@ -84,6 +90,7 @@ export async function unpublishAction(id: string) {
 }
 
 export async function archiveAction(id: string) {
+  await requireAdmin();
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
   await repo.upsert({ ...existing, status: "archived" });
@@ -93,6 +100,7 @@ export async function archiveAction(id: string) {
 }
 
 export async function deleteAction(id: string) {
+  await requireAdmin();
   await repo.remove(id);
   revalidatePath("/admin/properties");
   revalidatePath("/properties");

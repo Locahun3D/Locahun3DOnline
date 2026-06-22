@@ -7,6 +7,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { userSchema, type User } from "./account-schema";
+import _usersFallback from "../../data/users.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "users.json");
 
@@ -43,22 +44,18 @@ async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
-  } catch (e: unknown) {
-    if (
-      typeof e === "object" &&
-      e !== null &&
-      "code" in e &&
-      (e as { code: string }).code === "ENOENT"
-    ) {
-      return { version: 1, users: [] };
-    }
-    throw e;
+  } catch {
+    return _usersFallback as unknown as StoreShape;
   }
 }
 
 async function writeStore(s: StoreShape): Promise<void> {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
+  try {
+    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
+    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
+  } catch {
+    // Workers: filesystem writes unavailable
+  }
 }
 
 class JsonFileUserRepo implements UserRepo {

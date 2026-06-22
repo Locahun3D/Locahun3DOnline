@@ -6,6 +6,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { giftCodeSchema, normalizeCode, type GiftCode } from "./gift-schema";
+import _giftFallback from "../../data/gift-codes.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "gift-codes.json");
 
@@ -37,22 +38,18 @@ async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
-  } catch (e: unknown) {
-    if (
-      typeof e === "object" &&
-      e !== null &&
-      "code" in e &&
-      (e as { code: string }).code === "ENOENT"
-    ) {
-      return { version: 1, codes: [] };
-    }
-    throw e;
+  } catch {
+    return _giftFallback as unknown as StoreShape;
   }
 }
 
 async function writeStore(s: StoreShape): Promise<void> {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
+  try {
+    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
+    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
+  } catch {
+    // Workers: filesystem writes unavailable
+  }
 }
 
 class JsonFileGiftCodeRepo implements GiftCodeRepo {

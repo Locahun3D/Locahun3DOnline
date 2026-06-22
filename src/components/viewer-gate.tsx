@@ -6,6 +6,7 @@ import Link from "next/link";
 interface SplatItem {
   label: string;
   splatUrl: string;
+  previewVideoUrl?: string;
   sizeMb: number;
   notes: string;
 }
@@ -54,11 +55,9 @@ export default function ViewerGate({
   const items = splatItems.filter(it => it.splatUrl);
   const hasMultiple = items.length > 0;
   const activeSplatUrl = hasMultiple ? items[selectedIdx]?.splatUrl ?? splatUrl : splatUrl;
+  const activeVideoUrl = hasMultiple ? items[selectedIdx]?.previewVideoUrl : undefined;
 
-  // Dev / preview bypass — replaced with Clerk publicMetadata check when wired.
-  const devBypass =
-    process.env.NODE_ENV !== "production" ||
-    process.env.NEXT_PUBLIC_ADMIN_BYPASS === "1";
+  const devBypass = process.env.NODE_ENV !== "production";
   // 限定無料期間中は、プラン・トークンに関わらず誰でも閲覧可能。
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
@@ -190,13 +189,25 @@ export default function ViewerGate({
           </button>
         </div>
         <div className="relative">
-          <iframe
-            key={`${selectedIdx}-${fullMode ? "full" : "preview"}`}
-            src={viewerUrl}
-            className="w-full aspect-video"
-            allow="accelerometer; gyroscope; xr-spatial-tracking"
-            style={{ border: "none" }}
-          />
+          {activeVideoUrl && !fullMode ? (
+            <video
+              key={`video-${selectedIdx}`}
+              src={activeVideoUrl}
+              className="w-full aspect-video object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            <iframe
+              key={`${selectedIdx}-${fullMode ? "full" : "preview"}`}
+              src={viewerUrl}
+              className="w-full aspect-video"
+              allow="accelerometer; gyroscope; xr-spatial-tracking"
+              style={{ border: "none" }}
+            />
+          )}
           {!fullMode && (
             <button
               type="button"

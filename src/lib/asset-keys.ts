@@ -10,6 +10,7 @@ export const ALLOWED_IMAGE_TYPES = [
   "image/webp",
   "image/avif",
   "image/gif",
+  "video/webm",
 ];
 export const ALLOWED_SPLAT_EXTENSIONS = [".splat", ".ply", ".ksplat", ".rad", ".zip"];
 export const ALLOWED_ZIP_EXTENSIONS = [".zip"];

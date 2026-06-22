@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe, stripeEnabled, planForPriceId } from "@/lib/stripe";
 import { userRepo } from "@/lib/users";
+import { purchaseRepo } from "@/lib/purchases";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
 import { oneYearFrom, type AccountPlan } from "@/lib/account-schema";
 
@@ -51,6 +52,22 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
+
+        if (s.metadata?.type === "data_purchase") {
+          const purchaseId = s.metadata.purchaseId;
+          if (purchaseId) {
+            const p = await purchaseRepo.get(purchaseId);
+            if (p && p.status === "pending") {
+              await purchaseRepo.upsert({
+                ...p,
+                status: "completed",
+                completedAt: new Date().toISOString(),
+              });
+            }
+          }
+          break;
+        }
+
         const userId = s.client_reference_id || s.metadata?.userId;
         const customerId =
           typeof s.customer === "string" ? s.customer : s.customer?.id ?? null;

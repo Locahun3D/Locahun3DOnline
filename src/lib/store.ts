@@ -17,6 +17,10 @@ import {
   type AssetKind,
   type AssetStatus,
 } from "./schemas";
+// Bundled at build-time; used as read-only fallback on Cloudflare Workers
+// where node:fs is stubbed out by unenv.
+import _propsFallback from "../../data/properties.json";
+import _assetsFallback from "../../data/assets.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "properties.json");
 
@@ -35,24 +39,20 @@ interface StoreShape {
 async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
-    const parsed = JSON.parse(raw) as StoreShape;
-    return parsed;
-  } catch (e: unknown) {
-    if (
-      typeof e === "object" &&
-      e !== null &&
-      "code" in e &&
-      (e as { code: string }).code === "ENOENT"
-    ) {
-      return { version: 1, properties: [] };
-    }
-    throw e;
+    return JSON.parse(raw) as StoreShape;
+  } catch {
+    // Workers (unenv stub) or missing file → bundled fallback
+    return _propsFallback as unknown as StoreShape;
   }
 }
 
 async function writeStore(s: StoreShape): Promise<void> {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
+  try {
+    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
+    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
+  } catch {
+    // Workers: filesystem writes unavailable (read-only from bundled JSON)
+  }
 }
 
 class JsonFilePropertyRepo implements PropertyRepo {
@@ -116,22 +116,18 @@ export class JsonFileAssetRepo implements AssetRepo {
     try {
       const raw = await fs.readFile(this.dataFile, "utf8");
       return JSON.parse(raw) as AssetStoreShape;
-    } catch (e: unknown) {
-      if (
-        typeof e === "object" &&
-        e !== null &&
-        "code" in e &&
-        (e as { code: string }).code === "ENOENT"
-      ) {
-        return { version: 1, assets: [] };
-      }
-      throw e;
+    } catch {
+      return _assetsFallback as unknown as AssetStoreShape;
     }
   }
 
   private async write(s: AssetStoreShape): Promise<void> {
-    await fs.mkdir(path.dirname(this.dataFile), { recursive: true });
-    await fs.writeFile(this.dataFile, JSON.stringify(s, null, 2), "utf8");
+    try {
+      await fs.mkdir(path.dirname(this.dataFile), { recursive: true });
+      await fs.writeFile(this.dataFile, JSON.stringify(s, null, 2), "utf8");
+    } catch {
+      // Workers: filesystem writes unavailable
+    }
   }
 
   async list(
