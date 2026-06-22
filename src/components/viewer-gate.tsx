@@ -192,7 +192,9 @@ export default function ViewerGate({
           {activeVideoUrl && !fullMode ? (
             <video
               key={`video-${selectedIdx}`}
+              ref={el => { if (el) el.play().catch(() => {}); }}
               src={activeVideoUrl}
+              preload="auto"
               className="w-full aspect-video object-cover"
               autoPlay
               loop

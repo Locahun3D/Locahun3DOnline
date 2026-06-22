@@ -25,24 +25,8 @@ interface UseCaptureResult {
 
 const CORS_PROXY = "https://locahun3d-cors-proxy.nakamurakou1108.workers.dev";
 
-function createCaptureIframe(url: string): HTMLIFrameElement {
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = [
-    "position:fixed",
-    "bottom:16px",
-    "right:16px",
-    "width:320px",
-    "height:180px",
-    "border:2px solid #ffb454",
-    "border-radius:8px",
-    "z-index:99999",
-    "background:#000",
-    "box-shadow:0 4px 24px rgba(0,0,0,.6)",
-  ].join(";");
-  iframe.sandbox.add("allow-scripts", "allow-same-origin");
-  iframe.src = url;
-  document.body.appendChild(iframe);
-  return iframe;
+function openCaptureWindow(url: string): Window | null {
+  return window.open(url, '_blank', 'width=1920,height=1080,menubar=no,toolbar=no,location=no');
 }
 
 export function usePreviewCapture(): UseCaptureResult {
@@ -52,7 +36,7 @@ export function usePreviewCapture(): UseCaptureResult {
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
   const [capturedIdx, setCapturedIdx] = useState<number | null>(null);
   const [queueLength, setQueueLength] = useState(0);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const winRef = useRef<Window | null>(null);
   const abortRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const busyRef = useRef(false);
@@ -60,7 +44,7 @@ export function usePreviewCapture(): UseCaptureResult {
   useEffect(() => {
     return () => {
       abortRef.current = true;
-      iframeRef.current?.remove();
+      try { winRef.current?.close(); } catch {}
     };
   }, []);
 
@@ -68,8 +52,8 @@ export function usePreviewCapture(): UseCaptureResult {
     abortRef.current = true;
     queueRef.current = [];
     setQueueLength(0);
-    iframeRef.current?.remove();
-    iframeRef.current = null;
+    try { winRef.current?.close(); } catch {}
+    winRef.current = null;
     busyRef.current = false;
     setState("idle");
     setProgress("");
@@ -91,19 +75,22 @@ export function usePreviewCapture(): UseCaptureResult {
       setCapturedUrl(null);
       setCapturedIdx(itemIdx);
 
-      iframeRef.current?.remove();
+      try { winRef.current?.close(); } catch {}
       const directSplatUrl = splatUrl.startsWith("/") ? `${CORS_PROXY}${splatUrl}` : splatUrl;
-      // headless=1 keeps rendering alive even if page goes to background.
-      // capture=1 waits for RAD load then records exact 360° orbit loop.
-      // orbit=1 hides viewer UI for clean video.
-      const url = `/viewer/offline-viewer.html?autoload=${encodeURIComponent(directSplatUrl)}&orbit=1&capture=1&headless=1`;
-      const iframe = createCaptureIframe(url);
-      iframeRef.current = iframe;
+      const url = `/viewer/offline-viewer.html?autoload=${encodeURIComponent(directSplatUrl)}&orbit=1&capture=1`;
+      const capWin = openCaptureWindow(url);
+      winRef.current = capWin;
+      if (!capWin) {
+        setState("error");
+        setProgress("ポップアップがブロックされました。許可してください。");
+        busyRef.current = false;
+        return;
+      }
 
       const cleanup = () => {
         window.removeEventListener("message", handler);
-        iframe.remove();
-        iframeRef.current = null;
+        try { capWin.close(); } catch {}
+        winRef.current = null;
         busyRef.current = false;
       };
 
@@ -124,7 +111,7 @@ export function usePreviewCapture(): UseCaptureResult {
       }
 
       function handler(e: MessageEvent) {
-        if (e.source !== iframe.contentWindow) return;
+        if (e.source !== capWin) return;
         const d = e.data;
         if (!d || typeof d.type !== "string") return;
 
@@ -144,8 +131,8 @@ export function usePreviewCapture(): UseCaptureResult {
         if (d.type === "capture-done" && d.blob instanceof Blob) {
           clearTimeout(timeout);
           if (abortRef.current) { cleanup(); return; }
-          iframe.remove();
-          iframeRef.current = null;
+          try { capWin?.close(); } catch {}
+          winRef.current = null;
           setState("uploading");
           setProgress("アップロード準備中…");
 

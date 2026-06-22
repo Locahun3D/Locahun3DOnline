@@ -5115,7 +5115,9 @@ window.resetCameraToInitial = function(){
 // once immediately AND twice on a short timer to let the visual
 // viewport settle, and also hook orientationchange + visualViewport
 // so we don't depend on a single event source.
+let _captureLock = false;
 function _doViewportResize(){
+  if(_captureLock) return;
   const w = Math.max(1, innerWidth);
   const h = Math.max(1, innerHeight);
   renderer.setSize(w, h);
@@ -16734,22 +16736,35 @@ if(/[?&]capture=1/.test(location.search)){
       }
       if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
 
-      // Phase 3: start orbit + recording simultaneously for exact 360° loop
-      const RAD_PER_S = (2*Math.PI) / ORBIT_S;
-      const baseYaw = typeof yaw!=='undefined' ? yaw : 0;
+      // Phase 3: Lock resize handler and force 1920×1080 capture resolution.
+      const CAP_W = 1920, CAP_H = 1080;
+      if(typeof _captureLock!=='undefined') _captureLock = true;
+      if(typeof renderer!=='undefined'){
+        renderer.setSize(CAP_W, CAP_H);
+      } else {
+        canvas.width = CAP_W; canvas.height = CAP_H;
+      }
+      if(typeof camera!=='undefined'){
+        camera.aspect = CAP_W / CAP_H;
+        camera.updateProjectionMatrix();
+      }
+      // Warm-up render at new resolution
+      if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
+        renderer.render(scene, camera);
+      }
 
-      // WebCodecs VideoEncoder + mp4-muxer: frame-by-frame capture that
-      // bypasses MediaRecorder (which produces unplayable output from WebGL canvas).
+      // Phase 4: Synchronous frame-by-frame capture.
+      // No setTimeout loop — tight for-loop with encoder backpressure yield.
       const FPS = 30;
-      const W = canvas.width, H = canvas.height;
+      const TOTAL_FRAMES = FPS * ORBIT_S;
+      const ANGLE_PER_FRAME = (2 * Math.PI) / TOTAL_FRAMES;
 
-      // Load mp4-muxer from CDN
       const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
 
       const muxTarget = new ArrayBufferTarget();
       const muxer = new Muxer({
         target: muxTarget,
-        video: { codec: 'avc', width: W, height: H },
+        video: { codec: 'avc', width: CAP_W, height: CAP_H },
         fastStart: 'in-memory',
         firstTimestampBehavior: 'offset',
       });
@@ -16760,49 +16775,45 @@ if(/[?&]capture=1/.test(location.search)){
       });
       encoder.configure({
         codec: 'avc1.42001f',
-        width: W, height: H,
-        bitrate: 4_000_000,
+        width: CAP_W, height: CAP_H,
+        bitrate: 8_000_000,
         framerate: FPS,
       });
 
       msg('capture-started',{durationSec: ORBIT_S});
 
-      // Drive orbit via setTimeout (works in background tabs with headless=1)
-      // and encode one frame per step (~30fps).
-      let prev = performance.now(), totalAngle = 0, frameIdx = 0;
-      await new Promise(resolve=>{
-        function step(){
-          const now = performance.now();
-          const dt = Math.min((now-prev)/1000, 0.5);
-          prev = now;
-          const delta = RAD_PER_S * dt;
-          totalAngle += delta;
-          if(typeof _yawTarget!=='undefined') _yawTarget += delta;
-          if(typeof yaw!=='undefined') yaw = _yawTarget;
-          if(typeof markDirty==='function') markDirty(2);
-
-          // Force a synchronous render so the canvas has current content
-          if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
-            renderer.render(scene, camera);
-          }
-
-          // Encode this frame
-          try {
-            const vf = new VideoFrame(canvas, { timestamp: frameIdx * (1_000_000 / FPS) });
-            encoder.encode(vf, { keyFrame: frameIdx % (FPS * 2) === 0 });
-            vf.close();
-            frameIdx++;
-          } catch(e){ /* skip frame on error */ }
-
-          const pct = Math.min(100, Math.round(totalAngle/(2*Math.PI)*100));
-          msg('capture-progress',{phase:'recording', text:'録画中… '+pct+'%', pct:30+Math.round(pct*0.7)});
-          if(totalAngle >= 2*Math.PI) resolve();
-          else setTimeout(step, Math.round(1000/FPS));
+      for(let f = 0; f < TOTAL_FRAMES; f++){
+        // Wait for encoder queue to drain (prevents backpressure frame drops)
+        while(encoder.encodeQueueSize > 5){
+          await new Promise(r => setTimeout(r, 1));
         }
-        setTimeout(step, Math.round(1000/FPS));
-      });
 
-      // Finalize encoding and muxing
+        // Advance rotation by exact fixed angle
+        if(typeof _yawTarget!=='undefined') _yawTarget += ANGLE_PER_FRAME;
+        if(typeof yaw!=='undefined') yaw = _yawTarget;
+        if(typeof markDirty==='function') markDirty(2);
+
+        // Synchronous render + GPU flush
+        if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
+          renderer.render(scene, camera);
+          const gl = renderer.getContext();
+          if(gl) gl.finish();
+        }
+
+        // Capture & encode
+        const vf = new VideoFrame(canvas, { timestamp: f * (1_000_000 / FPS) });
+        encoder.encode(vf, { keyFrame: f % (FPS * 2) === 0 });
+        vf.close();
+
+        // Progress update every 30 frames (1 sec)
+        if(f % 30 === 0){
+          const pct = Math.round(f / TOTAL_FRAMES * 100);
+          msg('capture-progress',{phase:'recording', text:'録画中… '+pct+'%  ('+f+'/'+TOTAL_FRAMES+')', pct:30+Math.round(pct*0.7)});
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+
+      // Finalize
       await encoder.flush();
       encoder.close();
       muxer.finalize();
