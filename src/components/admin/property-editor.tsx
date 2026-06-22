@@ -624,8 +624,23 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   className={inputClass + " font-sans leading-[1.85]"}
                   placeholder="このスタジオの特徴、ロケーション、利用シーン、注意事項などをご記入ください。"
                 />
-                <div className="text-right mono text-[10px] opacity-50 mt-1">
-                  {watch("description")?.length ?? 0} / 4000
+                <div className="flex items-center justify-between mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = getValues();
+                      const draft = generateDescriptionDraft(d);
+                      if (draft) {
+                        setValue("description", draft, { shouldDirty: true });
+                      }
+                    }}
+                    className="mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition"
+                  >
+                    ✦ AI下書き生成
+                  </button>
+                  <div className="mono text-[10px] opacity-50">
+                    {watch("description")?.length ?? 0} / 4000
+                  </div>
                 </div>
               </Field>
 
@@ -1155,13 +1170,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       label="販売価格 (税込・円)"
                       hint="購入者はこの金額で3DGSデータのダウンロード権を得る。"
                     >
-                      <input
-                        type="number"
-                        {...register("dataSalePrice", { valueAsNumber: true })}
-                        className={inputClass}
-                        min={0}
-                        max={99999999}
-                        placeholder="例: 100000"
+                      <SalePriceInput
+                        value={watch("dataSalePrice")}
+                        onChange={(v) => setValue("dataSalePrice", v, { shouldDirty: true })}
                       />
                     </Field>
                     <Field
@@ -1293,7 +1304,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 // --- small UI helpers ------------------------------------------------------
 
 const inputClass =
-  "w-full bg-[#141414] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono";
+  "w-full bg-white text-[#111] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono placeholder:text-[#999]";
 
 function Field({
   label,
@@ -1485,22 +1496,25 @@ function CoordsInput({
         <input
           type="text"
           value={paste}
-          onChange={(e) => setPaste(e.target.value)}
-          placeholder="Google Maps からペースト: 35.6580, 139.7016"
+          onChange={(e) => {
+            setPaste(e.target.value);
+            const parsed = parseCoordsFromInput(e.target.value);
+            if (parsed) {
+              onChange(parsed);
+            }
+          }}
+          placeholder="Google Maps URL または座標をペースト"
           className={inputClass}
         />
         <button
           type="button"
           onClick={() => {
-            const m = paste.match(
-              /(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)/,
-            );
-            if (m) {
-              onChange({ lat: Number(m[1]), lng: Number(m[2]) });
-              setPaste("");
+            const parsed = parseCoordsFromInput(paste);
+            if (parsed) {
+              onChange(parsed);
             }
           }}
-          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition whitespace-nowrap"
         >
           解析
         </button>
@@ -1562,4 +1576,124 @@ function Checklist({ data }: { data: Property }) {
       </div>
     </div>
   );
+}
+
+const SALE_PRICE_PRESETS = [50000, 100000, 150000] as const;
+
+function SalePriceInput({
+  value,
+  onChange,
+}: {
+  value: number | undefined;
+  onChange: (v: number) => void;
+}) {
+  const isPreset = value != null && (SALE_PRICE_PRESETS as readonly number[]).includes(value);
+  const [mode, setMode] = useState<"preset" | "custom">(isPreset || !value ? "preset" : "custom");
+
+  return (
+    <div className="flex gap-2 items-start">
+      <select
+        value={mode === "custom" ? "__custom__" : String(value ?? "")}
+        onChange={(e) => {
+          if (e.target.value === "__custom__") {
+            setMode("custom");
+          } else {
+            setMode("preset");
+            onChange(Number(e.target.value));
+          }
+        }}
+        className={inputClass + " max-w-[220px]"}
+      >
+        <option value="">-- 選択 --</option>
+        {SALE_PRICE_PRESETS.map((p) => (
+          <option key={p} value={p}>
+            ¥{p.toLocaleString()}
+          </option>
+        ))}
+        <option value="__custom__">カスタム金額</option>
+      </select>
+      {mode === "custom" && (
+        <input
+          type="number"
+          value={value ?? ""}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className={inputClass + " max-w-[180px]"}
+          min={0}
+          placeholder="金額を入力"
+        />
+      )}
+    </div>
+  );
+}
+
+function parseCoordsFromInput(input: string): { lat: number; lng: number } | null {
+  const s = input.trim();
+  if (!s) return null;
+  // Google Maps URL: /@lat,lng or ?q=lat,lng or /place/.../@lat,lng
+  const urlMatch = s.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/) ||
+    s.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/) ||
+    s.match(/maps\/place\/[^/]*\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (urlMatch) {
+    const lat = Number(urlMatch[1]);
+    const lng = Number(urlMatch[2]);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+  }
+  // Plain coords: "35.6580, 139.7016"
+  const coordMatch = s.match(/(-?\d+\.?\d*)[\s,]+(-?\d+\.?\d*)/);
+  if (coordMatch) {
+    const lat = Number(coordMatch[1]);
+    const lng = Number(coordMatch[2]);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+  }
+  return null;
+}
+
+function generateDescriptionDraft(d: Record<string, unknown>): string {
+  const title = String(d.title || "");
+  const category = String(d.category || "");
+  const studioType = String(d.studioType || "");
+  const area = String(d.area || "");
+  const city = String(d.city || "");
+  const prefecture = String(d.prefecture || "");
+  const capacity = Number(d.capacity) || 0;
+  const floorArea = Number(d.floorAreaSqm) || 0;
+  const ceiling = Number(d.ceilingHeightM) || 0;
+  const power = String(d.powerVoltage || "");
+  const hasLight = d.hasNaturalLight;
+  const parking = d.parking;
+  const dock = d.loadingDock;
+  const tags = Array.isArray(d.tags) ? d.tags : [];
+
+  if (!title && !category) return "";
+
+  const lines: string[] = [];
+  const loc = [prefecture, city].filter(Boolean).join("");
+  if (loc) lines.push(`${loc}に位置する${studioType || category || "スタジオ"}。`);
+
+  const specs: string[] = [];
+  if (floorArea) specs.push(`床面積 ${floorArea}㎡`);
+  if (ceiling) specs.push(`天井高 ${ceiling}m`);
+  if (capacity) specs.push(`最大収容 ${capacity}名`);
+  if (specs.length) lines.push(specs.join("、") + "。");
+
+  const features: string[] = [];
+  if (hasLight) features.push("自然光あり");
+  if (parking) features.push("駐車場完備");
+  if (dock) features.push("搬入口あり");
+  if (power) features.push(`電源 ${power}`);
+  if (features.length) lines.push(features.join("／") + "。");
+
+  if (tags.length) {
+    lines.push(`${tags.join("・")}など、多様な撮影ニーズに対応。`);
+  }
+
+  lines.push("");
+  lines.push("3DGS スキャン済のため、レンズ選択・ライティング設計を撮影前にブラウザで完結できます。");
+  lines.push("ご利用検討の方はお気軽にお問い合わせください。");
+
+  return lines.join("\n");
 }
