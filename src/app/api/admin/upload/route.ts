@@ -100,6 +100,6 @@ export async function POST(req: Request) {
   }
 }
 
-// Allow up to 1 GB uploads through the route (Next default would cap earlier).
+// Allow up to 3 GB uploads through the route (Next default would cap earlier).
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -996,7 +996,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           kind="splat"
                           accept=".splat,.ply,.ksplat,.rad,.zip"
                           label="3DGS file (.splat / .ply / .ksplat / .rad / .zip)"
-                          hint="1 GB まで"
+                          hint="3 GB まで"
                           onUploaded={(f) => {
                             const now = new Date();
                             const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;

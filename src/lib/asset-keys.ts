@@ -16,7 +16,7 @@ export const ALLOWED_SPLAT_EXTENSIONS = [".splat", ".ply", ".ksplat", ".rad", ".
 export const ALLOWED_ZIP_EXTENSIONS = [".zip"];
 export const ALLOWED_DOCUMENT_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024; // 25 MB
-export const MAX_SPLAT_BYTES = 1024 * 1024 * 1024; // 1 GB
+export const MAX_SPLAT_BYTES = 3 * 1024 * 1024 * 1024; // 3 GB
 export const MAX_ZIP_BYTES = 20 * 1024 * 1024 * 1024; // 20 GB
 export const MAX_DOCUMENT_BYTES = 50 * 1024 * 1024; // 50 MB
 
