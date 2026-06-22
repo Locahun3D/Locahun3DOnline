@@ -11,7 +11,7 @@ export interface UploadedFile {
 
 interface Props {
   propertyId: string;
-  kind: "image" | "splat";
+  kind: "image" | "splat" | "zip" | "document";
   /** Accept attribute, e.g. "image/*" or ".splat,.ply,.ksplat" */
   accept: string;
   multiple?: boolean;

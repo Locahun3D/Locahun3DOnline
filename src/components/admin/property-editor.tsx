@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   useForm,
@@ -27,6 +27,7 @@ import {
   archiveAction,
   deleteAction,
 } from "@/app/admin/_actions";
+import ViewerUpdateBanner from "./viewer-update-banner";
 import FileDropzone, {
   type UploadedFile,
 } from "@/components/admin/file-dropzone";
@@ -52,6 +53,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [publishError, setPublishError] = useState<string | null>(null);
   const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
   const [pickSplat, setPickSplat] = useState(false);
+  const [previewZip, setPreviewZip] = useState(false);
+  const [previewSplat, setPreviewSplat] = useState(false);
+  const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
 
   const form = useForm<Property>({
     // zod's input type (fields with .default() are optional) differs from the
@@ -72,6 +76,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     // @ts-expect-error react-hook-form doesn't love primitive arrays; this works at runtime
     name: "tags",
   });
+  const splatItemsArray = useFieldArray({
+    control,
+    name: "splatItems",
+  });
+  const blueprintsArray = useFieldArray({
+    control,
+    name: "blueprints",
+  });
 
   const onSaveDraft: SubmitHandler<Property> = (data) => {
     startSave(async () => {
@@ -84,6 +96,28 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
       }
     });
   };
+
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const triggerAutoSave = useCallback(
+    (delayMs = 0) => {
+      clearTimeout(autoSaveTimer.current);
+      if (delayMs === 0) {
+        handleSubmit(onSaveDraft)();
+      } else {
+        autoSaveTimer.current = setTimeout(() => handleSubmit(onSaveDraft)(), delayMs);
+      }
+    },
+    [handleSubmit],
+  );
+  useEffect(() => () => clearTimeout(autoSaveTimer.current), []);
+
+  // Debounced auto-save: any form change triggers save after 1.5s of inactivity
+  useEffect(() => {
+    const sub = watch(() => {
+      triggerAutoSave(1500);
+    });
+    return () => sub.unsubscribe();
+  }, [watch, triggerAutoSave]);
 
   const onPublish = () => {
     setPublishError(null);
@@ -189,9 +223,19 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {savedAt && (
+            {(savedAt || watch("updatedAt")) && (
               <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">
-                Saved {savedAt.slice(11, 19)}
+                {savedAt
+                  ? `Saved ${savedAt.slice(11, 19)}`
+                  : (() => {
+                      const dt = watch("updatedAt");
+                      if (!dt) return "";
+                      try {
+                        const d = new Date(dt);
+                        return `Updated ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                      } catch { return ""; }
+                    })()
+                }
               </span>
             )}
             <button
@@ -360,6 +404,39 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   placeholder="例: 天井高 5.4m、25m スパンの白ホリ。CM・MV 撮影で実績多数。"
                 />
               </Field>
+
+              {/* ── 連絡先 ── */}
+              <div className="border-t border-line pt-5 mt-4">
+                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
+                  スタジオ連絡先
+                </div>
+                <div className="grid md:grid-cols-3 gap-5">
+                  <Field label="HP / ウェブサイト" hint="https:// から入力">
+                    <input
+                      type="url"
+                      {...register("contactWebsite")}
+                      className={inputClass}
+                      placeholder="https://example.com"
+                    />
+                  </Field>
+                  <Field label="電話番号">
+                    <input
+                      type="tel"
+                      {...register("contactPhone")}
+                      className={inputClass}
+                      placeholder="03-1234-5678"
+                    />
+                  </Field>
+                  <Field label="メールアドレス">
+                    <input
+                      type="email"
+                      {...register("contactEmail")}
+                      className={inputClass}
+                      placeholder="info@example.com"
+                    />
+                  </Field>
+                </div>
+              </div>
             </StepCard>
           )}
 
@@ -422,6 +499,89 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   onRemove={(i) => tagsArray.remove(i)}
                 />
               </Field>
+
+              {/* ── 図面 / フロアプラン ── */}
+              <div className="border-t border-line pt-5 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+                    図面 / フロアプラン
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => blueprintsArray.append({ label: "", url: "" })}
+                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                  >
+                    + 追加
+                  </button>
+                </div>
+
+                {blueprintsArray.fields.length === 0 && (
+                  <div className="text-[12px] text-muted py-4 text-center border border-dashed border-line">
+                    「+ 追加」で図面を登録（PDF / 画像 — 50 MB まで）
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {blueprintsArray.fields.map((field, idx) => (
+                    <div key={field.id} className="border border-line bg-[#141414] p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          {...register(`blueprints.${idx}.label`)}
+                          className={`${inputClass} flex-1`}
+                          placeholder="ラベル（例: 1F 平面図 / 断面図）"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => blueprintsArray.remove(idx)}
+                          className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
+                        >
+                          削除
+                        </button>
+                      </div>
+                      {watch(`blueprints.${idx}.url`) ? (
+                        <div className="flex items-center gap-3">
+                          <div className="mono text-[18px] text-accent">■</div>
+                          <div className="flex-1 min-w-0 text-[11px] mono truncate">
+                            {watch(`blueprints.${idx}.url`)}
+                          </div>
+                          <a
+                            href={watch(`blueprints.${idx}.url`)}
+                            target="_blank"
+                            rel="noopener"
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
+                          >
+                            確認
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => setValue(`blueprints.${idx}.url`, "", { shouldDirty: true })}
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                          >
+                            差し替え
+                          </button>
+                        </div>
+                      ) : (
+                        <FileDropzone
+                          propertyId={initial.id}
+                          kind="document"
+                          accept=".pdf,.jpg,.jpeg,.png,.webp"
+                          label="図面ファイル (PDF / 画像)"
+                          hint="PDF / JPEG / PNG / WebP — 50 MB まで"
+                          onUploaded={(f) => {
+                            setValue(
+                              `blueprints.${idx}.url`,
+                              new URL(f.url, window.location.origin).toString(),
+                              { shouldDirty: true, shouldValidate: true },
+                            );
+                            triggerAutoSave();
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </StepCard>
           )}
 
@@ -546,6 +706,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         setValue("cover.alt", name.replace(/\.[^.]+$/, ""), {
                           shouldDirty: true,
                         });
+                      triggerAutoSave();
                     }}
                   />
                 )}
@@ -620,6 +781,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       width: 1600,
                       height: 1000,
                     });
+                    triggerAutoSave();
                   }}
                 />
               </div>
@@ -630,137 +792,275 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <StepCard
               n="05"
               title="3DGS データ"
-              desc="Splat ファイル (.splat / .ply / .ksplat) をアップロード、または既存ライブラリから選択。アノテーション設置は Phase 2。"
+              desc="ZIPプロジェクトまたは個別3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
             >
-              <button
-                type="button"
-                onClick={() => setPickSplat(true)}
-                className="text-[12px] border border-line px-2 py-1 hover:border-accent transition"
-              >
-                ライブラリから3DGSを選択
-              </button>
-              <AssetPickerModal
-                kind="splat"
-                open={pickSplat}
-                onClose={() => setPickSplat(false)}
-                onPick={(a: Asset) => {
-                  setValue("splatUrl", a.url, { shouldDirty: true, shouldValidate: true });
-                  setValue("splatSizeMb", Math.max(1, Math.round(a.size / 1024 / 1024)), {
-                    shouldDirty: true,
-                  });
-                }}
-              />
+              <ViewerUpdateBanner />
 
-              {watch("splatUrl") ? (
-                <div className="border border-line bg-[#141414] p-4 flex items-center gap-4">
-                  <div className="mono text-[24px] text-accent">●</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-1">
-                      Loaded
+              {/* ── ZIP プロジェクトファイル ── */}
+              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3 mt-4">
+                ZIP プロジェクトファイル
+              </div>
+              {watch("zipUrl") ? (
+                <>
+                  <div className="border border-line bg-[#141414] p-4 flex items-center gap-4 flex-wrap">
+                    <div className="mono text-[24px] text-[#5ec8e8]">◆</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="mono text-[10px] tracking-[0.28em] uppercase text-[#5ec8e8] mb-1">
+                        ZIP Loaded
+                      </div>
+                      <div className="text-[12px] mono truncate">
+                        {watch("zipUrl")}
+                      </div>
+                      <div className="text-[11px] text-muted mt-1">
+                        {watch("zipSizeMb")} MB
+                      </div>
                     </div>
-                    <div className="text-[12px] mono truncate">
-                      {watch("splatUrl")}
-                    </div>
-                    <div className="text-[11px] text-muted mt-1">
-                      {watch("splatSizeMb")} MB
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewZip((v) => !v)}
+                      className="mono text-[10px] tracking-[0.22em] uppercase border border-[#5ec8e8] text-[#5ec8e8] px-3 py-2 hover:bg-[#5ec8e8]/10 transition"
+                    >
+                      {previewZip ? "閉じる" : "プレビュー"}
+                    </button>
+                    <a
+                      href={watch("zipUrl")}
+                      download
+                      className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+                    >
+                      ダウンロード
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("zipUrl", "", { shouldDirty: true });
+                        setValue("zipSizeMb", 0, { shouldDirty: true });
+                        setPreviewZip(false);
+                      }}
+                      className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+                    >
+                      差し替え
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setValue("splatUrl", "", { shouldDirty: true });
-                      setValue("splatSizeMb", 0, { shouldDirty: true });
-                    }}
-                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
-                  >
-                    差し替え
-                  </button>
-                </div>
+                  {previewZip && (
+                    <div className="border border-line bg-black overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                      <iframe
+                        src={`/viewer/offline-viewer.html?autoload=${encodeURIComponent(watch("zipUrl"))}`}
+                        title="3DGS ZIP プレビュー"
+                        className="w-full h-full border-0"
+                        allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
+                        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+                      />
+                    </div>
+                  )}
+                </>
               ) : (
                 <FileDropzone
                   propertyId={initial.id}
-                  kind="splat"
-                  accept=".splat,.ply,.ksplat"
-                  label="3DGS file (.splat / .ply / .ksplat)"
-                  hint="大容量 OK — 1 GB まで"
+                  kind="zip"
+                  accept=".zip"
+                  label="ロケハン3D ZIP プロジェクトファイル (.zip)"
+                  hint="複数3DGS をまとめてアップロード — 20 GB まで"
                   onUploaded={(f) => {
-                    setValue("splatUrl", new URL(f.url, window.location.origin).toString(), {
+                    const now = new Date();
+                    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+                    setValue("zipUrl", new URL(f.url, window.location.origin).toString(), {
                       shouldDirty: true,
                       shouldValidate: true,
                     });
-                    setValue(
-                      "splatSizeMb",
-                      Math.max(1, Math.round(f.size / 1024 / 1024)),
-                      { shouldDirty: true },
-                    );
+                    setValue("zipSizeMb", Math.max(1, Math.round(f.size / 1024 / 1024)), {
+                      shouldDirty: true,
+                    });
+                    if (!watch("scannedAt")) {
+                      setValue("scannedAt", today, { shouldDirty: true });
+                    }
+                    setValue("splatDataUpdatedAt", now.toISOString(), { shouldDirty: true });
+                    triggerAutoSave();
                   }}
                 />
               )}
 
-              <Field
-                label="Splat URL (手入力で上書きも可)"
-                hint="既に R2 などに置いてある場合"
-                error={formState.errors.splatUrl?.message}
-              >
-                <input
-                  type="url"
-                  {...register("splatUrl")}
-                  className={inputClass}
-                  placeholder="https://pub-....r2.dev/your_scan.splat"
-                />
-              </Field>
+              {/* ── 個別 3DGS アイテム (複数・ラベル付き) ── */}
+              <div className="border-t border-line pt-5 mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+                    個別 3DGS データ（フロア・区画別）
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", sizeMb: 0, notes: "" })}
+                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                  >
+                    + 追加
+                  </button>
+                </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
-                <Field label="ファイルサイズ (MB)">
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    {...register("splatSizeMb", { valueAsNumber: true })}
-                    className={inputClass}
-                  />
-                </Field>
+                {splatItemsArray.fields.length === 0 && (
+                  <div className="text-[12px] text-muted py-4 text-center border border-dashed border-line">
+                    「+ 追加」で 3DGS データを登録（駐車場・1F・2F 等）
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {splatItemsArray.fields.map((field, idx) => (
+                    <div key={field.id} className="border border-line bg-[#141414] p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="mono text-[10px] text-accent opacity-60 w-5 shrink-0">
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <input
+                          type="text"
+                          {...register(`splatItems.${idx}.label`)}
+                          className={`${inputClass} flex-1`}
+                          placeholder="ラベル（例: 1F / 駐車場 / 屋上）"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            splatItemsArray.remove(idx);
+                            if (previewItemIdx === idx) setPreviewItemIdx(null);
+                          }}
+                          className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
+                        >
+                          削除
+                        </button>
+                      </div>
+
+                      {watch(`splatItems.${idx}.splatUrl`) ? (
+                        <div className="flex items-center gap-3">
+                          <div className="mono text-[18px] text-accent">●</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] mono truncate">
+                              {watch(`splatItems.${idx}.splatUrl`)}
+                            </div>
+                            <div className="text-[10px] text-muted mt-0.5">
+                              {watch(`splatItems.${idx}.sizeMb`)} MB
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewItemIdx(previewItemIdx === idx ? null : idx)}
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
+                          >
+                            {previewItemIdx === idx ? "閉じる" : "プレビュー"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setValue(`splatItems.${idx}.splatUrl`, "", { shouldDirty: true });
+                              setValue(`splatItems.${idx}.sizeMb`, 0, { shouldDirty: true });
+                              if (previewItemIdx === idx) setPreviewItemIdx(null);
+                            }}
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                          >
+                            差し替え
+                          </button>
+                        </div>
+                      ) : (
+                        <FileDropzone
+                          propertyId={initial.id}
+                          kind="splat"
+                          accept=".splat,.ply,.ksplat,.rad,.zip"
+                          label="3DGS file (.splat / .ply / .ksplat / .rad / .zip)"
+                          hint="1 GB まで"
+                          onUploaded={(f) => {
+                            const now = new Date();
+                            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+                            setValue(
+                              `splatItems.${idx}.splatUrl`,
+                              new URL(f.url, window.location.origin).toString(),
+                              { shouldDirty: true, shouldValidate: true },
+                            );
+                            setValue(
+                              `splatItems.${idx}.sizeMb`,
+                              Math.max(1, Math.round(f.size / 1024 / 1024)),
+                              { shouldDirty: true },
+                            );
+                            if (!watch("scannedAt")) {
+                              setValue("scannedAt", today, { shouldDirty: true });
+                            }
+                            setValue("splatDataUpdatedAt", now.toISOString(), { shouldDirty: true });
+                            triggerAutoSave();
+                          }}
+                        />
+                      )}
+
+                      {previewItemIdx === idx && watch(`splatItems.${idx}.splatUrl`) && (
+                        <div className="border border-line bg-black overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                          <iframe
+                            src={`/viewer/offline-viewer.html?autoload=${encodeURIComponent(watch(`splatItems.${idx}.splatUrl`))}`}
+                            title={`3DGS プレビュー: ${watch(`splatItems.${idx}.label`) || `#${idx + 1}`}`}
+                            className="w-full h-full border-0"
+                            allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
+                            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+                          />
+                        </div>
+                      )}
+
+                      <textarea
+                        {...register(`splatItems.${idx}.notes`)}
+                        className={`${inputClass} resize-y min-h-[60px]`}
+                        rows={2}
+                        placeholder="注釈（スキャン条件・注意点・撮影メモなど）"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── 注釈 ── */}
+              <div className="border-t border-line pt-5 mt-6">
                 <Field
-                  label="スキャン日"
-                  error={formState.errors.scannedAt?.message}
-                  hint="YYYY-MM-DD"
+                  label="3DGS データ注釈"
+                  hint="スキャン条件・特記事項・撮影時の天候や機材など自由記述"
                 >
-                  <input
-                    type="text"
-                    {...register("scannedAt")}
-                    className={inputClass}
-                    placeholder="2026-05-23"
+                  <textarea
+                    {...register("splatNotes")}
+                    className={`${inputClass} resize-y min-h-[80px]`}
+                    rows={3}
+                    placeholder="例: 晴天14時撮影 / Insta360 X4使用 / 一部足場あり注意 / 2F奥の部屋は未スキャン"
                   />
                 </Field>
               </div>
 
-              <Field
-                label="トークンコスト (1 件視聴の消費数)"
-                hint="閲覧者のサブスクは月次トークン制。サイズが大きいほど消費トークン多。"
-              >
-                <select
-                  {...register("tokenCost", { valueAsNumber: true })}
-                  className={inputClass}
-                >
-                  {([1, 2, 3] as const).map((n) => (
-                    <option key={n} value={n} className="bg-bg">
-                      {n} トークン — {TOKEN_COST_LABEL[n]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <div className="border border-dashed border-line p-6 text-center">
-                <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
-                  ● Phase 2
+              {/* ── 共通メタ ── */}
+              <div className="border-t border-line pt-5 mt-6">
+                <div className="grid md:grid-cols-2 gap-5">
+                  <Field label="アップロード日">
+                    <div className={`${inputClass} bg-[#1a1a1a] cursor-default`}>
+                      {watch("scannedAt") || "—"}
+                    </div>
+                  </Field>
+                  <Field label="最終更新">
+                    <div className={`${inputClass} bg-[#1a1a1a] cursor-default`}>
+                      {(() => {
+                        const dt = watch("splatDataUpdatedAt");
+                        if (!dt) return "—";
+                        try {
+                          const d = new Date(dt);
+                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                        } catch {
+                          return dt;
+                        }
+                      })()}
+                    </div>
+                  </Field>
                 </div>
-                <div className="serif text-lg mb-2">アノテーション設置</div>
-                <p className="text-[12px] text-muted leading-[1.85] max-w-[44ch] mx-auto">
-                  3DGS 上に「📍 イベント / 🅿️ 駐車枠 / 🚪 搬入動線 / 📐 採寸」を
-                  クリックで配置できる UI を後で統合します
-                  （既存サービスの実装を参照予定）。
-                  現状はメタデータのみで公開可能です。
-                </p>
+
+                <Field
+                  label="トークンコスト (1 件視聴の消費数)"
+                  hint="閲覧者のサブスクは月次トークン制。サイズが大きいほど消費トークン多。"
+                >
+                  <select
+                    {...register("tokenCost", { valueAsNumber: true })}
+                    className={inputClass}
+                  >
+                    {([1, 2, 3] as const).map((n) => (
+                      <option key={n} value={n} className="bg-bg">
+                        {n} トークン — {TOKEN_COST_LABEL[n]}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               </div>
             </StepCard>
           )}
@@ -789,6 +1089,36 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 <div className="pt-4 border-t border-line text-[12px] text-muted leading-[1.7]">
                   公開後、編集中の内容は引き続き下書きとして保存され、
                   「公開する」を再度押すまで本番には反映されません。
+                </div>
+
+                <div className="pt-4 border-t border-line">
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+                    タイムスタンプ
+                  </div>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[12px]">
+                    <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">作成</dt>
+                    <dd className="mono text-[11px]">
+                      {(() => {
+                        const dt = watch("createdAt");
+                        if (!dt) return "—";
+                        try {
+                          const d = new Date(dt);
+                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                        } catch { return dt; }
+                      })()}
+                    </dd>
+                    <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">最終更新</dt>
+                    <dd className="mono text-[11px]">
+                      {(() => {
+                        const dt = watch("updatedAt");
+                        if (!dt) return "—";
+                        try {
+                          const d = new Date(dt);
+                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                        } catch { return dt; }
+                      })()}
+                    </dd>
+                  </dl>
                 </div>
               </div>
 

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_json" }, { status: 400 });
   }
 
-  const kind = body.kind === "splat" ? "splat" : "image";
+  const kind = body.kind === "splat" ? "splat" : body.kind === "zip" ? "zip" : body.kind === "document" ? "document" : "image";
   const filename = String(body.filename ?? "").trim();
   const contentType = String(body.contentType ?? "application/octet-stream");
   const size = Number(body.size ?? 0);

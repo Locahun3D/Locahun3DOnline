@@ -21,10 +21,11 @@ export default async function EditPropertyPage({
         <span>/</span>
         <span className="opacity-50">{property.id}</span>
         <Link
-          href={`/admin/properties/${property.id}/page`}
-          className="ml-auto border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition"
+          href={`/admin/properties/${property.id}/preview`}
+          target="_blank"
+          className="ml-auto border border-line text-ink px-3 py-1.5 hover:border-accent hover:text-accent transition"
         >
-          ページを組む →
+          プレビュー ↗
         </Link>
       </nav>
 

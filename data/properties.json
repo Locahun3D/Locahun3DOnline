@@ -31,6 +31,19 @@
         "鉄骨",
         "天井高"
       ],
+      "contactWebsite": "https://yokohama-warehouse.example.com",
+      "contactPhone": "045-123-4567",
+      "contactEmail": "info@yokohama-warehouse.example.com",
+      "blueprints": [
+        {
+          "label": "1F 平面図",
+          "url": "https://picsum.photos/seed/blueprint-1/1200/800"
+        },
+        {
+          "label": "断面図",
+          "url": "https://picsum.photos/seed/blueprint-2/1200/800"
+        }
+      ],
       "description": "京浜運河沿いに建つ大型倉庫。築 50 年以上の経年が生むテクスチャは、CG では再現が難しい質感を持ちます。\n3DGS スキャン済のため、レンズ選択・ライティング設計を撮影前にブラウザで完結できます。",
       "cover": {
         "src": "https://picsum.photos/seed/locahun3d-2/1600/1000",
@@ -58,14 +71,32 @@
           "height": 1000
         }
       ],
-      "splatUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/locahun3d_Demo_point_cloud.splat",
-      "splatSizeMb": 410,
+      "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+      "zipUrl": "",
+      "zipSizeMb": 0,
+      "splatSizeMb": 356,
+      "splatItems": [
+        {
+          "label": "1F",
+          "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+          "sizeMb": 356,
+          "notes": "1階エントランス〜メインホール"
+        },
+        {
+          "label": "2F",
+          "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+          "sizeMb": 356,
+          "notes": "2階スタジオ・控室"
+        }
+      ],
+      "splatNotes": "",
       "scannedAt": "2026-03-22",
+      "splatDataUpdatedAt": "",
       "tokenCost": 3,
       "annotations": [],
       "pageBlocks": [],
       "createdAt": "2026-03-22T00:00:00.000Z",
-      "updatedAt": "2026-06-18T14:49:47.656Z"
+      "updatedAt": "2026-06-21T00:18:29.397Z"
     }
   ]
 }

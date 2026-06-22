@@ -57,12 +57,12 @@ export default async function SiteHeader() {
             >
               スキャン
             </a>
-            <Link
-              href="/properties"
+            <a
+              href="https://locahun3d.com"
               className="px-3 py-1 border border-l-0 border-[#5ec8e8]/50 text-ink bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition"
             >
               オンライン
-            </Link>
+            </a>
           </div>
         </div>
 

@@ -11,6 +11,12 @@ const r2Host = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  experimental: {
+    proxyClientMaxBodySize: '2gb',
+  },
+  serverActions: {
+    bodySizeLimit: '2gb',
+  },
   images: {
     remotePatterns: [
       ...(r2Host ? [{ protocol: "https" as const, hostname: r2Host }] : []),

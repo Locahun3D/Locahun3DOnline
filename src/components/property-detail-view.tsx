@@ -182,6 +182,68 @@ export default function PropertyDetailView({
             </Link>
           </div>
 
+          {/* Contact info */}
+          {(property.contactPhone || property.contactEmail || property.contactWebsite) && (
+            <div className="pt-4 border-t border-line space-y-2">
+              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-1">
+                お問い合わせ
+              </div>
+              {property.contactPhone && (
+                <a
+                  href={`tel:${property.contactPhone}`}
+                  className="flex items-center gap-2 text-[12px] hover:text-accent transition"
+                >
+                  <span className="opacity-50">TEL</span>
+                  <span>{property.contactPhone}</span>
+                </a>
+              )}
+              {property.contactEmail && (
+                <a
+                  href={`mailto:${property.contactEmail}`}
+                  className="flex items-center gap-2 text-[12px] hover:text-accent transition"
+                >
+                  <span className="opacity-50">MAIL</span>
+                  <span>{property.contactEmail}</span>
+                </a>
+              )}
+              {property.contactWebsite && (
+                <a
+                  href={property.contactWebsite}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-[12px] hover:text-accent transition"
+                >
+                  <span className="opacity-50">HP</span>
+                  <span className="truncate">{property.contactWebsite.replace(/^https?:\/\//, "")}</span>
+                  <span className="opacity-40">↗</span>
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Blueprints download */}
+          {property.blueprints && property.blueprints.length > 0 && property.blueprints.some(b => b.url) && (
+            <div className="pt-4 border-t border-line space-y-2">
+              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-1">
+                図面 / フロアプラン
+              </div>
+              {property.blueprints.filter(b => b.url).map((b, i) => (
+                <a
+                  key={i}
+                  href={b.url}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-[12px] border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
+                >
+                  <span className="mono text-[10px] opacity-50">■</span>
+                  <span className="flex-1 truncate">{b.label || `図面 ${i + 1}`}</span>
+                  <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">DL</span>
+                </a>
+              ))}
+            </div>
+          )}
+
           <div className="pt-4 border-t border-line space-y-2">
             <button
               type="button"
@@ -219,6 +281,7 @@ export default function PropertyDetailView({
               propertyId={property.id}
               tokenCost={property.tokenCost}
               freeAccess={freeAccess}
+              splatItems={property.splatItems}
             />
           </section>
 

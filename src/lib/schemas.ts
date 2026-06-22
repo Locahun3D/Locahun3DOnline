@@ -164,6 +164,17 @@ export const propertySchema = z.object({
   loadingDock: z.boolean().default(false),
   tags: z.array(z.string().min(1).max(20)).max(20).default([]),
 
+  // 2.5 Contact — property-level contact info (overrides account-level)
+  contactWebsite: z.string().max(300).default(""),
+  contactPhone: z.string().max(40).default(""),
+  contactEmail: z.string().max(120).default(""),
+
+  // 2.6 Blueprints / floor plans
+  blueprints: z.array(z.object({
+    label: z.string().max(60).default(""),
+    url: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+  })).max(10).default([]),
+
   // 3. Description
   description: z.string().max(4000).default(""),
 
@@ -173,12 +184,22 @@ export const propertySchema = z.object({
 
   // 5. 3DGS
   splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+  zipUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+  zipSizeMb: z.number().min(0).max(99999).default(0),
   splatSizeMb: z.number().min(0).max(99999).default(0),
+  splatItems: z.array(z.object({
+    label: z.string().max(60).default(""),
+    splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+    sizeMb: z.number().min(0).max(99999).default(0),
+    notes: z.string().max(500).default(""),
+  })).max(20).default([]),
+  splatNotes: z.string().max(2000).default(""),
   scannedAt: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD で入力してください")
     .or(z.literal(""))
     .default(""),
+  splatDataUpdatedAt: z.string().datetime().or(z.literal("")).default(""),
   /**
    * Token cost for one 3DGS walkthrough viewing.
    *   1 = ハウススタジオ / 小規模 (≤ 150㎡ 目安)
@@ -315,7 +336,7 @@ export const REFERENCE_PRESETS = [
 export type ReferencePresetId = (typeof REFERENCE_PRESETS)[number]["id"];
 
 // ─── Asset library ───────────────────────────────────────────────
-export const assetKindSchema = z.enum(["image", "splat"]);
+export const assetKindSchema = z.enum(["image", "splat", "zip", "document"]);
 export const assetStatusSchema = z.enum(["uploading", "ready"]);
 
 export const assetSchema = z.object({
