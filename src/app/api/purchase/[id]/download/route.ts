@@ -3,6 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
+import { pickDownloadFile } from "@/lib/downloads";
 
 export const runtime = "nodejs";
 
@@ -39,10 +40,11 @@ function toR2Key(url: string): string | null {
  * R2バインディングから同一オリジンでストリームし、添付として強制ダウンロードさせる。
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const format = new URL(req.url).searchParams.get("format");
 
   const user = await getCurrentUser();
   if (!user) {
@@ -66,7 +68,9 @@ export async function GET(
     return NextResponse.json({ error: "データが見つかりません" }, { status: 404 });
   }
 
-  const key = toR2Key(item.downloadFileUrl || item.splatUrl || "");
+  // 形式指定があればその形式のファイルを、無ければ先頭/フォールバックを配信。
+  const file = pickDownloadFile(item, format);
+  const key = toR2Key(file?.url || item.splatUrl || "");
   if (!key) {
     return NextResponse.json({ error: "ダウンロードファイルが未設定です" }, { status: 404 });
   }

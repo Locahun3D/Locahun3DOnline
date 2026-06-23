@@ -88,7 +88,26 @@
           "accessLevel": "public",
           "downloadFileUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
           "downloadFileSizeMb": 356,
-          "downloadFileFormat": "PLY / RAD / OBJ"
+          "downloadFileFormat": "PLY / RAD / OBJ",
+          "downloadFiles": [
+            {
+              "format": "3DGS RAD",
+              "url": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+              "sizeMb": 356
+            },
+            {
+              "format": "PLY",
+              "url": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+              "sizeMb": 356
+            },
+            {
+              "format": "OBJ",
+              "url": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+              "sizeMb": 356
+            }
+          ],
+          "pointCount": 12000000,
+          "captureDevice": "iPhone 15 Pro LiDAR + フォトグラメトリ"
         },
         {
           "label": "2F",
@@ -102,7 +121,26 @@
           "accessLevel": "public",
           "downloadFileUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
           "downloadFileSizeMb": 356,
-          "downloadFileFormat": "PLY / RAD / OBJ"
+          "downloadFileFormat": "PLY / RAD / OBJ",
+          "downloadFiles": [
+            {
+              "format": "3DGS RAD",
+              "url": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+              "sizeMb": 356
+            },
+            {
+              "format": "PLY",
+              "url": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+              "sizeMb": 356
+            },
+            {
+              "format": "OBJ",
+              "url": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+              "sizeMb": 356
+            }
+          ],
+          "pointCount": 12000000,
+          "captureDevice": "iPhone 15 Pro LiDAR + フォトグラメトリ"
         }
       ],
       "splatNotes": "",

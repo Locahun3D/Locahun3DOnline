@@ -219,6 +219,16 @@ export const propertySchema = z.object({
     downloadFileUrl: z.string().url().or(z.literal("")).default(""),
     downloadFileSizeMb: z.number().min(0).max(99999).default(0),
     downloadFileFormat: z.string().max(40).default("PLY & OBJ (ZIP)"),
+    // TurboSquid風マルチ形式DL: 1購入で複数形式を個別ダウンロード可能にする。
+    // 空なら上の downloadFileUrl を単一形式としてフォールバック扱い。
+    downloadFiles: z.array(z.object({
+      format: z.string().max(40).default(""),
+      url: z.string().url().or(z.literal("")).default(""),
+      sizeMb: z.number().min(0).max(99999).default(0),
+    })).max(10).default([]),
+    // 商品スペック（TurboSquid風）
+    pointCount: z.number().min(0).max(99999999999).default(0),
+    captureDevice: z.string().max(80).default(""),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z

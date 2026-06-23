@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { ROLE_LABEL } from "@/lib/account-schema";
 import HeaderMark from "@/components/header-mark";
 import MobileNav from "@/components/mobile-nav";
+import CartLink from "@/components/cart-link";
 
 const NAV = [
   { href: "/properties", label: "物件を探す", code: "0.1" },
@@ -68,6 +69,7 @@ export default async function SiteHeader() {
 
         {/* Right zone — auth */}
         <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+          <CartLink />
           <Show when="signed-out">
             {/* Modal mode: signing in does NOT push a /sign-in history entry,
                 so the browser Back button never gets trapped bouncing through

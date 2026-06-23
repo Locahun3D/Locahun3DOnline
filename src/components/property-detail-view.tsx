@@ -311,6 +311,8 @@ export default function PropertyDetailView({
                   tokenCost={property.tokenCost as 1 | 2 | 3}
                   downloadFileFormat={item.downloadFileFormat}
                   downloadFileSizeMb={item.downloadFileSizeMb}
+                  pointCount={item.pointCount}
+                  captureDevice={item.captureDevice}
                   alreadyPurchased={purchasedIndices.includes(idx)}
                 />
               )}

@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  addToCart,
+  removeFromCart,
+  isInCart,
+  onCartChange,
+} from "@/lib/cart";
 
 interface DataSalePanelProps {
   propertyId: string;
@@ -17,11 +23,14 @@ interface DataSalePanelProps {
   tokenCost: 1 | 2 | 3;
   downloadFileFormat?: string;
   downloadFileSizeMb?: number;
+  pointCount?: number;
+  captureDevice?: string;
   alreadyPurchased?: boolean;
 }
 
 export default function DataSalePanel({
   propertyId,
+  propertyTitle,
   splatItemIndex,
   itemLabel,
   price,
@@ -29,10 +38,31 @@ export default function DataSalePanel({
   scannedAt,
   downloadFileFormat,
   downloadFileSizeMb,
+  pointCount,
+  captureDevice,
   alreadyPurchased = false,
 }: DataSalePanelProps) {
   const [loading, setLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
+  const [inCart, setInCart] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setInCart(isInCart(propertyId, splatItemIndex));
+    sync();
+    return onCartChange(sync);
+  }, [propertyId, splatItemIndex]);
+
+  const toggleCart = () => {
+    if (inCart) removeFromCart(propertyId, splatItemIndex);
+    else
+      addToCart({
+        propertyId,
+        splatItemIndex,
+        title: propertyTitle,
+        label: itemLabel,
+        price,
+      });
+  };
 
   const handlePurchase = async () => {
     if (!agreedTerms) {
@@ -68,6 +98,8 @@ export default function DataSalePanel({
     scannedAt && `${scannedAt}`,
     `${dlFormat}`,
     dlSize > 0 && `${dlSize} MB`,
+    pointCount && pointCount > 0 && `${pointCount.toLocaleString("ja-JP")} 点`,
+    captureDevice || "",
   ].filter(Boolean).join(" / ");
 
   return (
@@ -116,6 +148,22 @@ export default function DataSalePanel({
                 規約同意
               </Link>
             </label>
+            {inCart ? (
+              <Link
+                href="/cart"
+                className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+              >
+                ✓ カート → 見る
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleCart}
+                className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap"
+              >
+                + カート
+              </button>
+            )}
             <button
               onClick={handlePurchase}
               disabled={loading || !agreedTerms}

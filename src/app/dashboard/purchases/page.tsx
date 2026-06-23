@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
+import { resolveDownloadFiles } from "@/lib/downloads";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "購入履歴" };
@@ -102,9 +103,7 @@ export default async function UserPurchasesPage() {
           {purchases.map((p) => {
             const prop = propMap.get(p.propertyId);
             const item = prop?.splatItems[p.splatItemIndex];
-            const downloadUrl = item?.downloadFileUrl;
-            const downloadFormat = item?.downloadFileFormat || "PLY & OBJ (ZIP)";
-            const downloadSize = item?.downloadFileSizeMb ?? 0;
+            const files = item ? resolveDownloadFiles(item) : [];
 
             return (
               <div key={p.id} className="border border-line hover:border-line/80 transition">
@@ -144,16 +143,22 @@ export default async function UserPurchasesPage() {
                     </div>
 
                     {p.status === "completed" && (
-                      <div className="flex gap-2">
-                        {downloadUrl && (
-                          <a
-                            href={`/api/purchase/${p.id}/download`}
-                            className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
-                            title={`${downloadFormat} (${downloadSize} MB)`}
-                          >
-                            DL
-                          </a>
+                      <div className="flex flex-wrap gap-2 items-center justify-end">
+                        {files.length > 0 && (
+                          <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-40 mr-1">
+                            形式
+                          </span>
                         )}
+                        {files.map((f, fi) => (
+                          <a
+                            key={fi}
+                            href={`/api/purchase/${p.id}/download?format=${encodeURIComponent(f.format)}`}
+                            className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+                            title={`${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} をダウンロード`}
+                          >
+                            ↓ {f.format}
+                          </a>
+                        ))}
                         <a
                           href={`/api/purchase/${p.id}/receipt`}
                           target="_blank"
