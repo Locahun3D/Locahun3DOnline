@@ -275,30 +275,7 @@ export default function PropertyDetailView({
         </section>
       ) : (
         <>
-          {/* Data Sale Panels (per splatItem) */}
-          {property.splatItems.map((item, idx) =>
-            item.forSale && item.salePrice > 0 &&
-            (item.accessLevel === "public" || (item.accessLevel === "restricted" && canViewRestricted) || (item.accessLevel === "nda_only" && canViewNdaOnly)) ? (
-              <DataSalePanel
-                key={idx}
-                propertyId={property.id}
-                propertyTitle={property.title}
-                splatItemIndex={idx}
-                itemLabel={item.label}
-                price={item.salePrice}
-                description={item.saleDescription}
-                scannedAt={property.scannedAt}
-                splatSizeMb={item.sizeMb}
-                zipSizeMb={property.zipSizeMb}
-                splatItemCount={property.splatItems.length}
-                tokenCost={property.tokenCost}
-                downloadFileFormat={item.downloadFileFormat}
-                downloadFileSizeMb={item.downloadFileSizeMb}
-              />
-            ) : null,
-          )}
-
-          {/* 3DGS Viewer — per splatItem */}
+          {/* 3DGS Viewer + Data Sale — per splatItem */}
           {property.splatItems.filter(it => {
             if (!it.splatUrl) return false;
             if (it.accessLevel === "restricted" && !canViewRestricted) return false;
@@ -321,6 +298,23 @@ export default function PropertyDetailView({
                 tokenCost={property.tokenCost}
                 freeAccess={freeAccess}
               />
+              {item.forSale && item.salePrice > 0 && (
+                <DataSalePanel
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                  splatItemIndex={idx}
+                  itemLabel={item.label}
+                  price={item.salePrice}
+                  description={item.saleDescription}
+                  scannedAt={property.scannedAt}
+                  splatSizeMb={item.sizeMb}
+                  zipSizeMb={property.zipSizeMb}
+                  splatItemCount={property.splatItems.length}
+                  tokenCost={property.tokenCost}
+                  downloadFileFormat={item.downloadFileFormat}
+                  downloadFileSizeMb={item.downloadFileSizeMb}
+                />
+              )}
             </section>
           ))}
 

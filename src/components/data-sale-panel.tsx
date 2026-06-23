@@ -77,7 +77,7 @@ export default function DataSalePanel({
   const dlSize = downloadFileSizeMb ?? 0;
 
   return (
-    <section className="mb-16">
+    <section className="mt-6">
       <div className="chapter-rule">
         <span className="opacity-60">DATA</span>
         <span>3D Data Purchase</span>

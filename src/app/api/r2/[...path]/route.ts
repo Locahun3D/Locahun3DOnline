@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/dal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
@@ -81,12 +82,13 @@ export async function GET(
 }
 
 /**
- * Upload file to R2 (admin only — no auth check yet, add Clerk guard later).
+ * Upload file to R2 (admin only).
  */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  await requireAdmin();
   const { path } = await params;
   const key = path.join("/");
 

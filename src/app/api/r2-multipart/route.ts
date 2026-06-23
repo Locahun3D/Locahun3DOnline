@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/dal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
@@ -11,6 +12,7 @@ async function getBucket(): Promise<AnyBucket> {
 
 /** POST: init or complete multipart upload */
 export async function POST(req: NextRequest) {
+  await requireAdmin();
   try {
     const bucket = await getBucket();
     if (!bucket) return NextResponse.json({ error: "R2 not configured" }, { status: 503 });
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
 
 /** PUT: upload a single part */
 export async function PUT(req: NextRequest) {
+  await requireAdmin();
   try {
     const bucket = await getBucket();
     if (!bucket) return NextResponse.json({ error: "R2 not configured" }, { status: 503 });

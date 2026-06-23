@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import {
   getPublishedProperty,
   getPublishedProperties,
@@ -8,6 +9,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
+import PurchaseToast from "@/components/purchase-toast";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 
@@ -58,6 +60,9 @@ export default async function PropertyDetailPage({
 
   return (
     <>
+      <Suspense>
+        <PurchaseToast />
+      </Suspense>
       <TrackView propertyId={property.id} />
       <PropertyDetailView
         property={property}
