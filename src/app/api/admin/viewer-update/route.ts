@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
-import { readFile, writeFile } from "fs/promises";
-import { join } from "path";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VIEWER_PATH = join(process.cwd(), "public/viewer/offline-viewer.html");
 const GITHUB_VERSION_URL =
   "https://raw.githubusercontent.com/nakamurakou1108/Locahun3D/main/version.json";
 const GITHUB_VIEWER_URL =
@@ -23,10 +19,18 @@ export async function GET() {
 
   let localVersion = "unknown";
   try {
-    const html = await readFile(VIEWER_PATH, "utf-8");
-    localVersion = extractLocalVersion(html);
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "";
+    if (origin) {
+      const res = await fetch(`${origin}/viewer/offline-viewer.html`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const html = await res.text();
+        localVersion = extractLocalVersion(html);
+      }
+    }
   } catch {
-    // viewer file missing
+    // viewer file missing or fetch failed
   }
 
   let remoteVersion = "unknown";
@@ -50,7 +54,7 @@ export async function GET() {
   return NextResponse.json({ localVersion, remoteVersion, updateAvailable, notes });
 }
 
-// POST = download and replace viewer
+// POST = download viewer from GitHub and return it for manual deployment
 export async function POST() {
   await requireAdmin();
 
@@ -65,9 +69,15 @@ export async function POST() {
     const html = await res.text();
     const newVersion = extractLocalVersion(html);
 
-    await writeFile(VIEWER_PATH, html, "utf-8");
-
-    return NextResponse.json({ ok: true, version: newVersion });
+    return NextResponse.json({
+      ok: true,
+      version: newVersion,
+      message:
+        "Cloudflare Workers では自動ファイル書込みができません。" +
+        "GitHub リポジトリの最新版をプルし、再デプロイしてください。" +
+        "\n\ngit pull origin main && npx @opennextjs/cloudflare build && npx wrangler deploy",
+      manualRequired: true,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: "update_failed", message: e instanceof Error ? e.message : String(e) },

@@ -4,6 +4,8 @@ import {
   getPublishedProperties,
   getPublishedPropertyIds,
 } from "@/lib/properties";
+import { getCurrentUser } from "@/lib/dal";
+import { canViewBackyard } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
 import { getSettings } from "@/lib/site-settings";
@@ -44,10 +46,23 @@ export default async function PropertyDetailPage({
   const settings = await getSettings();
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
+  let canViewRestrictedItems = false;
+  try {
+    const user = await getCurrentUser();
+    canViewRestrictedItems = canViewBackyard(user);
+  } catch {
+    // No auth context (build time) — treat as no access
+  }
+
   return (
     <>
       <TrackView propertyId={property.id} />
-      <PropertyDetailView property={property} others={others} freeAccess={freeAccess} />
+      <PropertyDetailView
+        property={property}
+        others={others}
+        freeAccess={freeAccess}
+        canViewRestricted={canViewRestrictedItems}
+      />
     </>
   );
 }

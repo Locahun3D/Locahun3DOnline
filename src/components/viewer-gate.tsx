@@ -9,6 +9,7 @@ interface SplatItem {
   previewVideoUrl?: string;
   sizeMb: number;
   notes: string;
+  accessLevel?: "public" | "restricted";
 }
 
 interface Props {
@@ -22,6 +23,8 @@ interface Props {
   freeAccess?: boolean;
   /** 個別3DGSデータ（フロア・区画別） */
   splatItems?: SplatItem[];
+  /** Whether the current user can view restricted/backyard items. */
+  canViewRestricted?: boolean;
 }
 
 const SIZE_LABEL: Record<1 | 2 | 3, string> = {
@@ -46,13 +49,18 @@ export default function ViewerGate({
   hasSubscription = false,
   freeAccess = false,
   splatItems = [],
+  canViewRestricted = false,
 }: Props) {
   const [openedAt, setOpenedAt] = useState<number | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [inlineOpen, setInlineOpen] = useState(false);
   const [fullMode, setFullMode] = useState(false);
 
-  const items = splatItems.filter(it => it.splatUrl);
+  const items = splatItems.filter(it => {
+    if (!it.splatUrl) return false;
+    if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+    return true;
+  });
   const hasMultiple = items.length > 0;
   const activeSplatUrl = hasMultiple ? items[selectedIdx]?.splatUrl ?? splatUrl : splatUrl;
   const activeVideoUrl = hasMultiple ? items[selectedIdx]?.previewVideoUrl : undefined;

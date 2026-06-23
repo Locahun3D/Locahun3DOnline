@@ -85,6 +85,23 @@ export async function bulkSetAccountStatusAction(
   return { ok: true as const, count: ids.length };
 }
 
+/** Link a studio owner account to a set of property IDs they can manage. */
+export async function linkPropertiesToUserAction(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const propertyIdsRaw = String(formData.get("propertyIds") ?? "");
+  const propertyIds = propertyIdsRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const u = await userRepo.get(id);
+  if (!u) return;
+  await userRepo.upsert({ ...u, linkedPropertyIds: propertyIds });
+  revalidatePath("/admin/accounts");
+}
+
 /** 一括: 選択アカウントを削除 (自分自身は除外)。 */
 export async function bulkDeleteAccountsAction(ids: string[]) {
   const admin = await requireAdmin();

@@ -18,6 +18,7 @@ import {
   deleteAccountAction,
   bulkSetAccountStatusAction,
   bulkDeleteAccountsAction,
+  linkPropertiesToUserAction,
 } from "@/lib/admin-actions";
 
 const STATUS_STYLE: Record<AccountStatus, string> = {
@@ -205,6 +206,9 @@ export default function AccountsAdmin({
                     ? `（失効 ${u.tokenExpiresAt.slice(0, 10)}）`
                     : ""}{" "}
                   · 登録 {(u.createdAt ?? "").slice(0, 10)}
+                  {u.role === "studio" && (u.linkedPropertyIds ?? []).length > 0 && (
+                    <> · 紐付物件 {(u.linkedPropertyIds ?? []).length}件</>
+                  )}
                 </div>
               </div>
 
@@ -243,6 +247,20 @@ export default function AccountsAdmin({
                   <input type="number" name="balance" defaultValue={u.tokenBalance} min={0} className="w-16 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink" />
                   <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">付与</button>
                 </form>
+
+                {u.role === "studio" && (
+                  <form action={linkPropertiesToUserAction} className="flex items-center gap-1">
+                    <input type="hidden" name="id" value={u.id} />
+                    <input
+                      type="text"
+                      name="propertyIds"
+                      defaultValue={(u.linkedPropertyIds ?? []).join(",")}
+                      placeholder="物件ID（カンマ区切り）"
+                      className="w-40 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink"
+                    />
+                    <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">紐付</button>
+                  </form>
+                )}
 
                 {u.id !== adminId && (
                   <form action={deleteAccountAction}>

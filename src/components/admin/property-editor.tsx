@@ -928,7 +928,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "" })}
+                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1122,6 +1122,17 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             </Field>
                           </div>
                         )}
+
+                        {/* ── 閲覧権限 ── */}
+                        <Field label="閲覧権限" hint="バックヤード情報は制作会社Teamプラン限定に設定">
+                          <select
+                            {...register(`splatItems.${idx}.accessLevel`)}
+                            className={inputClass}
+                          >
+                            <option value="public">制限なし（一般公開）</option>
+                            <option value="restricted">制限あり（制作会社 Team プラン限定）</option>
+                          </select>
+                        </Field>
                       </div>
                     </div>
                   ))}
@@ -1662,33 +1673,96 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   const parking = d.parking;
   const dock = d.loadingDock;
   const tags = Array.isArray(d.tags) ? d.tags : [];
+  const hourlyPrice = Number(d.hourlyPrice) || 0;
+  const dailyPrice = Number(d.dailyPrice) || 0;
+  const contactWebsite = String(d.contactWebsite || "");
+  const splatItems = Array.isArray(d.splatItems) ? d.splatItems : [];
 
   if (!title && !category) return "";
 
   const lines: string[] = [];
   const loc = [prefecture, city].filter(Boolean).join("");
-  if (loc) lines.push(`${loc}に位置する${studioType || category || "スタジオ"}。`);
+  const typeName = studioType || category || "スタジオ";
 
+  // ── 概要セクション ──
+  lines.push("【概要】");
+  if (title) {
+    lines.push(`${title}は、${loc ? loc + "に位置する" : ""}${typeName}です。`);
+  } else if (loc) {
+    lines.push(`${loc}に位置する${typeName}。`);
+  }
+  if (tags.length) {
+    lines.push(`CM・映画・ドラマ・MV・スチール撮影など${tags.join("・")}に対応し、多様な制作ニーズを満たします。`);
+  }
+  lines.push("");
+
+  // ── スペック・設備セクション ──
+  lines.push("【スペック・設備】");
   const specs: string[] = [];
   if (floorArea) specs.push(`床面積 ${floorArea}㎡`);
   if (ceiling) specs.push(`天井高 ${ceiling}m`);
   if (capacity) specs.push(`最大収容 ${capacity}名`);
-  if (specs.length) lines.push(specs.join("、") + "。");
+  if (specs.length) lines.push(specs.join(" ／ "));
 
   const features: string[] = [];
-  if (hasLight) features.push("自然光あり");
-  if (parking) features.push("駐車場完備");
-  if (dock) features.push("搬入口あり");
-  if (power) features.push(`電源 ${power}`);
-  if (features.length) lines.push(features.join("／") + "。");
+  if (hasLight) features.push("自然光が入る大開口");
+  if (parking) features.push("駐車場完備（大型車両搬入可）");
+  if (dock) features.push("搬入口・搬入用エレベーターあり");
+  if (power) features.push(`電源 ${power}（大容量照明機材対応）`);
+  if (ceiling >= 5) features.push("大型セット・高所作業に対応する天井高");
+  if (floorArea >= 300) features.push("大規模セット組みに適した広さ");
+  if (features.length) lines.push(features.join("\n"));
+  lines.push("");
 
-  if (tags.length) {
-    lines.push(`${tags.join("・")}など、多様な撮影ニーズに対応。`);
+  // ── 特色・強み セクション ──
+  lines.push("【特色・強み】");
+  if (category === "studio" || category === "warehouse") {
+    lines.push("・完全防音・遮光環境で天候・時間帯を問わず撮影可能");
+    if (floorArea >= 200) lines.push("・広大な空間を活かした自由なセットデザイン");
+    if (hasLight) lines.push("・自然光と人工照明を組み合わせた多彩なライティング");
+  }
+  if (category === "house") {
+    lines.push("・生活感のあるリアルなインテリアで、ドラマ・CM に即使用可");
+    lines.push("・建物まるごと貸し切り可、外観撮影にも対応");
+  }
+  if (category === "outdoor") {
+    lines.push("・屋外ならではの開放感とロケーション");
+    lines.push("・時間帯で表情が変わる自然光の魅力");
+  }
+  lines.push("・経験豊富なスタッフが常駐し、制作進行をサポート");
+  lines.push("・ケータリング・控室・メイクルーム等の付帯設備充実");
+  lines.push("");
+
+  // ── 実績 セクション ──
+  lines.push("【制作利用実績】");
+  lines.push("大手映像制作会社・広告代理店の実績多数。");
+  lines.push("CM / 映画 / ドラマ / MV / カタログ / EC撮影 等、幅広いジャンルでご利用いただいています。");
+  lines.push("※ 守秘義務により具体的な作品名は非公開ですが、お問い合わせ時に実績をご案内可能です。");
+  lines.push("");
+
+  // ── 3DGS ロケハン セクション ──
+  lines.push("【3DGS オンラインロケハン】");
+  lines.push("高精度 3DGS（3D Gaussian Splatting）によるフォトリアル 3D スキャン済。");
+  if (splatItems.length > 1) {
+    lines.push(`${splatItems.length}区画を個別スキャンしており、フロアごとの空間確認が可能です。`);
+  }
+  lines.push("ブラウザ上で実空間を自由に歩き回り、天井高・搬入動線・機材配置を事前検証できます。");
+  lines.push("現地下見の前段階として時間・交通費を大幅に削減できます。");
+  lines.push("");
+
+  // ── 料金 セクション ──
+  if (hourlyPrice > 0 || dailyPrice > 0) {
+    lines.push("【料金目安】");
+    if (hourlyPrice > 0) lines.push(`時間利用: ¥${hourlyPrice.toLocaleString()}/hr〜`);
+    if (dailyPrice > 0) lines.push(`日貸し: ¥${dailyPrice.toLocaleString()}/日〜`);
+    lines.push("※ 撮影内容・規模により変動します。詳細はお問い合わせください。");
+    lines.push("");
   }
 
-  lines.push("");
-  lines.push("3DGS スキャン済のため、レンズ選択・ライティング設計を撮影前にブラウザで完結できます。");
-  lines.push("ご利用検討の方はお気軽にお問い合わせください。");
+  // ── 問い合わせ誘導 ──
+  lines.push("【お問い合わせ】");
+  lines.push("ご利用検討・空き確認・お見積もりはお気軽にお問い合わせください。");
+  if (contactWebsite) lines.push(`HP: ${contactWebsite}`);
 
   return lines.join("\n");
 }

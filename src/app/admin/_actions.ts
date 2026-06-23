@@ -6,13 +6,23 @@ import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
 import { repo, assetRepo } from "@/lib/store";
 import { deleteR2Object, UPLOAD_MODE } from "@/lib/uploads";
-import { requireAdmin } from "@/lib/dal";
+import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
 import {
   propertySchema,
   publishablePropertySchema,
   pageBlockSchema,
   type Property,
 } from "@/lib/schemas";
+
+async function assertPropertyAccess(propertyId: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("unauthorized");
+  if (user.role === "admin") return user;
+  const linked = user.linkedPropertyIds ?? [];
+  const prop = await repo.get(propertyId);
+  if (prop && (prop.ownerId === user.id || linked.includes(propertyId))) return user;
+  throw new Error("forbidden");
+}
 
 function newDraft(): Property {
   const now = new Date().toISOString();
@@ -37,8 +47,8 @@ export async function createDraftAction() {
 }
 
 export async function saveDraftAction(input: unknown) {
-  await requireAdmin();
   const parsed = propertySchema.parse(input);
+  await assertPropertyAccess(parsed.id);
   await repo.upsert(parsed);
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
@@ -46,8 +56,8 @@ export async function saveDraftAction(input: unknown) {
 }
 
 export async function publishAction(input: unknown) {
-  await requireAdmin();
   const parsed = publishablePropertySchema.parse(input);
+  await assertPropertyAccess(parsed.id);
   await repo.upsert({ ...parsed, status: "published" });
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
@@ -138,9 +148,9 @@ export async function bulkDeleteAction(ids: string[]) {
   return { ok: true as const, count: ids.length };
 }
 
-/** Save the studio page builder blocks for a property (admin only). */
+/** Save the studio page builder blocks for a property. */
 export async function saveStudioPageAction(id: string, blocks: unknown) {
-  await requireAdmin();
+  await assertPropertyAccess(id);
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
   const pageBlocks = z.array(pageBlockSchema).max(60).parse(blocks);

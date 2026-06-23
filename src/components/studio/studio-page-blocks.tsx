@@ -13,15 +13,17 @@ export default function StudioPageBlocks({
   blocks,
   property,
   freeAccess = false,
+  canViewRestricted = false,
 }: {
   blocks: PageBlock[];
   property: Property;
   freeAccess?: boolean;
+  canViewRestricted?: boolean;
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} />
       ))}
     </div>
   );
@@ -31,10 +33,12 @@ function BlockView({
   block,
   property,
   freeAccess,
+  canViewRestricted = false,
 }: {
   block: PageBlock;
   property: Property;
   freeAccess: boolean;
+  canViewRestricted?: boolean;
 }) {
   switch (block.kind) {
     case "heading":
@@ -89,6 +93,8 @@ function BlockView({
             propertyId={property.id}
             tokenCost={property.tokenCost}
             freeAccess={freeAccess}
+            splatItems={property.splatItems}
+            canViewRestricted={canViewRestricted}
           />
           {block.caption && (
             <div className="mono text-[10px] tracking-[0.18em] text-muted mt-2">

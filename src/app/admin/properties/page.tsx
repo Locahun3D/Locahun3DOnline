@@ -1,4 +1,5 @@
 import { repo } from "@/lib/store";
+import { getCurrentUser } from "@/lib/dal";
 import { createDraftAction } from "../_actions";
 import PropertiesAdmin, {
   type PropertyListItem,
@@ -7,7 +8,16 @@ import PropertiesAdmin, {
 export const metadata = { title: "物件管理" };
 
 export default async function AdminPropertiesList() {
-  const all = await repo.list();
+  const user = await getCurrentUser();
+  const isAdmin = user?.role === "admin";
+  let all = await repo.list();
+
+  if (!isAdmin && user) {
+    const linked = user.linkedPropertyIds ?? [];
+    all = all.filter(
+      (p) => p.ownerId === user.id || linked.includes(p.id),
+    );
+  }
 
   const items: PropertyListItem[] = all.map((p) => ({
     id: p.id,

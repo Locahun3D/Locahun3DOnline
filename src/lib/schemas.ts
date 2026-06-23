@@ -18,6 +18,19 @@ export const PROPERTY_STATUSES = ["draft", "published", "archived"] as const;
  */
 export const PROPERTY_VISIBILITIES = ["public", "confidential"] as const;
 
+/**
+ * Per-splatItem access level:
+ *   public     — anyone with a subscription can view this 3DGS file
+ *   restricted — only production accounts with Team plan can view (バックヤード)
+ */
+export const SPLAT_ACCESS_LEVELS = ["public", "restricted"] as const;
+export type SplatAccessLevel = (typeof SPLAT_ACCESS_LEVELS)[number];
+
+export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
+  public: "制限なし（一般公開）",
+  restricted: "制限あり（制作会社 Team プラン限定）",
+};
+
 export const ANNOTATION_KINDS = [
   "event",
   "parking",
@@ -197,6 +210,7 @@ export const propertySchema = z.object({
     forSale: z.boolean().default(false),
     salePrice: z.number().int().min(0).max(99999999).default(0),
     saleDescription: z.string().max(1000).default(""),
+    accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z

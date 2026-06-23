@@ -22,12 +22,15 @@ export default function PropertyDetailView({
   others,
   preview = false,
   freeAccess = false,
+  canViewRestricted = false,
 }: {
   property: Property;
   others: Property[];
   preview?: boolean;
   /** 限定無料期間: 全 3DGS をトークン消費なしで閲覧可能。 */
   freeAccess?: boolean;
+  /** Whether the current user can view restricted/backyard 3DGS files. */
+  canViewRestricted?: boolean;
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
@@ -265,13 +268,14 @@ export default function PropertyDetailView({
       {property.pageBlocks && property.pageBlocks.length > 0 ? (
         /* Custom page composed in the studio page builder */
         <section className="mb-16">
-          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} />
+          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} />
         </section>
       ) : (
         <>
           {/* Data Sale Panels (per splatItem) */}
           {property.splatItems.map((item, idx) =>
-            item.forSale && item.salePrice > 0 ? (
+            item.forSale && item.salePrice > 0 &&
+            (item.accessLevel !== "restricted" || canViewRestricted) ? (
               <DataSalePanel
                 key={idx}
                 propertyId={property.id}
@@ -303,6 +307,7 @@ export default function PropertyDetailView({
               tokenCost={property.tokenCost}
               freeAccess={freeAccess}
               splatItems={property.splatItems}
+              canViewRestricted={canViewRestricted}
             />
           </section>
 

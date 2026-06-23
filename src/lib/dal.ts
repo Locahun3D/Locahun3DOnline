@@ -57,6 +57,7 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     stripeCustomerId: null,
     bonusTokens: isGuest ? GUEST_BONUS_TOKENS : 0,
     ndaAcceptedAt: null,
+    linkedPropertyIds: [],
     bookmarks: [],
     createdAt: now,
     updatedAt: now,
@@ -86,4 +87,13 @@ export async function requireRole(roles: AccountRole[]): Promise<PublicUser> {
 
 export async function requireAdmin(): Promise<PublicUser> {
   return requireRole(["admin"]);
+}
+
+/**
+ * Admin OR studio owner with at least one linked property.
+ * Studio owners only see/edit their own properties — the caller must
+ * further check `user.linkedPropertyIds.includes(propertyId)`.
+ */
+export async function requireAdminOrStudioOwner(): Promise<PublicUser> {
+  return requireRole(["admin", "studio"]);
 }

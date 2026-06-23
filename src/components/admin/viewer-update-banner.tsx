@@ -35,8 +35,14 @@ export default function ViewerUpdateBanner() {
       const res = await fetch("/api/admin/viewer-update", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "update failed");
-      setDone(`v${data.version} に更新しました`);
-      setInfo((prev) => prev ? { ...prev, localVersion: data.version, updateAvailable: false } : prev);
+      if (data.manualRequired) {
+        setDone(
+          `v${data.version} が利用可能です。GitHub pull + 再デプロイで反映されます。`,
+        );
+      } else {
+        setDone(`v${data.version} に更新しました`);
+        setInfo((prev) => prev ? { ...prev, localVersion: data.version, updateAvailable: false } : prev);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "更新に失敗しました");
     } finally {

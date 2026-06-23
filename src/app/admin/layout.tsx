@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/dal";
+import { requireAdminOrStudioOwner } from "@/lib/dal";
 
 export const metadata = {
   title: { default: "Admin", template: "%s｜Admin" },
@@ -11,8 +11,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Real gate: redirects non-admins (proxy.ts also blocks at the edge).
-  await requireAdmin();
+  const user = await requireAdminOrStudioOwner();
+  const isAdmin = user.role === "admin";
 
   return (
     <div className="theme-online min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
@@ -20,7 +20,9 @@ export default async function AdminLayout({
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-1">
           ● REC
         </div>
-        <div className="serif text-lg mb-6">Admin</div>
+        <div className="serif text-lg mb-6">
+          {isAdmin ? "Admin" : "Studio"}
+        </div>
         <nav className="flex flex-col gap-1 text-sm">
           <Link
             href="/admin/properties"
@@ -28,60 +30,64 @@ export default async function AdminLayout({
           >
             物件
           </Link>
-          <Link
-            href="/admin/properties?status=draft"
-            className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-          >
-            ↳ 下書きのみ
-          </Link>
-          <Link
-            href="/admin/properties?status=published"
-            className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-          >
-            ↳ 公開中のみ
-          </Link>
-          <Link
-            href="/admin/accounts"
-            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            アカウント
-          </Link>
-          <Link
-            href="/admin/accounts?status=pending"
-            className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-          >
-            ↳ 承認待ちのみ
-          </Link>
-          <Link
-            href="/admin/analytics"
-            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            アナリティクス
-          </Link>
-          <Link
-            href="/admin/assets"
-            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            アセット
-          </Link>
-          <Link
-            href="/admin/gift-codes"
-            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            ギフトコード
-          </Link>
-          <Link
-            href="/admin/purchases"
-            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            データ販売
-          </Link>
-          <Link
-            href="/admin/free-period"
-            className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            限定無料期間
-          </Link>
+          {isAdmin && (
+            <>
+              <Link
+                href="/admin/properties?status=draft"
+                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
+              >
+                ↳ 下書きのみ
+              </Link>
+              <Link
+                href="/admin/properties?status=published"
+                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
+              >
+                ↳ 公開中のみ
+              </Link>
+              <Link
+                href="/admin/accounts"
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                アカウント
+              </Link>
+              <Link
+                href="/admin/accounts?status=pending"
+                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
+              >
+                ↳ 承認待ちのみ
+              </Link>
+              <Link
+                href="/admin/analytics"
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                アナリティクス
+              </Link>
+              <Link
+                href="/admin/assets"
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                アセット
+              </Link>
+              <Link
+                href="/admin/gift-codes"
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                ギフトコード
+              </Link>
+              <Link
+                href="/admin/purchases"
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                データ販売
+              </Link>
+              <Link
+                href="/admin/free-period"
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                限定無料期間
+              </Link>
+            </>
+          )}
         </nav>
       </aside>
 

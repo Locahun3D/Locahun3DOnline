@@ -6,7 +6,7 @@
  *
  * Five account types:
  *   individual  個人        — instant active, sees public listings
- *   studio      撮影スタジオ  — lists/rents own studios, needs admin approval
+ *   studio      撮影スタジオ  — lists/rents own studios, instant active, edits linked properties
  *   production  制作会社      — pro; NDA + approval → can see confidential listings
  *   guest       ゲスト        — invite-only 貢献特別枠; granted 100 non-expiring tokens
  *   admin       管理者        — site operator, full /admin access
@@ -91,6 +91,8 @@ export const userSchema = z.object({
   stripeCustomerId: z.string().nullable().default(null),
   /** ISO timestamp when the NDA was accepted; null = not accepted. */
   ndaAcceptedAt: z.string().nullable().default(null),
+  /** Property IDs this studio owner is authorized to manage. Set by admin. */
+  linkedPropertyIds: z.array(z.string()).max(100).default([]),
   bookmarks: z.array(z.string()).max(500).default([]),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -121,6 +123,16 @@ export function canViewConfidential(u: PublicUser | null): boolean {
   if (!u || u.status !== "active") return false;
   if (u.role === "admin") return true;
   return u.role === "production" && !!u.ndaAcceptedAt;
+}
+
+/**
+ * Whether this user can view restricted/backyard 3DGS files.
+ * Requires: production account + active status + Team plan.
+ */
+export function canViewBackyard(u: PublicUser | null): boolean {
+  if (!u || u.status !== "active") return false;
+  if (u.role === "admin") return true;
+  return u.role === "production" && u.plan === "team";
 }
 
 /** Captured on the /onboarding step after Clerk sign-up. */
