@@ -12,7 +12,6 @@ import {
   stripeEnabled,
   getStripe,
   priceIdFor,
-  appUrl,
   type BillingInterval,
 } from "./stripe";
 
@@ -98,10 +97,11 @@ export async function openBillingPortalAction(): Promise<void> {
   const u = await userRepo.get(user.id);
   if (!u?.stripeCustomerId) redirect("/pricing");
 
+  const origin = await requestOrigin();
   const stripe = getStripe();
   const portal = await stripe.billingPortal.sessions.create({
     customer: u.stripeCustomerId,
-    return_url: appUrl("/account"),
+    return_url: `${origin}/account`,
   });
   redirect(portal.url);
 }
