@@ -1,6 +1,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { z } from "zod";
 
 export const purchaseStatusSchema = z.enum([
@@ -38,6 +39,7 @@ interface StoreShape {
 }
 
 async function read(): Promise<StoreShape> {
+  if (!canAccessLocalFs()) return { version: 1, purchases: [] };
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
@@ -47,12 +49,7 @@ async function read(): Promise<StoreShape> {
 }
 
 async function write(s: StoreShape): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
-  } catch {
-    // Workers: filesystem writes unavailable
-  }
+  await safeWriteFile(DATA_FILE, JSON.stringify(s, null, 2));
 }
 
 export const purchaseRepo = {

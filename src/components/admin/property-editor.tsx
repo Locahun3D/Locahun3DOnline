@@ -33,6 +33,7 @@ import FileDropzone, {
 } from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
 import { usePreviewCapture } from "./use-preview-capture";
+import { buildViewerUrl } from "@/lib/viewer";
 
 const STEPS = [
   { id: "basic", label: "基本情報" },
@@ -885,7 +886,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   {previewZip && (
                     <div className="border border-line bg-black overflow-hidden" style={{ aspectRatio: "16/9" }}>
                       <iframe
-                        src={`/viewer/offline-viewer.html?autoload=${encodeURIComponent(watch("zipUrl"))}`}
+                        src={buildViewerUrl(watch("zipUrl"))}
                         title="3DGS ZIP プレビュー"
                         className="w-full h-full border-0"
                         allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
@@ -1072,7 +1073,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             />
                           ) : (
                             <iframe
-                              src={`/viewer/offline-viewer.html?autoload=${encodeURIComponent(watch(`splatItems.${idx}.splatUrl`))}`}
+                              src={buildViewerUrl(watch(`splatItems.${idx}.splatUrl`))}
                               title={`3DGS プレビュー: ${watch(`splatItems.${idx}.label`) || `#${idx + 1}`}`}
                               className="w-full h-full border-0"
                               allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"

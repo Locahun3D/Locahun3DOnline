@@ -6,6 +6,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteFile } from "./fs-safe";
 import { nanoid } from "nanoid";
 import {
   S3Client,
@@ -44,13 +45,12 @@ export async function saveLocalUpload(
 ): Promise<SaveResult> {
   const id = safeName(bucketId);
   const dir = path.join(PUBLIC_DIR, "uploads", id);
-  await fs.mkdir(dir, { recursive: true });
   const ext = path.extname(file.name);
   const stem = path.basename(file.name, ext);
   const filename = `${nanoid(6)}-${safeName(stem)}${ext.toLowerCase()}`;
   const abs = path.join(dir, filename);
   const buf = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(abs, buf);
+  await safeWriteFile(abs, buf);
   return {
     url: `${UPLOADS_ROOT}/${id}/${filename}`,
     size: file.size,

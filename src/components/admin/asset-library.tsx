@@ -3,7 +3,14 @@
 import { useMemo, useRef, useState } from "react";
 import type { Asset, AssetKind } from "@/lib/schemas";
 import { uploadAsset } from "./upload-client";
-import { renameAssetAction, deleteAssetAction } from "@/app/admin/_actions";
+function assetApi(body: Record<string, unknown>) {
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") return;
+  fetch("/api/admin/assets/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
 
 interface Props {
   initialAssets: Asset[];
@@ -16,24 +23,59 @@ function fmtBytes(n: number) {
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
+function fmtDate(iso: string) {
+  try {
+    const d = new Date(iso);
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+  } catch {
+    return "";
+  }
+}
+
+const SUGGESTED_TAGS = ["ロケ地", "スタジオ", "倉庫", "屋外", "内装", "外装", "広角", "4K", "テスト", "納品済"];
+
+const kindLabels: Record<AssetKind, string> = {
+  image: "画像",
+  splat: "3DGS",
+  zip: "ZIP",
+  document: "書類",
+};
+
+const kindIcons: Record<AssetKind, string> = {
+  image: "🖼",
+  splat: "◈",
+  zip: "📦",
+  document: "📄",
+};
+
 export default function AssetLibrary({ initialAssets, usage }: Props) {
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [q, setQ] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | AssetKind>("all");
+  const [tagFilter, setTagFilter] = useState("");
   const [onlyUnused, setOnlyUnused] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
+  const [editingTags, setEditingTags] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of assets) for (const t of a.tags ?? []) set.add(t);
+    return [...set].sort();
+  }, [assets]);
 
   const filtered = useMemo(() => {
     return assets.filter((a) => {
       if (kindFilter !== "all" && a.kind !== kindFilter) return false;
       if (onlyUnused && (usage[a.url]?.length ?? 0) > 0) return false;
-      if (q && !`${a.label} ${a.filename}`.toLowerCase().includes(q.toLowerCase()))
+      if (tagFilter && !(a.tags ?? []).includes(tagFilter)) return false;
+      if (q && !`${a.label} ${a.filename} ${(a.tags ?? []).join(" ")}`.toLowerCase().includes(q.toLowerCase()))
         return false;
       return true;
     });
-  }, [assets, kindFilter, onlyUnused, q, usage]);
+  }, [assets, kindFilter, onlyUnused, tagFilter, q, usage]);
 
   async function handleFiles(list: FileList | File[]) {
     setError(null);
@@ -57,21 +99,40 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
     }
   }
 
-  async function onRename(a: Asset) {
+  function onRename(a: Asset) {
     const label = prompt("表示名", a.label);
     if (label == null) return;
-    const res = await renameAssetAction(a.id, label);
-    if (res.ok) setAssets((prev) => prev.map((x) => (x.id === a.id ? { ...x, label } : x)));
+    setAssets((prev) => prev.map((x) => (x.id === a.id ? { ...x, label } : x)));
+    assetApi({ action: "rename", id: a.id, label });
   }
 
-  async function onDelete(a: Asset) {
+  function onDelete(a: Asset) {
     const inUse = usage[a.url]?.length ?? 0;
     const msg = inUse
       ? `このアセットは ${inUse} 件の物件で使用中です。削除すると表示が壊れます。削除しますか？`
       : "削除しますか？（R2 のファイルも削除されます）";
     if (!confirm(msg)) return;
-    const res = await deleteAssetAction(a.id);
-    if (res.ok) setAssets((prev) => prev.filter((x) => x.id !== a.id));
+    setAssets((prev) => prev.filter((x) => x.id !== a.id));
+    assetApi({ action: "delete", id: a.id });
+  }
+
+  function onAddTag(a: Asset, tag: string) {
+    const trimmed = tag.trim();
+    if (!trimmed || (a.tags ?? []).includes(trimmed)) return;
+    const newTags = [...(a.tags ?? []), trimmed];
+    setAssets((prev) => prev.map((x) => (x.id === a.id ? { ...x, tags: newTags } : x)));
+  }
+
+  function onRemoveTag(a: Asset, tag: string) {
+    const newTags = (a.tags ?? []).filter((t) => t !== tag);
+    setAssets((prev) => prev.map((x) => (x.id === a.id ? { ...x, tags: newTags } : x)));
+  }
+
+  function onSetThumbnail(a: Asset) {
+    const url = prompt("サムネイルURL（空欄で削除）", a.thumbnailUrl ?? "");
+    if (url == null) return;
+    setAssets((prev) => prev.map((x) => (x.id === a.id ? { ...x, thumbnailUrl: url } : x)));
+    assetApi({ action: "thumbnail", id: a.id, thumbnailUrl: url });
   }
 
   return (
@@ -98,8 +159,8 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="検索（名前）"
-          className="bg-[#222] border border-line px-2 py-1 text-[13px]"
+          placeholder="検索（名前・タグ）"
+          className="bg-[#222] border border-line px-2 py-1 text-[13px] w-40"
         />
         <select
           value={kindFilter}
@@ -109,14 +170,29 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
           <option value="all">すべて</option>
           <option value="image">画像</option>
           <option value="splat">3DGS</option>
+          <option value="zip">ZIP</option>
+          <option value="document">書類</option>
+        </select>
+        <select
+          value={tagFilter}
+          onChange={(e) => setTagFilter(e.target.value)}
+          className="bg-[#222] border border-line px-2 py-1 text-[13px]"
+        >
+          <option value="">タグ: すべて</option>
+          {allTags.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
         </select>
         <label className="text-[12px] text-muted flex items-center gap-1">
           <input type="checkbox" checked={onlyUnused} onChange={(e) => setOnlyUnused(e.target.checked)} />
           未使用のみ
         </label>
+        <span className="text-[11px] text-muted ml-auto mono">
+          {filtered.length} / {assets.length} 件
+        </span>
       </div>
 
-      {error && <div className="text-accent text-[12px] mb-3">{error}</div>}
+      {error && <div className="text-red-400 text-[12px] mb-3">{error}</div>}
       {Object.entries(progress).map(([k, pct]) => (
         <div key={k} className="mono text-[11px] text-muted mb-1">
           {k} … {pct}%
@@ -127,24 +203,124 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {filtered.map((a) => {
           const used = usage[a.url]?.length ?? 0;
+          const hasThumbnail = a.kind === "image" ? !!a.url : !!(a.thumbnailUrl);
+          const thumbSrc = a.kind === "image" ? a.url : a.thumbnailUrl;
+          const isEditing = editingTags === a.id;
           return (
-            <div key={a.id} className="border border-line bg-[#1d1d1d]">
-              <div className="aspect-video bg-[#111] flex items-center justify-center overflow-hidden">
-                {a.kind === "image" && a.url ? (
+            <div key={a.id} className="border border-line bg-[#1d1d1d] group hover:border-accent/40 transition-colors">
+              {/* Preview */}
+              <div className="aspect-video bg-[#111] flex items-center justify-center overflow-hidden relative">
+                {hasThumbnail && thumbSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.url} alt={a.label} className="object-cover w-full h-full" />
+                  <img src={thumbSrc} alt={a.label} className="object-cover w-full h-full" />
                 ) : (
-                  <span className="mono text-[28px] opacity-50">◈</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[28px] opacity-40">{kindIcons[a.kind]}</span>
+                    <span className="mono text-[9px] opacity-30 uppercase">{a.ext || a.kind}</span>
+                  </div>
+                )}
+                {/* Kind badge */}
+                <span className="absolute top-1.5 right-1.5 bg-black/70 text-[9px] mono px-1.5 py-0.5 uppercase tracking-wider">
+                  {kindLabels[a.kind]}
+                </span>
+                {/* Status indicator */}
+                {a.status === "uploading" && (
+                  <span className="absolute top-1.5 left-1.5 bg-yellow-600/80 text-[9px] mono px-1.5 py-0.5">
+                    アップロード中
+                  </span>
+                )}
+                {used > 0 && (
+                  <span className="absolute bottom-1.5 right-1.5 bg-green-700/80 text-[9px] mono px-1.5 py-0.5">
+                    使用 {used}
+                  </span>
                 )}
               </div>
-              <div className="p-2 text-[12px]">
-                <div className="truncate" title={a.label}>{a.label || a.filename}</div>
-                <div className="mono text-[10px] text-muted mt-0.5">
-                  {a.kind} · {fmtBytes(a.size)} {used > 0 ? `· 使用 ${used}` : "· 未使用"}
+
+              {/* Info */}
+              <div className="p-2.5 text-[12px] space-y-1.5">
+                <div className="truncate font-medium" title={a.label || a.filename}>
+                  {a.label || a.filename || "名前なし"}
                 </div>
-                <div className="flex gap-2 mt-1.5">
-                  <button onClick={() => onRename(a)} className="text-[11px] underline opacity-70 hover:opacity-100">名前</button>
-                  <button onClick={() => onDelete(a)} className="text-[11px] underline text-accent">削除</button>
+                <div className="mono text-[10px] text-muted flex flex-wrap gap-x-2">
+                  <span>{fmtBytes(a.size)}</span>
+                  <span>{fmtDate(a.uploadedAt)}</span>
+                </div>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1 min-h-[20px]">
+                  {(a.tags ?? []).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-0.5 bg-[#2a2a2a] border border-line text-[10px] px-1.5 py-0.5 rounded-sm"
+                    >
+                      {tag}
+                      {isEditing && (
+                        <button
+                          onClick={() => onRemoveTag(a, tag)}
+                          className="text-red-400 hover:text-red-300 ml-0.5 text-[10px]"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                  {!isEditing && (
+                    <button
+                      onClick={() => { setEditingTags(a.id); setTagInput(""); }}
+                      className="text-[10px] text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      + タグ
+                    </button>
+                  )}
+                </div>
+
+                {/* Tag editor */}
+                {isEditing && (
+                  <div className="space-y-1">
+                    <div className="flex gap-1">
+                      <input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && tagInput.trim()) {
+                            e.preventDefault();
+                            onAddTag(a, tagInput);
+                            setTagInput("");
+                          }
+                          if (e.key === "Escape") setEditingTags(null);
+                        }}
+                        placeholder="タグ名…"
+                        className="bg-[#111] border border-line px-1.5 py-0.5 text-[10px] flex-1 min-w-0"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => setEditingTags(null)}
+                        className="text-[10px] text-muted hover:text-white px-1"
+                      >
+                        完了
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {SUGGESTED_TAGS.filter((t) => !(a.tags ?? []).includes(t)).slice(0, 5).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => onAddTag(a, t)}
+                          className="bg-[#252525] text-[9px] px-1 py-0.5 text-muted hover:text-accent hover:border-accent/40 border border-transparent transition-colors"
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => onRename(a)} className="text-[11px] hover:text-accent transition-colors">名前</button>
+                  {a.kind !== "image" && (
+                    <button onClick={() => onSetThumbnail(a)} className="text-[11px] hover:text-accent transition-colors">サムネ</button>
+                  )}
+                  <button onClick={() => onDelete(a)} className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors ml-auto">削除</button>
                 </div>
               </div>
             </div>

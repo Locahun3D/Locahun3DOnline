@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
+import { VIEWER_PATH, VIEWER_GITHUB } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
-
-const GITHUB_VERSION_URL =
-  "https://raw.githubusercontent.com/nakamurakou1108/Locahun3D/main/version.json";
-const GITHUB_VIEWER_URL =
-  "https://raw.githubusercontent.com/nakamurakou1108/Locahun3D/main/Locahun3D_OfflineViewer.html";
 
 function extractLocalVersion(html: string): string {
   const m = html.match(/id="tb-version"[^>]*>v?\s*([\d.]+[-\w]*)/);
@@ -21,7 +17,7 @@ export async function GET() {
   try {
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "";
     if (origin) {
-      const res = await fetch(`${origin}/viewer/offline-viewer.html`, {
+      const res = await fetch(`${origin}${VIEWER_PATH}`, {
         cache: "no-store",
       });
       if (res.ok) {
@@ -36,7 +32,7 @@ export async function GET() {
   let remoteVersion = "unknown";
   let notes = "";
   try {
-    const res = await fetch(GITHUB_VERSION_URL, { cache: "no-store" });
+    const res = await fetch(VIEWER_GITHUB.versionUrl, { cache: "no-store" });
     if (res.ok) {
       const data = (await res.json()) as { version?: string; notes?: string };
       remoteVersion = data.version ?? "unknown";
@@ -59,7 +55,7 @@ export async function POST() {
   await requireAdmin();
 
   try {
-    const res = await fetch(GITHUB_VIEWER_URL, { cache: "no-store" });
+    const res = await fetch(VIEWER_GITHUB.htmlUrl, { cache: "no-store" });
     if (!res.ok) {
       return NextResponse.json(
         { error: "download_failed", message: `GitHub download failed (${res.status})` },

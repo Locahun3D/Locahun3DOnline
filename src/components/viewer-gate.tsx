@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 
 interface Props {
   splatUrl: string;
@@ -36,17 +37,9 @@ export default function ViewerGate({
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
-  const proxiedSplatUrl = splatUrl && /^https?:\/\//.test(splatUrl)
-    ? `/api/admin/splat-proxy?url=${encodeURIComponent(splatUrl)}`
-    : splatUrl;
-
-  const previewUrl = proxiedSplatUrl
-    ? `/viewer/offline-viewer.html?autoload=${encodeURIComponent(proxiedSplatUrl)}&orbit=1`
-    : "/viewer/offline-viewer.html";
-
-  const fullViewerUrl = proxiedSplatUrl
-    ? `/viewer/offline-viewer.html?autoload=${encodeURIComponent(proxiedSplatUrl)}`
-    : "/viewer/offline-viewer.html";
+  const proxied = proxySplatUrl(splatUrl);
+  const previewUrl = buildViewerUrl(proxied, { orbit: true });
+  const fullViewerUrl = buildViewerUrl(proxied);
 
   const viewerUrl = fullMode ? fullViewerUrl : previewUrl;
 

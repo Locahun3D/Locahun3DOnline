@@ -23,7 +23,7 @@ interface UseCaptureResult {
   clearResult: () => void;
 }
 
-const CORS_PROXY = "https://locahun3d-cors-proxy.nakamurakou1108.workers.dev";
+import { buildViewerUrl, CORS_PROXY } from "@/lib/viewer";
 
 function openCaptureWindow(url: string): Window | null {
   return window.open(url, '_blank', 'width=1920,height=1080,menubar=no,toolbar=no,location=no');
@@ -77,7 +77,7 @@ export function usePreviewCapture(): UseCaptureResult {
 
       try { winRef.current?.close(); } catch {}
       const directSplatUrl = splatUrl.startsWith("/") ? `${CORS_PROXY}${splatUrl}` : splatUrl;
-      const url = `/viewer/offline-viewer.html?autoload=${encodeURIComponent(directSplatUrl)}&orbit=1&capture=1`;
+      const url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true });
       const capWin = openCaptureWindow(url);
       winRef.current = capWin;
       if (!capWin) {

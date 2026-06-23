@@ -8,6 +8,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import {
   propertySchema,
   assetSchema,
@@ -37,22 +38,17 @@ interface StoreShape {
 }
 
 async function readStore(): Promise<StoreShape> {
+  if (!canAccessLocalFs()) return _propsFallback as unknown as StoreShape;
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
   } catch {
-    // Workers (unenv stub) or missing file → bundled fallback
     return _propsFallback as unknown as StoreShape;
   }
 }
 
 async function writeStore(s: StoreShape): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
-  } catch {
-    // Workers: filesystem writes unavailable (read-only from bundled JSON)
-  }
+  await safeWriteFile(DATA_FILE, JSON.stringify(s, null, 2));
 }
 
 class JsonFilePropertyRepo implements PropertyRepo {
@@ -113,6 +109,7 @@ export class JsonFileAssetRepo implements AssetRepo {
   constructor(private readonly dataFile: string = ASSETS_FILE) {}
 
   private async read(): Promise<AssetStoreShape> {
+    if (!canAccessLocalFs()) return _assetsFallback as unknown as AssetStoreShape;
     try {
       const raw = await fs.readFile(this.dataFile, "utf8");
       return JSON.parse(raw) as AssetStoreShape;
@@ -122,12 +119,7 @@ export class JsonFileAssetRepo implements AssetRepo {
   }
 
   private async write(s: AssetStoreShape): Promise<void> {
-    try {
-      await fs.mkdir(path.dirname(this.dataFile), { recursive: true });
-      await fs.writeFile(this.dataFile, JSON.stringify(s, null, 2), "utf8");
-    } catch {
-      // Workers: filesystem writes unavailable
-    }
+    await safeWriteFile(this.dataFile, JSON.stringify(s, null, 2));
   }
 
   async list(

@@ -23,17 +23,14 @@
  *    Add them to the iframe src when we want power-user controls.
  */
 import { useMemo } from "react";
+import { buildViewerUrl } from "@/lib/viewer";
 
 interface Props {
   src: string;
 }
 
 export default function SplatViewer({ src }: Props) {
-  // Build the iframe URL with the splat autoload param.
-  const iframeSrc = useMemo(() => {
-    if (!src) return "/viewer/offline-viewer.html";
-    return `/viewer/offline-viewer.html?autoload=${encodeURIComponent(src)}`;
-  }, [src]);
+  const iframeSrc = useMemo(() => buildViewerUrl(src || undefined), [src]);
 
   return (
     <div className="relative aspect-video border border-line bg-black overflow-hidden">

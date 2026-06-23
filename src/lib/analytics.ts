@@ -7,6 +7,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import _analyticsFallback from "../../data/analytics.json";
 
 const FILE = path.join(process.cwd(), "data", "analytics.json");
@@ -50,6 +51,15 @@ interface Store {
 }
 
 async function read(): Promise<Store> {
+  if (!canAccessLocalFs()) {
+    const fb = _analyticsFallback as unknown as Store;
+    if (fb.properties) {
+      for (const p of Object.values(fb.properties)) {
+        if (!p.devices) p.devices = {};
+      }
+    }
+    return fb.properties ? fb : { version: 1, properties: {} };
+  }
   try {
     const s = JSON.parse(await fs.readFile(FILE, "utf8")) as Store;
     for (const p of Object.values(s.properties)) {
@@ -68,12 +78,7 @@ async function read(): Promise<Store> {
 }
 
 async function write(s: Store): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(FILE), { recursive: true });
-    await fs.writeFile(FILE, JSON.stringify(s, null, 2), "utf8");
-  } catch {
-    // Workers: filesystem writes unavailable
-  }
+  await safeWriteFile(FILE, JSON.stringify(s, null, 2));
 }
 
 /** Map a referrer URL to a coarse source label. */

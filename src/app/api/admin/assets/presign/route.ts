@@ -59,6 +59,8 @@ export async function POST(req: Request) {
       url: publicUrl,
       size,
       contentType,
+      thumbnailUrl: "",
+      tags: [],
       uploadedAt: new Date().toISOString(),
     });
     return NextResponse.json({ id, mode: "r2", putUrl, url: publicUrl, contentType });
@@ -72,10 +74,12 @@ export async function POST(req: Request) {
     label: stem || filename,
     filename,
     ext,
-    r2Key, // unused in local but kept for shape
+    r2Key,
     url: "",
     size,
     contentType,
+    thumbnailUrl: "",
+    tags: [],
     uploadedAt: new Date().toISOString(),
   });
   return NextResponse.json({ id, mode: "local", postUrl: "/api/admin/assets/local" });

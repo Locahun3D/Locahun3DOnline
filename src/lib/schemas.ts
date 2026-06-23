@@ -386,6 +386,8 @@ export const assetSchema = z.object({
   contentType: z.string().default("application/octet-stream"),
   width: z.number().int().min(0).optional(),
   height: z.number().int().min(0).optional(),
+  thumbnailUrl: z.string().default(""),
+  tags: z.array(z.string().max(40)).default([]),
   uploadedAt: z.string().default(() => new Date().toISOString()),
 });
 

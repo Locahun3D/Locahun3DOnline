@@ -6,6 +6,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { userSchema, type User } from "./account-schema";
 import _usersFallback from "../../data/users.json";
 
@@ -41,6 +42,7 @@ export interface UserRepo {
 }
 
 async function readStore(): Promise<StoreShape> {
+  if (!canAccessLocalFs()) return _usersFallback as unknown as StoreShape;
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
@@ -50,12 +52,7 @@ async function readStore(): Promise<StoreShape> {
 }
 
 async function writeStore(s: StoreShape): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
-  } catch {
-    // Workers: filesystem writes unavailable
-  }
+  await safeWriteFile(DATA_FILE, JSON.stringify(s, null, 2));
 }
 
 class JsonFileUserRepo implements UserRepo {

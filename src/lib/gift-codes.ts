@@ -5,6 +5,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { giftCodeSchema, normalizeCode, type GiftCode } from "./gift-schema";
 import _giftFallback from "../../data/gift-codes.json";
 
@@ -35,6 +36,7 @@ export interface GiftCodeRepo {
 }
 
 async function readStore(): Promise<StoreShape> {
+  if (!canAccessLocalFs()) return _giftFallback as unknown as StoreShape;
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
@@ -44,12 +46,7 @@ async function readStore(): Promise<StoreShape> {
 }
 
 async function writeStore(s: StoreShape): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-    await fs.writeFile(DATA_FILE, JSON.stringify(s, null, 2), "utf8");
-  } catch {
-    // Workers: filesystem writes unavailable
-  }
+  await safeWriteFile(DATA_FILE, JSON.stringify(s, null, 2));
 }
 
 class JsonFileGiftCodeRepo implements GiftCodeRepo {

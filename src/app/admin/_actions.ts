@@ -166,7 +166,23 @@ export async function renameAssetAction(id: string, label: string) {
   const a = await assetRepo.get(id);
   if (!a) return { ok: false as const, reason: "not_found" as const };
   await assetRepo.upsert({ ...a, label: label.slice(0, 120) });
-  revalidatePath("/admin/assets");
+  return { ok: true as const };
+}
+
+export async function updateAssetTagsAction(id: string, tags: string[]) {
+  await requireAdmin();
+  const a = await assetRepo.get(id);
+  if (!a) return { ok: false as const, reason: "not_found" as const };
+  const cleaned = tags.map((t) => t.trim().slice(0, 40)).filter(Boolean);
+  await assetRepo.upsert({ ...a, tags: [...new Set(cleaned)] });
+  return { ok: true as const };
+}
+
+export async function updateAssetThumbnailAction(id: string, thumbnailUrl: string) {
+  await requireAdmin();
+  const a = await assetRepo.get(id);
+  if (!a) return { ok: false as const, reason: "not_found" as const };
+  await assetRepo.upsert({ ...a, thumbnailUrl });
   return { ok: true as const };
 }
 
@@ -182,6 +198,5 @@ export async function deleteAssetAction(id: string) {
     }
   }
   await assetRepo.remove(id);
-  revalidatePath("/admin/assets");
   return { ok: true as const };
 }
