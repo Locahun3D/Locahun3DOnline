@@ -6,6 +6,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
+import { r2DocGet, r2DocPut } from "./r2-store";
 import {
   siteSettingsSchema,
   DEFAULT_SETTINGS,
@@ -14,9 +15,15 @@ import {
 import _settingsFallback from "../../data/site-settings.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "site-settings.json");
+const R2_KEY = "site-settings.json";
 
 export async function getSettings(): Promise<SiteSettings> {
   if (!canAccessLocalFs()) {
+    // Workers: R2 (operator-saved) wins, else build-time seed, else defaults.
+    const fromR2 = await r2DocGet<unknown>(R2_KEY);
+    if (fromR2) {
+      try { return siteSettingsSchema.parse(fromR2); } catch { /* fall through */ }
+    }
     try { return siteSettingsSchema.parse(_settingsFallback); } catch { return DEFAULT_SETTINGS; }
   }
   try {
@@ -33,6 +40,10 @@ export async function getSettings(): Promise<SiteSettings> {
 
 export async function saveSettings(s: SiteSettings): Promise<SiteSettings> {
   const validated = siteSettingsSchema.parse(s);
-  await safeWriteFile(DATA_FILE, JSON.stringify(validated, null, 2));
+  if (canAccessLocalFs()) {
+    await safeWriteFile(DATA_FILE, JSON.stringify(validated, null, 2));
+  } else {
+    await r2DocPut(R2_KEY, validated);
+  }
   return validated;
 }
