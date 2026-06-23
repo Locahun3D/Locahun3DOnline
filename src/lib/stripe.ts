@@ -19,7 +19,11 @@ export function getStripe(): Stripe {
   if (!_client) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
-    _client = new Stripe(key);
+    // Cloudflare Workers では Node の http が使えないため fetch ベースの
+    // HTTP クライアントを使う（必須。デフォルトだと接続エラーになる）。
+    _client = new Stripe(key, {
+      httpClient: Stripe.createFetchHttpClient(),
+    });
   }
   return _client;
 }

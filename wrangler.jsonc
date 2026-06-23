@@ -15,6 +15,15 @@
       "bucket_name": "locahun3d-assets"
     }
   ],
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://locahun3d.com",
+    "STRIPE_PRICE_INDIVIDUAL_MONTHLY": "price_1Tlb2LRyHEgXelRysKE4Giy7",
+    "STRIPE_PRICE_INDIVIDUAL_ANNUAL": "price_1Tlb2MRyHEgXelRy6CEiIoya",
+    "STRIPE_PRICE_STUDIO_MONTHLY": "price_1Tlb2NRyHEgXelRyEOHhpPxa",
+    "STRIPE_PRICE_STUDIO_ANNUAL": "price_1Tlb2NRyHEgXelRyZqwghKCL",
+    "STRIPE_PRICE_TEAM_MONTHLY": "price_1Tlb2ORyHEgXelRywSLcbT7s",
+    "STRIPE_PRICE_TEAM_ANNUAL": "price_1Tlb2ORyHEgXelRyZnqqhqEP"
+  },
   "routes": [
     { "pattern": "locahun3d.com", "custom_domain": true },
     { "pattern": "www.locahun3d.com", "custom_domain": true }
