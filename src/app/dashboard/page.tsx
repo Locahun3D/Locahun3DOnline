@@ -50,10 +50,17 @@ export default function DashboardPage() {
         </section>
 
         <section className="border border-line p-6">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Recent</div>
-          <p className="text-[12px] text-muted leading-[1.7]">
-            最近見た物件・ウォークスルー履歴がここに並びます。
+          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Purchases</div>
+          <div className="serif text-2xl">—</div>
+          <p className="text-[12px] text-muted mt-2 leading-[1.7]">
+            3DGSデータの購入履歴・領収書はこちら。
           </p>
+          <Link
+            href="/dashboard/purchases"
+            className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
+          >
+            購入履歴 →
+          </Link>
         </section>
       </div>
     </div>

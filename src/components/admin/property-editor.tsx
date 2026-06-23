@@ -928,7 +928,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "" })}
+                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1088,6 +1088,41 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         rows={2}
                         placeholder="注釈（スキャン条件・注意点・撮影メモなど）"
                       />
+
+                      {/* Per-item data sale settings */}
+                      <div className="border-t border-line/40 pt-3 mt-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-3">
+                          <input
+                            type="checkbox"
+                            {...register(`splatItems.${idx}.forSale`)}
+                            className="w-4 h-4 accent-accent"
+                          />
+                          <span className="text-[11px] mono tracking-[0.14em] uppercase opacity-70">販売する</span>
+                        </label>
+
+                        {watch(`splatItems.${idx}.forSale`) && (
+                          <div className="space-y-3 pl-7">
+                            <Field
+                              label="販売価格 (税込・円)"
+                              hint=""
+                            >
+                              <SalePriceInput
+                                value={watch(`splatItems.${idx}.salePrice`)}
+                                onChange={(v) => setValue(`splatItems.${idx}.salePrice`, v, { shouldDirty: true })}
+                              />
+                            </Field>
+                            <Field label="販売説明文" hint="">
+                              <textarea
+                                {...register(`splatItems.${idx}.saleDescription`)}
+                                className={inputClass}
+                                rows={2}
+                                maxLength={1000}
+                                placeholder="例: 高精細3DGSデータ。商用利用可。"
+                              />
+                            </Field>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1149,47 +1184,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 </Field>
               </div>
 
-              {/* ── データ販売設定 ── */}
-              <div className="border-t border-line pt-5 mt-6">
-                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4">
-                  Data Sale Settings
-                </div>
-
-                <label className="flex items-center gap-3 cursor-pointer mb-4">
-                  <input
-                    type="checkbox"
-                    {...register("dataForSale")}
-                    className="w-4 h-4 accent-accent"
-                  />
-                  <span className="text-sm">3DGSデータを販売する</span>
-                </label>
-
-                {watch("dataForSale") && (
-                  <div className="space-y-4 pl-7">
-                    <Field
-                      label="販売価格 (税込・円)"
-                      hint="購入者はこの金額で3DGSデータのダウンロード権を得る。"
-                    >
-                      <SalePriceInput
-                        value={watch("dataSalePrice")}
-                        onChange={(v) => setValue("dataSalePrice", v, { shouldDirty: true })}
-                      />
-                    </Field>
-                    <Field
-                      label="販売説明文"
-                      hint="購入パネルに表示される説明。データの用途・含まれる内容など。"
-                    >
-                      <textarea
-                        {...register("dataSaleDescription")}
-                        className={inputClass}
-                        rows={3}
-                        maxLength={1000}
-                        placeholder="例: 高精細3DGSデータ一式。商用利用可。PLY+SPLAT形式。"
-                      />
-                    </Field>
-                  </div>
-                )}
-              </div>
+              {/* Data sale fields are now per-splatItem (forSale/salePrice/saleDescription) */}
             </StepCard>
           )}
 

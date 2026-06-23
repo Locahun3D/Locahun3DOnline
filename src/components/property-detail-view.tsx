@@ -269,19 +269,24 @@ export default function PropertyDetailView({
         </section>
       ) : (
         <>
-          {/* Data Sale Panel (above viewer) */}
-          {property.dataForSale && property.dataSalePrice > 0 && (
-            <DataSalePanel
-              propertyId={property.id}
-              propertyTitle={property.title}
-              price={property.dataSalePrice}
-              description={property.dataSaleDescription}
-              scannedAt={property.scannedAt}
-              splatSizeMb={property.splatSizeMb}
-              zipSizeMb={property.zipSizeMb}
-              splatItemCount={property.splatItems.length}
-              tokenCost={property.tokenCost}
-            />
+          {/* Data Sale Panels (per splatItem) */}
+          {property.splatItems.map((item, idx) =>
+            item.forSale && item.salePrice > 0 ? (
+              <DataSalePanel
+                key={idx}
+                propertyId={property.id}
+                propertyTitle={property.title}
+                splatItemIndex={idx}
+                itemLabel={item.label}
+                price={item.salePrice}
+                description={item.saleDescription}
+                scannedAt={property.scannedAt}
+                splatSizeMb={item.sizeMb}
+                zipSizeMb={property.zipSizeMb}
+                splatItemCount={property.splatItems.length}
+                tokenCost={property.tokenCost}
+              />
+            ) : null,
           )}
 
           {/* 3DGS Viewer (paywalled) */}

@@ -15,6 +15,8 @@ export const purchaseSchema = z.object({
   userEmail: z.string(),
   propertyId: z.string(),
   propertyTitle: z.string().default(""),
+  splatItemIndex: z.number().int().min(0).default(0),
+  itemLabel: z.string().max(60).default(""),
   priceYen: z.number().int().min(0),
   status: purchaseStatusSchema.default("pending"),
   stripeSessionId: z.string().default(""),
@@ -70,10 +72,12 @@ export const purchaseRepo = {
     return s.purchases.find((p) => p.stripeSessionId === sessionId) ?? null;
   },
 
-  async hasPurchased(userId: string, propertyId: string): Promise<boolean> {
+  async hasPurchased(userId: string, propertyId: string, splatItemIndex?: number): Promise<boolean> {
     const s = await read();
     return s.purchases.some(
-      (p) => p.userId === userId && p.propertyId === propertyId && p.status === "completed",
+      (p) => p.userId === userId && p.propertyId === propertyId &&
+             (splatItemIndex == null || p.splatItemIndex === splatItemIndex) &&
+             p.status === "completed",
     );
   },
 

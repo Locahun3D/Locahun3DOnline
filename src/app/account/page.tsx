@@ -171,6 +171,15 @@ export default async function AccountPage({
 
           <RedeemGift />
 
+          <Link href="/dashboard/purchases" className="block border border-line p-5 hover:border-accent/40 transition">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+              購入履歴
+            </div>
+            <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent">
+              購入履歴・領収書 →
+            </div>
+          </Link>
+
           <div className="border border-line p-5">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
               ブックマーク

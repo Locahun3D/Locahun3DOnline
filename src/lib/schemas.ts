@@ -194,6 +194,9 @@ export const propertySchema = z.object({
     previewVideoUrl: z.string().url().or(z.literal("")).default(""),
     sizeMb: z.number().min(0).max(99999).default(0),
     notes: z.string().max(500).default(""),
+    forSale: z.boolean().default(false),
+    salePrice: z.number().int().min(0).max(99999999).default(0),
+    saleDescription: z.string().max(1000).default(""),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z
@@ -213,10 +216,7 @@ export const propertySchema = z.object({
   tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
   annotations: z.array(annotationSchema).max(200).default([]),
 
-  // 5.5 Data sale — 3DGS data purchase options
-  dataForSale: z.boolean().default(false),
-  dataSalePrice: z.number().int().min(0).max(99999999).default(0),
-  dataSaleDescription: z.string().max(1000).default(""),
+  // Data sale fields moved to splatItems[].forSale/salePrice/saleDescription
 
   // 6. Studio page builder — ordered content blocks for the public page.
   //    Empty = render the default detail layout (no regression).

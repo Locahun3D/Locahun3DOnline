@@ -5,6 +5,8 @@ import { useState } from "react";
 interface DataSalePanelProps {
   propertyId: string;
   propertyTitle: string;
+  splatItemIndex: number;
+  itemLabel: string;
   price: number;
   description: string;
   scannedAt: string;
@@ -23,6 +25,8 @@ const TOKEN_LABEL: Record<1 | 2 | 3, string> = {
 export default function DataSalePanel({
   propertyId,
   propertyTitle,
+  splatItemIndex,
+  itemLabel,
   price,
   description,
   scannedAt,
@@ -39,7 +43,7 @@ export default function DataSalePanel({
       const res = await fetch("/api/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId }),
+        body: JSON.stringify({ propertyId, splatItemIndex }),
       });
       const data = await res.json();
       if (data.url) {
@@ -73,7 +77,7 @@ export default function DataSalePanel({
           {/* Left: info */}
           <div className="space-y-5">
             <h3 className="serif text-lg tracking-wider">
-              3DGSデータ購入
+              3DGSデータ購入{itemLabel && ` — ${itemLabel}`}
             </h3>
 
             {description && (

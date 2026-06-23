@@ -15,22 +15,28 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const propertyId = body.propertyId as string | undefined;
+  const splatItemIndex = typeof body.splatItemIndex === "number" ? body.splatItemIndex : 0;
   if (!propertyId) {
     return NextResponse.json({ error: "propertyId is required" }, { status: 400 });
   }
 
   const property = await propertyRepo.get(propertyId);
-  if (!property || !property.dataForSale || property.dataSalePrice <= 0) {
-    return NextResponse.json({ error: "この物件のデータは販売されていません" }, { status: 404 });
+  if (!property) {
+    return NextResponse.json({ error: "物件が見つかりません" }, { status: 404 });
   }
 
-  const already = await purchaseRepo.hasPurchased(user.id, propertyId);
+  const item = property.splatItems[splatItemIndex];
+  if (!item || !item.forSale || item.salePrice <= 0) {
+    return NextResponse.json({ error: "このデータは販売されていません" }, { status: 404 });
+  }
+
+  const already = await purchaseRepo.hasPurchased(user.id, propertyId, splatItemIndex);
   if (already) {
     return NextResponse.json({ error: "すでに購入済みです", ok: false }, { status: 409 });
   }
 
   const purchaseId = randomUUID();
-  const price = property.dataSalePrice;
+  const price = item.salePrice;
 
   if (!stripeEnabled()) {
     await purchaseRepo.upsert({
@@ -39,6 +45,8 @@ export async function POST(req: Request) {
       userEmail: user.email,
       propertyId,
       propertyTitle: property.title,
+      splatItemIndex,
+      itemLabel: item.label,
       priceYen: price,
       status: "completed",
       stripeSessionId: "",
@@ -57,8 +65,8 @@ export async function POST(req: Request) {
           currency: "jpy",
           unit_amount: price,
           product_data: {
-            name: `3DGSデータ — ${property.title}`,
-            description: `物件ID: ${property.id}`,
+            name: `3DGSデータ — ${property.title}${item.label ? ` (${item.label})` : ""}`,
+            description: `物件ID: ${property.id} / Item #${splatItemIndex}`,
           },
         },
         quantity: 1,
@@ -69,6 +77,7 @@ export async function POST(req: Request) {
     metadata: {
       userId: user.id,
       propertyId,
+      splatItemIndex: String(splatItemIndex),
       purchaseId,
       type: "data_purchase",
     },
@@ -84,6 +93,8 @@ export async function POST(req: Request) {
     userEmail: user.email,
     propertyId,
     propertyTitle: property.title,
+    splatItemIndex,
+    itemLabel: item.label,
     priceYen: price,
     status: "pending",
     stripeSessionId: session.id,

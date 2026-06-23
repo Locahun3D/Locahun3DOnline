@@ -81,14 +81,20 @@
           "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
           "previewVideoUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/0-preview.mp4",
           "sizeMb": 356,
-          "notes": "1階エントランス〜メインホール"
+          "notes": "1階エントランス〜メインホール",
+          "forSale": true,
+          "salePrice": 150000,
+          "saleDescription": "1F エントランス〜メインホール 3DGSデータ。"
         },
         {
           "label": "2F",
           "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
           "previewVideoUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/1-preview.mp4",
           "sizeMb": 356,
-          "notes": "2階スタジオ・控室"
+          "notes": "2階スタジオ・控室",
+          "forSale": true,
+          "salePrice": 150000,
+          "saleDescription": "2F スタジオ・控室 3DGSデータ。"
         }
       ],
       "splatNotes": "",
@@ -96,9 +102,6 @@
       "splatDataUpdatedAt": "",
       "tokenCost": 3,
       "annotations": [],
-      "dataForSale": true,
-      "dataSalePrice": 300000,
-      "dataSaleDescription": "高精細3DGSデータ一式。PLY+SPLAT形式。商用利用可。",
       "pageBlocks": [],
       "createdAt": "2026-03-22T00:00:00.000Z",
       "updatedAt": "2026-06-21T00:18:29.397Z"

@@ -34,7 +34,9 @@ function fmtDate(iso: string) {
 export default async function PurchasesPage() {
   const purchases = await purchaseRepo.list();
   const allProps = await propertyRepo.list();
-  const saleProps = allProps.filter((p) => p.dataForSale && p.dataSalePrice > 0);
+  const saleProps = allProps.filter((p) =>
+    p.splatItems.some((item) => item.forSale && item.salePrice > 0),
+  );
 
   const totalRevenue = purchases
     .filter((p) => p.status === "completed")
@@ -97,7 +99,7 @@ export default async function PurchasesPage() {
                     {p.title || p.id}
                   </Link>
                   <span className="mono text-[11px] tracking-[0.14em] opacity-60 shrink-0">
-                    {fmtPrice(p.dataSalePrice)}
+                    {fmtPrice(p.splatItems.filter((i) => i.forSale).reduce((s, i) => s + i.salePrice, 0))}
                   </span>
                   <span className="mono text-[10px] tracking-[0.14em] opacity-40 shrink-0">
                     {count} 件購入
@@ -136,6 +138,11 @@ export default async function PurchasesPage() {
                     </td>
                     <td className="px-4 py-3 truncate max-w-[200px]">
                       {p.propertyTitle || p.propertyId}
+                      {p.itemLabel && (
+                        <span className="ml-2 mono text-[9px] tracking-[0.14em] uppercase border border-line px-1 py-0.5 opacity-50">
+                          {p.itemLabel}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 mono text-[11px] opacity-60 truncate max-w-[180px]">
                       {p.userEmail}
