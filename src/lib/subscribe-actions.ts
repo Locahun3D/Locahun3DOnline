@@ -2,10 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { requireOnboarded } from "./dal";
 import { userRepo } from "./users";
-import { ACCOUNT_PLANS, oneYearFrom, type AccountPlan } from "./account-schema";
-import { PLAN_TOKEN_BUDGET } from "./schemas";
+import { ACCOUNT_PLANS, type AccountPlan } from "./account-schema";
+import { applyPlan } from "./subscription";
+import { notifySubscription } from "./email";
 import {
   stripeEnabled,
   getStripe,
@@ -14,17 +16,22 @@ import {
   type BillingInterval,
 } from "./stripe";
 
-/** 即時反映スタブ: プランを切り替え、月次トークンを付与する (Stripe未配線時)。 */
-async function applyPlanStub(userId: string, plan: AccountPlan): Promise<void> {
-  const monthly = PLAN_TOKEN_BUDGET[plan];
-  const u = await userRepo.get(userId);
-  if (!u) return;
-  await userRepo.upsert({
-    ...u,
-    plan,
-    tokenBalance: monthly,
-    tokenExpiresAt: monthly > 0 ? oneYearFrom(new Date().toISOString()) : null,
-  });
+/** 即時反映スタブ: プランを切り替え、月次トークン付与＋開始メール (Stripe未配線時)。 */
+async function applyPlanStub(
+  userId: string,
+  plan: AccountPlan,
+  email: string,
+): Promise<void> {
+  await applyPlan(userId, plan);
+  await notifySubscription({ to: email, plan, viaStripe: false });
+}
+
+/** リクエスト由来のオリジン（localhost依存を排除）。 */
+async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL ?? "https://locahun3d.com");
 }
 
 /**
@@ -41,7 +48,7 @@ export async function subscribeAction(
 
   // Free はダウングレード扱い。Stripe解約は Customer Portal 側で行う。
   if (plan === "free") {
-    await applyPlanStub(user.id, "free");
+    await applyPlanStub(user.id, "free", user.email);
     revalidatePath("/account");
     redirect("/account?plan=free");
   }
@@ -50,13 +57,14 @@ export async function subscribeAction(
 
   // Stripe 未配線、または Price 未設定 → スタブで即時反映。
   if (!priceId) {
-    await applyPlanStub(user.id, plan);
+    await applyPlanStub(user.id, plan, user.email);
     revalidatePath("/account");
     redirect(`/account?plan=${plan}`);
   }
 
   // Stripe Checkout セッションを作成してリダイレクト。
   const u = await userRepo.get(user.id);
+  const origin = await requestOrigin();
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -74,8 +82,9 @@ export async function subscribeAction(
     ...(u?.stripeCustomerId
       ? { customer_update: { name: "auto", address: "auto" } }
       : {}),
-    success_url: appUrl(`/account?plan=${plan}&checkout=success`),
-    cancel_url: appUrl(`/pricing?checkout=cancel`),
+    // 戻りルートでセッション検証→プラン反映→メール送信（webhook未設定でも完結）。
+    success_url: `${origin}/api/subscribe/return?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/pricing?checkout=cancel`,
   });
 
   if (!session.url) redirect("/pricing?checkout=error");

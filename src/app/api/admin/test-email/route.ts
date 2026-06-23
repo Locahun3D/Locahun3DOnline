@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
+import { notifySubscription } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -13,9 +14,21 @@ export async function POST(req: Request) {
   if (!key) {
     return NextResponse.json({ ok: false, error: "RESEND_API_KEY 未設定" }, { status: 503 });
   }
-  const body = (await req.json().catch(() => ({}))) as { to?: string };
+  const body = (await req.json().catch(() => ({}))) as { to?: string; type?: string };
   const to = body.to || admin.email;
   const from = process.env.EMAIL_FROM || "ロケハン3D <noreply@locahun3d.com>";
+
+  // サブスク開始メール（領収書相当）の実テンプレートで送信し、結果を返す。
+  if (body.type === "subscription") {
+    const sent = await notifySubscription({
+      to,
+      plan: "individual",
+      amountYen: 3300,
+      interval: "monthly",
+      viaStripe: true,
+    });
+    return NextResponse.json({ ok: sent, to, from, type: "subscription" });
+  }
 
   try {
     const res = await fetch("https://api.resend.com/emails", {

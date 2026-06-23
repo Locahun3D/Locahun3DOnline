@@ -1,8 +1,16 @@
 import "server-only";
 import { generateReceiptHtml } from "./receipt";
 import { repo as propertyRepo } from "./store";
-import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC } from "./schemas";
+import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC, PLAN_TOKEN_BUDGET } from "./schemas";
+import type { AccountPlan } from "./account-schema";
 import type { Purchase } from "./purchases";
+
+const PLAN_LABEL: Record<AccountPlan, string> = {
+  free: "Free",
+  individual: "Individual",
+  studio: "Studio",
+  team: "Team",
+};
 
 /**
  * メール送信（Resend）。RESEND_API_KEY 未設定なら送信スキップ（Stripeと同じ
@@ -135,5 +143,47 @@ export async function notifyRefund(p: Purchase): Promise<void> {
     });
   } catch {
     /* email失敗は無視 */
+  }
+}
+
+/** サブスク開始（プラン申込）メール＝領収書相当を登録メールへ送信。 */
+export async function notifySubscription(opts: {
+  to: string;
+  plan: AccountPlan;
+  amountYen?: number;
+  interval?: "monthly" | "annual";
+  viaStripe: boolean;
+}): Promise<boolean> {
+  if (!emailEnabled() || !opts.to || opts.plan === "free") return false;
+  try {
+    const monthly = PLAN_TOKEN_BUDGET[opts.plan];
+    const intervalLabel = opts.interval === "annual" ? "年額" : "月額";
+    const amountRow =
+      typeof opts.amountYen === "number" && opts.amountYen > 0
+        ? `<tr><td style="padding:6px 0;color:#666;">お支払い（${intervalLabel}・税込）</td><td style="padding:6px 0;text-align:right;font-weight:700;">${yen(opts.amountYen)}</td></tr>`
+        : "";
+    const note = opts.viaStripe
+      ? `<p style="font-size:12px;color:#999;">※ 正式な請求書（領収書）はStripeより自動発行・送付されます。マイページの「お支払い情報」からもご確認いただけます。</p>`
+      : `<p style="font-size:12px;color:#999;">※ プランは即時有効化されました。お支払い情報の更新はマイページから行えます。</p>`;
+
+    const body = `
+      <p style="font-size:14px;line-height:1.8;">${PLAN_LABEL[opts.plan]} プランのお申し込みありがとうございます。下記の通り有効化しました。</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+        <tr><td style="padding:6px 0;color:#666;">プラン</td><td style="padding:6px 0;text-align:right;font-weight:700;">${PLAN_LABEL[opts.plan]}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;">月次トークン</td><td style="padding:6px 0;text-align:right;">${monthly} トークン / 月</td></tr>
+        ${amountRow}
+      </table>
+      <p style="margin:20px 0;">
+        <a href="${appUrl("/account")}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 22px;font-size:13px;letter-spacing:.1em;">マイページを開く →</a>
+      </p>
+      ${note}
+    `;
+    return await sendEmail({
+      to: opts.to,
+      subject: `【ロケハン3D】${PLAN_LABEL[opts.plan]} プラン開始のお知らせ`,
+      html: shell("プラン開始のお知らせ", body),
+    });
+  } catch {
+    return false;
   }
 }
