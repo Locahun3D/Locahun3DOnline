@@ -130,7 +130,7 @@ export default function DataSalePanel({
           </div>
 
           {/* Right: price + CTA */}
-          <div className="flex flex-col items-center gap-4 min-w-[180px]">
+          <div className="flex flex-col items-center gap-4 w-full md:w-auto md:min-w-[180px]">
             <div className="text-center">
               <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
                 PRICE

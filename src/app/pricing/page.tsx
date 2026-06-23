@@ -110,7 +110,7 @@ export default async function PricingPage() {
           ← 横にスクロール →
         </p>
         <div className="border border-line overflow-x-auto">
-          <table className="w-full min-w-[600px] text-[12px] mono">
+          <table className="w-full min-w-[520px] text-[12px] mono">
             <thead>
               <tr className="bg-[#222] border-b border-line">
                 <th className="text-left px-3 py-3 mono text-[10px] tracking-[0.24em] uppercase opacity-60 font-normal min-w-[160px]">

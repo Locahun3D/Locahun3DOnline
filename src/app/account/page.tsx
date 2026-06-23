@@ -72,7 +72,7 @@ export default async function AccountPage({
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
               基本情報
             </div>
-            <dl className="grid grid-cols-[110px_1fr] gap-y-3 text-[13px]">
+            <dl className="grid grid-cols-[80px_1fr] sm:grid-cols-[110px_1fr] gap-y-3 text-[13px]">
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
                 氏名
               </dt>
@@ -98,7 +98,7 @@ export default async function AccountPage({
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
               利用中プラン
             </div>
-            <div className="flex items-baseline justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
               <div>
                 <div className="serif text-2xl uppercase">{user.plan}</div>
                 <div className="mono text-[10px] text-muted mt-1">

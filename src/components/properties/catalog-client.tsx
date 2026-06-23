@@ -403,7 +403,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
         </div>
 
         {/* Map: stretches to match the panel height (面一), no scroll-follow */}
-        <div className="h-[60vh] lg:h-auto">
+        <div className="h-[40vh] sm:h-[50vh] lg:h-auto">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}

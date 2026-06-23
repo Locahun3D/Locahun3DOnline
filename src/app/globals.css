@@ -142,13 +142,17 @@ body::before {
 @utility chapter-rule {
   display: flex;
   align-items: baseline;
-  gap: 22px;
-  margin-bottom: 60px;
+  gap: 12px;
+  margin-bottom: 36px;
   font-size: 0.78em;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   font-family: var(--font-mono);
   color: var(--color-muted);
+  @media (min-width: 640px) {
+    gap: 22px;
+    margin-bottom: 60px;
+  }
 }
 
 @utility timecode {
@@ -162,13 +166,13 @@ body::before {
 
 @utility frame {
   position: relative;
-  padding-inline: max(48px, calc((100vw - var(--container-frame)) / 2));
+  padding-inline: max(clamp(1rem, 4vw, 48px), calc((100vw - var(--container-frame)) / 2));
 }
 
 /* Wider container for data-dense pages (catalog) — more columns on PC. */
 @utility frame-wide {
   position: relative;
-  padding-inline: max(48px, calc((100vw - 1760px) / 2));
+  padding-inline: max(clamp(1rem, 4vw, 48px), calc((100vw - 1760px) / 2));
 }
 
 /* Split Gateway — cross-dim: hovering one side fades the other */

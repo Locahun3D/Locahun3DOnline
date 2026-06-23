@@ -92,7 +92,7 @@ export default async function PurchasesPage({
       </header>
 
       {/* Summary cards */}
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="border border-line p-5 bg-[#141414]">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
             販売中の物件

@@ -118,7 +118,7 @@ export default function AboutPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
 
-        <dl className="grid grid-cols-[100px_1fr] gap-y-3 text-[13px] text-left max-w-[44ch] mx-auto">
+        <dl className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-y-3 text-[13px] text-left max-w-[44ch] mx-auto">
           <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
             運営者
           </dt>

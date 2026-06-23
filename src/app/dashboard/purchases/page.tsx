@@ -108,9 +108,9 @@ export default async function UserPurchasesPage() {
 
             return (
               <div key={p.id} className="border border-line hover:border-line/80 transition">
-                <div className="flex items-start gap-4 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 p-4 sm:p-5">
                   <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <Link
                         href={`/properties/${p.propertyId}`}
                         className="text-sm font-medium hover:text-accent transition truncate"

@@ -65,7 +65,7 @@ export default function PropertyDetailView({
         <span className="text-ink/70">{property.id.toUpperCase()}</span>
       </nav>
 
-      <header className="grid lg:grid-cols-3 gap-10 mb-12">
+      <header className="grid lg:grid-cols-3 gap-6 sm:gap-10 mb-12">
         <div className="lg:col-span-2">
           <div className="mono text-[11px] tracking-[0.3em] uppercase text-accent mb-3">
             {property.prefecture} {property.city}
