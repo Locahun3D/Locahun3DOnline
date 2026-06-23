@@ -310,7 +310,7 @@ export default function PropertyDetailView({
                   splatSizeMb={item.sizeMb}
                   zipSizeMb={property.zipSizeMb}
                   splatItemCount={property.splatItems.length}
-                  tokenCost={property.tokenCost}
+                  tokenCost={property.tokenCost as 1 | 2 | 3}
                   downloadFileFormat={item.downloadFileFormat}
                   downloadFileSizeMb={item.downloadFileSizeMb}
                 />

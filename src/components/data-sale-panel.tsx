@@ -19,24 +19,13 @@ interface DataSalePanelProps {
   downloadFileSizeMb?: number;
 }
 
-const TOKEN_LABEL: Record<1 | 2 | 3, string> = {
-  1: "小規模",
-  2: "中規模",
-  3: "大規模",
-};
-
 export default function DataSalePanel({
   propertyId,
-  propertyTitle,
   splatItemIndex,
   itemLabel,
   price,
   description,
   scannedAt,
-  splatSizeMb,
-  zipSizeMb,
-  splatItemCount,
-  tokenCost,
   downloadFileFormat,
   downloadFileSizeMb,
 }: DataSalePanelProps) {
@@ -70,105 +59,55 @@ export default function DataSalePanel({
     }
   };
 
-  const fmt = (n: number) =>
-    n.toLocaleString("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
-
-  const dlFormat = downloadFileFormat || "PLY & OBJ (ZIP)";
+  const yen = price.toLocaleString("ja-JP");
+  const dlFormat = downloadFileFormat || "3DGS RAD";
   const dlSize = downloadFileSizeMb ?? 0;
+  const meta = [
+    scannedAt && `${scannedAt}`,
+    `${dlFormat}`,
+    dlSize > 0 && `${dlSize} MB`,
+  ].filter(Boolean).join(" / ");
 
   return (
-    <section className="mt-6">
-      <div className="chapter-rule">
-        <span className="opacity-60">DATA</span>
-        <span>3D Data Purchase</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-        <span className="opacity-60">販売中</span>
-      </div>
-
-      <div className="border border-accent/40 bg-[#0a0906] p-6 md:p-8">
-        <div className="grid md:grid-cols-[1fr_auto] gap-8 items-start">
-          {/* Left: info */}
-          <div className="space-y-5">
-            <h3 className="serif text-lg tracking-wider">
-              3Dデータ購入{itemLabel && ` — ${itemLabel}`}
-            </h3>
-
-            {description && (
-              <p className="text-sm leading-relaxed opacity-80 whitespace-pre-wrap">
-                {description}
-              </p>
-            )}
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-[11px] mono tracking-[0.14em] uppercase">
-              {scannedAt && (
-                <div>
-                  <div className="opacity-40 mb-1">SCANNED</div>
-                  <div>{scannedAt}</div>
-                </div>
-              )}
-              <div>
-                <div className="opacity-40 mb-1">SCALE</div>
-                <div>{TOKEN_LABEL[tokenCost]}</div>
-              </div>
-              <div>
-                <div className="opacity-40 mb-1">FORMAT</div>
-                <div>{dlFormat}</div>
-              </div>
-              {dlSize > 0 && (
-                <div>
-                  <div className="opacity-40 mb-1">DL SIZE</div>
-                  <div>{dlSize} MB</div>
-                </div>
-              )}
-              {splatItemCount > 0 && (
-                <div>
-                  <div className="opacity-40 mb-1">ITEMS</div>
-                  <div>{splatItemCount} ファイル</div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: price + CTA */}
-          <div className="flex flex-col items-center gap-4 w-full md:w-auto md:min-w-[180px]">
-            <div className="text-center">
-              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
-                PRICE
-              </div>
-              <div className="text-2xl font-semibold tracking-wider">
-                {fmt(price)}
-              </div>
-              <div className="mono text-[10px] tracking-[0.14em] opacity-40 mt-1">
-                税込
-              </div>
-            </div>
-
-            {/* Terms agreement */}
-            <label className="flex items-start gap-2 cursor-pointer text-[10px] opacity-70">
-              <input
-                type="checkbox"
-                checked={agreedTerms}
-                onChange={(e) => setAgreedTerms(e.target.checked)}
-                className="w-4 h-4 accent-accent mt-0.5 shrink-0"
-              />
-              <span>
-                <Link href="/terms/data-download" target="_blank" className="underline hover:text-accent transition">
-                  3Dデータ購入規約
-                </Link>
-                に同意する
-              </span>
-            </label>
-
-            <button
-              onClick={handlePurchase}
-              disabled={loading || !agreedTerms}
-              className="w-full px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
-            >
-              {loading ? "処理中..." : "購入する"}
-            </button>
-          </div>
+    <div className="mt-4 border border-accent/30 bg-[#0a0906] px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+      <div className="flex-1 min-w-[200px]">
+        <div className="flex items-baseline gap-2">
+          <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">DATA</span>
+          <span className="text-[13px] font-medium">
+            3Dデータ購入{itemLabel && ` — ${itemLabel}`}
+          </span>
         </div>
+        {description && (
+          <p className="text-[11px] opacity-60 mt-0.5 line-clamp-1">{description}</p>
+        )}
+        <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
       </div>
-    </section>
+
+      <div className="text-right shrink-0">
+        <span className="serif text-lg text-accent">¥{yen}</span>
+        <span className="mono text-[9px] opacity-40 ml-1">税込</span>
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] opacity-60 hover:opacity-80 transition">
+          <input
+            type="checkbox"
+            checked={agreedTerms}
+            onChange={(e) => setAgreedTerms(e.target.checked)}
+            className="w-3.5 h-3.5 accent-accent shrink-0"
+          />
+          <Link href="/terms/data-download" target="_blank" className="underline">
+            規約同意
+          </Link>
+        </label>
+        <button
+          onClick={handlePurchase}
+          disabled={loading || !agreedTerms}
+          className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
+        >
+          {loading ? "処理中..." : "購入する"}
+        </button>
+      </div>
+    </div>
   );
 }
