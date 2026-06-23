@@ -60,7 +60,7 @@ export default function DataSalePanel({
   };
 
   const yen = price.toLocaleString("ja-JP");
-  const dlFormat = downloadFileFormat || "3DGS RAD";
+  const dlFormat = downloadFileFormat || "PLY / RAD / OBJ";
   const dlSize = downloadFileSizeMb ?? 0;
   const meta = [
     scannedAt && `${scannedAt}`,

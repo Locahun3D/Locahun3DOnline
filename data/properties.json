@@ -88,7 +88,7 @@
           "accessLevel": "public",
           "downloadFileUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
           "downloadFileSizeMb": 356,
-          "downloadFileFormat": "3DGS RAD"
+          "downloadFileFormat": "PLY / RAD / OBJ"
         },
         {
           "label": "2F",
@@ -102,7 +102,7 @@
           "accessLevel": "public",
           "downloadFileUrl": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
           "downloadFileSizeMb": 356,
-          "downloadFileFormat": "3DGS RAD"
+          "downloadFileFormat": "PLY / RAD / OBJ"
         }
       ],
       "splatNotes": "",
