@@ -68,9 +68,15 @@ export async function GET(
     return NextResponse.json({ error: "データが見つかりません" }, { status: 404 });
   }
 
-  // 形式指定があればその形式のファイルを、無ければ先頭/フォールバックを配信。
-  const file = pickDownloadFile(item, format);
-  const key = toR2Key(file?.url || item.splatUrl || "");
+  // 形式指定: その形式の個別ファイル。
+  // 形式なし（一括DL）: バンドルZip(downloadFileUrl)を優先、無ければ先頭形式。
+  let sourceUrl: string;
+  if (format) {
+    sourceUrl = pickDownloadFile(item, format)?.url || "";
+  } else {
+    sourceUrl = item.downloadFileUrl || pickDownloadFile(item, null)?.url || "";
+  }
+  const key = toR2Key(sourceUrl || item.splatUrl || "");
   if (!key) {
     return NextResponse.json({ error: "ダウンロードファイルが未設定です" }, { status: 404 });
   }

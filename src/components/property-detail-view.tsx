@@ -25,6 +25,8 @@ export default function PropertyDetailView({
   canViewRestricted = false,
   canViewNdaOnly = false,
   purchasedIndices = [],
+  hasViewerAccess = false,
+  signedIn = false,
 }: {
   property: Property;
   others: Property[];
@@ -37,6 +39,10 @@ export default function PropertyDetailView({
   canViewNdaOnly?: boolean;
   /** splatItem indexes the current user has already purchased. */
   purchasedIndices?: number[];
+  /** 管理者・有料会員: paywall を出さず視聴可。 */
+  hasViewerAccess?: boolean;
+  /** サインイン済みか（paywall の「Sign in」表示制御用）。 */
+  signedIn?: boolean;
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
@@ -269,7 +275,7 @@ export default function PropertyDetailView({
       {property.pageBlocks && property.pageBlocks.length > 0 ? (
         /* Custom page composed in the studio page builder */
         <section className="mb-16">
-          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} />
+          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} />
         </section>
       ) : (
         <>
@@ -295,6 +301,8 @@ export default function PropertyDetailView({
                 previewVideoUrl={item.previewVideoUrl}
                 tokenCost={property.tokenCost}
                 freeAccess={freeAccess}
+                hasSubscription={hasViewerAccess}
+                signedIn={signedIn}
               />
               {item.forSale && item.salePrice > 0 && (
                 <DataSalePanel
@@ -313,6 +321,7 @@ export default function PropertyDetailView({
                   downloadFileSizeMb={item.downloadFileSizeMb}
                   pointCount={item.pointCount}
                   captureDevice={item.captureDevice}
+                  license={item.license}
                   alreadyPurchased={purchasedIndices.includes(idx)}
                 />
               )}

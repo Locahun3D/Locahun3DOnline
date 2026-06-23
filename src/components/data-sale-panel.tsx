@@ -8,6 +8,11 @@ import {
   isInCart,
   onCartChange,
 } from "@/lib/cart";
+import {
+  DATA_LICENSE_LABEL,
+  DATA_LICENSE_DESC,
+  type DataLicense,
+} from "@/lib/schemas";
 
 interface DataSalePanelProps {
   propertyId: string;
@@ -25,6 +30,7 @@ interface DataSalePanelProps {
   downloadFileSizeMb?: number;
   pointCount?: number;
   captureDevice?: string;
+  license?: DataLicense;
   alreadyPurchased?: boolean;
 }
 
@@ -40,6 +46,7 @@ export default function DataSalePanel({
   downloadFileSizeMb,
   pointCount,
   captureDevice,
+  license = "standard",
   alreadyPurchased = false,
 }: DataSalePanelProps) {
   const [loading, setLoading] = useState(false);
@@ -115,6 +122,12 @@ export default function DataSalePanel({
           <p className="text-[11px] opacity-60 mt-0.5 line-clamp-1">{description}</p>
         )}
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
+        <div className="flex items-center gap-1.5 mt-1" title={DATA_LICENSE_DESC[license]}>
+          <span className="mono text-[9px] tracking-[0.18em] uppercase border border-accent/40 text-accent/80 px-1.5 py-0.5">
+            LICENSE
+          </span>
+          <span className="text-[10px] opacity-70">{DATA_LICENSE_LABEL[license]}</span>
+        </div>
       </div>
 
       {alreadyPurchased ? (

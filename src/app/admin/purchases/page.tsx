@@ -4,6 +4,7 @@ import { repo as propertyRepo } from "@/lib/store";
 import { refundPurchaseAction } from "@/lib/admin-actions";
 import RefundButton from "@/components/admin/refund-button";
 import { stripeEnabled } from "@/lib/stripe";
+import StripeSetupPanel from "@/components/admin/stripe-setup-panel";
 
 export const metadata = { title: "データ販売" };
 
@@ -104,6 +105,8 @@ export default async function PurchasesPage({
           </span>
         )}
       </header>
+
+      <StripeSetupPanel />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

@@ -104,6 +104,8 @@ export default async function UserPurchasesPage() {
             const prop = propMap.get(p.propertyId);
             const item = prop?.splatItems[p.splatItemIndex];
             const files = item ? resolveDownloadFiles(item) : [];
+            // 一括DL（全形式まとめZip）= バンドル downloadFileUrl、無ければ先頭形式。
+            const bundled = item?.downloadFileUrl || files[0]?.url || "";
 
             return (
               <div key={p.id} className="border border-line hover:border-line/80 transition">
@@ -144,21 +146,32 @@ export default async function UserPurchasesPage() {
 
                     {p.status === "completed" && (
                       <div className="flex flex-wrap gap-2 items-center justify-end">
-                        {files.length > 0 && (
-                          <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-40 mr-1">
-                            形式
-                          </span>
-                        )}
-                        {files.map((f, fi) => (
+                        {bundled && (
                           <a
-                            key={fi}
-                            href={`/api/purchase/${p.id}/download?format=${encodeURIComponent(f.format)}`}
-                            className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
-                            title={`${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} をダウンロード`}
+                            href={`/api/purchase/${p.id}/download`}
+                            className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/50 bg-green-400/10 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+                            title="全形式まとめてダウンロード（ZIP）"
                           >
-                            ↓ {f.format}
+                            ↓ 一括ダウンロード (ZIP)
                           </a>
-                        ))}
+                        )}
+                        {files.length > 1 && (
+                          <>
+                            <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-30 mx-1">
+                              個別
+                            </span>
+                            {files.map((f, fi) => (
+                              <a
+                                key={fi}
+                                href={`/api/purchase/${p.id}/download?format=${encodeURIComponent(f.format)}`}
+                                className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/30 text-green-400/80 px-2.5 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+                                title={`${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} を個別ダウンロード`}
+                              >
+                                ↓ {f.format}
+                              </a>
+                            ))}
+                          </>
+                        )}
                         <a
                           href={`/api/purchase/${p.id}/receipt`}
                           target="_blank"

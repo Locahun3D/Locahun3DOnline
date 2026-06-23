@@ -9,6 +9,8 @@ import {
   type Resolver,
   type Control,
   type UseFormRegister,
+  type UseFormSetValue,
+  type UseFormWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -19,6 +21,9 @@ import {
   PROPERTY_CATEGORIES,
   STUDIO_TYPE_SUGGESTIONS,
   TOKEN_COST_LABEL,
+  DATA_LICENSES,
+  DATA_LICENSE_LABEL,
+  DATA_LICENSE_DESC,
   type Property,
   type Asset,
 } from "@/lib/schemas";
@@ -989,7 +994,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], pointCount: 0, captureDevice: "" })}
+                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], pointCount: 0, captureDevice: "", license: "standard" as const })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1185,10 +1190,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             {/* ── ダウンロード用ファイル (PLY & OBJ ZIP) ── */}
                             <div className="border border-dashed border-accent/30 p-3 space-y-2">
                               <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent/70 mb-2">
-                                販売用ダウンロードファイル（PLY & OBJ ZIP）
+                                一括ダウンロードファイル（全形式まとめ ZIP）
                               </div>
                               <div className="text-[10px] text-muted mb-2">
-                                ※ ビューアー用3DGSファイルとは別。購入者がダウンロードするPLY＆OBJのZIPデータ。
+                                ※ ビューアー用3DGSファイルとは別。購入者が「一括ダウンロード」で取得する全形式入りZIP。
+                                個別形式は下の「マルチ形式」で追加（任意）。
                               </div>
                               {watch(`splatItems.${idx}.downloadFileUrl`) ? (
                                 <div className="flex items-center gap-3">
@@ -1238,7 +1244,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             </div>
 
                             {/* ── マルチ形式ダウンロード（TurboSquid風） ── */}
-                            <DownloadFilesEditor control={control} register={register} idx={idx} />
+                            <DownloadFilesEditor
+                              control={control}
+                              register={register}
+                              setValue={setValue}
+                              watch={watch}
+                              propertyId={initial.id}
+                              idx={idx}
+                            />
 
                             {/* ── 商品スペック ── */}
                             <div className="grid sm:grid-cols-2 gap-3">
@@ -1260,6 +1273,20 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                 />
                               </Field>
                             </div>
+
+                            {/* ── ライセンス ── */}
+                            <Field label="ライセンス区分" hint="購入者の利用範囲。商品ページ・領収書に表示されます。">
+                              <select
+                                {...register(`splatItems.${idx}.license`)}
+                                className={inputClass}
+                              >
+                                {DATA_LICENSES.map((l) => (
+                                  <option key={l} value={l} className="bg-bg">
+                                    {DATA_LICENSE_LABEL[l]} — {DATA_LICENSE_DESC[l]}
+                                  </option>
+                                ))}
+                              </select>
+                            </Field>
                           </div>
                         )}
 
@@ -1453,19 +1480,25 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 const inputClass =
   "w-full bg-white text-[#111] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono placeholder:text-[#999]";
 
-/** splatItem ごとのマルチ形式ダウンロード編集（ネスト配列）。 */
+/** splatItem ごとのマルチ形式ダウンロード編集（ネスト配列＋形式別アップロード）。 */
 function DownloadFilesEditor({
   control,
   register,
+  setValue,
+  watch,
+  propertyId,
   idx,
 }: {
   control: Control<Property>;
   register: UseFormRegister<Property>;
+  setValue: UseFormSetValue<Property>;
+  watch: UseFormWatch<Property>;
+  propertyId: string;
   idx: number;
 }) {
   const fa = useFieldArray({ control, name: `splatItems.${idx}.downloadFiles` });
   return (
-    <div className="border border-dashed border-accent/30 p-3 space-y-2">
+    <div className="border border-dashed border-accent/30 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent/70">
           マルチ形式ダウンロード（任意）
@@ -1479,36 +1512,76 @@ function DownloadFilesEditor({
         </button>
       </div>
       <p className="text-[10px] text-muted">
-        形式ごとに個別ダウンロードを提供（例: PLY / RAD / OBJ）。空欄なら上の単一ファイルを使用。
+        形式ごとに本物のファイルをアップロード（PLY / RAD / OBJ 等）。空欄なら上の単一ファイルを使用。
       </p>
-      {fa.fields.map((f, fi) => (
-        <div key={f.id} className="flex flex-wrap items-center gap-2">
-          <input
-            {...register(`splatItems.${idx}.downloadFiles.${fi}.format`)}
-            placeholder="形式 (PLY/RAD/OBJ)"
-            className={inputClass + " flex-1 min-w-[90px]"}
-          />
-          <input
-            {...register(`splatItems.${idx}.downloadFiles.${fi}.url`)}
-            placeholder="ダウンロードURL (https://...)"
-            className={inputClass + " flex-[3] min-w-[200px]"}
-          />
-          <input
-            type="number"
-            {...register(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`, { valueAsNumber: true })}
-            placeholder="MB"
-            className={inputClass + " w-20"}
-          />
-          <button
-            type="button"
-            onClick={() => fa.remove(fi)}
-            className="mono text-[12px] border border-line px-2 py-2 hover:border-red-400 hover:text-red-400 transition"
-            aria-label="削除"
-          >
-            ×
-          </button>
-        </div>
-      ))}
+      {fa.fields.map((f, fi) => {
+        const url = watch(`splatItems.${idx}.downloadFiles.${fi}.url`);
+        const size = watch(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`);
+        return (
+          <div key={f.id} className="border border-line p-2 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                {...register(`splatItems.${idx}.downloadFiles.${fi}.format`)}
+                placeholder="形式 (PLY / RAD / OBJ)"
+                className={inputClass + " flex-1 min-w-[110px]"}
+              />
+              <input
+                type="number"
+                {...register(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`, { valueAsNumber: true })}
+                placeholder="MB"
+                className={inputClass + " w-24"}
+              />
+              <button
+                type="button"
+                onClick={() => fa.remove(fi)}
+                className="mono text-[12px] border border-line px-2 py-2 hover:border-red-400 hover:text-red-400 transition"
+                aria-label="削除"
+              >
+                ×
+              </button>
+            </div>
+            {url ? (
+              <div className="flex items-center gap-2">
+                <span className="mono text-[18px] text-green-400">●</span>
+                <div className="flex-1 min-w-0">
+                  <div className="mono text-[10px] truncate">{url}</div>
+                  <div className="text-[10px] text-muted">{size || 0} MB</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValue(`splatItems.${idx}.downloadFiles.${fi}.url`, "", { shouldDirty: true });
+                    setValue(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`, 0, { shouldDirty: true });
+                  }}
+                  className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                >
+                  差し替え
+                </button>
+              </div>
+            ) : (
+              <FileDropzone
+                propertyId={propertyId}
+                kind="zip"
+                accept=".ply,.obj,.rad,.zip,.splat,.ksplat"
+                label="この形式のファイルをアップロード"
+                hint="PLY / RAD / OBJ など — 20 GB まで"
+                onUploaded={(file) => {
+                  setValue(
+                    `splatItems.${idx}.downloadFiles.${fi}.url`,
+                    new URL(file.url, window.location.origin).toString(),
+                    { shouldDirty: true, shouldValidate: true },
+                  );
+                  setValue(
+                    `splatItems.${idx}.downloadFiles.${fi}.sizeMb`,
+                    Math.max(1, Math.round(file.size / 1024 / 1024)),
+                    { shouldDirty: true },
+                  );
+                }}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

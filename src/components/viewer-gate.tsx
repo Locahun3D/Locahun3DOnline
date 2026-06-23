@@ -12,6 +12,7 @@ interface Props {
   tokenCost?: 1 | 2 | 3;
   hasSubscription?: boolean;
   freeAccess?: boolean;
+  signedIn?: boolean;
 }
 
 const SIZE_LABEL: Record<1 | 2 | 3, string> = {
@@ -29,6 +30,7 @@ export default function ViewerGate({
   tokenCost = 1,
   hasSubscription = false,
   freeAccess = false,
+  signedIn = false,
 }: Props) {
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
@@ -81,12 +83,15 @@ export default function ViewerGate({
             >
               プランを見る
             </Link>
-            <Link
-              href={`/sign-in?redirect=/properties/${propertyId}`}
-              className="px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line hover:border-ink transition"
-            >
-              既にメンバー Sign in
-            </Link>
+            {/* サインイン済みの非会員には Sign in を出さない（プラン加入へ誘導）。 */}
+            {!signedIn && (
+              <Link
+                href={`/sign-in?redirect=/properties/${propertyId}`}
+                className="px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line hover:border-ink transition"
+              >
+                既にメンバー Sign in
+              </Link>
+            )}
           </div>
         </div>
       </div>

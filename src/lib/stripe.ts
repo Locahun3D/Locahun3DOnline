@@ -62,3 +62,31 @@ export function appUrl(path = ""): string {
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   return `${base}${path}`;
 }
+
+/**
+ * 本番化チェック用の設定ステータス（値は返さず存在のみ）。
+ * 管理画面に表示し、何を投入すれば本番決済になるか可視化する。
+ */
+export function stripeConfigStatus() {
+  const sk = process.env.STRIPE_SECRET_KEY ?? "";
+  return {
+    enabled: !!sk,
+    live: sk.startsWith("sk_live_"),
+    test: sk.startsWith("sk_test_"),
+    secretKey: !!sk,
+    webhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+    appUrl: !!process.env.NEXT_PUBLIC_APP_URL,
+    publishableKey: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    prices: {
+      individual:
+        !!process.env.STRIPE_PRICE_INDIVIDUAL_MONTHLY ||
+        !!process.env.STRIPE_PRICE_INDIVIDUAL_ANNUAL,
+      studio:
+        !!process.env.STRIPE_PRICE_STUDIO_MONTHLY ||
+        !!process.env.STRIPE_PRICE_STUDIO_ANNUAL,
+      team:
+        !!process.env.STRIPE_PRICE_TEAM_MONTHLY ||
+        !!process.env.STRIPE_PRICE_TEAM_ANNUAL,
+    },
+  };
+}

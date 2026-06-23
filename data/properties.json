@@ -107,7 +107,8 @@
             }
           ],
           "pointCount": 12000000,
-          "captureDevice": "iPhone 15 Pro LiDAR + フォトグラメトリ"
+          "captureDevice": "iPhone 15 Pro LiDAR + フォトグラメトリ",
+          "license": "standard"
         },
         {
           "label": "2F",
@@ -140,7 +141,8 @@
             }
           ],
           "pointCount": 12000000,
-          "captureDevice": "iPhone 15 Pro LiDAR + フォトグラメトリ"
+          "captureDevice": "iPhone 15 Pro LiDAR + フォトグラメトリ",
+          "license": "extended"
         }
       ],
       "splatNotes": "",

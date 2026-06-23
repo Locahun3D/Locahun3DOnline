@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
+import { repo as propertyRepo } from "@/lib/store";
+import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC } from "@/lib/schemas";
 
 export const runtime = "nodejs";
 
@@ -25,6 +27,8 @@ function generateReceiptHtml(p: {
   createdAt: string;
   completedAt?: string;
   userEmail: string;
+  licenseLabel?: string;
+  licenseDesc?: string;
 }) {
   const date = fmtDate(p.completedAt || p.createdAt);
   const shortId = p.id.slice(0, 8).toUpperCase();
@@ -99,6 +103,12 @@ function generateReceiptHtml(p: {
 
   <p class="tax-note">※ 上記金額には消費税が含まれています。</p>
 
+  ${p.licenseLabel ? `<div style="margin-bottom: 24px; border: 1px solid #ddd; padding: 12px 16px;">
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.2em; opacity:0.4; margin-bottom:4px;">ライセンス</div>
+    <div style="font-size:13px; font-weight:700;">${p.licenseLabel}</div>
+    ${p.licenseDesc ? `<div style="font-size:11px; opacity:0.6; margin-top:4px;">${p.licenseDesc}</div>` : ""}
+  </div>` : ""}
+
   <div style="margin-bottom: 32px;">
     <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.2em; opacity:0.4; margin-bottom:8px;">購入者</div>
     <div class="mono" style="font-size:13px;">${p.userEmail}</div>
@@ -138,7 +148,14 @@ export async function GET(
     return NextResponse.json({ error: "未完了の購入です" }, { status: 400 });
   }
 
-  const html = generateReceiptHtml(purchase);
+  const property = await propertyRepo.get(purchase.propertyId);
+  const license = property?.splatItems[purchase.splatItemIndex]?.license ?? "standard";
+
+  const html = generateReceiptHtml({
+    ...purchase,
+    licenseLabel: DATA_LICENSE_LABEL[license],
+    licenseDesc: DATA_LICENSE_DESC[license],
+  });
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",

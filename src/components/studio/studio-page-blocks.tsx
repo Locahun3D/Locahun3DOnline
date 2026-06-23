@@ -15,17 +15,21 @@ export default function StudioPageBlocks({
   freeAccess = false,
   canViewRestricted = false,
   canViewNdaOnly = false,
+  hasViewerAccess = false,
+  signedIn = false,
 }: {
   blocks: PageBlock[];
   property: Property;
   freeAccess?: boolean;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
+  hasViewerAccess?: boolean;
+  signedIn?: boolean;
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} />
       ))}
     </div>
   );
@@ -37,12 +41,16 @@ function BlockView({
   freeAccess,
   canViewRestricted = false,
   canViewNdaOnly = false,
+  hasViewerAccess = false,
+  signedIn = false,
 }: {
   block: PageBlock;
   property: Property;
   freeAccess: boolean;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
+  hasViewerAccess?: boolean;
+  signedIn?: boolean;
 }) {
   switch (block.kind) {
     case "heading":
@@ -107,6 +115,8 @@ function BlockView({
               previewVideoUrl={item.previewVideoUrl}
               tokenCost={property.tokenCost}
               freeAccess={freeAccess}
+              hasSubscription={hasViewerAccess}
+              signedIn={signedIn}
             />
           ))}
           {block.caption && (

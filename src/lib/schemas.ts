@@ -35,6 +35,24 @@ export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
   nda_only: "NDA 限定（機密構造・リギング情報を含む）",
 };
 
+// 3Dデータ販売ライセンス（TurboSquid風）
+export const DATA_LICENSES = ["standard", "editorial", "extended", "custom"] as const;
+export type DataLicense = (typeof DATA_LICENSES)[number];
+
+export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
+  standard: "標準ライセンス",
+  editorial: "エディトリアル限定",
+  extended: "拡張ライセンス",
+  custom: "カスタム（要相談）",
+};
+
+export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
+  standard: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
+  editorial: "報道・教育・個人利用に限定。広告等の商用利用は不可。",
+  extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
+  custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
+};
+
 export const ANNOTATION_KINDS = [
   "event",
   "parking",
@@ -229,6 +247,8 @@ export const propertySchema = z.object({
     // 商品スペック（TurboSquid風）
     pointCount: z.number().min(0).max(99999999999).default(0),
     captureDevice: z.string().max(80).default(""),
+    // 販売ライセンス区分
+    license: z.enum(DATA_LICENSES).default("standard"),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z

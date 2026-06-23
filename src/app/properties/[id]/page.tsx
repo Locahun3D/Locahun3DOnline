@@ -51,11 +51,17 @@ export default async function PropertyDetailPage({
 
   let canViewRestrictedItems = false;
   let canViewNdaOnlyItems = false;
+  let hasViewerAccess = false;
+  let signedIn = false;
   const purchasedIndices: number[] = [];
   try {
     const user = await getCurrentUser();
+    signedIn = !!user;
     canViewRestrictedItems = canViewBackyard(user);
     canViewNdaOnlyItems = canViewNdaOnly(user);
+    // 管理者・有料サブスク会員はサインイン済みなら 3DGS を視聴可（paywall を出さない）。
+    hasViewerAccess =
+      !!user && (user.role === "admin" || (!!user.plan && user.plan !== "free"));
     if (user) {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
       for (const p of mine) {
@@ -79,6 +85,8 @@ export default async function PropertyDetailPage({
         canViewRestricted={canViewRestrictedItems}
         canViewNdaOnly={canViewNdaOnlyItems}
         purchasedIndices={purchasedIndices}
+        hasViewerAccess={hasViewerAccess}
+        signedIn={signedIn}
       />
     </>
   );
