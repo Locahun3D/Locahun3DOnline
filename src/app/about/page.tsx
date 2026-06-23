@@ -109,41 +109,6 @@ export default function AboutPage() {
           </Jp>
         </p>
       </section>
-
-      {/* Operator info */}
-      <section className="mt-24 max-w-[58ch] mx-auto text-center">
-        <div className="chapter-rule justify-center">
-          <span className="opacity-60">COMPANY</span>
-          <span>運営</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-        </div>
-
-        <dl className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-y-3 text-[13px] text-left max-w-[44ch] mx-auto">
-          <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-            運営者
-          </dt>
-          <dd>中村 航 (個人事業主、法人化準備中)</dd>
-          <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-            所在地
-          </dt>
-          <dd>東京都清瀬市</dd>
-          <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-            お問い合わせ
-          </dt>
-          <dd>
-            <a
-              href="mailto:contact@locahun3d.com"
-              className="text-accent hover:underline"
-            >
-              contact@locahun3d.com
-            </a>
-          </dd>
-        </dl>
-
-        <p className="mt-6 text-[11px] text-muted leading-[1.75]">
-          ご利用・契約・カスタム要望はお気軽にご連絡ください。
-        </p>
-      </section>
     </div>
   );
 }
