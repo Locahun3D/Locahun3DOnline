@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 
@@ -31,17 +30,11 @@ export default function ViewerGate({
   hasSubscription = false,
   freeAccess = false,
 }: Props) {
-  const [inlineOpen, setInlineOpen] = useState(false);
-  const [fullMode, setFullMode] = useState(false);
-
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
   const proxied = proxySplatUrl(splatUrl);
-  const previewUrl = buildViewerUrl(proxied, { orbit: true });
   const fullViewerUrl = buildViewerUrl(proxied);
-
-  const viewerUrl = fullMode ? fullViewerUrl : previewUrl;
 
   /* --- Paywall (no subscription) --- */
   if (!effectiveSubscription) {
@@ -114,78 +107,7 @@ export default function ViewerGate({
     }).catch(() => {});
   };
 
-  const activateFullMode = () => {
-    setFullMode(true);
-    trackOpen();
-  };
-
-  /* --- Inline viewer (expanded) --- */
-  if (inlineOpen) {
-    return (
-      <div className="relative border border-line overflow-hidden bg-[#0a0a0a]">
-        <div className="flex items-center gap-2 px-4 py-2 bg-[#111] border-b border-line">
-          <span className="mono text-[9px] tracking-[0.22em] uppercase text-muted">
-            {label} — {fullMode ? "操作中" : "プレビュー中 — クリックで操作開始"}
-          </span>
-          <div className="flex-1" />
-          {fullMode && (
-            <a
-              href={fullViewerUrl}
-              target="_blank"
-              rel="noopener"
-              className="px-3 py-1 mono text-[9px] tracking-[0.22em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition"
-            >
-              別タブで開く ↗
-            </a>
-          )}
-          <button
-            type="button"
-            onClick={() => { setInlineOpen(false); setFullMode(false); }}
-            className="px-3 py-1 mono text-[9px] tracking-[0.22em] uppercase border border-line text-muted hover:border-red-400 hover:text-red-400 transition"
-          >
-            閉じる ✕
-          </button>
-        </div>
-        <div className="relative">
-          {previewVideoUrl && !fullMode ? (
-            <video
-              ref={el => { if (el) el.play().catch(() => {}); }}
-              src={previewVideoUrl}
-              preload="auto"
-              className="w-full aspect-video object-cover"
-              autoPlay loop muted playsInline
-            />
-          ) : (
-            <iframe
-              key={fullMode ? "full" : "preview"}
-              src={viewerUrl}
-              className="w-full aspect-video"
-              allow="accelerometer; gyroscope; xr-spatial-tracking"
-              style={{ border: "none" }}
-            />
-          )}
-          {!fullMode && (
-            <button
-              type="button"
-              onClick={activateFullMode}
-              className="absolute inset-0 w-full h-full cursor-pointer group"
-              aria-label="ウォークスルーを開始"
-            >
-              <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 pointer-events-none">
-                <div className="px-5 py-2.5 bg-black/70 backdrop-blur-sm border border-accent/60 rounded mono text-[10px] tracking-[0.22em] uppercase text-accent group-hover:bg-accent group-hover:text-bg transition">
-                  {freeAccess
-                    ? "クリックして操作開始（無料）"
-                    : `クリックして操作開始（${tokenCost} トークン消費）`}
-                </div>
-              </div>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  /* --- Initial state: preview video loop background + CTA overlay --- */
+  /* --- Always open in new tab --- */
   return (
     <div className="relative aspect-video border border-line overflow-hidden bg-[#141414]">
       {previewVideoUrl ? (
@@ -216,27 +138,18 @@ export default function ViewerGate({
         </div>
 
         <p className="text-[11px] text-muted max-w-[44ch] leading-[1.75] mb-4">
-          ページ内プレビューまたは別タブで全画面
+          別タブで 3D ウォークスルーを開きます
         </p>
 
-        <div className="flex flex-wrap gap-3 justify-center">
-          <button
-            type="button"
-            onClick={() => { setInlineOpen(true); trackOpen(); }}
-            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition bg-black/50 backdrop-blur-sm"
-          >
-            この場でプレビュー ▶
-          </button>
-          <a
-            href={fullViewerUrl}
-            target="_blank"
-            rel="noopener"
-            onClick={() => { trackOpen(); }}
-            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line text-muted hover:border-ink hover:text-ink transition bg-black/50 backdrop-blur-sm"
-          >
-            別タブで全画面 ↗
-          </a>
-        </div>
+        <a
+          href={fullViewerUrl}
+          target="_blank"
+          rel="noopener"
+          onClick={() => { trackOpen(); }}
+          className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition bg-black/50 backdrop-blur-sm"
+        >
+          3Dビューアーを開く ↗
+        </a>
       </div>
     </div>
   );
