@@ -7,6 +7,8 @@ import {
   useFieldArray,
   type SubmitHandler,
   type Resolver,
+  type Control,
+  type UseFormRegister,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -1225,12 +1227,36 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                   }}
                                 />
                               )}
-                              <Field label="ファイル形式" hint="">
+                              <Field label="ファイル形式（単一・フォールバック用）" hint="">
                                 <input
                                   type="text"
                                   {...register(`splatItems.${idx}.downloadFileFormat`)}
                                   className={inputClass}
                                   placeholder="PLY & OBJ (ZIP)"
+                                />
+                              </Field>
+                            </div>
+
+                            {/* ── マルチ形式ダウンロード（TurboSquid風） ── */}
+                            <DownloadFilesEditor control={control} register={register} idx={idx} />
+
+                            {/* ── 商品スペック ── */}
+                            <div className="grid sm:grid-cols-2 gap-3">
+                              <Field label="点群数（スペック表示）" hint="例: 12000000">
+                                <input
+                                  type="number"
+                                  {...register(`splatItems.${idx}.pointCount`, { valueAsNumber: true })}
+                                  className={inputClass}
+                                  placeholder="0"
+                                  min={0}
+                                />
+                              </Field>
+                              <Field label="撮影機材" hint="例: iPhone 15 Pro LiDAR">
+                                <input
+                                  type="text"
+                                  {...register(`splatItems.${idx}.captureDevice`)}
+                                  className={inputClass}
+                                  placeholder="撮影機材・手法"
                                 />
                               </Field>
                             </div>
@@ -1426,6 +1452,66 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
 const inputClass =
   "w-full bg-white text-[#111] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono placeholder:text-[#999]";
+
+/** splatItem ごとのマルチ形式ダウンロード編集（ネスト配列）。 */
+function DownloadFilesEditor({
+  control,
+  register,
+  idx,
+}: {
+  control: Control<Property>;
+  register: UseFormRegister<Property>;
+  idx: number;
+}) {
+  const fa = useFieldArray({ control, name: `splatItems.${idx}.downloadFiles` });
+  return (
+    <div className="border border-dashed border-accent/30 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent/70">
+          マルチ形式ダウンロード（任意）
+        </div>
+        <button
+          type="button"
+          onClick={() => fa.append({ format: "", url: "", sizeMb: 0 })}
+          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-2 py-1 hover:border-accent hover:text-accent transition"
+        >
+          + 形式を追加
+        </button>
+      </div>
+      <p className="text-[10px] text-muted">
+        形式ごとに個別ダウンロードを提供（例: PLY / RAD / OBJ）。空欄なら上の単一ファイルを使用。
+      </p>
+      {fa.fields.map((f, fi) => (
+        <div key={f.id} className="flex flex-wrap items-center gap-2">
+          <input
+            {...register(`splatItems.${idx}.downloadFiles.${fi}.format`)}
+            placeholder="形式 (PLY/RAD/OBJ)"
+            className={inputClass + " flex-1 min-w-[90px]"}
+          />
+          <input
+            {...register(`splatItems.${idx}.downloadFiles.${fi}.url`)}
+            placeholder="ダウンロードURL (https://...)"
+            className={inputClass + " flex-[3] min-w-[200px]"}
+          />
+          <input
+            type="number"
+            {...register(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`, { valueAsNumber: true })}
+            placeholder="MB"
+            className={inputClass + " w-20"}
+          />
+          <button
+            type="button"
+            onClick={() => fa.remove(fi)}
+            className="mono text-[12px] border border-line px-2 py-2 hover:border-red-400 hover:text-red-400 transition"
+            aria-label="削除"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function Field({
   label,
