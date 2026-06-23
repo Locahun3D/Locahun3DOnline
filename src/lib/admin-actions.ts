@@ -6,6 +6,7 @@ import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
+import { notifyRefund } from "./email";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
@@ -145,7 +146,7 @@ export async function refundPurchaseAction(
     }
   }
 
-  await purchaseRepo.upsert({
+  const refunded = await purchaseRepo.upsert({
     ...p,
     status: "refunded",
     refundedAt: new Date().toISOString(),
@@ -153,5 +154,6 @@ export async function refundPurchaseAction(
   });
   const day = new Date().toISOString().slice(0, 10);
   await track(p.propertyId, "refund", "", day, "desktop", p.priceYen);
+  await notifyRefund(refunded);
   revalidatePath("/admin/purchases");
 }

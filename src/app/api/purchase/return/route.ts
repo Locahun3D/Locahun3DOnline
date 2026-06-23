@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { track } from "@/lib/analytics";
+import { notifyPurchase } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -43,12 +44,13 @@ export async function GET(req: Request) {
     for (const purchase of matched) {
       if (user && user.id !== purchase.userId) continue;
       if (purchase.status === "pending") {
-        await purchaseRepo.upsert({
+        const completed = await purchaseRepo.upsert({
           ...purchase,
           status: "completed",
           completedAt: now.toISOString(),
         });
         await track(purchase.propertyId, "purchase", "", day, "desktop", purchase.priceYen);
+        await notifyPurchase(completed);
       }
     }
 

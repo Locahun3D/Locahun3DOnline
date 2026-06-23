@@ -4,6 +4,7 @@ import { repo as propertyRepo } from "@/lib/store";
 import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
+import { notifyPurchase } from "@/lib/email";
 import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
 
   if (!stripeEnabled()) {
     const now = new Date();
-    await purchaseRepo.upsert({
+    const completed = await purchaseRepo.upsert({
       id: purchaseId,
       userId: user.id,
       userEmail: user.email,
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
       refundReason: "",
     });
     await track(propertyId, "purchase", "", now.toISOString().slice(0, 10), "desktop", price);
+    await notifyPurchase(completed);
     return NextResponse.json({ ok: true, purchaseId });
   }
 

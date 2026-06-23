@@ -1,4 +1,5 @@
 import { stripeConfigStatus } from "@/lib/stripe";
+import { emailEnabled } from "@/lib/email";
 
 function Row({ ok, label, detail }: { ok: boolean; label: string; detail?: string }) {
   return (
@@ -18,6 +19,7 @@ function Row({ ok, label, detail }: { ok: boolean; label: string; detail?: strin
  */
 export default function StripeSetupPanel() {
   const s = stripeConfigStatus();
+  const mail = emailEnabled();
   const dataSaleReady = s.secretKey; // データ販売は戻りルートで確定するため最低限SECRET_KEYでOK
 
   return (
@@ -52,6 +54,20 @@ export default function StripeSetupPanel() {
           <Row ok={s.prices.individual} label="STRIPE_PRICE_INDIVIDUAL_(MONTHLY/ANNUAL)" />
           <Row ok={s.prices.studio} label="STRIPE_PRICE_STUDIO_(MONTHLY/ANNUAL)" />
           <Row ok={s.prices.team} label="STRIPE_PRICE_TEAM_(MONTHLY/ANNUAL)" />
+        </div>
+
+        <div className="space-y-1.5 border-t border-line pt-3">
+          <div className="mono text-[10px] tracking-[0.24em] uppercase opacity-40 mb-1">
+            メール通知（購入・返金・領収書を登録メールへ送信）
+          </div>
+          <Row ok={mail} label="RESEND_API_KEY" detail={mail ? "送信ON" : "未設定=送信スキップ"} />
+          <Row ok={!!process.env.EMAIL_FROM} label="EMAIL_FROM（送信元・任意）" detail="noreply@locahun3d.com" />
+          <div className="text-[11px] text-muted mt-1">
+            {mail
+              ? "→ 購入・返金時に登録メールへ自動送信されます。"
+              : "→ Resendの送信ドメイン認証＋APIキー投入で、購入/返金/領収書メールが届きます。"}
+            <pre className="mt-1 bg-[#0a0a0a] border border-line p-2 mono text-[10px] overflow-x-auto whitespace-pre">{`npx wrangler secret put RESEND_API_KEY`}</pre>
+          </div>
         </div>
 
         <div className="border-t border-line pt-3">
