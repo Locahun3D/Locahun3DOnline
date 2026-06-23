@@ -58,6 +58,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [previewZip, setPreviewZip] = useState(false);
   const [previewSplat, setPreviewSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
+  const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const capture = usePreviewCapture();
 
   const form = useForm<Property>({
@@ -525,6 +526,63 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   onAdd={(v) => tagsArray.append(v as never)}
                   onRemove={(i) => tagsArray.remove(i)}
                 />
+                <button
+                  type="button"
+                  disabled={aiTagsLoading}
+                  onClick={async () => {
+                    setAiTagsLoading(true);
+                    try {
+                      const d = getValues();
+                      const res = await fetch("/api/admin/suggest-tags", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          title: d.title,
+                          category: d.category,
+                          studioType: d.studioType,
+                          prefecture: d.prefecture,
+                          city: d.city,
+                          area: d.area,
+                          contactWebsite: d.contactWebsite,
+                          description: d.description,
+                          capacity: d.capacity,
+                          floorAreaSqm: d.floorAreaSqm,
+                          ceilingHeightM: d.ceilingHeightM,
+                          hasNaturalLight: d.hasNaturalLight,
+                          parking: d.parking,
+                          loadingDock: d.loadingDock,
+                          powerVoltage: d.powerVoltage,
+                          existingTags: Array.isArray(d.tags) ? d.tags : [],
+                        }),
+                      });
+                      const data = (await res.json()) as {
+                        tags?: string[];
+                        error?: string;
+                      };
+                      if (!res.ok || !data.tags) {
+                        alert(data.error || "タグ生成に失敗しました");
+                        return;
+                      }
+                      const existing = new Set(
+                        (Array.isArray(d.tags) ? d.tags : []).map((t) => String(t).trim()),
+                      );
+                      const fresh = data.tags.filter((t) => t && !existing.has(t));
+                      if (!fresh.length) {
+                        alert("追加できる新しいタグが見つかりませんでした");
+                        return;
+                      }
+                      for (const t of fresh) tagsArray.append(t as never);
+                      triggerAutoSave();
+                    } catch {
+                      alert("通信エラーが発生しました");
+                    } finally {
+                      setAiTagsLoading(false);
+                    }
+                  }}
+                  className="mt-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
+                >
+                  {aiTagsLoading ? "検索中…" : "✦ AIでタグ自動生成（ネット検索）"}
+                </button>
               </Field>
 
               {/* ── 図面 / フロアプラン ── */}

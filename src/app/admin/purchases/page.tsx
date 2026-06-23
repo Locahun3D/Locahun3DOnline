@@ -2,6 +2,7 @@ import Link from "next/link";
 import { purchaseRepo } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { refundPurchaseAction } from "@/lib/admin-actions";
+import RefundButton from "@/components/admin/refund-button";
 
 export const metadata = { title: "データ販売" };
 
@@ -265,15 +266,7 @@ export default async function PurchasesPage({
                             placeholder="返金理由"
                             className="w-24 bg-bg border border-line text-[10px] px-2 py-1 text-ink"
                           />
-                          <button
-                            type="submit"
-                            className="mono text-[10px] uppercase border border-purple-400/40 text-purple-400/80 px-2 py-1 hover:bg-purple-400 hover:text-bg transition"
-                            onClick={(e) => {
-                              if (!confirm("この購入を返金しますか？")) e.preventDefault();
-                            }}
-                          >
-                            返金
-                          </button>
+                          <RefundButton />
                         </form>
                       )}
                       {p.status === "refunded" && (
