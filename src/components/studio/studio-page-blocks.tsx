@@ -14,16 +14,18 @@ export default function StudioPageBlocks({
   property,
   freeAccess = false,
   canViewRestricted = false,
+  canViewNdaOnly = false,
 }: {
   blocks: PageBlock[];
   property: Property;
   freeAccess?: boolean;
   canViewRestricted?: boolean;
+  canViewNdaOnly?: boolean;
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} />
       ))}
     </div>
   );
@@ -34,11 +36,13 @@ function BlockView({
   property,
   freeAccess,
   canViewRestricted = false,
+  canViewNdaOnly = false,
 }: {
   block: PageBlock;
   property: Property;
   freeAccess: boolean;
   canViewRestricted?: boolean;
+  canViewNdaOnly?: boolean;
 }) {
   switch (block.kind) {
     case "heading":
@@ -95,6 +99,7 @@ function BlockView({
             freeAccess={freeAccess}
             splatItems={property.splatItems}
             canViewRestricted={canViewRestricted}
+            canViewNdaOnly={canViewNdaOnly}
           />
           {block.caption && (
             <div className="mono text-[10px] tracking-[0.18em] text-muted mt-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface DataSalePanelProps {
   propertyId: string;
@@ -14,6 +15,8 @@ interface DataSalePanelProps {
   zipSizeMb: number;
   splatItemCount: number;
   tokenCost: 1 | 2 | 3;
+  downloadFileFormat?: string;
+  downloadFileSizeMb?: number;
 }
 
 const TOKEN_LABEL: Record<1 | 2 | 3, string> = {
@@ -34,10 +37,17 @@ export default function DataSalePanel({
   zipSizeMb,
   splatItemCount,
   tokenCost,
+  downloadFileFormat,
+  downloadFileSizeMb,
 }: DataSalePanelProps) {
   const [loading, setLoading] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
 
   const handlePurchase = async () => {
+    if (!agreedTerms) {
+      alert("購入規約に同意してください");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/purchase", {
@@ -63,6 +73,9 @@ export default function DataSalePanel({
   const fmt = (n: number) =>
     n.toLocaleString("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
 
+  const dlFormat = downloadFileFormat || "PLY & OBJ (ZIP)";
+  const dlSize = downloadFileSizeMb ?? 0;
+
   return (
     <section className="mb-16">
       <div className="chapter-rule">
@@ -77,7 +90,7 @@ export default function DataSalePanel({
           {/* Left: info */}
           <div className="space-y-5">
             <h3 className="serif text-lg tracking-wider">
-              3DGSデータ購入{itemLabel && ` — ${itemLabel}`}
+              3Dデータ購入{itemLabel && ` — ${itemLabel}`}
             </h3>
 
             {description && (
@@ -86,7 +99,7 @@ export default function DataSalePanel({
               </p>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px] mono tracking-[0.14em] uppercase">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-[11px] mono tracking-[0.14em] uppercase">
               {scannedAt && (
                 <div>
                   <div className="opacity-40 mb-1">SCANNED</div>
@@ -97,16 +110,20 @@ export default function DataSalePanel({
                 <div className="opacity-40 mb-1">SCALE</div>
                 <div>{TOKEN_LABEL[tokenCost]}</div>
               </div>
+              <div>
+                <div className="opacity-40 mb-1">FORMAT</div>
+                <div>{dlFormat}</div>
+              </div>
+              {dlSize > 0 && (
+                <div>
+                  <div className="opacity-40 mb-1">DL SIZE</div>
+                  <div>{dlSize} MB</div>
+                </div>
+              )}
               {splatItemCount > 0 && (
                 <div>
                   <div className="opacity-40 mb-1">ITEMS</div>
                   <div>{splatItemCount} ファイル</div>
-                </div>
-              )}
-              {(splatSizeMb > 0 || zipSizeMb > 0) && (
-                <div>
-                  <div className="opacity-40 mb-1">SIZE</div>
-                  <div>{zipSizeMb > 0 ? `${zipSizeMb} MB (ZIP)` : `${splatSizeMb} MB`}</div>
                 </div>
               )}
             </div>
@@ -125,9 +142,26 @@ export default function DataSalePanel({
                 税込
               </div>
             </div>
+
+            {/* Terms agreement */}
+            <label className="flex items-start gap-2 cursor-pointer text-[10px] opacity-70">
+              <input
+                type="checkbox"
+                checked={agreedTerms}
+                onChange={(e) => setAgreedTerms(e.target.checked)}
+                className="w-4 h-4 accent-accent mt-0.5 shrink-0"
+              />
+              <span>
+                <Link href="/terms/data-download" target="_blank" className="underline hover:text-accent transition">
+                  3Dデータ購入規約
+                </Link>
+                に同意する
+              </span>
+            </label>
+
             <button
               onClick={handlePurchase}
-              disabled={loading}
+              disabled={loading || !agreedTerms}
               className="w-full px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
             >
               {loading ? "処理中..." : "購入する"}

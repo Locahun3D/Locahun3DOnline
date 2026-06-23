@@ -126,13 +126,24 @@ export function canViewConfidential(u: PublicUser | null): boolean {
 }
 
 /**
- * Whether this user can view restricted/backyard 3DGS files.
+ * Whether this user can view restricted 3DGS files (バックヤード/搬入口/バックステージ等).
  * Requires: production account + active status + Team plan.
  */
 export function canViewBackyard(u: PublicUser | null): boolean {
   if (!u || u.status !== "active") return false;
   if (u.role === "admin") return true;
   return u.role === "production" && u.plan === "team";
+}
+
+/**
+ * Whether this user can view NDA-only 3DGS files
+ * (ドーム詳細構造・天井リギング・ライブ会場機密エリア等).
+ * Requires: production account + Team plan + NDA accepted.
+ */
+export function canViewNdaOnly(u: PublicUser | null): boolean {
+  if (!u || u.status !== "active") return false;
+  if (u.role === "admin") return true;
+  return u.role === "production" && u.plan === "team" && !!u.ndaAcceptedAt;
 }
 
 /** Captured on the /onboarding step after Clerk sign-up. */

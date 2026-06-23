@@ -6,6 +6,7 @@ export const PROPERTY_CATEGORIES = [
   "house",
   "shop",
   "outdoor",
+  "venue",
 ] as const;
 
 export const PROPERTY_STATUSES = ["draft", "published", "archived"] as const;
@@ -21,14 +22,17 @@ export const PROPERTY_VISIBILITIES = ["public", "confidential"] as const;
 /**
  * Per-splatItem access level:
  *   public     — anyone with a subscription can view this 3DGS file
- *   restricted — only production accounts with Team plan can view (バックヤード)
+ *   restricted — only production accounts with Team plan can view
+ *                (バックヤード・搬入口・制御室・ライブ会場バックステージ・ドーム機材エリア等)
+ *   nda_only   — NDA 締結済み制作会社のみ（ドーム/アリーナの詳細構造・天井リギング等）
  */
-export const SPLAT_ACCESS_LEVELS = ["public", "restricted"] as const;
+export const SPLAT_ACCESS_LEVELS = ["public", "restricted", "nda_only"] as const;
 export type SplatAccessLevel = (typeof SPLAT_ACCESS_LEVELS)[number];
 
 export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
   public: "制限なし（一般公開）",
   restricted: "制限あり（制作会社 Team プラン限定）",
+  nda_only: "NDA 限定（機密構造・リギング情報を含む）",
 };
 
 export const ANNOTATION_KINDS = [
@@ -211,6 +215,10 @@ export const propertySchema = z.object({
     salePrice: z.number().int().min(0).max(99999999).default(0),
     saleDescription: z.string().max(1000).default(""),
     accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
+    // 販売用ダウンロードファイル（PLY & OBJ の ZIP）— ビューアー用 splatUrl とは別
+    downloadFileUrl: z.string().url().or(z.literal("")).default(""),
+    downloadFileSizeMb: z.number().min(0).max(99999).default(0),
+    downloadFileFormat: z.string().max(40).default("PLY & OBJ (ZIP)"),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z
@@ -281,6 +289,7 @@ export const CATEGORY_LABEL: Record<PropertyCategory, string> = {
   house: "住宅",
   shop: "店舗",
   outdoor: "屋外",
+  venue: "会場 / ドーム",
 };
 
 export const STATUS_LABEL: Record<PropertyStatus, string> = {
@@ -315,6 +324,10 @@ export const STUDIO_TYPE_SUGGESTIONS = [
   "カフェ / レストラン",
   "屋外 / ロケ地",
   "工場",
+  "ライブ会場 / ホール",
+  "ドーム / アリーナ",
+  "コンベンションセンター",
+  "劇場 / シアター",
   "その他",
 ] as const;
 

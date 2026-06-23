@@ -7,6 +7,7 @@ export const purchaseStatusSchema = z.enum([
   "pending",
   "completed",
   "cancelled",
+  "refunded",
 ]);
 
 export const purchaseSchema = z.object({
@@ -22,6 +23,8 @@ export const purchaseSchema = z.object({
   stripeSessionId: z.string().default(""),
   createdAt: z.string().default(() => new Date().toISOString()),
   completedAt: z.string().optional(),
+  refundedAt: z.string().optional(),
+  refundReason: z.string().max(500).default(""),
 });
 
 export type Purchase = z.infer<typeof purchaseSchema>;

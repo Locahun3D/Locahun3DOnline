@@ -9,7 +9,7 @@ interface SplatItem {
   previewVideoUrl?: string;
   sizeMb: number;
   notes: string;
-  accessLevel?: "public" | "restricted";
+  accessLevel?: "public" | "restricted" | "nda_only";
 }
 
 interface Props {
@@ -25,6 +25,8 @@ interface Props {
   splatItems?: SplatItem[];
   /** Whether the current user can view restricted/backyard items. */
   canViewRestricted?: boolean;
+  /** Whether the current user can view NDA-only items (dome structures, rigging etc.). */
+  canViewNdaOnly?: boolean;
 }
 
 const SIZE_LABEL: Record<1 | 2 | 3, string> = {
@@ -50,6 +52,7 @@ export default function ViewerGate({
   freeAccess = false,
   splatItems = [],
   canViewRestricted = false,
+  canViewNdaOnly = false,
 }: Props) {
   const [openedAt, setOpenedAt] = useState<number | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -59,6 +62,7 @@ export default function ViewerGate({
   const items = splatItems.filter(it => {
     if (!it.splatUrl) return false;
     if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+    if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
     return true;
   });
   const hasMultiple = items.length > 0;

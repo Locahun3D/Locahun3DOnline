@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
+import { purchaseRepo } from "./purchases";
+import { track } from "./analytics";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
@@ -111,4 +113,24 @@ export async function bulkDeleteAccountsAction(ids: string[]) {
   }
   revalidatePath("/admin/accounts");
   return { ok: true as const };
+}
+
+/** 購入を返金処理する。 */
+export async function refundPurchaseAction(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const reason = String(formData.get("reason") ?? "");
+  const p = await purchaseRepo.get(id);
+  if (!p || p.status !== "completed") return;
+  await purchaseRepo.upsert({
+    ...p,
+    status: "refunded",
+    refundedAt: new Date().toISOString(),
+    refundReason: reason,
+  });
+  const day = new Date().toISOString().slice(0, 10);
+  await track(p.propertyId, "refund", "", day, "desktop", p.priceYen);
+  revalidatePath("/admin/purchases");
 }

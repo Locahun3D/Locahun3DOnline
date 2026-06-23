@@ -928,7 +928,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const })}
+                    onClick={() => splatItemsArray.append({ label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1120,17 +1120,73 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                 placeholder="例: 高精細3DGSデータ。商用利用可。"
                               />
                             </Field>
+
+                            {/* ── ダウンロード用ファイル (PLY & OBJ ZIP) ── */}
+                            <div className="border border-dashed border-accent/30 p-3 space-y-2">
+                              <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent/70 mb-2">
+                                販売用ダウンロードファイル（PLY & OBJ ZIP）
+                              </div>
+                              <div className="text-[10px] text-muted mb-2">
+                                ※ ビューアー用3DGSファイルとは別。購入者がダウンロードするPLY＆OBJのZIPデータ。
+                              </div>
+                              {watch(`splatItems.${idx}.downloadFileUrl`) ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="mono text-[18px] text-green-400">●</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] mono truncate">
+                                      {watch(`splatItems.${idx}.downloadFileUrl`)}
+                                    </div>
+                                    <div className="text-[10px] text-muted mt-0.5">
+                                      {watch(`splatItems.${idx}.downloadFileSizeMb`)} MB ・ {watch(`splatItems.${idx}.downloadFileFormat`) || "PLY & OBJ (ZIP)"}
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setValue(`splatItems.${idx}.downloadFileUrl`, "", { shouldDirty: true });
+                                      setValue(`splatItems.${idx}.downloadFileSizeMb`, 0, { shouldDirty: true });
+                                    }}
+                                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                                  >
+                                    差し替え
+                                  </button>
+                                </div>
+                              ) : (
+                                <FileDropzone
+                                  propertyId={initial.id}
+                                  kind="zip"
+                                  accept=".zip,.ply,.obj"
+                                  label="PLY & OBJ ZIP ファイル (.zip / .ply / .obj)"
+                                  hint="販売用ダウンロードデータ — 20 GB まで"
+                                  onUploaded={(f) => {
+                                    const uploadedUrl = new URL(f.url, window.location.origin).toString();
+                                    setValue(`splatItems.${idx}.downloadFileUrl`, uploadedUrl, { shouldDirty: true, shouldValidate: true });
+                                    setValue(`splatItems.${idx}.downloadFileSizeMb`, Math.max(1, Math.round(f.size / 1024 / 1024)), { shouldDirty: true });
+                                    triggerAutoSave();
+                                  }}
+                                />
+                              )}
+                              <Field label="ファイル形式" hint="">
+                                <input
+                                  type="text"
+                                  {...register(`splatItems.${idx}.downloadFileFormat`)}
+                                  className={inputClass}
+                                  placeholder="PLY & OBJ (ZIP)"
+                                />
+                              </Field>
+                            </div>
                           </div>
                         )}
 
                         {/* ── 閲覧権限 ── */}
-                        <Field label="閲覧権限" hint="バックヤード情報は制作会社Teamプラン限定に設定">
+                        <Field label="閲覧権限" hint="バックヤード・バックステージは制限あり、ドーム天井構造・リギング等はNDA限定に設定">
                           <select
                             {...register(`splatItems.${idx}.accessLevel`)}
                             className={inputClass}
                           >
                             <option value="public">制限なし（一般公開）</option>
                             <option value="restricted">制限あり（制作会社 Team プラン限定）</option>
+                            <option value="nda_only">NDA 限定（機密構造・リギング情報を含む）</option>
                           </select>
                         </Field>
                       </div>

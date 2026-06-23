@@ -23,6 +23,7 @@ export default function PropertyDetailView({
   preview = false,
   freeAccess = false,
   canViewRestricted = false,
+  canViewNdaOnly = false,
 }: {
   property: Property;
   others: Property[];
@@ -31,6 +32,8 @@ export default function PropertyDetailView({
   freeAccess?: boolean;
   /** Whether the current user can view restricted/backyard 3DGS files. */
   canViewRestricted?: boolean;
+  /** Whether the current user can view NDA-only 3DGS files. */
+  canViewNdaOnly?: boolean;
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
@@ -268,14 +271,14 @@ export default function PropertyDetailView({
       {property.pageBlocks && property.pageBlocks.length > 0 ? (
         /* Custom page composed in the studio page builder */
         <section className="mb-16">
-          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} />
+          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} />
         </section>
       ) : (
         <>
           {/* Data Sale Panels (per splatItem) */}
           {property.splatItems.map((item, idx) =>
             item.forSale && item.salePrice > 0 &&
-            (item.accessLevel !== "restricted" || canViewRestricted) ? (
+            (item.accessLevel === "public" || (item.accessLevel === "restricted" && canViewRestricted) || (item.accessLevel === "nda_only" && canViewNdaOnly)) ? (
               <DataSalePanel
                 key={idx}
                 propertyId={property.id}
@@ -289,6 +292,8 @@ export default function PropertyDetailView({
                 zipSizeMb={property.zipSizeMb}
                 splatItemCount={property.splatItems.length}
                 tokenCost={property.tokenCost}
+                downloadFileFormat={item.downloadFileFormat}
+                downloadFileSizeMb={item.downloadFileSizeMb}
               />
             ) : null,
           )}
@@ -308,6 +313,7 @@ export default function PropertyDetailView({
               freeAccess={freeAccess}
               splatItems={property.splatItems}
               canViewRestricted={canViewRestricted}
+              canViewNdaOnly={canViewNdaOnly}
             />
           </section>
 

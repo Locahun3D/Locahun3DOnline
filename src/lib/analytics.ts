@@ -11,15 +11,18 @@ import _analyticsFallback from "../../data/analytics.json";
 
 const FILE = path.join(process.cwd(), "data", "analytics.json");
 
-export type TrackType = "view" | "viewer_open";
+export type TrackType = "view" | "viewer_open" | "purchase" | "refund";
 
 export type DeviceKind = "mobile" | "tablet" | "desktop";
 
 export interface PropStats {
   views: number;
   opens: number;
-  /** day(YYYY-MM-DD) -> { v: views, o: opens } */
-  daily: Record<string, { v: number; o: number }>;
+  purchases: number;
+  refunds: number;
+  revenue: number;
+  /** day(YYYY-MM-DD) -> { v: views, o: opens, p: purchases, r: refunds, rev: revenue } */
+  daily: Record<string, { v: number; o: number; p?: number; r?: number; rev?: number }>;
   /** referrer source -> count (views only) */
   referrers: Record<string, number>;
   /** device kind -> count (views + opens) */
@@ -98,19 +101,27 @@ export async function track(
   referrer: string,
   day: string,
   device: DeviceKind = "desktop",
+  amountYen: number = 0,
 ): Promise<void> {
   const s = await read();
   const p: PropStats =
     s.properties[propertyId] ??
-    ({ views: 0, opens: 0, daily: {}, referrers: {}, devices: {}, lastAt: "" } as PropStats);
+    ({ views: 0, opens: 0, purchases: 0, refunds: 0, revenue: 0, daily: {}, referrers: {}, devices: {}, lastAt: "" } as PropStats);
   if (!p.devices) p.devices = {};
+  if (!p.purchases) p.purchases = 0;
+  if (!p.refunds) p.refunds = 0;
+  if (!p.revenue) p.revenue = 0;
 
   if (type === "view") p.views += 1;
-  else p.opens += 1;
+  else if (type === "viewer_open") p.opens += 1;
+  else if (type === "purchase") { p.purchases += 1; p.revenue += amountYen; }
+  else if (type === "refund") { p.refunds += 1; p.revenue -= amountYen; }
 
   const d = p.daily[day] ?? { v: 0, o: 0 };
   if (type === "view") d.v += 1;
-  else d.o += 1;
+  else if (type === "viewer_open") d.o += 1;
+  else if (type === "purchase") { d.p = (d.p ?? 0) + 1; d.rev = (d.rev ?? 0) + amountYen; }
+  else if (type === "refund") { d.r = (d.r ?? 0) + 1; d.rev = (d.rev ?? 0) - amountYen; }
   p.daily[day] = d;
 
   if (type === "view") {
@@ -118,7 +129,9 @@ export async function track(
     p.referrers[src] = (p.referrers[src] ?? 0) + 1;
   }
 
-  p.devices[device] = (p.devices[device] ?? 0) + 1;
+  if (type === "view" || type === "viewer_open") {
+    p.devices[device] = (p.devices[device] ?? 0) + 1;
+  }
 
   p.lastAt = new Date().toISOString();
   s.properties[propertyId] = p;

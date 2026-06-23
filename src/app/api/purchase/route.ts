@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { repo as propertyRepo } from "@/lib/store";
 import { purchaseRepo } from "@/lib/purchases";
+import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe, appUrl } from "@/lib/stripe";
 import { randomUUID } from "node:crypto";
 
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
   const price = item.salePrice;
 
   if (!stripeEnabled()) {
+    const now = new Date();
     await purchaseRepo.upsert({
       id: purchaseId,
       userId: user.id,
@@ -50,9 +52,11 @@ export async function POST(req: Request) {
       priceYen: price,
       status: "completed",
       stripeSessionId: "",
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
+      completedAt: now.toISOString(),
+      refundReason: "",
     });
+    await track(propertyId, "purchase", "", now.toISOString().slice(0, 10), "desktop", price);
     return NextResponse.json({ ok: true, purchaseId });
   }
 
@@ -99,6 +103,7 @@ export async function POST(req: Request) {
     status: "pending",
     stripeSessionId: session.id,
     createdAt: new Date().toISOString(),
+    refundReason: "",
   });
 
   return NextResponse.json({ url: session.url });

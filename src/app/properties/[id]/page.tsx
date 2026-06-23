@@ -5,7 +5,7 @@ import {
   getPublishedPropertyIds,
 } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
-import { canViewBackyard } from "@/lib/account-schema";
+import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
 import { getSettings } from "@/lib/site-settings";
@@ -47,9 +47,11 @@ export default async function PropertyDetailPage({
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
   let canViewRestrictedItems = false;
+  let canViewNdaOnlyItems = false;
   try {
     const user = await getCurrentUser();
     canViewRestrictedItems = canViewBackyard(user);
+    canViewNdaOnlyItems = canViewNdaOnly(user);
   } catch {
     // No auth context (build time) — treat as no access
   }
@@ -62,6 +64,7 @@ export default async function PropertyDetailPage({
         others={others}
         freeAccess={freeAccess}
         canViewRestricted={canViewRestrictedItems}
+        canViewNdaOnly={canViewNdaOnlyItems}
       />
     </>
   );
