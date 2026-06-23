@@ -298,24 +298,31 @@ export default function PropertyDetailView({
             ) : null,
           )}
 
-          {/* 3DGS Viewer (paywalled) */}
-          <section className="mb-16">
-            <div className="chapter-rule">
-              <span className="opacity-60">3DGS</span>
-              <span>Virtual Walkthrough</span>
-              <span className="flex-1 h-px bg-current opacity-25" />
-              <span className="opacity-60">{property.splatSizeMb} MB</span>
-            </div>
-            <ViewerGate
-              splatUrl={property.splatUrl}
-              propertyId={property.id}
-              tokenCost={property.tokenCost}
-              freeAccess={freeAccess}
-              splatItems={property.splatItems}
-              canViewRestricted={canViewRestricted}
-              canViewNdaOnly={canViewNdaOnly}
-            />
-          </section>
+          {/* 3DGS Viewer — per splatItem */}
+          {property.splatItems.filter(it => {
+            if (!it.splatUrl) return false;
+            if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+            if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
+            return true;
+          }).map((item, idx) => (
+            <section key={idx} className="mb-16">
+              <div className="chapter-rule">
+                <span className="opacity-60">3DGS</span>
+                <span>{item.label || `Virtual Walkthrough`}</span>
+                <span className="flex-1 h-px bg-current opacity-25" />
+                <span className="opacity-60">{item.sizeMb} MB</span>
+              </div>
+              <ViewerGate
+                splatUrl={item.splatUrl}
+                propertyId={property.id}
+                label={item.label || `#${idx + 1}`}
+                sizeMb={item.sizeMb}
+                previewVideoUrl={item.previewVideoUrl}
+                tokenCost={property.tokenCost}
+                freeAccess={freeAccess}
+              />
+            </section>
+          ))}
 
           {/* Image Gallery */}
           <section className="mb-16">

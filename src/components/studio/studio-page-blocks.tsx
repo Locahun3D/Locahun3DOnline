@@ -91,16 +91,24 @@ function BlockView({
 
     case "splat":
       return (
-        <div>
-          <ViewerGate
-            splatUrl={property.splatUrl}
-            propertyId={property.id}
-            tokenCost={property.tokenCost}
-            freeAccess={freeAccess}
-            splatItems={property.splatItems}
-            canViewRestricted={canViewRestricted}
-            canViewNdaOnly={canViewNdaOnly}
-          />
+        <div className="space-y-10">
+          {property.splatItems.filter(it => {
+            if (!it.splatUrl) return false;
+            if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+            if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
+            return true;
+          }).map((item, idx) => (
+            <ViewerGate
+              key={idx}
+              splatUrl={item.splatUrl}
+              propertyId={property.id}
+              label={item.label || `#${idx + 1}`}
+              sizeMb={item.sizeMb}
+              previewVideoUrl={item.previewVideoUrl}
+              tokenCost={property.tokenCost}
+              freeAccess={freeAccess}
+            />
+          ))}
           {block.caption && (
             <div className="mono text-[10px] tracking-[0.18em] text-muted mt-2">
               {block.caption}

@@ -3,30 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 
-interface SplatItem {
-  label: string;
-  splatUrl: string;
-  previewVideoUrl?: string;
-  sizeMb: number;
-  notes: string;
-  accessLevel?: "public" | "restricted" | "nda_only";
-}
-
 interface Props {
   splatUrl: string;
   propertyId: string;
-  /** Token consumed per single walkthrough open. 1 = house, 2 = medium, 3 = dome. */
+  label: string;
+  sizeMb: number;
+  previewVideoUrl?: string;
   tokenCost?: 1 | 2 | 3;
-  /** TODO: replace with real subscription check via Clerk publicMetadata */
   hasSubscription?: boolean;
-  /** 限定無料期間中: トークン消費なしで全データを閲覧可能。 */
   freeAccess?: boolean;
-  /** 個別3DGSデータ（フロア・区画別） */
-  splatItems?: SplatItem[];
-  /** Whether the current user can view restricted/backyard items. */
-  canViewRestricted?: boolean;
-  /** Whether the current user can view NDA-only items (dome structures, rigging etc.). */
-  canViewNdaOnly?: boolean;
 }
 
 const SIZE_LABEL: Record<1 | 2 | 3, string> = {
@@ -35,47 +20,25 @@ const SIZE_LABEL: Record<1 | 2 | 3, string> = {
   3: "ドーム / 大規模",
 };
 
-/**
- * Gate the 3DGS walkthrough viewer.
- *
- * On click, the offline viewer (public/viewer/offline-viewer.html) is opened
- * in a new tab with the splat URL passed via `?autoload=`. The browser tab
- * itself becomes the fullscreen viewer surface — no embedded iframe in the
- * property detail page. This keeps the parent page interactive (gallery,
- * filters, etc.) while the heavy WebGL workload runs in its own process.
- */
 export default function ViewerGate({
   splatUrl,
   propertyId,
+  label,
+  sizeMb,
+  previewVideoUrl,
   tokenCost = 1,
   hasSubscription = false,
   freeAccess = false,
-  splatItems = [],
-  canViewRestricted = false,
-  canViewNdaOnly = false,
 }: Props) {
-  const [openedAt, setOpenedAt] = useState<number | null>(null);
-  const [selectedIdx, setSelectedIdx] = useState(0);
   const [inlineOpen, setInlineOpen] = useState(false);
   const [fullMode, setFullMode] = useState(false);
 
-  const items = splatItems.filter(it => {
-    if (!it.splatUrl) return false;
-    if (it.accessLevel === "restricted" && !canViewRestricted) return false;
-    if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
-    return true;
-  });
-  const hasMultiple = items.length > 0;
-  const activeSplatUrl = hasMultiple ? items[selectedIdx]?.splatUrl ?? splatUrl : splatUrl;
-  const activeVideoUrl = hasMultiple ? items[selectedIdx]?.previewVideoUrl : undefined;
-
   const devBypass = process.env.NODE_ENV !== "production";
-  // 限定無料期間中は、プラン・トークンに関わらず誰でも閲覧可能。
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
-  const proxiedSplatUrl = activeSplatUrl && /^https?:\/\//.test(activeSplatUrl)
-    ? `/api/admin/splat-proxy?url=${encodeURIComponent(activeSplatUrl)}`
-    : activeSplatUrl;
+  const proxiedSplatUrl = splatUrl && /^https?:\/\//.test(splatUrl)
+    ? `/api/admin/splat-proxy?url=${encodeURIComponent(splatUrl)}`
+    : splatUrl;
 
   const previewUrl = proxiedSplatUrl
     ? `/viewer/offline-viewer.html?autoload=${encodeURIComponent(proxiedSplatUrl)}&orbit=1`
@@ -87,18 +50,26 @@ export default function ViewerGate({
 
   const viewerUrl = fullMode ? fullViewerUrl : previewUrl;
 
+  /* --- Paywall (no subscription) --- */
   if (!effectiveSubscription) {
     return (
       <div className="relative aspect-video border border-line overflow-hidden">
-        {/* Blurred placeholder preview */}
-        <div
-          className="absolute inset-0 bg-[#222]"
-          style={{
-            backgroundImage:
-              "radial-gradient(ellipse at center, rgba(94,200,232,.18) 0%, transparent 60%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.06) 0%, transparent 50%)",
-            filter: "blur(1px)",
-          }}
-        />
+        {previewVideoUrl ? (
+          <video
+            src={previewVideoUrl}
+            autoPlay loop muted playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-40"
+          />
+        ) : (
+          <div
+            className="absolute inset-0 bg-[#222]"
+            style={{
+              backgroundImage:
+                "radial-gradient(ellipse at center, rgba(94,200,232,.18) 0%, transparent 60%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.06) 0%, transparent 50%)",
+              filter: "blur(1px)",
+            }}
+          />
+        )}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-sm bg-black/40">
           <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-4">
             ● Subscriber only · {tokenCost} トークン消費
@@ -143,6 +114,7 @@ export default function ViewerGate({
       body: JSON.stringify({
         propertyId,
         type: "viewer_open",
+        meta: { label },
         referrer: document.referrer,
       }),
       keepalive: true,
@@ -150,37 +122,18 @@ export default function ViewerGate({
   };
 
   const activateFullMode = () => {
-    // TODO: replace with real token consumption API call
-    // await fetch("/api/tokens/consume", { method: "POST", body: JSON.stringify({ propertyId, cost: tokenCost }) });
     setFullMode(true);
     trackOpen();
   };
 
-  // Inline iframe mode
+  /* --- Inline viewer (expanded) --- */
   if (inlineOpen) {
     return (
       <div className="relative border border-line overflow-hidden bg-[#0a0a0a]">
-        {/* Toolbar */}
         <div className="flex items-center gap-2 px-4 py-2 bg-[#111] border-b border-line">
-          {fullMode && hasMultiple && items.map((it, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => { setSelectedIdx(i); }}
-              className={`px-3 py-1 mono text-[9px] tracking-[0.22em] uppercase border transition ${
-                selectedIdx === i
-                  ? "border-accent text-accent bg-accent/10"
-                  : "border-line text-muted hover:border-ink hover:text-ink"
-              }`}
-            >
-              {it.label || `#${i + 1}`}
-            </button>
-          ))}
-          {!fullMode && (
-            <span className="mono text-[9px] tracking-[0.22em] uppercase text-muted">
-              プレビュー中 — クリックで操作開始
-            </span>
-          )}
+          <span className="mono text-[9px] tracking-[0.22em] uppercase text-muted">
+            {label} — {fullMode ? "操作中" : "プレビュー中 — クリックで操作開始"}
+          </span>
           <div className="flex-1" />
           {fullMode && (
             <a
@@ -201,21 +154,17 @@ export default function ViewerGate({
           </button>
         </div>
         <div className="relative">
-          {activeVideoUrl && !fullMode ? (
+          {previewVideoUrl && !fullMode ? (
             <video
-              key={`video-${selectedIdx}`}
               ref={el => { if (el) el.play().catch(() => {}); }}
-              src={activeVideoUrl}
+              src={previewVideoUrl}
               preload="auto"
               className="w-full aspect-video object-cover"
-              autoPlay
-              loop
-              muted
-              playsInline
+              autoPlay loop muted playsInline
             />
           ) : (
             <iframe
-              key={`${selectedIdx}-${fullMode ? "full" : "preview"}`}
+              key={fullMode ? "full" : "preview"}
               src={viewerUrl}
               className="w-full aspect-video"
               allow="accelerometer; gyroscope; xr-spatial-tracking"
@@ -243,70 +192,45 @@ export default function ViewerGate({
     );
   }
 
-  // Subscribed: gate with inline-preview + new-tab options
+  /* --- Initial state: preview video loop background + CTA overlay --- */
   return (
     <div className="relative aspect-video border border-line overflow-hidden bg-[#141414]">
-      {/* Background gradient hint */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse at center, rgba(94,200,232,.10) 0%, transparent 65%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.04) 0%, transparent 50%)",
-        }}
-      />
+      {previewVideoUrl ? (
+        <video
+          src={previewVideoUrl}
+          autoPlay loop muted playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse at center, rgba(94,200,232,.10) 0%, transparent 65%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.04) 0%, transparent 50%)",
+          }}
+        />
+      )}
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+      <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 text-center px-6"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)" }}
+      >
         <div
           className={`mono text-[10px] tracking-[0.32em] uppercase mb-3 ${
             freeAccess ? "text-green-400" : "text-accent"
           }`}
         >
-          {freeAccess ? "● 限定無料期間中 · トークン消費なし" : "● 3DGS WALKTHROUGH READY"}
+          {freeAccess ? "● 限定無料期間中 · トークン消費なし" : `● ${sizeMb} MB`}
         </div>
 
-        <div className="serif text-2xl md:text-3xl font-bold leading-[1.4] max-w-[28ch] mb-3">
-          3DGS ウォークスルー
-        </div>
-
-        <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-2">
-          このスタジオ ({SIZE_LABEL[tokenCost]}) は{" "}
-          {freeAccess ? (
-            <span className="text-green-400">無料期間中 · トークン消費なし</span>
-          ) : (
-            <>
-              <span className="text-accent">{tokenCost} トークン</span> 消費 / 視聴
-            </>
-          )}
-        </div>
-
-        <p className="text-[11px] text-muted max-w-[44ch] leading-[1.75] mb-6">
-          ページ内プレビューまたは別タブで全画面表示できます。
+        <p className="text-[11px] text-muted max-w-[44ch] leading-[1.75] mb-4">
+          ページ内プレビューまたは別タブで全画面
         </p>
-
-        {hasMultiple && (
-          <div className="flex flex-wrap gap-2 mb-5">
-            {items.map((it, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => { setSelectedIdx(i); setOpenedAt(null); }}
-                className={`px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border transition ${
-                  selectedIdx === i
-                    ? "border-accent text-accent bg-accent/10"
-                    : "border-line text-muted hover:border-ink hover:text-ink"
-                }`}
-              >
-                {it.label || `#${i + 1}`}
-              </button>
-            ))}
-          </div>
-        )}
 
         <div className="flex flex-wrap gap-3 justify-center">
           <button
             type="button"
             onClick={() => { setInlineOpen(true); trackOpen(); }}
-            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition bg-black/50 backdrop-blur-sm"
           >
             この場でプレビュー ▶
           </button>
@@ -314,16 +238,12 @@ export default function ViewerGate({
             href={fullViewerUrl}
             target="_blank"
             rel="noopener"
-            onClick={() => { setOpenedAt(Date.now()); trackOpen(); }}
-            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line text-muted hover:border-ink hover:text-ink transition"
+            onClick={() => { trackOpen(); }}
+            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line text-muted hover:border-ink hover:text-ink transition bg-black/50 backdrop-blur-sm"
           >
             別タブで全画面 ↗
           </a>
         </div>
-
-        <p className="mt-5 mono text-[9px] tracking-[0.22em] uppercase opacity-50">
-          ⚠ 大容量 3DGS データ · Wi-Fi 推奨
-        </p>
       </div>
     </div>
   );
