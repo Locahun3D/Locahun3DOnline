@@ -17,6 +17,7 @@ interface DataSalePanelProps {
   tokenCost: 1 | 2 | 3;
   downloadFileFormat?: string;
   downloadFileSizeMb?: number;
+  alreadyPurchased?: boolean;
 }
 
 export default function DataSalePanel({
@@ -28,6 +29,7 @@ export default function DataSalePanel({
   scannedAt,
   downloadFileFormat,
   downloadFileSizeMb,
+  alreadyPurchased = false,
 }: DataSalePanelProps) {
   const [loading, setLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
@@ -83,31 +85,47 @@ export default function DataSalePanel({
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
       </div>
 
-      <div className="text-right shrink-0">
-        <span className="serif text-lg text-accent">¥{yen}</span>
-        <span className="mono text-[9px] opacity-40 ml-1">税込</span>
-      </div>
-
-      <div className="flex items-center gap-3 shrink-0">
-        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] opacity-60 hover:opacity-80 transition">
-          <input
-            type="checkbox"
-            checked={agreedTerms}
-            onChange={(e) => setAgreedTerms(e.target.checked)}
-            className="w-3.5 h-3.5 accent-accent shrink-0"
-          />
-          <Link href="/terms/data-download" target="_blank" className="underline">
-            規約同意
+      {alreadyPurchased ? (
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="mono text-[10px] tracking-[0.18em] uppercase text-green-400 border border-green-400/40 px-2 py-1">
+            ✓ 購入済み
+          </span>
+          <Link
+            href="/dashboard/purchases"
+            className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
+          >
+            ダウンロードへ →
           </Link>
-        </label>
-        <button
-          onClick={handlePurchase}
-          disabled={loading || !agreedTerms}
-          className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
-        >
-          {loading ? "処理中..." : "購入する"}
-        </button>
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="text-right shrink-0">
+            <span className="serif text-lg text-accent">¥{yen}</span>
+            <span className="mono text-[9px] opacity-40 ml-1">税込</span>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <label className="flex items-center gap-1.5 cursor-pointer text-[10px] opacity-60 hover:opacity-80 transition">
+              <input
+                type="checkbox"
+                checked={agreedTerms}
+                onChange={(e) => setAgreedTerms(e.target.checked)}
+                className="w-3.5 h-3.5 accent-accent shrink-0"
+              />
+              <Link href="/terms/data-download" target="_blank" className="underline">
+                規約同意
+              </Link>
+            </label>
+            <button
+              onClick={handlePurchase}
+              disabled={loading || !agreedTerms}
+              className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
+            >
+              {loading ? "処理中..." : "購入する"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

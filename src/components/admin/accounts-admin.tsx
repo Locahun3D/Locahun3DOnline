@@ -30,13 +30,15 @@ const STATUS_STYLE: Record<AccountStatus, string> = {
 export default function AccountsAdmin({
   users,
   adminId,
+  initialStatus = "all",
 }: {
   users: User[];
   adminId: string;
+  initialStatus?: AccountStatus | "all";
 }) {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AccountRole | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">(initialStatus);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
 

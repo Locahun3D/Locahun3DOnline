@@ -3,6 +3,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { refundPurchaseAction } from "@/lib/admin-actions";
 import RefundButton from "@/components/admin/refund-button";
+import { stripeEnabled } from "@/lib/stripe";
 
 export const metadata = { title: "データ販売" };
 
@@ -90,6 +91,18 @@ export default async function PurchasesPage({
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
           {allPurchases.length} purchases
         </span>
+        {stripeEnabled() ? (
+          <span className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-2 py-0.5">
+            ● 決済 Stripe 接続済み（本番）
+          </span>
+        ) : (
+          <span
+            className="mono text-[10px] tracking-[0.18em] uppercase border border-amber-400/40 text-amber-400 px-2 py-0.5"
+            title="STRIPE_SECRET_KEY 未設定。購入は即時完了の擬似決済（実入金なし）です。"
+          >
+            ● 決済 未接続（テスト即時完了・実入金なし）
+          </span>
+        )}
       </header>
 
       {/* Summary cards */}

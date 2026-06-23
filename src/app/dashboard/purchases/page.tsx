@@ -147,8 +147,7 @@ export default async function UserPurchasesPage() {
                       <div className="flex gap-2">
                         {downloadUrl && (
                           <a
-                            href={downloadUrl}
-                            download
+                            href={`/api/purchase/${p.id}/download`}
                             className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
                             title={`${downloadFormat} (${downloadSize} MB)`}
                           >

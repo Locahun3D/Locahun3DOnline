@@ -24,6 +24,7 @@ export default function PropertyDetailView({
   freeAccess = false,
   canViewRestricted = false,
   canViewNdaOnly = false,
+  purchasedIndices = [],
 }: {
   property: Property;
   others: Property[];
@@ -34,6 +35,8 @@ export default function PropertyDetailView({
   canViewRestricted?: boolean;
   /** Whether the current user can view NDA-only 3DGS files. */
   canViewNdaOnly?: boolean;
+  /** splatItem indexes the current user has already purchased. */
+  purchasedIndices?: number[];
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
@@ -233,6 +236,7 @@ export default function PropertyDetailView({
             <div className="pt-4 border-t border-line space-y-2">
               <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-1">
                 図面 / フロアプラン
+                <span className="ml-2 normal-case tracking-normal opacity-70">クリックでダウンロード</span>
               </div>
               {property.blueprints.filter(b => b.url).map((b, i) => (
                 <a
@@ -258,12 +262,6 @@ export default function PropertyDetailView({
             >
               見積もり依頼
             </button>
-            <Link
-              href="/pricing"
-              className="block text-center w-full px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line hover:border-ink transition"
-            >
-              閲覧プランを見る
-            </Link>
           </div>
         </aside>
       </header>
@@ -313,6 +311,7 @@ export default function PropertyDetailView({
                   tokenCost={property.tokenCost as 1 | 2 | 3}
                   downloadFileFormat={item.downloadFileFormat}
                   downloadFileSizeMb={item.downloadFileSizeMb}
+                  alreadyPurchased={purchasedIndices.includes(idx)}
                 />
               )}
             </section>

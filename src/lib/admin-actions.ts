@@ -5,6 +5,7 @@ import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
 import { track } from "./analytics";
+import { stripeEnabled, getStripe } from "./stripe";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
@@ -124,6 +125,26 @@ export async function refundPurchaseAction(
   const reason = String(formData.get("reason") ?? "");
   const p = await purchaseRepo.get(id);
   if (!p || p.status !== "completed") return;
+
+  // 実決済（Stripe）が紐づく購入は、Stripe側でも実返金してから記録を更新する。
+  // 返金が失敗したら記録は completed のまま残す（金銭未返却の状態を防ぐ）。
+  if (stripeEnabled() && p.stripeSessionId) {
+    try {
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.retrieve(p.stripeSessionId);
+      const pi =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id;
+      if (pi) {
+        await stripe.refunds.create({ payment_intent: pi });
+      }
+    } catch {
+      // Stripe返金に失敗 → 記録を refunded にせず終了（再試行可能）。
+      return;
+    }
+  }
+
   await purchaseRepo.upsert({
     ...p,
     status: "refunded",

@@ -1,12 +1,23 @@
 import { requireAdmin } from "@/lib/dal";
 import { userRepo } from "@/lib/users";
+import { ACCOUNT_STATUSES, type AccountStatus } from "@/lib/account-schema";
 import AccountsAdmin from "@/components/admin/accounts-admin";
 
 export const metadata = { title: "アカウント" };
 
-export default async function AdminAccountsPage() {
+export default async function AdminAccountsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const admin = await requireAdmin();
   const users = await userRepo.list();
+
+  const sp = await searchParams;
+  const initialStatus: AccountStatus | "all" =
+    sp.status && (ACCOUNT_STATUSES as readonly string[]).includes(sp.status)
+      ? (sp.status as AccountStatus)
+      : "all";
 
   return (
     <div className="p-6 md:p-10">
@@ -17,7 +28,12 @@ export default async function AdminAccountsPage() {
         <span className="opacity-60">{users.length} 件</span>
       </div>
 
-      <AccountsAdmin users={users} adminId={admin.id} />
+      <AccountsAdmin
+        key={initialStatus}
+        users={users}
+        adminId={admin.id}
+        initialStatus={initialStatus}
+      />
     </div>
   );
 }

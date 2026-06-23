@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { repo as propertyRepo } from "@/lib/store";
 import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
-import { stripeEnabled, getStripe, appUrl } from "@/lib/stripe";
+import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, purchaseId });
   }
 
+  const origin = new URL(req.url).origin;
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -87,8 +88,9 @@ export async function POST(req: Request) {
     },
     tax_id_collection: { enabled: true },
     billing_address_collection: "auto",
-    success_url: appUrl(`/properties/${propertyId}?purchase=success`),
-    cancel_url: appUrl(`/properties/${propertyId}?purchase=cancel`),
+    // 成功時は確認ルートを経由 → セッション検証で購入確定（webhook未設定でも完了する）。
+    success_url: `${origin}/api/purchase/return?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/properties/${propertyId}?purchase=cancel`,
   });
 
   await purchaseRepo.upsert({

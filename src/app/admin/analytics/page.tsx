@@ -66,7 +66,9 @@ export default async function AdminAnalyticsPage({
         Object.entries(s.referrers).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
       return {
         id,
-        title: p?.title || "（削除済み物件）",
+        // 削除（リストに存在しない）・アーカイブ済み物件はランキングから除外する。
+        exists: !!p && p.status !== "archived",
+        title: p?.title || id,
         category: p?.category,
         views: pv,
         opens: po,
@@ -77,7 +79,7 @@ export default async function AdminAnalyticsPage({
         topRef,
       };
     })
-    .filter((r) => r.views > 0 || r.opens > 0 || r.purchases > 0);
+    .filter((r) => r.exists && (r.views > 0 || r.opens > 0 || r.purchases > 0));
 
   // Apply search filter
   if (query) {
@@ -137,11 +139,11 @@ export default async function AdminAnalyticsPage({
 
   const hasAnyData = Object.keys(stats).length > 0;
 
-  // All studios for filter dropdown
-  const allStudios = Object.entries(stats).map(([id]) => ({
-    id,
-    title: titleOf.get(id)?.title || id,
-  }));
+  // All studios for filter dropdown（削除・アーカイブ物件は除外）
+  const allStudios = Object.entries(stats)
+    .map(([id]) => titleOf.get(id))
+    .filter((p) => p && p.status !== "archived")
+    .map((p) => ({ id: p!.id, title: p!.title || p!.id }));
 
   return (
     <div className="p-6 md:p-10">

@@ -33,7 +33,7 @@ export async function saveFreePeriodAction(
   await saveSettings({ ...cur, freePeriod: { enabled, startAt, endAt, note } });
 
   // Free access is read on property pages; refresh broadly.
-  revalidatePath("/admin/free-period");
+  revalidatePath("/admin/gift-codes");
   revalidatePath("/properties", "layout");
   return { ok: true, message: "保存しました。" };
 }

@@ -6,6 +6,7 @@ import {
   getPublishedPropertyIds,
 } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
+import { purchaseRepo } from "@/lib/purchases";
 import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
@@ -50,10 +51,17 @@ export default async function PropertyDetailPage({
 
   let canViewRestrictedItems = false;
   let canViewNdaOnlyItems = false;
+  const purchasedIndices: number[] = [];
   try {
     const user = await getCurrentUser();
     canViewRestrictedItems = canViewBackyard(user);
     canViewNdaOnlyItems = canViewNdaOnly(user);
+    if (user) {
+      const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
+      for (const p of mine) {
+        if (p.status === "completed") purchasedIndices.push(p.splatItemIndex);
+      }
+    }
   } catch {
     // No auth context (build time) — treat as no access
   }
@@ -70,6 +78,7 @@ export default async function PropertyDetailPage({
         freeAccess={freeAccess}
         canViewRestricted={canViewRestrictedItems}
         canViewNdaOnly={canViewNdaOnlyItems}
+        purchasedIndices={purchasedIndices}
       />
     </>
   );
