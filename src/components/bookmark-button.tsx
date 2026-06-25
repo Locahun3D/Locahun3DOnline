@@ -8,7 +8,8 @@ import { toggleBookmarkAction } from "@/lib/bookmark-actions";
  * 物件ブックマーク（保存）ボタン。
  * - 未サインイン: クリックで /sign-in へ誘導。
  * - サインイン済み: 楽観更新でトグルし、サーバーアクションで永続化。
- * variant="overlay" はカード上のアイコンボタン、"inline" は詳細ページのラベル付き。
+ * variant="overlay" はカード上のアイコンボタン、"inline" は詳細ページのラベル付き、
+ * "hero" は暗いヒーロー画像上の強調ボタン（白文字グラス）。
  */
 export default function BookmarkButton({
   propertyId,
@@ -21,7 +22,7 @@ export default function BookmarkButton({
   initialBookmarked: boolean;
   signedIn: boolean;
   revalidate?: string;
-  variant?: "overlay" | "inline";
+  variant?: "overlay" | "inline" | "hero";
 }) {
   const router = useRouter();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
@@ -46,6 +47,26 @@ export default function BookmarkButton({
 
   const label = bookmarked ? "保存済み" : "保存する";
   const star = bookmarked ? "★" : "☆";
+
+  if (variant === "hero") {
+    // 暗いヒーロー画像の上で確実に視認できる強調ボタン。
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={pending}
+        aria-pressed={bookmarked}
+        className={`inline-flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] rounded-sm border px-4 py-2.5 backdrop-blur-md shadow-lg transition ${
+          bookmarked
+            ? "border-accent bg-accent text-black"
+            : "border-white/60 bg-black/35 text-white hover:bg-white hover:text-black hover:border-white"
+        } ${pending ? "opacity-60" : ""}`}
+      >
+        <span className="text-[16px] leading-none">{star}</span>
+        {label}
+      </button>
+    );
+  }
 
   if (variant === "overlay") {
     return (

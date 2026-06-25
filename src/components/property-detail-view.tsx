@@ -120,20 +120,21 @@ export default function PropertyDetailView({
         </div>
 
         {/* Top-right actions on the hero */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 flex items-center gap-2">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 flex items-center gap-2.5">
           {!preview && (
             <BookmarkButton
               propertyId={property.id}
               initialBookmarked={bookmarked}
               signedIn={signedIn}
               revalidate={`/properties/${property.id}`}
-              variant="inline"
+              variant="hero"
             />
           )}
           <button
             type="button"
-            className="px-4 py-2.5 mono text-[11px] tracking-[0.2em] uppercase bg-accent text-black font-semibold hover:bg-accent/90 transition rounded-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] tracking-[0.04em] bg-accent text-black font-bold shadow-lg hover:bg-accent/90 transition rounded-sm"
           >
+            <span className="text-[15px] leading-none">✎</span>
             見積もり依頼
           </button>
         </div>
