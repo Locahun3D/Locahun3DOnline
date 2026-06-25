@@ -66,6 +66,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [previewSplat, setPreviewSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const capture = usePreviewCapture();
 
   const form = useForm<Property>({
@@ -432,6 +433,58 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   className={inputClass}
                   placeholder="例: 天井高 5.4m、25m スパンの白ホリ。CM・MV 撮影で実績多数。"
                 />
+                <button
+                  type="button"
+                  disabled={aiSummaryLoading}
+                  onClick={async () => {
+                    setAiSummaryLoading(true);
+                    try {
+                      const d = getValues();
+                      const res = await fetch("/api/admin/suggest-summary", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          title: d.title,
+                          category: d.category,
+                          studioType: d.studioType,
+                          prefecture: d.prefecture,
+                          city: d.city,
+                          area: d.area,
+                          contactWebsite: d.contactWebsite,
+                          description: d.description,
+                          capacity: d.capacity,
+                          floorAreaSqm: d.floorAreaSqm,
+                          ceilingHeightM: d.ceilingHeightM,
+                          hasNaturalLight: d.hasNaturalLight,
+                          parking: d.parking,
+                          loadingDock: d.loadingDock,
+                          powerVoltage: d.powerVoltage,
+                          tags: Array.isArray(d.tags) ? d.tags : [],
+                        }),
+                      });
+                      const data = (await res.json()) as {
+                        summary?: string;
+                        error?: string;
+                      };
+                      if (!res.ok || !data.summary) {
+                        alert(data.error || "サマリー生成に失敗しました");
+                        return;
+                      }
+                      setValue("summary", data.summary, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      triggerAutoSave();
+                    } catch {
+                      alert("通信エラーが発生しました");
+                    } finally {
+                      setAiSummaryLoading(false);
+                    }
+                  }}
+                  className="mt-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
+                >
+                  {aiSummaryLoading ? "生成中…" : "✦ AIでサマリー生成"}
+                </button>
               </Field>
 
               {/* ── 連絡先 ── */}
