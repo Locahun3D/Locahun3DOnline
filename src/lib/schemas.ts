@@ -60,12 +60,25 @@ export const ANNOTATION_KINDS = [
   "measurement",
 ] as const;
 
+/**
+ * Draft-permissive URL: 空 / 絶対 http(s) URL / 同一オリジンの相対パス（/uploads/...）を許可。
+ * アップロード由来の相対パスを `.url()` が弾いて下書き保存が無言で失敗していたのを解消。
+ */
+const urlOrPath = (message = "URL またはパスで入力してください") =>
+  z
+    .string()
+    .max(2000)
+    .refine((s) => s === "" || /^https?:\/\//.test(s) || s.startsWith("/"), {
+      message,
+    })
+    .default("");
+
 // Draft-permissive image: src can be empty (placeholder), alt optional.
 export const propertyImageSchema = z.object({
   src: z
     .string()
     .max(2000)
-    .refine((s) => s === "" || /^https?:\/\//.test(s), {
+    .refine((s) => s === "" || /^https?:\/\//.test(s) || s.startsWith("/"), {
       message: "URL 形式で入力してください",
     })
     .default(""),
@@ -208,7 +221,7 @@ export const propertySchema = z.object({
   // 2.6 Blueprints / floor plans
   blueprints: z.array(z.object({
     label: z.string().max(60).default(""),
-    url: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+    url: urlOrPath(),
   })).max(10).default([]),
 
   // 3. Description
@@ -219,14 +232,14 @@ export const propertySchema = z.object({
   gallery: z.array(propertyImageSchema).max(40).default([]),
 
   // 5. 3DGS
-  splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
-  zipUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
+  splatUrl: urlOrPath(),
+  zipUrl: urlOrPath(),
   zipSizeMb: z.number().min(0).max(99999).default(0),
   splatSizeMb: z.number().min(0).max(99999).default(0),
   splatItems: z.array(z.object({
     label: z.string().max(60).default(""),
-    splatUrl: z.string().url("URL 形式で入力してください").or(z.literal("")).default(""),
-    previewVideoUrl: z.string().url().or(z.literal("")).default(""),
+    splatUrl: urlOrPath(),
+    previewVideoUrl: urlOrPath(),
     sizeMb: z.number().min(0).max(99999).default(0),
     notes: z.string().max(500).default(""),
     forSale: z.boolean().default(false),
@@ -234,14 +247,14 @@ export const propertySchema = z.object({
     saleDescription: z.string().max(1000).default(""),
     accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
     // 販売用ダウンロードファイル（PLY & OBJ の ZIP）— ビューアー用 splatUrl とは別
-    downloadFileUrl: z.string().url().or(z.literal("")).default(""),
+    downloadFileUrl: urlOrPath(),
     downloadFileSizeMb: z.number().min(0).max(99999).default(0),
     downloadFileFormat: z.string().max(40).default("PLY & OBJ (ZIP)"),
     // TurboSquid風マルチ形式DL: 1購入で複数形式を個別ダウンロード可能にする。
     // 空なら上の downloadFileUrl を単一形式としてフォールバック扱い。
     downloadFiles: z.array(z.object({
       format: z.string().max(40).default(""),
-      url: z.string().url().or(z.literal("")).default(""),
+      url: urlOrPath(),
       sizeMb: z.number().min(0).max(99999).default(0),
     })).max(10).default([]),
     // 商品スペック（TurboSquid風）

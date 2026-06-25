@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   useForm,
   useFieldArray,
-  type SubmitHandler,
   type Resolver,
   type Control,
   type UseFormRegister,
@@ -60,6 +59,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [saving, startSave] = useTransition();
   const [publishing, startPublish] = useTransition();
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
   const [pickSplat, setPickSplat] = useState(false);
   const [previewZip, setPreviewZip] = useState(false);
@@ -78,7 +78,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     mode: "onBlur",
   });
 
-  const { register, handleSubmit, watch, control, getValues, setValue, formState } = form;
+  const { register, watch, control, getValues, setValue, formState } = form;
 
   const galleryArray = useFieldArray({
     control,
@@ -98,29 +98,40 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     name: "blueprints",
   });
 
-  const onSaveDraft: SubmitHandler<Property> = (data) => {
+  // 下書き保存はフォーム全体のバリデーションでゲートしない（下書きは不完全でも
+  // 保存できるべき）。getValues() を直接サーバーへ送り、サーバー側の寛容な
+  // propertySchema で検証。失敗は無言にせず画面に表示する。
+  const onSaveDraft = useCallback(() => {
+    setSaveError(null);
+    const data = getValues();
     startSave(async () => {
       try {
         await saveDraftAction(data);
         setSavedAt(new Date().toISOString());
+        setSaveError(null);
         router.refresh();
       } catch (e) {
         console.error(e);
+        setSaveError(
+          e instanceof Error
+            ? `保存に失敗しました: ${e.message}`
+            : "保存に失敗しました（入力内容をご確認ください）",
+        );
       }
     });
-  };
+  }, [getValues, startSave, router]);
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const triggerAutoSave = useCallback(
     (delayMs = 0) => {
       clearTimeout(autoSaveTimer.current);
       if (delayMs === 0) {
-        handleSubmit(onSaveDraft)();
+        onSaveDraft();
       } else {
-        autoSaveTimer.current = setTimeout(() => handleSubmit(onSaveDraft)(), delayMs);
+        autoSaveTimer.current = setTimeout(() => onSaveDraft(), delayMs);
       }
     },
-    [handleSubmit],
+    [onSaveDraft],
   );
   useEffect(() => () => clearTimeout(autoSaveTimer.current), []);
 
@@ -206,12 +217,12 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        handleSubmit(onSaveDraft)();
+        onSaveDraft();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleSubmit]);
+  }, [onSaveDraft]);
 
   const currentTitle = watch("title");
   const currentStatus = watch("status");
@@ -220,7 +231,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
   return (
     <form
-      onSubmit={handleSubmit(onSaveDraft)}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSaveDraft();
+      }}
       className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8"
     >
       {/* Step navigation */}
@@ -311,6 +325,17 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             style={{ width: `${progress}%` }}
           />
         </div>
+
+        {saveError && (
+          <div className="mb-6 border border-red-500 bg-[#1a0a0a] p-4">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase text-red-400 mb-2">
+              ⚠ 下書き保存に失敗しました
+            </div>
+            <div className="text-[12px] text-muted leading-[1.7]">
+              {saveError}
+            </div>
+          </div>
+        )}
 
         {publishError && (
           <div className="mb-6 border border-accent bg-[#1a0c00] p-4">

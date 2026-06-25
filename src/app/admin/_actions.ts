@@ -3,7 +3,6 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { nanoid } from "nanoid";
 import { repo, assetRepo } from "@/lib/store";
 import { deleteR2Object, UPLOAD_MODE } from "@/lib/uploads";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
@@ -24,11 +23,11 @@ async function assertPropertyAccess(propertyId: string) {
   throw new Error("forbidden");
 }
 
-function newDraft(): Property {
+function newDraft(id: string): Property {
   const now = new Date().toISOString();
   // Schema defaults fill in empty strings / zero / empty arrays.
   return propertySchema.parse({
-    id: nanoid(8),
+    id,
     status: "draft",
     category: "studio",
     cover: { src: "", alt: "", width: 1600, height: 1000 },
@@ -37,9 +36,44 @@ function newDraft(): Property {
   });
 }
 
+/** カテゴリ別の物件番号プレフィックス（wh-002 形式）。 */
+const CATEGORY_ID_PREFIX: Record<string, string> = {
+  studio: "st",
+  warehouse: "wh",
+  house: "hs",
+  shop: "sh",
+  outdoor: "od",
+  venue: "vn",
+};
+
+/**
+ * 既存IDを走査して被らない連番IDを採番する（例: wh-002 → wh-003）。
+ * nanoid のランダムIDをやめ、人が読める番号を自動生成する。
+ */
+async function nextPropertyId(category: string): Promise<string> {
+  const prefix = CATEGORY_ID_PREFIX[category] ?? "lc";
+  const all = await repo.list();
+  const re = new RegExp(`^${prefix}-(\\d+)$`);
+  let max = 0;
+  for (const p of all) {
+    const m = p.id.match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  // 念のため重複を最終チェックし、被っていれば繰り上げる。
+  let n = max + 1;
+  let id = `${prefix}-${String(n).padStart(3, "0")}`;
+  while (await repo.get(id)) {
+    n += 1;
+    id = `${prefix}-${String(n).padStart(3, "0")}`;
+  }
+  return id;
+}
+
 export async function createDraftAction() {
   const admin = await requireAdmin();
-  const draft = newDraft();
+  // 既定カテゴリ(studio)で採番。エディターでカテゴリ変更後も番号は維持される。
+  const id = await nextPropertyId("studio");
+  const draft = newDraft(id);
   draft.ownerId = admin.id;
   await repo.upsert(draft);
   revalidatePath("/admin/properties");
