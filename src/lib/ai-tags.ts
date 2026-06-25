@@ -86,8 +86,11 @@ function buildPrompt(input: TagSuggestInput): string {
   ].filter(Boolean).join(" / ");
   return [
     "あなたは日本の撮影ロケ地プラットフォームのメタデータ担当です。",
-    "以下の物件について web_search ツールで物件名・公式サイト・所在地周辺を検索し、",
-    "撮影・ロケハンで検索されやすい日本語タグ（短い名詞・名詞句）を提案してください。",
+    "次の手順でこの物件のタグを割り出してください:",
+    "① 公式サイトURLが与えられていれば web_fetch でそのページを取得し、",
+    "   設備・コンセプト・撮影実績・雰囲気を読み取る。",
+    "② 物件名＋所在地で web_search（Google検索相当）し、紹介記事や口コミも参照する。",
+    "③ ①②の内容から、撮影・ロケハンで検索されやすい日本語タグ（短い名詞・名詞句）を提案。",
     "観点: 建物種別 / 質感・雰囲気 / 設備 / ロケーション特性 / 撮影ジャンル適性。",
     "6〜12個。既存タグと重複しないもの。固有名詞や住所は含めない。",
     "",
@@ -133,40 +136,61 @@ export async function suggestTags(
     return { tags: heuristicTags(input), source: "heuristic" };
   }
 
-  try {
-    const body = {
-      model: "claude-opus-4-8",
-      max_tokens: 1024,
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
-      messages: [{ role: "user", content: buildPrompt(input) }],
-    };
+  // 公式サイトを取得する web_fetch ＋ Google検索相当の web_search。
+  // web_fetch 未対応アカウントでも動くよう、ツール無しでも再試行する。
+  const TOOL_SETS = [
+    [
+      { type: "web_fetch_20250910", name: "web_fetch", max_uses: 3 },
+      { type: "web_search_20260209", name: "web_search", max_uses: 5 },
+    ],
+    [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+  ];
 
-    let data: AnthropicResponse | null = null;
-    let messages = body.messages as Array<{ role: string; content: unknown }>;
-    // server-side tool loop: pause_turn のとき assistant content を足して継続。
-    for (let i = 0; i < 4; i++) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({ ...body, messages }),
-      });
-      if (!res.ok) throw new Error(`anthropic ${res.status}`);
-      data = (await res.json()) as AnthropicResponse;
-      if (data.stop_reason !== "pause_turn") break;
-      messages = [...messages, { role: "assistant", content: data.content }];
+  const prompt = buildPrompt(input);
+  const existing = new Set(input.existingTags.map((t) => t.trim()));
+
+  for (const tools of TOOL_SETS) {
+    try {
+      const body = {
+        model: "claude-opus-4-8",
+        max_tokens: 1024,
+        tools,
+        messages: [{ role: "user", content: prompt }],
+      };
+
+      let data: AnthropicResponse | null = null;
+      let messages = body.messages as Array<{ role: string; content: unknown }>;
+      let badRequest = false;
+      // server-side tool loop: pause_turn のとき assistant content を足して継続。
+      for (let i = 0; i < 4; i++) {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({ ...body, messages }),
+        });
+        if (res.status === 400) {
+          // ツール未対応など → 次のツールセットで再試行。
+          badRequest = true;
+          break;
+        }
+        if (!res.ok) throw new Error(`anthropic ${res.status}`);
+        data = (await res.json()) as AnthropicResponse;
+        if (data.stop_reason !== "pause_turn") break;
+        messages = [...messages, { role: "assistant", content: data.content }];
+      }
+      if (badRequest) continue;
+
+      const tags = data
+        ? parseTags(data).filter((t) => !existing.has(t)).slice(0, 12)
+        : [];
+      if (tags.length) return { tags, source: "ai" };
+    } catch {
+      /* 次のツールセット、または heuristic へ */
     }
-
-    const existing = new Set(input.existingTags.map((t) => t.trim()));
-    const tags = data
-      ? parseTags(data).filter((t) => !existing.has(t)).slice(0, 12)
-      : [];
-    if (tags.length) return { tags, source: "ai" };
-  } catch {
-    /* fall through to heuristic */
   }
   return { tags: heuristicTags(input), source: "heuristic" };
 }

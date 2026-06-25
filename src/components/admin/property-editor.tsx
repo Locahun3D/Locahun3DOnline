@@ -67,6 +67,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiTagsNote, setAiTagsNote] = useState<string | null>(null);
   const capture = usePreviewCapture();
 
   const form = useForm<Property>({
@@ -641,6 +642,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       });
                       const data = (await res.json()) as {
                         tags?: string[];
+                        source?: "ai" | "heuristic";
                         error?: string;
                       };
                       if (!res.ok || !data.tags) {
@@ -651,8 +653,12 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         (Array.isArray(d.tags) ? d.tags : []).map((t) => String(t).trim()),
                       );
                       const fresh = data.tags.filter((t) => t && !existing.has(t));
+                      setAiTagsNote(
+                        data.source === "ai"
+                          ? "✓ 公式サイト＋ネット検索から生成しました"
+                          : "※ APIキー未設定のため簡易生成（ネット検索なし）。本番はキー投入でHP＋検索から割り出します。",
+                      );
                       if (!fresh.length) {
-                        alert("追加できる新しいタグが見つかりませんでした");
                         return;
                       }
                       for (const t of fresh) tagsArray.append(t as never);
@@ -665,8 +671,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   }}
                   className="mt-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
                 >
-                  {aiTagsLoading ? "検索中…" : "✦ AIでタグ自動生成（ネット検索）"}
+                  {aiTagsLoading ? "検索中…" : "✦ AIでタグ自動生成（HP＋ネット検索）"}
                 </button>
+                {aiTagsNote && (
+                  <div className="mt-1.5 text-[11px] text-muted">{aiTagsNote}</div>
+                )}
               </Field>
 
               {/* ── 図面 / フロアプラン ── */}
