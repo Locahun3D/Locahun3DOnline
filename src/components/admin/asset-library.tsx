@@ -3,13 +3,25 @@
 import { useMemo, useRef, useState } from "react";
 import type { Asset, AssetKind } from "@/lib/schemas";
 import { uploadAsset } from "./upload-client";
-function assetApi(body: Record<string, unknown>) {
-  if (typeof window !== "undefined" && window.location.hostname !== "localhost") return;
-  fetch("/api/admin/assets/update", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch(() => {});
+// アセットのリネーム/削除/サムネ更新を永続化する。以前は localhost 以外で
+// 早期 return しており、本番では UI 上は成功してもサーバーに保存されず
+// リロードで巻き戻る不具合があった（修正済み）。失敗は握りつぶさず log する。
+async function assetApi(body: Record<string, unknown>): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/assets/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error("asset update failed", res.status, await res.text().catch(() => ""));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("asset update error", e);
+    return false;
+  }
 }
 
 interface Props {

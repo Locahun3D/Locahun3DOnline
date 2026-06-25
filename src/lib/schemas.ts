@@ -309,11 +309,20 @@ export const publishablePropertySchema = propertySchema.extend({
     .string()
     .min(10, "10 文字以上で入力してください")
     .max(200),
-  splatUrl: z.string().url({ message: "公開には 3DGS の URL が必須です" }),
+  // 絶対URL / 相対パス(/uploads/...) どちらも可。必須(非空)のみ強制。
+  splatUrl: z
+    .string()
+    .min(1, "公開には 3DGS の URL が必須です")
+    .refine((s) => /^https?:\/\//.test(s) || s.startsWith("/"), {
+      message: "公開には 3DGS の URL が必須です",
+    }),
   cover: propertyImageSchema.extend({
     src: z
       .string()
-      .url({ message: "公開にはカバー画像が必須です" }),
+      .min(1, "公開にはカバー画像が必須です")
+      .refine((s) => /^https?:\/\//.test(s) || s.startsWith("/"), {
+        message: "公開にはカバー画像が必須です",
+      }),
     alt: z.string().min(1, "カバー画像の代替テキストを入力してください"),
   }),
 });

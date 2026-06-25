@@ -296,7 +296,11 @@ export default function PropertyDetailView({
                   )}
                   {property.contactWebsite && (
                     <a
-                      href={property.contactWebsite}
+                      href={
+                        /^https?:\/\//.test(property.contactWebsite)
+                          ? property.contactWebsite
+                          : `https://${property.contactWebsite}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 flex items-center justify-center gap-1.5 text-[12px] text-ink/60 border border-line rounded-md py-2 hover:border-accent hover:text-accent transition"

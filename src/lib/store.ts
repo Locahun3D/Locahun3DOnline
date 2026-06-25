@@ -86,15 +86,32 @@ async function ensurePropsSeeded(): Promise<void> {
   _propsSeeded = true;
 }
 
+/**
+ * 読込時にスキーマで検証し、欠落フィールドに default を補完する。
+ * upsert 時しか検証していなかったため、seed や旧 R2 レコードが欠落フィールドを
+ * 持つと公開ページ側で property.cover.src 等が undefined 参照でクラッシュし得た。
+ * 検証成功 → default 補完済みの安全なオブジェクト、失敗 → null（リストでは除外）。
+ */
+function coerceProperty(raw: unknown): Property | null {
+  const r = propertySchema.safeParse(raw);
+  if (r.success) return r.data;
+  const id = (raw as { id?: unknown })?.id;
+  console.error("[store] invalid property record skipped:", id, r.error.issues);
+  return null;
+}
+
 class PropertyRepoImpl implements PropertyRepo {
   async list(opts: { status?: PropertyStatus } = {}): Promise<Property[]> {
-    let props: Property[];
+    let raw: unknown[];
     if (canAccessLocalFs()) {
-      props = (await readStore()).properties;
+      raw = (await readStore()).properties;
     } else {
       await ensurePropsSeeded();
-      props = await r2ColList<Property>(PROP_R2_PREFIX);
+      raw = await r2ColList<Property>(PROP_R2_PREFIX);
     }
+    const props = raw
+      .map(coerceProperty)
+      .filter((p): p is Property => p !== null);
     const out = opts.status
       ? props.filter((p) => p.status === opts.status)
       : props;
@@ -104,11 +121,17 @@ class PropertyRepoImpl implements PropertyRepo {
   }
 
   async get(id: string): Promise<Property | null> {
+    let raw: unknown;
     if (canAccessLocalFs()) {
-      return (await readStore()).properties.find((p) => p.id === id) ?? null;
+      raw = (await readStore()).properties.find(
+        (p) => (p as Property).id === id,
+      );
+    } else {
+      await ensurePropsSeeded();
+      raw = await r2ColGet<Property>(PROP_R2_PREFIX, id);
     }
-    await ensurePropsSeeded();
-    return r2ColGet<Property>(PROP_R2_PREFIX, id);
+    if (!raw) return null;
+    return coerceProperty(raw);
   }
 
   async upsert(p: Property): Promise<Property> {
