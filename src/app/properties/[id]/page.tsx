@@ -53,6 +53,7 @@ export default async function PropertyDetailPage({
   let canViewNdaOnlyItems = false;
   let hasViewerAccess = false;
   let signedIn = false;
+  let bookmarked = false;
   const purchasedIndices: number[] = [];
   try {
     const user = await getCurrentUser();
@@ -63,6 +64,7 @@ export default async function PropertyDetailPage({
     hasViewerAccess =
       !!user && (user.role === "admin" || (!!user.plan && user.plan !== "free"));
     if (user) {
+      bookmarked = (user.bookmarks ?? []).includes(property.id);
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
       for (const p of mine) {
         if (p.status === "completed") purchasedIndices.push(p.splatItemIndex);
@@ -87,6 +89,8 @@ export default async function PropertyDetailPage({
         purchasedIndices={purchasedIndices}
         hasViewerAccess={hasViewerAccess}
         signedIn={signedIn}
+        bookmarked={bookmarked}
+
       />
     </>
   );

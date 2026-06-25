@@ -62,42 +62,6 @@ export default async function PricingPage() {
         </p>
       )}
 
-      {/* Token system explainer */}
-      <section className="mt-16">
-        <div className="chapter-rule">
-          <span className="opacity-60">TOKENS</span>
-          <span>3DGS Walkthrough Tokens</span>
-          <span className="flex-1 h-px bg-current opacity-25" />
-        </div>
-
-        <div className="border border-line bg-[#222] p-7 max-w-[680px] mx-auto">
-          <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-            SIZE → COST
-          </div>
-          <h3 className="serif text-2xl font-bold mb-4">スタジオサイズ別 トークン消費</h3>
-          <table className="w-full text-[13px] mono">
-            <tbody>
-              <tr className="border-b border-line">
-                <td className="py-3 text-left text-ink">ハウス / 小規模 (〜150㎡)</td>
-                <td className="py-3 text-right text-accent text-lg">1 トークン</td>
-              </tr>
-              <tr className="border-b border-line">
-                <td className="py-3 text-left text-ink">中規模スタジオ (150-400㎡)</td>
-                <td className="py-3 text-right text-accent text-lg">2 トークン</td>
-              </tr>
-              <tr>
-                <td className="py-3 text-left text-ink">ドーム / 大規模 / 屋外 (400㎡〜)</td>
-                <td className="py-3 text-right text-accent text-lg">3 トークン</td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="text-[11px] text-muted mt-4 leading-[1.7]">
-            トークンは月初リセット。同じ物件の再訪は追加消費なし。
-            月の予算を超えた場合はプラン変更でその場でアップグレード可能です。
-          </p>
-        </div>
-      </section>
-
       {/* Comparison table */}
       <section className="mt-16">
         <div className="chapter-rule">

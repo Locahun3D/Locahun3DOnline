@@ -166,4 +166,16 @@ export const purchaseRepo = {
     await r2Put(bucket, validated);
     return validated;
   },
+
+  /** 購入記録を完全削除（テスト購入の掃除・管理者専用想定）。 */
+  async remove(id: string): Promise<void> {
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      await fileWriteAll(all.filter((p) => p.id !== id));
+      return;
+    }
+    const bucket = await getBucket();
+    if (!bucket) return;
+    await bucket.delete(`${R2_PREFIX}${id}.json`);
+  },
 };

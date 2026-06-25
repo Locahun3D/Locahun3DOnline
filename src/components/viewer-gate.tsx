@@ -112,6 +112,40 @@ export default function ViewerGate({
     }).catch(() => {});
   };
 
+  /**
+   * 視聴を開く。署名URLが使える場合は R2 直取得URL でビューアーを開き、
+   * Worker CPU を消費しない。署名未設定/失敗時は従来の Worker 経由にフォールバック。
+   * ポップアップブロック回避のため、クリック同期で空タブを開いてから URL を流し込む。
+   */
+  const openViewer = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    trackOpen();
+    const win = window.open("", "_blank");
+    const fallback = () => {
+      if (win) win.location.href = fullViewerUrl;
+      else window.open(fullViewerUrl, "_blank");
+    };
+    // R2 ホストの相対アセットのみ署名対象（外部URLは従来どおり）。
+    if (/^https?:\/\//.test(splatUrl)) {
+      fallback();
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/viewer-asset?key=${encodeURIComponent(splatUrl)}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return fallback();
+      const data = (await res.json()) as { url?: string };
+      if (!data.url) return fallback();
+      const target = buildViewerUrl(data.url);
+      if (win) win.location.href = target;
+      else window.open(target, "_blank");
+    } catch {
+      fallback();
+    }
+  };
+
   /* --- Always open in new tab --- */
   return (
     <div className="relative aspect-video border border-line overflow-hidden bg-[#141414]">
@@ -150,7 +184,7 @@ export default function ViewerGate({
           href={fullViewerUrl}
           target="_blank"
           rel="noopener"
-          onClick={() => { trackOpen(); }}
+          onClick={openViewer}
           className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition bg-black/50 backdrop-blur-sm"
         >
           3Dビューアーを開く ↗

@@ -10,6 +10,15 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import {
+  getR2Bucket,
+  r2ColPut,
+  r2ColGet,
+  r2ColDelete,
+  r2ColList,
+  r2DocGet,
+  r2DocPut,
+} from "./r2-store";
+import {
   propertySchema,
   assetSchema,
   type Property,
@@ -51,20 +60,55 @@ async function writeStore(s: StoreShape): Promise<void> {
   await safeWriteFile(DATA_FILE, JSON.stringify(s, null, 2));
 }
 
-class JsonFilePropertyRepo implements PropertyRepo {
+/**
+ * 物件リポジトリ。
+ *  - dev（書込可FS）: data/properties.json を読み書き。
+ *  - Workers（書込不可FS）: R2 コレクション（`_properties/<id>.json`）。
+ *    本番の管理画面から直接編集・保存→即反映できる（旧: git SOT で本番保存不可だった）。
+ * 初回のみバンドルの data/properties.json を R2 へシードして既存物件を保護する。
+ */
+const PROP_R2_PREFIX = "_properties/";
+const PROP_SEED_KEY = "_properties_seeded.json";
+let _propsSeeded = false;
+
+async function ensurePropsSeeded(): Promise<void> {
+  if (_propsSeeded) return;
+  const marker = await r2DocGet<{ seeded: boolean }>(PROP_SEED_KEY);
+  if (marker?.seeded) {
+    _propsSeeded = true;
+    return;
+  }
+  const seed = (_propsFallback as unknown as StoreShape).properties ?? [];
+  for (const p of seed) {
+    await r2ColPut(PROP_R2_PREFIX, p.id, p);
+  }
+  await r2DocPut(PROP_SEED_KEY, { seeded: true });
+  _propsSeeded = true;
+}
+
+class PropertyRepoImpl implements PropertyRepo {
   async list(opts: { status?: PropertyStatus } = {}): Promise<Property[]> {
-    const s = await readStore();
+    let props: Property[];
+    if (canAccessLocalFs()) {
+      props = (await readStore()).properties;
+    } else {
+      await ensurePropsSeeded();
+      props = await r2ColList<Property>(PROP_R2_PREFIX);
+    }
     const out = opts.status
-      ? s.properties.filter((p) => p.status === opts.status)
-      : s.properties;
+      ? props.filter((p) => p.status === opts.status)
+      : props;
     return out.sort((a, b) =>
       (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""),
     );
   }
 
   async get(id: string): Promise<Property | null> {
-    const s = await readStore();
-    return s.properties.find((p) => p.id === id) ?? null;
+    if (canAccessLocalFs()) {
+      return (await readStore()).properties.find((p) => p.id === id) ?? null;
+    }
+    await ensurePropsSeeded();
+    return r2ColGet<Property>(PROP_R2_PREFIX, id);
   }
 
   async upsert(p: Property): Promise<Property> {
@@ -73,22 +117,32 @@ class JsonFilePropertyRepo implements PropertyRepo {
       updatedAt: new Date().toISOString(),
       createdAt: p.createdAt ?? new Date().toISOString(),
     });
-    const s = await readStore();
-    const idx = s.properties.findIndex((x) => x.id === validated.id);
-    if (idx >= 0) s.properties[idx] = validated;
-    else s.properties.push(validated);
-    await writeStore(s);
+    if (canAccessLocalFs()) {
+      const s = await readStore();
+      const idx = s.properties.findIndex((x) => x.id === validated.id);
+      if (idx >= 0) s.properties[idx] = validated;
+      else s.properties.push(validated);
+      await writeStore(s);
+    } else {
+      await ensurePropsSeeded();
+      await r2ColPut(PROP_R2_PREFIX, validated.id, validated);
+    }
     return validated;
   }
 
   async remove(id: string): Promise<void> {
-    const s = await readStore();
-    s.properties = s.properties.filter((p) => p.id !== id);
-    await writeStore(s);
+    if (canAccessLocalFs()) {
+      const s = await readStore();
+      s.properties = s.properties.filter((p) => p.id !== id);
+      await writeStore(s);
+    } else {
+      await ensurePropsSeeded();
+      await r2ColDelete(PROP_R2_PREFIX, id);
+    }
   }
 }
 
-export const repo: PropertyRepo = new JsonFilePropertyRepo();
+export const repo: PropertyRepo = new PropertyRepoImpl();
 
 // ─── Asset library repository ────────────────────────────────────
 const ASSETS_FILE = path.join(process.cwd(), "data", "assets.json");
@@ -105,11 +159,19 @@ interface AssetStoreShape {
   assets: Asset[];
 }
 
-export class JsonFileAssetRepo implements AssetRepo {
+/**
+ * アセットのメタデータ保存。
+ *  - dev（書込可FS）: data/assets.json を読み書き。
+ *  - Workers（書込不可FS）: R2 のコレクション（`_assets/<id>.json`）に永続化。
+ * 旧実装は safeWriteFile が Workers で no-op だったため、アップロード/削除が
+ * 永続化されず「削除しても消えない」状態だった（本修正で解消）。
+ */
+const ASSET_R2_PREFIX = "_assets/";
+
+export class AssetRepoImpl implements AssetRepo {
   constructor(private readonly dataFile: string = ASSETS_FILE) {}
 
-  private async read(): Promise<AssetStoreShape> {
-    if (!canAccessLocalFs()) return _assetsFallback as unknown as AssetStoreShape;
+  private async readFile(): Promise<AssetStoreShape> {
     try {
       const raw = await fs.readFile(this.dataFile, "utf8");
       return JSON.parse(raw) as AssetStoreShape;
@@ -118,15 +180,19 @@ export class JsonFileAssetRepo implements AssetRepo {
     }
   }
 
-  private async write(s: AssetStoreShape): Promise<void> {
+  private async writeFile(s: AssetStoreShape): Promise<void> {
     await safeWriteFile(this.dataFile, JSON.stringify(s, null, 2));
   }
 
   async list(
     opts: { kind?: AssetKind; status?: AssetStatus } = {},
   ): Promise<Asset[]> {
-    const s = await this.read();
-    let out = s.assets;
+    let out: Asset[];
+    if (canAccessLocalFs()) {
+      out = (await this.readFile()).assets;
+    } else {
+      out = await r2ColList<Asset>(ASSET_R2_PREFIX);
+    }
     if (opts.kind) out = out.filter((a) => a.kind === opts.kind);
     if (opts.status) out = out.filter((a) => a.status === opts.status);
     return [...out].sort((a, b) =>
@@ -135,25 +201,45 @@ export class JsonFileAssetRepo implements AssetRepo {
   }
 
   async get(id: string): Promise<Asset | null> {
-    const s = await this.read();
-    return s.assets.find((a) => a.id === id) ?? null;
+    if (canAccessLocalFs()) {
+      return (await this.readFile()).assets.find((a) => a.id === id) ?? null;
+    }
+    return r2ColGet<Asset>(ASSET_R2_PREFIX, id);
   }
 
   async upsert(a: Asset): Promise<Asset> {
     const validated = assetSchema.parse(a);
-    const s = await this.read();
-    const idx = s.assets.findIndex((x) => x.id === validated.id);
-    if (idx >= 0) s.assets[idx] = validated;
-    else s.assets.push(validated);
-    await this.write(s);
+    if (canAccessLocalFs()) {
+      const s = await this.readFile();
+      const idx = s.assets.findIndex((x) => x.id === validated.id);
+      if (idx >= 0) s.assets[idx] = validated;
+      else s.assets.push(validated);
+      await this.writeFile(s);
+    } else {
+      await r2ColPut(ASSET_R2_PREFIX, validated.id, validated);
+    }
     return validated;
   }
 
   async remove(id: string): Promise<void> {
-    const s = await this.read();
-    s.assets = s.assets.filter((a) => a.id !== id);
-    await this.write(s);
+    // 実体ファイル（R2 blob）も削除してストレージを解放する。
+    const a = await this.get(id);
+    if (a?.r2Key) {
+      try {
+        const bucket = await getR2Bucket();
+        if (bucket) await bucket.delete(a.r2Key);
+      } catch {
+        /* blob 削除失敗はメタ削除を妨げない */
+      }
+    }
+    if (canAccessLocalFs()) {
+      const s = await this.readFile();
+      s.assets = s.assets.filter((x) => x.id !== id);
+      await this.writeFile(s);
+    } else {
+      await r2ColDelete(ASSET_R2_PREFIX, id);
+    }
   }
 }
 
-export const assetRepo: AssetRepo = new JsonFileAssetRepo();
+export const assetRepo: AssetRepo = new AssetRepoImpl();

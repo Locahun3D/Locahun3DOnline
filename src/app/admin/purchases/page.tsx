@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { purchaseRepo } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
-import { refundPurchaseAction } from "@/lib/admin-actions";
+import { refundPurchaseAction, deletePurchaseAction, bulkDeleteTestPurchasesAction } from "@/lib/admin-actions";
 import RefundButton from "@/components/admin/refund-button";
-import { stripeEnabled } from "@/lib/stripe";
+import DeletePurchaseButton from "@/components/admin/delete-purchase-button";
+import BulkDeleteTestButton from "@/components/admin/bulk-delete-test-button";
+import { stripeConfigStatus } from "@/lib/stripe";
 import StripeSetupPanel from "@/components/admin/stripe-setup-panel";
 
 export const metadata = { title: "データ販売" };
@@ -85,6 +87,11 @@ export default async function PurchasesPage({
   // Unique property IDs with purchases (for filter dropdown)
   const purchasedPropertyIds = [...new Set(allPurchases.map((p) => p.propertyId))];
 
+  // 削除可能（Stripe紐付きの未返金 completed 以外）= テスト購入の掃除対象。
+  const deletableCount = allPurchases.filter(
+    (p) => !(p.status === "completed" && p.stripeSessionId),
+  ).length;
+
   return (
     <div className="p-6 md:p-10 space-y-8">
       <header className="flex items-baseline gap-4 flex-wrap">
@@ -92,18 +99,34 @@ export default async function PurchasesPage({
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
           {allPurchases.length} purchases
         </span>
-        {stripeEnabled() ? (
-          <span className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-2 py-0.5">
-            ● 決済 Stripe 接続済み（本番）
-          </span>
-        ) : (
-          <span
-            className="mono text-[10px] tracking-[0.18em] uppercase border border-amber-400/40 text-amber-400 px-2 py-0.5"
-            title="STRIPE_SECRET_KEY 未設定。購入は即時完了の擬似決済（実入金なし）です。"
-          >
-            ● 決済 未接続（テスト即時完了・実入金なし）
-          </span>
-        )}
+        {(() => {
+          const s = stripeConfigStatus();
+          if (!s.enabled) {
+            return (
+              <span
+                className="mono text-[10px] tracking-[0.18em] uppercase border border-amber-400/40 text-amber-400 px-2 py-0.5"
+                title="STRIPE_SECRET_KEY 未設定。購入は即時完了の擬似決済（実入金なし）です。"
+              >
+                ● 決済 未接続（テスト即時完了・実入金なし）
+              </span>
+            );
+          }
+          return s.live ? (
+            <span className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-2 py-0.5">
+              ● 決済 Stripe 接続済み（本番 LIVE）
+            </span>
+          ) : (
+            <span
+              className="mono text-[10px] tracking-[0.18em] uppercase border border-blue-400/40 text-blue-400 px-2 py-0.5"
+              title="sk_test キー。テストモードで実課金なし。Liveキーで本番化。"
+            >
+              ● 決済 Stripe 接続済み（テストモード）
+            </span>
+          );
+        })()}
+        <form action={bulkDeleteTestPurchasesAction} className="ml-auto">
+          <BulkDeleteTestButton count={deletableCount} />
+        </form>
       </header>
 
       <StripeSetupPanel />
@@ -273,23 +296,32 @@ export default async function PurchasesPage({
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {p.status === "completed" && (
-                        <form action={refundPurchaseAction} className="inline-flex items-center gap-1">
-                          <input type="hidden" name="id" value={p.id} />
-                          <input
-                            type="text"
-                            name="reason"
-                            placeholder="返金理由"
-                            className="w-24 bg-bg border border-line text-[10px] px-2 py-1 text-ink"
-                          />
-                          <RefundButton />
-                        </form>
-                      )}
-                      {p.status === "refunded" && (
-                        <span className="mono text-[9px] opacity-40">
-                          {p.refundedAt ? fmtDate(p.refundedAt) : ""}
-                        </span>
-                      )}
+                      <div className="inline-flex items-center gap-2">
+                        {p.status === "completed" && (
+                          <form action={refundPurchaseAction} className="inline-flex items-center gap-1">
+                            <input type="hidden" name="id" value={p.id} />
+                            <input
+                              type="text"
+                              name="reason"
+                              placeholder="返金理由"
+                              className="w-24 bg-bg border border-line text-[10px] px-2 py-1 text-ink"
+                            />
+                            <RefundButton />
+                          </form>
+                        )}
+                        {p.status === "refunded" && (
+                          <span className="mono text-[9px] opacity-40">
+                            {p.refundedAt ? fmtDate(p.refundedAt) : ""}
+                          </span>
+                        )}
+                        {/* 削除: 実入金が残り得る (Stripe紐付き completed) 以外は掃除できる。 */}
+                        {!(p.status === "completed" && p.stripeSessionId) && (
+                          <form action={deletePurchaseAction} className="inline-flex">
+                            <input type="hidden" name="id" value={p.id} />
+                            <DeletePurchaseButton />
+                          </form>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

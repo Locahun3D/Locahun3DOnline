@@ -80,6 +80,12 @@ export default async function AdminLayout({
               >
                 データ販売
               </Link>
+              <Link
+                href="/admin/pricing"
+                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
+              >
+                ↳ 価格管理
+              </Link>
             </>
           )}
         </nav>

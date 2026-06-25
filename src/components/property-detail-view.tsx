@@ -5,18 +5,11 @@ import {
   PLAN_TOKEN_BUDGET,
   type Property,
 } from "@/lib/schemas";
-import ImageGallery from "@/components/image-gallery";
 import ViewerGate from "@/components/viewer-gate";
 import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
+import BookmarkButton from "@/components/bookmark-button";
 
-/**
- * Shared property detail body. Used by the public page (`/properties/[id]`,
- * published only) and the admin preview (`/admin/properties/[id]/preview`,
- * any status). Presentational only — pages fetch and pass the data, and the
- * public page additionally renders <TrackView/> (omitted here so previews
- * don't log analytics views).
- */
 export default function PropertyDetailView({
   property,
   others,
@@ -27,29 +20,32 @@ export default function PropertyDetailView({
   purchasedIndices = [],
   hasViewerAccess = false,
   signedIn = false,
+  bookmarked = false,
 }: {
   property: Property;
   others: Property[];
   preview?: boolean;
-  /** 限定無料期間: 全 3DGS をトークン消費なしで閲覧可能。 */
   freeAccess?: boolean;
-  /** Whether the current user can view restricted/backyard 3DGS files. */
   canViewRestricted?: boolean;
-  /** Whether the current user can view NDA-only 3DGS files. */
   canViewNdaOnly?: boolean;
-  /** splatItem indexes the current user has already purchased. */
   purchasedIndices?: number[];
-  /** 管理者・有料会員: paywall を出さず視聴可。 */
   hasViewerAccess?: boolean;
-  /** サインイン済みか（paywall の「Sign in」表示制御用）。 */
   signedIn?: boolean;
+  bookmarked?: boolean;
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
 
+  const visibleSplatItems = property.splatItems.filter((it) => {
+    if (!it.splatUrl) return false;
+    if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+    if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
+    return true;
+  });
+
   return (
-    <article className="theme-online frame pt-10 pb-24">
+    <article className="theme-online">
       {preview && (
-        <div className="mb-6 border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-[12px] mono tracking-[0.08em] text-amber-300 flex flex-wrap items-center justify-between gap-3">
+        <div className="frame mb-0 border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-[13px] mono tracking-[0.08em] text-amber-300 flex flex-wrap items-center justify-between gap-3">
           <span>
             ● 管理プレビュー — ステータス:{" "}
             <strong className="uppercase">{property.status}</strong>
@@ -64,317 +60,572 @@ export default function PropertyDetailView({
         </div>
       )}
 
-      <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-6 flex gap-2 items-center">
-        <Link href="/properties" className="hover:text-accent">
-          CATALOG
-        </Link>
-        <span>/</span>
-        <span>{CATEGORY_LABEL[property.category]}</span>
-        <span>/</span>
-        <span className="text-ink/70">{property.id.toUpperCase()}</span>
-      </nav>
+      {/* ══════════════════════════════════════════════════
+       *  Cinematic Hero — full-width cover + dark gradient overlay
+       * ══════════════════════════════════════════════════ */}
+      <section className="relative w-full overflow-hidden" style={{ height: "clamp(340px, 40vw, 520px)" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={property.cover.src}
+          alt={property.cover.alt}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
 
-      <header className="grid lg:grid-cols-3 gap-6 sm:gap-10 mb-12">
-        <div className="lg:col-span-2">
-          <div className="mono text-[11px] tracking-[0.3em] uppercase text-accent mb-3">
+        <div className="absolute inset-0 flex flex-col justify-end frame pb-10 sm:pb-14">
+          <nav className="mono text-[11px] tracking-[0.28em] uppercase text-white/50 mb-4 flex gap-2 items-center">
+            <Link href="/properties" className="hover:text-white/80 transition">
+              CATALOG
+            </Link>
+            <span>/</span>
+            <span>{CATEGORY_LABEL[property.category]}</span>
+            <span>/</span>
+            <span>{property.id.toUpperCase()}</span>
+          </nav>
+
+          <div className="mono text-[12px] tracking-[0.2em] uppercase text-white/60 mb-2">
             {property.prefecture} {property.city}
-          </div>
-          <h1 className="serif text-[clamp(1.8rem,3.8vw,3rem)] font-bold leading-[1.3] mb-5">
-            {property.title || "（無題の物件）"}
-          </h1>
-          <p className="text-[15px] leading-[1.9] text-muted whitespace-pre-line max-w-[70ch]">
-            {property.description}
-          </p>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-            {property.tags.map((t) => (
-              <span
-                key={t}
-                className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-2 py-1 opacity-80"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <aside className="border border-line p-6 h-fit space-y-5">
-          <div>
-            <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50">
-              貸出料金
-            </div>
-            <div className="mt-1">
-              <span className="serif text-4xl text-accent">¥{yen}</span>
-              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
-                /hr
-              </span>
-            </div>
-            {property.dailyPrice > 0 ? (
-              <div className="mt-2 mono text-[12px]">
-                日貸し:{" "}
-                <span className="text-accent">
-                  ¥{property.dailyPrice.toLocaleString("ja-JP")}
-                </span>
-                <span className="opacity-50 ml-1">/day</span>
-              </div>
-            ) : (
-              <div className="mt-2 mono text-[10px] opacity-50">日貸し非対応</div>
+            {property.studioType && (
+              <span className="ml-3 text-white/40">{property.studioType}</span>
             )}
           </div>
 
-          <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              面積
-            </dt>
-            <dd className="text-right">{property.floorAreaSqm} ㎡</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              天井高
-            </dt>
-            <dd className="text-right">{property.ceilingHeightM || "—"} m</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              収容
-            </dt>
-            <dd className="text-right">{property.capacity} 名</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              自然光
-            </dt>
-            <dd className="text-right">
-              {property.hasNaturalLight ? "あり" : "なし"}
-            </dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              駐車
-            </dt>
-            <dd className="text-right">{property.parking ? "可" : "不可"}</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              搬入口
-            </dt>
-            <dd className="text-right">{property.loadingDock ? "大" : "通常"}</dd>
-            <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-              スキャン
-            </dt>
-            <dd className="text-right">{property.scannedAt || "—"}</dd>
-          </dl>
+          <h1 className="serif text-[clamp(1.6rem,4vw,2.8rem)] font-bold leading-[1.25] text-white max-w-[900px]">
+            {property.title || "（無題の物件）"}
+          </h1>
 
-          <div className="pt-4 border-t border-line">
-            <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
-              ● 3DGS 視聴コスト
-            </div>
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="serif text-2xl text-accent">
-                {property.tokenCost}
+          <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
+            <div className="flex items-baseline gap-1">
+              <span className="serif text-3xl sm:text-4xl text-accent font-bold">
+                ¥{yen}
               </span>
-              <span className="mono text-[10px] tracking-[0.18em] opacity-50">
-                トークン
-              </span>
-              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-auto">
-                {TOKEN_COST_LABEL[property.tokenCost]}
-              </span>
+              <span className="mono text-[11px] text-white/50">/hr</span>
             </div>
-            <div className="text-[11px] text-muted mt-2 leading-[1.7]">
-              {property.tokenCost === 1 ? (
-                <>
-                  Free 登録特典の 1 トークンで 1 件視聴可能。<br className="pc" />
-                  Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月 8 件、 Studio
-                  ({PLAN_TOKEN_BUDGET.studio}t/月) で月 12 件まで継続視聴。
-                </>
-              ) : (
-                <>
-                  Individual ({PLAN_TOKEN_BUDGET.individual}t/月) で月{" "}
-                  {Math.floor(PLAN_TOKEN_BUDGET.individual / property.tokenCost)}{" "}
-                  件、 Studio ({PLAN_TOKEN_BUDGET.studio}t/月) で月{" "}
-                  {Math.floor(PLAN_TOKEN_BUDGET.studio / property.tokenCost)}{" "}
-                  件まで視聴可能
-                  <span className="block opacity-70 mt-0.5">
-                    ※ Free の登録時 1 トークンではハウススタジオ (1t) のみ視聴可
-                  </span>
-                </>
-              )}
-            </div>
-            <Link
-              href="/pricing"
-              className="mt-2 inline-block mono text-[10px] tracking-[0.22em] uppercase text-accent hover:underline"
-            >
-              プラン詳細 →
-            </Link>
-          </div>
-
-          {/* Contact info */}
-          {(property.contactPhone || property.contactEmail || property.contactWebsite) && (
-            <div className="pt-4 border-t border-line space-y-2">
-              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-1">
-                お問い合わせ
+            {property.dailyPrice > 0 && (
+              <div className="mono text-[12px] text-white/60">
+                日貸し ¥{property.dailyPrice.toLocaleString("ja-JP")}/day
               </div>
-              {property.contactPhone && (
-                <a
-                  href={`tel:${property.contactPhone}`}
-                  className="flex items-center gap-2 text-[12px] hover:text-accent transition"
+            )}
+            <div className="flex flex-wrap gap-1.5 sm:ml-auto">
+              {property.tags.map((t) => (
+                <span
+                  key={t}
+                  className="mono text-[10px] tracking-[0.12em] uppercase bg-white/15 backdrop-blur-sm text-white/80 px-2.5 py-1 rounded-sm"
                 >
-                  <span className="opacity-50">TEL</span>
-                  <span>{property.contactPhone}</span>
-                </a>
-              )}
-              {property.contactEmail && (
-                <a
-                  href={`mailto:${property.contactEmail}`}
-                  className="flex items-center gap-2 text-[12px] hover:text-accent transition"
-                >
-                  <span className="opacity-50">MAIL</span>
-                  <span>{property.contactEmail}</span>
-                </a>
-              )}
-              {property.contactWebsite && (
-                <a
-                  href={property.contactWebsite}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-[12px] hover:text-accent transition"
-                >
-                  <span className="opacity-50">HP</span>
-                  <span className="truncate">{property.contactWebsite.replace(/^https?:\/\//, "")}</span>
-                  <span className="opacity-40">↗</span>
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Blueprints download */}
-          {property.blueprints && property.blueprints.length > 0 && property.blueprints.some(b => b.url) && (
-            <div className="pt-4 border-t border-line space-y-2">
-              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-1">
-                図面 / フロアプラン
-                <span className="ml-2 normal-case tracking-normal opacity-70">クリックでダウンロード</span>
-              </div>
-              {property.blueprints.filter(b => b.url).map((b, i) => (
-                <a
-                  key={i}
-                  href={b.url}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-[12px] border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
-                >
-                  <span className="mono text-[10px] opacity-50">■</span>
-                  <span className="flex-1 truncate">{b.label || `図面 ${i + 1}`}</span>
-                  <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">DL</span>
-                </a>
+                  {t}
+                </span>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Top-right actions on the hero */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 flex items-center gap-2">
+          {!preview && (
+            <BookmarkButton
+              propertyId={property.id}
+              initialBookmarked={bookmarked}
+              signedIn={signedIn}
+              revalidate={`/properties/${property.id}`}
+              variant="inline"
+            />
           )}
+          <button
+            type="button"
+            className="px-4 py-2.5 mono text-[11px] tracking-[0.2em] uppercase bg-accent text-black font-semibold hover:bg-accent/90 transition rounded-sm"
+          >
+            見積もり依頼
+          </button>
+        </div>
+      </section>
 
-          <div className="pt-4 border-t border-line space-y-2">
-            <button
-              type="button"
-              className="w-full px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
-            >
-              見積もり依頼
-            </button>
-          </div>
-        </aside>
-      </header>
-
-      {property.pageBlocks && property.pageBlocks.length > 0 ? (
-        /* Custom page composed in the studio page builder */
-        <section className="mb-16">
-          <StudioPageBlocks blocks={property.pageBlocks} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} />
-        </section>
-      ) : (
-        <>
-          {/* 3DGS Viewer + Data Sale — per splatItem */}
-          {property.splatItems.filter(it => {
-            if (!it.splatUrl) return false;
-            if (it.accessLevel === "restricted" && !canViewRestricted) return false;
-            if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
-            return true;
-          }).map((item, idx) => (
-            <section key={idx} className="mb-16">
-              <div className="chapter-rule">
-                <span className="opacity-60">3DGS</span>
-                <span>{item.label || `Virtual Walkthrough`}</span>
-                <span className="flex-1 h-px bg-current opacity-25" />
-                <span className="opacity-60">{item.sizeMb} MB</span>
-              </div>
-              <ViewerGate
-                splatUrl={item.splatUrl}
-                propertyId={property.id}
-                label={item.label || `#${idx + 1}`}
-                sizeMb={item.sizeMb}
-                previewVideoUrl={item.previewVideoUrl}
-                tokenCost={property.tokenCost}
-                freeAccess={freeAccess}
-                hasSubscription={hasViewerAccess}
-                signedIn={signedIn}
-              />
-              {item.forSale && item.salePrice > 0 && (
-                <DataSalePanel
-                  propertyId={property.id}
-                  propertyTitle={property.title}
-                  splatItemIndex={idx}
-                  itemLabel={item.label}
-                  price={item.salePrice}
-                  description={item.saleDescription}
-                  scannedAt={property.scannedAt}
-                  splatSizeMb={item.sizeMb}
-                  zipSizeMb={property.zipSizeMb}
-                  splatItemCount={property.splatItems.length}
-                  tokenCost={property.tokenCost as 1 | 2 | 3}
-                  downloadFileFormat={item.downloadFileFormat}
-                  downloadFileSizeMb={item.downloadFileSizeMb}
-                  pointCount={item.pointCount}
-                  captureDevice={item.captureDevice}
-                  license={item.license}
-                  alreadyPurchased={purchasedIndices.includes(idx)}
-                />
-              )}
-            </section>
-          ))}
-
-          {/* Image Gallery */}
-          <section className="mb-16">
-            <div className="chapter-rule">
-              <span className="opacity-60">STILLS</span>
-              <span>Reference Photos</span>
-              <span className="flex-1 h-px bg-current opacity-25" />
-              <span className="opacity-60">{property.gallery.length} 枚</span>
-            </div>
-            <ImageGallery images={[property.cover, ...property.gallery]} />
-          </section>
-        </>
-      )}
-
-      {/* Related */}
-      {others.length > 0 && (
-        <section>
-          <div className="chapter-rule">
-            <span className="opacity-60">RELATED</span>
-            <span>Other Locations</span>
-            <span className="flex-1 h-px bg-current opacity-25" />
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {others.map((p) => (
-              <Link
-                key={p.id}
-                href={`/properties/${p.id}`}
-                className="group block border border-line overflow-hidden hover:border-accent transition"
-              >
+      {/* ══════════════════════════════════════════════════
+       *  Dashboard body
+       * ══════════════════════════════════════════════════ */}
+      <div className="frame pt-8 pb-24">
+        {/* ── Gallery — Airbnb-style 5-image grid ── */}
+        {(() => {
+          const allPhotos = [property.cover, ...property.gallery];
+          const grid5 = allPhotos.slice(0, 5);
+          const totalCount = allPhotos.length;
+          return (
+            <div className="grid grid-cols-[1fr_0.5fr_0.5fr] grid-rows-2 gap-1 rounded-lg overflow-hidden mb-8"
+                 style={{ height: "clamp(300px, 36vw, 480px)" }}>
+              {/* Left: main image spanning 2 rows */}
+              <div className="row-span-2 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={p.cover.src}
-                  alt={p.cover.alt}
-                  className="w-full aspect-[16/10] object-cover"
+                  src={grid5[0]?.src}
+                  alt={grid5[0]?.alt}
+                  className="w-full h-full object-cover"
                 />
-                <div className="p-4">
-                  <div className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">
-                    {p.city}
+              </div>
+              {/* Right: 4 images in 2×2 */}
+              {[1, 2, 3, 4].map((idx) => (
+                <div key={idx} className="relative overflow-hidden">
+                  {grid5[idx] ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={grid5[idx].src}
+                        alt={grid5[idx].alt}
+                        className="w-full h-full object-cover"
+                      />
+                      {idx === 4 && totalCount > 5 && (
+                        <button
+                          type="button"
+                          className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
+                        >
+                          すべての写真 ({totalCount})
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-ink/[0.04] flex items-center justify-center aspect-[4/3]">
+                      <span className="text-[13px] text-ink/40 font-medium">
+                        すべての写真 ({totalCount})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── 4-column metric cards ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <div className="border border-line rounded-md p-4">
+            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+              面積
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                {property.floorAreaSqm}
+              </span>
+              <span className="text-[13px] text-ink/50">㎡</span>
+            </div>
+          </div>
+
+          <div className="border border-line rounded-md p-4">
+            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+              天井高
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                {property.ceilingHeightM || "—"}
+              </span>
+              <span className="text-[13px] text-ink/50">m</span>
+            </div>
+          </div>
+
+          <div className="border border-line rounded-md p-4">
+            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+              収容
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                {property.capacity}
+              </span>
+              <span className="text-[13px] text-ink/50">名</span>
+            </div>
+          </div>
+
+          <div className="border border-line rounded-md p-4">
+            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+              自然光
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                {property.hasNaturalLight ? "あり" : "なし"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Description + Spec/Contact sidebar ── */}
+        <div className="grid lg:grid-cols-3 gap-6 mb-10">
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <div className="mono text-[11px] tracking-[0.22em] uppercase text-ink/45 mb-2 font-medium">
+                概要
+              </div>
+              <p className="text-[15px] leading-[1.9] text-ink/80 whitespace-pre-line">
+                {property.description}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Right sidebar: CTA + specs + blueprints */}
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            {/* ── CTA card (accent) ── */}
+            <div className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
+              <div className="bg-accent px-5 py-4">
+                <div className="text-[11px] font-bold tracking-[0.15em] text-white/80 mb-1">
+                  お問い合わせ
+                </div>
+                {property.contactPhone && (
+                  <a
+                    href={`tel:${property.contactPhone}`}
+                    className="flex items-center gap-2 text-white"
+                  >
+                    <span className="text-[11px] font-bold tracking-wider">TEL</span>
+                    <span className="text-[22px] font-bold tracking-wide leading-none">
+                      {property.contactPhone}
+                    </span>
+                  </a>
+                )}
+              </div>
+              <div className="bg-white px-5 py-4 space-y-3">
+                <a
+                  href="#inquiry-form"
+                  className="block w-full bg-ink text-white text-center text-[14px] font-medium py-3.5 rounded-md hover:bg-ink/85 transition"
+                >
+                  フォームからお問い合わせ
+                </a>
+                <div className="flex items-center gap-2">
+                  {property.contactEmail && (
+                    <a
+                      href={`mailto:${property.contactEmail}`}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[12px] text-ink/60 border border-line rounded-md py-2 hover:border-accent hover:text-accent transition"
+                    >
+                      <span>✉</span>
+                      <span>メール</span>
+                    </a>
+                  )}
+                  {property.contactWebsite && (
+                    <a
+                      href={property.contactWebsite}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[12px] text-ink/60 border border-line rounded-md py-2 hover:border-accent hover:text-accent transition"
+                    >
+                      <span>↗</span>
+                      <span>HP</span>
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-line">
+                  <BookmarkButton
+                    propertyId={property.id}
+                    initialBookmarked={bookmarked}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Specs ── */}
+            <div className="border border-line rounded-md overflow-hidden">
+              <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
+                <span className="mono text-[11px] tracking-[0.22em] uppercase text-ink/50 font-medium">
+                  スペック
+                </span>
+              </div>
+              <table className="w-full text-[14px]">
+                <tbody>
+                  {[
+                    ["電源", property.powerVoltage || "—"],
+                    ["駐車場", property.parking ? "利用可" : "なし"],
+                    ["搬入口", property.loadingDock ? "大型搬入可" : "通常"],
+                    ["スキャン日", property.scannedAt || "—"],
+                  ].map(([label, value]) => (
+                    <tr key={label} className="border-b border-line last:border-0">
+                      <td className="px-4 py-2.5 mono text-[11px] tracking-[0.18em] uppercase text-ink/45 font-medium w-[100px]">
+                        {label}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink/80">{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Blueprints ── */}
+            {property.blueprints &&
+              property.blueprints.length > 0 &&
+              property.blueprints.some((b) => b.url) && (
+                <div className="border border-line rounded-md overflow-hidden">
+                  <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
+                    <span className="mono text-[11px] tracking-[0.22em] uppercase text-ink/50 font-medium">
+                      図面 / フロアプラン
+                    </span>
                   </div>
-                  <div className="serif text-base mt-1 group-hover:text-accent transition">
-                    {p.title}
+                  <div className="p-3 space-y-2">
+                    {property.blueprints
+                      .filter((b) => b.url)
+                      .map((b, i) => (
+                        <a
+                          key={i}
+                          href={b.url}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 rounded-sm hover:border-accent hover:text-accent transition"
+                        >
+                          <span className="text-accent">⬇</span>
+                          <span className="flex-1 truncate text-ink/80">
+                            {b.label || `図面 ${i + 1}`}
+                          </span>
+                          <span className="mono text-[10px] tracking-[0.18em] uppercase text-ink/40 font-medium">
+                            DL
+                          </span>
+                        </a>
+                      ))}
                   </div>
                 </div>
-              </Link>
+              )}
+          </aside>
+        </div>
+
+        {/* ── Content sections (3DGS / Gallery / Page blocks) ── */}
+        {property.pageBlocks && property.pageBlocks.length > 0 ? (
+          <section className="mb-16">
+            <StudioPageBlocks
+              blocks={property.pageBlocks}
+              property={property}
+              freeAccess={freeAccess}
+              canViewRestricted={canViewRestricted}
+              canViewNdaOnly={canViewNdaOnly}
+              hasViewerAccess={hasViewerAccess}
+              signedIn={signedIn}
+            />
+          </section>
+        ) : (
+          <>
+            {visibleSplatItems.map((item, idx) => (
+              <section key={idx} className="mb-12">
+                <div className="chapter-rule">
+                  <span className="text-ink/50">3DGS</span>
+                  <span className="text-ink/80">
+                    {item.label || "Virtual Walkthrough"}
+                  </span>
+                  <span className="flex-1 h-px bg-current opacity-25" />
+                  <span className="text-ink/50">{item.sizeMb} MB</span>
+                </div>
+                <ViewerGate
+                  splatUrl={item.splatUrl}
+                  propertyId={property.id}
+                  label={item.label || `#${idx + 1}`}
+                  sizeMb={item.sizeMb}
+                  previewVideoUrl={item.previewVideoUrl}
+                  tokenCost={property.tokenCost}
+                  freeAccess={freeAccess}
+                  hasSubscription={hasViewerAccess}
+                  signedIn={signedIn}
+                />
+                {item.forSale && item.salePrice > 0 && (
+                  <DataSalePanel
+                    propertyId={property.id}
+                    propertyTitle={property.title}
+                    splatItemIndex={idx}
+                    itemLabel={item.label}
+                    price={item.salePrice}
+                    description={item.saleDescription}
+                    scannedAt={property.scannedAt}
+                    splatSizeMb={item.sizeMb}
+                    zipSizeMb={property.zipSizeMb}
+                    splatItemCount={property.splatItems.length}
+                    tokenCost={property.tokenCost as 1 | 2 | 3}
+                    downloadFileFormat={item.downloadFileFormat}
+                    downloadFileSizeMb={item.downloadFileSizeMb}
+                    pointCount={item.pointCount}
+                    captureDevice={item.captureDevice}
+                    license={item.license}
+                    alreadyPurchased={purchasedIndices.includes(idx)}
+                  />
+                )}
+              </section>
             ))}
+
+          </>
+        )}
+
+        {/* ── Inquiry form ── */}
+        <section id="inquiry-form" className="mt-16 mb-16 scroll-mt-24">
+          <div className="chapter-rule">
+            <span className="text-accent font-medium">CONTACT</span>
+            <span className="text-ink/80">スタジオへのお問い合わせ</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
+
+          <div className="border border-line rounded-lg overflow-hidden">
+            {/* Form header */}
+            <div className="bg-accent px-6 py-4">
+              <h3 className="text-white text-[16px] font-bold">
+                {property.title} に問い合わせる
+              </h3>
+              <p className="text-white/70 text-[13px] mt-1">
+                下記フォームにご記入ください。担当者より折り返しご連絡いたします。
+              </p>
+            </div>
+
+            <form className="bg-white p-6 space-y-5" action="#inquiry-form" method="GET">
+              {/* 2-col: name + company */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                    お名前 <span className="text-red-500 text-[11px]">必須</span>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="山田 太郎"
+                    required
+                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                    会社名
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="株式会社〇〇"
+                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                  />
+                </label>
+              </div>
+
+              {/* 2-col: email + phone */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                    メールアドレス <span className="text-red-500 text-[11px]">必須</span>
+                  </span>
+                  <input
+                    type="email"
+                    placeholder="info@example.com"
+                    required
+                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                    電話番号
+                  </span>
+                  <input
+                    type="tel"
+                    placeholder="090-0000-0000"
+                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                  />
+                </label>
+              </div>
+
+              {/* 2-col: purpose + date */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                    利用目的 <span className="text-red-500 text-[11px]">必須</span>
+                  </span>
+                  <select
+                    required
+                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] bg-white focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>選択してください</option>
+                    <option>スチール撮影</option>
+                    <option>ムービー / CM撮影</option>
+                    <option>ロケハン（内見）</option>
+                    <option>イベント / 展示会</option>
+                    <option>その他</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                    利用希望日
+                  </span>
+                  <input
+                    type="date"
+                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                  />
+                </label>
+              </div>
+
+              {/* Message */}
+              <label className="block">
+                <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
+                  お問い合わせ内容 <span className="text-red-500 text-[11px]">必須</span>
+                </span>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="ご利用時間、人数、搬入物の有無など詳細をお聞かせください"
+                  className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] leading-relaxed resize-y focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
+                />
+              </label>
+
+              {/* Submit */}
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  type="submit"
+                  className="bg-accent text-white text-[15px] font-bold px-8 py-3.5 rounded-md hover:bg-accent/85 transition shadow-sm"
+                >
+                  送信する
+                </button>
+                <span className="text-[12px] text-ink/40">
+                  ※ 送信後、担当者より1営業日以内にご連絡いたします
+                </span>
+              </div>
+            </form>
           </div>
         </section>
-      )}
+
+        {/* ── Related studios ── */}
+        <section className="mt-8">
+          <div className="chapter-rule">
+            <span className="text-ink/50">RELATED</span>
+            <span className="text-ink/80">類似スタジオ</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
+          {others.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {others.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/properties/${p.id}`}
+                  className="group block border border-line rounded-md overflow-hidden hover:border-accent transition"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.cover.src}
+                    alt={p.cover.alt}
+                    className="w-full aspect-[16/10] object-cover"
+                  />
+                  <div className="p-4 space-y-1.5">
+                    <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/45 font-medium">
+                      {p.area} · {p.city}
+                    </div>
+                    <div className="serif text-[15px] text-ink/85 group-hover:text-accent transition leading-snug">
+                      {p.title}
+                    </div>
+                    <div className="flex items-center gap-3 text-[12px] text-ink/50 mt-2">
+                      {p.floorAreaSqm > 0 && <span>{p.floorAreaSqm} m²</span>}
+                      {p.ceilingHeightM > 0 && <span>天井 {p.ceilingHeightM}m</span>}
+                      {p.hourlyPrice > 0 && (
+                        <span className="ml-auto font-medium text-ink/70">
+                          ¥{p.hourlyPrice.toLocaleString()}/h
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="border border-dashed border-line rounded-md py-16 text-center">
+              <p className="text-ink/40 text-[14px]">
+                現在、類似スタジオの掲載準備中です
+              </p>
+              <Link
+                href="/properties"
+                className="inline-block mt-4 mono text-[12px] tracking-[0.15em] uppercase text-accent hover:underline"
+              >
+                すべての物件を見る →
+              </Link>
+            </div>
+          )}
+        </section>
+      </div>
     </article>
   );
 }

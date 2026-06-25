@@ -12,6 +12,7 @@ import {
   type PropertyCategory,
 } from "@/lib/schemas";
 import { formatKm, haversineKm } from "@/lib/distance";
+import BookmarkButton from "@/components/bookmark-button";
 
 const CatalogMap = dynamic(() => import("./catalog-map"), {
   ssr: false,
@@ -38,6 +39,8 @@ interface Props {
   items: Property[];
   areas: string[];
   studioTypes: string[];
+  bookmarkedIds?: string[];
+  signedIn?: boolean;
 }
 
 type SortKey =
@@ -183,10 +186,12 @@ function useRecentFilters() {
   return { recent, record, remove, clear };
 }
 
-export default function CatalogClient({ items, areas, studioTypes }: Props) {
+export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds = [], signedIn = false }: Props) {
+  const bookmarkedSet = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [reference, setReference] = useState<Reference>(DEFAULT_REF);
+  const [geoMsg, setGeoMsg] = useState("");
 
   // Filters (dual ranges where it makes sense)
   const [q, setQ] = useState("");
@@ -354,14 +359,18 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
 
   const useGeolocation = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      alert("お使いのブラウザはジオロケーションに対応していません。");
+      setGeoMsg("お使いのブラウザはジオロケーションに対応していません。");
+      setTimeout(() => setGeoMsg(""), 4000);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => setReference({
         id: "current", lat: pos.coords.latitude, lng: pos.coords.longitude, label: "現在地",
       }),
-      (err) => alert(`現在地を取得できませんでした: ${err.message}`),
+      () => {
+        setGeoMsg("現在地を取得できませんでした。ブラウザの位置情報を許可してください。");
+        setTimeout(() => setGeoMsg(""), 4000);
+      },
       { enableHighAccuracy: false, timeout: 8000 },
     );
   }, []);
@@ -382,7 +391,7 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
             category={category} setCategory={setCategory}
             area={area} setArea={setArea} areas={areas}
             studioType={studioType} setStudioType={setStudioType} studioTypes={studioTypes}
-            reference={reference} setReference={setReference} useGeolocation={useGeolocation}
+            reference={reference} setReference={setReference} useGeolocation={useGeolocation} geoMsg={geoMsg}
             minPrice={minPrice} setMinPrice={setMinPrice}
             maxPrice={maxPrice} setMaxPrice={setMaxPrice}
             minDailyPrice={minDailyPrice} setMinDailyPrice={setMinDailyPrice}
@@ -441,6 +450,8 @@ export default function CatalogClient({ items, areas, studioTypes }: Props) {
                   distanceKm={p.distanceKm}
                   referenceLabel={reference.label}
                   highlighted={hoveredId === p.id}
+                  bookmarked={bookmarkedSet.has(p.id)}
+                  signedIn={signedIn}
                 />
               </li>
             ))}
@@ -460,7 +471,7 @@ interface FiltersProps {
   category: PropertyCategory | "all"; setCategory: (v: PropertyCategory | "all") => void;
   area: string; setArea: (v: string) => void; areas: string[];
   studioType: string; setStudioType: (v: string) => void; studioTypes: string[];
-  reference: Reference; setReference: (v: Reference) => void; useGeolocation: () => void;
+  reference: Reference; setReference: (v: Reference) => void; useGeolocation: () => void; geoMsg: string;
   minPrice: number | ""; setMinPrice: (v: number | "") => void;
   maxPrice: number | ""; setMaxPrice: (v: number | "") => void;
   minDailyPrice: number | ""; setMinDailyPrice: (v: number | "") => void;
@@ -532,34 +543,35 @@ function FiltersPanel(p: FiltersProps) {
       <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2.5">
         <div className="space-y-2.5">
           <Row label="キーワード">
-            <input
-              type="search"
-              value={p.q}
-              onChange={(e) => p.setQ(e.target.value)}
-              placeholder="白ホリ / 渋谷 / ガレージ ..."
-              className={inputWhiteCls + " w-full max-w-xs"}
-            />
-          </Row>
-
-          <Row label="">
-            <button
-              type="button"
-              onClick={p.reset}
-              className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-ink transition"
-            >
-              ✕ すべてリセット
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="search"
+                value={p.q}
+                onChange={(e) => p.setQ(e.target.value)}
+                placeholder="白ホリ / 渋谷 / ガレージ ..."
+                className={inputWhiteCls + " w-full max-w-xs"}
+              />
+              <button
+                type="button"
+                onClick={p.reset}
+                className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-ink transition whitespace-nowrap"
+              >
+                ✕ すべてリセット
+              </button>
+            </div>
           </Row>
         </div>
 
         <Row label="参照地点 / 距離">
-          <div className="grid md:grid-cols-[2fr_1fr] gap-3">
-            <ReferencePicker
-              value={p.reference}
-              onChange={p.setReference}
-              onUseGeolocation={p.useGeolocation}
-            />
-            <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <ReferencePicker
+                value={p.reference}
+                onChange={p.setReference}
+                onUseGeolocation={p.useGeolocation}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
               <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
                 から
               </span>
@@ -569,13 +581,17 @@ function FiltersPanel(p: FiltersProps) {
                 options={DISTANCE_OPTS}
                 format={(v) => `${v}km`}
                 emptyLabel="制限なし"
-                className="flex-1"
               />
               <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
                 以内
               </span>
             </div>
           </div>
+          {p.geoMsg && (
+            <div className="mt-1 mono text-[10px] text-amber-500">
+              {p.geoMsg}
+            </div>
+          )}
         </Row>
       </div>
 
@@ -899,7 +915,7 @@ function ReferencePicker({
       setResolving(true);
       try {
         const r = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(t)}`,
+          `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=jp&q=${encodeURIComponent(t)}`,
           { headers: { Accept: "application/json" } },
         );
         const j: GeocodeHit[] = await r.json();
@@ -960,7 +976,7 @@ function ReferencePicker({
           📍
         </button>
       </div>
-      <div className="flex flex-wrap gap-1 mt-1.5">
+      <div className="flex flex-wrap gap-1 mt-0.5">
         {REFERENCE_PRESETS.map((pr) => (
           <button
             key={pr.id}
@@ -1074,10 +1090,11 @@ function SortBar({
 // ──────────────────────────────────────────────────────────────────────────
 
 function PropertyCardLite({
-  property, distanceKm, referenceLabel, highlighted,
+  property, distanceKm, referenceLabel, highlighted, bookmarked = false, signedIn = false,
 }: {
   property: Property; distanceKm: number | null;
   referenceLabel: string; highlighted: boolean;
+  bookmarked?: boolean; signedIn?: boolean;
 }) {
   const yen = property.hourlyPrice.toLocaleString("ja-JP");
   return (
@@ -1113,6 +1130,15 @@ function PropertyCardLite({
             {referenceLabel} から {formatKm(distanceKm)}
           </div>
         )}
+        <div className="absolute bottom-2 left-2">
+          <BookmarkButton
+            propertyId={property.id}
+            initialBookmarked={bookmarked}
+            signedIn={signedIn}
+            revalidate="/properties"
+            variant="overlay"
+          />
+        </div>
       </div>
 
       <div className="p-4 space-y-3 flex flex-col flex-1">

@@ -17,6 +17,9 @@
   ],
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://locahun3d.com",
+    "R2_BUCKET": "locahun3d-assets",
+    "R2_PUBLIC_URL": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev",
+    "UPLOAD_MODE": "r2",
     "STRIPE_PRICE_INDIVIDUAL_MONTHLY": "price_1Tlb2LRyHEgXelRysKE4Giy7",
     "STRIPE_PRICE_INDIVIDUAL_ANNUAL": "price_1Tlb2MRyHEgXelRy6CEiIoya",
     "STRIPE_PRICE_STUDIO_MONTHLY": "price_1Tlb2NRyHEgXelRyEOHhpPxa",

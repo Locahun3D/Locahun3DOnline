@@ -40,9 +40,6 @@ export default async function UserPurchasesPage() {
   if (!user) redirect("/sign-in");
 
   const purchases = await purchaseRepo.list({ userId: user.id });
-  const completed = purchases.filter((p) => p.status === "completed");
-  const refunded = purchases.filter((p) => p.status === "refunded");
-  const totalSpent = completed.reduce((sum, p) => sum + p.priceYen, 0);
 
   // Look up download URLs for completed purchases
   const allProps = await propertyRepo.list();
@@ -64,28 +61,6 @@ export default async function UserPurchasesPage() {
           3DGSデータの購入履歴・ダウンロード・領収書の管理ができます。
         </p>
       </header>
-
-      {/* Summary */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-10">
-        <div className="border border-line p-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
-            購入件数
-          </div>
-          <div className="text-2xl font-semibold">{completed.length}</div>
-        </div>
-        <div className="border border-line p-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
-            合計金額
-          </div>
-          <div className="text-2xl font-semibold text-accent">{fmtPrice(totalSpent)}</div>
-        </div>
-        <div className="border border-line p-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
-            返金
-          </div>
-          <div className="text-2xl font-semibold text-purple-400">{refunded.length} 件</div>
-        </div>
-      </div>
 
       {/* Purchase list */}
       {purchases.length === 0 ? (

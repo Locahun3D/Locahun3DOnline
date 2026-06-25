@@ -16,7 +16,7 @@ export default async function SiteHeader() {
   const user = await getCurrentUser();
 
   return (
-    <header className="theme-online sticky top-0 z-50 border-b border-line bg-bg/85 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-line bg-bg/85 backdrop-blur-sm">
       <div className="frame flex items-center h-16 gap-3">
         {/* Left zone — hamburger (< lg) + nav (lg+) */}
         <div className="flex items-center gap-7 flex-1 min-w-0">
@@ -51,15 +51,13 @@ export default async function SiteHeader() {
           </Link>
           <div className="hidden lg:flex items-stretch ml-1 brand text-[11px] tracking-[0.06em]">
             <a
-              href="https://web.locahun3d.com/locahun3d_manifesto.html"
-              target="_blank"
-              rel="noopener"
+              href="https://web.locahun3d.com/"
               className="px-3 py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition"
             >
               スキャン
             </a>
             <a
-              href="https://locahun3d.com"
+              href="/properties"
               className="px-3 py-1 border border-l-0 border-[#5ec8e8]/50 text-ink bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition"
             >
               オンライン

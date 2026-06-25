@@ -39,13 +39,13 @@ export default function DashboardPage() {
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Bookmarks</div>
           <div className="serif text-2xl">0</div>
           <p className="text-[12px] text-muted mt-2 leading-[1.7]">
-            気になる物件はブックマークに保存できます。
+            気になる物件は ★ で保存できます。
           </p>
           <Link
-            href="/properties"
+            href="/dashboard/bookmarks"
             className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
           >
-            物件を探す →
+            保存した物件 →
           </Link>
         </section>
 

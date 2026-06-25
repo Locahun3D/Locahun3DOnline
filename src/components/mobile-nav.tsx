@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const ITEMS: { href: string; label: string; external?: boolean }[] = [
   {
-    href: "https://web.locahun3d.com/locahun3d_manifesto.html",
+    href: "https://web.locahun3d.com/",
     label: "スキャン",
     external: true,
   },
@@ -64,13 +64,10 @@ export default function MobileNav({
                 <a
                   key={it.label}
                   href={it.href}
-                  target="_blank"
-                  rel="noopener"
                   onClick={close}
                   className={`${LINK} hover:!text-[#ffb454]`}
                 >
                   {it.label}
-                  <span className="text-[13px] text-muted">↗</span>
                 </a>
               ) : (
                 <Link key={it.label} href={it.href} onClick={close} className={LINK}>

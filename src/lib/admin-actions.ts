@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
+import { repo as propertyRepo } from "./store";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
 import { notifyRefund } from "./email";
@@ -155,5 +156,95 @@ export async function refundPurchaseAction(
   const day = new Date().toISOString().slice(0, 10);
   await track(p.propertyId, "refund", "", day, "desktop", p.priceYen);
   await notifyRefund(refunded);
+  revalidatePath("/admin/purchases");
+}
+
+/**
+ * 購入記録を完全削除（テスト購入の掃除用・管理者専用）。
+ * 安全側: 実決済が紐づく "completed"（未返金）の購入は削除させない。
+ * 削除してよいのは refunded / cancelled / pending、または Stripe 紐付けの無い
+ * テスト即時完了の購入のみ。
+ */
+export async function deletePurchaseAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const p = await purchaseRepo.get(id);
+  if (!p) return;
+  // 実入金が残っている可能性のある購入（Stripe紐付け＋completed）は削除不可。
+  // 先に返金してから削除する運用にする。
+  if (p.status === "completed" && p.stripeSessionId) return;
+  await purchaseRepo.remove(id);
+  revalidatePath("/admin/purchases");
+}
+
+/** 削除可能か: 実入金が残り得る (Stripe紐付き completed) 以外は掃除対象。 */
+function isDeletablePurchase(p: { status: string; stripeSessionId?: string }): boolean {
+  return !(p.status === "completed" && !!p.stripeSessionId);
+}
+
+/**
+ * テスト購入の一括削除（管理者専用）。
+ * Stripe紐付きの未返金「完了」だけ残し、それ以外（返金済・処理中・キャンセル・
+ * テスト即時完了）をまとめて削除する。
+ */
+export async function bulkDeleteTestPurchasesAction(): Promise<void> {
+  await requireAdmin();
+  const all = await purchaseRepo.list();
+  const targets = all.filter(isDeletablePurchase);
+  for (const p of targets) {
+    await purchaseRepo.remove(p.id);
+  }
+  revalidatePath("/admin/purchases");
+}
+
+/**
+ * 価格一括管理: データ販売の販売可否・販売価格をまとめて更新する。
+ * フォームは hidden `items` に [{propertyId, idx}] の JSON を持ち、各行の
+ * `sale:<propertyId>:<idx>`（チェックボックス）と `price:<propertyId>:<idx>`
+ * （数値）を読む。物件ごとに 1 回だけ upsert する（R2 書込を最小化）。
+ */
+export async function bulkUpdateSalePricesAction(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+
+  let items: { propertyId: string; idx: number }[] = [];
+  try {
+    items = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return;
+  }
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  // 物件IDごとに対象アイテムをまとめる。
+  const byProperty = new Map<string, number[]>();
+  for (const it of items) {
+    if (!it?.propertyId || typeof it.idx !== "number") continue;
+    const list = byProperty.get(it.propertyId) ?? [];
+    list.push(it.idx);
+    byProperty.set(it.propertyId, list);
+  }
+
+  for (const [propertyId, idxs] of byProperty) {
+    const property = await propertyRepo.get(propertyId);
+    if (!property) continue;
+
+    let changed = false;
+    const splatItems = property.splatItems.map((item, i) => {
+      if (!idxs.includes(i)) return item;
+      const forSale = formData.get(`sale:${propertyId}:${i}`) != null;
+      const rawPrice = Number(formData.get(`price:${propertyId}:${i}`) ?? item.salePrice);
+      const salePrice = Math.max(0, Math.min(99_999_999, Math.trunc(Number.isFinite(rawPrice) ? rawPrice : 0)));
+      if (item.forSale === forSale && item.salePrice === salePrice) return item;
+      changed = true;
+      return { ...item, forSale, salePrice };
+    });
+
+    if (changed) {
+      await propertyRepo.upsert({ ...property, splatItems });
+    }
+  }
+
+  revalidatePath("/admin/pricing");
   revalidatePath("/admin/purchases");
 }

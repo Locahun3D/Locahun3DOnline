@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
 import { assetRepo } from "@/lib/store";
-import { canAccessLocalFs } from "@/lib/fs-safe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  if (!canAccessLocalFs()) {
-    return NextResponse.json({ ok: true, skipped: "no_writable_fs" });
-  }
+  // assetRepo は R2 永続化対応済み（Workers でも書き込める）。
   await requireAdmin();
 
   let body: { action?: string; id?: string; [k: string]: unknown };

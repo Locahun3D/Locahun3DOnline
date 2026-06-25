@@ -180,18 +180,18 @@ export default async function AccountPage({
             </div>
           </Link>
 
-          <div className="border border-line p-5">
+          <Link
+            href="/dashboard/bookmarks"
+            className="border border-line p-5 block hover:border-accent transition"
+          >
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-              ブックマーク
+              保存した物件
             </div>
             <div className="serif text-3xl">{user.bookmarks.length}</div>
-            <Link
-              href="/properties"
-              className="mt-3 inline-block mono text-[10px] tracking-[0.22em] uppercase text-accent hover:underline"
-            >
-              物件を探す →
-            </Link>
-          </div>
+            <div className="mt-3 mono text-[10px] tracking-[0.22em] uppercase text-accent">
+              保存一覧を見る →
+            </div>
+          </Link>
         </aside>
       </div>
     </div>

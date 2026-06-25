@@ -8,9 +8,11 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
+import { r2DocGet, r2DocPut } from "./r2-store";
 import _analyticsFallback from "../../data/analytics.json";
 
 const FILE = path.join(process.cwd(), "data", "analytics.json");
+const R2_DOC_KEY = "_analytics.json";
 
 export type TrackType = "view" | "viewer_open" | "purchase" | "refund";
 
@@ -50,35 +52,38 @@ interface Store {
   properties: Record<string, PropStats>;
 }
 
-async function read(): Promise<Store> {
-  if (!canAccessLocalFs()) {
-    const fb = _analyticsFallback as unknown as Store;
-    if (fb.properties) {
-      for (const p of Object.values(fb.properties)) {
-        if (!p.devices) p.devices = {};
-      }
-    }
-    return fb.properties ? fb : { version: 1, properties: {} };
-  }
-  try {
-    const s = JSON.parse(await fs.readFile(FILE, "utf8")) as Store;
+function withDevices(s: Store): Store {
+  if (s.properties) {
     for (const p of Object.values(s.properties)) {
       if (!p.devices) p.devices = {};
     }
-    return s;
+  }
+  return s.properties ? s : { version: 1, properties: {} };
+}
+
+function fallbackStore(): Store {
+  return withDevices(_analyticsFallback as unknown as Store);
+}
+
+async function read(): Promise<Store> {
+  if (!canAccessLocalFs()) {
+    // Workers: R2 が真。未保存（初回）はバンドルのスナップショットを種にする。
+    const fromR2 = await r2DocGet<Store>(R2_DOC_KEY);
+    return fromR2 ? withDevices(fromR2) : fallbackStore();
+  }
+  try {
+    return withDevices(JSON.parse(await fs.readFile(FILE, "utf8")) as Store);
   } catch {
-    const fb = _analyticsFallback as unknown as Store;
-    if (fb.properties) {
-      for (const p of Object.values(fb.properties)) {
-        if (!p.devices) p.devices = {};
-      }
-    }
-    return fb.properties ? fb : { version: 1, properties: {} };
+    return fallbackStore();
   }
 }
 
 async function write(s: Store): Promise<void> {
-  await safeWriteFile(FILE, JSON.stringify(s, null, 2));
+  if (canAccessLocalFs()) {
+    await safeWriteFile(FILE, JSON.stringify(s, null, 2));
+  } else {
+    await r2DocPut(R2_DOC_KEY, s);
+  }
 }
 
 /** Map a referrer URL to a coarse source label. */

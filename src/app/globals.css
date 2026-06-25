@@ -187,3 +187,35 @@ body::before {
   z-index: 10;
 }
 
+/* フォーム要素の視認性向上 */
+.theme-online select,
+.theme-online input[type="text"],
+.theme-online input[type="search"],
+.theme-online input[type="number"],
+.theme-online input[type="email"],
+.theme-online input[type="url"],
+.theme-online textarea {
+  font-weight: 500;
+  color: #1a1f25;
+}
+
+/* font-light (300) を白テーマでは Medium に引き上げ */
+.theme-online [class~="font-light"] {
+  font-weight: 500;
+}
+
+/* mono ラベル (10-11px) の視認性強化 */
+.theme-online .mono {
+  font-weight: 500;
+}
+
+/* opacity で薄くしたテキストの視認性を確保 */
+.theme-online [class~="opacity-50"] {
+  opacity: 0.7;
+}
+.theme-online [class~="opacity-40"] {
+  opacity: 0.6;
+}
+.theme-online [class~="opacity-60"] {
+  opacity: 0.75;
+}
