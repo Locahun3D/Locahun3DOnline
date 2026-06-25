@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ScanMark from "@/components/scan-mark";
 import Jp from "@/components/jp";
+import GatewayOverlay from "@/components/gateway-overlay";
 
 // トップはスキャン/オンライン両義のため、ファビコンは白 (ヘッダーアイコンと連動)。
 export const metadata = { icons: { icon: "/icon-white.svg" } };
@@ -18,11 +19,9 @@ export default function HomePage() {
           2027 / LOCAHUN 3D
         </span>
 
-        {/* Left — SCAN → manifesto (external) */}
+        {/* Left — SCAN → 製品サイト (同タブ) */}
         <a
-          href="https://web.locahun3d.com/locahun3d_manifesto.html"
-          target="_blank"
-          rel="noopener"
+          href="https://web.locahun3d.com/"
           className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 pt-28 sm:pt-48 pb-16 sm:pb-28 border-b md:border-b-0 md:border-r border-line overflow-hidden"
         >
           {/* Hover glow */}
@@ -95,6 +94,9 @@ export default function HomePage() {
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 mono text-[10px] tracking-[0.3em] uppercase text-muted scroll-hint pointer-events-none">
           ↓&nbsp;&nbsp;SCROLL
         </div>
+
+        {/* Click-through ripple overlay */}
+        <GatewayOverlay />
       </section>
 
       {/* ABOUT — what Locahun3D is (two lines) */}
@@ -109,9 +111,7 @@ export default function HomePage() {
         </p>
         <div className="grid md:grid-cols-2 gap-px bg-line">
           <a
-            href="https://web.locahun3d.com/locahun3d_manifesto.html"
-            target="_blank"
-            rel="noopener"
+            href="https://web.locahun3d.com/"
             className="group bg-bg p-8 hover:bg-[#1d1b18] transition-colors text-center"
           >
             <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-3">
@@ -160,12 +160,10 @@ export default function HomePage() {
         </p>
         <div className="mt-10 flex justify-center gap-3 flex-wrap">
           <a
-            href="https://web.locahun3d.com/locahun3d_manifesto.html"
-            target="_blank"
-            rel="noopener"
+            href="https://web.locahun3d.com/"
             className="px-7 py-3 mono text-[12px] tracking-[0.24em] uppercase border border-ink text-ink hover:bg-ink hover:text-bg transition"
           >
-            スキャンを相談 ↗
+            スキャンを相談
           </a>
           <Link
             href="/sign-up"
