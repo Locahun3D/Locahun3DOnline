@@ -197,10 +197,10 @@ export default function PropertyDetailView({
         <div className="grid lg:grid-cols-3 gap-6 mb-10">
           <div className="lg:col-span-2 space-y-6">
             <div>
-              <div className="mono text-[11px] tracking-[0.22em] uppercase text-ink/45 mb-2 font-medium">
+              <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-2.5 font-semibold">
                 概要
               </div>
-              <p className="text-[15px] leading-[1.9] text-ink/80 whitespace-pre-line">
+              <p className="text-[16px] leading-[1.95] text-ink/90 whitespace-pre-line">
                 {property.description}
               </p>
             </div>
@@ -208,43 +208,43 @@ export default function PropertyDetailView({
             {/* ── 4-column metric cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="border border-line rounded-md p-4">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
                   面積
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
                     {property.floorAreaSqm}
                   </span>
-                  <span className="text-[13px] text-ink/50">㎡</span>
+                  <span className="text-[13px] text-ink/65">㎡</span>
                 </div>
               </div>
 
               <div className="border border-line rounded-md p-4">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
                   天井高
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
                     {property.ceilingHeightM || "—"}
                   </span>
-                  <span className="text-[13px] text-ink/50">m</span>
+                  <span className="text-[13px] text-ink/65">m</span>
                 </div>
               </div>
 
               <div className="border border-line rounded-md p-4">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
                   収容
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
                     {property.capacity}
                   </span>
-                  <span className="text-[13px] text-ink/50">名</span>
+                  <span className="text-[13px] text-ink/65">名</span>
                 </div>
               </div>
 
               <div className="border border-line rounded-md p-4">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
                   自然光
                 </div>
                 <div className="flex items-baseline gap-1.5">
@@ -319,7 +319,7 @@ export default function PropertyDetailView({
             {/* ── Specs ── */}
             <div className="border border-line rounded-md overflow-hidden">
               <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
-                <span className="mono text-[11px] tracking-[0.22em] uppercase text-ink/50 font-medium">
+                <span className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 font-semibold">
                   スペック
                 </span>
               </div>
@@ -332,10 +332,10 @@ export default function PropertyDetailView({
                     ["スキャン日", property.scannedAt || "—"],
                   ].map(([label, value]) => (
                     <tr key={label} className="border-b border-line last:border-0">
-                      <td className="px-4 py-2.5 mono text-[11px] tracking-[0.18em] uppercase text-ink/45 font-medium w-[100px]">
+                      <td className="px-4 py-3 mono text-[11px] tracking-[0.1em] uppercase text-ink/60 font-semibold w-[100px]">
                         {label}
                       </td>
-                      <td className="px-4 py-2.5 text-ink/80">{value}</td>
+                      <td className="px-4 py-3 text-[14px] text-ink/90 font-medium">{value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -348,7 +348,7 @@ export default function PropertyDetailView({
               property.blueprints.some((b) => b.url) && (
                 <div className="border border-line rounded-md overflow-hidden">
                   <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
-                    <span className="mono text-[11px] tracking-[0.22em] uppercase text-ink/50 font-medium">
+                    <span className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 font-semibold">
                       図面 / フロアプラン
                     </span>
                   </div>
@@ -365,10 +365,10 @@ export default function PropertyDetailView({
                           className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 rounded-sm hover:border-accent hover:text-accent transition"
                         >
                           <span className="text-accent">⬇</span>
-                          <span className="flex-1 truncate text-ink/80">
+                          <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">
                             {b.label || `図面 ${i + 1}`}
                           </span>
-                          <span className="mono text-[10px] tracking-[0.18em] uppercase text-ink/40 font-medium">
+                          <span className="mono text-[10px] tracking-[0.12em] uppercase text-ink/55 font-semibold">
                             DL
                           </span>
                         </a>
