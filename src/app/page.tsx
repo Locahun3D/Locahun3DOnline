@@ -19,43 +19,38 @@ export default function HomePage() {
           2027 / LOCAHUN 3D
         </span>
 
-        {/* Center divider */}
-        <div className="gateway-divider hidden md:block absolute top-[15%] bottom-[15%] left-1/2 -translate-x-1/2 z-20 w-px bg-gradient-to-b from-transparent via-line to-transparent pointer-events-none" />
-
         {/* Left — SCAN → 製品サイト (同タブ) */}
         <a
           href="https://web.locahun3d.com/"
           className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 pt-28 sm:pt-48 pb-16 sm:pb-28 border-b md:border-b-0 md:border-r border-line overflow-hidden"
         >
-          {/* Hover glow — multi-layered */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(255,180,84,.1) 0%, transparent 60%)" }} />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 delay-200 pointer-events-none"
-            style={{ background: "radial-gradient(circle at 50% 80%, rgba(255,180,84,.05) 0%, transparent 50%)" }} />
+          {/* Hover glow */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(255,180,84,.08) 0%, transparent 70%)" }} />
           <span className="leader text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">1</span>
-          <div className="relative z-10 flex flex-col items-center transition-transform duration-700 ease-out group-hover:-translate-y-3">
-            <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap transition-all duration-700 group-hover:tracking-[0.6em] group-hover:opacity-70">
+          <div className="relative z-10 flex flex-col items-center transition-transform duration-500 ease-out group-hover:-translate-y-2">
+            <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
               L · O · C · A · H · U · N&nbsp;&nbsp;&nbsp;3&nbsp;D
             </div>
-            <ScanMark size={42} className="scan-mark-icon mb-6 transition-transform duration-700 group-hover:scale-110" />
+            <ScanMark size={42} className="mb-6 transition-transform duration-500 group-hover:scale-110" />
             <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-5">
-              <span className="w-9 h-px bg-current opacity-50 transition-all duration-700 group-hover:w-16 group-hover:opacity-80" />
+              <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
               ロケハン3D
-              <span className="w-9 h-px bg-current opacity-50 transition-all duration-700 group-hover:w-16 group-hover:opacity-80" />
+              <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
-            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] transition-all duration-700 group-hover:text-accent group-hover:scale-105">
+            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
               スキャン
             </h2>
-            <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] opacity-70 transition-all duration-700 delay-100 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2">
+            <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] transition-opacity duration-500 group-hover:opacity-100">
               <Jp>
                 実空間を 3D Gaussian Splatting
                 でスキャンし、現場をまるごとデータ化して持ち帰る。撮影・制作のための実測
                 3D。
               </Jp>
             </p>
-            <span className="mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-accent opacity-60 transition-all duration-500 delay-200 group-hover:opacity-100">
+            <span className="mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-accent transition-all duration-300">
               スキャンを見る
-              <span className="group-hover:translate-x-3 transition-transform duration-500">↗</span>
+              <span className="group-hover:translate-x-2 transition-transform duration-300">↗</span>
             </span>
           </div>
         </a>
@@ -65,34 +60,32 @@ export default function HomePage() {
           href="/properties"
           className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 pt-28 sm:pt-48 pb-16 sm:pb-28 overflow-hidden"
         >
-          {/* Hover glow — multi-layered */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(94,200,232,.1) 0%, transparent 60%)" }} />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 delay-200 pointer-events-none"
-            style={{ background: "radial-gradient(circle at 50% 80%, rgba(94,200,232,.05) 0%, transparent 50%)" }} />
+          {/* Hover glow */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(94,200,232,.08) 0%, transparent 70%)" }} />
           <span className="leader text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">2</span>
-          <div className="relative z-10 flex flex-col items-center transition-transform duration-700 ease-out group-hover:-translate-y-3">
-            <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap transition-all duration-700 group-hover:tracking-[0.6em] group-hover:opacity-70">
+          <div className="relative z-10 flex flex-col items-center transition-transform duration-500 ease-out group-hover:-translate-y-2">
+            <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
               L · O · C · A · H · U · N&nbsp;&nbsp;&nbsp;3&nbsp;D
             </div>
-            <ScanMark size={42} reticle="#5ec8e8" className="scan-mark-icon mb-6 transition-transform duration-700 group-hover:scale-110" />
+            <ScanMark size={42} reticle="#5ec8e8" className="mb-6 transition-transform duration-500 group-hover:scale-110" />
             <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-5">
-              <span className="w-9 h-px bg-current opacity-50 transition-all duration-700 group-hover:w-16 group-hover:opacity-80" />
+              <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
               ロケハン3D
-              <span className="w-9 h-px bg-current opacity-50 transition-all duration-700 group-hover:w-16 group-hover:opacity-80" />
+              <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
-            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] transition-all duration-700 group-hover:text-[#5ec8e8] group-hover:scale-105">
+            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">
               オンライン
             </h2>
-            <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] opacity-70 transition-all duration-700 delay-100 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2">
+            <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] transition-opacity duration-500 group-hover:opacity-100">
               <Jp>
                 ブラウザだけで撮影前ロケハン。スタジオ・倉庫・住宅・屋外ロケ地を 3D
                 で検索し、構図・レンズ・光・動線を現場に行かず検証する。
               </Jp>
             </p>
-            <span className="mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-[#5ec8e8] opacity-60 transition-all duration-500 delay-200 group-hover:opacity-100">
+            <span className="mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-[#5ec8e8] transition-all duration-300">
               オンラインを見る
-              <span className="group-hover:translate-x-3 transition-transform duration-500">→</span>
+              <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
             </span>
           </div>
         </Link>
@@ -102,7 +95,7 @@ export default function HomePage() {
           ↓&nbsp;&nbsp;SCROLL
         </div>
 
-        {/* Click-through cinematic overlay */}
+        {/* Click-through ripple overlay */}
         <GatewayOverlay />
       </section>
 
