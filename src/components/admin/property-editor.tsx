@@ -350,20 +350,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 </Field>
                 <Field
                   label="スタジオ種類"
-                  hint="ハウス / ガレージ / 白ホリ ... (datalist から選択 or 自由入力)"
+                  hint="一覧から選択。無ければ「その他（自由入力）」"
                 >
-                  <input
-                    type="text"
-                    list="studio-type-suggestions"
-                    {...register("studioType")}
-                    className={inputClass}
-                    placeholder="例: ハウススタジオ"
+                  <StudioTypeSelect
+                    value={watch("studioType") || ""}
+                    onChange={(v) =>
+                      setValue("studioType", v, { shouldDirty: true })
+                    }
                   />
-                  <datalist id="studio-type-suggestions">
-                    {STUDIO_TYPE_SUGGESTIONS.map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
                 </Field>
                 <Field
                   label="時間料金 (¥/hr)"
@@ -495,20 +489,36 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     className={inputClass}
                   />
                 </Field>
-                <Field label="天井高 (m)">
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    {...register("ceilingHeightM", { valueAsNumber: true })}
-                    className={inputClass}
-                  />
+                <Field
+                  label="天井高 (m)"
+                  hint={
+                    watch("category") === "outdoor"
+                      ? "屋外のため対象外（自動で「—」表示）"
+                      : undefined
+                  }
+                >
+                  {watch("category") === "outdoor" ? (
+                    <input
+                      type="text"
+                      disabled
+                      value="— 屋外のため対象外"
+                      className={inputClass + " opacity-60 cursor-not-allowed"}
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      {...register("ceilingHeightM", { valueAsNumber: true })}
+                      className={inputClass}
+                    />
+                  )}
                 </Field>
               </div>
 
               <Field
                 label="電源仕様"
-                hint="例: 100V 15A / 100V/200V 三相 60A / 簡易電源 (発電機推奨)"
+                hint="下のボタンで素早く入力。屋外・電源不可の場合は「なし」。"
               >
                 <input
                   type="text"
@@ -516,6 +526,20 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   className={inputClass}
                   placeholder="100V 30A など"
                 />
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {POWER_PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() =>
+                        setValue("powerVoltage", p, { shouldDirty: true })
+                      }
+                      className="mono text-[10px] tracking-[0.1em] border border-line px-2.5 py-1 hover:border-accent hover:text-accent transition"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </Field>
 
               <div className="grid md:grid-cols-3 gap-5">
@@ -1479,6 +1503,71 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
 const inputClass =
   "w-full bg-white text-[#111] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono placeholder:text-[#999]";
+
+/** 電源仕様のクイック入力プリセット（「なし」含む）。 */
+const POWER_PRESETS = [
+  "なし",
+  "100V 15A",
+  "100V 20A",
+  "100V 30A",
+  "200V 単相",
+  "三相 200V",
+  "簡易電源 (発電機推奨)",
+] as const;
+
+/**
+ * スタジオ種類セレクト。候補から選択、無ければ「その他（自由入力）」で
+ * テキスト入力に切り替わる（任意の文字列を保持できる）。
+ */
+function StudioTypeSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const options = STUDIO_TYPE_SUGGESTIONS.filter((s) => s !== "その他");
+  const inList = (options as readonly string[]).includes(value);
+  const [freeMode, setFreeMode] = useState(value !== "" && !inList);
+
+  return (
+    <div className="space-y-2">
+      <select
+        value={freeMode ? "__other__" : value}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "__other__") {
+            setFreeMode(true);
+            onChange("");
+          } else {
+            setFreeMode(false);
+            onChange(v);
+          }
+        }}
+        className={inputClass}
+      >
+        <option value="">— 選択 —</option>
+        {options.map((s) => (
+          <option key={s} value={s} className="bg-white">
+            {s}
+          </option>
+        ))}
+        <option value="__other__" className="bg-white">
+          その他（自由入力）
+        </option>
+      </select>
+      {freeMode && (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClass}
+          placeholder="スタジオ種類を入力"
+        />
+      )}
+    </div>
+  );
+}
 
 /** splatItem ごとのマルチ形式ダウンロード編集（ネスト配列＋形式別アップロード）。 */
 function DownloadFilesEditor({
