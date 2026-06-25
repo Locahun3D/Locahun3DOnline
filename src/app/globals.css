@@ -98,11 +98,14 @@ body::before {
 @utility theme-online {
   --color-accent: #1ea0c4;
   --color-bg: #f6f8fa;
-  --color-ink: #14181c;
-  --color-line: #e2e7ec;
-  --color-muted: #7b8794;
+  --color-ink: #1a1f25;
+  --color-line: #d0d7e0;
+  --color-muted: #4a5568;
   background-color: var(--color-bg);
   color: var(--color-ink);
+  font-weight: 500;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
 }
 
 /* Manifesto motifs ─────────────────────────────── */
@@ -185,33 +188,110 @@ body::before {
   padding-inline: max(clamp(1rem, 4vw, 48px), calc((100vw - 1760px) / 2));
 }
 
-/* Split Gateway — cross-dim: hovering one side fades the other */
+/* Split Gateway — cinematic cross-dim hover */
+.split-gateway {
+  perspective: 1200px;
+}
 .split-gateway > .split-panel {
-  transition: opacity 0.5s ease, filter 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    flex 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+  will-change: opacity, filter, transform, flex;
 }
 .split-gateway:has(> .split-panel:hover) > .split-panel:not(:hover) {
-  opacity: 0.3;
-  filter: saturate(0.2) brightness(0.6);
+  opacity: 0.18;
+  filter: saturate(0) brightness(0.35) blur(2px);
+  flex: 0.7;
+}
+.split-gateway:has(> .split-panel:hover) > .split-panel:hover {
+  flex: 1.3;
 }
 .split-gateway > .split-panel:hover {
   z-index: 10;
 }
-.split-gateway > .split-panel {
-  cursor: pointer;
+
+/* Ambient idle pulse on the leader numerals */
+@keyframes leaderFloat {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.035; }
+  50%      { transform: translateY(-8px) scale(1.01); opacity: 0.05; }
+}
+.split-panel .leader {
+  animation: leaderFloat 6s ease-in-out infinite;
+}
+.split-panel:nth-child(2) .leader {
+  animation-delay: -3s;
 }
 
-/* Gateway click-through ripple */
+/* Ambient scan-mark pulse */
+@keyframes reticlePulse {
+  0%, 100% { filter: drop-shadow(0 0 0px transparent); }
+  50%      { filter: drop-shadow(0 0 12px var(--reticle-glow, #ffb454)); }
+}
+.split-panel:first-of-type .scan-mark-icon {
+  --reticle-glow: #ffb454;
+  animation: reticlePulse 4s ease-in-out infinite;
+}
+.split-panel:last-of-type .scan-mark-icon {
+  --reticle-glow: #5ec8e8;
+  animation: reticlePulse 4s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+/* Gateway click-through transition (multi-stage) */
 @keyframes gatewayRipple {
-  0%   { transform: scale(0); opacity: 0.85; }
-  60%  { opacity: 0.95; }
+  0%   { transform: scale(0); opacity: 0.6; }
+  40%  { opacity: 0.85; }
   100% { transform: scale(1); opacity: 1; }
+}
+@keyframes gatewayFlash {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.15; }
+  100% { opacity: 0; }
 }
 .gateway-ripple-circle {
   position: absolute;
   border-radius: 50%;
   transform: scale(0);
-  animation: gatewayRipple 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  box-shadow: 0 0 80px 40px currentColor;
+  animation: gatewayRipple 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  box-shadow: 0 0 120px 60px currentColor;
+}
+.gateway-flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  animation: gatewayFlash 600ms ease-out forwards;
+  animation-delay: 200ms;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Fade-out class applied to the split-panel on click */
+.split-panel.gateway-exit {
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.6s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.split-panel.gateway-exit.exit-active {
+  opacity: 0 !important;
+  filter: blur(8px) !important;
+}
+.split-panel.gateway-exit.exit-chosen {
+  transform: scale(1.05) !important;
+  opacity: 0 !important;
+  filter: blur(4px) !important;
+}
+
+/* Center divider line for the gateway */
+.gateway-divider {
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.split-gateway:has(> .split-panel:hover) .gateway-divider {
+  opacity: 0;
+  transform: scaleY(0);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -286,5 +366,38 @@ body::before {
 }
 .theme-online [class~="text-red-300"] {
   color: #dc2626;
+}
+
+/* フォーム要素の視認性向上 */
+.theme-online select,
+.theme-online input[type="text"],
+.theme-online input[type="search"],
+.theme-online input[type="number"],
+.theme-online input[type="email"],
+.theme-online input[type="url"],
+.theme-online textarea {
+  font-weight: 500;
+  color: #1a1f25;
+}
+
+/* font-light (300) を白テーマでは Medium に引き上げ */
+.theme-online [class~="font-light"] {
+  font-weight: 500;
+}
+
+/* mono ラベル (10-11px) の視認性強化 */
+.theme-online .mono {
+  font-weight: 500;
+}
+
+/* opacity で薄くしたテキストの視認性を確保 */
+.theme-online [class~="opacity-50"] {
+  opacity: 0.7;
+}
+.theme-online [class~="opacity-40"] {
+  opacity: 0.6;
+}
+.theme-online [class~="opacity-60"] {
+  opacity: 0.75;
 }
 

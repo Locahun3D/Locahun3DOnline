@@ -16,6 +16,7 @@ export default function GatewayOverlay() {
   const anchorRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [ripple, setRipple] = useState<Ripple | null>(null);
+  const [showFlash, setShowFlash] = useState(false);
 
   useEffect(() => {
     const section = anchorRef.current?.closest(".split-gateway");
@@ -46,15 +47,46 @@ export default function GatewayOverlay() {
       const maxDy = Math.max(y, vh - y);
       const size = Math.hypot(maxDx, maxDy) * 2.2;
 
+      // Stage 1: Add exit classes to panels
+      panels.forEach((p, i) => {
+        const el = p as HTMLElement;
+        el.classList.add("gateway-exit");
+        requestAnimationFrame(() => {
+          if ((isLeft && i === 0) || (!isLeft && i === 1)) {
+            el.classList.add("exit-chosen");
+          } else {
+            el.classList.add("exit-active");
+          }
+        });
+      });
+
+      // Hide divider
+      const divider = section.querySelector(".gateway-divider") as HTMLElement | null;
+      if (divider) {
+        divider.style.opacity = "0";
+        divider.style.transform = "scaleY(0)";
+      }
+
+      // Hide timecodes and scroll hint
+      section.querySelectorAll("[class*='pointer-events-none']").forEach((el) => {
+        (el as HTMLElement).style.transition = "opacity 0.4s ease";
+        (el as HTMLElement).style.opacity = "0";
+      });
+
+      // Stage 2: Ripple
       setRipple({ x, y, color, size, href, external });
 
+      // Stage 3: Flash
+      setTimeout(() => setShowFlash(true), 250);
+
+      // Stage 4: Navigate
       setTimeout(() => {
         if (external) {
           window.location.href = href;
         } else {
           router.push(href);
         }
-      }, 800);
+      }, 1000);
     };
 
     section.addEventListener("click", handler);
@@ -81,6 +113,7 @@ export default function GatewayOverlay() {
           />
         </div>
       )}
+      {showFlash && <div className="gateway-flash z-[9999]" />}
     </>
   );
 }
