@@ -1820,6 +1820,45 @@ function CoordsInput({
   onChange: (v: { lat: number; lng: number } | null) => void;
 }) {
   const [paste, setPaste] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveErr, setResolveErr] = useState<string | null>(null);
+
+  const handleParse = async () => {
+    setResolveErr(null);
+    const parsed = parseCoordsFromInput(paste);
+    if (parsed) {
+      onChange(parsed);
+      return;
+    }
+    const url = paste.trim();
+    if (!/^https?:\/\//.test(url)) {
+      setResolveErr("Google Maps の URL か座標を入力してください");
+      return;
+    }
+    // 短縮URL（maps.app.goo.gl 等）はサーバー側でリダイレクト解決して座標抽出。
+    setResolving(true);
+    try {
+      const res = await fetch("/api/admin/resolve-maps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = (await res.json()) as {
+        coords?: { lat: number; lng: number };
+        error?: string;
+      };
+      if (res.ok && data.coords) {
+        onChange(data.coords);
+        setResolveErr(null);
+      } else {
+        setResolveErr(data.error || "座標を取得できませんでした");
+      }
+    } catch {
+      setResolveErr("通信エラーが発生しました");
+    } finally {
+      setResolving(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -1872,22 +1911,22 @@ function CoordsInput({
               onChange(parsed);
             }
           }}
-          placeholder="Google Maps URL または座標をペースト"
+          placeholder="Google Maps URL（共有・短縮リンク可）または座標をペースト"
           className={inputClass}
         />
         <button
           type="button"
-          onClick={() => {
-            const parsed = parseCoordsFromInput(paste);
-            if (parsed) {
-              onChange(parsed);
-            }
-          }}
-          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition whitespace-nowrap"
+          onClick={handleParse}
+          disabled={resolving}
+          className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-40 disabled:cursor-wait"
         >
-          解析
+          {resolving ? "解析中…" : "解析"}
         </button>
       </div>
+
+      {resolveErr && (
+        <div className="mono text-[10px] text-red-400">{resolveErr}</div>
+      )}
 
       {value && (
         <div className="mono text-[10px] text-muted">
