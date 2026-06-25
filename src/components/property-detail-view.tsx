@@ -310,6 +310,8 @@ export default function PropertyDetailView({
                   <BookmarkButton
                     propertyId={property.id}
                     initialBookmarked={bookmarked}
+                    signedIn={signedIn}
+                    revalidate={`/properties/${property.id}`}
                   />
                 </div>
               </div>
