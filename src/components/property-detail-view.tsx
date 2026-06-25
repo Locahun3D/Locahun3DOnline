@@ -193,57 +193,7 @@ export default function PropertyDetailView({
           );
         })()}
 
-        {/* ── 4-column metric cards ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-          <div className="border border-line rounded-md p-4">
-            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
-              面積
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                {property.floorAreaSqm}
-              </span>
-              <span className="text-[13px] text-ink/50">㎡</span>
-            </div>
-          </div>
-
-          <div className="border border-line rounded-md p-4">
-            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
-              天井高
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                {property.ceilingHeightM || "—"}
-              </span>
-              <span className="text-[13px] text-ink/50">m</span>
-            </div>
-          </div>
-
-          <div className="border border-line rounded-md p-4">
-            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
-              収容
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                {property.capacity}
-              </span>
-              <span className="text-[13px] text-ink/50">名</span>
-            </div>
-          </div>
-
-          <div className="border border-line rounded-md p-4">
-            <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
-              自然光
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                {property.hasNaturalLight ? "あり" : "なし"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Description + CTA/Specs/Blueprints (left column) ── */}
+        {/* ── Description + Spec/Contact sidebar ── */}
         <div className="grid lg:grid-cols-3 gap-6 mb-10">
           <div className="lg:col-span-2 space-y-6">
             <div>
@@ -255,7 +205,59 @@ export default function PropertyDetailView({
               </p>
             </div>
 
-            <div className="space-y-4">
+            {/* ── 4-column metric cards ── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="border border-line rounded-md p-4">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                  面積
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                    {property.floorAreaSqm}
+                  </span>
+                  <span className="text-[13px] text-ink/50">㎡</span>
+                </div>
+              </div>
+
+              <div className="border border-line rounded-md p-4">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                  天井高
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                    {property.ceilingHeightM || "—"}
+                  </span>
+                  <span className="text-[13px] text-ink/50">m</span>
+                </div>
+              </div>
+
+              <div className="border border-line rounded-md p-4">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                  収容
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                    {property.capacity}
+                  </span>
+                  <span className="text-[13px] text-ink/50">名</span>
+                </div>
+              </div>
+
+              <div className="border border-line rounded-md p-4">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/50 mb-1.5 font-medium">
+                  自然光
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
+                    {property.hasNaturalLight ? "あり" : "なし"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right sidebar: CTA + specs + blueprints */}
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             {/* ── CTA card (accent) ── */}
             <div className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
               <div className="bg-accent px-5 py-4">
@@ -374,8 +376,7 @@ export default function PropertyDetailView({
                   </div>
                 </div>
               )}
-            </div>
-          </div>
+          </aside>
         </div>
 
         {/* ── Content sections (3DGS / Gallery / Page blocks) ── */}
