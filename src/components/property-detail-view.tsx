@@ -243,22 +243,18 @@ export default function PropertyDetailView({
           </div>
         </div>
 
-        {/* ── Description + Spec/Contact sidebar ── */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-10">
-          <div className="lg:col-span-2 space-y-6">
-            <div>
-              <div className="mono text-[11px] tracking-[0.22em] uppercase text-ink/45 mb-2 font-medium">
-                概要
-              </div>
-              <p className="text-[15px] leading-[1.9] text-ink/80 whitespace-pre-line">
-                {property.description}
-              </p>
-            </div>
-
+        {/* ── Description ── */}
+        <div className="mb-8">
+          <div className="mono text-[11px] tracking-[0.22em] uppercase text-ink/45 mb-2 font-medium">
+            概要
           </div>
+          <p className="text-[15px] leading-[1.9] text-ink/80 whitespace-pre-line max-w-[72ch]">
+            {property.description}
+          </p>
+        </div>
 
-          {/* Right sidebar: CTA + specs + blueprints */}
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+        {/* ── CTA + Specs + Blueprints — horizontal grid ── */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
             {/* ── CTA card (accent) ── */}
             <div className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
               <div className="bg-accent px-5 py-4">
@@ -377,7 +373,6 @@ export default function PropertyDetailView({
                   </div>
                 </div>
               )}
-          </aside>
         </div>
 
         {/* ── Content sections (3DGS / Gallery / Page blocks) ── */}
