@@ -989,9 +989,26 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             >
               <ViewerUpdateBanner />
 
-              {/* ── ZIP プロジェクトファイル ── */}
-              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3 mt-4">
-                ZIP プロジェクトファイル
+              {/* ── 入力方法ガイド（2経路の使い分け） ── */}
+              <div className="border border-accent/30 bg-accent/[0.06] rounded-md p-4 mt-4 mb-2 text-[12px] leading-relaxed">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent mb-2">
+                  3DGSデータの入れ方（どちらか一方でOK）
+                </div>
+                <div className="space-y-1 text-ink/80">
+                  <div>
+                    <strong className="text-ink">方法A・ZIPでまとめて</strong> —
+                    複数フロアを1つのZIPプロジェクトで管理する場合。下の「方法A」へ。
+                  </div>
+                  <div>
+                    <strong className="text-ink">方法B・フロア別に個別</strong> —
+                    駐車場・1F・2F等を別々に登録・販売する場合。下の「方法B」へ。
+                  </div>
+                </div>
+              </div>
+
+              {/* ── 方法A: ZIP プロジェクトファイル ── */}
+              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3 mt-5">
+                方法A — ZIP プロジェクト（複数まとめて）
               </div>
               {watch("zipUrl") ? (
                 <>
@@ -1076,7 +1093,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               <div className="border-t border-line pt-5 mt-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-                    個別 3DGS データ（フロア・区画別）
+                    方法B — 個別データ（フロア・区画別）
                   </div>
                   <button
                     type="button"
@@ -1118,6 +1135,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         </button>
                       </div>
 
+                      <div className="mono text-[9px] tracking-[0.2em] uppercase text-accent/60">
+                        ① ビューアー用 3DGS ファイル
+                      </div>
                       {watch(`splatItems.${idx}.splatUrl`) ? (
                         <div className="flex items-center gap-3">
                           <div className="mono text-[18px] text-accent">●</div>
@@ -1234,6 +1254,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         </div>
                       )}
 
+                      <div className="mono text-[9px] tracking-[0.2em] uppercase text-ink/40">
+                        ② メモ（任意）
+                      </div>
                       <textarea
                         {...register(`splatItems.${idx}.notes`)}
                         className={`${inputClass} resize-y min-h-[60px]`}
@@ -1249,7 +1272,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             {...register(`splatItems.${idx}.forSale`)}
                             className="w-4 h-4 accent-accent"
                           />
-                          <span className="text-[11px] mono tracking-[0.14em] uppercase opacity-70">販売する</span>
+                          <span className="text-[11px] mono tracking-[0.14em] uppercase opacity-70">③ このデータを販売する</span>
                         </label>
 
                         {watch(`splatItems.${idx}.forSale`) && (
