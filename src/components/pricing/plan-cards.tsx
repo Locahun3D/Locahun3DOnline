@@ -136,7 +136,7 @@ export default function PlanCards({
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-y-9 lg:gap-y-5">
         {PLANS.map((p) => {
           const price = priceFor(p, mode);
           const monthlyEquivalent = price > 0 ? price : 0;

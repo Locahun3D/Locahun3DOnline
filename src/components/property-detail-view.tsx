@@ -559,11 +559,11 @@ export default function PropertyDetailView({
                 />
               </label>
 
-              {/* Submit */}
-              <div className="flex items-center gap-4 pt-2">
+              {/* Submit — stack on mobile so the button isn't squeezed by the note */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 pt-2">
                 <button
                   type="submit"
-                  className="bg-accent text-white text-[15px] font-bold px-8 py-3.5 rounded-md hover:bg-accent/85 transition shadow-sm"
+                  className="w-full sm:w-auto bg-accent text-white text-[15px] font-bold px-8 py-3.5 rounded-md hover:bg-accent/85 transition shadow-sm"
                 >
                   送信する
                 </button>

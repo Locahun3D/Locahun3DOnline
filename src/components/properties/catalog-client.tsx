@@ -564,7 +564,7 @@ function FiltersPanel(p: FiltersProps) {
         </div>
 
         <Row label="参照地点 / 距離">
-          <div className="flex items-start gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-2">
             <div className="flex-1 min-w-0">
               <ReferencePicker
                 value={p.reference}
@@ -572,7 +572,7 @@ function FiltersPanel(p: FiltersProps) {
                 onUseGeolocation={p.useGeolocation}
               />
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0 sm:pt-0.5">
               <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
                 から
               </span>
@@ -737,7 +737,7 @@ function ToggleChip({
     <button
       type="button"
       onClick={() => onChange(!value)}
-      className={`px-2.5 py-1 font-sans text-[11px] border transition ${
+      className={`px-3 py-1.5 min-h-[34px] inline-flex items-center font-sans text-[11px] border transition ${
         value
           ? "border-accent text-accent bg-[#0e1a20]"
           : "border-line text-muted hover:border-ink hover:text-ink"
@@ -758,7 +758,7 @@ function FacilityChip({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2.5 py-1 font-sans text-[11px] border transition ${
+      className={`px-3 py-1.5 min-h-[34px] inline-flex items-center font-sans text-[11px] border transition ${
         active
           ? "border-accent text-accent bg-[#0e1a20]"
           : "border-line text-muted hover:border-ink hover:text-ink"
@@ -1058,7 +1058,7 @@ function SortBar({
               <button
                 type="button"
                 onClick={() => setSort(c.ascKey)}
-                className={`px-1.5 py-0.5 mono text-[10px] tracking-[0.18em] uppercase transition ${
+                className={`px-2 py-1 mono text-[10px] tracking-[0.18em] uppercase transition ${
                   sort === c.ascKey
                     ? "bg-accent text-bg"
                     : "text-muted hover:text-accent"
@@ -1070,7 +1070,7 @@ function SortBar({
               <button
                 type="button"
                 onClick={() => setSort(c.descKey)}
-                className={`px-1.5 py-0.5 mono text-[10px] tracking-[0.18em] uppercase transition ${
+                className={`px-2 py-1 mono text-[10px] tracking-[0.18em] uppercase transition ${
                   sort === c.descKey
                     ? "bg-accent text-bg"
                     : "text-muted hover:text-accent"
