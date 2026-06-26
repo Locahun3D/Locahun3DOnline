@@ -144,31 +144,28 @@ export default function PropertyDetailView({
        *  Dashboard body
        * ══════════════════════════════════════════════════ */}
       <div className="frame pt-6 pb-16">
-        {/* ── Gallery — カバーはヒーローで全幅表示済みなので重複させず、
-             追加のギャラリー写真のみを枚数に応じて並べる（無ければ非表示） ── */}
+        {/* ── Gallery — Airbnb 風（主1 + サムネ）。多様な幅/解像度/アスペクト比の
+             写真も object-cover でセル比率に統一トリミング。写真がカバー1枚だけ
+             ならヒーローで足りるため非表示。 ── */}
         {(() => {
-          // カバーを除いた、src のあるギャラリー写真だけ。
-          const photos = property.gallery.filter((p) => p?.src);
-          const n = photos.length;
-          if (n === 0) return null;
+          const photos = [property.cover, ...property.gallery].filter(
+            (p) => p?.src,
+          );
+          const total = photos.length;
+          if (total <= 1) return null;
 
-          // 画像1枚分の JSX を返すヘルパー（ネストコンポーネント化を避ける）。
+          // 画像1枚分。どんなアスペクト比でもセルを object-cover で埋める。
           const img = (p: { src: string; alt: string }) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.src} alt={p.alt} className="w-full h-full object-cover" />
+            <img
+              src={p.src}
+              alt={p.alt}
+              className="w-full h-full object-cover object-center"
+            />
           );
 
-          // 1枚: 全幅シングル
-          if (n === 1) {
-            return (
-              <div className="rounded-lg overflow-hidden mb-8 aspect-[16/9] sm:aspect-auto sm:h-[clamp(320px,38vw,520px)]">
-                {img(photos[0])}
-              </div>
-            );
-          }
-
           // 2枚: 2カラム
-          if (n === 2) {
+          if (total === 2) {
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 rounded-lg overflow-hidden mb-8">
                 {photos.map((p, i) => (
@@ -184,7 +181,7 @@ export default function PropertyDetailView({
           }
 
           // 3枚: 主1（左・2行分）+ 右2枚
-          if (n === 3) {
+          if (total === 3) {
             return (
               <div className="grid grid-cols-2 sm:grid-cols-[1.5fr_1fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
                 <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
@@ -199,39 +196,37 @@ export default function PropertyDetailView({
             );
           }
 
-          // 4枚: 2×2 均等
-          if (n === 4) {
-            return (
-              <div className="grid grid-cols-2 gap-1.5 rounded-lg overflow-hidden mb-8">
-                {photos.map((p, i) => (
-                  <div key={i} className="aspect-[16/10] overflow-hidden">
-                    {img(p)}
-                  </div>
-                ))}
-              </div>
-            );
-          }
-
-          // 5枚以上: Airbnb 型（主1 + 右4、5枚超なら「すべての写真」）
+          // 4枚以上: Airbnb 5グリッド（主1 + サムネ4スロット）。スロットが余る
+          // 場合は「すべての写真」プレースホルダで埋める（2枚目スクショの形）。
           const grid5 = photos.slice(0, 5);
           return (
-            <div className="grid grid-cols-2 sm:grid-cols-[1fr_0.5fr_0.5fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
+            <div className="grid grid-cols-2 sm:grid-cols-[1fr_0.5fr_0.5fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(320px,38vw,540px)]">
               <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
                 {img(grid5[0])}
               </div>
-              {grid5.slice(1).map((p, i) => (
+              {[1, 2, 3, 4].map((idx) => (
                 <div
-                  key={i}
+                  key={idx}
                   className="relative aspect-square sm:aspect-auto overflow-hidden"
                 >
-                  {img(p)}
-                  {i === 3 && n > 5 && (
-                    <button
-                      type="button"
-                      className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
-                    >
-                      すべての写真 ({n + 1})
-                    </button>
+                  {grid5[idx] ? (
+                    <>
+                      {img(grid5[idx])}
+                      {idx === 4 && total > 5 && (
+                        <button
+                          type="button"
+                          className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
+                        >
+                          すべての写真 ({total})
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-ink/[0.05] flex items-center justify-center">
+                      <span className="text-[13px] text-ink/45 font-medium">
+                        すべての写真 ({total})
+                      </span>
+                    </div>
                   )}
                 </div>
               ))}
