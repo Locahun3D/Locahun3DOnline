@@ -541,7 +541,7 @@ function FiltersPanel(p: FiltersProps) {
       </div>
 
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
-      <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2.5">
+      <div className="grid xl:grid-cols-2 gap-x-6 gap-y-2.5">
         <div className="space-y-2.5">
           <Row label="キーワード">
             <div className="flex items-center gap-2">
@@ -625,8 +625,9 @@ function FiltersPanel(p: FiltersProps) {
 
       <Divider />
 
-      {/* Range filters — two columns: top 3 on the left, bottom 3 on the right */}
-      <div className="grid lg:grid-cols-2 gap-x-5 gap-y-2">
+      {/* Range filters — 地図サイドバーで狭まった列だと2列はラベルが重なるため、
+          十分な幅(2xl)になってから2列化。列間の余白も広めに。 */}
+      <div className="grid 2xl:grid-cols-2 gap-x-8 gap-y-2">
         <div className="space-y-2">
           <RangeRow
             label="時間料金 (¥/hr)"
