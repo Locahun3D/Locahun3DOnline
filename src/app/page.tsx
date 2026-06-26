@@ -100,7 +100,7 @@ export default function HomePage() {
       </section>
 
       {/* ABOUT — what Locahun3D is (two lines) */}
-      <section className="frame py-24 border-b border-line">
+      <section className="frame py-14 md:py-20 border-b border-line">
         <div className="chapter-rule">
           <span className="opacity-60">01</span>
           <span>About — ロケハン3D とは</span>
@@ -149,7 +149,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA — monochrome (white gothic) */}
-      <section className="frame py-32 text-center border-t border-line">
+      <section className="frame py-20 md:py-28 text-center border-t border-line">
         <div className="brand text-[clamp(1.8rem,3.6vw,2.8rem)] leading-[1.5] max-w-[32ch] mx-auto">
           あなたの現場を、3Dに。
         </div>
