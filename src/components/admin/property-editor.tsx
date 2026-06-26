@@ -774,7 +774,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           onUploaded={(f) => {
                             setValue(
                               `blueprints.${idx}.url`,
-                              new URL(f.url, window.location.origin).toString(),
+                              f.url,
                               { shouldDirty: true, shouldValidate: true },
                             );
                             triggerAutoSave();
@@ -1098,7 +1098,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   onUploaded={(f) => {
                     const now = new Date();
                     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-                    setValue("zipUrl", new URL(f.url, window.location.origin).toString(), {
+                    setValue("zipUrl", f.url, {
                       shouldDirty: true,
                       shouldValidate: true,
                     });
@@ -1212,7 +1212,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           onUploaded={(f) => {
                             const now = new Date();
                             const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-                            const uploadedUrl = new URL(f.url, window.location.origin).toString();
+                            const uploadedUrl = f.url;
                             setValue(
                               `splatItems.${idx}.splatUrl`,
                               uploadedUrl,
@@ -1360,7 +1360,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                   label="PLY & OBJ ZIP ファイル (.zip / .ply / .obj)"
                                   hint="販売用ダウンロードデータ — 20 GB まで"
                                   onUploaded={(f) => {
-                                    const uploadedUrl = new URL(f.url, window.location.origin).toString();
+                                    const uploadedUrl = f.url;
                                     setValue(`splatItems.${idx}.downloadFileUrl`, uploadedUrl, { shouldDirty: true, shouldValidate: true });
                                     setValue(`splatItems.${idx}.downloadFileSizeMb`, Math.max(1, Math.round(f.size / 1024 / 1024)), { shouldDirty: true });
                                     triggerAutoSave();

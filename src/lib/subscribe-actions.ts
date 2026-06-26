@@ -65,26 +65,35 @@ export async function subscribeAction(
   const u = await userRepo.get(user.id);
   const origin = await requestOrigin();
   const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
-    customer: u?.stripeCustomerId ?? undefined,
-    customer_email: u?.stripeCustomerId ? undefined : user.email,
-    client_reference_id: user.id,
-    metadata: { userId: user.id, plan },
-    subscription_data: { metadata: { userId: user.id, plan } },
-    allow_promotion_codes: true,
-    // サブスクは毎月の請求書を自動発行。電子帳簿/インボイス制度対応として
-    // 顧客の登録番号(T番号)・住所を収集し、毎月の請求書へ自動反映する。
-    tax_id_collection: { enabled: true },
-    billing_address_collection: "auto",
-    ...(u?.stripeCustomerId
-      ? { customer_update: { name: "auto", address: "auto" } }
-      : {}),
-    // 戻りルートでセッション検証→プラン反映→メール送信（webhook未設定でも完結）。
-    success_url: `${origin}/api/subscribe/return?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/pricing?checkout=cancel`,
-  });
+  let session: Awaited<
+    ReturnType<typeof stripe.checkout.sessions.create>
+  >;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer: u?.stripeCustomerId ?? undefined,
+      customer_email: u?.stripeCustomerId ? undefined : user.email,
+      client_reference_id: user.id,
+      metadata: { userId: user.id, plan },
+      subscription_data: { metadata: { userId: user.id, plan } },
+      allow_promotion_codes: true,
+      // サブスクは毎月の請求書を自動発行。電子帳簿/インボイス制度対応として
+      // 顧客の登録番号(T番号)・住所を収集し、毎月の請求書へ自動反映する。
+      tax_id_collection: { enabled: true },
+      billing_address_collection: "auto",
+      ...(u?.stripeCustomerId
+        ? { customer_update: { name: "auto", address: "auto" } }
+        : {}),
+      // 戻りルートでセッション検証→プラン反映→メール送信（webhook未設定でも完結）。
+      success_url: `${origin}/api/subscribe/return?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/pricing?checkout=cancel`,
+    });
+  } catch (e) {
+    // Stripe API エラーで汎用エラー画面になるのを防ぎ、料金ページへ誘導。
+    console.error("stripe checkout create failed", e);
+    redirect("/pricing?checkout=error");
+  }
 
   if (!session.url) redirect("/pricing?checkout=error");
   redirect(session.url);

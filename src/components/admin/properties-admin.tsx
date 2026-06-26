@@ -34,6 +34,7 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
   const [statusFilter, setStatusFilter] = useState<PropertyStatus | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -78,10 +79,33 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
       return new Set([...prev, ...visibleIds]);
     });
 
-  const runBulk = (fn: () => Promise<unknown>) =>
+  const runBulk = (fn: () => Promise<unknown>, label: string) =>
     startTransition(async () => {
-      await fn();
-      setSelected(new Set());
+      setNotice(null);
+      try {
+        const res = (await fn()) as
+          | { count?: number; total?: number; skipped?: string[] }
+          | undefined;
+        setSelected(new Set());
+        if (
+          res &&
+          typeof res.total === "number" &&
+          typeof res.count === "number" &&
+          res.count < res.total
+        ) {
+          const skip = res.total - res.count;
+          setNotice(
+            `${label}: ${res.count}/${res.total} 件を処理（${skip} 件は公開要件を満たさずスキップ）`,
+          );
+        } else if (res && typeof res.count === "number") {
+          setNotice(`${label}: ${res.count} 件を処理しました`);
+        }
+      } catch (e) {
+        console.error(e);
+        setNotice(
+          `${label}に失敗しました: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
     });
 
   const ids = [...selected];
@@ -120,6 +144,19 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
         </span>
       </div>
 
+      {notice && (
+        <div className="flex items-center justify-between gap-3 border border-line bg-ink/[0.04] px-3 py-2 text-[12px] text-ink/80">
+          <span>{notice}</span>
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            className="mono text-[10px] text-muted hover:text-ink"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 border border-accent/40 bg-accent/10 px-3 py-2">
@@ -127,16 +164,16 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
             {selected.size} 件選択中
           </span>
           <div className="flex flex-wrap gap-1.5 ml-auto">
-            <BulkBtn label="公開" disabled={pending} onClick={() => runBulk(() => bulkSetStatusAction(ids, "published"))} />
-            <BulkBtn label="非公開" disabled={pending} onClick={() => runBulk(() => bulkSetStatusAction(ids, "draft"))} />
-            <BulkBtn label="アーカイブ" disabled={pending} onClick={() => runBulk(() => bulkSetStatusAction(ids, "archived"))} />
+            <BulkBtn label="公開" disabled={pending} onClick={() => runBulk(() => bulkSetStatusAction(ids, "published"), "公開")} />
+            <BulkBtn label="非公開" disabled={pending} onClick={() => runBulk(() => bulkSetStatusAction(ids, "draft"), "非公開")} />
+            <BulkBtn label="アーカイブ" disabled={pending} onClick={() => runBulk(() => bulkSetStatusAction(ids, "archived"), "アーカイブ")} />
             <BulkBtn
               label="削除"
               danger
               disabled={pending}
               onClick={() => {
                 if (confirm(`${selected.size} 件を削除しますか？この操作は元に戻せません。`)) {
-                  runBulk(() => bulkDeleteAction(ids));
+                  runBulk(() => bulkDeleteAction(ids), "削除");
                 }
               }}
             />

@@ -157,20 +157,29 @@ export async function bulkSetStatusAction(
   status: "published" | "draft" | "archived",
 ) {
   await requireAdmin();
+  let done = 0;
+  const skipped: string[] = [];
   for (const id of ids) {
     const existing = await repo.get(id);
-    if (!existing) continue;
+    if (!existing) {
+      skipped.push(id);
+      continue;
+    }
     if (status === "published") {
       const parsed = publishablePropertySchema.safeParse(existing);
-      if (!parsed.success) continue; // 公開要件を満たさないものはスキップ
+      if (!parsed.success) {
+        skipped.push(id); // 公開要件を満たさないものはスキップ
+        continue;
+      }
       await repo.upsert({ ...parsed.data, status: "published" });
     } else {
       await repo.upsert({ ...existing, status });
     }
+    done++;
   }
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
-  return { ok: true as const, count: ids.length };
+  return { ok: true as const, count: done, total: ids.length, skipped };
 }
 
 /** 一括: 選択した物件をまとめて削除。 */

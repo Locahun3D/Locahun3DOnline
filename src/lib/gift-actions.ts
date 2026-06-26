@@ -107,9 +107,30 @@ export async function redeemGiftCodeAction(
     return { ok: false, error: REDEEM_ERROR_MESSAGE[err ?? "not_found"] };
   }
 
-  const granted = code.tokens;
+  // 競合防止（二重引換 / maxUses 超過 / 同時クリック）: 付与の直前にコードを
+  // 再取得して再検証し、先にコードの uses を確定(claim)してからトークンを付与する。
+  // 完全な原子性には D1 等の CAS が必要だが、再取得＋claim-first で実害ケース
+  // （同一ユーザーの連打・maxUses=1 の同時利用）を大幅に抑止する。
+  const fresh = await giftCodeRepo.get(input);
+  const err2 = redeemableFor(fresh, user.id, now);
+  if (err2 || !fresh) {
+    return { ok: false, error: REDEEM_ERROR_MESSAGE[err2 ?? "not_found"] };
+  }
+  const granted = fresh.tokens;
+
+  // 1) 使用回数を先に確定（コードを claim）
+  await giftCodeRepo.upsert({
+    ...fresh,
+    uses: fresh.uses + 1,
+    redemptions: [
+      ...fresh.redemptions,
+      { userId: user.id, email: user.email, tokens: granted, at: now },
+    ],
+  });
+
+  // 2) ユーザーへ付与
   const nextUser =
-    code.bucket === "bonus"
+    fresh.bucket === "bonus"
       ? { ...user, bonusTokens: user.bonusTokens + granted }
       : {
           ...user,
@@ -119,15 +140,6 @@ export async function redeemGiftCodeAction(
         };
   await userRepo.upsert(nextUser);
 
-  await giftCodeRepo.upsert({
-    ...code,
-    uses: code.uses + 1,
-    redemptions: [
-      ...code.redemptions,
-      { userId: user.id, email: user.email, tokens: granted, at: now },
-    ],
-  });
-
   revalidatePath("/account");
-  return { ok: true, granted, bucket: code.bucket };
+  return { ok: true, granted, bucket: fresh.bucket };
 }

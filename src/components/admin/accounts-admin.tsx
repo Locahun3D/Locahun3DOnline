@@ -41,6 +41,7 @@ export default function AccountsAdmin({
   const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">(initialStatus);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -76,10 +77,35 @@ export default function AccountsAdmin({
       }
       return new Set([...p, ...visibleIds]);
     });
-  const runBulk = (fn: () => Promise<unknown>) =>
+  const runBulk = (fn: () => Promise<unknown>, label: string) =>
     startTransition(async () => {
-      await fn();
-      setSelected(new Set());
+      setNotice(null);
+      try {
+        const res = (await fn()) as
+          | { ok?: boolean; count?: number; total?: number }
+          | undefined;
+        setSelected(new Set());
+        if (res && res.ok === false) {
+          setNotice(`${label}に失敗しました`);
+        } else if (
+          res &&
+          typeof res.total === "number" &&
+          typeof res.count === "number" &&
+          res.count < res.total
+        ) {
+          const skip = res.total - res.count;
+          setNotice(
+            `${label}: ${res.count}/${res.total} 件を処理（${skip} 件はスキップ）`,
+          );
+        } else if (res && typeof res.count === "number") {
+          setNotice(`${label}: ${res.count} 件を処理しました`);
+        }
+      } catch (e) {
+        console.error(e);
+        setNotice(
+          `${label}に失敗しました: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
     });
 
   const ids = [...selected];
@@ -125,20 +151,27 @@ export default function AccountsAdmin({
         <span className="mono text-[11px] text-muted ml-auto">{filtered.length} 件</span>
       </div>
 
+      {notice && (
+        <div className="flex items-center justify-between gap-3 border border-line bg-ink/[0.04] px-3 py-2 text-[12px] text-ink/80">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="mono text-[10px] text-muted hover:text-ink">✕</button>
+        </div>
+      )}
+
       {/* Bulk bar */}
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 border border-accent/40 bg-accent/10 px-3 py-2">
           <span className="mono text-[11px] text-accent">{selected.size} 件選択中</span>
           <div className="flex flex-wrap gap-1.5 ml-auto">
-            <BulkBtn label="承認/有効化" disabled={pending} onClick={() => runBulk(() => bulkSetAccountStatusAction(ids, "active"))} />
-            <BulkBtn label="停止" disabled={pending} onClick={() => runBulk(() => bulkSetAccountStatusAction(ids, "suspended"))} />
+            <BulkBtn label="承認/有効化" disabled={pending} onClick={() => runBulk(() => bulkSetAccountStatusAction(ids, "active"), "承認/有効化")} />
+            <BulkBtn label="停止" disabled={pending} onClick={() => runBulk(() => bulkSetAccountStatusAction(ids, "suspended"), "停止")} />
             <BulkBtn
               label="削除"
               danger
               disabled={pending}
               onClick={() => {
                 if (confirm(`${selected.size} 件を削除しますか？（自分自身は除外されます）`)) {
-                  runBulk(() => bulkDeleteAccountsAction(ids));
+                  runBulk(() => bulkDeleteAccountsAction(ids), "削除");
                 }
               }}
             />

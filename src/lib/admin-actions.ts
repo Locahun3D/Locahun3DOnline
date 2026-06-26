@@ -81,13 +81,19 @@ export async function bulkSetAccountStatusAction(
 ) {
   await requireAdmin();
   if (!ACCOUNT_STATUSES.includes(status)) return { ok: false as const };
+  let done = 0;
+  const skipped: string[] = [];
   for (const id of ids) {
     const u = await userRepo.get(id);
-    if (!u) continue;
+    if (!u) {
+      skipped.push(id);
+      continue;
+    }
     await userRepo.upsert({ ...u, status });
+    done++;
   }
   revalidatePath("/admin/accounts");
-  return { ok: true as const, count: ids.length };
+  return { ok: true as const, count: done, total: ids.length, skipped };
 }
 
 /** Link a studio owner account to a set of property IDs they can manage. */
@@ -110,12 +116,18 @@ export async function linkPropertiesToUserAction(
 /** 一括: 選択アカウントを削除 (自分自身は除外)。 */
 export async function bulkDeleteAccountsAction(ids: string[]) {
   const admin = await requireAdmin();
+  let done = 0;
+  const skipped: string[] = [];
   for (const id of ids) {
-    if (id === admin.id) continue;
+    if (id === admin.id) {
+      skipped.push(id); // 自分自身は削除できない
+      continue;
+    }
     await userRepo.remove(id);
+    done++;
   }
   revalidatePath("/admin/accounts");
-  return { ok: true as const };
+  return { ok: true as const, count: done, total: ids.length, skipped };
 }
 
 /** 購入を返金処理する。 */
