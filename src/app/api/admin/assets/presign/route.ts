@@ -47,23 +47,36 @@ export async function POST(req: Request) {
   const stem = filename.slice(0, filename.length - ext.length);
 
   if (UPLOAD_MODE === "r2") {
-    const { putUrl, publicUrl } = await createPresignedUpload({ r2Key, contentType });
-    await assetRepo.upsert({
+    const base = {
       id,
       kind: kind as AssetKind,
-      status: "uploading",
+      status: "uploading" as const,
       label: stem || filename,
       filename,
       ext,
       r2Key,
-      url: publicUrl,
       size,
       contentType,
       thumbnailUrl: "",
       tags: [],
       uploadedAt: new Date().toISOString(),
-    });
-    return NextResponse.json({ id, mode: "r2", putUrl, url: publicUrl, contentType });
+    };
+    try {
+      // 署名アップロード（S3 互換クレデンシャル必要）。ブラウザが R2 へ直 PUT。
+      const { putUrl, publicUrl } = await createPresignedUpload({ r2Key, contentType });
+      await assetRepo.upsert({ ...base, url: publicUrl });
+      return NextResponse.json({ id, mode: "r2", putUrl, url: publicUrl, contentType });
+    } catch (e) {
+      // R2_ACCESS_KEY_ID 等が未設定なら、バインディング経由アップロードへフォールバック。
+      console.warn("[presign] S3 creds unavailable, using binding upload:", e instanceof Error ? e.message : e);
+      await assetRepo.upsert({ ...base, url: "" });
+      return NextResponse.json({
+        id,
+        mode: "binding",
+        postUrl: "/api/admin/assets/binding-upload",
+        contentType,
+      });
+    }
   }
 
   // local mode — bytes go to /api/admin/assets/local next

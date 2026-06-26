@@ -383,6 +383,20 @@ export const STUDIO_TYPE_SUGGESTIONS = [
   "その他",
 ] as const;
 
+/** Suggested areas — editor select の候補（自由入力も可）。 */
+export const AREA_SUGGESTIONS = [
+  "東京23区",
+  "東京西エリア",
+  "神奈川エリア",
+  "千葉エリア",
+  "埼玉エリア",
+  "茨城エリア",
+  "栃木・群馬エリア",
+  "中部・東海エリア",
+  "関西エリア",
+  "その他",
+] as const;
+
 /** Token cost labels and per-plan monthly budgets. */
 export const TOKEN_COST_LABEL: Record<1 | 2 | 3, string> = {
   1: "ハウス / 小規模",

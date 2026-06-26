@@ -64,6 +64,7 @@ export async function uploadAsset(
   }
   const presign = (await presignRes.json()) as
     | { id: string; mode: "r2"; putUrl: string; url: string; contentType: string }
+    | { id: string; mode: "binding"; postUrl: string; contentType: string }
     | { id: string; mode: "local"; postUrl: string };
 
   if (presign.mode === "r2") {
@@ -87,7 +88,8 @@ export async function uploadAsset(
     return data.asset as Asset;
   }
 
-  // local mode
+  // local mode、または binding mode（R2バインディング経由でWorkerへPOST）。
+  // どちらも multipart で postUrl に送り、サーバーが保存して asset を返す。
   const form = new FormData();
   form.append("id", presign.id);
   form.append("file", file);
@@ -96,7 +98,7 @@ export async function uploadAsset(
   const res = await xhrSend("POST", presign.postUrl, form, {}, opts.onProgress);
   const data = JSON.parse(res.text || "{}");
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(data.message ?? data.error ?? `local upload ${res.status}`);
+    throw new Error(data.message ?? data.error ?? `upload ${res.status}`);
   }
   return data.asset as Asset;
 }

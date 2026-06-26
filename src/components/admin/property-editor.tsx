@@ -19,6 +19,7 @@ import {
   STATUS_LABEL,
   PROPERTY_CATEGORIES,
   STUDIO_TYPE_SUGGESTIONS,
+  AREA_SUGGESTIONS,
   TOKEN_COST_LABEL,
   DATA_LICENSES,
   DATA_LICENSE_LABEL,
@@ -379,11 +380,13 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   label="スタジオ種類"
                   hint="一覧から選択。無ければ「その他（自由入力）」"
                 >
-                  <StudioTypeSelect
+                  <SuggestSelect
                     value={watch("studioType") || ""}
                     onChange={(v) =>
                       setValue("studioType", v, { shouldDirty: true })
                     }
+                    options={STUDIO_TYPE_SUGGESTIONS}
+                    placeholder="スタジオ種類を入力"
                   />
                 </Field>
                 <Field
@@ -418,11 +421,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               <div className="grid md:grid-cols-3 gap-5">
                 <Field label="エリア" error={formState.errors.area?.message} required>
-                  <input
-                    type="text"
-                    {...register("area")}
-                    className={inputClass}
-                    placeholder="例: 東京西エリア"
+                  <SuggestSelect
+                    value={watch("area") || ""}
+                    onChange={(v) => setValue("area", v, { shouldDirty: true })}
+                    options={AREA_SUGGESTIONS}
+                    placeholder="エリアを入力"
                   />
                 </Field>
                 <Field label="都道府県" required>
@@ -1626,18 +1629,22 @@ const POWER_PRESETS = [
 ] as const;
 
 /**
- * スタジオ種類セレクト。候補から選択、無ければ「その他（自由入力）」で
- * テキスト入力に切り替わる（任意の文字列を保持できる）。
+ * 候補から選択、無ければ「その他（自由入力）」でテキスト入力に切り替わる
+ * 汎用セレクト（任意の文字列を保持できる）。スタジオ種類・エリア等で共用。
  */
-function StudioTypeSelect({
+function SuggestSelect({
   value,
   onChange,
+  options: rawOptions,
+  placeholder = "自由入力",
 }: {
   value: string;
   onChange: (v: string) => void;
+  options: readonly string[];
+  placeholder?: string;
 }) {
-  const options = STUDIO_TYPE_SUGGESTIONS.filter((s) => s !== "その他");
-  const inList = (options as readonly string[]).includes(value);
+  const options = rawOptions.filter((s) => s !== "その他");
+  const inList = options.includes(value);
   const [freeMode, setFreeMode] = useState(value !== "" && !inList);
 
   return (
@@ -1672,7 +1679,7 @@ function StudioTypeSelect({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={inputClass}
-          placeholder="スタジオ種類を入力"
+          placeholder={placeholder}
         />
       )}
     </div>

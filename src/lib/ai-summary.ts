@@ -49,26 +49,36 @@ async function getApiKey(): Promise<string | null> {
   return process.env.ANTHROPIC_API_KEY || null;
 }
 
-/** ネットなしで、入力フィールドから妥当なサマリーを組み立てるフォールバック。 */
+/**
+ * ネットなしで、入力フィールドから妥当なサマリーを組み立てるフォールバック。
+ * カテゴリに準拠した内容にする（屋外で床面積/天井高を出さない等）。
+ * タグは物件タイプと不整合な古い値が残っていることがあるため使わず、
+ * カテゴリに応じた中立的な用途文で締める（例: 倉庫タグが屋外物件に残る等の誤りを防ぐ）。
+ */
 function heuristicSummary(input: SummarySuggestInput): string {
   const loc = [input.prefecture, input.city].filter(Boolean).join("");
   const typeName =
     input.studioType || CATEGORY_JP[input.category] || "スペース";
+  const isOutdoor = input.category === "outdoor";
+
   const specs: string[] = [];
-  if (input.floorAreaSqm > 0) specs.push(`床面積${input.floorAreaSqm}㎡`);
-  if (input.category !== "outdoor" && input.ceilingHeightM > 0)
+  if (!isOutdoor && input.floorAreaSqm > 0)
+    specs.push(`床面積${input.floorAreaSqm}㎡`);
+  if (!isOutdoor && input.ceilingHeightM > 0)
     specs.push(`天井高${input.ceilingHeightM}m`);
   if (input.capacity > 0) specs.push(`収容${input.capacity}名`);
-  if (input.hasNaturalLight) specs.push("自然光あり");
+  if (input.hasNaturalLight) specs.push("自然光");
+  if (input.parking) specs.push("駐車場あり");
 
-  const useTags = input.tags.filter(Boolean).slice(0, 3);
-  const sentences: string[] = [];
-  sentences.push(`${loc ? loc + "の" : ""}${typeName}。`);
-  if (specs.length) sentences.push(specs.join("・") + "。");
-  if (useTags.length) sentences.push(`${useTags.join("・")}の撮影に。`);
-  let s = sentences.join("");
+  const head = `${loc ? loc + "の" : ""}${typeName}。`;
+  const specLine = specs.length ? specs.join("・") + "。" : "";
+  const close = isOutdoor
+    ? "屋外ロケ撮影に対応。"
+    : "CM・MV・スチール等の撮影に対応。";
+
+  let s = `${head}${specLine}${close}`;
   if (s.length < 10 && input.title) s = `${input.title}。${s}`;
-  return s.slice(0, 90);
+  return s.slice(0, 100);
 }
 
 interface AnthropicBlock {
