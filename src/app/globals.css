@@ -185,18 +185,24 @@ body::before {
   padding-inline: max(clamp(1rem, 4vw, 48px), calc((100vw - var(--container-frame-wide, 1760px)) / 2));
 }
 
-/* 4K / 大型モニター対応: 巨大画面で 1440/1760px に固定すると左右が空きすぎ・
- * 文字が小さく見えるため、コンテナ幅を段階的に広げる。 */
+/* 大型モニター対応: 1440px 固定だと左右の余白が空きすぎるため、画面が広いほど
+ * コンテナ幅を段階的に広げて余白を詰める（ただし広げ過ぎず、まとまりは維持）。 */
+@media (min-width: 1920px) {
+  :root {
+    --container-frame: 1600px;
+    --container-frame-wide: 1880px;
+  }
+}
 @media (min-width: 2560px) {
   :root {
-    --container-frame: 1760px;
-    --container-frame-wide: 2200px;
+    --container-frame: 1780px;
+    --container-frame-wide: 2160px;
   }
 }
 @media (min-width: 3200px) {
   :root {
-    --container-frame: 2040px;
-    --container-frame-wide: 2560px;
+    --container-frame: 2000px;
+    --container-frame-wide: 2520px;
   }
 }
 

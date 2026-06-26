@@ -68,7 +68,7 @@ export default function PropertyDetailView({
         <img
           src={property.cover.src}
           alt={property.cover.alt}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-[center_28%]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
 
@@ -143,49 +143,96 @@ export default function PropertyDetailView({
       {/* ══════════════════════════════════════════════════
        *  Dashboard body
        * ══════════════════════════════════════════════════ */}
-      <div className="frame pt-8 pb-24">
-        {/* ── Gallery — Airbnb-style 5-image grid ── */}
+      <div className="frame pt-6 pb-16">
+        {/* ── Gallery — 写真枚数に応じて最適化（空き枠を作らない） ── */}
         {(() => {
-          const allPhotos = [property.cover, ...property.gallery];
-          const grid5 = allPhotos.slice(0, 5);
-          const totalCount = allPhotos.length;
-          return (
-            <div className="grid grid-cols-2 sm:grid-cols-[1fr_0.5fr_0.5fr] sm:grid-rows-2 gap-1 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
-              {/* Left: main image — full-width on mobile, spans 2 rows on sm+ */}
-              <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={grid5[0]?.src}
-                  alt={grid5[0]?.alt}
-                  className="w-full h-full object-cover"
-                />
+          // src のある写真だけ。空のカバーで空き枠が出るのを防ぐ。
+          const photos = [property.cover, ...property.gallery].filter(
+            (p) => p?.src,
+          );
+          const n = photos.length;
+          if (n === 0) return null;
+
+          // 画像1枚分の JSX を返すヘルパー（ネストコンポーネント化を避ける）。
+          const img = (p: { src: string; alt: string }) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.src} alt={p.alt} className="w-full h-full object-cover" />
+          );
+
+          // 1枚: 全幅シングル
+          if (n === 1) {
+            return (
+              <div className="rounded-lg overflow-hidden mb-8 aspect-[16/9] sm:aspect-auto sm:h-[clamp(320px,38vw,520px)]">
+                {img(photos[0])}
               </div>
-              {/* Right: 4 images — 2×2 on mobile, 2×2 sidebar on sm+ */}
-              {[1, 2, 3, 4].map((idx) => (
-                <div key={idx} className="relative aspect-square sm:aspect-auto overflow-hidden">
-                  {grid5[idx] ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={grid5[idx].src}
-                        alt={grid5[idx].alt}
-                        className="w-full h-full object-cover"
-                      />
-                      {idx === 4 && totalCount > 5 && (
-                        <button
-                          type="button"
-                          className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
-                        >
-                          すべての写真 ({totalCount})
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <div className="w-full h-full bg-ink/[0.04] flex items-center justify-center aspect-[4/3]">
-                      <span className="text-[13px] text-ink/40 font-medium">
-                        すべての写真 ({totalCount})
-                      </span>
-                    </div>
+            );
+          }
+
+          // 2枚: 2カラム
+          if (n === 2) {
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 rounded-lg overflow-hidden mb-8">
+                {photos.map((p, i) => (
+                  <div
+                    key={i}
+                    className="aspect-[16/10] sm:aspect-auto sm:h-[clamp(280px,32vw,460px)] overflow-hidden"
+                  >
+                    {img(p)}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          // 3枚: 主1（左・2行分）+ 右2枚
+          if (n === 3) {
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-[1.5fr_1fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
+                <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
+                  {img(photos[0])}
+                </div>
+                {photos.slice(1).map((p, i) => (
+                  <div key={i} className="aspect-[4/3] sm:aspect-auto overflow-hidden">
+                    {img(p)}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          // 4枚: 2×2 均等
+          if (n === 4) {
+            return (
+              <div className="grid grid-cols-2 gap-1.5 rounded-lg overflow-hidden mb-8">
+                {photos.map((p, i) => (
+                  <div key={i} className="aspect-[16/10] overflow-hidden">
+                    {img(p)}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          // 5枚以上: Airbnb 型（主1 + 右4、5枚超なら「すべての写真」）
+          const grid5 = photos.slice(0, 5);
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-[1fr_0.5fr_0.5fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
+              <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
+                {img(grid5[0])}
+              </div>
+              {grid5.slice(1).map((p, i) => (
+                <div
+                  key={i}
+                  className="relative aspect-square sm:aspect-auto overflow-hidden"
+                >
+                  {img(p)}
+                  {i === 3 && n > 5 && (
+                    <button
+                      type="button"
+                      className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
+                    >
+                      すべての写真 ({n})
+                    </button>
                   )}
                 </div>
               ))}
