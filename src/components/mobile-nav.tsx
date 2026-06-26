@@ -34,7 +34,7 @@ export default function MobileNav({
         aria-label="メニューを開く"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="lg:hidden flex flex-col gap-[5px] p-2 -ml-2 text-ink"
+        className="lg:hidden flex flex-col justify-center items-start gap-[5px] p-2.5 -ml-2 min-w-11 min-h-11 text-ink"
       >
         <span className="block w-5 h-px bg-current" />
         <span className="block w-5 h-px bg-current" />
@@ -50,7 +50,7 @@ export default function MobileNav({
             type="button"
             aria-label="メニューを閉じる"
             onClick={close}
-            className="self-end mono text-[11px] tracking-[0.24em] uppercase text-muted hover:text-accent p-2"
+            className="self-end mono text-[11px] tracking-[0.24em] uppercase text-muted hover:text-accent p-3 min-h-11 inline-flex items-center"
           >
             ✕ CLOSE
           </button>

@@ -384,7 +384,7 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
       </div>
 
       {/* Top band: search panel (left) + map (right), flush to the same height */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)] gap-6">
         <div className="min-w-0">
           <FiltersPanel
             q={q} setQ={setQ}
@@ -411,8 +411,9 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
           />
         </div>
 
-        {/* Map: stretches to match the panel height (面一), no scroll-follow */}
-        <div className="h-[40vh] sm:h-[50vh] lg:h-auto">
+        {/* Map: stretches to match the panel height (面一), no scroll-follow.
+            モバイルでは高さを抑えて結果カードを早く見せる。 */}
+        <div className="h-[30vh] sm:h-[44vh] lg:h-auto">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}
@@ -437,7 +438,7 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
             </p>
           </div>
         ) : (
-          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <ul className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[2200px]:grid-cols-6 gap-5">
             {computed.map((p) => (
               <li
                 key={p.id}

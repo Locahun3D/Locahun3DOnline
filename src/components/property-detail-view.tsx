@@ -150,10 +150,9 @@ export default function PropertyDetailView({
           const grid5 = allPhotos.slice(0, 5);
           const totalCount = allPhotos.length;
           return (
-            <div className="grid grid-cols-[1fr_0.5fr_0.5fr] grid-rows-2 gap-1 rounded-lg overflow-hidden mb-8"
-                 style={{ height: "clamp(300px, 36vw, 480px)" }}>
-              {/* Left: main image spanning 2 rows */}
-              <div className="row-span-2 overflow-hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-[1fr_0.5fr_0.5fr] sm:grid-rows-2 gap-1 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
+              {/* Left: main image — full-width on mobile, spans 2 rows on sm+ */}
+              <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={grid5[0]?.src}
@@ -161,9 +160,9 @@ export default function PropertyDetailView({
                   className="w-full h-full object-cover"
                 />
               </div>
-              {/* Right: 4 images in 2×2 */}
+              {/* Right: 4 images — 2×2 on mobile, 2×2 sidebar on sm+ */}
               {[1, 2, 3, 4].map((idx) => (
-                <div key={idx} className="relative overflow-hidden">
+                <div key={idx} className="relative aspect-square sm:aspect-auto overflow-hidden">
                   {grid5[idx] ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -182,7 +182,22 @@ body::before {
 /* Wider container for data-dense pages (catalog) — more columns on PC. */
 @utility frame-wide {
   position: relative;
-  padding-inline: max(clamp(1rem, 4vw, 48px), calc((100vw - 1760px) / 2));
+  padding-inline: max(clamp(1rem, 4vw, 48px), calc((100vw - var(--container-frame-wide, 1760px)) / 2));
+}
+
+/* 4K / 大型モニター対応: 巨大画面で 1440/1760px に固定すると左右が空きすぎ・
+ * 文字が小さく見えるため、コンテナ幅を段階的に広げる。 */
+@media (min-width: 2560px) {
+  :root {
+    --container-frame: 1760px;
+    --container-frame-wide: 2200px;
+  }
+}
+@media (min-width: 3200px) {
+  :root {
+    --container-frame: 2040px;
+    --container-frame-wide: 2560px;
+  }
 }
 
 /* Split Gateway — cross-dim: hovering one side fades the other */

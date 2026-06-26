@@ -27,7 +27,7 @@ export default function HomePage() {
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
             style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(255,180,84,.08) 0%, transparent 70%)" }} />
-          <span className="leader text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">1</span>
+          <span className="leader text-[30vw] sm:text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">1</span>
           <div className="relative z-10 flex flex-col items-center transition-transform duration-500 ease-out group-hover:-translate-y-2">
             <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
               L · O · C · A · H · U · N&nbsp;&nbsp;&nbsp;3&nbsp;D
@@ -38,7 +38,7 @@ export default function HomePage() {
               ロケハン3D
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
-            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
+            <h2 className="brand text-[clamp(2.6rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
               スキャン
             </h2>
             <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] transition-opacity duration-500 group-hover:opacity-100">
@@ -63,7 +63,7 @@ export default function HomePage() {
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
             style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(94,200,232,.08) 0%, transparent 70%)" }} />
-          <span className="leader text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">2</span>
+          <span className="leader text-[30vw] sm:text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">2</span>
           <div className="relative z-10 flex flex-col items-center transition-transform duration-500 ease-out group-hover:-translate-y-2">
             <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
               L · O · C · A · H · U · N&nbsp;&nbsp;&nbsp;3&nbsp;D
@@ -74,7 +74,7 @@ export default function HomePage() {
               ロケハン3D
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
-            <h2 className="brand text-[clamp(2.6rem,5.2vw,4.6rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">
+            <h2 className="brand text-[clamp(2.6rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">
               オンライン
             </h2>
             <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] transition-opacity duration-500 group-hover:opacity-100">
