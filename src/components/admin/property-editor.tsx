@@ -882,6 +882,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       alt: a.label,
                       width: a.width ?? 1600,
                       height: a.height ?? 1000,
+                      focus: "center",
                     });
                   }
                 }}
@@ -898,8 +899,18 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     <img
                       src={watch("cover.src")}
                       alt="cover preview"
-                      className="w-full max-h-[320px] object-cover"
+                      className="w-full aspect-[16/9] object-cover"
+                      style={{ objectPosition: watch("cover.focus") || "center" }}
                     />
+                    {/* トリミング基準ピッカー（残す位置を指定。プレビューに即反映） */}
+                    <div className="absolute bottom-3 left-3">
+                      <FocusPicker
+                        value={watch("cover.focus") || "center"}
+                        onChange={(v) =>
+                          setValue("cover.focus", v, { shouldDirty: true })
+                        }
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -959,12 +970,29 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         className="relative border border-line bg-[#141414]"
                       >
                         {watch(`gallery.${i}.src`) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={watch(`gallery.${i}.src`)}
-                            alt=""
-                            className="w-full aspect-[4/3] object-cover"
-                          />
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={watch(`gallery.${i}.src`)}
+                              alt=""
+                              className="w-full aspect-[4/3] object-cover"
+                              style={{
+                                objectPosition:
+                                  watch(`gallery.${i}.focus`) || "center",
+                              }}
+                            />
+                            {/* トリミング基準ピッカー */}
+                            <div className="absolute top-1.5 left-1.5">
+                              <FocusPicker
+                                value={watch(`gallery.${i}.focus`) || "center"}
+                                onChange={(v) =>
+                                  setValue(`gallery.${i}.focus`, v, {
+                                    shouldDirty: true,
+                                  })
+                                }
+                              />
+                            </div>
+                          </>
                         ) : (
                           <div className="w-full aspect-[4/3] flex items-center justify-center mono text-[10px] opacity-40">
                             no preview
@@ -1001,6 +1029,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       alt: name.replace(/\.[^.]+$/, ""),
                       width: 1600,
                       height: 1000,
+                      focus: "center",
                     });
                     triggerAutoSave();
                   }}
@@ -1616,6 +1645,53 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
 const inputClass =
   "w-full bg-white text-[#111] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono placeholder:text-[#999]";
+
+/** 画像トリミングのフォーカス位置（object-position 値）。3×3 の9点。 */
+const FOCUS_POSITIONS = [
+  "left top",
+  "center top",
+  "right top",
+  "left center",
+  "center",
+  "right center",
+  "left bottom",
+  "center bottom",
+  "right bottom",
+] as const;
+
+/**
+ * 画像の切り抜き基準（object-position）を 3×3 グリッドで指定するピッカー。
+ * 多様なアスペクト比の写真を object-cover で切る際に「写真のどこを残すか」を選ぶ。
+ */
+function FocusPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const active = value || "center";
+  return (
+    <div
+      className="inline-grid grid-cols-3 gap-0.5 bg-black/55 backdrop-blur-sm p-1 rounded"
+      title="トリミング基準（残す位置）"
+    >
+      {FOCUS_POSITIONS.map((pos) => (
+        <button
+          key={pos}
+          type="button"
+          aria-label={`トリミング基準: ${pos}`}
+          onClick={() => onChange(pos)}
+          className={`w-3.5 h-3.5 rounded-[2px] border transition ${
+            active === pos
+              ? "bg-accent border-accent"
+              : "bg-white/25 border-white/40 hover:bg-white/60"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 /** 電源仕様のクイック入力プリセット（「なし」含む）。 */
 const POWER_PRESETS = [

@@ -68,7 +68,8 @@ export default function PropertyDetailView({
         <img
           src={property.cover.src}
           alt={property.cover.alt}
-          className="absolute inset-0 w-full h-full object-cover object-[center_28%]"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: property.cover.focus || "center" }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
 
@@ -155,12 +156,14 @@ export default function PropertyDetailView({
           if (total <= 1) return null;
 
           // 画像1枚分。どんなアスペクト比でもセルを object-cover で埋める。
-          const img = (p: { src: string; alt: string }) => (
+          // focus（object-position）で「写真のどこを残すか」を画像ごとに指定可能。
+          const img = (p: { src: string; alt: string; focus?: string }) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={p.src}
               alt={p.alt}
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: p.focus || "center" }}
             />
           );
 

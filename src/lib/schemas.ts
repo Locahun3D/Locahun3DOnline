@@ -85,6 +85,9 @@ export const propertyImageSchema = z.object({
   alt: z.string().max(200).default(""),
   width: z.number().int().positive().default(1600),
   height: z.number().int().positive().default(1000),
+  // トリミングの基準位置（object-position）。多様なアスペクト比の写真を
+  // object-cover で切る際にどこを残すか。例: "center" / "top" / "left bottom"。
+  focus: z.string().max(24).default("center"),
 });
 
 export const annotationSchema = z.object({
