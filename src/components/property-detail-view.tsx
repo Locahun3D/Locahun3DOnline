@@ -144,12 +144,11 @@ export default function PropertyDetailView({
        *  Dashboard body
        * ══════════════════════════════════════════════════ */}
       <div className="frame pt-6 pb-16">
-        {/* ── Gallery — 写真枚数に応じて最適化（空き枠を作らない） ── */}
+        {/* ── Gallery — カバーはヒーローで全幅表示済みなので重複させず、
+             追加のギャラリー写真のみを枚数に応じて並べる（無ければ非表示） ── */}
         {(() => {
-          // src のある写真だけ。空のカバーで空き枠が出るのを防ぐ。
-          const photos = [property.cover, ...property.gallery].filter(
-            (p) => p?.src,
-          );
+          // カバーを除いた、src のあるギャラリー写真だけ。
+          const photos = property.gallery.filter((p) => p?.src);
           const n = photos.length;
           if (n === 0) return null;
 
@@ -231,7 +230,7 @@ export default function PropertyDetailView({
                       type="button"
                       className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
                     >
-                      すべての写真 ({n})
+                      すべての写真 ({n + 1})
                     </button>
                   )}
                 </div>
