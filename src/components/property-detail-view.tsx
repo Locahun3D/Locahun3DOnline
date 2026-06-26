@@ -501,7 +501,8 @@ export default function PropertyDetailView({
             <span className="flex-1 h-px bg-current opacity-25" />
           </div>
 
-          <div className="border border-line rounded-lg overflow-hidden">
+          {/* フォームは全幅に広げず読みやすい幅に収める（操作性向上） */}
+          <div className="border border-line rounded-lg overflow-hidden max-w-[760px]">
             {/* Form header */}
             <div className="bg-accent px-6 py-4">
               <h3 className="text-white text-[16px] font-bold">
