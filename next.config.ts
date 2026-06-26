@@ -29,11 +29,17 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    // X-Frame-Options は本番のみ DENY。dev ではレスポンシブ検証用に
+    // 同一オリジン iframe プレビューを許可する（本番のクリックジャッキング対策は維持）。
+    const frameGuard =
+      process.env.NODE_ENV === "production"
+        ? [{ key: "X-Frame-Options", value: "DENY" }]
+        : [];
     return [
       {
         source: "/(.*)",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
+          ...frameGuard,
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-DNS-Prefetch-Control", value: "off" },
