@@ -96,9 +96,24 @@ export async function uploadAsset(
   if (dims.width) form.append("width", String(dims.width));
   if (dims.height) form.append("height", String(dims.height));
   const res = await xhrSend("POST", presign.postUrl, form, {}, opts.onProgress);
-  const data = JSON.parse(res.text || "{}");
+  // レスポンスが JSON とは限らない。大容量POSTをエッジ(Cloudflare等)が弾くと
+  // HTMLの413が返り、素の JSON.parse は "Unexpected token '<'" で落ちて原因が埋もれる。
+  // 先に本文を防御的に解析し、status から人間に読めるメッセージを組み立てる。
+  let data: { asset?: Asset; message?: string; error?: string } = {};
+  try {
+    data = res.text ? JSON.parse(res.text) : {};
+  } catch {
+    /* 非JSON（多くはプラットフォームのHTMLエラーページ）。本文は捨てて status で判断 */
+  }
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(data.message ?? data.error ?? `upload ${res.status}`);
+    if (data.message || data.error) throw new Error(data.message ?? data.error);
+    if (res.status === 413 || /^\s*</.test(res.text || "")) {
+      throw new Error(
+        "ファイルが大きすぎてアップロードできません（サーバー経由は約100MBが上限）。" +
+          "大容量データはR2直アップロード（presign）の設定が必要です。",
+      );
+    }
+    throw new Error(`アップロード失敗 (${res.status})`);
   }
   return data.asset as Asset;
 }
