@@ -41,12 +41,12 @@ export default function ViewerGate({
   /* --- Paywall (no subscription) --- */
   if (!effectiveSubscription) {
     return (
-      <div className="relative aspect-video max-w-sm border border-line overflow-hidden">
+      <div className="group relative aspect-video max-w-sm border border-line overflow-hidden">
         {previewVideoUrl ? (
           <video
             src={previewVideoUrl}
             autoPlay loop muted playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div
@@ -58,8 +58,8 @@ export default function ViewerGate({
             }}
           />
         )}
-        {/* 背景写真の上で文字が埋もれないよう、強めの暗幕＋ぼかしを敷く。 */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-md bg-black/70">
+        {/* ゲート文言はホバー時のみフェードイン表示。通常はプレビューを見せる。 */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-md bg-black/70 opacity-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 group-hover:pointer-events-auto">
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
             ● Subscriber only · {tokenCost} トークン消費
           </div>

@@ -29,7 +29,9 @@ export default async function PropertyPreviewPage({
   const settings = await getSettings();
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
+  // 管理プレビューは requireAdmin を通っている＝必ずサインイン済み。signedIn を
+  // 渡さないと ViewerGate が「既にメンバーの方はサインイン」ボタンを出してしまう。
   return (
-    <PropertyDetailView property={property} others={others} preview freeAccess={freeAccess} />
+    <PropertyDetailView property={property} others={others} preview freeAccess={freeAccess} signedIn />
   );
 }
