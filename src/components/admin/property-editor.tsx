@@ -63,7 +63,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
   const [pickSplat, setPickSplat] = useState(false);
-  const [previewZip, setPreviewZip] = useState(false);
   const [previewSplat, setPreviewSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
@@ -438,7 +437,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               <Field
                 label="座標 (lat, lng) — 地図ピンと距離計算に使用"
-                hint="Google Maps で右クリック → 数値をコピーして貼り付け。空欄でも下書き OK、公開時は地図に出ません。"
+                hint="下の欄に「日本の住所」「Google Maps の URL」「座標」のいずれかを貼り、解析でピン位置を取得。空欄でも下書き OK、公開時は地図に出ません。"
               >
                 <CoordsInput
                   value={watch("coords")}
@@ -538,12 +537,15 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       placeholder="03-1234-5678"
                     />
                   </Field>
-                  <Field label="メールアドレス">
+                  <Field
+                    label="メールアドレス"
+                    hint="問い合わせフォームの送信先（先方へ直接転送）"
+                  >
                     <input
                       type="email"
                       {...register("contactEmail")}
                       className={inputClass}
-                      placeholder="info@example.com"
+                      placeholder="studio@example.com"
                     />
                   </Field>
                 </div>
@@ -890,8 +892,8 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               {/* COVER */}
               <div>
-                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-70 mb-1.5">
-                  カバー画像 <span className="text-accent">*</span>
+                <div className="mono text-[11px] font-semibold tracking-[0.2em] uppercase text-neutral-600 mb-1.5">
+                  カバー画像（詳細ページのヘッダー） <span className="text-accent">*</span>
                 </div>
                 {watch("cover.src") ? (
                   <div className="border border-line bg-[#141414] p-2 relative">
@@ -903,7 +905,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       style={{ objectPosition: watch("cover.focus") || "center" }}
                     />
                     {/* トリミング基準ピッカー（残す位置を指定。プレビューに即反映） */}
-                    <div className="absolute bottom-3 left-3">
+                    <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-white bg-black/60 px-2 py-1 rounded">
+                        表示位置 ▾
+                      </span>
                       <FocusPicker
                         value={watch("cover.focus") || "center"}
                         onChange={(v) =>
@@ -941,6 +946,12 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       triggerAutoSave();
                     }}
                   />
+                )}
+                {watch("cover.src") && (
+                  <p className="text-[12px] text-neutral-500 mt-1.5 leading-relaxed">
+                    ↑ プレビュー左下の <span className="font-semibold text-neutral-700">「表示位置」</span>
+                    で、詳細ページ上部（ヘッダー）に表示される位置を9点から調整できます。
+                  </p>
                 )}
                 <Field
                   label="カバー画像 代替テキスト"
@@ -1042,115 +1053,15 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <StepCard
               n="05"
               title="3DGS データ"
-              desc="ZIPプロジェクトまたは個別3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
+              desc="3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
             >
               <ViewerUpdateBanner />
 
-              {/* ── 入力方法ガイド（2経路の使い分け） ── */}
-              <div className="border border-accent/30 bg-accent/[0.06] rounded-md p-4 mt-4 mb-2 text-[12px] leading-relaxed">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent mb-2">
-                  3DGSデータの入れ方（どちらか一方でOK）
-                </div>
-                <div className="space-y-1 text-ink/80">
-                  <div>
-                    <strong className="text-ink">方法A・ZIPでまとめて</strong> —
-                    複数フロアを1つのZIPプロジェクトで管理する場合。下の「方法A」へ。
-                  </div>
-                  <div>
-                    <strong className="text-ink">方法B・フロア別に個別</strong> —
-                    駐車場・1F・2F等を別々に登録・販売する場合。下の「方法B」へ。
-                  </div>
-                </div>
-              </div>
-
-              {/* ── 方法A: ZIP プロジェクトファイル ── */}
-              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3 mt-5">
-                方法A — ZIP プロジェクト（複数まとめて）
-              </div>
-              {watch("zipUrl") ? (
-                <>
-                  <div className="border border-line bg-[#141414] p-4 flex items-center gap-4 flex-wrap">
-                    <div className="mono text-[24px] text-[#5ec8e8]">◆</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="mono text-[10px] tracking-[0.28em] uppercase text-[#5ec8e8] mb-1">
-                        ZIP Loaded
-                      </div>
-                      <div className="text-[12px] mono truncate">
-                        {watch("zipUrl")}
-                      </div>
-                      <div className="text-[11px] text-muted mt-1">
-                        {watch("zipSizeMb")} MB
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewZip((v) => !v)}
-                      className="mono text-[10px] tracking-[0.22em] uppercase border border-[#5ec8e8] text-[#5ec8e8] px-3 py-2 hover:bg-[#5ec8e8]/10 transition"
-                    >
-                      {previewZip ? "閉じる" : "プレビュー"}
-                    </button>
-                    <a
-                      href={watch("zipUrl")}
-                      download
-                      className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
-                    >
-                      ダウンロード
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValue("zipUrl", "", { shouldDirty: true });
-                        setValue("zipSizeMb", 0, { shouldDirty: true });
-                        setPreviewZip(false);
-                      }}
-                      className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
-                    >
-                      差し替え
-                    </button>
-                  </div>
-                  {previewZip && (
-                    <div className="border border-line bg-black overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                      <iframe
-                        src={buildViewerUrl(watch("zipUrl"))}
-                        title="3DGS ZIP プレビュー"
-                        className="w-full h-full border-0"
-                        allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
-                        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <FileDropzone
-                  propertyId={initial.id}
-                  kind="zip"
-                  accept=".zip"
-                  label="ロケハン3D ZIP プロジェクトファイル (.zip)"
-                  hint="複数3DGS をまとめてアップロード — 20 GB まで"
-                  onUploaded={(f) => {
-                    const now = new Date();
-                    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-                    setValue("zipUrl", f.url, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
-                    setValue("zipSizeMb", Math.max(1, Math.round(f.size / 1024 / 1024)), {
-                      shouldDirty: true,
-                    });
-                    if (!watch("scannedAt")) {
-                      setValue("scannedAt", today, { shouldDirty: true });
-                    }
-                    setValue("splatDataUpdatedAt", now.toISOString(), { shouldDirty: true });
-                    triggerAutoSave();
-                  }}
-                />
-              )}
-
-              {/* ── 個別 3DGS アイテム (複数・ラベル付き) ── */}
-              <div className="border-t border-line pt-5 mt-6">
+              {/* ── 3DGS アイテム (複数・ラベル付き) ── */}
+              <div className="mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-                    方法B — 個別データ（フロア・区画別）
+                    3DGS データ（フロア・区画別）
                   </div>
                   <button
                     type="button"
@@ -1355,7 +1266,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
                             {/* ── ダウンロード用ファイル (PLY & OBJ ZIP) ── */}
                             <div className="border border-dashed border-accent/30 p-3 space-y-2">
-                              <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent/70 mb-2">
+                              <div className="mono text-[11px] font-semibold tracking-[0.18em] uppercase text-accent mb-2">
                                 一括ダウンロードファイル（全形式まとめ ZIP）
                               </div>
                               <div className="text-[10px] text-muted mb-2">
@@ -1395,6 +1306,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                     const uploadedUrl = f.url;
                                     setValue(`splatItems.${idx}.downloadFileUrl`, uploadedUrl, { shouldDirty: true, shouldValidate: true });
                                     setValue(`splatItems.${idx}.downloadFileSizeMb`, Math.max(1, Math.round(f.size / 1024 / 1024)), { shouldDirty: true });
+                                    // 形式が未入力なら拡張子から自動セット（zipはバンドル表記のため上書きしない）。
+                                    const fmt = formatFromUrl(uploadedUrl);
+                                    if (fmt && fmt !== "ZIP" && !watch(`splatItems.${idx}.downloadFileFormat`)) {
+                                      setValue(`splatItems.${idx}.downloadFileFormat`, fmt, { shouldDirty: true });
+                                    }
                                     triggerAutoSave();
                                   }}
                                 />
@@ -1644,7 +1560,24 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 // --- small UI helpers ------------------------------------------------------
 
 const inputClass =
-  "w-full bg-white text-[#111] border border-line px-3 py-2 text-[14px] focus:outline-none focus:border-accent transition mono placeholder:text-[#999]";
+  "w-full bg-white text-[#111] border border-neutral-300 px-3 py-2.5 text-[15px] font-medium focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/25 transition mono placeholder:text-[#9aa0a6] placeholder:font-normal";
+
+/** アップロードファイルの拡張子から表示用フォーマット名を推定（自動入力用）。 */
+function formatFromUrl(url: string): string {
+  const ext = (url.split("?")[0].match(/\.([a-z0-9]+)$/i)?.[1] || "").toLowerCase();
+  const map: Record<string, string> = {
+    rad: "3DGS RAD",
+    ply: "PLY",
+    obj: "OBJ",
+    zip: "ZIP",
+    splat: "SPLAT",
+    ksplat: "KSPLAT",
+    glb: "GLB",
+    gltf: "glTF",
+    fbx: "FBX",
+  };
+  return map[ext] || ext.toUpperCase();
+}
 
 /** 画像トリミングのフォーカス位置（object-position 値）。3×3 の9点。 */
 const FOCUS_POSITIONS = [
@@ -1782,7 +1715,7 @@ function DownloadFilesEditor({
   return (
     <div className="border border-dashed border-accent/30 p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent/70">
+        <div className="mono text-[11px] font-semibold tracking-[0.18em] uppercase text-accent">
           マルチ形式ダウンロード（任意）
         </div>
         <button
@@ -1858,6 +1791,13 @@ function DownloadFilesEditor({
                     Math.max(1, Math.round(file.size / 1024 / 1024)),
                     { shouldDirty: true },
                   );
+                  // 形式名が未入力なら拡張子から自動セット。
+                  const fmt = formatFromUrl(file.url);
+                  if (fmt && !watch(`splatItems.${idx}.downloadFiles.${fi}.format`)) {
+                    setValue(`splatItems.${idx}.downloadFiles.${fi}.format`, fmt, {
+                      shouldDirty: true,
+                    });
+                  }
                 }}
               />
             )}
@@ -1883,13 +1823,13 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block mono text-[10px] tracking-[0.28em] uppercase opacity-70 mb-1.5">
+      <span className="block mono text-[11px] font-semibold tracking-[0.18em] uppercase text-neutral-600 mb-1.5">
         {label}
         {required && <span className="text-accent ml-1">*</span>}
       </span>
       {children}
       {hint && !error && (
-        <span className="block text-[11px] text-muted mt-1">{hint}</span>
+        <span className="block text-[12px] text-neutral-500 mt-1">{hint}</span>
       )}
       {error && (
         <span className="block text-[11px] text-accent mt-1">{error}</span>
@@ -2023,18 +1963,18 @@ function CoordsInput({
       onChange(parsed);
       return;
     }
-    const url = paste.trim();
-    if (!/^https?:\/\//.test(url)) {
-      setResolveErr("Google Maps の URL か座標を入力してください");
+    const q = paste.trim();
+    if (q.length < 2) {
+      setResolveErr("住所・地名、Google Maps の URL、または座標を入力してください");
       return;
     }
-    // 短縮URL（maps.app.goo.gl 等）はサーバー側でリダイレクト解決して座標抽出。
+    // 住所/地名・短縮URL ともサーバー側で解決（GSI住所検索 → Nominatim、URLはリダイレクト解決）。
     setResolving(true);
     try {
       const res = await fetch("/api/admin/resolve-maps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: q }),
       });
       const data = (await res.json()) as {
         coords?: { lat: number; lng: number };
@@ -2104,7 +2044,7 @@ function CoordsInput({
               onChange(parsed);
             }
           }}
-          placeholder="Google Maps URL（共有・短縮リンク可）または座標をペースト"
+          placeholder="日本の住所 / Google Maps URL（共有・短縮可）/ 座標 をペースト → 解析"
           className={inputClass}
         />
         <button
@@ -2271,7 +2211,6 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   const hourlyPrice = Number(d.hourlyPrice) || 0;
   const dailyPrice = Number(d.dailyPrice) || 0;
   const contactWebsite = String(d.contactWebsite || "");
-  const splatItems = Array.isArray(d.splatItems) ? d.splatItems : [];
 
   if (!title && !category) return "";
 
@@ -2287,11 +2226,11 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
     lines.push(`${loc}に位置する${typeName}。`);
   }
   if (tags.length) {
-    lines.push(`CM・映画・ドラマ・MV・スチール撮影など${tags.join("・")}に対応し、多様な制作ニーズを満たします。`);
+    lines.push(`特徴: ${tags.join("・")}`);
   }
   lines.push("");
 
-  // ── スペック・設備セクション ──
+  // ── スペック・設備セクション（入力された実データのみ。誇張表現は付けない） ──
   lines.push("【スペック・設備】");
   const specs: string[] = [];
   if (floorArea) specs.push(`床面積 ${floorArea}㎡`);
@@ -2300,50 +2239,16 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   if (specs.length) lines.push(specs.join(" ／ "));
 
   const features: string[] = [];
-  if (hasLight) features.push("自然光が入る大開口");
-  if (parking) features.push("駐車場完備（大型車両搬入可）");
-  if (dock) features.push("搬入口・搬入用エレベーターあり");
-  if (power) features.push(`電源 ${power}（大容量照明機材対応）`);
-  if (ceiling >= 5) features.push("大型セット・高所作業に対応する天井高");
-  if (floorArea >= 300) features.push("大規模セット組みに適した広さ");
-  if (features.length) lines.push(features.join("\n"));
+  if (hasLight) features.push("自然光あり");
+  if (parking) features.push("駐車場あり");
+  if (dock) features.push("大型搬入口あり");
+  if (power) features.push(`電源 ${power}`);
+  if (features.length) lines.push(features.join(" ／ "));
   lines.push("");
 
-  // ── 特色・強み セクション ──
-  lines.push("【特色・強み】");
-  if (category === "studio" || category === "warehouse") {
-    lines.push("・完全防音・遮光環境で天候・時間帯を問わず撮影可能");
-    if (floorArea >= 200) lines.push("・広大な空間を活かした自由なセットデザイン");
-    if (hasLight) lines.push("・自然光と人工照明を組み合わせた多彩なライティング");
-  }
-  if (category === "house") {
-    lines.push("・生活感のあるリアルなインテリアで、ドラマ・CM に即使用可");
-    lines.push("・建物まるごと貸し切り可、外観撮影にも対応");
-  }
-  if (category === "outdoor") {
-    lines.push("・屋外ならではの開放感とロケーション");
-    lines.push("・時間帯で表情が変わる自然光の魅力");
-  }
-  lines.push("・経験豊富なスタッフが常駐し、制作進行をサポート");
-  lines.push("・ケータリング・控室・メイクルーム等の付帯設備充実");
-  lines.push("");
-
-  // ── 実績 セクション ──
-  lines.push("【制作利用実績】");
-  lines.push("大手映像制作会社・広告代理店の実績多数。");
-  lines.push("CM / 映画 / ドラマ / MV / カタログ / EC撮影 等、幅広いジャンルでご利用いただいています。");
-  lines.push("※ 守秘義務により具体的な作品名は非公開ですが、お問い合わせ時に実績をご案内可能です。");
-  lines.push("");
-
-  // ── 3DGS ロケハン セクション ──
-  lines.push("【3DGS オンラインロケハン】");
-  lines.push("高精度 3DGS（3D Gaussian Splatting）によるフォトリアル 3D スキャン済。");
-  if (splatItems.length > 1) {
-    lines.push(`${splatItems.length}区画を個別スキャンしており、フロアごとの空間確認が可能です。`);
-  }
-  lines.push("ブラウザ上で実空間を自由に歩き回り、天井高・搬入動線・機材配置を事前検証できます。");
-  lines.push("現地下見の前段階として時間・交通費を大幅に削減できます。");
-  lines.push("");
+  // 【特色・強み】【制作利用実績】等の自動文は、物件と無関係に毎回挿入され
+  // 誇張・虚偽になり得るため生成しない。特色は上のタグ・設備（実データ）で表す。
+  // 3DGS の一般説明も全物件共通で自明なため生成しない。
 
   // ── 料金 セクション ──
   if (hourlyPrice > 0 || dailyPrice > 0) {
