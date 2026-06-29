@@ -14,6 +14,7 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { safeName, buildPublicUrl } from "./asset-keys";
 
 export {
@@ -24,8 +25,27 @@ export {
 } from "./asset-keys";
 
 export type UploadMode = "local" | "r2";
-export const UPLOAD_MODE: UploadMode =
-  process.env.UPLOAD_MODE === "r2" ? "r2" : "local";
+
+// Cloudflare Workers (compat 2025-04-01 + nodejs_compat) only populates
+// process.env DURING a request — a module-top-level `process.env.X` read comes
+// back empty, so a top-level const resolves WRONG on Workers (UPLOAD_MODE fell
+// to "local", R2 creds went undefined → presign always fell back to the binding
+// upload, capped at ~100MB). Read bindings via getCloudflareContext().env at
+// call time, with process.env as the dev fallback (mirrors ai-summary.ts).
+async function readEnv(name: string): Promise<string | undefined> {
+  try {
+    const { env } = await getCloudflareContext();
+    const v = (env as Record<string, unknown>)[name];
+    if (typeof v === "string" && v) return v;
+  } catch {
+    /* not on Workers (npm run dev) */
+  }
+  return process.env[name];
+}
+
+export async function getUploadMode(): Promise<UploadMode> {
+  return (await readEnv("UPLOAD_MODE")) === "r2" ? "r2" : "local";
+}
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const UPLOADS_ROOT = "/uploads";
@@ -63,7 +83,7 @@ export async function handleUpload(
   propertyId: string,
   file: File,
 ): Promise<SaveResult> {
-  if (UPLOAD_MODE === "r2") {
+  if ((await getUploadMode()) === "r2") {
     throw new Error(
       "handleUpload(local) called while UPLOAD_MODE=r2 — use the assets presign flow.",
     );
@@ -72,12 +92,15 @@ export async function handleUpload(
 }
 
 // ── R2 mode ──
-function r2Env() {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  const bucket = process.env.R2_BUCKET;
-  const publicBase = process.env.R2_PUBLIC_URL;
+async function r2Env() {
+  const [accountId, accessKeyId, secretAccessKey, bucket, publicBase] =
+    await Promise.all([
+      readEnv("R2_ACCOUNT_ID"),
+      readEnv("R2_ACCESS_KEY_ID"),
+      readEnv("R2_SECRET_ACCESS_KEY"),
+      readEnv("R2_BUCKET"),
+      readEnv("R2_PUBLIC_URL"),
+    ]);
   if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !publicBase) {
     throw new Error(
       "R2 env not configured (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET / R2_PUBLIC_URL).",
@@ -87,8 +110,8 @@ function r2Env() {
 }
 
 let _client: S3Client | null = null;
-function r2Client(): { client: S3Client; bucket: string; publicBase: string } {
-  const env = r2Env();
+async function r2Client(): Promise<{ client: S3Client; bucket: string; publicBase: string }> {
+  const env = await r2Env();
   if (!_client) {
     _client = new S3Client({
       region: "auto",
@@ -107,7 +130,7 @@ export async function createPresignedUpload(input: {
   r2Key: string;
   contentType: string;
 }): Promise<{ putUrl: string; publicUrl: string }> {
-  const { client, bucket, publicBase } = r2Client();
+  const { client, bucket, publicBase } = await r2Client();
   const cmd = new PutObjectCommand({
     Bucket: bucket,
     Key: input.r2Key,
@@ -118,10 +141,10 @@ export async function createPresignedUpload(input: {
 }
 
 export async function deleteR2Object(r2Key: string): Promise<void> {
-  const { client, bucket } = r2Client();
+  const { client, bucket } = await r2Client();
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: r2Key }));
 }
 
-export function r2PublicUrlFor(r2Key: string): string {
-  return buildPublicUrl(r2Key, r2Env().publicBase);
+export async function r2PublicUrlFor(r2Key: string): Promise<string> {
+  return buildPublicUrl(r2Key, (await r2Env()).publicBase);
 }

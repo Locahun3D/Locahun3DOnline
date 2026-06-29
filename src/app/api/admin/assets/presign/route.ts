@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { requireAdmin } from "@/lib/dal";
 import { assetRepo } from "@/lib/store";
-import { UPLOAD_MODE, createPresignedUpload } from "@/lib/uploads";
+import { getUploadMode, createPresignedUpload } from "@/lib/uploads";
 import {
   buildAssetKey,
   validateUploadMeta,
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const r2Key = buildAssetKey({ kind: kind as AssetKind, id, filename });
   const stem = filename.slice(0, filename.length - ext.length);
 
-  if (UPLOAD_MODE === "r2") {
+  if ((await getUploadMode()) === "r2") {
     const base = {
       id,
       kind: kind as AssetKind,

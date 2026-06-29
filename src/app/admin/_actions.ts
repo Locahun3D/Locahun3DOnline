@@ -4,7 +4,10 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { repo, assetRepo } from "@/lib/store";
-import { deleteR2Object, UPLOAD_MODE } from "@/lib/uploads";
+import { userRepo } from "@/lib/users";
+import { purchaseRepo } from "@/lib/purchases";
+import { inquiryRepo } from "@/lib/inquiries";
+import { deleteR2Object, getUploadMode } from "@/lib/uploads";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
 import {
   propertySchema,
@@ -21,6 +24,20 @@ async function assertPropertyAccess(propertyId: string) {
   const prop = await repo.get(propertyId);
   if (prop && (prop.ownerId === user.id || linked.includes(propertyId))) return user;
   throw new Error("forbidden");
+}
+
+/**
+ * エディタ保存時に、フォームが保持しないサーバ管理フィールドを既存値で保全する。
+ * - pageBlocks: 別UI（スタジオページビルダー）の所有物。autosave で消さない。
+ * - ownerId: 所有権＝アクセス権の根拠。エディタ保存で空に上書きさせない。
+ */
+function mergeManaged<T extends Property>(incoming: T, existing: Property | null): T {
+  if (!existing) return incoming;
+  return {
+    ...incoming,
+    pageBlocks: existing.pageBlocks,
+    ownerId: existing.ownerId || incoming.ownerId,
+  };
 }
 
 function newDraft(id: string): Property {
@@ -44,6 +61,7 @@ const CATEGORY_ID_PREFIX: Record<string, string> = {
   shop: "sh",
   outdoor: "od",
   venue: "vn",
+  school: "sc",
 };
 
 /**
@@ -83,7 +101,11 @@ export async function createDraftAction() {
 export async function saveDraftAction(input: unknown) {
   const parsed = propertySchema.parse(input);
   await assertPropertyAccess(parsed.id);
-  await repo.upsert(parsed);
+  // 編集フォームが保持しないサーバ管理フィールドは既存値を保全する。
+  // pageBlocks（スタジオページビルダー）と ownerId（所有権＝権限の根拠）は
+  // エディタの入力対象外なので、autosave で default(空) に上書きさせない。
+  const existing = await repo.get(parsed.id);
+  await repo.upsert(mergeManaged(parsed, existing));
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   return { ok: true as const, id: parsed.id };
@@ -92,7 +114,8 @@ export async function saveDraftAction(input: unknown) {
 export async function publishAction(input: unknown) {
   const parsed = publishablePropertySchema.parse(input);
   await assertPropertyAccess(parsed.id);
-  await repo.upsert({ ...parsed, status: "published" });
+  const existing = await repo.get(parsed.id);
+  await repo.upsert({ ...mergeManaged(parsed, existing), status: "published" });
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   revalidatePath("/properties");
@@ -191,6 +214,85 @@ export async function bulkDeleteAction(ids: string[]) {
   return { ok: true as const, count: ids.length };
 }
 
+/** URL（スラッグ＝物件ID）の変更結果。 */
+export type RenameState =
+  | { ok: true }
+  | { ok: false; error: string }
+  | undefined;
+
+/** スラッグ（公開URL）を正規化: 英小文字・数字・ハイフンのみ。 */
+function normalizeSlug(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * 物件の公開URL（スラッグ＝ID）を変更する。主に公開前の調整用。
+ * 安全なリネーム移行: 新IDで作成→旧ID削除し、リンク/ブックマーク/購入/問い合わせの
+ * 参照も付け替える。重複・不正形式は弾く。成功時は新しい編集ページへ遷移。
+ */
+export async function renamePropertyAction(
+  _prev: RenameState,
+  formData: FormData,
+): Promise<RenameState> {
+  const oldId = String(formData.get("oldId") ?? "");
+  const newId = normalizeSlug(String(formData.get("newId") ?? ""));
+  await assertPropertyAccess(oldId);
+
+  if (!newId) {
+    return { ok: false, error: "URLは英小文字・数字・ハイフンで入力してください。" };
+  }
+  if (newId.length < 2 || newId.length > 60) {
+    return { ok: false, error: "URLは2〜60文字にしてください。" };
+  }
+  if (newId === oldId) {
+    return { ok: false, error: "現在のURLと同じです。" };
+  }
+  const existing = await repo.get(oldId);
+  if (!existing) {
+    return { ok: false, error: "物件が見つかりません。" };
+  }
+  if (await repo.get(newId)) {
+    return { ok: false, error: `「${newId}」は既に使われています。別のURLにしてください。` };
+  }
+
+  // 1) 物件レコードを新IDで作成 → 旧IDを削除（先に作成してデータ消失を防ぐ）。
+  await repo.upsert({ ...existing, id: newId });
+  await repo.remove(oldId);
+
+  // 2) 参照を移行（公開前の下書きなら大半は空。公開済みでも安全に付け替える）。
+  const users = await userRepo.list();
+  for (const u of users) {
+    const linked = u.linkedPropertyIds ?? [];
+    const bms = u.bookmarks ?? [];
+    const hasLink = linked.includes(oldId);
+    const hasBm = bms.includes(oldId);
+    if (hasLink || hasBm) {
+      await userRepo.upsert({
+        ...u,
+        linkedPropertyIds: hasLink ? linked.map((x) => (x === oldId ? newId : x)) : linked,
+        bookmarks: hasBm ? bms.map((x) => (x === oldId ? newId : x)) : bms,
+      });
+    }
+  }
+  for (const p of await purchaseRepo.list({ propertyId: oldId })) {
+    await purchaseRepo.upsert({ ...p, propertyId: newId });
+  }
+  for (const i of await inquiryRepo.list({ propertyId: oldId })) {
+    await inquiryRepo.upsert({ ...i, propertyId: newId });
+  }
+
+  revalidatePath("/admin/properties");
+  revalidatePath("/properties");
+  revalidatePath(`/properties/${oldId}`);
+  revalidatePath(`/properties/${newId}`);
+  redirect(`/admin/properties/${newId}/edit`);
+}
+
 /** Save the studio page builder blocks for a property. */
 export async function saveStudioPageAction(id: string, blocks: unknown) {
   await assertPropertyAccess(id);
@@ -233,7 +335,7 @@ export async function deleteAssetAction(id: string) {
   await requireAdmin();
   const a = await assetRepo.get(id);
   if (!a) return { ok: false as const, reason: "not_found" as const };
-  if (UPLOAD_MODE === "r2" && a.r2Key) {
+  if ((await getUploadMode()) === "r2" && a.r2Key) {
     try {
       await deleteR2Object(a.r2Key);
     } catch (e) {
