@@ -41,7 +41,7 @@ export default function ViewerGate({
   /* --- Paywall (no subscription) --- */
   if (!effectiveSubscription) {
     return (
-      <div className="relative aspect-video border border-line overflow-hidden">
+      <div className="relative aspect-video max-w-sm border border-line overflow-hidden">
         {previewVideoUrl ? (
           <video
             src={previewVideoUrl}
@@ -58,28 +58,29 @@ export default function ViewerGate({
             }}
           />
         )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-sm bg-black/40">
-          <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-4">
+        {/* 背景写真の上で文字が埋もれないよう、強めの暗幕＋ぼかしを敷く。 */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-md bg-black/70">
+          <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
             ● Subscriber only · {tokenCost} トークン消費
           </div>
-          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] mb-4">
+          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] mb-4 text-white drop-shadow-lg">
             3DGS ウォークスルーは
             <br />
             メンバー限定です。
           </div>
-          <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-4">
-            このスタジオ ({SIZE_LABEL[tokenCost]}) は{" "}
-            <span className="text-accent">{tokenCost} トークン</span>
+          <div className="text-[13px] text-white/85 mb-5">
+            このスタジオ（{SIZE_LABEL[tokenCost]}）は{" "}
+            <span className="text-accent font-bold">{tokenCost} トークン</span>
             {" "}消費 / 視聴
           </div>
-          <p className="text-[13px] text-muted max-w-[42ch] leading-[1.85] mb-6">
+          <p className="text-[14px] text-white/80 max-w-[42ch] leading-[1.9] mb-7">
             実空間を 3D で歩き回り、レンズ画角・天井距離・光源位置を
             ブラウザだけで検証できます。
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
               href={`/pricing?from=${propertyId}`}
-              className="px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+              className="px-7 py-3.5 text-[14px] font-bold rounded-md bg-accent text-white hover:bg-accent/85 transition shadow-lg"
             >
               プランを見る
             </Link>
@@ -87,9 +88,9 @@ export default function ViewerGate({
             {!signedIn && (
               <Link
                 href={`/sign-in?redirect=/properties/${propertyId}`}
-                className="px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-line hover:border-ink transition"
+                className="px-7 py-3.5 text-[14px] font-semibold rounded-md border border-white/50 text-white hover:bg-white/10 transition"
               >
-                既にメンバー Sign in
+                既にメンバーの方はサインイン
               </Link>
             )}
           </div>
@@ -148,7 +149,7 @@ export default function ViewerGate({
 
   /* --- Always open in new tab --- */
   return (
-    <div className="relative aspect-video border border-line overflow-hidden bg-[#141414]">
+    <div className="relative aspect-video max-w-sm border border-line overflow-hidden bg-[#141414]">
       {previewVideoUrl ? (
         <video
           src={previewVideoUrl}

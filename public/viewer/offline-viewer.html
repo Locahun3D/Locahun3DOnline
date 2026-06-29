@@ -16720,32 +16720,59 @@ if(/[?&]capture=1/.test(location.search)){
       for(let i=0; i<180 && !hasScene(); i++) await new Promise(r=>setTimeout(r,500));
       if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
 
-      // Phase 2: wait for RAD splats to actually stream in and stabilise.
-      // Poll __nSplat(); when count > 0 and unchanged for 3s, data is ready.
-      msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
-      let lastCount = 0, stableMs = 0;
-      const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = 60000;
-      let elapsed = 0;
-      while(elapsed < MAX_MS){
-        await new Promise(r=>setTimeout(r, POLL_MS));
-        elapsed += POLL_MS;
-        const c = nSplat();
-        if(c > 0 && c === lastCount){ stableMs += POLL_MS; if(stableMs >= STABLE_MS) break; }
-        else { stableMs = 0; lastCount = c; }
-        msg('capture-progress',{phase:'loading', text:'RAD 読み込み中… '+(c>0?c.toLocaleString()+' splats':'待機中'), pct:Math.min(30, Math.round(elapsed/MAX_MS*30))});
+      // Phase 2: readiness.
+      //  - Streaming RAD (__nSplat()>0): wait for splats to stream in & stabilise.
+      //  - Non-streaming ZIP/PLY/SPLAT: __nSplat (a RAD-only counter) stays 0/-1
+      //    even though geometry is fully baked & present once the scene layer
+      //    exists, so gate on hasScene() instead of forcing a 'no-splats' abort.
+      if(nSplat() > 0){
+        msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
+        let lastCount = 0, stableMs = 0;
+        const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = 60000;
+        let elapsed = 0;
+        while(elapsed < MAX_MS){
+          await new Promise(r=>setTimeout(r, POLL_MS));
+          elapsed += POLL_MS;
+          const c = nSplat();
+          if(c > 0 && c === lastCount){ stableMs += POLL_MS; if(stableMs >= STABLE_MS) break; }
+          else { stableMs = 0; lastCount = c; }
+          msg('capture-progress',{phase:'loading', text:'RAD 読み込み中… '+(c>0?c.toLocaleString()+' splats':'待機中'), pct:Math.min(30, Math.round(elapsed/MAX_MS*30))});
+        }
+        if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
+      } else {
+        // Non-streaming scene (ZIP project / PLY / SPLAT): let Spark settle, then go.
+        msg('capture-progress',{phase:'loading', text:'シーン安定化中…', pct:20});
+        await new Promise(r=>setTimeout(r, 2500));
+        if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
       }
-      if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
 
       // Phase 3: Lock resize handler and force 1920×1080 capture resolution.
       const CAP_W = 1920, CAP_H = 1080;
+      const CAP_FOV = 70;   // 固定FOV（70）でキャプチャ
       if(typeof _captureLock!=='undefined') _captureLock = true;
+      // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
+      // 上げてしまい VideoEncoder の 1920×1080 と不整合になるため、ここでは
+      // 品質変数と RAD lodScale だけ高に寄せ、pixelRatio は下で 1 に固定する。
+      try {
+        if(typeof qualScale!=='undefined') qualScale = 1.5;
+        if(typeof qualIdx!=='undefined') qualIdx = 2;
+        if(typeof _qualPreferred!=='undefined') _qualPreferred = 1.5;
+        if(typeof _radEffectiveLodScale==='function' && typeof layers!=='undefined' && layers){
+          const hi = _radEffectiveLodScale();
+          for(const L of layers){
+            if(L && L.mesh && L.mesh.paged && typeof L.mesh.lodScale === 'number') L.mesh.lodScale = hi;
+          }
+        }
+      } catch(_){}
       if(typeof renderer!=='undefined'){
+        renderer.setPixelRatio(1);          // キャプチャ backing を厳密に 1920×1080 に
         renderer.setSize(CAP_W, CAP_H);
       } else {
         canvas.width = CAP_W; canvas.height = CAP_H;
       }
       if(typeof camera!=='undefined'){
         camera.aspect = CAP_W / CAP_H;
+        if('fov' in camera) camera.fov = CAP_FOV;
         camera.updateProjectionMatrix();
       }
       // Warm-up: let the viewer's render loop run for ~2s at capture resolution
@@ -16793,6 +16820,10 @@ if(/[?&]capture=1/.test(location.search)){
 
         if(typeof _yawTarget!=='undefined') _yawTarget += ANGLE_PER_FRAME;
         if(typeof yaw!=='undefined') yaw = _yawTarget;
+        // FOV を毎フレーム固定（カメラモード等が触っても 70 を維持）。
+        if(typeof camera!=='undefined' && 'fov' in camera && camera.fov !== CAP_FOV){
+          camera.fov = CAP_FOV; camera.updateProjectionMatrix();
+        }
         if(typeof markDirty==='function') markDirty(30);
 
         // Spark needs multiple rAFs to process sort/LOD after yaw change.
