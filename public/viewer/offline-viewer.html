@@ -16715,10 +16715,15 @@ if(/[?&]capture=1/.test(location.search)){
     const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
 
     async function run(){
-      // Phase 1: wait for scene layer to appear (up to 90s)
+      // Phase 1: wait for a renderable scene (up to 90s).
+      // hasScene() inspects layers[].mesh, but a streaming RAD keeps its data
+      // on the global splatMesh (not the layer ref) — so __nSplat()>0 ("splats
+      // are present & rendering") is an equally valid readiness signal. Accept
+      // either, else ZIP-restored streaming scenes hang here and time out.
+      const sceneReady = ()=> hasScene() || nSplat() > 0;
       msg('capture-progress',{phase:'loading', text:'3DGS 読み込み中…'});
-      for(let i=0; i<180 && !hasScene(); i++) await new Promise(r=>setTimeout(r,500));
-      if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
+      for(let i=0; i<180 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
+      if(!sceneReady()){ msg('capture-error',{error:'no-scene'}); return; }
 
       // Phase 2: readiness.
       //  - Streaming RAD (__nSplat()>0): wait for splats to stream in & stabilise.
