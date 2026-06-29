@@ -8,12 +8,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile } from "./fs-safe";
 import { nanoid } from "nanoid";
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+// @aws-sdk の署名は Cloudflare Workers 上で `fs.readFile is not implemented`
+// (unenv) で落ちる → presign が毎回 binding にフォールバックし約100MB上限に
+// 引っかかっていた。Workers で動く軽量 SigV4 の aws4fetch に置き換える
+// (Cloudflare が R2 presign で公式に推奨)。
+import { AwsClient } from "aws4fetch";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { safeName, buildPublicUrl } from "./asset-keys";
 
@@ -109,20 +108,35 @@ async function r2Env() {
   return { accountId, accessKeyId, secretAccessKey, bucket, publicBase };
 }
 
-let _client: S3Client | null = null;
-async function r2Client(): Promise<{ client: S3Client; bucket: string; publicBase: string }> {
+let _client: AwsClient | null = null;
+async function r2Client(): Promise<{
+  client: AwsClient;
+  endpoint: string;
+  bucket: string;
+  publicBase: string;
+}> {
   const env = await r2Env();
   if (!_client) {
-    _client = new S3Client({
+    _client = new AwsClient({
+      accessKeyId: env.accessKeyId,
+      secretAccessKey: env.secretAccessKey,
+      service: "s3",
       region: "auto",
-      endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: env.accessKeyId,
-        secretAccessKey: env.secretAccessKey,
-      },
     });
   }
-  return { client: _client, bucket: env.bucket, publicBase: env.publicBase };
+  return {
+    client: _client,
+    endpoint: `https://${env.accountId}.r2.cloudflarestorage.com`,
+    bucket: env.bucket,
+    publicBase: env.publicBase,
+  };
+}
+
+// オブジェクトの S3 URL。キーは "/" 区切りの各セグメントだけエンコード
+// (区切りスラッシュは保持)。署名URLと配信URLでキー表現を一致させる。
+function r2ObjectUrl(endpoint: string, bucket: string, key: string): string {
+  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+  return `${endpoint}/${bucket}/${encodedKey}`;
 }
 
 /** Presigned PUT URL the browser uploads to directly. */
@@ -130,19 +144,27 @@ export async function createPresignedUpload(input: {
   r2Key: string;
   contentType: string;
 }): Promise<{ putUrl: string; publicUrl: string }> {
-  const { client, bucket, publicBase } = await r2Client();
-  const cmd = new PutObjectCommand({
-    Bucket: bucket,
-    Key: input.r2Key,
-    ContentType: input.contentType,
+  const { client, endpoint, bucket, publicBase } = await r2Client();
+  const url = new URL(r2ObjectUrl(endpoint, bucket, input.r2Key));
+  url.searchParams.set("X-Amz-Expires", "600");
+  // signQuery=true で署名をクエリに載せた presigned URL を生成。ブラウザはこの
+  // URL にそのまま PUT する。content-type は署名に含めない(ブラウザが送る任意の
+  // type を許容)ことで署名不一致を避ける。
+  const signed = await client.sign(url.toString(), {
+    method: "PUT",
+    aws: { signQuery: true },
   });
-  const putUrl = await getSignedUrl(client, cmd, { expiresIn: 600 });
-  return { putUrl, publicUrl: buildPublicUrl(input.r2Key, publicBase) };
+  return { putUrl: signed.url, publicUrl: buildPublicUrl(input.r2Key, publicBase) };
 }
 
 export async function deleteR2Object(r2Key: string): Promise<void> {
-  const { client, bucket } = await r2Client();
-  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: r2Key }));
+  const { client, endpoint, bucket } = await r2Client();
+  const res = await client.fetch(r2ObjectUrl(endpoint, bucket, r2Key), {
+    method: "DELETE",
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`R2 delete failed (${res.status})`);
+  }
 }
 
 export async function r2PublicUrlFor(r2Key: string): Promise<string> {

@@ -15,6 +15,7 @@
     "@clerk/nextjs": "^7.5.2",
     "@hookform/resolvers": "^5.4.0",
     "@opennextjs/cloudflare": "^1.19.11",
+    "aws4fetch": "^1.0.20",
     "budoux": "^0.8.4",
     "leaflet": "^1.9.4",
     "nanoid": "^5.1.11",
