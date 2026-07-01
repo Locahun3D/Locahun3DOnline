@@ -40,13 +40,13 @@ export async function GET(
     return NextResponse.json({ error: "Not a 3DGS asset" }, { status: 403 });
   }
 
-  const user = await getCurrentUser();
-  if (!user) {
+  const [user, settings] = await Promise.all([getCurrentUser(), getSettings()]);
+  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
+
+  if (!user && !freeAccess) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
   }
-  const settings = await getSettings();
-  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
-  const hasAccess = user.role === "admin" || (!!user.plan && user.plan !== "free") || freeAccess;
+  const hasAccess = freeAccess || (!!user && (user.role === "admin" || (!!user.plan && user.plan !== "free")));
   if (!hasAccess) {
     return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
   }

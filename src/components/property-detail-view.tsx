@@ -181,13 +181,13 @@ export default function PropertyDetailView({
               variant="hero"
             />
           )}
-          <button
-            type="button"
+          <a
+            href="#inquiry"
             className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] tracking-[0.04em] bg-accent text-black font-bold shadow-lg hover:bg-accent/90 transition rounded-sm"
           >
             <span className="text-[15px] leading-none">✎</span>
             {en ? "Request a quote" : "見積もり依頼"}
-          </button>
+          </a>
         </div>
       </section>
 
@@ -351,7 +351,7 @@ export default function PropertyDetailView({
           {/* Right sidebar: CTA + specs + blueprints */}
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             {/* ── CTA card (accent) ── */}
-            <div className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
+            <div id="inquiry" className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
               <div className="bg-accent px-5 py-4">
                 <div className="text-[11px] font-bold tracking-[0.15em] text-white/80 mb-1">
                   {en ? "Contact" : "お問い合わせ"}

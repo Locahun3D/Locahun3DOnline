@@ -116,9 +116,6 @@ type FilterSnapshot = {
 const RECENT_KEY = "locahun3d:recent-filters:v2";
 const RECENT_MAX = 5;
 
-const yenShort = (n: number) =>
-  n >= 10000 ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万` : `¥${n.toLocaleString("ja-JP")}`;
-
 function rangePart(lo: number | "", hi: number | "", label: string, fmt: (n: number) => string): string | null {
   const hasLo = typeof lo === "number";
   const hasHi = typeof hi === "number";
@@ -129,21 +126,28 @@ function rangePart(lo: number | "", hi: number | "", label: string, fmt: (n: num
 }
 
 /** 条件セットを人間可読な短い文字列に要約 (空なら "")。 */
-function describeSnapshot(s: FilterSnapshot): string {
+function describeSnapshot(s: FilterSnapshot, en = false): string {
+  const yenFmt = (n: number) =>
+    en
+      ? `¥${n.toLocaleString("en-US")}`
+      : n >= 10000 ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万` : `¥${n.toLocaleString("ja-JP")}`;
   const parts: string[] = [];
   if (s.q.trim()) parts.push(`"${s.q.trim()}"`);
-  if (s.category !== "all") parts.push(CATEGORY_LABEL[s.category]);
+  if (s.category !== "all") parts.push(categoryLabel(s.category, en ? "en" : "ja"));
   if (s.studioType !== "all") parts.push(s.studioType);
   if (s.area !== "all") parts.push(s.area);
-  const pr = rangePart(s.minPrice, s.maxPrice, "時", yenShort); if (pr) parts.push(pr);
-  const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, "日", yenShort); if (dp) parts.push(dp);
-  const ar = rangePart(s.minArea, s.maxArea, "面積", (n) => `${n}㎡`); if (ar) parts.push(ar);
-  const ce = rangePart(s.minCeiling, s.maxCeiling, "天井", (n) => `${n}m`); if (ce) parts.push(ce);
+  const pr = rangePart(s.minPrice, s.maxPrice, en ? "hr" : "時", yenFmt); if (pr) parts.push(pr);
+  const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, en ? "day" : "日", yenFmt); if (dp) parts.push(dp);
+  const ar = rangePart(s.minArea, s.maxArea, en ? "area" : "面積", (n) => `${n}㎡`); if (ar) parts.push(ar);
+  const ce = rangePart(s.minCeiling, s.maxCeiling, en ? "ceil." : "天井", (n) => `${n}m`); if (ce) parts.push(ce);
   if (typeof s.maxKmFromRef === "number") parts.push(`${s.reference.label}≤${s.maxKmFromRef}km`);
-  if (s.requiresDaily) parts.push("日貸し可");
-  if (s.requiresParking) parts.push("駐車場");
+  if (s.requiresDaily) parts.push(en ? "daily" : "日貸し可");
+  if (s.requiresParking) parts.push(en ? "parking" : "駐車場");
   if (s.requires200V) parts.push("200V");
-  for (const f of s.facilities ?? []) parts.push(f);
+  for (const f of s.facilities ?? []) {
+    const tag = FACILITY_TAGS.find((t) => t.ja === f);
+    parts.push(en && tag ? tag.en : f);
+  }
   return parts.join(" / ");
 }
 
@@ -566,7 +570,7 @@ function FiltersPanel(p: FiltersProps) {
         ) : (
           p.recent.map((s) => {
             const key = snapshotKey(s);
-            const label = describeSnapshot(s);
+            const label = describeSnapshot(s, en);
             return (
               <span
                 key={key}

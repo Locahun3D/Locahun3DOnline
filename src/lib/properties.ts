@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { repo } from "./store";
 import { getCurrentUser } from "./dal";
 import { canViewConfidential } from "./account-schema";
@@ -68,9 +69,9 @@ export function filterProperties(
   });
 }
 
-export async function getPublishedProperties(): Promise<Property[]> {
+export const getPublishedProperties = cache(async (): Promise<Property[]> => {
   return filterVisible(await repo.list({ status: "published" }));
-}
+});
 
 /**
  * Build-safe list of published property IDs for `generateStaticParams`.
@@ -88,9 +89,9 @@ export async function getAllAreas(): Promise<string[]> {
   return Array.from(new Set(all.map((p) => p.area))).sort();
 }
 
-export async function getPublishedProperty(
+export const getPublishedProperty = cache(async (
   id: string,
-): Promise<Property | null> {
+): Promise<Property | null> => {
   const p = await repo.get(id);
   if (!p || p.status !== "published") return null;
   if (p.visibility === "confidential") {
@@ -98,4 +99,4 @@ export async function getPublishedProperty(
     if (!canViewConfidential(user)) return null;
   }
   return p;
-}
+});
