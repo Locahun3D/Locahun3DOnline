@@ -19,7 +19,6 @@ import {
   type GiftCode,
   type RedeemError,
 } from "./gift-schema";
-import _giftFallback from "../../data/gift-codes.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "gift-codes.json");
 const TABLE = "gift_codes";
@@ -63,7 +62,7 @@ async function readStore(): Promise<StoreShape> {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
   } catch {
-    return _giftFallback as unknown as StoreShape;
+    return { version: 1, codes: [] };
   }
 }
 async function writeStore(s: StoreShape): Promise<void> {

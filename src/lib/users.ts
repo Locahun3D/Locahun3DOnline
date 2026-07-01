@@ -18,14 +18,14 @@ import {
   type D1,
 } from "./d1";
 import { userSchema, type User } from "./account-schema";
-import _usersFallback from "../../data/users.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "users.json");
 const TABLE = "users";
 const R2_PREFIX = "users/"; // 旧本番ストア（D1 への初回シード元）
 
-/** Build-time seed (e.g. bootstrap admin). Resolves on Workers before R2 has the record. */
-const SEED_USERS: User[] = (_usersFallback as unknown as StoreShape).users ?? [];
+/** Build-time seed (e.g. bootstrap admin). Empty — bootstrap admins resolve via
+ * ADMIN_BOOTSTRAP_EMAILS / isBootstrapAdminEmail() on first sign-in instead. */
+const SEED_USERS: User[] = [];
 
 /**
  * Emails that bootstrap as admin on first sign-in. Defaults to the operator's
@@ -57,12 +57,12 @@ export interface UserRepo {
 }
 
 async function readStore(): Promise<StoreShape> {
-  if (!canAccessLocalFs()) return _usersFallback as unknown as StoreShape;
+  if (!canAccessLocalFs()) return { version: 1, users: SEED_USERS };
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     return JSON.parse(raw) as StoreShape;
   } catch {
-    return _usersFallback as unknown as StoreShape;
+    return { version: 1, users: SEED_USERS };
   }
 }
 

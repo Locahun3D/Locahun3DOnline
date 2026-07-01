@@ -16,7 +16,6 @@ import {
   DEFAULT_SETTINGS,
   type SiteSettings,
 } from "./settings-schema";
-import _settingsFallback from "../../data/site-settings.json";
 
 const DATA_FILE = path.join(process.cwd(), "data", "site-settings.json");
 const R2_KEY = "site-settings.json"; // 旧本番ストア（D1 への初回シード元）
@@ -41,17 +40,13 @@ async function d1PutSettings(db: D1, s: SiteSettings): Promise<void> {
     .run();
 }
 
-/** R2(operator保存) → build seed → defaults の順で確定した初期値。 */
+/** R2(operator保存) → defaults の順で確定した初期値。 */
 async function seedValue(): Promise<SiteSettings> {
   const fromR2 = await r2DocGet<unknown>(R2_KEY).catch(() => null);
   try {
-    return siteSettingsSchema.parse(fromR2 ?? _settingsFallback);
+    return siteSettingsSchema.parse(fromR2 ?? DEFAULT_SETTINGS);
   } catch {
-    try {
-      return siteSettingsSchema.parse(_settingsFallback);
-    } catch {
-      return DEFAULT_SETTINGS;
-    }
+    return DEFAULT_SETTINGS;
   }
 }
 
@@ -61,11 +56,7 @@ export const getSettings = cache(async (): Promise<SiteSettings> => {
       const raw = await fs.readFile(DATA_FILE, "utf8");
       return siteSettingsSchema.parse(JSON.parse(raw));
     } catch {
-      try {
-        return siteSettingsSchema.parse(_settingsFallback);
-      } catch {
-        return DEFAULT_SETTINGS;
-      }
+      return DEFAULT_SETTINGS;
     }
   }
   const db = await getD1();

@@ -10,7 +10,6 @@ import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { r2DocGet } from "./r2-store";
 import { getD1, d1IsEmpty, type D1 } from "./d1";
-import _analyticsFallback from "../../data/analytics.json";
 
 const FILE = path.join(process.cwd(), "data", "analytics.json");
 const R2_DOC_KEY = "_analytics.json"; // 旧本番ストア（D1 への初回シード元）
@@ -63,7 +62,7 @@ function withDevices(s: Store): Store {
 }
 
 function fallbackStore(): Store {
-  return withDevices(_analyticsFallback as unknown as Store);
+  return { version: 1, properties: {} };
 }
 
 // ── dev（ローカルファイル）: 単一プロセス前提の read-modify-write ──
