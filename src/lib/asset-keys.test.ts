@@ -21,12 +21,12 @@ describe("buildAssetKey", () => {
 });
 
 describe("buildPublicUrl", () => {
-  it("joins base + key with a single slash", () => {
+  it("returns the secure API proxy path (ignores publicBase)", () => {
     expect(buildPublicUrl("assets/image/x.jpg", "https://cdn.test")).toBe(
-      "https://cdn.test/assets/image/x.jpg",
+      "/api/r2/assets/image/x.jpg",
     );
-    expect(buildPublicUrl("assets/image/x.jpg", "https://cdn.test/")).toBe(
-      "https://cdn.test/assets/image/x.jpg",
+    expect(buildPublicUrl("assets/image/x.jpg")).toBe(
+      "/api/r2/assets/image/x.jpg",
     );
   });
 });
@@ -44,8 +44,12 @@ describe("validateUploadMeta", () => {
     const r = validateUploadMeta({ kind: "image", filename: "a.jpg", contentType: "image/jpeg", size: MAX_IMAGE_BYTES + 1 });
     expect(r.ok).toBe(false);
   });
-  it("rejects a bad splat extension", () => {
+  it("accepts a .zip splat (zipped splat is a valid upload)", () => {
     const r = validateUploadMeta({ kind: "splat", filename: "a.zip", contentType: "application/zip", size: 1000 });
+    expect(r.ok).toBe(true);
+  });
+  it("rejects a genuinely disallowed splat extension", () => {
+    const r = validateUploadMeta({ kind: "splat", filename: "a.exe", contentType: "application/octet-stream", size: 1000 });
     expect(r.ok).toBe(false);
   });
   it("accepts a .ply splat", () => {

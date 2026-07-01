@@ -38,7 +38,6 @@ jobs:
 
       - name: Test
         run: npm test -- --passWithNoTests
-        continue-on-error: true
 
       # Clerk keys must be inlined into the compiled Worker bundle, not just
       # visible to the build *process* — Next.js only performs that inlining
