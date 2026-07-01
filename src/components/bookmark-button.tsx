@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleBookmarkAction } from "@/lib/bookmark-actions";
+import { useLocale } from "@/components/locale-provider";
 
 /**
  * 物件ブックマーク（保存）ボタン。
@@ -27,6 +28,8 @@ export default function BookmarkButton({
   const router = useRouter();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const [pending, startTransition] = useTransition();
+  const locale = useLocale();
+  const en = locale === "en";
 
   const onClick = (e: React.MouseEvent) => {
     // カード全体がリンクの場合、リンク遷移を止める。
@@ -45,7 +48,7 @@ export default function BookmarkButton({
     });
   };
 
-  const label = bookmarked ? "保存済み" : "保存する";
+  const label = bookmarked ? (en ? "Saved" : "保存済み") : (en ? "Save" : "保存する");
   const star = bookmarked ? "★" : "☆";
 
   if (variant === "hero") {
