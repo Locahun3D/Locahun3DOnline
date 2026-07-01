@@ -9,7 +9,6 @@ import {
   GIFT_BUCKETS,
   GIFT_STATUSES,
   REDEEM_ERROR_MESSAGE,
-  redeemableFor,
   type GiftBucket,
   type GiftCode,
   type GiftStatus,
@@ -100,46 +99,35 @@ export async function redeemGiftCodeAction(
   const input = String(formData.get("code") ?? "").trim();
   if (!input) return { ok: false, error: "コードを入力してください。" };
 
-  const code = await giftCodeRepo.get(input);
   const now = new Date().toISOString();
-  const err = redeemableFor(code, user.id, now);
-  if (err || !code) {
-    return { ok: false, error: REDEEM_ERROR_MESSAGE[err ?? "not_found"] };
-  }
 
-  // 競合防止（二重引換 / maxUses 超過 / 同時クリック）: 付与の直前にコードを
-  // 再取得して再検証し、先にコードの uses を確定(claim)してからトークンを付与する。
-  // 完全な原子性には D1 等の CAS が必要だが、再取得＋claim-first で実害ケース
-  // （同一ユーザーの連打・maxUses=1 の同時利用）を大幅に抑止する。
-  const fresh = await giftCodeRepo.get(input);
-  const err2 = redeemableFor(fresh, user.id, now);
-  if (err2 || !fresh) {
-    return { ok: false, error: REDEEM_ERROR_MESSAGE[err2 ?? "not_found"] };
-  }
-  const granted = fresh.tokens;
-
-  // 1) 使用回数を先に確定（コードを claim）
-  await giftCodeRepo.upsert({
-    ...fresh,
-    uses: fresh.uses + 1,
-    redemptions: [
-      ...fresh.redemptions,
-      { userId: user.id, email: user.email, tokens: granted, at: now },
-    ],
+  // 1) コードを原子的に確定（claim）。D1 の条件付き UPDATE（楽観ロック）で
+  //    二重引換 / maxUses 超過 / 同時クリックを真に防ぐ。dev は read-modify-write。
+  const claim = await giftCodeRepo.claim(input, {
+    userId: user.id,
+    email: user.email,
+    at: now,
   });
+  if (!claim.ok) {
+    return { ok: false, error: REDEEM_ERROR_MESSAGE[claim.error] };
+  }
+  const granted = claim.code.tokens;
 
-  // 2) ユーザーへ付与
+  // 2) ユーザーへ付与。付与直前に最新のユーザーレコードを取り直す（リクエスト
+  //    冒頭の stale な user に加算すると、並行する別付与/管理者操作を上書きして
+  //    トークンを失う lost-update を防ぐ）。
+  const u = (await userRepo.get(user.id)) ?? user;
   const nextUser =
-    fresh.bucket === "bonus"
-      ? { ...user, bonusTokens: user.bonusTokens + granted }
+    claim.code.bucket === "bonus"
+      ? { ...u, bonusTokens: u.bonusTokens + granted }
       : {
-          ...user,
-          tokenBalance: user.tokenBalance + granted,
+          ...u,
+          tokenBalance: u.tokenBalance + granted,
           // 通常トークンは付与から1年で失効。
           tokenExpiresAt: oneYearFrom(now),
         };
   await userRepo.upsert(nextUser);
 
   revalidatePath("/account");
-  return { ok: true, granted, bucket: fresh.bucket };
+  return { ok: true, granted, bucket: claim.code.bucket };
 }

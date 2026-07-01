@@ -9,15 +9,16 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
+import { getR2Bucket, r2ColList } from "./r2-store";
 import {
-  getR2Bucket,
-  r2ColPut,
-  r2ColGet,
-  r2ColDelete,
-  r2ColList,
-  r2DocGet,
-  r2DocPut,
-} from "./r2-store";
+  getD1,
+  d1GetData,
+  d1ListData,
+  d1Upsert,
+  d1Delete,
+  d1IsEmpty,
+  type D1,
+} from "./d1";
 import {
   propertySchema,
   assetSchema,
@@ -67,22 +68,38 @@ async function writeStore(s: StoreShape): Promise<void> {
  *    本番の管理画面から直接編集・保存→即反映できる（旧: git SOT で本番保存不可だった）。
  * 初回のみバンドルの data/properties.json を R2 へシードして既存物件を保護する。
  */
-const PROP_R2_PREFIX = "_properties/";
-const PROP_SEED_KEY = "_properties_seeded.json";
-let _propsSeeded = false;
+const PROP_TABLE = "properties";
+const PROP_R2_PREFIX = "_properties/"; // 旧本番ストア（D1 への初回シード元）
 
-async function ensurePropsSeeded(): Promise<void> {
+/** D1 の実カラム抽出（id 含む）。properties は id のみが UNIQUE。 */
+function propertyCols(p: Property): Record<string, string | number | null> {
+  return {
+    id: p.id,
+    status: p.status ?? null,
+    visibility: p.visibility ?? null,
+    category: p.category ?? null,
+    owner_id: p.ownerId ?? null,
+    created_at: p.createdAt ?? null,
+    updated_at: p.updatedAt ?? null,
+  };
+}
+
+// D1 が空なら「旧本番(R2 _properties/*) → 無ければ git seed」を非破壊で初回投入。
+let _propsSeeded = false;
+async function ensurePropsSeeded(db: D1): Promise<void> {
   if (_propsSeeded) return;
-  const marker = await r2DocGet<{ seeded: boolean }>(PROP_SEED_KEY);
-  if (marker?.seeded) {
+  if (!(await d1IsEmpty(db, PROP_TABLE))) {
     _propsSeeded = true;
     return;
   }
-  const seed = (_propsFallback as unknown as StoreShape).properties ?? [];
-  for (const p of seed) {
-    await r2ColPut(PROP_R2_PREFIX, p.id, p);
+  const r2 = await r2ColList<Property>(PROP_R2_PREFIX).catch(() => [] as Property[]);
+  const src = r2.length
+    ? r2
+    : (_propsFallback as unknown as StoreShape).properties ?? [];
+  for (const raw of src) {
+    const p = coerceProperty(raw);
+    if (p) await d1Upsert(db, PROP_TABLE, "id", propertyCols(p), p);
   }
-  await r2DocPut(PROP_SEED_KEY, { seeded: true });
   _propsSeeded = true;
 }
 
@@ -92,12 +109,42 @@ async function ensurePropsSeeded(): Promise<void> {
  * 持つと公開ページ側で property.cover.src 等が undefined 参照でクラッシュし得た。
  * 検証成功 → default 補完済みの安全なオブジェクト、失敗 → null（リストでは除外）。
  */
-function coerceProperty(raw: unknown): Property | null {
+function coerceProperty(
+  raw: unknown,
+  { lenient = false }: { lenient?: boolean } = {},
+): Property | null {
   const r = propertySchema.safeParse(raw);
   if (r.success) return r.data;
   const id = (raw as { id?: unknown })?.id;
-  console.error("[store] invalid property record skipped:", id, r.error.issues);
-  return null;
+  console.error("[store] invalid property record:", id, r.error.issues);
+  if (!lenient) return null;
+
+  // Salvage (get() のみ): 1フィールドの型崩れで「レコードごと消える」と、編集者が
+  // 開いて直すことすらできなくなる。デフォルト充填済みの骨組みに、単体で検証を
+  // 通る各フィールドだけ上書きし、壊れたフィールドは default に落として返す。
+  // これで編集ページは必ず開け、保存し直せば正常化する。
+  try {
+    // 骨組みには propertySchema の「必須・default 無し」フィールド（category, cover）を
+    // 明示的に与える。これが無いと parse 自体が throw して salvage が一切走らない。
+    // 実レコードの category/cover が正しければ下の probe ループで上書き復元される。
+    const skeleton = propertySchema.parse({
+      id: typeof id === "string" && id ? id : "unknown",
+      category: "studio",
+      cover: {},
+    }) as Record<string, unknown>;
+    if (raw && typeof raw === "object") {
+      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+        if (!(k in skeleton)) continue; // スキーマ外のキーは無視（undefined混入防止）
+        const probe = propertySchema.safeParse({ ...skeleton, [k]: v });
+        if (probe.success) {
+          skeleton[k] = (probe.data as Record<string, unknown>)[k];
+        }
+      }
+    }
+    return skeleton as unknown as Property;
+  } catch {
+    return null;
+  }
 }
 
 class PropertyRepoImpl implements PropertyRepo {
@@ -106,11 +153,13 @@ class PropertyRepoImpl implements PropertyRepo {
     if (canAccessLocalFs()) {
       raw = (await readStore()).properties;
     } else {
-      await ensurePropsSeeded();
-      raw = await r2ColList<Property>(PROP_R2_PREFIX);
+      const db = await getD1();
+      if (!db) return [];
+      await ensurePropsSeeded(db);
+      raw = await d1ListData<unknown>(db, PROP_TABLE);
     }
     const props = raw
-      .map(coerceProperty)
+      .map((r) => coerceProperty(r))
       .filter((p): p is Property => p !== null);
     const out = opts.status
       ? props.filter((p) => p.status === opts.status)
@@ -127,11 +176,14 @@ class PropertyRepoImpl implements PropertyRepo {
         (p) => (p as Property).id === id,
       );
     } else {
-      await ensurePropsSeeded();
-      raw = await r2ColGet<Property>(PROP_R2_PREFIX, id);
+      const db = await getD1();
+      if (!db) return null;
+      await ensurePropsSeeded(db);
+      raw = await d1GetData<unknown>(db, PROP_TABLE, "id", id);
     }
     if (!raw) return null;
-    return coerceProperty(raw);
+    // get() は編集経路でも使うため lenient: 型崩れでも開いて直せるよう salvage。
+    return coerceProperty(raw, { lenient: true });
   }
 
   async upsert(p: Property): Promise<Property> {
@@ -147,8 +199,10 @@ class PropertyRepoImpl implements PropertyRepo {
       else s.properties.push(validated);
       await writeStore(s);
     } else {
-      await ensurePropsSeeded();
-      await r2ColPut(PROP_R2_PREFIX, validated.id, validated);
+      const db = await getD1();
+      if (!db) throw new Error("D1 が利用できません");
+      await ensurePropsSeeded(db);
+      await d1Upsert(db, PROP_TABLE, "id", propertyCols(validated), validated);
     }
     return validated;
   }
@@ -159,8 +213,8 @@ class PropertyRepoImpl implements PropertyRepo {
       s.properties = s.properties.filter((p) => p.id !== id);
       await writeStore(s);
     } else {
-      await ensurePropsSeeded();
-      await r2ColDelete(PROP_R2_PREFIX, id);
+      const db = await getD1();
+      if (db) await d1Delete(db, PROP_TABLE, "id", id);
     }
   }
 }
@@ -189,7 +243,32 @@ interface AssetStoreShape {
  * 旧実装は safeWriteFile が Workers で no-op だったため、アップロード/削除が
  * 永続化されず「削除しても消えない」状態だった（本修正で解消）。
  */
-const ASSET_R2_PREFIX = "_assets/";
+const ASSET_TABLE = "assets";
+const ASSET_R2_PREFIX = "_assets/"; // 旧本番ストア（D1 への初回シード元）
+
+function assetCols(a: Asset): Record<string, string | number | null> {
+  return {
+    id: a.id,
+    kind: a.kind ?? null,
+    status: a.status ?? null,
+    uploaded_at: a.uploadedAt ?? null,
+  };
+}
+
+let _assetsSeeded = false;
+async function ensureAssetsSeeded(db: D1): Promise<void> {
+  if (_assetsSeeded) return;
+  if (!(await d1IsEmpty(db, ASSET_TABLE))) {
+    _assetsSeeded = true;
+    return;
+  }
+  const r2 = await r2ColList<Asset>(ASSET_R2_PREFIX).catch(() => [] as Asset[]);
+  for (const a of r2) {
+    const v = assetSchema.safeParse(a);
+    if (v.success) await d1Upsert(db, ASSET_TABLE, "id", assetCols(v.data), v.data);
+  }
+  _assetsSeeded = true;
+}
 
 export class AssetRepoImpl implements AssetRepo {
   constructor(private readonly dataFile: string = ASSETS_FILE) {}
@@ -214,7 +293,10 @@ export class AssetRepoImpl implements AssetRepo {
     if (canAccessLocalFs()) {
       out = (await this.readFile()).assets;
     } else {
-      out = await r2ColList<Asset>(ASSET_R2_PREFIX);
+      const db = await getD1();
+      if (!db) return [];
+      await ensureAssetsSeeded(db);
+      out = await d1ListData<Asset>(db, ASSET_TABLE);
     }
     if (opts.kind) out = out.filter((a) => a.kind === opts.kind);
     if (opts.status) out = out.filter((a) => a.status === opts.status);
@@ -227,7 +309,10 @@ export class AssetRepoImpl implements AssetRepo {
     if (canAccessLocalFs()) {
       return (await this.readFile()).assets.find((a) => a.id === id) ?? null;
     }
-    return r2ColGet<Asset>(ASSET_R2_PREFIX, id);
+    const db = await getD1();
+    if (!db) return null;
+    await ensureAssetsSeeded(db);
+    return d1GetData<Asset>(db, ASSET_TABLE, "id", id);
   }
 
   async upsert(a: Asset): Promise<Asset> {
@@ -239,7 +324,10 @@ export class AssetRepoImpl implements AssetRepo {
       else s.assets.push(validated);
       await this.writeFile(s);
     } else {
-      await r2ColPut(ASSET_R2_PREFIX, validated.id, validated);
+      const db = await getD1();
+      if (!db) throw new Error("D1 が利用できません");
+      await ensureAssetsSeeded(db);
+      await d1Upsert(db, ASSET_TABLE, "id", assetCols(validated), validated);
     }
     return validated;
   }
@@ -260,7 +348,8 @@ export class AssetRepoImpl implements AssetRepo {
       s.assets = s.assets.filter((x) => x.id !== id);
       await this.writeFile(s);
     } else {
-      await r2ColDelete(ASSET_R2_PREFIX, id);
+      const db = await getD1();
+      if (db) await d1Delete(db, ASSET_TABLE, "id", id);
     }
   }
 }

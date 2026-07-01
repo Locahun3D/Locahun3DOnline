@@ -5,13 +5,6 @@
 
 export const VIEWER_PATH = "/viewer/offline-viewer.html";
 
-export const VIEWER_GITHUB = {
-  versionUrl:
-    "https://raw.githubusercontent.com/Locahun3D/Locahun3D/main/version.json",
-  htmlUrl:
-    "https://raw.githubusercontent.com/Locahun3D/Locahun3D/main/Locahun3D_OfflineViewer.html",
-};
-
 export const CORS_PROXY =
   "https://locahun3d-cors-proxy.nakamurakou1108.workers.dev";
 

@@ -9,8 +9,11 @@ import {
   onCartChange,
   type CartItem,
 } from "@/lib/cart";
+import { useLocale, useHref } from "@/components/locale-provider";
 
 export default function CartClient() {
+  const en = useLocale() === "en";
+  const lh = useHref();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
@@ -27,7 +30,7 @@ export default function CartClient() {
 
   const checkout = async () => {
     if (!agreed) {
-      alert("購入規約に同意してください");
+      alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
     }
     setLoading(true);
@@ -48,19 +51,19 @@ export default function CartClient() {
         error?: string;
       };
       if (res.status === 401) {
-        window.location.href = "/sign-in?redirect=/cart";
+        window.location.href = lh("/sign-in?redirect=/cart");
         return;
       }
       if (data.url) {
         window.location.href = data.url;
       } else if (data.ok) {
         clearCart();
-        window.location.href = "/dashboard/purchases";
+        window.location.href = lh("/dashboard/purchases");
       } else {
-        alert(data.error || "購入処理に失敗しました");
+        alert(data.error || (en ? "Purchase failed" : "購入処理に失敗しました"));
       }
     } catch {
-      alert("通信エラーが発生しました");
+      alert(en ? "A network error occurred" : "通信エラーが発生しました");
     } finally {
       setLoading(false);
     }
@@ -71,12 +74,12 @@ export default function CartClient() {
   if (items.length === 0) {
     return (
       <div className="border border-line p-10 text-center">
-        <p className="text-sm opacity-50 mb-4">カートは空です。</p>
+        <p className="text-sm opacity-50 mb-4">{en ? "Your cart is empty." : "カートは空です。"}</p>
         <Link
-          href="/properties"
+          href={lh("/properties")}
           className="mono text-[11px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
         >
-          物件を探す →
+          {en ? "Browse locations →" : "物件を探す →"}
         </Link>
       </div>
     );
@@ -92,7 +95,7 @@ export default function CartClient() {
           >
             <div className="flex-1 min-w-0">
               <Link
-                href={`/properties/${i.propertyId}`}
+                href={lh(`/properties/${i.propertyId}`)}
                 className="text-sm font-medium hover:text-accent transition"
               >
                 {i.title || i.propertyId}
@@ -102,17 +105,17 @@ export default function CartClient() {
                   {i.label}
                 </span>
               )}
-              <div className="mono text-[10px] opacity-40 mt-1">3DGS データ</div>
+              <div className="mono text-[10px] opacity-40 mt-1">{en ? "3DGS data" : "3DGS データ"}</div>
             </div>
             <div className="mono text-[12px] tracking-[0.14em] whitespace-nowrap">
-              ¥{i.price.toLocaleString("ja-JP")}
+              ¥{i.price.toLocaleString(en ? "en-US" : "ja-JP")}
             </div>
             <button
               type="button"
               onClick={() => removeFromCart(i.propertyId, i.splatItemIndex)}
               className="mono text-[10px] uppercase border border-line px-2 py-1 text-muted hover:border-red-400 hover:text-red-400 transition"
             >
-              削除
+              {en ? "Remove" : "削除"}
             </button>
           </div>
         ))}
@@ -121,11 +124,11 @@ export default function CartClient() {
       <div className="border border-accent/40 bg-[#0a0906] p-5 flex flex-wrap items-center gap-4">
         <div className="flex-1">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
-            合計 {items.length} 点
+            {en ? `${items.length} item(s) total` : `合計 ${items.length} 点`}
           </div>
           <div className="serif text-2xl text-accent">
-            ¥{total.toLocaleString("ja-JP")}{" "}
-            <span className="mono text-[10px] opacity-40">税込</span>
+            ¥{total.toLocaleString(en ? "en-US" : "ja-JP")}{" "}
+            <span className="mono text-[10px] opacity-40">{en ? "tax incl." : "税込"}</span>
           </div>
         </div>
         <label className="flex items-center gap-2 cursor-pointer text-[11px] opacity-70">
@@ -135,10 +138,21 @@ export default function CartClient() {
             onChange={(e) => setAgreed(e.target.checked)}
             className="w-4 h-4 accent-accent"
           />
-          <Link href="/terms/data-download" target="_blank" className="underline">
-            3Dデータ購入規約
-          </Link>
-          に同意
+          {en ? (
+            <>
+              I agree to the{" "}
+              <Link href={lh("/terms/data-download")} target="_blank" className="underline">
+                3D data purchase terms
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href={lh("/terms/data-download")} target="_blank" className="underline">
+                3Dデータ購入規約
+              </Link>
+              に同意
+            </>
+          )}
         </label>
         <button
           type="button"
@@ -146,7 +160,7 @@ export default function CartClient() {
           disabled={loading || !agreed}
           className="px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
         >
-          {loading ? "処理中..." : "まとめて購入"}
+          {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy all" : "まとめて購入"}
         </button>
       </div>
     </div>

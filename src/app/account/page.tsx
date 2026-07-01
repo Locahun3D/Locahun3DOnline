@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { requireOnboarded } from "@/lib/dal";
 import { acceptNdaAction } from "@/lib/auth-actions";
-import { ROLE_LABEL, ACCOUNT_STATUS_LABEL, totalTokens } from "@/lib/account-schema";
+import { roleLabel, accountStatusLabel, totalTokens } from "@/lib/account-schema";
 import RedeemGift from "@/components/account/redeem-gift";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
+import { getLocale } from "@/lib/i18n/server";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export const metadata = { title: "プロフィール" };
 
@@ -14,6 +16,10 @@ export default async function AccountPage({
 }) {
   const user = await requireOnboarded();
   const { welcome, nda, plan } = await searchParams;
+  const locale = await getLocale();
+  const en = locale === "en";
+  const lc = en ? "en" : "ja";
+  const lh = (href: string) => localizedHref(href, locale);
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -26,10 +32,19 @@ export default async function AccountPage({
       {welcome && (
         <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">
           {welcome === "pending" ? (
-            <>
-              ようこそ。<strong className="text-accent">{ROLE_LABEL[user.role]}</strong>
-              アカウントは現在<strong>承認待ち</strong>です。運営の承認後にプロ機能が有効化されます。
-            </>
+            en ? (
+              <>
+                Welcome. Your <strong className="text-accent">{roleLabel(user.role, "en")}</strong>{" "}
+                account is currently <strong>pending approval</strong>. Pro features activate once our team approves it.
+              </>
+            ) : (
+              <>
+                ようこそ。<strong className="text-accent">{roleLabel(user.role, "ja")}</strong>
+                アカウントは現在<strong>承認待ち</strong>です。運営の承認後にプロ機能が有効化されます。
+              </>
+            )
+          ) : en ? (
+            <>Registration complete. We&apos;ve granted you <strong className="text-accent">1 token</strong>.</>
           ) : (
             <>登録が完了しました。<strong className="text-accent">1 トークン</strong>を付与しました。</>
           )}
@@ -37,15 +52,28 @@ export default async function AccountPage({
       )}
       {nda && (
         <div className="mb-6 border border-green-400/40 bg-green-400/10 px-4 py-3 text-[13px]">
-          NDA への同意を記録しました。機密ロケ地の閲覧が可能になりました。
+          {en
+            ? "Your NDA agreement has been recorded. You can now view confidential locations."
+            : "NDA への同意を記録しました。機密ロケ地の閲覧が可能になりました。"}
         </div>
       )}
       {plan && (
         <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">
-          プランを <strong className="text-accent uppercase">{plan}</strong> に変更しました。
-          月次トークンを付与しました。
+          {en ? (
+            <>
+              Your plan has been changed to <strong className="text-accent uppercase">{plan}</strong>.
+              Monthly tokens have been granted.
+            </>
+          ) : (
+            <>
+              プランを <strong className="text-accent uppercase">{plan}</strong> に変更しました。
+              月次トークンを付与しました。
+            </>
+          )}
           <span className="block mono text-[10px] text-muted mt-1">
-            ※ 決済連携は準備中（現在は即時反映）
+            {en
+              ? "※ Payment integration in progress (changes apply instantly for now)"
+              : "※ 決済連携は準備中（現在は即時反映）"}
           </span>
         </div>
       )}
@@ -56,11 +84,11 @@ export default async function AccountPage({
         </h1>
         <p className="text-[13px] text-muted mt-2 flex items-center gap-2">
           <span className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-1.5 py-0.5">
-            {ROLE_LABEL[user.role]}
+            {roleLabel(user.role, lc)}
           </span>
           {user.status !== "active" && (
             <span className="mono text-[10px] tracking-[0.2em] uppercase border border-amber-400/40 text-amber-400 px-1.5 py-0.5">
-              {ACCOUNT_STATUS_LABEL[user.status]}
+              {accountStatusLabel(user.status, lc)}
             </span>
           )}
         </p>
@@ -70,11 +98,11 @@ export default async function AccountPage({
         <section className="md:col-span-2 border border-line p-6 space-y-5">
           <div>
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-              基本情報
+              {en ? "Basic info" : "基本情報"}
             </div>
             <dl className="grid grid-cols-[80px_1fr] sm:grid-cols-[110px_1fr] gap-y-3 text-[13px]">
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
-                氏名
+                {en ? "Name" : "氏名"}
               </dt>
               <dd>{user.name}</dd>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
@@ -82,11 +110,11 @@ export default async function AccountPage({
               </dt>
               <dd className="mono text-[11px]">{user.email}</dd>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
-                所属
+                {en ? "Company" : "所属"}
               </dt>
               <dd>{user.company || "—"}</dd>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 pt-0.5">
-                登録日
+                {en ? "Joined" : "登録日"}
               </dt>
               <dd className="mono text-[11px]">
                 {(user.createdAt ?? "").slice(0, 10) || "—"}
@@ -96,28 +124,30 @@ export default async function AccountPage({
 
           <div className="pt-5 border-t border-line">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
-              利用中プラン
+              {en ? "Current plan" : "利用中プラン"}
             </div>
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
               <div>
                 <div className="serif text-2xl uppercase">{user.plan}</div>
                 <div className="mono text-[10px] text-muted mt-1">
-                  {user.plan === "free" ? "無料プラン" : "サブスクリプション"}
+                  {user.plan === "free"
+                    ? en ? "Free plan" : "無料プラン"
+                    : en ? "Subscription" : "サブスクリプション"}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {user.stripeCustomerId && (
                   <form action={openBillingPortalAction}>
                     <button className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition">
-                      支払い・解約
+                      {en ? "Billing / cancel" : "支払い・解約"}
                     </button>
                   </form>
                 )}
                 <Link
-                  href="/pricing"
+                  href={lh("/pricing")}
                   className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                 >
-                  プラン変更
+                  {en ? "Change plan" : "プラン変更"}
                 </Link>
               </div>
             </div>
@@ -126,19 +156,23 @@ export default async function AccountPage({
           {user.role === "production" && (
             <div className="pt-5 border-t border-line">
               <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
-                NDA（秘密保持契約）
+                {en ? "NDA (confidentiality)" : "NDA（秘密保持契約）"}
               </div>
               {user.ndaAcceptedAt ? (
                 <p className="text-[13px] text-green-400">
-                  ✓ 締結済（{user.ndaAcceptedAt.slice(0, 10)}）— 機密ロケ地を閲覧できます。
+                  {en
+                    ? `✓ Signed (${user.ndaAcceptedAt.slice(0, 10)}) — you can view confidential locations.`
+                    : `✓ 締結済（${user.ndaAcceptedAt.slice(0, 10)}）— 機密ロケ地を閲覧できます。`}
                 </p>
               ) : (
                 <form action={acceptNdaAction} className="space-y-3">
                   <p className="text-[12px] text-muted leading-[1.8]">
-                    倉庫裏・非公開スタジオ等の機密ロケ地を閲覧するには、NDA への同意が必要です。
+                    {en
+                      ? "To view confidential locations such as backyards and private studios, you must agree to the NDA."
+                      : "倉庫裏・非公開スタジオ等の機密ロケ地を閲覧するには、NDA への同意が必要です。"}
                   </p>
                   <button className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition">
-                    NDA に同意する
+                    {en ? "Agree to NDA" : "NDA に同意する"}
                   </button>
                 </form>
               )}
@@ -149,47 +183,65 @@ export default async function AccountPage({
         <aside className="space-y-5">
           <div className="border border-line p-5">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-              トークン残
+              {en ? "Tokens left" : "トークン残"}
             </div>
             <div className="serif text-3xl text-accent">{totalTokens(user)}</div>
             <div className="mono text-[10px] text-muted mt-1">
-              3DGS ウォークスルーで消費
+              {en ? "Used for 3DGS walkthroughs" : "3DGS ウォークスルーで消費"}
             </div>
             {user.bonusTokens > 0 && (
               <div className="mono text-[10px] text-accent/80 mt-2 leading-[1.6]">
-                うち {user.bonusTokens} は<strong>失効しない</strong>貢献特別枠
-                <span className="block opacity-60">月次 {user.tokenBalance} ＋ 貢献 {user.bonusTokens}</span>
+                {en ? (
+                  <>
+                    {user.bonusTokens} of these are <strong>non-expiring</strong> contributor tokens
+                    <span className="block opacity-60">Monthly {user.tokenBalance} + contributor {user.bonusTokens}</span>
+                  </>
+                ) : (
+                  <>
+                    うち {user.bonusTokens} は<strong>失効しない</strong>貢献特別枠
+                    <span className="block opacity-60">月次 {user.tokenBalance} ＋ 貢献 {user.bonusTokens}</span>
+                  </>
+                )}
               </div>
             )}
             {user.tokenExpiresAt && user.tokenBalance > 0 && (
               <div className="mono text-[10px] text-amber-400/90 mt-2 leading-[1.6]">
-                月次 {user.tokenBalance} トークンは{" "}
-                <strong>{user.tokenExpiresAt.slice(0, 10)}</strong> に失効予定
+                {en ? (
+                  <>
+                    {user.tokenBalance} monthly tokens expire on{" "}
+                    <strong>{user.tokenExpiresAt.slice(0, 10)}</strong>
+                  </>
+                ) : (
+                  <>
+                    月次 {user.tokenBalance} トークンは{" "}
+                    <strong>{user.tokenExpiresAt.slice(0, 10)}</strong> に失効予定
+                  </>
+                )}
               </div>
             )}
           </div>
 
           <RedeemGift />
 
-          <Link href="/dashboard/purchases" className="block border border-line p-5 hover:border-accent/40 transition">
+          <Link href={lh("/dashboard/purchases")} className="block border border-line p-5 hover:border-accent/40 transition">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-              購入履歴
+              {en ? "Purchases" : "購入履歴"}
             </div>
             <div className="mono text-[10px] tracking-[0.22em] uppercase text-accent">
-              購入履歴・領収書 →
+              {en ? "History & receipts →" : "購入履歴・領収書 →"}
             </div>
           </Link>
 
           <Link
-            href="/dashboard/bookmarks"
+            href={lh("/dashboard/bookmarks")}
             className="border border-line p-5 block hover:border-accent transition"
           >
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-              保存した物件
+              {en ? "Saved locations" : "保存した物件"}
             </div>
             <div className="serif text-3xl">{user.bookmarks.length}</div>
             <div className="mt-3 mono text-[10px] tracking-[0.22em] uppercase text-accent">
-              保存一覧を見る →
+              {en ? "View saved list →" : "保存一覧を見る →"}
             </div>
           </Link>
         </aside>

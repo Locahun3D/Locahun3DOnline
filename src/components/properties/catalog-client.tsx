@@ -7,12 +7,15 @@ import { useRouter } from "next/navigation";
 import {
   CATEGORY_LABEL,
   REFERENCE_PRESETS,
-  TOKEN_COST_LABEL,
+  categoryLabel,
+  tokenCostLabel,
+  presetLabel,
   type Property,
   type PropertyCategory,
 } from "@/lib/schemas";
 import { formatKm, haversineKm } from "@/lib/distance";
 import BookmarkButton from "@/components/bookmark-button";
+import { useLocale } from "@/components/locale-provider";
 
 const CatalogMap = dynamic(() => import("./catalog-map"), {
   ssr: false,
@@ -68,15 +71,29 @@ const DEFAULT_REF: Reference = {
 
 // ── 追加条件: 設備・機能タグ ─────────────────────────────────────────────────
 // 物件の tags / summary / studioType に対するテキストマッチで絞り込む (複数選択は AND)。
-const FACILITY_TAGS = [
-  "ライブ使用", "クロマキー", "控室", "同録", "電動昇降トラス",
-  "音響システム", "照明システム", "可動式ステージ", "ネット回線", "音出し",
-  "高速インターネット", "楽器演奏", "完全遮光", "トラック搬入口",
-] as const;
+// マッチは日本語(ja)で行い、英語版では表示ラベルだけ en に差し替える。
+type FacilityTag = { ja: string; en: string };
+const FACILITY_TAGS: FacilityTag[] = [
+  { ja: "ライブ使用", en: "Live use" },
+  { ja: "クロマキー", en: "Chroma key" },
+  { ja: "控室", en: "Green room" },
+  { ja: "同録", en: "Sync sound" },
+  { ja: "電動昇降トラス", en: "Motorized truss" },
+  { ja: "音響システム", en: "Sound system" },
+  { ja: "照明システム", en: "Lighting rig" },
+  { ja: "可動式ステージ", en: "Movable stage" },
+  { ja: "ネット回線", en: "Internet" },
+  { ja: "音出し", en: "Amplified sound OK" },
+  { ja: "高速インターネット", en: "High-speed internet" },
+  { ja: "楽器演奏", en: "Live instruments" },
+  { ja: "完全遮光", en: "Full blackout" },
+  { ja: "トラック搬入口", en: "Truck loading bay" },
+];
 
 // 1段目に出す主要タグ (日料金/駐車場/200V の3トグルと同じ行に並べる)。
-const FACILITY_PRIMARY: string[] = ["クロマキー", "ネット回線"];
-const FACILITY_SECONDARY = FACILITY_TAGS.filter((f) => !FACILITY_PRIMARY.includes(f));
+const FACILITY_PRIMARY_JA = ["クロマキー", "ネット回線"];
+const FACILITY_PRIMARY = FACILITY_TAGS.filter((f) => FACILITY_PRIMARY_JA.includes(f.ja));
+const FACILITY_SECONDARY = FACILITY_TAGS.filter((f) => !FACILITY_PRIMARY_JA.includes(f.ja));
 
 // ── 検索条件の履歴 (localStorage) ───────────────────────────────────────────
 // ユーザーが過去に打ち込んだフィルタ一式を丸ごと保存し、ワンクリックで再適用する。
@@ -189,8 +206,12 @@ function useRecentFilters() {
 export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds = [], signedIn = false }: Props) {
   const bookmarkedSet = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
   const router = useRouter();
+  const en = useLocale() === "en";
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [reference, setReference] = useState<Reference>(DEFAULT_REF);
+  const [reference, setReference] = useState<Reference>(() => ({
+    ...DEFAULT_REF,
+    label: presetLabel(DEFAULT_REF.id, en ? "en" : "ja") ?? DEFAULT_REF.label,
+  }));
   const [geoMsg, setGeoMsg] = useState("");
 
   // Filters (dual ranges where it makes sense)
@@ -359,21 +380,30 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
 
   const useGeolocation = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setGeoMsg("お使いのブラウザはジオロケーションに対応していません。");
+      setGeoMsg(
+        en
+          ? "Your browser does not support geolocation."
+          : "お使いのブラウザはジオロケーションに対応していません。",
+      );
       setTimeout(() => setGeoMsg(""), 4000);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => setReference({
-        id: "current", lat: pos.coords.latitude, lng: pos.coords.longitude, label: "現在地",
+        id: "current", lat: pos.coords.latitude, lng: pos.coords.longitude,
+        label: en ? "Current location" : "現在地",
       }),
       () => {
-        setGeoMsg("現在地を取得できませんでした。ブラウザの位置情報を許可してください。");
+        setGeoMsg(
+          en
+            ? "Could not get your location. Please allow location access in your browser."
+            : "現在地を取得できませんでした。ブラウザの位置情報を許可してください。",
+        );
         setTimeout(() => setGeoMsg(""), 4000);
       },
       { enableHighAccuracy: false, timeout: 8000 },
     );
-  }, []);
+  }, [en]);
 
   return (
     <div className="frame-wide pt-5 pb-32">
@@ -434,7 +464,9 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
               No results
             </div>
             <p className="text-muted text-[14px]">
-              条件に合致する物件が見つかりません。フィルタを緩めてください。
+              {en
+                ? "No locations match your filters. Try loosening them."
+                : "条件に合致する物件が見つかりません。フィルタを緩めてください。"}
             </p>
           </div>
         ) : (
@@ -494,21 +526,43 @@ interface FiltersProps {
 }
 
 function FiltersPanel(p: FiltersProps) {
+  // モバイルは検索UIを既定で畳み、物件カードを早く見せる (lg+ は常時展開で従来通り)。
+  const [open, setOpen] = useState(false);
+  const en = useLocale() === "en";
   const yenFmt = (n: number) =>
-    n >= 10000
-      ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万`
-      : `¥${n.toLocaleString("ja-JP")}`;
+    en
+      ? `¥${n.toLocaleString("en-US")}`
+      : n >= 10000
+        ? `¥${(n / 10000).toFixed(n % 10000 === 0 ? 0 : 1)}万`
+        : `¥${n.toLocaleString("ja-JP")}`;
 
   return (
     <div className="border border-line bg-[#222] p-3.5 space-y-2.5">
+      {/* モバイル: 検索UIを既定で畳むトグル (lg未満のみ表示)。畳んでカードを早く見せる。 */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="lg:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2.5 hover:border-accent transition"
+      >
+        <span className="mono text-[11px] tracking-[0.2em] uppercase">🔍 {en ? "Filters" : "絞り込み検索"}</span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="brand text-accent text-lg leading-none">{p.resultCount}</span>
+          <span className="text-[11px] opacity-60">{en ? "" : "件"}</span>
+          <span className="text-[12px] opacity-70 ml-1">{open ? "▲" : "▼"}</span>
+        </span>
+      </button>
+
+      {/* 折りたたみ本体: モバイルは open のときだけ展開 / lg+ は常時展開 */}
+      <div className={`${open ? "block" : "hidden"} lg:block space-y-2.5`}>
       {/* 最近の検索条件: 常時・1行固定高さ (横スクロール) でパネル高さを安定させ、
           チップ出現/折り返しによる枠全体のサイズ変動を防ぐ。 */}
       <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap min-h-[30px]">
         <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mr-0.5 shrink-0">
-          最近の条件
+          {en ? "Recent" : "最近の条件"}
         </span>
         {p.recent.length === 0 ? (
-          <span className="text-[11px] text-muted/60 shrink-0">なし</span>
+          <span className="text-[11px] text-muted/60 shrink-0">{en ? "None" : "なし"}</span>
         ) : (
           p.recent.map((s) => {
             const key = snapshotKey(s);
@@ -529,7 +583,7 @@ function FiltersPanel(p: FiltersProps) {
                 <button
                   type="button"
                   onClick={() => p.removeRecent(key)}
-                  aria-label="この条件を削除"
+                  aria-label={en ? "Remove this filter" : "この条件を削除"}
                   className="px-1.5 py-1 text-[12px] leading-none text-muted hover:text-ink border-l border-line/70 transition"
                 >
                   ×
@@ -543,13 +597,13 @@ function FiltersPanel(p: FiltersProps) {
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
       <div className="grid xl:grid-cols-2 gap-x-6 gap-y-2.5">
         <div className="space-y-2.5">
-          <Row label="キーワード">
+          <Row label={en ? "Keyword" : "キーワード"}>
             <div className="flex items-center gap-2">
               <input
                 type="search"
                 value={p.q}
                 onChange={(e) => p.setQ(e.target.value)}
-                placeholder="白ホリ / 渋谷 / ガレージ ..."
+                placeholder={en ? "white cyc / Shibuya / garage ..." : "白ホリ / 渋谷 / ガレージ ..."}
                 className={inputWhiteCls + " w-full max-w-xs"}
               />
               <button
@@ -557,13 +611,13 @@ function FiltersPanel(p: FiltersProps) {
                 onClick={p.reset}
                 className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-ink transition whitespace-nowrap"
               >
-                ✕ すべてリセット
+                ✕ {en ? "Reset all" : "すべてリセット"}
               </button>
             </div>
           </Row>
         </div>
 
-        <Row label="参照地点 / 距離">
+        <Row label={en ? "Reference / distance" : "参照地点 / 距離"}>
           <div className="flex flex-col sm:flex-row sm:items-start gap-2">
             <div className="flex-1 min-w-0">
               <ReferencePicker
@@ -574,18 +628,20 @@ function FiltersPanel(p: FiltersProps) {
             </div>
             <div className="flex flex-wrap items-center gap-1.5 shrink-0 sm:pt-0.5">
               <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
-                から
+                {en ? "within" : "から"}
               </span>
               <ChoiceSelect
                 value={p.maxKmFromRef}
                 onChange={p.setMaxKmFromRef}
                 options={DISTANCE_OPTS}
                 format={(v) => `${v}km`}
-                emptyLabel="制限なし"
+                emptyLabel={en ? "No limit" : "制限なし"}
               />
-              <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
-                以内
-              </span>
+              {!en && (
+                <span className="mono text-[10px] tracking-[0.22em] uppercase opacity-60">
+                  以内
+                </span>
+              )}
             </div>
           </div>
           {p.geoMsg && (
@@ -599,26 +655,26 @@ function FiltersPanel(p: FiltersProps) {
       <Divider />
 
       {/* Categorical: category, studioType, area */}
-      <Row label="種別 / エリア">
+      <Row label={en ? "Type / area" : "種別 / エリア"}>
         <div className="grid md:grid-cols-3 gap-3">
           <ChoiceSelect
             value={p.category}
             onChange={(v) => p.setCategory(v as PropertyCategory | "all")}
             options={Object.keys(CATEGORY_LABEL) as PropertyCategory[]}
-            format={(v) => CATEGORY_LABEL[v as PropertyCategory]}
-            emptyLabel="カテゴリ すべて"
+            format={(v) => categoryLabel(v as PropertyCategory, en ? "en" : "ja")}
+            emptyLabel={en ? "Category — all" : "カテゴリ すべて"}
           />
           <ChoiceSelect
             value={p.studioType === "all" ? "" : p.studioType}
             onChange={(v) => p.setStudioType(v === "" ? "all" : v)}
             options={p.studioTypes}
-            emptyLabel="スタジオ種類 すべて"
+            emptyLabel={en ? "Studio type — all" : "スタジオ種類 すべて"}
           />
           <ComboPicker
             value={p.area}
             onChange={p.setArea}
             options={p.areas}
-            placeholder="エリア (打ち込みも可)"
+            placeholder={en ? "Area (typing OK)" : "エリア (打ち込みも可)"}
           />
         </div>
       </Row>
@@ -630,13 +686,13 @@ function FiltersPanel(p: FiltersProps) {
       <div className="grid 2xl:grid-cols-2 gap-x-8 gap-y-2">
         <div className="space-y-2">
           <RangeRow
-            label="時間料金 (¥/hr)"
+            label={en ? "Hourly (¥/hr)" : "時間料金 (¥/hr)"}
             min={p.minPrice} max={p.maxPrice}
             setMin={p.setMinPrice} setMax={p.setMaxPrice}
             options={PRICE_HR_OPTS} format={yenFmt}
           />
           <RangeRow
-            label="日料金 (¥/day)"
+            label={en ? "Daily (¥/day)" : "日料金 (¥/day)"}
             min={p.minDailyPrice} max={p.maxDailyPrice}
             setMin={p.setMinDailyPrice} setMax={p.setMaxDailyPrice}
             options={PRICE_DAY_OPTS} format={yenFmt}
@@ -644,13 +700,13 @@ function FiltersPanel(p: FiltersProps) {
         </div>
         <div className="space-y-2">
           <RangeRow
-            label="床面積 (㎡)"
+            label={en ? "Floor area (㎡)" : "床面積 (㎡)"}
             min={p.minArea} max={p.maxArea}
             setMin={p.setMinArea} setMax={p.setMaxArea}
             options={AREA_OPTS} format={(v) => `${v}㎡`}
           />
           <RangeRow
-            label="天井高 (m)"
+            label={en ? "Ceiling (m)" : "天井高 (m)"}
             min={p.minCeiling} max={p.maxCeiling}
             setMin={p.setMinCeiling} setMax={p.setMaxCeiling}
             options={CEILING_OPTS} format={(v) => `${v}m`}
@@ -661,23 +717,23 @@ function FiltersPanel(p: FiltersProps) {
       <Divider />
 
       {/* Additional conditions */}
-      <Row label="追加条件">
+      <Row label={en ? "Extra filters" : "追加条件"}>
         <div className="space-y-2">
           {/* 1段目: 主要トグル + 主要設備タグ */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <ToggleChip label="日料金あり" value={p.requiresDaily} onChange={p.setRequiresDaily} />
-            <ToggleChip label="駐車場あり" value={p.requiresParking} onChange={p.setRequiresParking} />
-            <ToggleChip label="200V 電源" value={p.requires200V} onChange={p.setRequires200V} />
+            <ToggleChip label={en ? "Daily rate" : "日料金あり"} value={p.requiresDaily} onChange={p.setRequiresDaily} />
+            <ToggleChip label={en ? "Parking" : "駐車場あり"} value={p.requiresParking} onChange={p.setRequiresParking} />
+            <ToggleChip label={en ? "200V power" : "200V 電源"} value={p.requires200V} onChange={p.setRequires200V} />
             {FACILITY_PRIMARY.map((f) => (
               <FacilityChip
-                key={f}
-                label={f}
-                active={p.facilities.includes(f)}
+                key={f.ja}
+                label={en ? f.en : f.ja}
+                active={p.facilities.includes(f.ja)}
                 onClick={() =>
                   p.setFacilities(
-                    p.facilities.includes(f)
-                      ? p.facilities.filter((x) => x !== f)
-                      : [...p.facilities, f],
+                    p.facilities.includes(f.ja)
+                      ? p.facilities.filter((x) => x !== f.ja)
+                      : [...p.facilities, f.ja],
                   )
                 }
               />
@@ -687,14 +743,14 @@ function FiltersPanel(p: FiltersProps) {
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-line/50">
             {FACILITY_SECONDARY.map((f) => (
               <FacilityChip
-                key={f}
-                label={f}
-                active={p.facilities.includes(f)}
+                key={f.ja}
+                label={en ? f.en : f.ja}
+                active={p.facilities.includes(f.ja)}
                 onClick={() =>
                   p.setFacilities(
-                    p.facilities.includes(f)
-                      ? p.facilities.filter((x) => x !== f)
-                      : [...p.facilities, f],
+                    p.facilities.includes(f.ja)
+                      ? p.facilities.filter((x) => x !== f.ja)
+                      : [...p.facilities, f.ja],
                   )
                 }
               />
@@ -702,6 +758,7 @@ function FiltersPanel(p: FiltersProps) {
           </div>
         </div>
       </Row>
+      </div>
     </div>
   );
 }
@@ -784,6 +841,7 @@ interface RangeRowProps {
 }
 
 function RangeRow({ label, min, max, setMin, setMax, options, format, singleMax }: RangeRowProps) {
+  const en = useLocale() === "en";
   const invalid =
     typeof min === "number" && typeof max === "number" && min > max;
 
@@ -797,10 +855,10 @@ function RangeRow({ label, min, max, setMin, setMax, options, format, singleMax 
               onChange={setMin}
               options={options}
               format={format}
-              emptyLabel="下限なし"
+              emptyLabel={en ? "Min — any" : "下限なし"}
               className={`flex-1 ${invalid ? "border-accent text-accent" : ""}`}
             />
-            <span className="mono text-[12px] opacity-50">〜</span>
+            <span className="mono text-[12px] opacity-50">{en ? "–" : "〜"}</span>
           </>
         )}
         <ChoiceSelect
@@ -808,13 +866,15 @@ function RangeRow({ label, min, max, setMin, setMax, options, format, singleMax 
           onChange={setMax}
           options={options}
           format={format}
-          emptyLabel={singleMax ? "制限なし" : "上限なし"}
+          emptyLabel={singleMax ? (en ? "No limit" : "制限なし") : en ? "Max — any" : "上限なし"}
           className={`flex-1 ${invalid ? "border-accent text-accent" : ""}`}
         />
       </div>
       {invalid && (
         <div className="mono text-[10px] text-accent mt-1">
-          ※ 下限 &gt; 上限 — このフィルタは無効化されています
+          {en
+            ? "※ Min > Max — this filter is disabled"
+            : "※ 下限 > 上限 — このフィルタは無効化されています"}
         </div>
       )}
     </Row>
@@ -897,6 +957,7 @@ function ReferencePicker({
 }: {
   value: Reference; onChange: (v: Reference) => void; onUseGeolocation: () => void;
 }) {
+  const en = useLocale() === "en";
   const [query, setQuery] = useState(value.label);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -923,13 +984,13 @@ function ReferencePicker({
         const j: GeocodeHit[] = await r.json();
         if (id === lastReq.current) setResults(j);
       } catch {
-        if (id === lastReq.current) setError("検索に失敗");
+        if (id === lastReq.current) setError(en ? "Search failed" : "検索に失敗");
       } finally {
         if (id === lastReq.current) setResolving(false);
       }
     }, 450);
     return () => clearTimeout(timer);
-  }, [query, value.label]);
+  }, [query, value.label, en]);
 
   const commit = useCallback((next: Reference) => {
     onChange(next); setQuery(next.label); setOpen(false); setResults([]);
@@ -938,9 +999,9 @@ function ReferencePicker({
   const tryResolve = useCallback(() => {
     const t = query.trim();
     if (!t) return;
-    const preset = REFERENCE_PRESETS.find((r) => r.label === t || r.id === t);
+    const preset = REFERENCE_PRESETS.find((r) => r.label === t || r.labelEn === t || r.id === t);
     if (preset) {
-      commit({ id: preset.id, lat: preset.lat, lng: preset.lng, label: preset.label });
+      commit({ id: preset.id, lat: preset.lat, lng: preset.lng, label: en ? preset.labelEn : preset.label });
       return;
     }
     const m = t.match(/(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)/);
@@ -966,37 +1027,40 @@ function ReferencePicker({
             if (e.key === "Enter") { e.preventDefault(); tryResolve(); }
             else if (e.key === "Escape") setOpen(false);
           }}
-          placeholder="渋谷駅 / 大阪駅 / 35.66, 139.70 / ..."
+          placeholder={en ? "Shibuya Sta. / Osaka Sta. / 35.66, 139.70 / ..." : "渋谷駅 / 大阪駅 / 35.66, 139.70 / ..."}
           className={`${inputCls} flex-1`}
         />
         <button
           type="button"
           onClick={onUseGeolocation}
           className="mono text-[10px] tracking-[0.2em] uppercase border border-line bg-bg px-2 hover:border-accent hover:text-accent transition"
-          title="現在地"
+          title={en ? "Current location" : "現在地"}
         >
           📍
         </button>
       </div>
       <div className="flex flex-wrap gap-1 mt-0.5">
-        {REFERENCE_PRESETS.map((pr) => (
-          <button
-            key={pr.id}
-            type="button"
-            onClick={() => commit({ id: pr.id, lat: pr.lat, lng: pr.lng, label: pr.label })}
-            className={`mono text-[9px] tracking-[0.16em] uppercase px-1.5 py-0.5 border transition ${
-              value.id === pr.id
-                ? "border-accent text-accent"
-                : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
-          >
-            {pr.label}
-          </button>
-        ))}
+        {REFERENCE_PRESETS.map((pr) => {
+          const lbl = en ? pr.labelEn : pr.label;
+          return (
+            <button
+              key={pr.id}
+              type="button"
+              onClick={() => commit({ id: pr.id, lat: pr.lat, lng: pr.lng, label: lbl })}
+              className={`mono text-[9px] tracking-[0.16em] uppercase px-1.5 py-0.5 border transition ${
+                value.id === pr.id
+                  ? "border-accent text-accent"
+                  : "border-line text-muted hover:border-ink hover:text-ink"
+              }`}
+            >
+              {lbl}
+            </button>
+          );
+        })}
       </div>
       {open && (results.length > 0 || resolving || error) && (
         <div className="absolute z-30 left-0 right-0 top-full mt-1 border border-line bg-bg shadow-2xl max-h-[260px] overflow-auto">
-          {resolving && <div className="px-3 py-2 mono text-[10px] text-muted">検索中…</div>}
+          {resolving && <div className="px-3 py-2 mono text-[10px] text-muted">{en ? "Searching…" : "検索中…"}</div>}
           {error && <div className="px-3 py-2 mono text-[10px] text-accent">{error}</div>}
           {results.map((r, i) => (
             <button
@@ -1025,14 +1089,19 @@ function ReferencePicker({
 // SortBar — Carsensor-style multi-axis sort header
 // ──────────────────────────────────────────────────────────────────────────
 
-const SORT_COLS: Array<{ label: string; ascKey: SortKey; descKey: SortKey; ascLabel: string; descLabel: string }> = [
-  { label: "新着順",   ascKey: "newest",       descKey: "oldest",       ascLabel: "新", descLabel: "古" },
-  { label: "時間料金", ascKey: "priceAsc",     descKey: "priceDesc",    ascLabel: "安", descLabel: "高" },
-  { label: "日料金",   ascKey: "dailyAsc",     descKey: "dailyDesc",    ascLabel: "安", descLabel: "高" },
-  { label: "天井",     ascKey: "ceilingDesc",  descKey: "ceilingAsc",   ascLabel: "高", descLabel: "低" },
-  { label: "面積",     ascKey: "areaDesc",     descKey: "areaAsc",      ascLabel: "広", descLabel: "狭" },
-  { label: "収容",     ascKey: "capacityDesc", descKey: "capacityAsc",  ascLabel: "多", descLabel: "少" },
-  { label: "距離",     ascKey: "distanceAsc",  descKey: "distanceDesc", ascLabel: "近", descLabel: "遠" },
+const SORT_COLS: Array<{
+  label: string; labelEn: string;
+  ascKey: SortKey; descKey: SortKey;
+  ascLabel: string; descLabel: string;
+  ascLabelEn: string; descLabelEn: string;
+}> = [
+  { label: "新着順",   labelEn: "Date",     ascKey: "newest",       descKey: "oldest",       ascLabel: "新", descLabel: "古", ascLabelEn: "New",  descLabelEn: "Old" },
+  { label: "時間料金", labelEn: "Hourly",   ascKey: "priceAsc",     descKey: "priceDesc",    ascLabel: "安", descLabel: "高", ascLabelEn: "Low",  descLabelEn: "High" },
+  { label: "日料金",   labelEn: "Daily",    ascKey: "dailyAsc",     descKey: "dailyDesc",    ascLabel: "安", descLabel: "高", ascLabelEn: "Low",  descLabelEn: "High" },
+  { label: "天井",     labelEn: "Ceiling",  ascKey: "ceilingDesc",  descKey: "ceilingAsc",   ascLabel: "高", descLabel: "低", ascLabelEn: "High", descLabelEn: "Low" },
+  { label: "面積",     labelEn: "Area",     ascKey: "areaDesc",     descKey: "areaAsc",      ascLabel: "広", descLabel: "狭", ascLabelEn: "Big",  descLabelEn: "Small" },
+  { label: "収容",     labelEn: "Capacity", ascKey: "capacityDesc", descKey: "capacityAsc",  ascLabel: "多", descLabel: "少", ascLabelEn: "Many", descLabelEn: "Few" },
+  { label: "距離",     labelEn: "Distance", ascKey: "distanceAsc",  descKey: "distanceDesc", ascLabel: "近", descLabel: "遠", ascLabelEn: "Near", descLabelEn: "Far" },
 ];
 
 function SortBar({
@@ -1041,19 +1110,20 @@ function SortBar({
   sort: SortKey; setSort: (v: SortKey) => void;
   resultCount: number; totalCount: number;
 }) {
+  const en = useLocale() === "en";
   return (
     <div className="mt-4 border border-line bg-[#222] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] mono">
       <div className="flex items-baseline gap-2 font-sans">
-        <span className="brand text-2xl text-accent">{resultCount.toLocaleString("ja-JP")}</span>
-        <span className="text-[12px] font-medium opacity-70">件</span>
-        <span className="text-[12px] opacity-50">/ {totalCount} 全</span>
+        <span className="brand text-2xl text-accent">{resultCount.toLocaleString(en ? "en-US" : "ja-JP")}</span>
+        <span className="text-[12px] font-medium opacity-70">{en ? "results" : "件"}</span>
+        <span className="text-[12px] opacity-50">/ {totalCount} {en ? "total" : "全"}</span>
       </div>
 
       <div className="flex flex-wrap items-stretch gap-x-3 gap-y-1 ml-auto">
         {SORT_COLS.map((c) => (
           <div key={c.label} className="flex flex-col items-center">
             <div className="mono text-[9px] tracking-[0.22em] uppercase opacity-50">
-              {c.label}
+              {en ? c.labelEn : c.label}
             </div>
             <div className="flex">
               <button
@@ -1065,7 +1135,7 @@ function SortBar({
                     : "text-muted hover:text-accent"
                 }`}
               >
-                {c.ascLabel}
+                {en ? c.ascLabelEn : c.ascLabel}
               </button>
               <span className="mono text-[10px] opacity-30 px-0.5">|</span>
               <button
@@ -1077,7 +1147,7 @@ function SortBar({
                     : "text-muted hover:text-accent"
                 }`}
               >
-                {c.descLabel}
+                {en ? c.descLabelEn : c.descLabel}
               </button>
             </div>
           </div>
@@ -1098,10 +1168,12 @@ function PropertyCardLite({
   referenceLabel: string; highlighted: boolean;
   bookmarked?: boolean; signedIn?: boolean;
 }) {
-  const yen = property.hourlyPrice.toLocaleString("ja-JP");
+  const en = useLocale() === "en";
+  const lc = en ? "en" : "ja";
+  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
   return (
     <Link
-      href={`/properties/${property.id}`}
+      href={en ? `/en/properties/${property.id}` : `/properties/${property.id}`}
       className={`flex flex-col h-full border bg-bg overflow-hidden transition ${
         highlighted ? "border-accent" : "border-line hover:border-ink"
       }`}
@@ -1115,21 +1187,28 @@ function PropertyCardLite({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
         <div className="absolute top-2 left-2 mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
-          {CATEGORY_LABEL[property.category]}
+          {categoryLabel(property.category, lc)}
           {property.studioType ? ` · ${property.studioType}` : ""}
         </div>
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>
           <div
             className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
-            title={`1 回視聴で ${property.tokenCost} トークン消費 — ${TOKEN_COST_LABEL[property.tokenCost]}`}
+            title={
+              en
+                ? `${property.tokenCost} token(s) per view — ${tokenCostLabel(property.tokenCost, "en")}`
+                : `1 回視聴で ${property.tokenCost} トークン消費 — ${tokenCostLabel(property.tokenCost, "ja")}`
+            }
           >
-            {property.tokenCost}T · {property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}
+            {property.tokenCost}T ·{" "}
+            {en
+              ? property.tokenCost === 1 ? "House" : property.tokenCost === 2 ? "Mid" : "Large"
+              : property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}
           </div>
         </div>
         {distanceKm !== null && (
           <div className="absolute bottom-2 right-2 mono text-[10px] tracking-[0.2em] uppercase bg-bg/80 backdrop-blur px-2 py-1 border border-line">
-            {referenceLabel} から {formatKm(distanceKm)}
+            {en ? `${formatKm(distanceKm)} from ${referenceLabel}` : `${referenceLabel} から ${formatKm(distanceKm)}`}
           </div>
         )}
         <div className="absolute bottom-2 left-2">
@@ -1151,10 +1230,10 @@ function PropertyCardLite({
           {property.title}
         </h3>
         <div className="grid grid-cols-4 gap-1.5 text-[10px] mono text-muted">
-          <Stat label="面積" value={`${property.floorAreaSqm}㎡`} />
-          <Stat label="天井" value={property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
-          <Stat label="収容" value={`${property.capacity}名`} />
-          <Stat label="駐車" value={property.parking ? "可" : "—"} accent={property.parking} />
+          <Stat label={en ? "Area" : "面積"} value={`${property.floorAreaSqm}㎡`} />
+          <Stat label={en ? "Ceiling" : "天井"} value={property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
+          <Stat label={en ? "Cap." : "収容"} value={en ? `${property.capacity}` : `${property.capacity}名`} />
+          <Stat label={en ? "Park" : "駐車"} value={property.parking ? (en ? "Yes" : "可") : "—"} accent={property.parking} />
         </div>
         {property.powerVoltage && (
           <div className="mono text-[10px] text-muted truncate">⚡ {property.powerVoltage}</div>
@@ -1164,7 +1243,7 @@ function PropertyCardLite({
             <span className="serif text-xl text-accent">¥{yen}</span>
             <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
           </div>
-          <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-60">詳細 →</span>
+          <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-60">{en ? "Details →" : "詳細 →"}</span>
         </div>
       </div>
     </Link>

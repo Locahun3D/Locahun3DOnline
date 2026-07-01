@@ -5,6 +5,7 @@ import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
 import { repo as propertyRepo } from "./store";
+import { inquiryRepo, type InquiryStatus } from "./inquiries";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
 import { notifyRefund } from "./email";
@@ -21,17 +22,20 @@ export async function approveAccountAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const u = await userRepo.get(id);
-  if (!u) return;
+  // 承認は「保留中」アカウントのみ。停止中(suspended)を承認で復活させない。
+  if (!u || u.status !== "pending") return;
   await userRepo.upsert({ ...u, status: "active" });
   revalidatePath("/admin/accounts");
 }
 
 /** Set an account's status (active / pending / suspended). */
 export async function setAccountStatusAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as AccountStatus;
   if (!ACCOUNT_STATUSES.includes(status)) return;
+  // 自己ロックアウト防止: 自分を active 以外(停止/保留)にはできない。
+  if (id === admin.id && status !== "active") return;
   const u = await userRepo.get(id);
   if (!u) return;
   await userRepo.upsert({ ...u, status });
@@ -79,11 +83,16 @@ export async function bulkSetAccountStatusAction(
   ids: string[],
   status: AccountStatus,
 ) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   if (!ACCOUNT_STATUSES.includes(status)) return { ok: false as const };
   let done = 0;
   const skipped: string[] = [];
   for (const id of ids) {
+    // 自己ロックアウト防止: 自分を active 以外には一括変更しない。
+    if (id === admin.id && status !== "active") {
+      skipped.push(id);
+      continue;
+    }
     const u = await userRepo.get(id);
     if (!u) {
       skipped.push(id);
@@ -128,6 +137,26 @@ export async function bulkDeleteAccountsAction(ids: string[]) {
   }
   revalidatePath("/admin/accounts");
   return { ok: true as const, count: done, total: ids.length, skipped };
+}
+
+/** 問い合わせの状態を変更（new / read / archived）。 */
+export async function setInquiryStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as InquiryStatus;
+  if (!["new", "read", "archived"].includes(status)) return;
+  const i = await inquiryRepo.get(id);
+  if (!i) return;
+  await inquiryRepo.upsert({ ...i, status });
+  revalidatePath("/admin/inquiries");
+}
+
+/** 問い合わせを削除。 */
+export async function deleteInquiryAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  await inquiryRepo.remove(id);
+  revalidatePath("/admin/inquiries");
 }
 
 /** 購入を返金処理する。 */

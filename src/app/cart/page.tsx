@@ -1,8 +1,10 @@
 import CartClient from "@/components/cart-client";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata = { title: "カート" };
 
-export default function CartPage() {
+export default async function CartPage() {
+  const en = (await getLocale()) === "en";
   return (
     <div className="theme-online frame pt-12 pb-32">
       <div className="chapter-rule">
@@ -12,9 +14,11 @@ export default function CartPage() {
       </div>
 
       <header className="mb-8">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">カート</h1>
+        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">{en ? "Cart" : "カート"}</h1>
         <p className="text-[14px] text-muted mt-2">
-          複数の 3DGS データをまとめて購入できます。
+          {en
+            ? "Buy multiple 3DGS data sets together."
+            : "複数の 3DGS データをまとめて購入できます。"}
         </p>
       </header>
 

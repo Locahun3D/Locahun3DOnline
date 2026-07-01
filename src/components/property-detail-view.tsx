@@ -1,14 +1,60 @@
 import Link from "next/link";
 import {
-  CATEGORY_LABEL,
-  TOKEN_COST_LABEL,
-  PLAN_TOKEN_BUDGET,
+  categoryLabel,
   type Property,
 } from "@/lib/schemas";
+import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import ViewerGate from "@/components/viewer-gate";
 import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 import BookmarkButton from "@/components/bookmark-button";
+import InquiryPanel from "@/components/inquiry-panel";
+import ZoomableImage from "@/components/zoomable-image";
+
+/**
+ * 概要テキストを描画。`【見出し】` 行を見出しとして強調し、本文は読みやすい
+ * 段落に整形する（項目ごとに見出しが立ち、文字が細い問題を解消）。
+ */
+function renderOverview(text: string) {
+  if (!text || !text.trim()) return null;
+  const lines = text.replace(/\r/g, "").split("\n");
+  const sections: { heading: string | null; body: string }[] = [];
+  let cur: { heading: string | null; lines: string[] } = { heading: null, lines: [] };
+  const flush = () =>
+    sections.push({ heading: cur.heading, body: cur.lines.join("\n").trim() });
+  for (const ln of lines) {
+    const m = ln.match(/^\s*【(.+?)】\s*$/);
+    if (m) {
+      flush();
+      cur = { heading: m[1], lines: [] };
+    } else {
+      cur.lines.push(ln);
+    }
+  }
+  flush();
+
+  return (
+    <div className="space-y-5">
+      {sections
+        .filter((s) => s.heading || s.body)
+        .map((s, i) => (
+          <div key={i}>
+            {s.heading && (
+              <h3 className="serif text-[18px] font-bold text-ink mb-2.5 flex items-center gap-2.5">
+                <span className="inline-block w-1 h-4 bg-accent rounded-sm shrink-0" />
+                {s.heading}
+              </h3>
+            )}
+            {s.body && (
+              <p className="text-[15px] leading-[1.95] text-ink/85 whitespace-pre-line">
+                {s.body}
+              </p>
+            )}
+          </div>
+        ))}
+    </div>
+  );
+}
 
 export default function PropertyDetailView({
   property,
@@ -21,6 +67,7 @@ export default function PropertyDetailView({
   hasViewerAccess = false,
   signedIn = false,
   bookmarked = false,
+  locale = "ja",
 }: {
   property: Property;
   others: Property[];
@@ -32,8 +79,11 @@ export default function PropertyDetailView({
   hasViewerAccess?: boolean;
   signedIn?: boolean;
   bookmarked?: boolean;
+  locale?: Locale;
 }) {
-  const yen = property.hourlyPrice.toLocaleString("ja-JP");
+  const en = locale === "en";
+  const lh = (href: string) => localizedHref(href, locale);
+  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
 
   const visibleSplatItems = property.splatItems.filter((it) => {
     if (!it.splatUrl) return false;
@@ -75,11 +125,11 @@ export default function PropertyDetailView({
 
         <div className="absolute inset-0 flex flex-col justify-end frame pb-10 sm:pb-14">
           <nav className="mono text-[11px] tracking-[0.28em] uppercase text-white/50 mb-4 flex gap-2 items-center">
-            <Link href="/properties" className="hover:text-white/80 transition">
+            <Link href={lh("/properties")} className="hover:text-white/80 transition">
               CATALOG
             </Link>
             <span>/</span>
-            <span>{CATEGORY_LABEL[property.category]}</span>
+            <span>{categoryLabel(property.category, locale)}</span>
             <span>/</span>
             <span>{property.id.toUpperCase()}</span>
           </nav>
@@ -92,7 +142,7 @@ export default function PropertyDetailView({
           </div>
 
           <h1 className="serif text-[clamp(1.6rem,4vw,2.8rem)] font-bold leading-[1.25] text-white max-w-[900px]">
-            {property.title || "（無題の物件）"}
+            {property.title || (en ? "(Untitled location)" : "（無題の物件）")}
           </h1>
 
           <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
@@ -104,7 +154,7 @@ export default function PropertyDetailView({
             </div>
             {property.dailyPrice > 0 && (
               <div className="mono text-[12px] text-white/60">
-                日貸し ¥{property.dailyPrice.toLocaleString("ja-JP")}/day
+                {en ? "Daily" : "日貸し"} ¥{property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}/day
               </div>
             )}
             <div className="flex flex-wrap gap-1.5 sm:ml-auto">
@@ -136,7 +186,7 @@ export default function PropertyDetailView({
             className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] tracking-[0.04em] bg-accent text-black font-bold shadow-lg hover:bg-accent/90 transition rounded-sm"
           >
             <span className="text-[15px] leading-none">✎</span>
-            見積もり依頼
+            {en ? "Request a quote" : "見積もり依頼"}
           </button>
         </div>
       </section>
@@ -149,21 +199,26 @@ export default function PropertyDetailView({
              写真も object-cover でセル比率に統一トリミング。写真がカバー1枚だけ
              ならヒーローで足りるため非表示。 ── */}
         {(() => {
-          const photos = [property.cover, ...property.gallery].filter(
-            (p) => p?.src,
-          );
+          // カバー画像はヒーローで全幅表示済みなのでギャラリーには出さない
+          // （ヒーローとギャラリーで同じ画像が二重に出るのを防ぐ）。
+          // gallery 内の重複も src で除外する。
+          const seen = new Set<string>([property.cover.src]);
+          const photos = property.gallery.filter((p) => {
+            if (!p?.src || seen.has(p.src)) return false;
+            seen.add(p.src);
+            return true;
+          });
           const total = photos.length;
           if (total <= 1) return null;
 
           // 画像1枚分。どんなアスペクト比でもセルを object-cover で埋める。
           // focus（object-position）で「写真のどこを残すか」を画像ごとに指定可能。
           const img = (p: { src: string; alt: string; focus?: string }) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <ZoomableImage
               src={p.src}
               alt={p.alt}
+              focus={p.focus}
               className="w-full h-full object-cover"
-              style={{ objectPosition: p.focus || "center" }}
             />
           );
 
@@ -220,14 +275,14 @@ export default function PropertyDetailView({
                           type="button"
                           className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
                         >
-                          すべての写真 ({total})
+                          {en ? `All photos (${total})` : `すべての写真 (${total})`}
                         </button>
                       )}
                     </>
                   ) : (
                     <div className="w-full h-full bg-ink/[0.05] flex items-center justify-center">
                       <span className="text-[13px] text-ink/45 font-medium">
-                        すべての写真 ({total})
+                        {en ? `All photos (${total})` : `すべての写真 (${total})`}
                       </span>
                     </div>
                   )}
@@ -240,20 +295,13 @@ export default function PropertyDetailView({
         {/* ── Description + Spec/Contact sidebar ── */}
         <div className="grid lg:grid-cols-3 gap-6 mb-10">
           <div className="lg:col-span-2 space-y-6">
-            <div>
-              <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-2.5 font-semibold">
-                概要
-              </div>
-              <p className="text-[16px] leading-[1.95] text-ink/90 whitespace-pre-line">
-                {property.description}
-              </p>
-            </div>
+            <div>{renderOverview(property.description)}</div>
 
             {/* ── 4-column metric cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="border border-line rounded-md p-4">
                 <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  面積
+                  {en ? "Area" : "面積"}
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
@@ -265,7 +313,7 @@ export default function PropertyDetailView({
 
               <div className="border border-line rounded-md p-4">
                 <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  天井高
+                  {en ? "Ceiling" : "天井高"}
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
@@ -277,23 +325,23 @@ export default function PropertyDetailView({
 
               <div className="border border-line rounded-md p-4">
                 <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  収容
+                  {en ? "Capacity" : "収容"}
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
                     {property.capacity}
                   </span>
-                  <span className="text-[13px] text-ink/65">名</span>
+                  <span className="text-[13px] text-ink/65">{en ? "ppl" : "名"}</span>
                 </div>
               </div>
 
               <div className="border border-line rounded-md p-4">
                 <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  自然光
+                  {en ? "Natural light" : "自然光"}
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                    {property.hasNaturalLight ? "あり" : "なし"}
+                    {property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし"}
                   </span>
                 </div>
               </div>
@@ -306,7 +354,7 @@ export default function PropertyDetailView({
             <div className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
               <div className="bg-accent px-5 py-4">
                 <div className="text-[11px] font-bold tracking-[0.15em] text-white/80 mb-1">
-                  お問い合わせ
+                  {en ? "Contact" : "お問い合わせ"}
                 </div>
                 {property.contactPhone && (
                   <a
@@ -321,12 +369,11 @@ export default function PropertyDetailView({
                 )}
               </div>
               <div className="bg-white px-5 py-4 space-y-3">
-                <a
-                  href="#inquiry-form"
-                  className="block w-full bg-ink text-white text-center text-[14px] font-medium py-3.5 rounded-md hover:bg-ink/85 transition"
-                >
-                  フォームからお問い合わせ
-                </a>
+                <InquiryPanel
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                  locale={locale}
+                />
                 <div className="flex items-center gap-2">
                   {property.contactEmail && (
                     <a
@@ -334,7 +381,7 @@ export default function PropertyDetailView({
                       className="flex-1 flex items-center justify-center gap-1.5 text-[12px] text-ink/60 border border-line rounded-md py-2 hover:border-accent hover:text-accent transition"
                     >
                       <span>✉</span>
-                      <span>メール</span>
+                      <span>{en ? "Email" : "メール"}</span>
                     </a>
                   )}
                   {property.contactWebsite && (
@@ -368,16 +415,16 @@ export default function PropertyDetailView({
             <div className="border border-line rounded-md overflow-hidden">
               <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
                 <span className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 font-semibold">
-                  スペック
+                  {en ? "Specs" : "スペック"}
                 </span>
               </div>
               <table className="w-full text-[14px]">
                 <tbody>
                   {[
-                    ["電源", property.powerVoltage || "—"],
-                    ["駐車場", property.parking ? "利用可" : "なし"],
-                    ["搬入口", property.loadingDock ? "大型搬入可" : "通常"],
-                    ["スキャン日", property.scannedAt || "—"],
+                    [en ? "Power" : "電源", property.powerVoltage || "—"],
+                    [en ? "Parking" : "駐車場", property.parking ? (en ? "Available" : "利用可") : en ? "None" : "なし"],
+                    [en ? "Loading" : "搬入口", property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常"],
+                    [en ? "Scanned" : "スキャン日", property.scannedAt || "—"],
                   ].map(([label, value]) => (
                     <tr key={label} className="border-b border-line last:border-0">
                       <td className="px-4 py-3 mono text-[11px] tracking-[0.1em] uppercase text-ink/60 font-semibold w-[100px]">
@@ -397,7 +444,7 @@ export default function PropertyDetailView({
                 <div className="border border-line rounded-md overflow-hidden">
                   <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
                     <span className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 font-semibold">
-                      図面 / フロアプラン
+                      {en ? "Floor plans" : "図面 / フロアプラン"}
                     </span>
                   </div>
                   <div className="p-3 space-y-2">
@@ -414,7 +461,7 @@ export default function PropertyDetailView({
                         >
                           <span className="text-accent">⬇</span>
                           <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">
-                            {b.label || `図面 ${i + 1}`}
+                            {b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}
                           </span>
                           <span className="mono text-[10px] tracking-[0.12em] uppercase text-ink/55 font-semibold">
                             DL
@@ -442,8 +489,16 @@ export default function PropertyDetailView({
           </section>
         ) : (
           <>
+            {/* 3DGSが複数ある時はページ幅で2つ並べる（1つなら全幅で大きく）。 */}
+            <div
+              className={
+                visibleSplatItems.length > 1
+                  ? "grid lg:grid-cols-2 gap-x-8 gap-y-12 mb-12"
+                  : "space-y-12 mb-12"
+              }
+            >
             {visibleSplatItems.map((item, idx) => (
-              <section key={idx} className="mb-12">
+              <section key={idx}>
                 <div className="chapter-rule">
                   <span className="text-ink/50">3DGS</span>
                   <span className="text-ink/80">
@@ -486,145 +541,18 @@ export default function PropertyDetailView({
                 )}
               </section>
             ))}
-
+            </div>
           </>
         )}
 
-        {/* ── Inquiry form ── */}
-        <section id="inquiry-form" className="mt-16 mb-16 scroll-mt-24">
-          <div className="chapter-rule">
-            <span className="text-accent font-medium">CONTACT</span>
-            <span className="text-ink/80">スタジオへのお問い合わせ</span>
-            <span className="flex-1 h-px bg-current opacity-25" />
-          </div>
-
-          {/* フォームは全幅に広げず読みやすい幅に収める（操作性向上） */}
-          <div className="border border-line rounded-lg overflow-hidden max-w-[760px]">
-            {/* Form header */}
-            <div className="bg-accent px-6 py-4">
-              <h3 className="text-white text-[16px] font-bold">
-                {property.title} に問い合わせる
-              </h3>
-              <p className="text-white/70 text-[13px] mt-1">
-                下記フォームにご記入ください。担当者より折り返しご連絡いたします。
-              </p>
-            </div>
-
-            <form className="bg-white p-6 space-y-5" action="#inquiry-form" method="GET">
-              {/* 2-col: name + company */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                    お名前 <span className="text-red-500 text-[11px]">必須</span>
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="山田 太郎"
-                    required
-                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                    会社名
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="株式会社〇〇"
-                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                  />
-                </label>
-              </div>
-
-              {/* 2-col: email + phone */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                    メールアドレス <span className="text-red-500 text-[11px]">必須</span>
-                  </span>
-                  <input
-                    type="email"
-                    placeholder="info@example.com"
-                    required
-                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                    電話番号
-                  </span>
-                  <input
-                    type="tel"
-                    placeholder="090-0000-0000"
-                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                  />
-                </label>
-              </div>
-
-              {/* 2-col: purpose + date */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                    利用目的 <span className="text-red-500 text-[11px]">必須</span>
-                  </span>
-                  <select
-                    required
-                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] bg-white focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                    defaultValue=""
-                  >
-                    <option value="" disabled>選択してください</option>
-                    <option>スチール撮影</option>
-                    <option>ムービー / CM撮影</option>
-                    <option>ロケハン（内見）</option>
-                    <option>イベント / 展示会</option>
-                    <option>その他</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                    利用希望日
-                  </span>
-                  <input
-                    type="date"
-                    className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                  />
-                </label>
-              </div>
-
-              {/* Message */}
-              <label className="block">
-                <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
-                  お問い合わせ内容 <span className="text-red-500 text-[11px]">必須</span>
-                </span>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="ご利用時間、人数、搬入物の有無など詳細をお聞かせください"
-                  className="w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] leading-relaxed resize-y focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition"
-                />
-              </label>
-
-              {/* Submit — stack on mobile so the button isn't squeezed by the note */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 pt-2">
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto bg-accent text-white text-[15px] font-bold px-8 py-3.5 rounded-md hover:bg-accent/85 transition shadow-sm"
-                >
-                  送信する
-                </button>
-                <span className="text-[12px] text-ink/40">
-                  ※ 送信後、担当者より1営業日以内にご連絡いたします
-                </span>
-              </div>
-            </form>
-          </div>
-        </section>
+        {/* 問い合わせフォームは右サイドの「お問い合わせ」パネル内に統合済み
+            （InquiryPanel）。重複する全幅セクションは撤去した。 */}
 
         {/* ── Related studios ── */}
         <section className="mt-8">
           <div className="chapter-rule">
             <span className="text-ink/50">RELATED</span>
-            <span className="text-ink/80">類似スタジオ</span>
+            <span className="text-ink/80">{en ? "Similar studios" : "類似スタジオ"}</span>
             <span className="flex-1 h-px bg-current opacity-25" />
           </div>
           {others.length > 0 ? (
@@ -632,7 +560,7 @@ export default function PropertyDetailView({
               {others.map((p) => (
                 <Link
                   key={p.id}
-                  href={`/properties/${p.id}`}
+                  href={lh(`/properties/${p.id}`)}
                   className="group block border border-line rounded-md overflow-hidden hover:border-accent transition"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -650,7 +578,7 @@ export default function PropertyDetailView({
                     </div>
                     <div className="flex items-center gap-3 text-[12px] text-ink/50 mt-2">
                       {p.floorAreaSqm > 0 && <span>{p.floorAreaSqm} m²</span>}
-                      {p.ceilingHeightM > 0 && <span>天井 {p.ceilingHeightM}m</span>}
+                      {p.ceilingHeightM > 0 && <span>{en ? "Ceiling" : "天井"} {p.ceilingHeightM}m</span>}
                       {p.hourlyPrice > 0 && (
                         <span className="ml-auto font-medium text-ink/70">
                           ¥{p.hourlyPrice.toLocaleString()}/h
@@ -664,13 +592,13 @@ export default function PropertyDetailView({
           ) : (
             <div className="border border-dashed border-line rounded-md py-16 text-center">
               <p className="text-ink/40 text-[14px]">
-                現在、類似スタジオの掲載準備中です
+                {en ? "Similar studios are coming soon." : "現在、類似スタジオの掲載準備中です"}
               </p>
               <Link
-                href="/properties"
+                href={lh("/properties")}
                 className="inline-block mt-4 mono text-[12px] tracking-[0.15em] uppercase text-accent hover:underline"
               >
-                すべての物件を見る →
+                {en ? "See all locations →" : "すべての物件を見る →"}
               </Link>
             </div>
           )}

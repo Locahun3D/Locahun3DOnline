@@ -21,6 +21,20 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
 
   const existing = await userRepo.get(userId);
   if (existing) {
+    // Break-glass: ブートストラップ管理者メールのアカウントが（誤操作等で）降格/
+    // 停止されても、再サインインで admin/active に自動回復させる。これが自己
+    // ロックアウトからの唯一の復旧経路（停止中は通常 getCurrentUser が null）。
+    if (
+      isBootstrapAdminEmail(existing.email) &&
+      (existing.role !== "admin" || existing.status !== "active")
+    ) {
+      return userRepo.upsert({
+        ...existing,
+        role: "admin",
+        status: "active",
+        updatedAt: new Date().toISOString(),
+      });
+    }
     if (existing.status === "suspended") return null;
     return existing;
   }
@@ -96,4 +110,22 @@ export async function requireAdmin(): Promise<PublicUser> {
  */
 export async function requireAdminOrStudioOwner(): Promise<PublicUser> {
   return requireRole(["admin", "studio"]);
+}
+
+/**
+ * 物件へのアクセス権を確認（admin、または所有/リンク済みの studio オーナーのみ）。
+ * 編集ページ・編集アクションの両方で使い、studio オーナーが他社物件を
+ * URL 直打ちで閲覧/編集できる IDOR を防ぐ。失敗時は throw。
+ */
+export async function assertPropertyAccess(propertyId: string): Promise<PublicUser> {
+  const { repo } = await import("./store");
+  const user = await getCurrentUser();
+  if (!user) throw new Error("unauthorized");
+  if (user.role === "admin") return user;
+  const linked = user.linkedPropertyIds ?? [];
+  const prop = await repo.get(propertyId);
+  if (prop && (prop.ownerId === user.id || linked.includes(propertyId))) {
+    return user;
+  }
+  throw new Error("forbidden");
 }

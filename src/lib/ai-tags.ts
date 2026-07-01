@@ -44,6 +44,7 @@ const CATEGORY_TAG: Record<string, string[]> = {
   warehouse: ["倉庫", "インダストリアル"],
   house: ["住宅", "生活感"],
   outdoor: ["屋外", "ロケーション"],
+  school: ["学校", "教室", "体育館"],
   office: ["オフィス", "会議室"],
   other: [],
 };

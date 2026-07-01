@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Jp from "@/components/jp";
+import { getLocale } from "@/lib/i18n/server";
+import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
 export const metadata = {
   title: "サービスについて",
@@ -7,25 +9,17 @@ export const metadata = {
     "ロケハン3D オンラインは、スタジオ・ロケ地を地図検索 + 3DGS で下見し、ブラウザだけで撮影前ロケハンを完結するオンライン・プラットフォームです。",
 };
 
-const FEATURES = [
-  {
-    n: "01",
-    h: "探す",
-    p: "全国のスタジオ・倉庫・住宅・屋外ロケ地を、地図とフィルタで横断検索。料金・天井高・搬入・距離の条件で絞り込めます。",
-  },
-  {
-    n: "02",
-    h: "下見する",
-    p: "3D Gaussian Splatting の実寸空間をブラウザで歩き、レンズ画角・光・天井・人の動線を現地に行かず検証できます。",
-  },
-  {
-    n: "03",
-    h: "決める",
-    p: "チーム全員が同じ 3D を見て意思決定。そのまま見積もり・問い合わせへ。撮影前の往復をブラウザの中へ。",
-  },
-];
-
-export default function AboutPage() {
+export default async function AboutPage() {
+  const locale = await getLocale();
+  const t = (k: DictKey) => translate(locale, k);
+  const lh = (href: string) => localizedHref(href, locale);
+  const J = ({ k }: { k: DictKey }) =>
+    locale === "ja" ? <Jp>{t(k)}</Jp> : <>{t(k)}</>;
+  const FEATURES: { n: string; h: DictKey; p: DictKey }[] = [
+    { n: "01", h: "about.f1.h", p: "about.f1.p" },
+    { n: "02", h: "about.f2.h", p: "about.f2.p" },
+    { n: "03", h: "about.f3.h", p: "about.f3.p" },
+  ];
   return (
     <div className="theme-online frame pt-12 pb-32">
       {/* Title block */}
@@ -34,13 +28,10 @@ export default function AboutPage() {
           LOCAHUN 3D / ONLINE
         </div>
         <h1 className="serif text-[clamp(2rem,4vw,3.4rem)] font-bold leading-[1.3] mb-5">
-          サービスについて
+          {t("about.h1")}
         </h1>
         <p className="text-[14px] text-muted leading-[1.95]">
-          <Jp>
-            ロケハン3D オンラインは、撮影前ロケハンをブラウザだけで完結するオンライン・プラットフォームです。スタジオ・倉庫・住宅・屋外ロケ地を
-            3D で検索・下見し、現場に行かず構図・レンズ・光・動線を検証できます。
-          </Jp>
+          <J k="about.intro" />
         </p>
       </header>
 
@@ -57,9 +48,9 @@ export default function AboutPage() {
               <div className="mono text-[11px] tracking-[0.3em] text-accent mb-3">
                 {f.n}
               </div>
-              <h3 className="serif text-[1.5rem] font-bold leading-[1.5] mb-3">{f.h}</h3>
+              <h3 className="serif text-[1.5rem] font-bold leading-[1.5] mb-3">{t(f.h)}</h3>
               <p className="text-[13px] leading-[1.9] text-muted">
-                <Jp>{f.p}</Jp>
+                <J k={f.p} />
               </p>
             </div>
           ))}
@@ -74,23 +65,20 @@ export default function AboutPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
         <p className="text-[14px] text-muted leading-[1.95] mb-7">
-          <Jp>
-            3DGS ウォークスルーはトークン制。Free / Individual / Studio / Team
-            の月額プランから、利用規模に合わせて選べます。年払いで割引も。
-          </Jp>
+          <J k="about.plans" />
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
           <Link
-            href="/properties"
+            href={lh("/properties")}
             className="px-6 py-3 mono text-[12px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
           >
-            物件を探す →
+            {t("about.cta.browse")} →
           </Link>
           <Link
-            href="/pricing"
+            href={lh("/pricing")}
             className="px-6 py-3 mono text-[12px] tracking-[0.24em] uppercase border border-line hover:border-ink transition"
           >
-            料金プラン
+            {t("about.cta.pricing")}
           </Link>
         </div>
       </section>
@@ -103,10 +91,7 @@ export default function AboutPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
         <p className="text-[14px] leading-[1.95]">
-          <Jp>
-            個人クリエイター・制作プロダクション・スタジオ運営者のためのサービスです。撮影監督・カメラマン・美術が同じ
-            3D 空間で打合せできます。
-          </Jp>
+          <J k="about.audience" />
         </p>
       </section>
     </div>

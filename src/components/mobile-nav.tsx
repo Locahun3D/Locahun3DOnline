@@ -2,16 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useT, useHref, useLocale } from "@/components/locale-provider";
+import type { DictKey } from "@/lib/i18n/dictionaries";
 
-const ITEMS: { href: string; label: string; external?: boolean }[] = [
-  {
-    href: "https://web.locahun3d.com/",
-    label: "スキャン",
-    external: true,
-  },
-  { href: "/properties", label: "物件を探す" },
-  { href: "/pricing", label: "料金" },
-  { href: "/about", label: "サービスについて" },
+const ITEMS: { href: string; key: DictKey; external?: boolean }[] = [
+  { href: "https://web.locahun3d.com/", key: "header.scan", external: true },
+  { href: "/properties", key: "nav.properties" },
+  { href: "/pricing", key: "nav.pricing" },
+  { href: "/about", key: "nav.about" },
 ];
 
 const LINK =
@@ -26,12 +24,18 @@ export default function MobileNav({
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const t = useT();
+  const lh = useHref();
+  const locale = useLocale();
+  // EN時はスキャンサイトのEN版へ（サイト間でEN維持）。
+  const scanUrl =
+    locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/";
 
   return (
     <>
       <button
         type="button"
-        aria-label="メニューを開く"
+        aria-label={t("nav.menuOpen")}
         aria-expanded={open}
         onClick={() => setOpen(true)}
         className="lg:hidden flex flex-col justify-center items-start gap-[5px] p-2.5 -ml-2 min-w-11 min-h-11 text-ink"
@@ -48,7 +52,7 @@ export default function MobileNav({
         >
           <button
             type="button"
-            aria-label="メニューを閉じる"
+            aria-label={t("nav.menuClose")}
             onClick={close}
             className="self-end mono text-[11px] tracking-[0.24em] uppercase text-muted hover:text-accent p-3 min-h-11 inline-flex items-center"
           >
@@ -62,42 +66,42 @@ export default function MobileNav({
             {ITEMS.map((it) =>
               it.external ? (
                 <a
-                  key={it.label}
-                  href={it.href}
+                  key={it.key}
+                  href={scanUrl}
                   onClick={close}
                   className={`${LINK} hover:!text-[#ffb454]`}
                 >
-                  {it.label}
+                  {t(it.key)}
                 </a>
               ) : (
-                <Link key={it.label} href={it.href} onClick={close} className={LINK}>
-                  {it.label}
+                <Link key={it.key} href={lh(it.href)} onClick={close} className={LINK}>
+                  {t(it.key)}
                 </Link>
               ),
             )}
 
             {loggedIn ? (
               <>
-                <Link href="/account" onClick={close} className={LINK}>
-                  マイページ
+                <Link href={lh("/account")} onClick={close} className={LINK}>
+                  {t("auth.mypage")}
                 </Link>
                 {isAdmin && (
-                  <Link href="/admin" onClick={close} className={LINK}>
-                    管理
+                  <Link href={lh("/admin")} onClick={close} className={LINK}>
+                    {t("auth.adminShort")}
                   </Link>
                 )}
               </>
             ) : (
               <>
-                <Link href="/sign-in" onClick={close} className={LINK}>
-                  ログイン
+                <Link href={lh("/sign-in")} onClick={close} className={LINK}>
+                  {t("auth.login")}
                 </Link>
                 <Link
-                  href="/sign-up"
+                  href={lh("/sign-up")}
                   onClick={close}
                   className={`${LINK} text-accent`}
                 >
-                  新規登録
+                  {t("auth.signup")}
                 </Link>
               </>
             )}

@@ -9,10 +9,11 @@ import {
   onCartChange,
 } from "@/lib/cart";
 import {
-  DATA_LICENSE_LABEL,
-  DATA_LICENSE_DESC,
+  dataLicenseLabel,
+  dataLicenseDesc,
   type DataLicense,
 } from "@/lib/schemas";
+import { useLocale } from "@/components/locale-provider";
 
 interface DataSalePanelProps {
   propertyId: string;
@@ -49,6 +50,8 @@ export default function DataSalePanel({
   license = "standard",
   alreadyPurchased = false,
 }: DataSalePanelProps) {
+  const en = useLocale() === "en";
+  const lc = en ? "en" : "ja";
   const [loading, setLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [inCart, setInCart] = useState(false);
@@ -73,7 +76,7 @@ export default function DataSalePanel({
 
   const handlePurchase = async () => {
     if (!agreedTerms) {
-      alert("購入規約に同意してください");
+      alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
     }
     setLoading(true);
@@ -89,23 +92,23 @@ export default function DataSalePanel({
       } else if (data.ok) {
         window.location.reload();
       } else {
-        alert(data.error || "購入処理に失敗しました");
+        alert(data.error || (en ? "Purchase failed" : "購入処理に失敗しました"));
       }
     } catch {
-      alert("通信エラーが発生しました");
+      alert(en ? "A network error occurred" : "通信エラーが発生しました");
     } finally {
       setLoading(false);
     }
   };
 
-  const yen = price.toLocaleString("ja-JP");
+  const yen = price.toLocaleString(en ? "en-US" : "ja-JP");
   const dlFormat = downloadFileFormat || "PLY / RAD / OBJ";
   const dlSize = downloadFileSizeMb ?? 0;
   const meta = [
     scannedAt && `${scannedAt}`,
     `${dlFormat}`,
     dlSize > 0 && `${dlSize} MB`,
-    pointCount && pointCount > 0 && `${pointCount.toLocaleString("ja-JP")} 点`,
+    pointCount && pointCount > 0 && `${pointCount.toLocaleString(en ? "en-US" : "ja-JP")} ${en ? "pts" : "点"}`,
     captureDevice || "",
   ].filter(Boolean).join(" / ");
 
@@ -115,38 +118,38 @@ export default function DataSalePanel({
         <div className="flex items-baseline gap-2">
           <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">DATA</span>
           <span className="text-[13px] font-medium">
-            3Dデータ購入{itemLabel && ` — ${itemLabel}`}
+            {en ? "Buy 3D data" : "3Dデータ購入"}{itemLabel && ` — ${itemLabel}`}
           </span>
         </div>
         {description && (
           <p className="text-[11px] opacity-60 mt-0.5 line-clamp-1">{description}</p>
         )}
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
-        <div className="flex items-center gap-1.5 mt-1" title={DATA_LICENSE_DESC[license]}>
+        <div className="flex items-center gap-1.5 mt-1" title={dataLicenseDesc(license, lc)}>
           <span className="mono text-[9px] tracking-[0.18em] uppercase border border-accent/40 text-accent/80 px-1.5 py-0.5">
             LICENSE
           </span>
-          <span className="text-[10px] opacity-70">{DATA_LICENSE_LABEL[license]}</span>
+          <span className="text-[10px] opacity-70">{dataLicenseLabel(license, lc)}</span>
         </div>
       </div>
 
       {alreadyPurchased ? (
         <div className="flex items-center gap-3 shrink-0">
           <span className="mono text-[10px] tracking-[0.18em] uppercase text-green-400 border border-green-400/40 px-2 py-1">
-            ✓ 購入済み
+            {en ? "✓ Purchased" : "✓ 購入済み"}
           </span>
           <Link
-            href="/dashboard/purchases"
+            href={en ? "/en/dashboard/purchases" : "/dashboard/purchases"}
             className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
           >
-            ダウンロードへ →
+            {en ? "To downloads →" : "ダウンロードへ →"}
           </Link>
         </div>
       ) : (
         <>
           <div className="text-right shrink-0">
             <span className="serif text-lg text-accent">¥{yen}</span>
-            <span className="mono text-[9px] opacity-40 ml-1">税込</span>
+            <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax incl." : "税込"}</span>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
@@ -157,16 +160,16 @@ export default function DataSalePanel({
                 onChange={(e) => setAgreedTerms(e.target.checked)}
                 className="w-3.5 h-3.5 accent-accent shrink-0"
               />
-              <Link href="/terms/data-download" target="_blank" className="underline">
-                規約同意
+              <Link href={en ? "/en/terms/data-download" : "/terms/data-download"} target="_blank" className="underline">
+                {en ? "Agree to terms" : "規約同意"}
               </Link>
             </label>
             {inCart ? (
               <Link
-                href="/cart"
+                href={en ? "/en/cart" : "/cart"}
                 className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
               >
-                ✓ カート → 見る
+                {en ? "✓ Cart → view" : "✓ カート → 見る"}
               </Link>
             ) : (
               <button
@@ -174,7 +177,7 @@ export default function DataSalePanel({
                 onClick={toggleCart}
                 className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap"
               >
-                + カート
+                {en ? "+ Cart" : "+ カート"}
               </button>
             )}
             <button
@@ -182,7 +185,7 @@ export default function DataSalePanel({
               disabled={loading || !agreedTerms}
               className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
             >
-              {loading ? "処理中..." : "購入する"}
+              {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy" : "購入する"}
             </button>
           </div>
         </>

@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { subscribeAction } from "@/lib/subscribe-actions";
 import type { AccountPlan } from "@/lib/account-schema";
+import { useT, useHref, useLocale } from "@/components/locale-provider";
+import type { DictKey } from "@/lib/i18n/dictionaries";
 
 type BillingMode = "monthly" | "annual";
 
@@ -12,13 +14,12 @@ interface Plan {
   name: string;
   monthly: number;
   annualMonthly?: number;
-  desc: string;
-  features: string[];
+  desc: DictKey;
+  features: DictKey[];
   cta: string;
   href: string;
   accent: boolean;
   badge?: string;
-  note?: string;
 }
 
 const ANNUAL_DISCOUNT = 0.15;
@@ -28,13 +29,8 @@ const PLANS: Plan[] = [
     code: "FREE",
     name: "Free",
     monthly: 0,
-    desc: "登録だけで OK。アカウント作成時 1 トークン付与でハウススタジオを試せる。",
-    features: [
-      "全物件のサムネイル・写真閲覧",
-      "地図・フィルタ・距離検索",
-      "見積もり依頼 月 1 件まで",
-      "3DGS ウォークスルー 登録時 1 トークン (一度限り)",
-    ],
+    desc: "plan.free.desc",
+    features: ["plan.free.f1", "plan.free.f2", "plan.free.f3", "plan.free.f4"],
     cta: "Sign up",
     href: "/sign-up",
     accent: false,
@@ -44,15 +40,15 @@ const PLANS: Plan[] = [
     name: "Individual",
     monthly: 5200,
     annualMonthly: Math.round(5200 * (1 - ANNUAL_DISCOUNT)),
-    desc: "個人クリエイター向け。月 8 トークンで案件 2-3 件分のロケハンに。",
+    desc: "plan.ind.desc",
     features: [
-      "3DGS ウォークスルー 月 8 トークン",
-      "ハウス 1 / 中規模 2 / ドーム 3 トークン消費",
-      "図面ダウンロード 無制限",
-      "履歴・ブックマーク 永続保存",
-      "ログイン端末制限なし",
-      "見積もり依頼 無制限",
-      "請求書を毎月自動送付 (電子帳簿対応)",
+      "plan.ind.f1",
+      "plan.ind.f2",
+      "plan.ind.f3",
+      "plan.ind.f4",
+      "plan.ind.f5",
+      "plan.ind.f6",
+      "plan.ind.f7",
     ],
     cta: "Subscribe",
     href: "/sign-up?plan=individual",
@@ -63,13 +59,13 @@ const PLANS: Plan[] = [
     name: "Studio",
     monthly: 9800,
     annualMonthly: Math.round(9800 * (1 - ANNUAL_DISCOUNT)),
-    desc: "小規模制作チーム向け。月 12 トークン + 5 端末共有。単発撮影でも余裕。",
+    desc: "plan.studio.desc",
     features: [
-      "Individual の全機能",
-      "3DGS ウォークスルー 月 12 トークン",
-      "5 端末まで同時ログイン",
-      "チーム履歴の共有",
-      "請求書を毎月自動送付 (電子帳簿対応)",
+      "plan.studio.f1",
+      "plan.studio.f2",
+      "plan.studio.f3",
+      "plan.studio.f4",
+      "plan.studio.f5",
     ],
     cta: "Subscribe",
     href: "/sign-up?plan=studio",
@@ -81,13 +77,8 @@ const PLANS: Plan[] = [
     name: "Team",
     monthly: 29800,
     annualMonthly: Math.round(29800 * (1 - ANNUAL_DISCOUNT)),
-    desc: "プロダクション向け。月 30 トークン + 20 端末 + 請求書対応。",
-    features: [
-      "Studio の全機能",
-      "3DGS ウォークスルー 月 30 トークン",
-      "20 端末まで同時ログイン",
-      "請求書を毎月自動送付＋一括 (電子帳簿対応)",
-    ],
+    desc: "plan.team.desc",
+    features: ["plan.team.f1", "plan.team.f2", "plan.team.f3", "plan.team.f4"],
     cta: "Subscribe",
     href: "/sign-up?plan=team",
     accent: false,
@@ -109,6 +100,9 @@ export default function PlanCards({
 }) {
   const [mode, setMode] = useState<BillingMode>("monthly");
   const [pending, startTransition] = useTransition();
+  const t = useT();
+  const lh = useHref();
+  const locale = useLocale();
 
   return (
     <>
@@ -122,7 +116,7 @@ export default function PlanCards({
               mode === "monthly" ? "bg-accent text-bg" : "text-muted hover:text-ink"
             }`}
           >
-            月払い
+            {t("plan.billing.monthly")}
           </button>
           <button
             type="button"
@@ -131,7 +125,7 @@ export default function PlanCards({
               mode === "annual" ? "bg-accent text-bg" : "text-muted hover:text-ink"
             }`}
           >
-            年払い <span className="ml-1 opacity-80">-15%</span>
+            {t("plan.billing.annual")} <span className="ml-1 opacity-80">-15%</span>
           </button>
         </div>
       </div>
@@ -177,25 +171,31 @@ export default function PlanCards({
                   </span>
                   {price > 0 && (
                     <span className="mono text-[10px] tracking-[0.18em] opacity-50">
-                      /月
+                      {locale === "en" ? "/mo" : "/月"}
                     </span>
                   )}
                 </div>
                 {annualTotal && (
                   <div className="mono text-[10px] text-muted mt-1">
-                    年 ¥{annualTotal.toLocaleString("ja-JP")} 一括 ·
+                    {locale === "en"
+                      ? `¥${annualTotal.toLocaleString("en-US")}/yr billed annually ·`
+                      : `年 ¥${annualTotal.toLocaleString("ja-JP")} 一括 ·`}
                     <span className="text-accent ml-1">
-                      月払比 -¥{((p.monthly - monthlyEquivalent) * 12).toLocaleString("ja-JP")}
+                      {locale === "en" ? "−" : "月払比 -"}¥
+                      {((p.monthly - monthlyEquivalent) * 12).toLocaleString(
+                        locale === "en" ? "en-US" : "ja-JP",
+                      )}
+                      {locale === "en" ? " vs monthly" : ""}
                     </span>
                   </div>
                 )}
                 {price > 0 && mode === "monthly" && (
                   <div className="mono text-[10px] text-muted mt-1">
-                    年払いで -15%
+                    {locale === "en" ? "−15% with annual billing" : "年払いで -15%"}
                   </div>
                 )}
                 <p className="text-[12px] text-muted mt-3 leading-[1.65]">
-                  {p.desc}
+                  {t(p.desc)}
                 </p>
               </div>
 
@@ -203,16 +203,10 @@ export default function PlanCards({
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2">
                     <span className="text-accent mt-0.5">▸</span>
-                    <span>{f}</span>
+                    <span>{t(f)}</span>
                   </li>
                 ))}
               </ul>
-
-              {p.note && (
-                <p className="text-[10px] text-muted leading-[1.55] border-t border-line pt-3">
-                  {p.note}
-                </p>
-              )}
 
               <div className="mt-auto pt-3">
                 {(() => {
@@ -227,7 +221,7 @@ export default function PlanCards({
                   if (isCurrent) {
                     return (
                       <div className="block text-center w-full px-4 py-2.5 mono text-[11px] tracking-[0.22em] uppercase border border-green-400/50 text-green-400">
-                        ✓ 利用中
+                        {t("plan.current")}
                       </div>
                     );
                   }
@@ -239,20 +233,26 @@ export default function PlanCards({
                         onClick={() => {
                           const msg =
                             p.monthly === 0
-                              ? "Free プランに変更しますか？"
-                              : `${p.name} プランに変更しますか？（決済は今後対応・現在は即時反映）`;
+                              ? t("plan.confirmFree")
+                              : locale === "en"
+                                ? `Switch to the ${p.name} plan? (Billing is coming soon — changes apply instantly for now.)`
+                                : `${p.name} プランに変更しますか？（決済は今後対応・現在は即時反映）`;
                           if (confirm(msg)) {
                             startTransition(() => subscribeAction(planKey as AccountPlan, mode));
                           }
                         }}
                         className={cls + " disabled:opacity-50"}
                       >
-                        {pending ? "処理中…" : p.monthly === 0 ? "Free にする" : "このプランにする"}
+                        {pending
+                          ? t("plan.processing")
+                          : p.monthly === 0
+                            ? t("plan.chooseFree")
+                            : t("plan.choose")}
                       </button>
                     );
                   }
                   return (
-                    <Link href={p.href} className={cls}>
+                    <Link href={lh(p.href)} className={cls}>
                       {p.cta}
                     </Link>
                   );

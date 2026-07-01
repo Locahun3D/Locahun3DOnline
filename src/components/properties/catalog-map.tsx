@@ -87,9 +87,9 @@ export default function CatalogMap({
         // before the first effect runs.
         center={reference ? [reference.lat, reference.lng] : [35.6580, 139.7016]}
         zoom={10}
-        // スクロールでページを送る際に地図がズームする「スクロールトラップ」を
-        // 防ぐためホイールズームは無効。ズームは +/− ボタンとピンチで行う。
-        scrollWheelZoom={false}
+        // 地図上のホイールでズームできるようにする（ユーザー要望）。
+        // ページのスクロールは地図外（フィルター/結果カード上）で行う。
+        scrollWheelZoom={true}
         style={{ width: "100%", height: "100%" }}
         worldCopyJump
       >

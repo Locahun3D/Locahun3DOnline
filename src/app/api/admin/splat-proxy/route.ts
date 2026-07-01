@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// R2 公開アクセスは無効化済み（pub-*.r2.dev は401）。絶対URLの外部フェッチ用
+// ホワイトリスト。現行データの splatUrl は全て相対（/uploads/… → viewer-stream で
+// 認証配信）なのでこの経路は実質未使用。死んだ pub-*.r2.dev は掲載しない。
 const ALLOWED_HOSTS = [
-  "pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev",
   "locahun3d-assets.r2.dev",
 ];
 

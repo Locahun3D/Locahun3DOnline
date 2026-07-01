@@ -19,11 +19,11 @@ import {
  * Returns: { url: string, size: number, contentType: string }
  */
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production") {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
+  // 認証は常に必須（NODE_ENV で分岐すると preview/誤設定で誰でもアップロード可に
+  // なる）。書込ルートは無条件で admin を要求する。
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   let form: FormData;

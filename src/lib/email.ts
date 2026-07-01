@@ -33,10 +33,19 @@ function appUrl(path = ""): string {
   return `${base}${path}`;
 }
 
+/** 運営の受信箱（問い合わせの控え先）。 */
+function operatorAddress(): string {
+  return process.env.EMAIL_OPERATOR || "info@locahun3d.com";
+}
+
 export async function sendEmail(opts: {
   to: string;
   subject: string;
   html: string;
+  /** 返信先（問い合わせ転送で、送信者＝問い合わせ者に返信できるように）。 */
+  replyTo?: string;
+  /** 控え用の BCC（先方には見えない運営コピー）。 */
+  bcc?: string;
 }): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key || !opts.to) return false;
@@ -50,6 +59,8 @@ export async function sendEmail(opts: {
       body: JSON.stringify({
         from: fromAddress(),
         to: [opts.to],
+        ...(opts.bcc ? { bcc: [opts.bcc] } : {}),
+        ...(opts.replyTo ? { reply_to: [opts.replyTo] } : {}),
         subject: opts.subject,
         html: opts.html,
       }),
@@ -144,6 +155,56 @@ export async function notifyRefund(p: Purchase): Promise<void> {
   } catch {
     /* email失敗は無視 */
   }
+}
+
+const esc = (s: string) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+/**
+ * スタジオへの問い合わせを「先方メール」へ直接転送する。
+ *  - 宛先 = 先方メール（未設定なら運営）。返信先 = 問い合わせ者（先方がそのまま返信可）。
+ *  - BCC で運営にも控えを送る（lead を取りこぼさない）。
+ *  - RESEND_API_KEY 未設定なら送信されず false（記録は inquiryRepo 側で残る）。
+ */
+export async function notifyInquiry(opts: {
+  propertyTitle: string;
+  studioEmail: string;
+  name: string;
+  company?: string;
+  fromEmail: string;
+  phone?: string;
+  purpose?: string;
+  preferredDate?: string;
+  message: string;
+}): Promise<boolean> {
+  if (!emailEnabled()) return false;
+  const to = opts.studioEmail || operatorAddress();
+  const row = (label: string, value?: string) =>
+    value
+      ? `<tr><td style="padding:6px 12px 6px 0;color:#666;white-space:nowrap;vertical-align:top;">${label}</td><td style="padding:6px 0;">${esc(value)}</td></tr>`
+      : "";
+  const body = `
+    <p style="font-size:14px;line-height:1.8;">「${esc(opts.propertyTitle)}」へ新しいお問い合わせが届きました。下記の連絡先へ直接ご返信ください（このメールにそのまま返信すると問い合わせ者へ届きます）。</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+      ${row("お名前", opts.name)}
+      ${row("会社名", opts.company)}
+      ${row("メール", opts.fromEmail)}
+      ${row("電話", opts.phone)}
+      ${row("利用目的", opts.purpose)}
+      ${row("利用希望日", opts.preferredDate)}
+    </table>
+    <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.message)}</div>
+  `;
+  return sendEmail({
+    to,
+    bcc: to === operatorAddress() ? undefined : operatorAddress(),
+    replyTo: opts.fromEmail,
+    subject: `【お問い合わせ】${opts.propertyTitle} — ${opts.name} 様`,
+    html: shell("スタジオへのお問い合わせ", body),
+  });
 }
 
 /** サブスク開始（プラン申込）メール＝領収書相当を登録メールへ送信。 */

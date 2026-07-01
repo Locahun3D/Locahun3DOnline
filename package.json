@@ -12,6 +12,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1071.0",
     "@aws-sdk/s3-request-presigner": "^3.1071.0",
+    "@clerk/localizations": "^4.11.1",
     "@clerk/nextjs": "^7.5.2",
     "@hookform/resolvers": "^5.4.0",
     "@opennextjs/cloudflare": "^1.19.11",

@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { repo } from "@/lib/store";
+import { assertPropertyAccess } from "@/lib/dal";
 import PropertyEditor from "@/components/admin/property-editor";
+import SlugEditor from "@/components/admin/slug-editor";
 
 export default async function EditPropertyPage({
   params,
@@ -9,6 +11,12 @@ export default async function EditPropertyPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // 権限チェック: studio オーナーが他社物件を URL 直打ちで開けないように。
+  try {
+    await assertPropertyAccess(id);
+  } catch {
+    notFound();
+  }
   const property = await repo.get(id);
   if (!property) notFound();
 
@@ -28,6 +36,10 @@ export default async function EditPropertyPage({
           プレビュー ↗
         </Link>
       </nav>
+
+      <div className="mb-5">
+        <SlugEditor id={property.id} status={property.status} />
+      </div>
 
       <PropertyEditor initial={property} />
     </div>

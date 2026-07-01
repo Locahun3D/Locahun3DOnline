@@ -1,0 +1,51 @@
+name: Deploy to Cloudflare
+
+# morning-restored への push で自動ビルド＋D1マイグレ＋デプロイ。
+# 手動実行(workflow_dispatch)も可。
+on:
+  push:
+    branches: [morning-restored]
+  workflow_dispatch:
+
+# 同一ブランチの多重デプロイを防ぐ（後発が先発をキャンセル）。
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # 品質ゲート（当面は非ブロッキング＝結果は見えるがデプロイは止めない）。
+      # 安定したら continue-on-error を外して必須化する。
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Test
+        run: npm test -- --passWithNoTests
+        continue-on-error: true
+
+      # ここが本番デプロイの実ゲート: 型エラー/ビルド失敗ならデプロイしない。
+      - name: Build (OpenNext for Cloudflare)
+        run: npx opennextjs-cloudflare build
+
+      - name: Apply D1 migrations (remote)
+        run: npx wrangler d1 migrations apply locahun3d-db --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

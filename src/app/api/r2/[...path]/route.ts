@@ -20,8 +20,11 @@ async function getBucket(): Promise<AnyBucket> {
   return (env as Record<string, unknown>).R2_ASSETS;
 }
 
+const BLOCKED_3DGS_RE = /\.(splat|ply|ksplat|rad)$/i;
+
 /**
  * Serve files from R2 bucket at /api/r2/<key>.
+ * 3DGS data files (.splat/.ply/.ksplat/.rad) are blocked — use /api/viewer-asset instead.
  * Single R2 call per Range request — avoids head()+get() double-call
  * that caused 503s under Spark's 12-parallel-fetcher load.
  */
@@ -31,6 +34,10 @@ export async function GET(
 ) {
   const { path } = await params;
   const key = path.join("/");
+
+  if (BLOCKED_3DGS_RE.test(key)) {
+    return NextResponse.json({ error: "Use /api/viewer-asset for 3DGS data" }, { status: 403 });
+  }
 
   try {
     const bucket = await getBucket();

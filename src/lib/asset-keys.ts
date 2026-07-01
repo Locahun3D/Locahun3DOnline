@@ -42,8 +42,8 @@ export function buildAssetKey(input: {
   return `assets/${input.kind}/${input.id}-${safeName(stem)}${ext}`;
 }
 
-export function buildPublicUrl(r2Key: string, publicBase: string): string {
-  return `${publicBase.replace(/\/+$/, "")}/${r2Key}`;
+export function buildPublicUrl(r2Key: string, _publicBase?: string): string {
+  return `/api/r2/${r2Key}`;
 }
 
 export type ValidateResult =

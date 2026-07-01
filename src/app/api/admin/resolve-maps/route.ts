@@ -4,10 +4,56 @@ import { requireAdmin } from "@/lib/dal";
 export const runtime = "nodejs";
 
 /**
- * Google Maps 共有リンク（maps.app.goo.gl / goo.gl/maps などの短縮URL）を
- * サーバー側でリダイレクト解決し、展開後URL（または本文）から緯度経度を抽出する。
- * 短縮URL自体は座標を含まないため、クライアントの正規表現だけでは「解析」できない。
+ * 座標解決（サーバー側）。次の入力を緯度経度に変換する:
+ *  - Google Maps 共有リンク（maps.app.goo.gl 等の短縮URL）→ リダイレクト解決して抽出
+ *  - 日本の住所/地名 → 国土地理院(GSI)で住所検索、ダメなら Nominatim にフォールバック
+ * GSI/Nominatim はブラウザから直接だと CORS/UA で弾かれるためサーバー側で実行する。
  */
+
+const GEO_UA = "locahun3d-online/1.0 (admin geocode)";
+
+/** 日本の住所/地名 → 座標。GSI（番地まで強い）→ Nominatim の順で試す。 */
+async function geocodeAddress(
+  q: string,
+): Promise<{ lat: number; lng: number } | null> {
+  // 1) 国土地理院 住所検索（日本の詳細住所に強い）
+  try {
+    const r = await fetch(
+      `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`,
+      { headers: { "user-agent": GEO_UA } },
+    );
+    if (r.ok) {
+      const arr = (await r.json()) as Array<{
+        geometry?: { coordinates?: [number, number] };
+      }>;
+      const c = arr?.[0]?.geometry?.coordinates;
+      if (c && c.length === 2) {
+        const [lng, lat] = c; // GSI は [経度, 緯度]
+        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  // 2) Nominatim（OSM）フォールバック
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=jp&q=${encodeURIComponent(q)}`,
+      { headers: { "user-agent": GEO_UA, "accept-language": "ja" } },
+    );
+    if (r.ok) {
+      const arr = (await r.json()) as Array<{ lat: string; lon: string }>;
+      if (arr?.[0]) {
+        const lat = parseFloat(arr[0].lat);
+        const lng = parseFloat(arr[0].lon);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) return { lat, lng };
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  return null;
+}
 
 function extractCoords(s: string): { lat: number; lng: number } | null {
   const patterns = [
@@ -44,10 +90,23 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
-  if (!/^https?:\/\//.test(url)) {
+  if (!url) {
     return NextResponse.json(
-      { error: "Google Maps の URL を入力してください" },
+      { error: "住所・Google Maps の URL・座標 のいずれかを入力してください" },
       { status: 400 },
+    );
+  }
+
+  // URL でなければ住所/地名として扱い、ジオコーディングする。
+  if (!/^https?:\/\//.test(url)) {
+    const coords = await geocodeAddress(url);
+    if (coords) return NextResponse.json({ coords });
+    return NextResponse.json(
+      {
+        error:
+          "住所から座標を取得できませんでした。番地まで含めた住所、または Google Maps の URL でお試しください。",
+      },
+      { status: 422 },
     );
   }
 

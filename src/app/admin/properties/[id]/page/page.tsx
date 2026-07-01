@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { repo } from "@/lib/store";
+import { assertPropertyAccess } from "@/lib/dal";
 import StudioPageBuilder from "@/components/admin/studio-page-builder";
 
 export const metadata = { title: "スタジオページ編集" };
@@ -11,6 +12,11 @@ export default async function StudioPageEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  try {
+    await assertPropertyAccess(id);
+  } catch {
+    notFound();
+  }
   const property = await repo.get(id);
   if (!property) notFound();
 

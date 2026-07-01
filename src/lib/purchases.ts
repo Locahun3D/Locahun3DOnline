@@ -1,8 +1,8 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
+import { getD1, d1GetData, d1ListData, d1Upsert, d1Delete } from "./d1";
 import { z } from "zod";
 
 export const purchaseStatusSchema = z.enum([
@@ -42,24 +42,15 @@ interface StoreShape {
 /* ------------------------------------------------------------------ *
  * Storage backends
  *  - dev (local fs): single JSON file at data/purchases.json
- *  - Cloudflare Workers: one R2 object per purchase under purchases/
- *    (per-object avoids read-modify-write clobbering on concurrent buys)
+ *  - deployed (Workers): D1 テーブル `purchases`（R2 から移行）。
+ *    getByStripeSession / hasPurchased が index 参照になり O(n) 全スキャンを解消。
+ *    UNIQUE(stripe_session_id) で同一セッションの二重購入行を防止（空=NULLに写して
+ *    pending 同士の衝突は回避）。
  * ------------------------------------------------------------------ */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyBucket = any;
-const R2_PREFIX = "purchases/";
+const TABLE = "purchases";
 
-async function getBucket(): Promise<AnyBucket | null> {
-  try {
-    const { env } = await getCloudflareContext();
-    return (env as Record<string, unknown>).R2_ASSETS ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/* --- local file backend --- */
+/* --- local file backend (dev) --- */
 async function fileReadAll(): Promise<Purchase[]> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
@@ -74,56 +65,41 @@ async function fileWriteAll(purchases: Purchase[]): Promise<void> {
   await safeWriteFile(DATA_FILE, JSON.stringify({ version: 1, purchases }, null, 2));
 }
 
-/* --- R2 backend --- */
-async function r2ReadAll(bucket: AnyBucket): Promise<Purchase[]> {
-  const out: Purchase[] = [];
-  let cursor: string | undefined;
-  do {
-    const listing = await bucket.list({ prefix: R2_PREFIX, cursor });
-    for (const obj of listing.objects) {
-      const got = await bucket.get(obj.key);
-      if (!got) continue;
-      try {
-        out.push(JSON.parse(await got.text()) as Purchase);
-      } catch {
-        /* skip corrupt object */
-      }
-    }
-    cursor = listing.truncated ? listing.cursor : undefined;
-  } while (cursor);
-  return out;
-}
-
-async function r2Get(bucket: AnyBucket, id: string): Promise<Purchase | null> {
-  const got = await bucket.get(`${R2_PREFIX}${id}.json`);
-  if (!got) return null;
-  try {
-    return JSON.parse(await got.text()) as Purchase;
-  } catch {
-    return null;
-  }
-}
-
-async function r2Put(bucket: AnyBucket, p: Purchase): Promise<void> {
-  await bucket.put(`${R2_PREFIX}${p.id}.json`, JSON.stringify(p), {
-    httpMetadata: { contentType: "application/json" },
-  });
-}
-
-/* --- unified read --- */
-async function readAll(): Promise<Purchase[]> {
-  if (canAccessLocalFs()) return fileReadAll();
-  const bucket = await getBucket();
-  if (!bucket) return [];
-  return r2ReadAll(bucket);
+/** D1 の実カラム抽出（id 含む）。空の session は NULL に写して UNIQUE 衝突を避ける。 */
+function purchaseCols(p: Purchase): Record<string, string | number | null> {
+  return {
+    id: p.id,
+    user_id: p.userId,
+    property_id: p.propertyId,
+    splat_item_index: p.splatItemIndex ?? 0,
+    status: p.status,
+    stripe_session_id: p.stripeSessionId || null,
+    created_at: p.createdAt,
+  };
 }
 
 export const purchaseRepo = {
   async list(opts?: { userId?: string; propertyId?: string; status?: PurchaseStatus }): Promise<Purchase[]> {
-    let out = await readAll();
-    if (opts?.userId) out = out.filter((p) => p.userId === opts.userId);
-    if (opts?.propertyId) out = out.filter((p) => p.propertyId === opts.propertyId);
-    if (opts?.status) out = out.filter((p) => p.status === opts.status);
+    let out: Purchase[];
+    if (canAccessLocalFs()) {
+      out = await fileReadAll();
+      if (opts?.userId) out = out.filter((p) => p.userId === opts.userId);
+      if (opts?.propertyId) out = out.filter((p) => p.propertyId === opts.propertyId);
+      if (opts?.status) out = out.filter((p) => p.status === opts.status);
+    } else {
+      const db = await getD1();
+      if (!db) return [];
+      const conds: string[] = [];
+      const binds: (string | number)[] = [];
+      if (opts?.userId) { conds.push("user_id = ?"); binds.push(opts.userId); }
+      if (opts?.propertyId) { conds.push("property_id = ?"); binds.push(opts.propertyId); }
+      if (opts?.status) { conds.push("status = ?"); binds.push(opts.status); }
+      out = await d1ListData<Purchase>(
+        db,
+        TABLE,
+        conds.length ? { sql: conds.join(" AND "), binds } : undefined,
+      );
+    }
     return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
@@ -132,23 +108,44 @@ export const purchaseRepo = {
       const all = await fileReadAll();
       return all.find((p) => p.id === id) ?? null;
     }
-    const bucket = await getBucket();
-    if (!bucket) return null;
-    return r2Get(bucket, id);
+    const db = await getD1();
+    return db ? d1GetData<Purchase>(db, TABLE, "id", id) : null;
   },
 
   async getByStripeSession(sessionId: string): Promise<Purchase | null> {
-    const all = await readAll();
-    return all.find((p) => p.stripeSessionId === sessionId) ?? null;
+    if (!sessionId) return null;
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      return all.find((p) => p.stripeSessionId === sessionId) ?? null;
+    }
+    const db = await getD1();
+    if (!db) return null;
+    const rows = await d1ListData<Purchase>(db, TABLE, {
+      sql: "stripe_session_id = ?",
+      binds: [sessionId],
+    });
+    return rows[0] ?? null;
   },
 
   async hasPurchased(userId: string, propertyId: string, splatItemIndex?: number): Promise<boolean> {
-    const all = await readAll();
-    return all.some(
-      (p) => p.userId === userId && p.propertyId === propertyId &&
-             (splatItemIndex == null || p.splatItemIndex === splatItemIndex) &&
-             p.status === "completed",
-    );
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      return all.some(
+        (p) => p.userId === userId && p.propertyId === propertyId &&
+               (splatItemIndex == null || p.splatItemIndex === splatItemIndex) &&
+               p.status === "completed",
+      );
+    }
+    const db = await getD1();
+    if (!db) return false;
+    const conds = ["user_id = ?", "property_id = ?", "status = 'completed'"];
+    const binds: (string | number)[] = [userId, propertyId];
+    if (splatItemIndex != null) { conds.push("splat_item_index = ?"); binds.push(splatItemIndex); }
+    const row = await db
+      .prepare(`SELECT 1 FROM ${TABLE} WHERE ${conds.join(" AND ")} LIMIT 1`)
+      .bind(...binds)
+      .first();
+    return !!row;
   },
 
   async upsert(p: Purchase): Promise<Purchase> {
@@ -161,9 +158,9 @@ export const purchaseRepo = {
       await fileWriteAll(all);
       return validated;
     }
-    const bucket = await getBucket();
-    if (!bucket) throw new Error("購入データの保存先 (R2) が利用できません");
-    await r2Put(bucket, validated);
+    const db = await getD1();
+    if (!db) throw new Error("購入データの保存先 (D1) が利用できません");
+    await d1Upsert(db, TABLE, "id", purchaseCols(validated), validated);
     return validated;
   },
 
@@ -174,8 +171,7 @@ export const purchaseRepo = {
       await fileWriteAll(all.filter((p) => p.id !== id));
       return;
     }
-    const bucket = await getBucket();
-    if (!bucket) return;
-    await bucket.delete(`${R2_PREFIX}${id}.json`);
+    const db = await getD1();
+    if (db) await d1Delete(db, TABLE, "id", id);
   },
 };

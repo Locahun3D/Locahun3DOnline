@@ -3,8 +3,9 @@ import { nanoid } from "nanoid";
 import { getCurrentUser } from "@/lib/dal";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { saveLocalUpload } from "@/lib/uploads";
+import { canAccessLocalFs } from "@/lib/fs-safe";
 
-const R2_PUBLIC_BASE = "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev";
+const R2_PROXY_BASE = "/api/r2";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,11 +15,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production") {
-    const user = await getCurrentUser();
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
+  // 認証は常に必須（NODE_ENV 分岐は preview/誤設定で誰でも書込可になる）。
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   let form: FormData;
@@ -29,7 +29,10 @@ export async function POST(req: Request) {
   }
 
   const file = form.get("file");
-  const propertyId = String(form.get("propertyId") ?? "").trim();
+  // パストラバーサル対策: propertyId は英数・ハイフン・アンダースコアのみ許可。
+  const propertyId = String(form.get("propertyId") ?? "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "no_file" }, { status: 400 });
   }
@@ -44,7 +47,10 @@ export async function POST(req: Request) {
   const key = `uploads/${propertyId}/${slug}-preview.${ext}`;
 
   try {
-    if (process.env.NODE_ENV === "production") {
+    // 永続化先は NODE_ENV ではなく実行環境で分岐する。Workers では FS が
+    // read-only のため saveLocalUpload は無効（ファイルが消える）。preview/staging で
+    // NODE_ENV!=="production" でも Workers 上なら必ず R2 に put する。
+    if (!canAccessLocalFs()) {
       const { env } = await getCloudflareContext();
       const r2 = (env as Record<string, unknown>).R2_ASSETS as {
         put(key: string, value: ArrayBuffer, opts?: Record<string, unknown>): Promise<unknown>;
@@ -53,7 +59,7 @@ export async function POST(req: Request) {
       await r2.put(key, buf, {
         httpMetadata: { contentType },
       });
-      return NextResponse.json({ url: `${R2_PUBLIC_BASE}/${key}` });
+      return NextResponse.json({ url: `${R2_PROXY_BASE}/${key}` });
     }
 
     const result = await saveLocalUpload(propertyId, file);

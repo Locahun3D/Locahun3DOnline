@@ -35,6 +35,7 @@ const CATEGORY_JP: Record<string, string> = {
   shop: "店舗",
   outdoor: "屋外ロケ地",
   venue: "会場",
+  school: "学校",
   other: "スペース",
 };
 
@@ -87,6 +88,7 @@ interface AnthropicBlock {
 }
 interface AnthropicResponse {
   content: AnthropicBlock[];
+  stop_reason: string;
 }
 
 function buildPrompt(input: SummarySuggestInput): string {
@@ -108,12 +110,24 @@ function buildPrompt(input: SummarySuggestInput): string {
     .join(" / ");
   return [
     "あなたは日本の撮影ロケ地プラットフォームの編集者です。",
-    "以下の物件について、一覧カードに表示する短い紹介文を日本語で1〜2文・40〜80字で書いてください。",
-    "質感・雰囲気・撮影適性が伝わるように。誇張や絵文字は禁止。固有の住所や電話番号は含めない。",
+    "次の手順で、この物件の一覧カード用の短い紹介文を作成してください:",
+    "① 公式サイトURLがあれば web_fetch でそのページを取得し、その物件の実際の",
+    "   設備・コンセプト・雰囲気・特色を読み取る。",
+    "② 必要なら 物件名＋所在地 で web_search し、確実にこの物件についての情報だけを補う",
+    "   （別物件・別店舗の情報は使わない。同名の別施設に注意）。",
+    "③ ①②で確認できた事実と、下の入力情報だけを根拠に、日本語1〜2文・40〜80字で書く。",
+    "",
+    "制約（重要）:",
+    "・事実ベースのみ。裏付けの取れない実績・受賞・「多数」等の断定は書かない（誇張・虚偽は禁止）。",
+    "・確証が持てない情報は書かず、入力スペックの範囲で簡潔にまとめる。",
+    "・3DGS/オンラインロケハンの一般説明（フォトリアル/ブラウザで歩ける/下見削減 等）は",
+    "  全物件共通で自明なので書かない。その物件ならではの質感・特色だけを書く。",
+    "・絵文字・誇張表現・固有の住所/電話番号は禁止。",
     "",
     `■ 物件名: ${input.title || "（不明）"}`,
     `■ 種別: ${CATEGORY_JP[input.category] || input.category}${input.studioType ? ` / ${input.studioType}` : ""}`,
     `■ 所在地: ${loc || "（不明）"}`,
+    input.contactWebsite ? `■ 公式サイト: ${input.contactWebsite}` : "",
     specs ? `■ スペック: ${specs}` : "",
     input.tags.length ? `■ タグ: ${input.tags.join("、")}` : "",
     input.description ? `■ 詳細説明: ${input.description.slice(0, 400)}` : "",
@@ -141,7 +155,11 @@ function parseSummary(resp: AnthropicResponse): string {
   return "";
 }
 
-/** Claude でサマリー生成。失敗時は heuristic フォールバック。 */
+/**
+ * Claude でサマリー生成。公式サイトを web_fetch ／必要なら web_search で参照し、
+ * 事実ベースで要約する（[[ai-tags]] と同じツールループ）。失敗時は heuristic。
+ * web_fetch/web_search 未対応アカウントでもツール無しで再試行→最後は heuristic。
+ */
 export async function suggestSummary(
   input: SummarySuggestInput,
 ): Promise<{ summary: string; source: "ai" | "heuristic" }> {
@@ -150,28 +168,59 @@ export async function suggestSummary(
     return { summary: heuristicSummary(input), source: "heuristic" };
   }
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
+  // 公式HP取得(web_fetch)＋検索(web_search) → ツール無し の順でフォールバック。
+  const TOOL_SETS = [
+    [
+      { type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 },
+      { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+    ],
+    [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
+    [],
+  ];
+
+  const prompt = buildPrompt(input);
+
+  for (const tools of TOOL_SETS) {
+    try {
+      const base: Record<string, unknown> = {
         model: "claude-opus-4-8",
-        max_tokens: 512,
-        messages: [{ role: "user", content: buildPrompt(input) }],
-      }),
-    });
-    if (!res.ok) throw new Error(`anthropic ${res.status}`);
-    const data = (await res.json()) as AnthropicResponse;
-    const summary = parseSummary(data);
-    if (summary && summary.length >= 8) {
-      return { summary: summary.slice(0, 120), source: "ai" };
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      };
+      if (tools.length) base.tools = tools;
+
+      let data: AnthropicResponse | null = null;
+      let messages = base.messages as Array<{ role: string; content: unknown }>;
+      let badRequest = false;
+      // server-side tool loop: pause_turn のとき assistant content を足して継続。
+      for (let i = 0; i < 4; i++) {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({ ...base, messages }),
+        });
+        if (res.status === 400) {
+          badRequest = true; // ツール未対応など → 次のツールセットへ
+          break;
+        }
+        if (!res.ok) throw new Error(`anthropic ${res.status}`);
+        data = (await res.json()) as AnthropicResponse;
+        if (data.stop_reason !== "pause_turn") break;
+        messages = [...messages, { role: "assistant", content: data.content }];
+      }
+      if (badRequest) continue;
+
+      const summary = data ? parseSummary(data) : "";
+      if (summary && summary.length >= 8) {
+        return { summary: summary.slice(0, 120), source: "ai" };
+      }
+    } catch {
+      /* 次のツールセット、または heuristic へ */
     }
-  } catch {
-    /* fall through to heuristic */
   }
   return { summary: heuristicSummary(input), source: "heuristic" };
 }

@@ -34,7 +34,6 @@ import {
   archiveAction,
   deleteAction,
 } from "@/app/admin/_actions";
-import ViewerUpdateBanner from "./viewer-update-banner";
 import FileDropzone, {
   type UploadedFile,
 } from "@/components/admin/file-dropzone";
@@ -1055,8 +1054,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               title="3DGS データ"
               desc="3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
             >
-              <ViewerUpdateBanner />
-
               {/* ── 3DGS アイテム (複数・ラベル付き) ── */}
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-3">

@@ -216,7 +216,7 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
             <div
               key={p.id}
               className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line items-center transition min-w-[860px] ${
-                selected.has(p.id) ? "bg-[#0e1a20]" : "hover:bg-[#222]"
+                selected.has(p.id) ? "bg-accent/10" : "hover:bg-neutral-100"
               }`}
             >
               <div className="flex items-center">

@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { getLocale } from "@/lib/i18n/server";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export const metadata = {
   title: "3Dデータ購入規約｜ロケハン3D",
 };
 
-export default function DataDownloadTermsPage() {
+export default async function DataDownloadTermsPage() {
+  const locale = await getLocale();
+  const en = locale === "en";
+  if (en) return <DataDownloadTermsEN locale={locale} />;
   return (
     <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-32">
       <div className="chapter-rule">
@@ -115,10 +120,137 @@ export default function DataDownloadTermsPage() {
 
       <div className="mt-10 text-center">
         <Link
-          href="/properties"
+          href={localizedHref("/properties", locale)}
           className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition"
         >
           ← 物件一覧に戻る
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
+  return (
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-32">
+      <div className="chapter-rule">
+        <span className="opacity-60">TERMS</span>
+        <span>3D Data Purchase Agreement</span>
+        <span className="flex-1 h-px bg-current opacity-25" />
+      </div>
+
+      <header className="mb-12">
+        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+          3D Data Purchase Agreement
+        </h1>
+        <p className="text-[14px] text-muted mt-3">
+          These terms govern the purchase and use of 3D scan data (PLY / OBJ / other
+          formats; the &quot;Data&quot;) sold on Locahun 3D (the &quot;Service&quot;). Please read
+          before purchasing.
+        </p>
+        <p className="text-[12px] text-amber-400/80 mt-3 border border-amber-400/30 bg-amber-400/5 px-3 py-2 rounded">
+          This English text is a reference translation. The Japanese version is the
+          legally binding agreement and prevails in case of any discrepancy.
+        </p>
+      </header>
+
+      <div className="prose-terms space-y-10 text-[14px] leading-[1.85]">
+        <section>
+          <h2 className="serif text-lg mb-4">Article 1 (Definitions)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>&quot;Data&quot; means the 3D scan data provided by Locahun 3D (including PLY, OBJ and ZIP formats).</li>
+            <li>&quot;Purchaser&quot; means the corporation or individual that purchases the Data through the Service.</li>
+            <li>&quot;Studio&quot; means the filming studio or location facility that is the subject of the scanned Data.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 2 (License)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>The Purchaser may use the Data for <strong>location review, previs and virtual production</strong> in the production of video, film, commercials, drama, music videos and the like.</li>
+            <li>Use of the Data is limited to the Purchaser&apos;s own production team and project.</li>
+            <li>The license is non-exclusive; the same Data may be provided to other purchasers.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 3 (Prohibited acts)</h2>
+          <p className="opacity-80 mb-3">The Purchaser shall not:</p>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>redistribute, resell or lend the Data to third parties;</li>
+            <li>reproduce or imitate the Studio facility without permission using the Data;</li>
+            <li>provide the Studio&apos;s internal structure or equipment information to competing facilities;</li>
+            <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
+            <li>sell the Data as an NFT or digital asset;</li>
+            <li>publish confidential Studio information contained in the Data (backyards, loading docks, control rooms, etc.) on social media or elsewhere without permission.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 4 (Data quality and disclaimer)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>The Data is a 3D scan of the space at the time of capture and may differ from the facility&apos;s current state.</li>
+            <li>The accuracy and resolution of the Data depend on capture conditions and are not guaranteed to be fully accurate.</li>
+            <li>The Service is not liable for any direct or indirect damages arising from use of the Data.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 5 (Refunds)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>Due to the nature of digital data, refunds are not provided after download as a general rule.</li>
+            <li>If a problem attributable to the Service is confirmed (such as corrupted or defective data), we will consider a refund or replacement data.</li>
+            <li>Whether a refund is granted is at the Service&apos;s discretion.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 6 (Handling of confidential information)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>Data including non-public areas such as backyards, loading routes and control rooms is provided only to production-company accounts (Team plan).</li>
+            <li>The Purchaser shall manage such confidential information appropriately and not disclose it to anyone other than project members.</li>
+            <li>Where an NDA is required, we may request that one be signed separately.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 7 (Intellectual property)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>Copyright and other intellectual property rights in the Data belong to the Studio owner or the Service.</li>
+            <li>The only right transferred by purchase is the license set out in Article 2.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 8 (Changes to these terms)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>These terms may be changed without notice.</li>
+            <li>The amended terms take effect when posted on this page.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 9 (Governing law and jurisdiction)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>These terms are governed by the laws of Japan.</li>
+            <li>Any dispute shall be subject to the exclusive jurisdiction of the Tokyo District Court as the court of first instance.</li>
+          </ol>
+        </section>
+
+        <div className="border-t border-line pt-6 mt-10">
+          <p className="mono text-[11px] opacity-40">
+            Established: June 23, 2026<br />
+            Locahun 3D — Ko Nakamura
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-10 text-center">
+        <Link
+          href={localizedHref("/properties", locale)}
+          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition"
+        >
+          ← Back to locations
         </Link>
       </div>
     </div>

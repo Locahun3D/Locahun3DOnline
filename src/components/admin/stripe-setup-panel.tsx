@@ -1,5 +1,6 @@
 import { stripeConfigStatus } from "@/lib/stripe";
 import { emailEnabled } from "@/lib/email";
+import StripeWebhookSetupButton from "./stripe-webhook-setup-button";
 
 function Row({ ok, label, detail }: { ok: boolean; label: string; detail?: string }) {
   return (
@@ -44,6 +45,15 @@ export default function StripeSetupPanel() {
               ? "→ データ販売は本番決済が有効です（成功時に戻りルートで自動確定）。"
               : "→ SECRET_KEY を入れるとデータ販売が実決済に切替わります。"}
           </div>
+          {s.secretKey && !s.webhookSecret && (
+            <div className="mt-2 pt-2 border-t border-line/60 space-y-1.5">
+              <div className="text-[11px] text-muted">
+                現在の鍵（{s.live ? "本番" : "テスト"}）の環境にWebhookをワンクリック登録できます。
+                署名シークレットは新規作成時のみ表示されます。
+              </div>
+              <StripeWebhookSetupButton />
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">

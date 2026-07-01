@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/dal";
 import OnboardingForm from "@/components/onboarding-form";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata = { title: "アカウント設定" };
 
 export default async function OnboardingPage() {
   const user = await requireUser();
   if (user.onboarded || user.role === "admin") redirect("/account");
+  const en = (await getLocale()) === "en";
 
   return (
     <div className="theme-online frame min-h-[72vh] flex items-center justify-center py-16">
@@ -14,10 +16,11 @@ export default async function OnboardingPage() {
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
           WELCOME
         </div>
-        <h1 className="serif text-3xl mb-2">アカウント種別を選択</h1>
+        <h1 className="serif text-3xl mb-2">{en ? "Choose your account type" : "アカウント種別を選択"}</h1>
         <p className="text-[12px] text-muted leading-[1.85] mb-7">
-          ようこそ、{user.name} さん。利用形態に合わせて種別を選んでください。
-          後から運営に相談して変更も可能です。
+          {en
+            ? `Welcome, ${user.name}. Pick the type that matches how you'll use the service. You can change it later by contacting our team.`
+            : `ようこそ、${user.name} さん。利用形態に合わせて種別を選んでください。後から運営に相談して変更も可能です。`}
         </p>
         <OnboardingForm />
       </div>

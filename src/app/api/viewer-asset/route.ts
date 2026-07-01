@@ -30,57 +30,58 @@ function toR2Key(url: string): string | null {
  *   任意キーの署名は拒否（情報漏えい防止）。
  */
 export async function GET(req: Request) {
-  const rawKey = new URL(req.url).searchParams.get("key") || "";
-  const key = toR2Key(rawKey);
-  if (!key) {
-    return NextResponse.json({ error: "bad key" }, { status: 400 });
-  }
-  if (!presignConfigured()) {
-    // 署名未設定 → 呼び出し側は従来の Worker 経由にフォールバックする。
-    return NextResponse.json({ error: "signing not configured" }, { status: 503 });
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
-  }
-
-  // key に一致する splatItem（視聴用 splatUrl）を探す。
-  const props = await propertyRepo.list();
-  let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
-  for (const p of props) {
-    for (const item of p.splatItems) {
-      if (item.splatUrl && toR2Key(item.splatUrl) === key) {
-        matchedItem = item;
-        break;
-      }
+  try {
+    const rawKey = new URL(req.url).searchParams.get("key") || "";
+    const key = toR2Key(rawKey);
+    if (!key) {
+      return NextResponse.json({ error: "bad key" }, { status: 400 });
     }
-    if (matchedItem) break;
-  }
-  if (!matchedItem) {
-    return NextResponse.json({ error: "視聴対象が見つかりません" }, { status: 404 });
-  }
+    if (!presignConfigured()) {
+      return NextResponse.json({ error: "signing not configured" }, { status: 503 });
+    }
 
-  // 閲覧資格: 管理者 / 有料プラン / 限定無料期間。
-  const settings = await getSettings();
-  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
-  const hasViewerAccess =
-    user.role === "admin" || (!!user.plan && user.plan !== "free") || freeAccess;
-  if (!hasViewerAccess) {
-    return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
-  }
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
+    }
 
-  // アイテムのアクセスレベル（restricted = backyard, nda_only = NDA）。
-  if (matchedItem.accessLevel === "restricted" && !canViewBackyard(user)) {
-    return NextResponse.json({ error: "制限付きデータです" }, { status: 403 });
-  }
-  if (matchedItem.accessLevel === "nda_only" && !canViewNdaOnly(user)) {
-    return NextResponse.json({ error: "NDA限定データです" }, { status: 403 });
-  }
+    const props = await propertyRepo.list();
+    let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
+    for (const p of props) {
+      for (const item of p.splatItems) {
+        if (item.splatUrl && toR2Key(item.splatUrl) === key) {
+          matchedItem = item;
+          break;
+        }
+      }
+      if (matchedItem) break;
+    }
+    if (!matchedItem) {
+      return NextResponse.json({ error: "視聴対象が見つかりません" }, { status: 404 });
+    }
 
-  const signed = await presignViewerAsset(key, 3600);
-  if (!signed) {
-    return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
+    const settings = await getSettings();
+    const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
+    const hasViewerAccess =
+      user.role === "admin" || (!!user.plan && user.plan !== "free") || freeAccess;
+    if (!hasViewerAccess) {
+      return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
+    }
+
+    if (matchedItem.accessLevel === "restricted" && !canViewBackyard(user)) {
+      return NextResponse.json({ error: "制限付きデータです" }, { status: 403 });
+    }
+    if (matchedItem.accessLevel === "nda_only" && !canViewNdaOnly(user)) {
+      return NextResponse.json({ error: "NDA限定データです" }, { status: 403 });
+    }
+
+    const signed = await presignViewerAsset(key, 3600);
+    if (!signed) {
+      return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
+    }
+    return NextResponse.json({ url: signed }, { headers: { "Cache-Control": "no-store" } });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: "internal", detail: msg }, { status: 500 });
   }
-  return NextResponse.json({ url: signed }, { headers: { "Cache-Control": "no-store" } });
 }

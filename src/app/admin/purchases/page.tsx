@@ -179,7 +179,7 @@ export default async function PurchasesPage({
                 {[...studioStats.entries()]
                   .sort((a, b) => b[1].revenue - a[1].revenue)
                   .map(([propId, s]) => (
-                    <tr key={propId} className="hover:bg-[#1a1a1a] transition">
+                    <tr key={propId} className="hover:bg-neutral-100 transition">
                       <td className="px-4 py-3">
                         <Link
                           href={`/admin/purchases?property=${propId}`}
@@ -269,7 +269,7 @@ export default async function PurchasesPage({
               </thead>
               <tbody className="divide-y divide-line/50">
                 {purchases.map((p) => (
-                  <tr key={p.id} className="hover:bg-[#1a1a1a] transition">
+                  <tr key={p.id} className="hover:bg-neutral-100 transition">
                     <td className="px-4 py-3 mono text-[11px] opacity-60 whitespace-nowrap">
                       {fmtDate(p.createdAt)}
                     </td>

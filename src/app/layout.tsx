@@ -1,10 +1,13 @@
 import "@/lib/env";
 import {ClerkProvider} from "@clerk/nextjs";
+import { jaJP, enUS } from "@clerk/localizations";
 import type { Metadata } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
+import { LocaleProvider } from "@/components/locale-provider";
+import { getLocale } from "@/lib/i18n/server";
 
 // 明朝体は全面禁止。`--font-serif` も Noto Sans JP（ゴシック）に振り替え、
 // `serif` ユーティリティ / Tailwind `font-serif` / `.leader` をすべてゴシックで描画する。
@@ -43,23 +46,38 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "ロケハン3D",
     locale: "ja_JP",
+    images: [
+      {
+        url: "/og-cover.jpg",
+        width: 1200,
+        height: 630,
+        alt: "ロケハン3D — 実空間を 3D Gaussian Splatting で持ち帰る",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-cover.jpg"],
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
     <html
-      lang="ja"
+      lang={locale}
       className={`${serif.variable} ${sans.variable} ${mono.variable}`}
     >
       <body className="min-h-screen flex flex-col">
-        <ClerkProvider>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </ClerkProvider>
+        <LocaleProvider locale={locale}>
+          <ClerkProvider localization={locale === "en" ? enUS : jaJP}>
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </ClerkProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

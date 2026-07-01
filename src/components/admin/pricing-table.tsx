@@ -96,7 +96,7 @@ export default function PricingTable({ rows }: { rows: PricingRow[] }) {
               return (
                 <tr
                   key={`${r.propertyId}:${r.idx}`}
-                  className={`transition ${s.forSale ? "" : "opacity-50"} hover:bg-[#1a1a1a]`}
+                  className={`transition ${s.forSale ? "" : "opacity-50"} hover:bg-neutral-100`}
                 >
                   <td className="px-4 py-3">
                     <Link

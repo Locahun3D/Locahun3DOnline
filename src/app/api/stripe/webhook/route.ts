@@ -3,6 +3,8 @@ import type Stripe from "stripe";
 import { getStripe, stripeEnabled, planForPriceId } from "@/lib/stripe";
 import { userRepo } from "@/lib/users";
 import { purchaseRepo } from "@/lib/purchases";
+import { track } from "@/lib/analytics";
+import { notifyPurchase } from "@/lib/email";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
 import { oneYearFrom, type AccountPlan } from "@/lib/account-schema";
 
@@ -13,7 +15,16 @@ async function findByCustomer(customerId: string) {
   return all.find((u) => u.stripeCustomerId === customerId) ?? null;
 }
 
-/** プラン+月次トークン+Stripe顧客IDをユーザーに反映。 */
+/**
+ * プラン+トークン枠+Stripe顧客IDをユーザーに反映。
+ *
+ * 冪等性: トークン枠の付与は「プランが実際に変わった時」だけ行う。Stripe は
+ * `customer.subscription.updated` を支払い方法変更・メタデータ編集などでも送る上、
+ * 1回の購入で checkout.session.completed と subscription.updated の両方が発火する。
+ * 毎回 tokenBalance を月次枠に戻すと、ユーザーが使ったトークンが無料で復活したり
+ * （付与悪用）、追加購入分が消える（データ損失）。トークンは年次付与
+ * （oneYearFrom）なので、プラン未変更の重複イベントでは残高を一切触らない。
+ */
 async function applyPlan(
   userId: string,
   plan: AccountPlan,
@@ -21,13 +32,24 @@ async function applyPlan(
 ) {
   const u = await userRepo.get(userId);
   if (!u) return;
-  const monthly = PLAN_TOKEN_BUDGET[plan];
+  const nextCustomer = customerId ?? u.stripeCustomerId;
+
+  // プラン未変更 → 残高はそのまま。顧客IDの補完だけ行う（必要な時のみ書込）。
+  if (u.plan === plan) {
+    if (nextCustomer !== u.stripeCustomerId) {
+      await userRepo.upsert({ ...u, stripeCustomerId: nextCustomer });
+    }
+    return;
+  }
+
+  // プラン変更 → 新プランの枠を付与（年次失効）。
+  const budget = PLAN_TOKEN_BUDGET[plan];
   await userRepo.upsert({
     ...u,
     plan,
-    tokenBalance: monthly,
-    tokenExpiresAt: monthly > 0 ? oneYearFrom(new Date().toISOString()) : null,
-    stripeCustomerId: customerId ?? u.stripeCustomerId,
+    tokenBalance: budget,
+    tokenExpiresAt: budget > 0 ? oneYearFrom(new Date().toISOString()) : null,
+    stripeCustomerId: nextCustomer,
   });
 }
 
@@ -55,14 +77,40 @@ export async function POST(req: Request) {
 
         if (s.metadata?.type === "data_purchase") {
           const purchaseId = s.metadata.purchaseId;
-          if (purchaseId) {
+          if (purchaseId && s.payment_status === "paid") {
             const p = await purchaseRepo.get(purchaseId);
             if (p && p.status === "pending") {
-              await purchaseRepo.upsert({
+              const completed = await purchaseRepo.upsert({
                 ...p,
                 status: "completed",
                 completedAt: new Date().toISOString(),
               });
+              const day = new Date().toISOString().slice(0, 10);
+              await track(p.propertyId, "purchase", "", day, "desktop", p.priceYen);
+              await notifyPurchase(completed);
+            }
+          }
+          break;
+        }
+
+        // カート一括購入: return ハンドラが主経路だが、ユーザーが戻り前にタブを
+        // 閉じると pending のまま残る（支払済なのに未配信）。Webhook を保険として
+        // セッション紐付きの pending を全て completed 化する。
+        if (s.metadata?.type === "data_cart") {
+          if (s.payment_status === "paid") {
+            const all = await purchaseRepo.list();
+            const matched = all.filter(
+              (p) => p.stripeSessionId === s.id && p.status === "pending",
+            );
+            const day = new Date().toISOString().slice(0, 10);
+            for (const p of matched) {
+              const completed = await purchaseRepo.upsert({
+                ...p,
+                status: "completed",
+                completedAt: new Date().toISOString(),
+              });
+              await track(p.propertyId, "purchase", "", day, "desktop", p.priceYen);
+              await notifyPurchase(completed);
             }
           }
           break;
@@ -92,6 +140,27 @@ export async function POST(req: Request) {
           const u = await findByCustomer(customerId);
           if (u) await applyPlan(u.id, plan, customerId);
         }
+        break;
+      }
+      case "invoice.paid": {
+        // 年次トークン枠は applyPlan を冪等化したため「プラン変更時のみ」付与される。
+        // 正規の更新（subscription_cycle）でだけ、枠を満タンに補充し失効日を更新する。
+        // 新規作成(subscription_create)は checkout.session.completed で付与済みなので除外。
+        const inv = event.data.object as Stripe.Invoice;
+        if (inv.billing_reason !== "subscription_cycle") break;
+        const customerId =
+          typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+        if (!customerId) break;
+        const u = await findByCustomer(customerId);
+        if (!u) break;
+        const budget = PLAN_TOKEN_BUDGET[u.plan];
+        // budget へ「セット」（加算でない）なので Stripe の再送でも冪等。
+        await userRepo.upsert({
+          ...u,
+          tokenBalance: budget,
+          tokenExpiresAt:
+            budget > 0 ? oneYearFrom(new Date().toISOString()) : null,
+        });
         break;
       }
       case "customer.subscription.deleted": {

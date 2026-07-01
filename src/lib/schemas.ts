@@ -4,6 +4,7 @@ export const PROPERTY_CATEGORIES = [
   "studio",
   "warehouse",
   "house",
+  "school",
   "shop",
   "outdoor",
   "venue",
@@ -52,6 +53,27 @@ export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
+
+export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
+  standard: "Standard license",
+  editorial: "Editorial only",
+  extended: "Extended license",
+  custom: "Custom (by arrangement)",
+};
+
+export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
+  standard: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
+  editorial: "Limited to news, education and personal use. Commercial use such as advertising is not permitted.",
+  extended: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
+  custom: "Scope arranged individually. Please contact us before purchasing.",
+};
+
+export function dataLicenseLabel(l: DataLicense, locale?: string): string {
+  return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];
+}
+export function dataLicenseDesc(l: DataLicense, locale?: string): string {
+  return locale === "en" ? DATA_LICENSE_DESC_EN[l] : DATA_LICENSE_DESC[l];
+}
 
 export const ANNOTATION_KINDS = [
   "event",
@@ -342,10 +364,26 @@ export const CATEGORY_LABEL: Record<PropertyCategory, string> = {
   studio: "スタジオ",
   warehouse: "倉庫",
   house: "住宅",
+  school: "学校",
   shop: "店舗",
   outdoor: "屋外",
   venue: "会場 / ドーム",
 };
+
+export const CATEGORY_LABEL_EN: Record<PropertyCategory, string> = {
+  studio: "Studio",
+  warehouse: "Warehouse",
+  house: "House",
+  school: "School",
+  shop: "Shop",
+  outdoor: "Outdoor",
+  venue: "Venue / Dome",
+};
+
+/** locale-aware カテゴリ名。locale="en" で英語、それ以外は日本語。 */
+export function categoryLabel(cat: PropertyCategory, locale?: string): string {
+  return locale === "en" ? CATEGORY_LABEL_EN[cat] : CATEGORY_LABEL[cat];
+}
 
 export const STATUS_LABEL: Record<PropertyStatus, string> = {
   draft: "下書き",
@@ -407,6 +445,16 @@ export const TOKEN_COST_LABEL: Record<1 | 2 | 3, string> = {
   3: "ドーム / 大規模",
 };
 
+export const TOKEN_COST_LABEL_EN: Record<1 | 2 | 3, string> = {
+  1: "House / small",
+  2: "Mid-size studio",
+  3: "Dome / large",
+};
+
+export function tokenCostLabel(t: 1 | 2 | 3, locale?: string): string {
+  return locale === "en" ? TOKEN_COST_LABEL_EN[t] : TOKEN_COST_LABEL[t];
+}
+
 /** Monthly recurring token budget per plan (resets on the 1st). */
 export const PLAN_TOKEN_BUDGET = {
   free: 0,       // free has no monthly budget — only the signup bonus below
@@ -427,16 +475,23 @@ export const DATA_SALE_PRICE: Record<1 | 2 | 3, number> = {
 
 /** Reference location presets for the catalog "from X km" feature. */
 export const REFERENCE_PRESETS = [
-  { id: "shibuya",   label: "渋谷駅",   lat: 35.6580, lng: 139.7016 },
-  { id: "shinjuku",  label: "新宿駅",   lat: 35.6896, lng: 139.7006 },
-  { id: "tokyo",     label: "東京駅",   lat: 35.6812, lng: 139.7671 },
-  { id: "roppongi",  label: "六本木駅", lat: 35.6628, lng: 139.7314 },
-  { id: "kichijoji", label: "吉祥寺駅", lat: 35.7028, lng: 139.5800 },
-  { id: "yokohama",  label: "横浜駅",   lat: 35.4660, lng: 139.6225 },
-  { id: "osaka",     label: "大阪駅",   lat: 34.7024, lng: 135.4959 },
+  { id: "shibuya",   label: "渋谷駅",   labelEn: "Shibuya Sta.",   lat: 35.6580, lng: 139.7016 },
+  { id: "shinjuku",  label: "新宿駅",   labelEn: "Shinjuku Sta.",  lat: 35.6896, lng: 139.7006 },
+  { id: "tokyo",     label: "東京駅",   labelEn: "Tokyo Sta.",     lat: 35.6812, lng: 139.7671 },
+  { id: "roppongi",  label: "六本木駅", labelEn: "Roppongi Sta.",  lat: 35.6628, lng: 139.7314 },
+  { id: "kichijoji", label: "吉祥寺駅", labelEn: "Kichijoji Sta.", lat: 35.7028, lng: 139.5800 },
+  { id: "yokohama",  label: "横浜駅",   labelEn: "Yokohama Sta.",  lat: 35.4660, lng: 139.6225 },
+  { id: "osaka",     label: "大阪駅",   labelEn: "Osaka Sta.",     lat: 34.7024, lng: 135.4959 },
 ] as const;
 
 export type ReferencePresetId = (typeof REFERENCE_PRESETS)[number]["id"];
+
+/** locale 対応の参照地点ラベル。プリセット id 一致時のみ。 */
+export function presetLabel(id: string, locale?: string): string | null {
+  const p = REFERENCE_PRESETS.find((r) => r.id === id);
+  if (!p) return null;
+  return locale === "en" ? p.labelEn : p.label;
+}
 
 // ─── Asset library ───────────────────────────────────────────────
 export const assetKindSchema = z.enum(["image", "splat", "zip", "document"]);

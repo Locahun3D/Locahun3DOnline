@@ -97,28 +97,32 @@ function BlockView({
         <ImageGallery images={[property.cover, ...property.gallery]} />
       );
 
-    case "splat":
+    case "splat": {
+      const splats = property.splatItems.filter((it) => {
+        if (!it.splatUrl) return false;
+        if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+        if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
+        return true;
+      });
       return (
-        <div className="space-y-10">
-          {property.splatItems.filter(it => {
-            if (!it.splatUrl) return false;
-            if (it.accessLevel === "restricted" && !canViewRestricted) return false;
-            if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
-            return true;
-          }).map((item, idx) => (
-            <ViewerGate
-              key={idx}
-              splatUrl={item.splatUrl}
-              propertyId={property.id}
-              label={item.label || `#${idx + 1}`}
-              sizeMb={item.sizeMb}
-              previewVideoUrl={item.previewVideoUrl}
-              tokenCost={property.tokenCost}
-              freeAccess={freeAccess}
-              hasSubscription={hasViewerAccess}
-              signedIn={signedIn}
-            />
-          ))}
+        <div>
+          {/* 複数あればページ幅で2つ並べる（1つなら全幅で大きく） */}
+          <div className={splats.length > 1 ? "grid lg:grid-cols-2 gap-8" : "space-y-10"}>
+            {splats.map((item, idx) => (
+              <ViewerGate
+                key={idx}
+                splatUrl={item.splatUrl}
+                propertyId={property.id}
+                label={item.label || `#${idx + 1}`}
+                sizeMb={item.sizeMb}
+                previewVideoUrl={item.previewVideoUrl}
+                tokenCost={property.tokenCost}
+                freeAccess={freeAccess}
+                hasSubscription={hasViewerAccess}
+                signedIn={signedIn}
+              />
+            ))}
+          </div>
           {block.caption && (
             <div className="mono text-[10px] tracking-[0.18em] text-muted mt-2">
               {block.caption}
@@ -126,6 +130,7 @@ function BlockView({
           )}
         </div>
       );
+    }
 
     case "specs":
       return (

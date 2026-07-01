@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireAdmin } from "@/lib/dal";
 import { assetRepo } from "@/lib/store";
 import { getR2Bucket } from "@/lib/r2-store";
-import { buildPublicUrl } from "@/lib/asset-keys";
+import { buildPublicUrl, validateUploadMeta } from "@/lib/asset-keys";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// バインディング経由はリクエストボディを Worker メモリに全載せするため、GB級は
+// OOM する。バインディング fallback は小ファイル専用とし、これを超える場合は
+// presign（ブラウザ→R2 直 PUT）経路を使わせる。
+const MAX_BINDING_BYTES = 100 * 1024 * 1024; // 100 MB
 
 /**
  * R2 バケットバインディング (env.R2_ASSETS) 経由でファイルを保存する。
@@ -15,17 +19,6 @@ export const dynamic = "force-dynamic";
  * presign が creds 不足で失敗したとき (mode:"binding") のフォールバック経路。
  * 注: リクエストボディが Worker を通るため大容量(GB級)には不向き。画像/小ファイル向け。
  */
-async function r2PublicBase(): Promise<string | null> {
-  try {
-    const { env } = await getCloudflareContext();
-    const v = (env as Record<string, unknown>).R2_PUBLIC_URL;
-    if (typeof v === "string" && v) return v;
-  } catch {
-    /* not on Workers */
-  }
-  return process.env.R2_PUBLIC_URL || null;
-}
-
 export async function POST(req: Request) {
   await requireAdmin();
 
@@ -47,17 +40,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown_asset" }, { status: 404 });
   }
 
+  // 種類・形式・サイズを put 前に検証（不正な巨大/異種ファイルでの OOM・汚染を防ぐ）。
+  const check = validateUploadMeta({
+    kind: pending.kind,
+    filename: file.name,
+    contentType: file.type || pending.contentType,
+    size: file.size,
+  });
+  if (!check.ok) {
+    return NextResponse.json(
+      { error: check.error, message: check.message },
+      { status: check.status },
+    );
+  }
+  if (file.size > MAX_BINDING_BYTES) {
+    return NextResponse.json(
+      {
+        error: "too_large_for_binding",
+        message: `${(MAX_BINDING_BYTES / 1024 / 1024).toFixed(0)} MB を超えるファイルは直アップロード(presign)経路を使用してください`,
+      },
+      { status: 413 },
+    );
+  }
+
   const bucket = await getR2Bucket();
   if (!bucket) {
     return NextResponse.json({ error: "r2_unavailable" }, { status: 503 });
-  }
-
-  const publicBase = await r2PublicBase();
-  if (!publicBase) {
-    return NextResponse.json(
-      { error: "R2_PUBLIC_URL_missing" },
-      { status: 500 },
-    );
   }
 
   try {
@@ -79,7 +87,7 @@ export async function POST(req: Request) {
   const asset = await assetRepo.upsert({
     ...pending,
     status: "ready",
-    url: buildPublicUrl(pending.r2Key, publicBase),
+    url: buildPublicUrl(pending.r2Key),
     width,
     height,
   });

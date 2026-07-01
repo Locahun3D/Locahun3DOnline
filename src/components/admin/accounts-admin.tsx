@@ -201,7 +201,7 @@ export default function AccountsAdmin({
             <div
               key={u.id}
               className={`border p-4 grid gap-3 md:grid-cols-[20px_1fr_auto] md:items-center ${
-                selected.has(u.id) ? "border-accent/50 bg-[#0e1a20]" : "border-line"
+                selected.has(u.id) ? "border-accent/50 bg-accent/10" : "border-line"
               }`}
             >
               <input

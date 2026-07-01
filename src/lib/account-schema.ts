@@ -56,6 +56,38 @@ export const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
   suspended: "停止中",
 };
 
+export const ROLE_LABEL_EN: Record<AccountRole, string> = {
+  individual: "Individual",
+  studio: "Studio",
+  production: "Production",
+  guest: "Guest",
+  admin: "Admin",
+};
+
+export const ACCOUNT_STATUS_LABEL_EN: Record<AccountStatus, string> = {
+  active: "Active",
+  pending: "Pending approval",
+  suspended: "Suspended",
+};
+
+export const ROLE_DESCRIPTION_EN: Record<AccountRole, string> = {
+  individual: "Individuals and freelancers using 3D for pre-shoot scouting. Available immediately.",
+  studio: "Operators who list and rent out their own studio. Available right after signup.",
+  production: "Pro accounts that, after signing an NDA, can view confidential locations such as backyards.",
+  guest: `Invite-only contributor tier. Granted ${GUEST_BONUS_TOKENS} non-expiring tokens at creation.`,
+  admin: "Site operator.",
+};
+
+export function roleLabel(role: AccountRole, locale?: string): string {
+  return locale === "en" ? ROLE_LABEL_EN[role] : ROLE_LABEL[role];
+}
+export function roleDescription(role: AccountRole, locale?: string): string {
+  return locale === "en" ? ROLE_DESCRIPTION_EN[role] : ROLE_DESCRIPTION[role];
+}
+export function accountStatusLabel(status: AccountStatus, locale?: string): string {
+  return locale === "en" ? ACCOUNT_STATUS_LABEL_EN[status] : ACCOUNT_STATUS_LABEL[status];
+}
+
 /**
  * 承認が必要なのは制作会社 (production = チーム/法人枠) のみ。
  * 個人・撮影スタジオは登録後すぐに有効。

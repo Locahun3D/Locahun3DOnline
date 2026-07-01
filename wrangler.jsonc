@@ -5,6 +5,12 @@
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  // Workers 監視: 実行ログ/例外/呼び出し数を Cloudflare 側に蓄積し、ダッシュボードの
+  // Observability から検索・可視化できる（wrangler tail の手動監視に依存しない）。
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -13,6 +19,13 @@
     {
       "binding": "R2_ASSETS",
       "bucket_name": "locahun3d-assets"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "locahun3d-db",
+      "database_id": "d296a328-97ae-4700-a4f9-a5003b6c4f67"
     }
   ],
   "vars": {
