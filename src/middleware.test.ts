@@ -1,0 +1,147 @@
+/**
+ * Unit tests for the middleware's stale-cookie graceful-degradation path.
+ *
+ * We don't spin up a real Next.js server here; instead we exercise the
+ * exported `middleware` function directly, stubbing out `clerkMiddleware`
+ * so we can simulate the SyntaxError that Clerk throws when it encounters
+ * a malformed __session cookie (garbage base64 → JSON.parse throws).
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeRequest(pathname: string, cookies?: Record<string, string>) {
+  const url = `https://locahun3d.com${pathname}`;
+  const headers = new Headers();
+  if (cookies) {
+    const cookieStr = Object.entries(cookies)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("; ");
+    headers.set("cookie", cookieStr);
+  }
+  return new NextRequest(url, { method: "GET", headers });
+}
+
+// ---------------------------------------------------------------------------
+// The middleware module is tightly coupled to clerkMiddleware, so we need
+// to mock it at the module level.  We re-import the middleware after mocking.
+// ---------------------------------------------------------------------------
+
+const mockClerkHandler = vi.fn<[NextRequest, unknown], Promise<NextResponse>>();
+
+vi.mock("@clerk/nextjs/server", () => ({
+  clerkMiddleware: () => mockClerkHandler,
+}));
+
+// Import AFTER mocking so the module picks up our stub.
+// Dynamic import ensures each test group can reset the mock.
+const { default: middleware } = await import("./middleware");
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("middleware graceful degradation for invalid Clerk session cookies", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("passes through normally when clerkHandler succeeds", async () => {
+    const expected = NextResponse.next();
+    mockClerkHandler.mockResolvedValue(expected);
+
+    const req = makeRequest("/");
+    const res = await middleware(req, {} as never);
+
+    expect(res).toBe(expected);
+    expect(mockClerkHandler).toHaveBeenCalledOnce();
+  });
+
+  it("returns signed-out NextResponse.next() when clerkHandler throws on a PUBLIC route", async () => {
+    mockClerkHandler.mockRejectedValue(
+      new SyntaxError("Unexpected token — simulates malformed JWT parse failure"),
+    );
+
+    const req = makeRequest("/", {
+      __session: "garbage.invalid.token",
+      __client_uat: "1",
+    });
+    const res = await middleware(req, {} as never);
+
+    // Must be a 200 (next), not 500.
+    expect(res.status).toBe(200);
+
+    // The x-middleware-override-headers mechanism must be set so RSC's
+    // auth() sees x-clerk-auth-status: signed-out.
+    const override = res.headers.get("x-middleware-override-headers") ?? "";
+    expect(override).toContain("x-clerk-auth-status");
+
+    const statusHeader = res.headers.get(
+      "x-middleware-request-x-clerk-auth-status",
+    );
+    expect(statusHeader).toBe("signed-out");
+  });
+
+  it("returns signed-out on PUBLIC routes for other public paths", async () => {
+    mockClerkHandler.mockRejectedValue(new SyntaxError("malformed token"));
+
+    for (const path of [
+      "/properties",
+      "/properties/some-id",
+      "/pricing",
+      "/about",
+      "/terms/privacy",
+    ]) {
+      const req = makeRequest(path, { __session: "garbage.bad.token" });
+      const res = await middleware(req, {} as never);
+      expect(res.status, `path ${path} should return 200`).toBe(200);
+      expect(
+        res.headers.get("x-middleware-request-x-clerk-auth-status"),
+        `path ${path} should set signed-out`,
+      ).toBe("signed-out");
+    }
+  });
+
+  it("rethrows when clerkHandler throws on a PROTECTED route", async () => {
+    const error = new SyntaxError("malformed token");
+    mockClerkHandler.mockRejectedValue(error);
+
+    for (const path of [
+      "/account",
+      "/dashboard",
+      "/admin",
+      "/admin/properties",
+      "/onboarding",
+    ]) {
+      const req = makeRequest(path, { __session: "garbage.bad.token" });
+      await expect(
+        middleware(req, {} as never),
+        `path ${path} should rethrow`,
+      ).rejects.toThrow(error);
+    }
+  });
+
+  it("rethrows even for /en-prefixed protected routes", async () => {
+    const error = new SyntaxError("malformed token");
+    mockClerkHandler.mockRejectedValue(error);
+
+    const req = makeRequest("/en/admin", { __session: "garbage.bad.token" });
+    await expect(middleware(req, {} as never)).rejects.toThrow(error);
+  });
+
+  it("returns signed-out for /en-prefixed public routes", async () => {
+    mockClerkHandler.mockRejectedValue(new SyntaxError("malformed token"));
+
+    const req = makeRequest("/en/properties", {
+      __session: "garbage.bad.token",
+    });
+    const res = await middleware(req, {} as never);
+    expect(res.status).toBe(200);
+    expect(
+      res.headers.get("x-middleware-request-x-clerk-auth-status"),
+    ).toBe("signed-out");
+  });
+});
