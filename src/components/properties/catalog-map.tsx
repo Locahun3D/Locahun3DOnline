@@ -90,7 +90,10 @@ export default function CatalogMap({
         // 地図上のホイールでズームできるようにする（ユーザー要望）。
         // ページのスクロールは地図外（フィルター/結果カード上）で行う。
         scrollWheelZoom={true}
-        style={{ width: "100%", height: "100%" }}
+        // absolute + inset-0: Leaflet fills the parent without contributing to its
+        // intrinsic height, breaking the scroll-triggered layout feedback loop where
+        // invalidateSize() would cause the grid cell to grow and overflow the header.
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         worldCopyJump
       >
         <TileLayer
