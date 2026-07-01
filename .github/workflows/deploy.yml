@@ -15,6 +15,10 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # account_id は機密ではない（ダッシュボードURL等で公開情報）。API トークンのみ
+      # GitHub Secrets に登録する。
+      CLOUDFLARE_ACCOUNT_ID: 9ad06a76157fb2f40dfef1f4b7a14a93
     steps:
       - uses: actions/checkout@v4
 
