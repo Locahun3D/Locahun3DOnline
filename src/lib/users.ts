@@ -23,7 +23,7 @@ const SEED_USERS: User[] = (_usersFallback as unknown as StoreShape).users ?? []
  * can be promoted from /admin/accounts.
  */
 const ADMIN_EMAILS = (
-  process.env.ADMIN_BOOTSTRAP_EMAILS ?? "nakamurakou1108@gmail.com"
+  process.env.ADMIN_BOOTSTRAP_EMAILS ?? "nakamurakou1108@gmail.com,l3dtools@gmail.com"
 )
   .split(",")
   .map((s) => s.trim().toLowerCase())
