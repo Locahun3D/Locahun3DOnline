@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- GENERATED FILE — DO NOT EDIT. Source: src/ in F:/Htlml/3DGS/Locahun3D (build: node build.mjs) -->
 <html lang="ja" id="html-root">
 <head>
 <meta charset="UTF-8">
@@ -10791,13 +10792,6 @@ window.__setCam = (y,p)=>{ if(typeof yaw!=='undefined'){yaw=_yawTarget=y;} if(ty
 // sparkRenderer のLOD関連プロパティをライブ設定（lodSplatCount/lodSplatScale/coneFov等）
 window.__setRenderer = (p)=>{ if(typeof sparkRenderer==='undefined') return 'no sr'; const out={}; for(const k in p){ sparkRenderer[k]=p[k]; out[k]=sparkRenderer[k]; } if(typeof markDirty==='function') markDirty(240); return out; };
 window.__srDump = ()=>{ if(typeof sparkRenderer==='undefined') return 'no sr'; const o={}; for(const k of ['lodSplatCount','lodSplatScale','lodRenderScale','coneFov','coneFov0','coneFoveate','behindFoveate','maxPagedSplats','numLodFetchers','enableLod','enableDriveLod']){ o[k]=sparkRenderer[k]; } return o; };
-window.__srDeep = ()=>{
-  if(typeof sparkRenderer==='undefined') return 'no sr';
-  const sr = sparkRenderer;
-  const r = { hasPager:!!sr.pager, lodMeshes:sr.lodMeshes?.length, lastFrame:sr.lastFrame, activeSplats:sr.activeSplats };
-  if(typeof splatMesh!=='undefined'&&splatMesh&&splatMesh.paged) r.nSplat=splatMesh.paged.numSplats;
-  return r;
-};
 // 予算設定→再ウォーク→収束numSplats と FPS を返す
 window.__probeBudget = async function(lodSplatCount, settleMs){
   if(typeof sparkRenderer!=='undefined') sparkRenderer.lodSplatCount = lodSplatCount;
@@ -17662,10 +17656,12 @@ else          requestAnimationFrame(animate);
 // silently shows a black screen. Worker source + deploy instructions are
 // in `demo-proxy/` next to this file.
 //
-// デモ(交差点)はログイン不要の公開プレビュー。R2公開アクセスは無効化したので、
-// デモ専用の公開ストリーミング(/api/demo-asset)経由で配信する。相対URLなので
-// locahun3d.com から配信された時のみ機能する（オフライン単体HTMLでは非対応）。
-const DEMO_SCENE_URL = '/api/demo-asset/Kousaten_ForDemo_point_cloud.rad';
+// TODO(2026-05): after `wrangler deploy` in demo-proxy/, replace the
+// pub-*.r2.dev URL below with the Worker URL, e.g.
+//   https://locahun3d-demo.<account>.workers.dev/Kousaten_ForDemo_point_cloud.rad
+// (or a custom domain once one is attached). The proxy whitelist also
+// needs the filename — see ALLOWED_PATHS in demo-proxy/src/index.js.
+const DEMO_SCENE_URL = 'https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev/Kousaten_ForDemo_point_cloud.rad';
 const DEMO_SCENE_LABEL = 'デモシーン(交差点)';
 const DEMO_SCENE_SIZE_MB = 357;
 
@@ -17781,11 +17777,7 @@ setTimeout(async ()=>{
   const m  = location.search.match(/[?&]autoload=([^&]+)/);
   const dm = /[?&]demo=1/.test(location.search);
   if(m){
-    let autoUrl = decodeURIComponent(m[1]);
-    if(_protected && !(/^https?:\/\//.test(autoUrl))){
-      autoUrl = '/api/viewer-stream/' + autoUrl.replace(/^\/+/, '');
-    }
-    await loadFromURL(autoUrl);
+    await loadFromURL(decodeURIComponent(m[1]));
   } else if(dm && DEMO_SCENE_URL){
     await loadFromURL(DEMO_SCENE_URL, (typeof T==='function'?T('demo-btn-lbl'):DEMO_SCENE_LABEL));
   }
