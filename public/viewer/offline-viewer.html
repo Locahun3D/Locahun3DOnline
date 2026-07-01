@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ロケハン3D</title>
+<!-- Favicon / SEO: 実ファイル参照（Google検索はdata-URIを無視するため /favicon.* を配信） -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0c0c0d">
+<meta name="description" content="ロケハン3D — 3D Gaussian Splatting のオフライン・ビューアー。ロケハン/現場検証のためのプリビズ・カメラツール・日照/天気シミュレーション。">
+<meta property="og:title" content="ロケハン3D">
+<meta property="og:description" content="3D Gaussian Splatting ビューアー（ロケハン・現場検証向け）">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;600;700;900&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
@@ -38,6 +47,73 @@ html,body{
   text-size-adjust:100%;
 }
 body{position:fixed;top:0;left:0;}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FOCUS RING for non-pointer / no-hover devices (user 2026-06-28).
+   Smart TVs (remote D-pad), game consoles (controller), VR/MR headsets
+   (Vision Pro gaze, Quest), smart displays and car screens all navigate by
+   MOVING FOCUS between controls — and most report `hover:none`, so the app's
+   hover affordances are invisible to them. Without a focus ring the user can't
+   tell which control is selected.
+   :focus-visible only triggers for keyboard / D-pad / gaze focus (NOT mouse
+   clicks), so pointer users see no change. The ring is bright + has an offset
+   gap + a dark contrast halo (box-shadow) so it stays visible on both the dark
+   UI and bright splat backgrounds. !important re-asserts it over the various
+   `outline:none` rules on inputs/sliders.
+   ══════════════════════════════════════════════════════════════════════════ */
+:focus-visible{
+  outline: 3px solid #5aa9ff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px rgba(0,0,0,.55) !important;
+}
+/* Keep mouse focus quiet (some engines fall back to :focus): only the
+   :focus-visible heuristic should paint the ring. */
+:focus:not(:focus-visible){ outline: none; }
+/* The WebGL canvas itself never needs a ring even if focused for key input. */
+#c:focus-visible, #overlay:focus-visible{ outline: none !important; box-shadow: none !important; }
+
+/* ── Reduced motion (E-Ink readers, low-GPU TVs/consoles, motion-sensitive
+   users). Standard safe reset: collapse CSS transitions/animations so UI chrome
+   snaps instead of animating. Does NOT touch the WebGL 3D render (that's
+   JS-driven), only the DOM UI. user 2026-06-28. ── */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── No-hover devices: reinforce the focused control with a tinted background
+   (D-pad / gaze users never get :hover, so the ring alone can be easy to lose
+   against busy splat backgrounds). Only fires for real focus-navigation
+   (:focus-visible), so touch taps and mouse clicks are unaffected. ── */
+@media (hover: none){
+  button:focus-visible, a:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible{
+    background: rgba(90,169,255,.20) !important;
+  }
+}
+/* 10-foot screens (TV / console / VR viewed from afar): a bolder ring. */
+@media (min-width:1600px) and (hover:none){
+  :focus-visible{ outline-width: 4px !important; outline-offset: 3px !important; }
+}
+/* ── TV / set-top D-pad: no pointing device at all → `pointer:none`. These fall
+   through to desktop sizing but are viewed from across a room, so enlarge the
+   controls for a legible 10-foot UI. Precise target — desktop is pointer:fine,
+   touch is pointer:coarse, so ONLY a pure remote/D-pad matches; nothing else is
+   affected. user 2026-06-28. ── */
+@media (pointer: none){
+  #view-tl-btns button{ font-size:.9em !important; padding:8px 16px !important; }
+  #hud .cbar button{ font-size:.92em !important; padding:11px 18px !important; }
+  #qi-badge{ font-size:.9em !important; }
+  #topbar .tb-home, #topbar .tb-update, #topbar .tb-lang,
+  #topbar #tb-save-btn, #topbar #tb-undo-btn{ font-size:.85em; padding:5px 12px; }
+  #quality-panel #qbtns button{ padding:10px 0 !important; font-size:1.05em !important; }
+  /* The bottom bar can sit a touch higher so it clears any TV bottom overscan. */
+  #hud .cbar{ bottom:28px; }
+}
+
 /* iPad/iPhone fix (2026-06): touch-action:manipulation on the document root does
    NOT reliably propagate the "no double-tap-zoom" behaviour to individual elements
    in iOS Safari — a touch that STARTS on an element uses that element's own (auto)
@@ -105,6 +181,20 @@ body{position:fixed;top:0;left:0;}
   cursor:pointer;transition:all .15s;white-space:nowrap;
 }
 #topbar .tb-home:hover{background:rgba(255,255,255,.12);color:#D8D8D8;}
+/* Editable project-name chip: framed like a text input with a ✎ pencil in the
+   right gutter so it's obviously renameable (user 2026-06-27). The reserved
+   padding-right on the span keeps the name text from sliding under the icon. */
+#topbar .tb-pn{ position:relative; transition:border-color .15s, background .15s, color .15s; }
+#topbar .tb-pn::after{
+  content:'✎'; position:absolute; right:7px; top:50%; transform:translateY(-50%);
+  font-size:.92em; line-height:1; color:rgba(255,255,255,.45); pointer-events:none;
+}
+#topbar .tb-pn:hover{
+  border-color:rgba(255,200,120,.6) !important;
+  background:rgba(255,255,255,.1) !important;
+  color:#fff;
+}
+#topbar .tb-pn:hover::after{ color:rgba(255,200,120,.95); }
 #topbar .tb-sep{flex:1;}
 /* tb-version was previously in the topbar; moved to the home screen
    (under the changelog) at the user's request. The element still
@@ -153,6 +243,12 @@ body{position:fixed;top:0;left:0;}
 #topbar .tb-update.is-checking{opacity:.55;cursor:default;}
 #topbar .tb-update.is-offline{background:rgba(255,255,255,.04);
   border-color:rgba(255,180,84,.18);color:rgba(220,180,120,.55);}
+/* スマホ版では上部の「↩ 戻る」(Undo) ボタンを非表示（user 2026-06-30）。
+   狭い画面の上部を圧迫するため。タブレット(iPad)は対象外。 */
+@media (pointer:coarse) and (any-hover:none) and (max-width:600px),
+       (pointer:coarse) and (any-hover:none) and (max-height:500px){
+  #topbar #tb-undo-btn{ display:none !important; }
+}
 @keyframes tb-update-pulse{
   0%,100%{box-shadow:0 0 0 0 rgba(255,180,84,.0);}
   50%   {box-shadow:0 0 0 4px rgba(255,180,84,.18);}
@@ -254,7 +350,13 @@ body{position:fixed;top:0;left:0;}
   #dz .dz-changelog{ margin-top:6px !important; }
 }
 /* Stacking order: aspect frames behind, content above */
-#dz>h1,#dz>p,#dz>.zone,#dz>.demo-btn{position:relative;z-index:2;}
+#dz>h1,#dz>p,#dz>.zone,#dz>.demo-btn,#dz>.dz-head{position:relative;z-index:2;}
+/* ロゴはタイトルの左に横並び（[アイコン] ロケハン3D）。サブタイトルはタイトル直下に左揃え。 */
+#dz .dz-head{display:flex;align-items:center;gap:16px;}
+#dz .dz-titletext{display:flex;flex-direction:column;align-items:flex-start;}
+#dz .dz-titletext h1{margin:0;}
+#dz .dz-titletext .sub{margin:2px 0 0;text-align:left;}
+@media (pointer:coarse) and (any-hover:none){ #dz .dz-head{gap:12px;} }
 #dz h1{
   font-family:'Noto Sans JP',sans-serif;font-weight:900;
   font-size:clamp(2.2em,4.6vw,3.4em);
@@ -264,7 +366,7 @@ body{position:fixed;top:0;left:0;}
 #dz h1 em{font-style:normal;font-weight:900;color:#fff;}
 /* Home-screen brand logo (vector reproduction of the app icon: camera-frame
    brackets + amber record-ring). Sits above the ロケハン3D wordmark. */
-#dz>.dz-logo{position:relative;z-index:2;line-height:0;margin-bottom:-4px;}
+#dz .dz-logo{position:relative;line-height:0;flex-shrink:0;}
 #dz .dz-logo svg{width:clamp(76px,9vw,104px);height:auto;display:block;
   filter:drop-shadow(0 6px 18px rgba(0,0,0,.5));}
 @media (pointer:coarse) and (any-hover:none){
@@ -384,6 +486,12 @@ body{position:fixed;top:0;left:0;}
 /* Toggle JA / EN entries via lang on root */
 :root[lang="en"] #dz .dz-changelog .cl-ja{display:none;}
 :root:not([lang="en"]) #dz .dz-changelog .cl-en{display:none;}
+/* 更新履歴の下: ロケハン3D サイトへ戻るリンク */
+#dz .dz-back-site{display:block;margin:10px auto 0;max-width:340px;width:100%;text-align:center;
+  padding:9px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);color:rgba(220,220,220,.78);font-size:.82em;
+  text-decoration:none;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+#dz .dz-back-site:hover{background:rgba(255,180,84,.1);border-color:rgba(255,180,84,.4);color:#ffd9a8;}
 
 /* ── Loading ── */
 #ld{
@@ -455,6 +563,52 @@ body{position:fixed;top:0;left:0;}
 }
 #hud .cbar button:hover,#hud .cbar button.on{
   background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#D8D8D8;
+}
+/* Touch tap feedback (user 2026-06-27): on iOS the :hover / synthetic-mouseover
+   highlight STICKS after a tap and reads as "this is still active" even when the
+   action is finished. On touch we (a) neutralise the sticky :hover for buttons
+   that aren't in a persistent .on mode, and (b) show the press highlight only via
+   a brief `.tap-fx` class that JS removes after ~1s. */
+@media (pointer:coarse) and (any-hover:none){
+  #hud .cbar button:hover:not(.on):not(.tap-fx){
+    background:rgba(28,28,30,.92);border-color:rgba(255,255,255,.1);color:#C0C0C0;
+  }
+  #hud .cbar button.tap-fx,
+  #view-tl-btns button.tap-fx{
+    background:rgba(255,255,255,.16) !important;border-color:rgba(255,255,255,.32) !important;color:#fff !important;
+  }
+}
+/* カメラ／日照モード中は「📷カメラ」と「☀日照」の2つだけ残す（この2機能は同時に
+   使える関連ペアなので、どちらのモードでも互いに行き来できるようにする — user 2026-06-27）。
+   測定・使い方は隠してビューを広く保つ。 */
+body.cam-active #hud .cbar > button:not(#btnCamTool):not(#btn-sun){ display:none !important; }
+body.sun-active #hud .cbar > button:not(#btnCamTool):not(#btn-sun){ display:none !important; }
+/* 測定モード中は「📐測定」のみ（測定は日照と排他）。 */
+body.msr-active #hud .cbar > button:not(#btnMeasure){ display:none !important; }
+/* カメラモード中は上ボタン行も撮影に使うものだけに絞る：🎞カメラワーク / 📱AR /
+   🖥画質チップ のみ表示し、カメラリセット・オブジェクト追加・アバター歩行は隠す
+   （user 2026-06-27）。AR は元々タッチ端末でのみ表示。 */
+body.cam-active #view-tl-btns > *:not(#btnCamAnim):not(#btnAR):not(#qi-badge){ display:none !important; }
+/* 自由ゾーンが狭い（スマホ縦でカメラパネルが画面を占有）と上部ボタンがパネルに重なるため隠す。
+   _layoutCamMode() が body.cam-cramped を付与。横向き/iPad/PCでは余白が十分なので発火しない。 */
+body.cam-active.cam-cramped #view-tl-btns{ display:none !important; }
+/* カメラモード中：下ボタン群(cbar)と上ボタン群を、左の操作系(ジョイスティック or
+   レイヤーパネル)と右のカメラツール情報パネルの「あいだ」の中央へ寄せ直す。
+   --cam-cbar-left / --cam-top-left は _layoutCamMode() が実測して px で設定する
+   （iPad/スマホ縦でボタンが右パネルに隠れる問題の解消 — user 2026-06-27）。 */
+body.cam-active #hud .cbar{
+  left: var(--cam-cbar-left, 50%) !important;
+  right:auto !important;
+  transform: translateX(-50%) !important;
+}
+body.cam-active #view-tl-btns{
+  left: var(--cam-top-left, 50%) !important;
+  right:auto !important;
+  transform: translateX(-50%) !important;
+  max-width: var(--cam-top-maxw, none);
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 5px;
 }
 
 /* ── Settings panel ── */
@@ -542,8 +696,8 @@ body{position:fixed;top:0;left:0;}
   color:#9fd0e0;border-radius:6px;padding:7px 0;font-size:.74em;cursor:pointer;
   transition:all .15s;margin:2px 0 4px;
 }
-#gizmo .msr-addc-btn:hover{background:rgba(102,221,255,.12);border-color:rgba(102,221,255,.4);color:#cdeefa;}
-#gizmo .msr-addc-btn.on{background:rgba(102,221,255,.15);border-color:rgba(102,221,255,.5);color:#cdeefa;}
+#gizmo .msr-addc-btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#cdeefa;}
+#gizmo .msr-addc-btn.on{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.25);color:#cdeefa;}
 #gizmo .dist-row{
   margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);
   font-size:.88em;color:#D8D8D8;font-weight:600;
@@ -552,6 +706,10 @@ body{position:fixed;top:0;left:0;}
 #gizmo .dist-components{
   display:flex;gap:8px;margin-top:4px;font-size:.72em;
 }
+/* Hide the ΔX/ΔY/ΔZ component breakdown in the measure panel — unnecessary info
+   (user 2026-06-28「不要な情報」). The JS still updates #dcX/#dcY/#dcZ harmlessly;
+   only the panel display is suppressed (the main 距離 / 高さ readouts stay). */
+#gizmo #distComp{ display:none !important; }
 #gizmo .dist-components .dc{color:#404040;}
 #gizmo .dist-components .dc span{font-size:.9em;}
 #gizmo .giz-btns{display:flex;gap:6px;margin-top:8px;}
@@ -573,6 +731,8 @@ body{position:fixed;top:0;left:0;}
   background:rgba(22,22,24,.96);display:flex;flex-direction:column;
   z-index:55;pointer-events:all;transition:opacity .5s;opacity:0;
   border-right:1px solid rgba(255,255,255,.07);
+  /* iOSで長押しすると選択ルーペ/コールアウトが出てページがずれるのを防ぐ */
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
 }
 #layer-panel.visible{opacity:1;}
 .lp-head{
@@ -609,6 +769,7 @@ body{position:fixed;top:0;left:0;}
 #layer-list{
   flex:1 1 auto;overflow-y:auto;padding:5px;background:rgba(22,22,24,.82);
   min-height:60px;
+  touch-action:pan-y;overscroll-behavior:contain;-webkit-touch-callout:none;
 }
 #layer-list::-webkit-scrollbar{width:4px;}
 #layer-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
@@ -711,19 +872,25 @@ body{position:fixed;top:0;left:0;}
 #qi-badge{
   position:fixed;top:54px;right:14px;z-index:60;
   display:flex;align-items:center;gap:6px;
+  /* ── Unified with the sibling top-row buttons (#btn-cam-reset / #btnAddCubeTop
+     / #btnCamAnim …) so the 画質 chip is sized & styled IDENTICALLY and is no
+     longer "left behind" when the row's look is edited (user 2026-06-27).
+     Same background / border / colour / radius / padding / font-size as the
+     siblings' inline styles. All RESPONSIVE sizing now comes from the shared
+     `#view-tl-btns button` media rules (the badge IS a <button> in that row —
+     see _qiBadgeIntoActionRow), exactly like its neighbours, so there are NO
+     dedicated per-breakpoint #qi-badge sizing rules anymore. */
   background:rgba(20,20,22,.88);
   border:1px solid rgba(255,255,255,.18);
-  color:rgba(220,220,220,.85);
+  color:rgba(200,200,200,.85);
   border-radius:6px;
-  /* Match the neighbouring action buttons (user 2026-06 "ほかのボタンと同じ大きさ"):
-     same .72em font + .18 border; the in-row rule below sets the matching padding. */
-  padding:4px 9px;font-size:.72em;
-  font-family:ui-monospace,Consolas,monospace;
+  padding:5px 12px;font-size:.72em;
   cursor:pointer;pointer-events:all;
   transition:background .15s,border-color .15s;
   /* line-height:normal (was 1.2) so the 🖥 emoji's line box matches the other
      action buttons — otherwise the chip rendered ~3px shorter than them. */
   letter-spacing:.02em;line-height:normal;
+  white-space:nowrap;
   user-select:none;
   /* It's a <button> now — strip the native control chrome so it looks exactly
      like the old <div>, and make sure no tap on it (or its child spans) can
@@ -749,6 +916,9 @@ body{position:fixed;top:0;left:0;}
 #qi-badge .qib-icon{opacity:.65;}
 #qi-badge .qib-lvl{color:#ffe4b3;font-weight:600;}
 #qi-badge .qib-fps{color:rgba(180,180,180,.65);
+  /* The number stays monospace + tabular so the chip width doesn't jitter as the
+     FPS readout changes (container font now matches the sibling buttons). */
+  font-family:ui-monospace,Consolas,monospace;
   font-variant-numeric:tabular-nums;min-width:46px;text-align:right;
   /* Never let the FPS read-out wrap to a 2nd line (that fattened the chip): keep
      it on one line, and floor the width to the WIDEST value ("144 fps" ≈ 46px)
@@ -756,25 +926,12 @@ body{position:fixed;top:0;left:0;}
      to "60 fps" (39px) the instant a tap/interaction starts rendering — the
      "画質ボタンを触るとサイズが変わる" report. */
   white-space:nowrap;flex-shrink:0;}
-/* Touch-device badge sizing: keep visible on iPad / iPhone (FPS readout
-   was requested back). Slightly larger tap target so users can comfortably
-   tap to open the quality panel. */
-@media (pointer:coarse) and (any-hover:none){
-  /* Touch: match the other action buttons' font (.72em) — padding comes from the
-     in-row rule below. (Phones drop to .57em via the #view-tl-btns button rule,
-     same as the neighbouring buttons.) */
-  #qi-badge{ font-size:.72em; }
-}
 /* When JS moves the badge into the camera action row (see _qiBadgeIntoActionRow)
    it flows inline at the row's RIGHT END rather than being pinned to the corner.
-   This applies on every device. */
-#view-tl-btns > #qi-badge{ position:static; top:auto; right:auto; align-self:center;
-  /* Same HEIGHT as the neighbouring action buttons (user 2026-06 "ほかのボタンと
-     同じ大きさ"): 5px vertical padding matches them, so the chip lines up in the row
-     AND the dropdown (anchored just under the row) no longer overlaps the taller
-     buttons. !important so it outranks the generic #view-tl-btns button padding
-     rule (also !important) on phones. */
-  gap:4px !important; padding:6px 10px !important; }
+   This applies on every device. POSITIONING ONLY — sizing (font/padding) is
+   inherited from the shared `#view-tl-btns button` rules so the chip always
+   tracks its sibling buttons (no dedicated sizing here). */
+#view-tl-btns > #qi-badge{ position:static; top:auto; right:auto; align-self:center; }
 @media (pointer:coarse) and (any-hover:none) and (max-width:600px) and (orientation:portrait){
   /* Phone PORTRAIT: keep the whole top group on ONE line (user request 2026-06
      "縦画面の上UIを一列に"). On phones only 3 buttons survive (🏠リセット / ⏺録画 /
@@ -787,7 +944,7 @@ body{position:fixed;top:0;left:0;}
      half the viewport and stack 3 lines; the ≤384px breakpoint below handles
      genuinely-narrow phones instead.) */
   #view-tl-btns{ gap:4px !important; }
-  #view-tl-btns > #qi-badge{ position:static !important; top:auto; right:auto; align-self:center !important; }
+  /* (画質チップの position:static は基底ルールで設定済み＝専用の再指定は不要。) */
 }
 @media (pointer:coarse) and (any-hover:none) and (orientation:portrait) and (max-width:384px){
   /* Narrow phones (iPhone SE / mini, ≤375px): 5 top buttons can't fit one line,
@@ -831,6 +988,14 @@ body{position:fixed;top:0;left:0;}
 #quality-panel .qp-bar-pct{
   font-size:.65em;color:#B8B8B8;font-variant-numeric:tabular-nums;
 }
+/* Touch: the 低 / 中 / 高 quality buttons are too narrow to tap comfortably on
+   iPad / iPhone. Make the three share the panel width equally (≈1.5×+ wider)
+   and add vertical padding for a bigger hit target. user 2026-06-27. */
+@media (pointer:coarse) and (any-hover:none){
+  #quality-panel #qbtns{ gap:6px !important; }
+  #quality-panel #qbtns button{ flex:1 1 0 !important; min-width:0 !important;
+    padding-top:8px !important; padding-bottom:8px !important; }
+}
 
 /* ── Layer panel resize handle ── */
 #layer-panel .lp-resize{
@@ -839,6 +1004,12 @@ body{position:fixed;top:0;left:0;}
   background:transparent;transition:background .15s;
 }
 #layer-panel .lp-resize:hover{background:rgba(255,255,255,.12);}
+/* Touch: enlarge the divider / width handle hit areas so they're grabbable with
+   a finger on iPad / iPhone (user 2026-06-27). */
+@media (pointer:coarse) and (any-hover:none){
+  #lp-divider{ height:18px !important; }
+  #layer-panel .lp-resize{ width:18px !important; right:-9px !important; }
+}
 /* ── Light object visual ── */
 .light-gizmo{pointer-events:auto;}
 
@@ -894,7 +1065,7 @@ body{position:fixed;top:0;left:0;}
   #sun-panel{ bottom:264px !important; max-height:46vh; left:auto !important; right:14px !important; }
 }
 @media (pointer:coarse) and (any-hover:none) and (orientation:landscape) and (max-height:500px){
-  #sun-panel{ bottom:64px !important; top:auto !important; left:auto !important; right:14px !important; max-height:calc(100vh - 80px); }
+  #sun-panel{ bottom:80px !important; top:auto !important; left:auto !important; right:14px !important; max-height:calc(100vh - 96px); }
   #cam-anim-panel{ top:46px !important; max-height:calc(100vh - 100px) !important; }
   #gizmo{ max-height:calc(100vh - 100px) !important; }
 }
@@ -918,6 +1089,26 @@ body{position:fixed;top:0;left:0;}
   #quality-panel{ width:min(190px, calc(100vw - 24px)) !important; padding:7px 9px !important; }
   #gizmo{ width:min(200px, calc(100vw - 24px)) !important; padding:8px 10px !important; top:100px !important; max-height:min(50vh, calc(100vh - 130px)) !important; }
   #cam-anim-panel{ width:min(210px, calc(100vw - 24px)) !important; padding:8px 10px !important; max-height:60vh !important; }
+  /* user 2026-06-28: スマホUIをさらに 2/3 に縮小（押して出るパネル＋上部カメラワーク/画質バッジ）。
+     パネルは右下/右上を基点に scale → 位置を保ったまま一回り小さく（日照パネルの上見切れも緩和）。 */
+  /* スマホ限定: 日照(#sun-panel)/測定(#gizmo) を カメラワーク(#cam-anim-panel) と同じ
+     「右上・同じ幅・同じ最大高」に統一（user 2026-06-28）。サイズは共有の .58em＋幅で合わせ、
+     位置は bottom 基点をやめて top:46px・right:14px に揃える。scale は使わない。 */
+  #sun-panel, #gizmo, #cam-anim-panel{
+    /* top は上UI(上部ボタン行)の下端を実測して JS が --m-panel-top に設定 → かぶらない。
+       未設定時は上ボタン行(top:57)＋約1.5行ぶんを見込んだ 96px をフォールバック。 */
+    top:var(--m-panel-top, 96px) !important; bottom:auto !important; left:auto !important; right:14px !important;
+    width:min(210px, calc(100vw - 24px)) !important;
+    max-height:calc(100vh - var(--m-panel-top, 96px) - 14px) !important;
+    transform:none !important;
+  }
+  /* 上部の カメラワーク(🎞) ボタンの行内サイズを 2/3 に詰める。
+     ※画質/FPSバッジ(#qi-badge)そのものは変更しない（縮小対象は低中高ボタン側）。 */
+  #view-tl-btns > #btnCamAnim{ font-size:.5em !important; padding:3px 7px !important; }
+  /* 画質「低 / 中 / 高」3ボタンを 2/3 に（タッチ用拡大で大きすぎたのを是正）。 */
+  #quality-panel #qbtns button{ padding-top:5px !important; padding-bottom:5px !important; font-size:.66em !important; }
+  /* スマホでは画質パネルの「処理能力モニター」を丸ごと非表示（user 2026-06-28）。 */
+  #qp-perf-section{ display:none !important; }
 }
 
 /* ── Axis pivot highlight ── */
@@ -1078,6 +1269,11 @@ body{position:fixed;top:0;left:0;}
   /* Center the surviving buttons so they don't anchor to the cbar's
      original (off-center) origin. */
   #hud .cbar{justify-content:center !important;}
+  /* カメラ起動中(スマホ)は 日照ボタンを隠し、カメラ(終了)ボタンだけを
+     ジョイスティック上の空きスペース(青枠)へ寄せる(横位置は _layoutCamMode が設定)。 */
+  body.cam-active #btn-sun{ display:none !important; }
+  /* 対称: 日照起動中(スマホ)は カメラボタンを隠す（カメラ起動中に日照を隠すのと同様）。 */
+  body.sun-active #btnCamTool{ display:none !important; }
   /* Phone fix (2026-06): on a ≤600px phone the 176px joystick (anchored
      bottom-left, reaching the horizontal centre at x≈200) plus the elevation
      arrows immediately to its right (x≈208–278) fill the ENTIRE bottom band.
@@ -1144,16 +1340,13 @@ body{position:fixed;top:0;left:0;}
   #view-tl-btns button{
     padding:6px 8px !important;font-size:.57em !important;line-height:1.2 !important;
   }
-  /* Bottom cbar (📷カメラ / ☀日照 / 📐測定 / ⏺録画) — now lifted above the
-     joystick (bottom:212px) so it has room for larger, easier-to-tap buttons;
-     wraps to a 2nd row above the joystick if all four don't fit on one line. */
-  #hud .cbar{gap:6px;}
+  /* Bottom cbar — single row above joystick. */
+  #hud .cbar{gap:6px;flex-wrap:nowrap !important;}
   #hud .cbar > button{
-    padding:7px 11px !important;font-size:.64em !important;line-height:1.2 !important;
+    padding:7px 9px !important;font-size:.60em !important;line-height:1.2 !important;
   }
-  #qi-badge{
-    top:30px;right:6px;padding:4px 7px;font-size:.59em;gap:3px;line-height:1.2;
-  }
+  /* (画質チップは上の #view-tl-btns button ルールで他ボタンと同じ .57em/6px8px に
+     縮む＝専用指定不要。) */
 }
 /* (Previous iPhone-only "hoist action row into topbar" override removed
    because the buttons ended up overlapping the topbar widgets and the
@@ -1207,6 +1400,16 @@ body{position:fixed;top:0;left:0;}
      sliders that used to sit under the joystick) stays clear above. The collapsed
      panel is height:auto so it's unaffected. */
   #layer-panel:not(.collapsed){ bottom: 208px !important; }
+  /* iPad panel sizing: between desktop (.78em/256-288px) and phone (.58em/190-210px).
+     iPad mini (744px) and standard iPad (810-1024px) benefit from slightly smaller
+     panels than desktop — thumbs can't reach desktop-sized controls easily. */
+  #sun-panel, #quality-panel, #gizmo{ font-size:.68em !important; width:220px !important; padding:10px 12px !important; }
+  #cam-anim-panel{ font-size:.68em !important; }
+  /* (画質チップの専用サイズ指定は撤去。兄弟ボタンと同じ #view-tl-btns button
+     ルールでサイズが決まる＝iPadでは兄弟同様 .72em のまま統一される。) */
+  /* When camera tool is open, move ▲▼ beside the joystick (same as phone fix) so
+     the right-side cam-panel doesn't cover them. */
+  body.cam-active #joy-vert{ left:208px !important; right:auto !important; }
 }
 @media (pointer:coarse) and (any-hover:none) and (orientation:portrait) and (min-width:600px) and (max-width:900px){
   /* iPad PORTRAIT (≤834px): the camera action row now carries 5 buttons
@@ -1230,6 +1433,10 @@ body{position:fixed;top:0;left:0;}
      bar centred above. Previously the arrows sat right next to the joystick, so
      every bottom control crowded the left half and the right side sat empty. */
   #joy-vert{ left:auto !important; right:24px !important; }
+  /* When the camera tool panel (#cam-panel) is open it occupies the right
+     side (right:0, width ≈210px on phone) and completely covers the ▲▼
+     buttons. Move them back beside the joystick so they stay usable. */
+  body.cam-active #joy-vert{ left:208px !important; right:auto !important; }
 }
 /* Fullscreen top-overlap fix (2026-06): in fullscreen the browser status bar is
    hidden, so the top UI (topbar / camera action row / perf badge) slides up under
@@ -1237,13 +1444,14 @@ body{position:fixed;top:0;left:0;}
    the device's top safe-area inset so it clears the notch. The inset is 0 on
    non-notched devices and in normal (non-fullscreen) mode, so nothing else moves.
    Separate :fullscreen / :-webkit-full-screen rules so an unknown pseudo on one
-   engine doesn't drop the rule for the other. */
+   engine doesn't drop the rule for the other.
+   NOTE: the 画質 chip is a CHILD of #view-tl-btns now, so shifting the row already
+   moves the chip with it — a separate `#qi-badge` margin here would DOUBLE the
+   offset, so it's intentionally omitted (unified with the row). */
 :fullscreen #topbar,
-:fullscreen #view-tl-btns,
-:fullscreen #qi-badge{ margin-top: env(safe-area-inset-top, 0px); }
+:fullscreen #view-tl-btns{ margin-top: env(safe-area-inset-top, 0px); }
 :-webkit-full-screen #topbar,
-:-webkit-full-screen #view-tl-btns,
-:-webkit-full-screen #qi-badge{ margin-top: env(safe-area-inset-top, 0px); }
+:-webkit-full-screen #view-tl-btns{ margin-top: env(safe-area-inset-top, 0px); }
 
 /* ── Simple "fullscreen" for phones (2026-06) ──
    iPhone Safari has NO Fullscreen API (only iPad/Android do), so the ⛶ button
@@ -1255,8 +1463,7 @@ body{position:fixed;top:0;left:0;}
    appears to leave the mode. (Phone-only: the ⛶ button is shown on phones only,
    so iPad never enters this.) */
 body.immersive #topbar,
-body.immersive #view-tl-btns,
-body.immersive #qi-badge{ display:none !important; }
+body.immersive #view-tl-btns{ display:none !important; }  /* 画質チップは #view-tl-btns の子なので一緒に隠れる（専用ルール不要） */
 #immersive-exit{
   display:none; position:fixed; z-index:90;
   top: calc(8px + env(safe-area-inset-top, 0px)); right: 10px;
@@ -1267,6 +1474,151 @@ body.immersive #qi-badge{ display:none !important; }
   letter-spacing:.03em;
 }
 body.immersive #immersive-exit{ display:inline-block; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Large-screen / 4K scaling (2026-06)
+   On ≥1920px monitors the default UI is proportionally small — scale up
+   all interactive elements so buttons stay comfortably clickable and
+   panels remain readable without squinting. Touch devices never hit
+   these because phones/tablets max out at ~1400px CSS width.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (min-width:1920px) and (pointer:fine){
+  /* Keep the topbar at its default 45px height so it never overlaps the layer
+     panel (which starts at top:45px). Only the horizontal padding/gap and the
+     button fonts grow on big monitors — NOT the bar height (user 2026-06-28
+     「一番上のメニューを上に縮小してかぶらないように」). */
+  #topbar{ padding:0 14px; gap:10px; }
+  #topbar .tb-home{ font-size:.82em; padding:3px 14px; }
+  #topbar .tb-save-btn,
+  #topbar #tb-save-btn{ font-size:.78em; padding:3px 12px; }
+  #topbar .tb-update{ font-size:.74em; padding:3px 10px; }
+  #topbar .tb-lang{ font-size:.76em; padding:3px 10px; }
+  #topbar .tb-bug{ font-size:.86em; }
+  #topbar .tb-integrity{ font-size:.76em; }
+
+  #view-tl-btns{ top:54px !important; }
+  /* 画質チップ含む全ボタンを一括拡大（バッジ専用ルールは廃止＝兄弟と完全統一）。 */
+  #view-tl-btns button{ font-size:.82em !important; padding:7px 16px !important; }
+
+  #hud .cbar button{ font-size:.86em; padding:10px 18px; border-radius:10px; }
+
+  #gizmo{ width:300px; top:100px; max-height:calc(100vh - 116px); }
+  #quality-panel{ width:min(260px, calc(100vw - 28px)); }
+  #sun-panel{ width:320px; }
+  #cam-panel{ width:330px !important; }
+  #cam-anim-panel{ width:300px !important; }
+
+  #layer-panel{ width:320px; }
+  :root{ --lp-width-default:320px; }
+
+  #helpbox{ font-size:12.5px; min-width:220px; top:66px; }
+  #hud .ibox{ top:116px; font-size:12px; }
+
+  #qpanel{ min-width:240px; }
+
+  #dz h1{ font-size:clamp(2.6em, 4vw, 4em); }
+  #dz .sub{ font-size:1em; }
+  #dz .zone{ padding:40px 80px; }
+  #dz .zone .ico{ font-size:2.8em; }
+  #dz .demo-btn{ padding:12px 30px; font-size:.92em; }
+  #dz .dz-changelog-head{ font-size:.86em; padding:9px 16px; }
+}
+@media (min-width:2560px) and (pointer:fine){
+  /* Same: bar height stays 45px (no overlap with the layer panel). */
+  #topbar{ padding:0 18px; gap:12px; }
+  #topbar .tb-home{ font-size:.88em; padding:4px 16px; }
+  #topbar .tb-update{ font-size:.80em; }
+  #topbar .tb-lang{ font-size:.82em; }
+
+  #view-tl-btns{ top:56px !important; }
+  #view-tl-btns button{ font-size:.88em !important; padding:8px 18px !important; }
+
+  #hud .cbar button{ font-size:.94em; padding:12px 22px; }
+
+  #gizmo{ width:340px; top:110px; }
+  #quality-panel{ width:min(300px, calc(100vw - 28px)); }
+  #sun-panel{ width:360px; }
+  #cam-panel{ width:380px !important; }
+  #cam-anim-panel{ width:340px !important; }
+
+  #layer-panel{ width:360px; }
+
+  #helpbox{ font-size:13.5px; min-width:240px; top:74px; }
+  #hud .ibox{ top:126px; font-size:13px; }
+
+  #dz h1{ font-size:clamp(3em, 3.8vw, 4.6em); }
+  #dz .zone{ padding:48px 100px; }
+  #dz .demo-btn{ padding:14px 36px; font-size:1em; }
+
+  #joy{ width:210px; height:210px; }
+  #joy .knob{ width:84px; height:84px; }
+  #joy-vert{ left:244px; width:84px; height:210px; }
+  #joy-vert .jv-btn{ width:84px; height:84px; font-size:1.6em; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Panel max-height safeguards (all devices)
+   Prevent any floating panel from exceeding the viewport height.
+   Some panels already have max-height on specific breakpoints — these
+   rules provide a baseline for devices/orientations not covered.
+   ══════════════════════════════════════════════════════════════════════ */
+#sun-panel{ max-height:calc(100vh - 140px); max-height:calc(100dvh - 140px); overflow-y:auto; }
+#cam-anim-panel{ max-height:calc(100vh - 100px); max-height:calc(100dvh - 100px); overflow-y:auto; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   iPad landscape panel overlap refinements (2026-06)
+   On iPad landscape (1024×768 / 1180×820) the right-anchored panels
+   (sun / quality / gizmo) can overlap each other or the cbar.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (pointer:coarse) and (any-hover:none) and (orientation:landscape) and (min-width:600px) and (min-height:600px){
+  #sun-panel{ bottom:120px !important; max-height:calc(100vh - 186px); }
+  #gizmo{ max-height:calc(100vh - 160px); }
+  #cam-anim-panel{ max-height:calc(100vh - 160px) !important; }
+  #cam-panel{ max-height:calc(100vh - 52px); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   iPad portrait panel + cbar refinements (2026-06)
+   Portrait has less width — panels must not overflow horizontally.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (pointer:coarse) and (any-hover:none) and (orientation:portrait) and (min-width:600px) and (min-height:600px){
+  #sun-panel{ max-height:calc(100vh - 250px); width:min(220px, calc(100vw - 28px)) !important; }
+  #gizmo{ max-height:calc(100vh - 160px); width:min(220px, calc(100vw - 28px)) !important; }
+  #cam-panel{ width:min(262px, 40vw) !important; }
+  #cam-anim-panel{ max-height:calc(100vh - 200px) !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Phone landscape safeguards (2026-06)
+   Height ≤500px — the tightest layout. Ensure all panels fit within
+   the viewport and the cbar doesn't collide with joystick / panels.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (pointer:coarse) and (any-hover:none) and (orientation:landscape) and (max-height:500px){
+  #hud .cbar > button{ padding:5px 8px !important; font-size:.56em !important; }
+  #sun-panel{ max-height:calc(100vh - 96px) !important; width:min(180px, 40vw) !important; }
+  #cam-panel{ width:min(200px, 38vw) !important; max-height:calc(100vh - 36px) !important; top:34px !important; }
+  #quality-panel{ width:min(180px, 40vw) !important; max-height:calc(100vh - 80px) !important; }
+  #gizmo{ width:min(190px, 40vw) !important; max-height:calc(100vh - 80px) !important; top:64px !important; }
+  #cam-anim-panel{ max-height:calc(100vh - 80px) !important; width:min(200px, 40vw) !important; }
+  #topbar{ height:28px !important; }
+  #view-tl-btns{ top:30px !important; }
+  /* 画質チップ含む全ボタンを一括縮小（バッジ専用ルールは廃止＝兄弟と完全統一）。 */
+  #view-tl-btns button{ padding:4px 6px !important; font-size:.52em !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Phone portrait narrow (≤375px) — extra tightening
+   iPhone SE / mini has only ~375px width. Ensure cbar buttons and
+   panels don't overflow.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (pointer:coarse) and (any-hover:none) and (orientation:portrait) and (max-width:375px){
+  #hud .cbar{ gap:4px !important; }
+  #hud .cbar > button{ padding:6px 7px !important; font-size:.55em !important; }
+  #sun-panel{ width:min(170px, calc(100vw - 16px)) !important; }
+  #cam-panel{ width:min(190px, 70vw) !important; }
+  #quality-panel{ width:min(170px, calc(100vw - 16px)) !important; }
+  #gizmo{ width:min(180px, calc(100vw - 16px)) !important; }
+}
 
 </style>
 </head>
@@ -1444,10 +1796,11 @@ body.immersive #immersive-exit{ display:inline-block; }
 
   <!-- 天気 (疑似HDRI連動) -->
   <div class="sun-sec-lbl" id="sun-l-weather" data-i18n="sun-l-weather">🌤 天気</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:10px">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:10px">
     <button class="sun-wx-btn" data-wx="clear"  id="sun-wx-clear"  data-i18n="sun-wx-clear"  onclick="onSunWeather('clear')">☀ 晴れ</button>
     <button class="sun-wx-btn" data-wx="cloudy" id="sun-wx-cloudy" data-i18n="sun-wx-cloudy" onclick="onSunWeather('cloudy')">☁ 曇り</button>
     <button class="sun-wx-btn" data-wx="rain"   id="sun-wx-rain"   data-i18n="sun-wx-rain"   onclick="onSunWeather('rain')">🌧 雨</button>
+    <button class="sun-wx-btn" data-wx="snow"   id="sun-wx-snow"   data-i18n="sun-wx-snow"   onclick="onSunWeather('snow')">❄ 雪</button>
   </div>
   <!-- 実際の天気予報 (Open-Meteo, オンライン時のみ) -->
   <button id="sun-fetch-wx" data-i18n="sun-fetch-wx" onclick="fetchSunForecast()" title="選択中の場所・日付・時刻の実際の天気予報を読み込み、上の天気を自動設定します（インターネット接続が必要）" style="width:100%;margin-bottom:6px;background:rgba(120,180,255,.16);border:1px solid rgba(120,180,255,.4);color:#bdf;border-radius:6px;padding:5px 8px;font-size:.85em;cursor:pointer">🌐 実際の天気予報を取得（オンライン時）</button>
@@ -1564,7 +1917,8 @@ body.immersive #immersive-exit{ display:inline-block; }
            oninput="onSpeedSlider(this.value)" style="width:100%">
   </div>
 
-  <!-- ── パフォーマンスメトリクス ── -->
+  <!-- ── パフォーマンスメトリクス ── （スマホでは丸ごと非表示・user 2026-06-28） -->
+  <div id="qp-perf-section">
   <div class="qp-divider"></div>
   <div class="qp-perf-title" id="qp-perf-t">📊 処理能力モニター</div>
 
@@ -1601,6 +1955,7 @@ body.immersive #immersive-exit{ display:inline-block; }
   </div>
 
   <div style="margin-top:7px;font-size:.62em;color:#303030;text-align:right" id="qp-resolution">—</div>
+  </div><!-- /qp-perf-section -->
 </div>
 
 <!-- ══ View Top-Left Buttons (projection toggle + camera reset) ══ -->
@@ -1609,6 +1964,7 @@ body.immersive #immersive-exit{ display:inline-block; }
   display:none;flex-direction:row;gap:6px;z-index:60;pointer-events:all;
   justify-content:center;">
   <button id="btn-cam-reset" onclick="resetCameraToInitial()"
+    ontouchend="if(event.cancelable)event.preventDefault(); resetCameraToInitial();"
     style="background:rgba(20,20,22,.88);border:1px solid rgba(255,255,255,.18);
            color:rgba(200,200,200,.85);border-radius:6px;padding:5px 12px;
            font-size:.72em;cursor:pointer;
@@ -1675,11 +2031,18 @@ body.immersive #immersive-exit{ display:inline-block; }
      toggleARMode() swaps its label to "AR 終了" + red state. -->
 <div id="topbar">
   <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-    <button id="tb-save-btn" onclick="saveProjectZip()" style="background:rgba(100,255,150,.08);border:1px solid rgba(100,255,150,.2);color:rgba(100,255,150,.7);border-radius:5px;padding:2px 8px;font-size:.72em;cursor:pointer;transition:all .15s;white-space:nowrap" onmouseover="this.style.background='rgba(100,255,150,.18)'" onmouseout="this.style.background='rgba(100,255,150,.08)'" title="ZIP Save">💾 <span id="tb-save-lbl">オフライン保存</span></button>
+    <button id="tb-save-btn" onclick="saveProjectZip()" style="background:rgba(100,255,150,.08);border:1px solid rgba(100,255,150,.2);color:rgba(100,255,150,.7);border-radius:5px;padding:2px 8px;font-size:.72em;cursor:pointer;transition:all .15s;white-space:nowrap" onmouseover="this.style.background='rgba(100,255,150,.18)'" onmouseout="this.style.background='rgba(100,255,150,.08)'" title="ZIP Save">💾 <span id="tb-save-lbl">Zip保存</span></button>
     <!-- 読込 (load project ZIP) button removed: project ZIPs are now imported
          via the layer panel "📁 インポート" button (dispatchFiles routes
          .zip → _loadProjectZipFromFile automatically) or via drag-and-drop. -->
-    <span id="tb-project-name" style="font-size:.78em;color:rgba(200,200,200,.85);cursor:default;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:2px 8px;border-radius:4px;border:1px solid transparent;user-select:none;letter-spacing:.02em;" ondblclick="startEditProjectName()" title="ダブルクリックで編集">Untitled Project</span>
+    <!-- Editable project name. Framed like a text input (border + subtle inset
+         bg + ✎ icon) so it's obvious it can be renamed — user 2026-06-27
+         "入力できることがわかるように枠で囲って". Single-click now also enters edit
+         (dblclick kept for habit). -->
+    <span id="tb-project-name" class="tb-pn"
+      style="font-size:.78em;color:rgba(200,200,200,.9);cursor:text;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:2px 22px 2px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);user-select:none;letter-spacing:.02em;"
+      onclick="startEditProjectName()" ondblclick="startEditProjectName()"
+      title="クリックして名前を編集">Untitled Project</span>
   </div>
   <button class="tb-home" onclick="resetToHome()" id="tb-home-btn" title="ホームに戻る — ロケハン3D" aria-label="ロケハン3D — Home" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:2px 9px">
     <svg width="18" height="18" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0">
@@ -1690,10 +2053,16 @@ body.immersive #immersive-exit{ display:inline-block; }
       </g>
       <circle cx="50" cy="50" r="11" fill="#f3a02a"/>
       <circle cx="50" cy="50" r="4.4" fill="#0c0c0d"/>
-    </svg><span id="tb-brand-text" data-i18n="tb-brand" style="font-weight:600;letter-spacing:.03em;white-space:nowrap">ロケハン3D</span></button>
+    </svg><span id="tb-brand-text" data-i18n="tb-brand" style="font-weight:600;letter-spacing:.03em;white-space:nowrap;line-height:1;display:inline-flex;align-items:center">ロケハン3D</span></button>
   <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;justify-content:flex-end">
+    <!-- Undo (1 step). Mirrors Ctrl+Z: undoes the last measurement step while
+         measuring, otherwise the last scene action (move/add/delete/pose…).
+         Up to 20 steps are kept (≥10 as requested). user 2026-06-27. -->
+    <button class="tb-update" id="tb-undo-btn"
+      onclick="topbarUndo()"
+      title="一つ前に戻す (Ctrl+Z)">↩ <span id="tb-undo-lbl">戻る</span></button>
     <button class="tb-bug" id="tb-report-btn" onclick="reportBug()"
-      title="エラー / 不具合を開発者に報告">🐛</button>
+      title="エラー / 不具合を開発者に報告">❗</button>
     <button class="tb-update" id="tb-update-btn" onclick="checkForUpdate(true)"
       title="更新を確認">🔄 <span id="tb-update-lbl">更新確認</span></button>
     <span class="tb-integrity" id="tb-integrity" hidden></span>
@@ -1761,6 +2130,7 @@ body.immersive #immersive-exit{ display:inline-block; }
       <a href="#m-measure" class="mn-link" data-i18n-key="manual-link-measure">📐 距離測定</a>
       <a href="#m-camtool" class="mn-link" data-i18n-key="manual-link-camtool">📷 カメラツール</a>
       <a href="#m-env"     class="mn-link" data-i18n-key="manual-link-env">☀ 日照・天気</a>
+      <a href="#m-walkar"  class="mn-link" data-i18n-key="manual-link-walkar">🚶 アバター歩行・AR</a>
 
       <div class="mn-grp" data-i18n-key="manual-grp-save">設定 / 保存</div>
       <a href="#m-save"    class="mn-link" data-i18n-key="manual-link-save">💾 プロジェクト保存</a>
@@ -1794,6 +2164,24 @@ body.immersive #immersive-exit{ display:inline-block; }
         <p style="color:#889">スマホ / iPad では、左下のジョイスティックで移動、画面ドラッグで視点回転します。</p>
       </section>
 
+      <section id="m-devices">
+        <h2>📱 デバイス別の対応機能</h2>
+        <p style="color:#889">デバイスによって使える機能・操作が異なります（◯=対応 / △=一部・非推奨 / －=非対応）。</p>
+        <table class="m-tbl">
+          <tr><th>機能</th><th>PC<br>(マウス/キー)</th><th>スマホ/<br>タブレット</th><th>VR<br>(Vision Pro/Quest)</th><th>TV/ゲーム機<br>(リモコン/パッド)</th></tr>
+          <tr><td>視点回転・閲覧</td><td>◯</td><td>◯</td><td>◯</td><td>◯</td></tr>
+          <tr><td>移動（WASD / ジョイスティック）</td><td>◯ WASD</td><td>◯ ジョイ</td><td>◯</td><td>△ D-pad</td></tr>
+          <tr><td>日照・天気シミュレーション</td><td>◯</td><td>◯</td><td>◯</td><td>◯</td></tr>
+          <tr><td>距離測定</td><td>◯</td><td>◯</td><td>△</td><td>△</td></tr>
+          <tr><td>カメラツール（プリビズ）</td><td>◯</td><td>◯</td><td>△</td><td>△</td></tr>
+          <tr><td>オブジェクト追加・編集</td><td>◯</td><td>◯</td><td>△</td><td>△</td></tr>
+          <tr><td>アバター歩行</td><td>◯</td><td>△</td><td>◯</td><td>－</td></tr>
+          <tr><td>AR（背面カメラ重畳）</td><td>－</td><td>◯</td><td>－</td><td>－</td></tr>
+          <tr><td>フォーカス操作（D-pad/視線）</td><td>－</td><td>－</td><td>◯</td><td>◯</td></tr>
+        </table>
+        <p style="color:#889">※ AR はスマホ / タブレットのみ（端末の「設定 &gt; Safari &gt; モーションと画面の向きのアクセス」を ON に）。VR は閲覧・歩行に最適。細かな編集は PC を推奨します。</p>
+      </section>
+
       <section id="m-layers">
         <h2>📁 レイヤーとフォルダー</h2>
         <p>左の「シーンレイヤー」に、読み込んだファイルや追加オブジェクトが並びます。</p>
@@ -1812,7 +2200,8 @@ body.immersive #immersive-exit{ display:inline-block; }
         <ul style="line-height:1.9">
           <li>矢印＝移動 / リング＝回転 / キューブ＝拡縮</li>
           <li>「ローカル / ワールド」で座標系を切替（新規・読み込みは既定でローカル）</li>
-          <li>iPad ではギズモを<b>指でドラッグ</b>して操作できます</li>
+          <li>位置・回転・拡縮・寸法の数値入力は <b>0.01 刻み</b>で微調整できます</li>
+          <li>iPad / スマホではギズモ（矢印・リング・ピボット）を<b>指でドラッグ</b>して操作できます</li>
         </ul>
       </section>
 
@@ -1822,7 +2211,7 @@ body.immersive #immersive-exit{ display:inline-block; }
         <ul style="line-height:1.9">
           <li>📦 <b>Cube</b> — 寸法の目安・あたり</li>
           <li>🟠 <b>Event</b> — 注目ポイント。画像を貼れます</li>
-          <li>👤 <b>Figure</b> — 人型（身長・ポーズ調整）でスケール感を確認</li>
+          <li>👤 <b>Figure</b> — 人型。身長を変えてスケール感・アイレベルを確認。<b>関節を選んで回転</b>、または<b>IKハンドル</b>を引いてポーズ付けできます</li>
           <li>🛣 <b>パス</b> — 4点で囲む区画＋中央ラベル（駐車区画など）。ラベルは複数行OK</li>
         </ul>
       </section>
@@ -1833,7 +2222,9 @@ body.immersive #immersive-exit{ display:inline-block; }
         <ul style="line-height:1.9">
           <li>左クリック長押しで点をプレビュー → 離して確定（点A → 点B）</li>
           <li>「+ 高さを図る」で3点目（高さ）も測定</li>
-          <li>マーカーは矢印で微調整、🗑 でクリア</li>
+          <li>マーカーは矢印（軸）・XZ面で微調整、🗑 でクリア</li>
+          <li>iPad / スマホでも、矢印・マーカーを<b>指でドラッグ</b>して微調整できます</li>
+          <li>距離・高さ・成分は <b>0.01 m（1cm）単位</b>で表示します</li>
         </ul>
       </section>
 
@@ -1853,10 +2244,17 @@ body.immersive #immersive-exit{ display:inline-block; }
         </ul>
       </section>
 
+      <section id="m-walkar">
+        <h2>🚶 アバター歩行・📱 AR</h2>
+        <p><b>アバター歩行</b>（上「🚶 アバター歩行」）：人の目線でシーンを歩いて確認できます。<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>でアバターを移動、視点は通常どおり。実際に立ったときの見え方・アイレベル・スケール感のチェックに。もう一度押すと解除。</p>
+        <p><b>AR モード</b>（上「📱 AR」・スマホ / タブレットのみ）：背面カメラの映像に 3DGS を重ねて表示し、端末を傾けて見回せます。現地で実寸の重なりを確認するときに。</p>
+        <p style="color:#889">※ iOS は初回に「設定 &gt; Safari &gt; モーションと画面の向きのアクセス」を ON にし、ページを再読み込みすると AR が使えます。</p>
+      </section>
+
       <section id="m-save">
         <h2>💾 保存・読み込み</h2>
         <ul style="line-height:1.9">
-          <li><b>オフライン保存</b>（左上）：シーン全体を1つのZIPに保存。レイヤー・オブジェクト・カメラ・設定をまるごと復元できます。</li>
+          <li><b>Zip保存</b>（左上）：シーン全体を1つのZIPに保存。レイヤー・オブジェクト・カメラ・設定をまるごと復元できます。</li>
           <li><b>読み込み</b>（レイヤーパネル上の「📁 読み込み」）：ZIPや 3DGS / モデルを追加。</li>
           <li><b>🎥 カメラ保存</b>：今のカメラ位置をレイヤーとして保存。</li>
         </ul>
@@ -2284,6 +2682,24 @@ body.immersive #immersive-exit{ display:inline-block; }
         <p style="color:#889">On phone / iPad, use the bottom-left joystick to move and drag the screen to look around.</p>
       </section>
 
+      <section id="m-devices">
+        <h2>📱 Features by device</h2>
+        <p style="color:#889">Available features and controls differ by device (◯=yes / △=partial or not recommended / －=no).</p>
+        <table class="m-tbl">
+          <tr><th>Feature</th><th>PC<br>(mouse/key)</th><th>Phone/<br>Tablet</th><th>VR<br>(Vision Pro/Quest)</th><th>TV/Console<br>(remote/pad)</th></tr>
+          <tr><td>Look around / view</td><td>◯</td><td>◯</td><td>◯</td><td>◯</td></tr>
+          <tr><td>Move (WASD / joystick)</td><td>◯ WASD</td><td>◯ joy</td><td>◯</td><td>△ D-pad</td></tr>
+          <tr><td>Sun / weather sim</td><td>◯</td><td>◯</td><td>◯</td><td>◯</td></tr>
+          <tr><td>Distance measure</td><td>◯</td><td>◯</td><td>△</td><td>△</td></tr>
+          <tr><td>Camera tool (previz)</td><td>◯</td><td>◯</td><td>△</td><td>△</td></tr>
+          <tr><td>Add / edit objects</td><td>◯</td><td>◯</td><td>△</td><td>△</td></tr>
+          <tr><td>Avatar walk</td><td>◯</td><td>△</td><td>◯</td><td>－</td></tr>
+          <tr><td>AR (rear-camera overlay)</td><td>－</td><td>◯</td><td>－</td><td>－</td></tr>
+          <tr><td>Focus nav (D-pad / gaze)</td><td>－</td><td>－</td><td>◯</td><td>◯</td></tr>
+        </table>
+        <p style="color:#889">AR is phone / tablet only (enable “Settings &gt; Safari &gt; Motion &amp; Orientation Access”). VR is best for viewing &amp; walking; use a PC for detailed editing.</p>
+      </section>
+
       <section id="m-layers">
         <h2>📁 Layers &amp; folders</h2>
         <p>Loaded files and added objects appear in “Scene layers” on the left.</p>
@@ -2302,7 +2718,8 @@ body.immersive #immersive-exit{ display:inline-block; }
         <ul style="line-height:1.9">
           <li>arrows = move / rings = rotate / cubes = scale</li>
           <li>switch coordinate space with “Local / World” (new &amp; imported objects default to Local)</li>
-          <li>on iPad you can <b>drag the gizmo with your finger</b></li>
+          <li>position / rotation / scale / size inputs step by <b>0.01</b> for fine adjustment</li>
+          <li>on iPad / phone you can <b>drag the gizmo (arrows, rings, pivot) with your finger</b></li>
         </ul>
       </section>
 
@@ -2312,7 +2729,7 @@ body.immersive #immersive-exit{ display:inline-block; }
         <ul style="line-height:1.9">
           <li>📦 <b>Cube</b> — size reference / blocking</li>
           <li>🟠 <b>Event</b> — a point of interest; you can attach an image</li>
-          <li>👤 <b>Figure</b> — a human (adjustable height &amp; pose) for sense of scale</li>
+          <li>👤 <b>Figure</b> — a human; adjust height to check scale &amp; eye level, and pose it by <b>selecting joints to rotate</b> or pulling the <b>IK handles</b></li>
           <li>🛣 <b>Path</b> — a 4-point area with a centre label (e.g. parking bays). Labels can be multi-line.</li>
         </ul>
       </section>
@@ -2323,7 +2740,9 @@ body.immersive #immersive-exit{ display:inline-block; }
         <ul style="line-height:1.9">
           <li>long-press to preview a point, release to confirm (point A → point B)</li>
           <li>“+ Measure height” adds a 3rd point for height</li>
-          <li>fine-tune markers with the arrows; 🗑 to clear</li>
+          <li>fine-tune markers with the arrows (axis) or the XZ plane; 🗑 to clear</li>
+          <li>on iPad / phone you can also <b>drag the arrows and markers with your finger</b></li>
+          <li>distance, height &amp; components read out in <b>0.01 m (1 cm)</b> steps</li>
         </ul>
       </section>
 
@@ -2343,10 +2762,17 @@ body.immersive #immersive-exit{ display:inline-block; }
         </ul>
       </section>
 
+      <section id="m-walkar">
+        <h2>🚶 Avatar walk / 📱 AR</h2>
+        <p><b>Avatar walk</b> (“🚶 Avatar walk” at the top): explore the scene from a person’s eye level. Move the avatar with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>; look around as usual. Great for checking sightlines, eye level and sense of scale. Click again to exit.</p>
+        <p><b>AR mode</b> (“📱 AR” at the top; phone / tablet only): overlays the 3DGS on the rear-camera feed so you can tilt the device to look around — handy for checking the real-scale overlay on location.</p>
+        <p style="color:#889">Note: on iOS, first enable “Settings &gt; Safari &gt; Motion &amp; Orientation Access”, then reload the page to use AR.</p>
+      </section>
+
       <section id="m-save">
         <h2>💾 Save &amp; load</h2>
         <ul style="line-height:1.9">
-          <li><b>Offline save</b> (top-left): saves the whole scene into a single ZIP — layers, objects, camera and settings all restore.</li>
+          <li><b>Zip save</b> (top-left): saves the whole scene into a single ZIP — layers, objects, camera and settings all restore.</li>
           <li><b>Load</b> (“📁 Load” above the layer panel): add a ZIP or a 3DGS / model.</li>
           <li><b>🎥 Save camera</b>: stores the current camera position as a layer.</li>
         </ul>
@@ -2841,11 +3267,11 @@ body.immersive #immersive-exit{ display:inline-block; }
 <div id="cam-shot-panel" style="display:none" aria-hidden="true"></div>
 
 <!-- Side panel (right) -->
-<div id="cam-panel" style="position:fixed;top:46px;right:0;bottom:0;width:288px;
+<div id="cam-panel" style="position:fixed;top:46px;right:0;bottom:0;width:262px;
   background:rgba(20,20,22,.95);backdrop-filter:blur(12px);
   border-left:1px solid rgba(255,255,255,.08);color:#d8d8d8;
   font-size:.78em;font-family:ui-sans-serif,system-ui,sans-serif;
-  padding:14px 14px 14px;overflow-y:auto;z-index:60;display:none;">
+  padding:14px 14px 14px;overflow-y:auto;overscroll-behavior:contain;z-index:60;display:none;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
     <strong style="font-size:1.05em;letter-spacing:.04em">📷 <span id="ct-tool">カメラツール</span></strong>
     <button onclick="toggleCamTool()" style="background:none;border:none;color:#888;
@@ -3113,21 +3539,22 @@ body.immersive #immersive-exit{ display:inline-block; }
 /* Legacy section header (kept for sub-headings inside groups) */
 #cam-panel .cm-sec{font-size:.72em;color:#aaa;letter-spacing:.06em;margin:10px 0 4px;
   text-transform:uppercase;font-weight:600;}
-#cam-panel .cm-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-#cam-panel .cm-lbl{font-size:.82em;color:#888;min-width:52px;}
+/* ボタン幅を詰めて右パネル全体を細く（段組み/セクション配置は不変）。 */
+#cam-panel .cm-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+#cam-panel .cm-lbl{font-size:.82em;color:#888;min-width:44px;}
 #cam-panel .cm-input{flex:1;background:#0e0e10;border:1px solid rgba(255,255,255,.1);
-  color:#ddd;border-radius:3px;padding:4px 6px;font-size:.92em;font-family:inherit;
+  color:#ddd;border-radius:3px;padding:4px 5px;font-size:.92em;font-family:inherit;
   min-width:0;}
 #cam-panel .cm-aspect,#cam-panel .cm-grid-btn{flex:1;background:#1a1a1c;
   border:1px solid rgba(255,255,255,.1);color:#888;border-radius:3px;
-  padding:4px 6px;font-size:.78em;cursor:pointer;font-family:inherit;min-width:54px;}
+  padding:4px 4px;font-size:.78em;cursor:pointer;font-family:inherit;min-width:42px;}
 #cam-panel .cm-aspect.on,#cam-panel .cm-grid-btn.on{background:rgba(255,180,84,.18);
   border-color:rgba(255,180,84,.5);color:#ffe4b3;}
 #cam-panel .cm-wb-btn{background:#1a1a1c;border:1px solid rgba(255,255,255,.1);
-  color:#aaa;border-radius:3px;padding:4px 8px;font-size:1em;cursor:pointer;}
+  color:#aaa;border-radius:3px;padding:4px 6px;font-size:1em;cursor:pointer;}
 #cam-panel .cm-focal-btn{flex:0 0 auto;background:#1a1a1c;
   border:1px solid rgba(255,255,255,.1);color:#888;border-radius:3px;
-  padding:3px 8px;font-size:.78em;cursor:pointer;font-family:inherit;min-width:36px;}
+  padding:3px 5px;font-size:.78em;cursor:pointer;font-family:inherit;min-width:29px;}
 #cam-panel .cm-focal-btn.on{background:rgba(255,180,84,.18);
   border-color:rgba(255,180,84,.5);color:#ffe4b3;}
 #btnCamTool.on{background:rgba(255,180,84,.22);border-color:rgba(255,180,84,.55);
@@ -3179,19 +3606,23 @@ body.ar-active #dz{display:none !important;}
   <span class="dz-tc tr">2026 / LOCAHUN 3D</span>
   <span class="dz-tc bl">LOCAHUN 3D — LOCATION SCOUT</span>
   <span class="dz-tc br">EST. 2026</span>
-  <div class="dz-logo" aria-hidden="true">
-    <svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ロケハン3D">
-      <defs><linearGradient id="dzlogobg" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#17171a"/><stop offset="1" stop-color="#070708"/></linearGradient></defs>
-      <rect x="5" y="5" width="90" height="90" rx="24" fill="url(#dzlogobg)" stroke="#d8b061" stroke-width="1.6" stroke-opacity=".9"/>
-      <g fill="none" stroke="#f3efe6" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M25 36 L25 25 L36 25"/><path d="M75 36 L75 25 L64 25"/>
-        <path d="M25 64 L25 75 L36 75"/><path d="M75 64 L75 75 L64 75"/></g>
-      <circle cx="50" cy="50" r="10.5" fill="#f3a02a"/><circle cx="50" cy="50" r="4.3" fill="#0c0c0d"/>
-    </svg>
+  <div class="dz-head">
+    <div class="dz-logo" aria-hidden="true">
+      <svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ロケハン3D">
+        <defs><linearGradient id="dzlogobg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#17171a"/><stop offset="1" stop-color="#070708"/></linearGradient></defs>
+        <rect x="5" y="5" width="90" height="90" rx="24" fill="url(#dzlogobg)" stroke="#d8b061" stroke-width="1.6" stroke-opacity=".9"/>
+        <g fill="none" stroke="#f3efe6" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M25 36 L25 25 L36 25"/><path d="M75 36 L75 25 L64 25"/>
+          <path d="M25 64 L25 75 L36 75"/><path d="M75 64 L75 75 L64 75"/></g>
+        <circle cx="50" cy="50" r="10.5" fill="#f3a02a"/><circle cx="50" cy="50" r="4.3" fill="#0c0c0d"/>
+      </svg>
+    </div>
+    <div class="dz-titletext">
+      <h1 id="dz-h1">ロケハン3D</h1>
+      <p class="sub" id="dz-sub">3D Gaussian Splatting ビューア</p>
+    </div>
   </div>
-  <h1 id="dz-h1">ロケハン3D</h1>
-  <p class="sub" id="dz-sub">3D Gaussian Splatting ビューア</p>
   <div class="zone" id="dropzone">
     <div class="ico">📂</div>
     <div id="dz-drop-text">3DGS、Zipファイルをドロップ、またはクリックして選択</div>
@@ -3354,6 +3785,9 @@ body.ar-active #dz{display:none !important;}
       </div>
     </div>
   </div>
+  <a class="dz-back-site" id="dz-back-site" href="https://locahun3d.com/">
+    <span id="dz-back-site-lbl">← ロケハン3D サイトへ戻る</span>
+  </a>
   <div class="dz-version-line">
     <span id="tb-version">v 0.2.0-beta</span>
   </div>
@@ -3367,15 +3801,6 @@ body.ar-active #dz{display:none !important;}
   <div class="lm" id="lm">初期化中</div>
   <div class="lerr" id="lerr"></div>
 </div>
-
-<script>
-// Hide dropzone immediately when ?autoload= is present so the user
-// never sees the home screen flash before the deferred loader fires.
-if(/[?&]autoload=/.test(location.search)){
-  document.getElementById('dz').style.display='none';
-  document.getElementById('ld').classList.remove('hidden');
-}
-</script>
 
 <!-- HUD -->
 <div id="hud" style="opacity:0">
@@ -3423,6 +3848,11 @@ if(/[?&]autoload=/.test(location.search)){
 
 <!-- Gizmo / Measure panel -->
 <div id="gizmo">
+  <!-- 右上の × で測定を閉じる（user 2026-06-28）。.gt は applyI18n が innerHTML を
+       書き換えるので、その外（パネル直下）に絶対配置で置く。 -->
+  <button id="msr-close-x" onclick="toggleMeasure()" ontouchend="if(event.cancelable)event.preventDefault(); toggleMeasure();"
+    title="測定を閉じる" aria-label="閉じる"
+    style="position:absolute;top:9px;right:11px;background:none;border:none;color:#9a9a9a;font-size:1.05em;line-height:1;cursor:pointer;padding:3px 5px;z-index:2">✕</button>
   <div class="gt">📐 距離測定</div>
 
   <!-- Point list (uniform rows). The per-point world-coordinate inputs and
@@ -3450,7 +3880,9 @@ if(/[?&]autoload=/.test(location.search)){
     ＋ <span id="giz-height-lbl">高さを図る (点C追加)</span>
   </button>
 
-  <div class="dist-row"><span id="dist-l">距離</span>: <span id="measDist">-</span></div>
+  <!-- 距離の数値表示はパネルから非表示（user 2026-06-28・全端末）。#measDist は JS が
+       参照するので要素は残し display:none。 -->
+  <div class="dist-row" style="display:none"><span id="dist-l">距離</span>: <span id="measDist">-</span></div>
   <div class="dist-components" id="distComp" style="display:none">
     <span class="dc" style="color:#ff5566">ΔX <span id="dcX">-</span></span>
     <span class="dc" style="color:#55ee66">ΔY <span id="dcY">-</span></span>
@@ -3462,7 +3894,9 @@ if(/[?&]autoload=/.test(location.search)){
 
   <div class="giz-btns">
     <button onclick="clearMeasure()" id="msr-clear">🗑 クリア</button>
-    <button onclick="undoMeasure()" id="btnUndo" style="color:#686868">↩ <span id="msr-undo">戻る</span></button>
+    <!-- In-panel 「↩ 戻る」 removed (user 2026-06-28): the top-menu ↩ 戻る button
+         now also undoes measurement steps, so this was redundant. undoMeasure()
+         stays reachable via that button / Ctrl+Z / Z. -->
     <button onclick="toggleMeasure()" id="btnMeasureEnd"><span id="msr-end-lbl-init">終了</span></button>
   </div>
 </div>
@@ -3984,7 +4418,7 @@ renderer = new THREE.WebGLRenderer({
   antialias: !_heavyDisplay && !isMobile && !(typeof _isMac !== 'undefined' && _isMac),
   powerPreference: 'high-performance',
   stencil: false,
-  preserveDrawingBuffer: /[?&]capture=1/.test(location.search),
+  preserveDrawingBuffer: false,
   alpha: false,                    // opaque canvas — no body bleed-through during compositing
   premultipliedAlpha: true,        // matches Three.js default; prevents subpixel halos on splats
   depth: true,
@@ -4012,6 +4446,26 @@ const _PR_CAP = (_splatPerfTier === 'phone')  ? 1.5
               : (_splatPerfTier === 'tablet') ? 1.75
               : (typeof _isMac !== 'undefined' && _isMac) ? 1.5
               :                                 2;
+// Camera-mode zoom supersampling (user 2026-06-27): when composing a shot at a
+// long lens (≥50mm) the narrow FOV magnifies the splats and they look soft. Render
+// the canvas at a higher pixel ratio so the framed splats keep detail. 50mm→×1.0,
+// scaling with focal, capped at ×1.8 to bound the GPU cost. Reverts below 50mm or
+// when the camera tool closes. PR > the normal cap is intentional here (a
+// deliberate "compose a still" mode, not the live fly-around).
+function _camZoomResBoost(){
+  if(!(typeof cam!=='undefined' && cam.active)) return 1;
+  const f = (cam.focal || 35);
+  if(f < 50) return 1;
+  return Math.min(1.8, 1 + (f - 50) / 150);   // 50→1.0, 125→1.5, ≥200→1.8(cap)
+}
+function _applyRenderPixelRatio(){
+  const boost = _camZoomResBoost();
+  // Allow the boost to exceed the normal _PR_CAP, but keep an absolute ceiling so
+  // a huge DPR × boost can't allocate an enormous buffer.
+  const basePR = Math.min(devicePixelRatio, _PR_CAP) * qualScale;
+  const pr = Math.min(basePR * boost, (devicePixelRatio || 1) * 2.2);
+  renderer.setPixelRatio(pr);
+}
 renderer.setPixelRatio(Math.min(devicePixelRatio, _PR_CAP) * qualScale);
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(0x000000); // black — splat sort gaps blend cleanly with dark/night and don't flash gray
@@ -4210,6 +4664,10 @@ function _envBuildMesh(){
       uSunDir:    { value: new THREE.Vector3(0, 1, 0) },       // WORLD direction toward the sun
       uSunColor:  { value: new THREE.Color(1.0, 0.95, 0.85) }, // disc + glow tint
       uSunGlow:   { value: 1.0 },                              // glow strength (fades near/below horizon)
+      // ── Procedural clouds (日照モードのみ) ──
+      uCloudAmt:  { value: 0.0 },                              // 0 = clear sky, 1 = full overcast (coverage)
+      uCloudTime: { value: 0.0 },                              // drift animation seconds
+      uCloudLight:{ value: 1.0 },                              // sunlit-top whiteness (lowered for rain)
     },
     vertexShader: `
       varying vec3 vDir;
@@ -4232,6 +4690,24 @@ function _envBuildMesh(){
       uniform vec3  uSunDir;
       uniform vec3  uSunColor;
       uniform float uSunGlow;
+      uniform float uCloudAmt;
+      uniform float uCloudTime;
+      uniform float uCloudLight;
+      // ── value-noise FBM (procedural clouds) ──
+      float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+      float vnoise(vec2 p){
+        vec2 i = floor(p), f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        float a = h21(i), b = h21(i + vec2(1.0, 0.0));
+        float c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));
+        return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+      }
+      float fbm(vec2 p){
+        float v = 0.0, a = 0.5;
+        mat2 m = mat2(1.6, 1.2, -1.2, 1.6);   // rotate+scale each octave to kill axis artifacts
+        for(int i = 0; i < 6; i++){ v += a * vnoise(p); p = m * p; a *= 0.5; }
+        return v;
+      }
       void main(){
         float y = vDir.y;
         vec3 col;
@@ -4241,6 +4717,29 @@ function _envBuildMesh(){
         } else {
           float t = pow(clamp(-y, 0.0, 1.0), 0.7);
           col = mix(uHorizon, uGround, t);
+        }
+        // ── procedural clouds: 視線を雲層平面へ投影 → 地平線に向かって雲が収束する ──
+        if(uCloudAmt > 0.001 && vDir.y > 0.0){
+          // 平面投影（分母に定数＝地平線付近の極端な伸びを抑える）
+          vec2 uv = (vDir.xz / (vDir.y * 0.85 + 0.18)) * 0.5;
+          // 雲を Y方向（奥行き=画面の縦方向）へ一定速度で流す＝手前の地平から頭上へ立ち上がる動き。
+          // 全層を同じ量だけ平行移動（剛体）→ その場回転/churn にならない。
+          vec2 p = uv - vec2(0.0, uCloudTime * 0.05);
+          float base   = fbm(p);
+          float detail = fbm(p * 2.7);
+          float n = base * 0.62 + detail * 0.38;                 // multi-scale wisps
+          float cov = clamp(uCloudAmt, 0.0, 1.0);
+          // 気象庁の雲量定義(空を覆う割合)に一致させる較正。実測ノイズ分布の分位点から逆算し、
+          // 「雲で覆われる面積割合 ≈ 雲量cov」になるしきい値(mid)を求める（cov→mid はほぼ線形、上端で完全曇天へ）。
+          float mid = 0.642 - 0.303 * cov - 0.34 * smoothstep(0.85, 1.0, cov);
+          float density = smoothstep(mid - 0.055, mid + 0.055, n);
+          density *= smoothstep(0.02, 0.24, vDir.y);             // haze-fade near horizon (no singularity)
+          // shading: sunlit top vs shadowed underside (underside follows sky → dark in rain)
+          float lit = clamp(fbm(p * 1.3 + normalize(uSunDir).xz * 0.28) * 1.35, 0.0, 1.0);
+          vec3 cloudBase = mix(uHorizon, uZenith, 0.35) * 0.55;
+          vec3 cloudTop  = mix(vec3(1.0), uSunColor, 0.4);
+          vec3 cloudCol  = mix(cloudBase, cloudTop, lit * uCloudLight);
+          col = mix(col, cloudCol, density);
         }
         // ── 日照モード: 太陽方向への暖色グロー＋ディスク ──
         // uShowSun=0（手動環境 or 太陽が地平線下）のとき完全に無効。
@@ -4286,8 +4785,9 @@ window.setEnvPreset = function(key){
 };
 function _setEnvPresetCore(key){
   env.preset = key;
-  // 手動プリセット/なし は太陽ディスクを持たない（日照モードは updateSunMode で再点灯）。
-  if(env.material) env.material.uniforms.uShowSun.value = 0;
+  // 手動プリセット/なし は太陽ディスク＋プロシージャル雲を持たない
+  // （日照モードのみ updateSunMode で再点灯・雲量を設定）。起動時の day 背景も雲なしのまま。
+  if(env.material){ env.material.uniforms.uShowSun.value = 0; env.material.uniforms.uCloudAmt.value = 0; }
   document.querySelectorAll('#env-panel .env-btn').forEach(b=>{
     b.classList.toggle('on', b.dataset.env === key);
   });
@@ -4552,7 +5052,13 @@ const sun = {
   lat: 35.69, lng: 139.69, tz: 9,   // デフォルト=東京（県庁所在地）
   y: null, mo: null, d: null,   // 日付 (未設定なら今日)
   timeMin: 12*60,               // 0..1439
-  weather: 'clear',             // 'clear' | 'cloudy' | 'rain' — 疑似HDRIに連動
+  weather: 'clear',             // 'clear' | 'cloudy' | 'rain' | 'snow' — 疑似HDRIに連動
+  // 予報追従(_fcAuto)時のみ、現在時刻の予報から計算した強度を保持し疑似HDRIに反映する。
+  // 手動でボタンを選んだときは null（＝従来どおりの固定の曇り/雨の見え方）。
+  _fcCloudAmt: null,            // 曇り: 雲量 0..1（cloud_cover% から）
+  _fcRainLevel: null,           // 雨: 1=霧雨 / 2=雨 / 3=豪雨（weather_code＋降水量から）
+  _fcSnowLevel: null,           // 雪: 1=弱 / 2=雪 / 3=強（weather_code から）
+  _fcPrecip: null,              // 降水種別: 'rain' | 'snow' | 'hail'（雹は雷雨96/99）
   _vizKey: '',                  // 太陽軌道の再構築判定 (日付/場所が変わったら作り直す)
 };
 (function _sunInitDate(){ const n=new Date(); sun.y=n.getFullYear(); sun.mo=n.getMonth()+1; sun.d=n.getDate(); sun.timeMin=Math.min(1430, Math.round((n.getHours()*60+n.getMinutes())/10)*10); })();
@@ -4577,6 +5083,8 @@ function _sunFmtHM(dt){
 function _setSunActive(on){
   if(on === sun.active){ if(on) updateSunMode(); return; }
   sun.active = on;
+  // cbar のボタン表示制御用（CSS: body.sun-active で カメラ/日照 以外を隠す）。
+  document.body.classList.toggle('sun-active', on);
   const btn = document.getElementById('btn-sun');
   if(on){
     env.preset = '__sun';
@@ -4619,17 +5127,222 @@ function _applyWeather(pal, weather){
   const desat=(c,amt)=>{ const l=0.30*c[0]+0.59*c[1]+0.11*c[2];
     return [c[0]+(l-c[0])*amt, c[1]+(l-c[1])*amt, c[2]+(l-c[2])*amt]; };
   const mul=(c,m)=>[c[0]*m[0], c[1]*m[1], c[2]*m[2]];
+  // 予報追従(_fcAuto)時のみ、雲量/雨レベルの強度を反映する。手動選択時は従来の固定。
+  const auto = !!sun._fcAuto;
   if(weather === 'cloudy'){
-    // 灰色でフラット、わずかに寒色寄りに減光（一様な曇天）
+    if(auto && typeof sun._fcCloudAmt === 'number'){
+      // 予報の雲量(0..1)で曇りの厚さをスケール → 疑似HDRIに雲量を再現。
+      // 雲量小=薄曇り(ほぼ晴れ)、雲量大=厚い灰色の本曇り。
+      const amt = Math.max(0, Math.min(1, sun._fcCloudAmt));
+      const desA = 0.30 + 0.62*amt;
+      const z=desat(pal.zenith,desA), h=desat(pal.horizon,desA), g=desat(pal.ground,desA*0.92), t=desat(pal.tint,desA*0.92);
+      const dv = 1.00 - 0.22*amt;
+      const dim=[dv, dv+0.01, dv+0.04];
+      const tv = 0.99 - 0.13*amt;
+      return { zenith:mul(z,dim), horizon:mul(h,dim), ground:mul(g,dim), tint:mul(t,[tv, tv+0.02, tv+0.05]) };
+    }
+    // 手動（または雲量不明）: 従来どおりの固定の曇り（灰色フラット・わずかに寒色）
     const z=desat(pal.zenith,0.85), h=desat(pal.horizon,0.85), g=desat(pal.ground,0.80), t=desat(pal.tint,0.80);
     const dim=[0.84,0.85,0.88];
     return { zenith:mul(z,dim), horizon:mul(h,dim), ground:mul(g,dim), tint:mul(t,[0.90,0.92,0.95]) };
   }
-  // rain: さらに暗く青灰色
+  if(weather === 'snow'){
+    // 雪空: 明るい灰白色（曇りより脱色＆やや明るめ。雨のように暗くしない）。
+    const z=desat(pal.zenith,0.90), h=desat(pal.horizon,0.90), g=desat(pal.ground,0.86), t=desat(pal.tint,0.86);
+    const dim=[0.86,0.88,0.92];
+    return { zenith:mul(z,dim), horizon:mul(h,dim), ground:mul(g,dim), tint:mul(t,[0.90,0.92,0.96]) };
+  }
+  // rain
+  if(auto && (sun._fcRainLevel===1 || sun._fcRainLevel===3)){
+    // 予報の雨レベル: 1=霧雨（明るめ薄い青灰） / 3=豪雨（かなり暗い青灰）。
+    // 2=雨 は下の従来固定と同じ見え方なので分岐不要。
+    const RA = (sun._fcRainLevel===1)
+      ? { des:0.82, desG:0.80, dim:[0.72,0.76,0.84], tint:[0.80,0.84,0.92] }   // 霧雨
+      : { des:0.96, desG:0.92, dim:[0.40,0.45,0.56], tint:[0.48,0.55,0.68] };  // 豪雨
+    const z=desat(pal.zenith,RA.des), h=desat(pal.horizon,RA.des), g=desat(pal.ground,RA.desG), t=desat(pal.tint,RA.desG);
+    return { zenith:mul(z,RA.dim), horizon:mul(h,RA.dim), ground:mul(g,RA.dim), tint:mul(t,RA.tint) };
+  }
+  // 手動（または rainLevel===2 / 不明）: 従来どおりの固定の雨（暗く青灰色）
   const z=desat(pal.zenith,0.92), h=desat(pal.horizon,0.92), g=desat(pal.ground,0.88), t=desat(pal.tint,0.88);
   const dim=[0.55,0.60,0.70];
   return { zenith:mul(z,dim), horizon:mul(h,dim), ground:mul(g,dim), tint:mul(t,[0.62,0.68,0.78]) };
 }
+
+// 雲量(amt 0..1)と雲の明るさ(light)を決める。
+//  ★プロシージャル雲は「実際の天気予報を取得」したフォローモード(_fcAuto)時のみ描く。
+//   手動の晴れ/曇り/雨は従来通りフラット（雲なし）＝見た目を一切変えない。
+//  予報時は cloud_cover% / 雨レベルで連続的にスケール（強度再現）。
+function _sunCloudParams(){
+  if(!sun._fcAuto) return { amt:0.0, light:1.0 };    // 手動＝雲なし（フラット表示を厳守）
+  // ★雲量は天気分類(晴れ/曇り/雨)に関係なく cloud_cover% がそのまま被覆率を決める。
+  //   50%なら晴れ判定でもちゃんと半分雲が出る。雲は天気に依らず常に存在する。
+  const a = (typeof sun._fcCloudAmt === 'number') ? sun._fcCloudAmt : 0.0;  // 実雲量 0..1
+  // 天気は「雲の明暗(ムード)」だけを決める。被覆率(amt)には触らない。
+  let light = 0.95 - 0.33 * a;                        // 雲が多いほど下面がやや暗い
+  if(sun.weather === 'rain'){
+    const lv = sun._fcRainLevel || 2;
+    light = (lv >= 3) ? 0.30 : (lv >= 2 ? 0.45 : 0.60);  // 雨ほど暗い雲
+  } else if(sun.weather === 'snow'){
+    light = 0.88;                                    // 雪空は明るい灰白色の雲
+  }
+  return { amt:a, light };
+}
+
+// 雲のドリフト(流れ)アニメ。日照モード中＆雲があるときだけ ~10fps で回し、
+// それ以外は自動停止（重い連続描画を避ける）。rAFはラップ済みなので setTimeout を使う。
+let _cloudAnimTimer = null, _cloudT0 = null;
+function _cloudAnimTick(){
+  _cloudAnimTimer = null;
+  // 日照の空(__sun)が表示中＆雲があれば回す。モードを抜けても凍結保持の空が出ていれば流れ続ける。
+  if(!(env.material && _sunSkyShown() && env.material.uniforms.uCloudAmt.value > 0.001)) return;
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if(_cloudT0 == null) _cloudT0 = now;
+  env.material.uniforms.uCloudTime.value = (now - _cloudT0) / 1000;
+  markDirty(6);
+  _cloudAnimTimer = setTimeout(_cloudAnimTick, 100);
+}
+function _cloudAnimEnsure(){
+  if(_cloudAnimTimer == null && env.material && _sunSkyShown() && env.material.uniforms.uCloudAmt.value > 0.001) _cloudAnimTick();
+}
+// 検証/微調整用フック（手動で雲量・明るさを直接設定して見た目を確認できる）
+window.__setClouds = function(amt, light){
+  if(!env.material) return;
+  env.material.uniforms.uCloudAmt.value = (amt == null ? 0.6 : amt);
+  if(light != null) env.material.uniforms.uCloudLight.value = light;
+  _cloudAnimEnsure(); markDirty(6);
+};
+window.__cloudDbg = function(){
+  if(!env.material) return { err:'no env.material' };
+  const u = env.material.uniforms;
+  return { amt:+u.uCloudAmt.value.toFixed(3), light:+u.uCloudLight.value.toFixed(3),
+    time:+u.uCloudTime.value.toFixed(2), sunActive: !!(sun&&sun.active), fcAuto: !!(sun&&sun._fcAuto),
+    weather: sun&&sun.weather, fcCloudAmt: sun&&sun._fcCloudAmt, fcRainLevel: sun&&sun._fcRainLevel,
+    timer: _cloudAnimTimer!=null, params: (typeof _sunCloudParams==='function'? _sunCloudParams():null) };
+};
+
+// ── 降水の表現（雨/雪/雹）: シーンの上に2Dキャンバスで描く前面オーバーレイ ──
+// 3Dパイプラインから独立。雨=斜めの筋(霧雨/雨/豪雨)、雪=白い粒がゆらぎ落ちる、雹=速く白い短粒。
+// ★日照の空(__sun)が表示中なら、日照ボタンでモードを抜けても(凍結保持)降り続ける＝雲と同じ挙動。
+let _precipCv=null, _precipCtx=null, _precipParts=[], _precipTimer=null, _precipType='none', _precipLevel=0, _precipLast=null;
+let _precipLastYaw=null, _precipLastPitch=null; const _precipDirV=new THREE.Vector3();
+// カメラの回転に合わせて粒を逆方向へずらす（パララックス）→ 画面に張り付かず世界に追従して見える。
+function _precipParallax(W,H){
+  if(typeof camera==='undefined' || !camera) return {sx:0, sy:0};
+  camera.getWorldDirection(_precipDirV);
+  const yaw=Math.atan2(_precipDirV.x, _precipDirV.z);
+  const pitch=Math.asin(Math.max(-1,Math.min(1,_precipDirV.y)));
+  if(_precipLastYaw==null){ _precipLastYaw=yaw; _precipLastPitch=pitch; return {sx:0, sy:0}; }
+  let dyaw=yaw-_precipLastYaw; if(dyaw>Math.PI)dyaw-=6.2832; if(dyaw<-Math.PI)dyaw+=6.2832;
+  const dpitch=pitch-_precipLastPitch;
+  _precipLastYaw=yaw; _precipLastPitch=pitch;
+  const vfov=((camera.fov||50)*Math.PI/180), hfov=2*Math.atan(Math.tan(vfov/2)*(W/Math.max(1,H)));
+  // カメラが右を向く(dyaw>0)→粒は左へ。カメラが上を向く(dpitch>0)→粒は下へ。
+  return { sx:-dyaw*(W/Math.max(0.001,hfov)), sy:dpitch*(H/Math.max(0.001,vfov)) };
+}
+function _sunSkyShown(){ return (typeof env!=='undefined' && env && env.mesh && env.mesh.visible && env.preset==='__sun'); }
+function _precipConfig(type, lv){
+  if(type==='snow'){
+    if(lv>=3) return { snow:true, n:540, vmin:60, vmax:130, smin:1.4, smax:3.6, sway:1.6, alpha:0.9 };
+    if(lv>=2) return { snow:true, n:320, vmin:45, vmax:100, smin:1.2, smax:3.0, sway:1.3, alpha:0.85 };
+    return       { snow:true, n:160, vmin:35, vmax:75,  smin:1.0, smax:2.4, sway:1.0, alpha:0.78 };
+  }
+  if(type==='hail'){   // 雹: 速く白っぽい短粒（先端に丸）
+    if(lv>=3) return { head:2.1, n:430, vmin:1150, vmax:1550, lmin:6, lmax:12, slant:0.12, w:2.2, alpha:0.72 };
+    return       { head:1.8, n:300, vmin:1050, vmax:1400, lmin:5, lmax:10, slant:0.12, w:1.9, alpha:0.64 };
+  }
+  // rain
+  if(lv>=3) return { n:380, vmin:1020, vmax:1420, lmin:22, lmax:42, slant:0.30, w:1.7, alpha:0.42 };  // 豪雨
+  if(lv>=2) return { n:200, vmin:740,  vmax:1060, lmin:15, lmax:30, slant:0.24, w:1.3, alpha:0.36 };  // 雨
+  return       { n:340, vmin:380,  vmax:560,  lmin:7,  lmax:14, slant:0.14, w:1.0, alpha:0.40 };  // 霧雨(細かい粒を多く＝見えるように)
+}
+function _precipEnsure(){
+  if(_precipCv) return;
+  _precipCv=document.createElement('canvas'); _precipCv.id='rain-fx';
+  _precipCv.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;display:none;';
+  document.body.appendChild(_precipCv);
+  _precipCtx=_precipCv.getContext('2d');
+}
+function _precipResize(){
+  if(!_precipCv) return;
+  const dpr=Math.min(2, window.devicePixelRatio||1);
+  _precipCv.width=Math.round(window.innerWidth*dpr); _precipCv.height=Math.round(window.innerHeight*dpr);
+  _precipCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+function _precipSeed(cfg){
+  const W=window.innerWidth, H=window.innerHeight; _precipParts=[];
+  for(let i=0;i<cfg.n;i++){
+    const p={ x:Math.random()*(W+240)-120, y:Math.random()*H, v:cfg.vmin+Math.random()*(cfg.vmax-cfg.vmin), ph:Math.random()*6.283 };
+    if(cfg.snow) p.r=cfg.smin+Math.random()*(cfg.smax-cfg.smin); else p.l=cfg.lmin+Math.random()*(cfg.lmax-cfg.lmin);
+    _precipParts.push(p);
+  }
+}
+function _precipTick(){
+  _precipTimer=null;
+  if(_precipLevel<1 || _precipType==='none' || !_sunSkyShown()){ if(_precipCv) _precipCv.style.display='none'; _precipLast=null; _precipLastYaw=null; return; }
+  const cfg=_precipConfig(_precipType,_precipLevel);
+  const now=(typeof performance!=='undefined'?performance.now():Date.now());
+  const dt=_precipLast==null?0.016:Math.min(0.05,(now-_precipLast)/1000); _precipLast=now;
+  const t=now/1000, W=window.innerWidth, H=window.innerHeight, ctx=_precipCtx;
+  const par=_precipParallax(W,H), sx=par.sx, sy=par.sy, WW=W+260;
+  ctx.clearRect(0,0,W,H);
+  if(cfg.snow){
+    ctx.fillStyle='rgba(248,250,255,'+cfg.alpha+')';
+    for(const p of _precipParts){
+      p.y+=p.v*dt+sy; p.x+=Math.sin(t*cfg.sway+p.ph)*0.5+sx;
+      if(p.x<-130)p.x+=WW; else if(p.x>W+130)p.x-=WW;
+      if(p.y>H+8){ p.y=-8-Math.random()*40; p.x=Math.random()*(W+240)-120; }
+      else if(p.y<-60){ p.y=H+Math.random()*30; p.x=Math.random()*(W+240)-120; }
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.2832); ctx.fill();
+    }
+  } else {
+    ctx.strokeStyle=(_precipType==='hail'?'rgba(232,240,250,':'rgba(176,194,216,')+cfg.alpha+')';
+    ctx.lineWidth=cfg.w; ctx.lineCap='round'; ctx.beginPath();
+    for(const p of _precipParts){
+      p.y+=p.v*dt+sy; p.x+=p.v*dt*cfg.slant+sx;
+      if(p.x<-130)p.x+=WW; else if(p.x>W+130)p.x-=WW;
+      if(p.y>H+24){ p.y=-24-Math.random()*80; p.x=Math.random()*(W+240)-120; }
+      else if(p.y<-90){ p.y=H+Math.random()*40; p.x=Math.random()*(W+240)-120; }
+      ctx.moveTo(p.x,p.y); ctx.lineTo(p.x - p.l*cfg.slant, p.y - p.l);
+    }
+    ctx.stroke();
+    if(cfg.head){ ctx.fillStyle='rgba(240,246,255,'+Math.min(1,cfg.alpha+0.2)+')';
+      for(const p of _precipParts){ ctx.beginPath(); ctx.arc(p.x,p.y,cfg.head,0,6.2832); ctx.fill(); } }
+  }
+  _precipTimer=setTimeout(_precipTick, 33);   // ~30fps（rAFはラップ済なので setTimeout）
+}
+function _precipFxUpdate(type, lv){
+  _precipEnsure();
+  type=type||'none'; const nl=(type==='none')?0:(lv||0);
+  if(nl>=1){
+    const reseed=(_precipType!==type)||(_precipLevel<1)||(_precipConfig(_precipType,_precipLevel).n!==_precipConfig(type,nl).n);
+    _precipType=type; _precipLevel=nl; _precipResize();
+    if(reseed) _precipSeed(_precipConfig(type,nl));
+    _precipCv.style.display='block';
+    if(_precipTimer==null){ _precipLast=null; _precipTick(); }
+  } else { _precipLevel=0; _precipType='none'; if(_precipCv) _precipCv.style.display='none'; }
+}
+window.addEventListener('resize', ()=>{ if(_precipLevel>=1) _precipResize(); });
+// iOS/iPad: テキスト入力にフォーカスすると position:fixed のページごとスクロールしてしまう。
+// アプリは全画面固定で正規のページスクロールが無いので、常に左上(0,0)へ戻す（内部パネルの
+// overflow スクロールはwindowのscrollイベントを発火しないので影響なし）。
+function _lockPageScroll(){ if(window.pageYOffset||window.pageXOffset||document.documentElement.scrollTop||document.body.scrollTop){ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; } }
+window.addEventListener('scroll', _lockPageScroll, {passive:true});
+document.addEventListener('focusin', ()=>setTimeout(_lockPageScroll,60));
+document.addEventListener('focusout', ()=>setTimeout(_lockPageScroll,60));
+if(window.visualViewport){ window.visualViewport.addEventListener('scroll', _lockPageScroll); }
+// iPad/iOS: ページ地のタッチドラッグでページごと動くのを抑止（overflowスクロール可能なパネル内は許可）。
+document.addEventListener('touchmove', function(e){
+  let el = e.target;
+  // ボタン/入力/スライダー等のタップは触らない（preventDefaultでクリックが消えてダブルタップ化するのを防ぐ）。
+  if(el.closest && el.closest('button, input, select, textarea, a, [role=button], .lr, #joy, #joy-vert')) return;
+  while(el && el.nodeType===1 && el!==document.body){
+    if(el.scrollHeight > el.clientHeight + 1){ const oy=getComputedStyle(el).overflowY; if(oy==='auto'||oy==='scroll') return; }
+    el = el.parentElement;
+  }
+  if(e.cancelable) e.preventDefault();   // ページ地(背景)のスクロールだけを止める
+}, {passive:false});
+window.__setRain   = function(lv){ _precipFxUpdate(lv>=1?'rain':'none', lv||0); };  // 後方互換
+window.__setPrecip = function(type, lv){ _precipFxUpdate(type, lv||0); };           // 検証/微調整用
 
 // 現在の sun.state から太陽位置/日照時間を計算し、ドーム・ティント・読み出し・3D可視化を更新
 function updateSunMode(){
@@ -4664,7 +5377,21 @@ function updateSunMode(){
     u.uSunDir.value.copy(dir);
     u.uSunColor.value.setRGB(..._sunDiscColor(altDeg));
     u.uSunGlow.value = _sunGlowStrength(altDeg);
+    // 雲量/雲の明るさ（天気＋予報強度から）。夜は描いても見えないので高度で減衰。
+    const cp = _sunCloudParams();
+    const nightFade = THREE.MathUtils.clamp((altDeg + 6.0) / 8.0, 0.0, 1.0); // 薄明で雲をフェードアウト
+    u.uCloudAmt.value = cp.amt;
+    u.uCloudLight.value = cp.light * (0.25 + 0.75 * nightFade);
   }
+  _cloudAnimEnsure();
+  // 降水の表現: 手動でも予報でも、雨/雪を選べば降る。雹は予報(雷雨96/99)時のみ。夜(高度<-6)は止める。
+  let _pType='none', _pLv=0;
+  if(altDeg > -6){
+    if(sun._fcAuto && sun._fcPrecip==='hail'){ _pType='hail'; _pLv=3; }
+    else if(sun.weather==='snow'){ _pType='snow'; _pLv = sun._fcAuto ? (sun._fcSnowLevel||2) : 2; }
+    else if(sun.weather==='rain'){ _pType='rain'; _pLv = sun._fcAuto ? (sun._fcRainLevel||2) : 2; }
+  }
+  _precipFxUpdate(_pType, _pLv);
   applySceneTint();
   _sunUpdateReadout(altDeg, w.az, times);
   _sunVizUpdate(dir, times);   // 3D コンパス＋太陽軌道を更新
@@ -4764,9 +5491,10 @@ window.onSunDate = function(val){
 };
 window.onSunTime = function(val){ sun.timeMin=Math.max(0,Math.min(1439,+val)); updateSunMode(); };
 window.onSunWeather = function(wx){
-  if(wx!=='clear' && wx!=='cloudy' && wx!=='rain') return;
+  if(wx!=='clear' && wx!=='cloudy' && wx!=='rain' && wx!=='snow') return;
   sun.weather = wx;
   sun._fcAuto = false;   // 手動で天気を選んだら予報の自動追従を解除（再取得で再開）
+  sun._fcCloudAmt = null; sun._fcRainLevel = null; sun._fcSnowLevel = null; sun._fcPrecip = null;  // 手動は従来の固定の見え方に戻す
   document.querySelectorAll('#sun-panel .sun-wx-btn').forEach(b=>b.classList.toggle('on', b.dataset.wx===wx));
   updateSunMode();
 };
@@ -4816,12 +5544,74 @@ function _sunFcWeatherForNow(){
   if(code==null) return null;
   return _wmoWx(code).wx;
 }
-// 自動モード中、現在の日時に対応する予報の天気を sun.weather に反映。
+// 雨を3段階に分類: 1=霧雨 / 2=雨 / 3=豪雨。WMO weather_code を主、毎時降水量(mm)で補強。
+function _rainLevelFromCodePrecip(code, pr){
+  let lvl;
+  if([51,53,55,56,57,61,80].includes(code))      lvl = 1;  // 霧雨・弱い雨・弱いにわか雨
+  else if([63,66,81].includes(code))             lvl = 2;  // 雨・にわか雨
+  else if([65,67,82,95,96,99].includes(code))    lvl = 3;  // 強い雨・激しいにわか雨・雷雨
+  else                                           lvl = 2;
+  // 降水量(mm/h)で上方修正（コードが弱めでも実降水が多ければ格上げ）。
+  if(typeof pr === 'number'){
+    if(pr >= 6)        lvl = Math.max(lvl, 3);
+    else if(pr >= 1.5) lvl = Math.max(lvl, 2);
+  }
+  return Math.max(1, Math.min(3, lvl));
+}
+// 予報キャッシュから現在の日付/場所/時刻に対応する {wx, cloudAmt(0..1), rainLevel(1..3)} を返す。無ければnull。
+function _sunFcDetailForNow(){
+  const fc=sun._fc;
+  if(!fc||!fc.hourly||!fc.hourly.time) return null;
+  if(fc.keyLoc!==(sun.lat.toFixed(2)+','+sun.lng.toFixed(2))) return null;
+  const dstr=_sunDateStr();
+  if(dstr<fc.start || dstr>fc.end) return null;
+  const h=Math.max(0,Math.min(23,Math.round(sun.timeMin/60)));
+  const idx=fc.hourly.time.indexOf(dstr+'T'+String(h).padStart(2,'0')+':00');
+  if(idx<0) return null;
+  const hh=fc.hourly;
+  const code=(hh.weather_code&&hh.weather_code[idx]!=null)?hh.weather_code[idx]:null;
+  if(code==null) return null;
+  let wx=_wmoWx(code).wx;
+  // ★雲量は天気分類に関係なく常に cloud_cover% から取る（晴れでも雨でも雲は存在する）。
+  const cc=(hh.cloud_cover&&hh.cloud_cover[idx]!=null)?hh.cloud_cover[idx]:null;
+  let cloudAmt = (cc!=null) ? Math.max(0,Math.min(1, cc/100)) : null;
+  let rainLevel=null, snowLevel=null, precipType=null;
+  const SNOW={71:1,77:1,85:1,73:2,75:3,86:3};   // WMO雪コード→強度
+  if(SNOW[code]!=null){
+    wx='snow'; snowLevel=SNOW[code]; precipType='snow';
+    if(cloudAmt==null || cloudAmt<0.6) cloudAmt=0.9;   // 雪は厚い雲
+  } else if(code===96 || code===99){
+    wx='rain'; precipType='hail'; rainLevel=3;          // 雷雨＋雹 → 暗い雨空＋雹
+    if(cloudAmt==null) cloudAmt=0.95;
+  } else if(wx==='rain'){
+    const pr=(hh.precipitation&&hh.precipitation[idx]!=null)?hh.precipitation[idx]:null;
+    rainLevel = _rainLevelFromCodePrecip(code, pr); precipType='rain';
+    if(cloudAmt==null) cloudAmt = 0.9;          // 雨で雲量欠損 → 厚め
+  } else if(wx==='cloudy' && cloudAmt==null){
+    cloudAmt = 0.85;                            // 霧(45/48)など雲量欠損 → 厚め
+  } else if(cloudAmt==null){
+    cloudAmt = 0;                               // 晴れで雲量欠損 → 雲なし
+  }
+  // ★気象庁の雲量基準で「晴れ/曇り」を再判定（雲量で決まる code 0-3 のみ）。
+  //   快晴=雲量0-1 / 晴れ=2-8(15-85%) / 曇り=9-10(85%超)。WMOの partly-cloudy(=晴れ)を
+  //   灰色の曇り扱いにしていたズレを是正。雨・雪・霧はそのまま。
+  if(code>=0 && code<=3 && cloudAmt!=null){
+    wx = (cloudAmt > 0.85) ? 'cloudy' : 'clear';
+  }
+  return { wx, cloudAmt, rainLevel, snowLevel, precipType };
+}
+// 自動モード中、現在の日時に対応する予報の天気＋強度(雲量/雨レベル)を sun に反映。
 // updateSunMode を呼ばず直接書き換える（onSunWeather経由だと再帰するため）。
 function _sunFcApplyAuto(){
   if(!sun._fcAuto) return;
-  const wx=_sunFcWeatherForNow();
-  if(wx && wx!==sun.weather){ sun.weather=wx; _sunFcSyncButtons(); }
+  const d=_sunFcDetailForNow();
+  if(!d || !d.wx) return;
+  // 強度は予報の現在時刻の値に毎回更新（該当しない時刻は null に戻す）。
+  sun._fcCloudAmt  = d.cloudAmt;
+  sun._fcRainLevel = d.rainLevel;
+  sun._fcSnowLevel = d.snowLevel;
+  sun._fcPrecip    = d.precipType;
+  if(d.wx!==sun.weather){ sun.weather=d.wx; _sunFcSyncButtons(); }
 }
 
 // キャッシュ済み予報から、現在の日付/場所/時刻に対応する行を表示。
@@ -5115,9 +5905,7 @@ window.resetCameraToInitial = function(){
 // once immediately AND twice on a short timer to let the visual
 // viewport settle, and also hook orientationchange + visualViewport
 // so we don't depend on a single event source.
-let _captureLock = false;
 function _doViewportResize(){
-  if(_captureLock) return;
   const w = Math.max(1, innerWidth);
   const h = Math.max(1, innerHeight);
   renderer.setSize(w, h);
@@ -5211,6 +5999,32 @@ window.toggleAppFullscreen = function(){
   };
   document.addEventListener('fullscreenchange', upd);
   document.addEventListener('webkitfullscreenchange', upd);
+})();
+// ── Touch tap feedback auto-clear (user 2026-06-27) ──
+// On touch devices the press highlight on the top row (#view-tl-btns) and the
+// bottom bar (#hud .cbar) used to STICK after a tap (iOS sticky :hover, and the
+// top buttons' inline onmouseover setting an inline background). Show the press
+// highlight for ~1s only: add a `.tap-fx` class on touchend and remove it after
+// 1000ms, also resetting any inline hover background the top buttons applied.
+(function _tapFlashAutoClear(){
+  const coarse = window.matchMedia && window.matchMedia('(pointer:coarse) and (any-hover:none)').matches;
+  if(!coarse) return;
+  const SEL = '#view-tl-btns button, #hud .cbar button';
+  const TOP_BASE_BG = 'rgba(20,20,22,.88)', TOP_BASE_BORDER = 'rgba(255,255,255,.18)';
+  document.addEventListener('touchend', e=>{
+    const btn = e.target.closest && e.target.closest(SEL);
+    if(!btn) return;
+    btn.classList.add('tap-fx');
+    setTimeout(()=>{
+      btn.classList.remove('tap-fx');
+      // Top-row buttons set an inline hover bg via onmouseover (which iOS fires
+      // on tap and never clears) — reset it so the highlight doesn't persist.
+      if(btn.closest('#view-tl-btns')){
+        btn.style.background = TOP_BASE_BG;
+        btn.style.borderColor = TOP_BASE_BORDER;
+      }
+    }, 1000);
+  }, {passive:true});
 })();
 // Move the 画質 / perf badge to the RIGHT END of the camera action row so the top
 // controls read as one cohesive group instead of a separate floating chip in the
@@ -5595,7 +6409,9 @@ function updateLayerPivot(){
   const s=Math.max(0.01, d*0.04);
   lpv.group.scale.setScalar(s);
   // ── ローカル / ワールド座標系 ──
-  if(L.pivotSpace==='local'){
+  // Events (billboards) always use a world-aligned, untilted pivot regardless of
+  // pivotSpace — copying the camera-facing mesh.rotation tilted the move arrows.
+  if(L.pivotSpace==='local' && !_isEvt){
     lpv.group.rotation.copy(L.mesh.rotation);
   } else {
     lpv.group.rotation.set(0,0,0);
@@ -5915,13 +6731,14 @@ function updateMeasureLine() {
     arr[3]=msr.ptB.x; arr[4]=msr.ptB.y; arr[5]=msr.ptB.z;
     msr.line.geometry.attributes.position.needsUpdate = true;
     const dist = msr.ptA.distanceTo(msr.ptB);
-    document.getElementById('measDist').textContent = dist.toFixed(4) + ' m';
+    // 0.01 m (1cm) 精度に丸め、端数（3桁目以降）を削除（user 2026-06-27）。
+    document.getElementById('measDist').textContent = dist.toFixed(2) + ' m';
     // Component deltas
     const compEl = document.getElementById('distComp');
     compEl.style.display = 'flex';
-    document.getElementById('dcX').textContent = Math.abs(msr.ptB.x-msr.ptA.x).toFixed(4);
-    document.getElementById('dcY').textContent = Math.abs(msr.ptB.y-msr.ptA.y).toFixed(4);
-    document.getElementById('dcZ').textContent = Math.abs(msr.ptB.z-msr.ptA.z).toFixed(4);
+    document.getElementById('dcX').textContent = Math.abs(msr.ptB.x-msr.ptA.x).toFixed(2);
+    document.getElementById('dcY').textContent = Math.abs(msr.ptB.y-msr.ptA.y).toFixed(2);
+    document.getElementById('dcZ').textContent = Math.abs(msr.ptB.z-msr.ptA.z).toFixed(2);
   }
   // Update vertical A↔C line + height readout
   if (msr.heightOn && msr.lineAC && msr.step >= 1){
@@ -5931,7 +6748,7 @@ function updateMeasureLine() {
     msr.lineAC.geometry.attributes.position.needsUpdate = true;
     const h = msr.ptA.distanceTo(msr.ptC);
     const hEl = document.getElementById('measHeight');
-    if(hEl) hEl.textContent = h.toFixed(4) + ' m';
+    if(hEl) hEl.textContent = h.toFixed(2) + ' m';
   }
 }
 
@@ -6103,6 +6920,8 @@ function closeAllPanels(opts){
     }
     // カメラを閉じたので、開いている日照パネルは右下へ戻す
     if(typeof _sunUpdatePanelPos === 'function') _sunUpdatePanelPos();
+    if(typeof _camHideLetterbox === 'function') _camHideLetterbox();
+    document.body.classList.remove('cam-active');
     markDirty(4);
   }
   // Env panel (note: env preset stays applied — we only hide the panel)
@@ -6136,6 +6955,7 @@ function _hideCamAnimPanel(){
 }
 function _closeMeasureOnly(){
   msr.active=false;
+  document.body.classList.remove('msr-active');
   document.getElementById('btnMeasure').classList.remove('on');
   document.getElementById('btnMeasure').innerHTML='📐 <span id="lbl-measure">'+T('lbl-measure')+'</span>';
   // Restore the gizmo End button to its idle label
@@ -6212,10 +7032,7 @@ const cam = {
   env:  '',         // ショット環境 (時間帯/天候 等)
   note: '',         // 備考 (動き / 演出メモ 等)
   aspect: 16/9,     // default delivery aspect (FHD 16:9). null = use sensor.
-  // Default safe-frame outer margin: 10 % (per user request 2026-05). The user
-  // can still dial it 0–20 % via the アスペクト → 余白 slider; this is just the
-  // initial value.
-  margin: 10,
+  margin: 5,
   // grids: SET of active grid types — multi-select. Each toggles independently.
   // Members: thirds | golden | cross | diag | safe-action | safe-title | center-mark | custom
   grids: new Set(['thirds']),
@@ -6648,6 +7465,7 @@ function applyCamSettings(){
   const _eff = _camEffectiveSensorWH();
   camera.aspect = _eff.w / Math.max(1e-6, _eff.h);
   camera.updateProjectionMatrix();
+  _applyRenderPixelRatio();   // supersample more as the lens zooms in (≥50mm)
   layoutCamFrame();
   drawCamGrid();
   updateCamHud();
@@ -6665,6 +7483,29 @@ function layoutCamFrame(){
   frame.style.top    = r.y + 'px';
   frame.style.width  = r.w + 'px';
   frame.style.height = r.h + 'px';
+}
+
+let _camLetterbox = null;
+function _camUpdateLetterbox(r){
+  if(!_camLetterbox){
+    _camLetterbox = document.createElement('div');
+    _camLetterbox.id = 'cam-letterbox';
+    _camLetterbox.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:49;';
+    document.body.appendChild(_camLetterbox);
+  }
+  const W = r.viewportW, H = r.viewportH;
+  const fx = r.x, fy = r.y, fw = r.w, fh = r.h;
+  const pct = (v, total) => (v / total * 100).toFixed(3) + '%';
+  _camLetterbox.style.clipPath =
+    `polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ` +
+    `${pct(fx,W)} ${pct(fy,H)}, ${pct(fx,W)} ${pct(fy+fh,H)}, ` +
+    `${pct(fx+fw,W)} ${pct(fy+fh,H)}, ${pct(fx+fw,W)} ${pct(fy,H)}, ` +
+    `${pct(fx,W)} ${pct(fy,H)})`;
+  _camLetterbox.style.background = 'rgba(0,0,0,0.75)';
+  _camLetterbox.style.display = 'block';
+}
+function _camHideLetterbox(){
+  if(_camLetterbox) _camLetterbox.style.display = 'none';
 }
 
 function applyWBTint(){
@@ -6893,6 +7734,7 @@ window.toggleCamTool = function(){
   const tint = document.getElementById('cam-wb-tint');
   // ショット情報 is now embedded inside #cam-panel — its visibility follows
   // the panel automatically, no separate show/hide needed.
+  document.body.classList.toggle('cam-active', cam.active);
   if(cam.active){
     cam.prevFOV = fov;
     btn.classList.add('on');
@@ -6917,9 +7759,11 @@ window.toggleCamTool = function(){
     hud.style.display = 'none';
     pan.style.display = 'none';
     if(tint) tint.style.display = 'none';
+    if(typeof _camHideLetterbox === 'function') _camHideLetterbox();
     fov = cam.prevFOV;
     camera.fov = fov;
     camera.updateProjectionMatrix();
+    _applyRenderPixelRatio();   // revert the camera-zoom supersampling
     markDirty(4);
   }
   // 日照パネルの位置をカメラ状態に追従（起動中=中央下 / それ以外=右下）
@@ -6927,9 +7771,81 @@ window.toggleCamTool = function(){
   // If the カメラアニメ panel is open alongside, re-tuck it left of / back from
   // the camera panel as the tool opens/closes.
   if(typeof _camAnimReposition === 'function') _camAnimReposition();
+  // Re-centre cbar / top buttons between the left controls and the right cam panel
+  // (or clear the vars when closing). setTimeout (not rAF) so it runs reliably AND
+  // after the panel's layout has settled — works for both open and close.
+  setTimeout(()=>{ if(window._layoutCamMode) window._layoutCamMode(); }, 30);
 };
 
-window.addEventListener('resize', ()=>{ if(cam.active) layoutCamFrame(); });
+window.addEventListener('resize', ()=>{ if(cam.active){ layoutCamFrame(); if(window._layoutCamMode) window._layoutCamMode(); } });
+window.addEventListener('orientationchange', ()=>{ setTimeout(()=>{ if(cam.active){ layoutCamFrame(); if(window._layoutCamMode) window._layoutCamMode(); } }, 220); });
+
+// Re-centre the bottom (cbar) + top (#view-tl-btns) button groups into the free
+// space BETWEEN the left controls (joystick if shown, else layer panel) and the
+// right カメラツール panel while camera mode is open. Sets px CSS vars consumed by
+// the `body.cam-active` rules. user 2026-06-27 (E/F: buttons hid behind / weren't
+// centred relative to the right panel on iPad / phone portrait).
+function _layoutCamMode(){
+  const root = document.documentElement;
+  const pan = document.getElementById('cam-panel');
+  const open = document.body.classList.contains('cam-active') && pan && getComputedStyle(pan).display!=='none';
+  if(!open){
+    root.style.removeProperty('--cam-cbar-left');
+    root.style.removeProperty('--cam-top-left');
+    root.style.removeProperty('--cam-top-maxw');
+    document.body.classList.remove('cam-cramped');
+    return;
+  }
+  const panLeft = pan.getBoundingClientRect().left;   // right edge of the free zone
+  let leftBound = 0;
+  const joy = document.getElementById('joy');
+  if(joy && getComputedStyle(joy).display!=='none'){
+    const jr = joy.getBoundingClientRect().right;
+    const jv = document.getElementById('joy-vert');
+    const jvr = (jv && getComputedStyle(jv).display!=='none') ? jv.getBoundingClientRect().right : jr;
+    leftBound = Math.max(jr, jvr);
+  } else {
+    const lp = document.getElementById('layer-panel');
+    if(lp && getComputedStyle(lp).display!=='none') leftBound = lp.getBoundingClientRect().right;
+  }
+  const center = Math.round((leftBound + panLeft) / 2);
+  const room = panLeft - leftBound;
+  const cramped = room < 150;
+  const freeW = Math.max(80, Math.round(room - 12));
+  // 余白が狭い（スマホ）とき、下部cbar(=カメラ終了ボタン)はジョイスティックの真上へ寄せる(青枠の位置)。
+  let cbarLeft = center;
+  if(cramped && joy && getComputedStyle(joy).display!=='none'){
+    const jb = joy.getBoundingClientRect();
+    cbarLeft = Math.round(jb.left + jb.width / 2);
+  }
+  root.style.setProperty('--cam-cbar-left', cbarLeft+'px');
+  root.style.setProperty('--cam-top-left', center+'px');
+  root.style.setProperty('--cam-top-maxw', freeW+'px');
+  // 自由ゾーンが狭すぎる（スマホ縦など）と上部ボタンがパネルに重なるので、その時は隠す。
+  document.body.classList.toggle('cam-cramped', cramped);
+}
+window._layoutCamMode = _layoutCamMode;   // exposed for resize hooks / debugging
+
+// スマホ: 日照/測定/カメラワーク パネルの top を「上UI(上部ボタン行)の下端」から決めて
+// かぶらないようにする。上ボタンが隠れている(cam-cramped等)ときはトップバー直下に置く。
+// 上ボタン行は折返しで1〜2行になるので、実測した bottom を使う（user 2026-06-28）。
+function _mPanelTop(){
+  const root = document.documentElement;
+  if(!matchMedia('(pointer:coarse) and (any-hover:none)').matches){ root.style.removeProperty('--m-panel-top'); return; }
+  let topPx = 53;   // 上ボタンが無いとき＝トップバー(45px)直下
+  const tl = document.getElementById('view-tl-btns');
+  if(tl && getComputedStyle(tl).display!=='none'){
+    const r = tl.getBoundingClientRect();
+    if(r.height > 0) topPx = Math.round(r.bottom + 8);
+  }
+  root.style.setProperty('--m-panel-top', topPx + 'px');
+}
+window._mPanelTop = _mPanelTop;
+window.addEventListener('resize', _mPanelTop);
+window.addEventListener('orientationchange', ()=>setTimeout(_mPanelTop, 250));
+// パネルを開くタップの直後に再計算（どのツールボタンでも拾えるよう全クリックで・軽量）。
+document.addEventListener('click', ()=>setTimeout(_mPanelTop, 30), true);
+setTimeout(_mPanelTop, 400);   // 初期化
 
 // ══════════════════════════════════════════════════
 //  CAMERA LAYER (multi-camera placement)
@@ -7805,16 +8721,6 @@ function _camAnimRenderPanel(){
         style="background:transparent;border:1px solid rgba(255,255,255,.18);
                color:#aaa;width:24px;height:24px;border-radius:4px;cursor:pointer">×</button>
     </div>
-    <p style="font-size:.74em;color:#9c8fb8;margin:0 0 8px 0;line-height:1.45">
-      ${nKeys === 0
-        ? t('Move the view to where Camera 1 should start, then press "Save position".',
-            'カメラ1の開始位置にビューを移動し、「位置を保存」を押してください。')
-        : nKeys === 1
-        ? t('Move to Camera 2 and save again. You need 2+ keys to preview / export.',
-            'カメラ2に移動し、再度「位置を保存」してください。プレビュー/書き出しには最低2点必要です。')
-        : t('Add more keys, preview the path, or export an MP4.',
-            'さらに点を追加、プレビュー、または MP4 書き出しが可能です。')}
-    </p>
     <button onclick="window.camAnimAddKey()" style="width:100%;padding:8px;margin-bottom:8px;
       background:rgba(160,120,255,.18);border:1px solid rgba(180,140,255,.4);
       color:#e0ccff;border-radius:6px;cursor:pointer;font-weight:600">
@@ -8882,6 +9788,7 @@ window.toggleMeasure = function() {
       if(typeof _setSunActive==='function') _setSunActive(false);
     }
     msr.active=true;
+    document.body.classList.add('msr-active');
     document.getElementById('btnMeasure').classList.add('on');
     document.getElementById('btnMeasure').innerHTML='📐 <span id="lbl-measure">'+T('msr-active-lbl')+'</span>';
     document.getElementById('btnMeasureEnd').textContent=T('msr-end-lbl');
@@ -8889,7 +9796,9 @@ window.toggleMeasure = function() {
     // Position gizmo just below topbar — helpbox was removed.
     const helpboxEl=document.getElementById('helpbox');
     const hbBottom = helpboxEl ? helpboxEl.getBoundingClientRect().bottom : 0;
-    const topPos=Math.max(57, hbBottom + 10);
+    const tlBtns=document.getElementById('view-tl-btns');
+    const tlBottom=tlBtns?tlBtns.getBoundingClientRect().bottom:0;
+    const topPos=Math.max(92, tlBottom + 6, hbBottom + 10);
     gizmoEl.style.top=topPos+'px';
     gizmoEl.style.display='block';
     const hintEl=document.getElementById('msr-hint');
@@ -9105,7 +10014,12 @@ window.undoMeasure = function() {
     msr.markerC.position.copy(msr.ptC);
   }
   if(msr.lineAC) msr.lineAC.visible = msr.heightOn && msr.step >= 1;
-  if (s.step < 2) document.getElementById('distComp').style.display = 'none';
+  if (s.step < 2){
+    document.getElementById('distComp').style.display = 'none';
+    // Clear the stale 距離 readout when we drop below 2 points (it used to keep
+    // showing the old value after an undo).
+    const _md = document.getElementById('measDist'); if(_md) _md.textContent = '-';
+  }
   syncGizmoToMsr();
   // 点B段階(step 1)のヒント(msr-h1)は全端末で非表示（user request 2026-06-19）。
   const hintMap = [T('msr-h0'), T('msr-h1'), T('msr-h2')];
@@ -9223,7 +10137,7 @@ function drawRuler(sA, sB, ptA, ptB, color) {
   const mx = (sA.x + sB.x) / 2 + px * LOFF;
   const my = (sA.y + sB.y) / 2 + py * LOFF;
 
-  const distStr = dist3D.toFixed(4) + ' m';
+  const distStr = dist3D.toFixed(2) + ' m';
   octx.font = 'bold 13px "Segoe UI",monospace';
   const tw = octx.measureText(distStr).width;
   const PH = 21, PW = tw + 14;
@@ -9256,9 +10170,9 @@ function drawRuler(sA, sB, ptA, ptB, color) {
   // Component deltas below label
   const compY = my + PH/2 + 14;
   const parts = [
-    { label: `ΔX ${dx3.toFixed(3)}`, col:'#ff5566' },
-    { label: `ΔY ${dy3.toFixed(3)}`, col:'#55ee66' },
-    { label: `ΔZ ${dz3.toFixed(3)}`, col:'#5599ff' },
+    { label: `ΔX ${dx3.toFixed(2)}`, col:'#ff5566' },
+    { label: `ΔY ${dy3.toFixed(2)}`, col:'#55ee66' },
+    { label: `ΔZ ${dz3.toFixed(2)}`, col:'#5599ff' },
   ];
   octx.font = '10px "Segoe UI",monospace';
   const totalW = 160;
@@ -11712,12 +12626,15 @@ async function _arEnter(orientPermP){
   // result. Only a hard 'denied' aborts — once denied, iOS never re-prompts, so
   // point the user at Settings. 'error'/undefined means we couldn't determine it
   // (e.g. the call threw); continue anyway so the camera passthrough still runs.
+  arMode.noGyro = false;
   if(orientPermP){
     let r = 'granted';
     try { r = await orientPermP; } catch(_){ r = 'error'; }
     if(r === 'denied'){
+      // ★ジャイロ拒否でも AR を中止しない。背面カメラ表示は出し、傾き追従なし＝指で見回す。
+      //   （設定>Safari>モーションと画面の向きのアクセス OFF でも AR が使えるように）
+      arMode.noGyro = true;
       showUndoToast(T('ar-perm-motion-denied'));
-      return;
     }
   }
   // Same minimum cap as V1: 640×360 / 15 fps. In V2 this matters EVEN
@@ -11937,7 +12854,9 @@ async function _arEnter(orientPermP){
     _pitchTarget = newPitchTarget;
     if(dyaw > ARGYRO_EPS || dpitch > ARGYRO_EPS) markDirty(2);
   };
-  window.addEventListener('deviceorientation', arMode.orientHandler, true);
+  // ジャイロ権限が拒否されたときは傾き追従を付けない → baselineCaptured が false のまま
+  // となり、タッチドラッグが直接 free-look（指で見回し）になる。
+  if(!arMode.noGyro) window.addEventListener('deviceorientation', arMode.orientHandler, true);
 
   // ── Store handles + UI swap ──
   arMode.video = video;
@@ -12251,6 +13170,13 @@ function globalRedo(){
   }
 }
 
+// Exposed for the top-bar "↩ 戻る" button (inline onclick runs in GLOBAL scope and
+// can't see the module-scoped globalUndo). Mirrors the Ctrl+Z behaviour: undo the
+// last measurement step while measuring, else the last scene action.
+window.topbarUndo = function(){
+  if(typeof msr!=='undefined' && msr.active && msr.undoStack && msr.undoStack.length) window.undoMeasure();
+  else globalUndo();
+};
 function globalUndo(){
   _flushGenericPending();
   if(!globalUndoStack.length){ showUndoToast(T('undo-none')); return; }
@@ -12712,7 +13638,8 @@ window.removeLayer=function(id){
   }
   renderLayerList();
   renderTransformPanel();
-  showUndoToast(T('deleted-undo'));
+  // (削除トーストは非表示 — user 2026-06-27「これ表示いらない」。取り消しは Ctrl+Z /
+  //  上メニューの「↩ 戻る」で可能。)
   markDirty(8);
   if(typeof _haloMarkDirty === 'function') _haloMarkDirty();
   if(typeof _recountLayerActivity === 'function') _recountLayerActivity();
@@ -12853,9 +13780,11 @@ window.readTransformInputs=function(id){
   L.scale.y=Math.max(0.001,g('lt-scy')||1);
   L.scale.z=Math.max(0.001,g('lt-scz')||1);
   if(L.type==='cube'||L.type==='sphere'){
-    L.size.x=Math.max(0.01,g('lt-sw')||1);
-    L.size.y=Math.max(0.01,g('lt-sh')||1);
-    L.size.z=Math.max(0.01,g('lt-sd')||1);
+    if(document.getElementById('lt-sw')){   // サイズ入力がある(球)ときだけ読む。立方体は非表示なので既存値を維持。
+      L.size.x=Math.max(0.01,g('lt-sw')||1);
+      L.size.y=Math.max(0.01,g('lt-sh')||1);
+      L.size.z=Math.max(0.01,g('lt-sd')||1);
+    }
     updateCubeGeometry(id);
   }
   applyLayerTransform(id);
@@ -13138,9 +14067,12 @@ window.toggleLang = function(){
 };
 function applyI18n(){
   const L=window._lang;
-  // Topbar
-  const homeBtn=document.getElementById('tb-home-btn');
-  if(homeBtn) homeBtn.textContent=T('tb-home');
+  // Topbar — only translate the brand TEXT label, NOT the whole button.
+  // (Previously `homeBtn.textContent=T('tb-home')` overwrote the button's
+  //  innerHTML, nuking the ロケハン3D SVG brand icon and replacing it with a ⚡
+  //  emoji. The SVG lives in the markup; #tb-brand-text carries data-i18n
+  //  ="tb-brand" and is translated by the [data-i18n] loop below, so here we
+  //  just leave the icon intact — user 2026-06-27 "稲妻ではなくロケハン3Dアイコンに".)
   const langBtn=document.getElementById('tb-lang-btn');
   if(langBtn) langBtn.textContent=T('tb-lang');
   // Helpbox data-i18n
@@ -13151,7 +14083,7 @@ function applyI18n(){
   // 日照パネルの都市ドロップダウンを言語に合わせて翻訳
   if(typeof _sunApplyCityI18n==='function') _sunApplyCityI18n();
   // HUD labels
-  ['lbl-pos','lbl-spd','lbl-rot','lbl-measure','lbl-flip','lbl-addobj','lbl-quality','lbl-settings','lbl-file','lbl-cam-reset','lbl-camtool','lbl-env','lbl-help','orient-lock-msg','orient-lock-sub','lbl-addobj-top','lbl-addfig-top','tb-save-lbl','tb-load-lbl','tb-report-lbl','fp-btn-import-lbl','fp-btn-export-lbl','csp-shot-info','csp-cam-info','csp-meta-info','csp-shot-name','csp-rig','csp-env','csp-note','csp-capture','csp-burnin','csp-burnin-grid','csp-capture-btn','csp-salvage','csp-salvage-drop','csp-salvage-sub','ct-tool','ct-lens','ct-focal','ct-sensor','ct-sensor-ff','ct-sensor-apsc','ct-sensor-apsh','ct-sensor-mft','ct-sensor-1inch','ct-sensor-phone13','ct-sensor-phone17','ct-sensor-phone23','ct-sensor-m65','ct-sensor-s35','ct-sensor-bm','ct-sensor-cust','ct-sensor-w','ct-sensor-h','ct-cam-angle','ct-pan','ct-tilt','ct-roll','ct-roll-level','ct-wb','ct-wb-temp','ct-aspect','ct-aspect-sensor','ct-aspect-cust','ct-aspect-apply','ct-margin','ct-grid','ct-grid-multi','ct-grid-guide','ct-grid-off','ct-grid-thirds','ct-grid-golden','ct-grid-cross','ct-grid-diag','ct-grid-safe-cust','ct-grid-action','ct-grid-title','ct-grid-center','ct-grid-custom','ct-grid-cols','ct-grid-rows','ct-grid-opacity','dz-manual-text','dz-ar-label','env-h-title','env-p-off','env-p-day','env-p-morning','env-p-evening','env-p-night','env-p-cloudy','env-p-rain','env-p-overcast','env-p-twilight','env-l-rot','env-l-int','msr-active-lbl','msr-end-lbl','lp-h-scene','lp-empty','qt-title','qt-low','qt-mid','qt-high','qp-perf-t','qp-l-frame','qp-l-gpu','qp-l-head','qp-l-dc','qp-l-tris','qp-l-geos','qp-l-texs','dist-l','msr-clear','msr-undo','em-3dgs','em-3dgs-d','em-zip-save','em-zip-save-d','em-zip-load','em-zip-load-d','em-json','em-json-d','em-glb','em-glb-d','em-obj','em-obj-d','em-cancel','em-recommended','em-h-title','qp-settings-t','qp-lbl-lowpoly-main','qp-lbl-lowpoly-hint','qp-lbl-grid','qp-lbl-show','qp-lbl-fov','qp-lbl-spd','cl-title','cl-sub','cl-tag-init','cl-tag-v003','lbl-walk','lbl-save-camera','lbl-view-rec','lbl-view-rec-phone','lbl-cam-anim','giz-pt-a','giz-pt-b','giz-pt-c','giz-height-lbl','height-l','csp-jpeg-q','csp-4k-lbl','obj-add-cube','obj-add-sphere','obj-add-light','obj-add-event','obj-add-path','msr-end-lbl-init'].forEach(id=>{
+  ['lbl-pos','lbl-spd','lbl-rot','lbl-measure','lbl-flip','lbl-addobj','lbl-quality','lbl-settings','lbl-file','lbl-cam-reset','lbl-camtool','lbl-env','lbl-help','orient-lock-msg','orient-lock-sub','lbl-addobj-top','lbl-addfig-top','tb-save-lbl','tb-undo-lbl','tb-load-lbl','tb-report-lbl','fp-btn-import-lbl','fp-btn-export-lbl','csp-shot-info','csp-cam-info','csp-meta-info','csp-shot-name','csp-rig','csp-env','csp-note','csp-capture','csp-burnin','csp-burnin-grid','csp-capture-btn','csp-salvage','csp-salvage-drop','csp-salvage-sub','ct-tool','ct-lens','ct-focal','ct-sensor','ct-sensor-ff','ct-sensor-apsc','ct-sensor-apsh','ct-sensor-mft','ct-sensor-1inch','ct-sensor-phone13','ct-sensor-phone17','ct-sensor-phone23','ct-sensor-m65','ct-sensor-s35','ct-sensor-bm','ct-sensor-cust','ct-sensor-w','ct-sensor-h','ct-cam-angle','ct-pan','ct-tilt','ct-roll','ct-roll-level','ct-wb','ct-wb-temp','ct-aspect','ct-aspect-sensor','ct-aspect-cust','ct-aspect-apply','ct-margin','ct-grid','ct-grid-multi','ct-grid-guide','ct-grid-off','ct-grid-thirds','ct-grid-golden','ct-grid-cross','ct-grid-diag','ct-grid-safe-cust','ct-grid-action','ct-grid-title','ct-grid-center','ct-grid-custom','ct-grid-cols','ct-grid-rows','ct-grid-opacity','dz-manual-text','dz-ar-label','env-h-title','env-p-off','env-p-day','env-p-morning','env-p-evening','env-p-night','env-p-cloudy','env-p-rain','env-p-overcast','env-p-twilight','env-l-rot','env-l-int','msr-active-lbl','msr-end-lbl','lp-h-scene','lp-empty','qt-title','qt-low','qt-mid','qt-high','qp-perf-t','qp-l-frame','qp-l-gpu','qp-l-head','qp-l-dc','qp-l-tris','qp-l-geos','qp-l-texs','dist-l','msr-clear','msr-undo','em-3dgs','em-3dgs-d','em-zip-save','em-zip-save-d','em-zip-load','em-zip-load-d','em-json','em-json-d','em-glb','em-glb-d','em-obj','em-obj-d','em-cancel','em-recommended','em-h-title','qp-settings-t','qp-lbl-lowpoly-main','qp-lbl-lowpoly-hint','qp-lbl-grid','qp-lbl-show','qp-lbl-fov','qp-lbl-spd','cl-title','cl-sub','cl-tag-init','cl-tag-v003','lbl-walk','lbl-save-camera','lbl-view-rec','lbl-view-rec-phone','lbl-cam-anim','giz-pt-a','giz-pt-b','giz-pt-c','giz-height-lbl','height-l','csp-jpeg-q','csp-4k-lbl','obj-add-cube','obj-add-sphere','obj-add-light','obj-add-event','obj-add-path','msr-end-lbl-init'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.textContent=T(id);
   });
   // HUD info-box edit tooltip + dropzone titles
@@ -13168,6 +14100,7 @@ function applyI18n(){
   _setTitle('#btnHelp','tt-help');
   _setTitle('#btnAddCubeTop','tt-add-obj');
   _setTitle('#tb-project-name','tt-edit-name');
+  _setTitle('#tb-undo-btn','tt-undo');
   _setTitle('#mf-collapse-btn','tt-mf-collapse');
   // Cam reset button has no stable id; locate via lbl-cam-reset child
   const _camResetBtn=document.getElementById('lbl-cam-reset');
@@ -13276,7 +14209,7 @@ function applyI18n(){
   // ── Home screen & extended elements ──
   const _s=(id,key)=>{ const e=document.getElementById(id); if(e) e.textContent=T(key); };
   _s('dz-h1','dz-h1'); _s('dz-sub','dz-sub');
-  _s('dz-drop-text','dz-drop-text'); _s('dz-empty-text','dz-empty-text');
+  _s('dz-drop-text','dz-drop-text'); _s('dz-empty-text','dz-empty-text'); _s('dz-back-site-lbl','dz-back-site-lbl');
   _s('dz-zip-text','dz-zip-text'); _s('dz-continue-text','dz-continue-text');
   _s('mf-title','mf-title');
   const mfHint=document.getElementById('mf-hint'); if(mfHint) mfHint.textContent=T('mf-hint');
@@ -13727,30 +14660,30 @@ function renderTransformPanel(){
   ${coordToggle}
   <div class="lt-section">${T('lt-pos')} (${pivSp==='local'?T('lt-pos-local'):T('lt-pos-world')})</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="0.01" value="${p.x.toFixed(3)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="0.01" value="${p.y.toFixed(3)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="0.01" value="${p.z.toFixed(3)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="0.01" value="${p.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="0.01" value="${p.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="0.01" value="${p.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>
   <div class="lt-section">${T('lt-rot')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-rx" step="1" value="${r.x.toFixed(1)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-ry" step="1" value="${r.y.toFixed(1)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-rz" step="1" value="${r.z.toFixed(1)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-rx" step="1" value="${r.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-ry" step="1" value="${r.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-rz" step="1" value="${r.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>
   <div class="lt-section">${T('lt-scale')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff6677">X</span><input type="number" id="lt-scx" step="0.05" min="0.001" value="${sc.x.toFixed(3)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#66ee88">Y</span><input type="number" id="lt-scy" step="0.05" min="0.001" value="${sc.y.toFixed(3)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#77aaff">Z</span><input type="number" id="lt-scz" step="0.05" min="0.001" value="${sc.z.toFixed(3)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff6677">X</span><input type="number" id="lt-scx" step="0.01" min="0.01" value="${sc.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#66ee88">Y</span><input type="number" id="lt-scy" step="0.01" min="0.01" value="${sc.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#77aaff">Z</span><input type="number" id="lt-scz" step="0.01" min="0.01" value="${sc.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>`;
   // ── Event: position-only panel (no rotation/scale) ──
   if(L.type==='event'){
     html=`<div class="lt-title">${LAYER_ICONS[L.type]} ${L.name}</div>
   <div class="lt-section">${T('lt-pos')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="0.01" value="${p.x.toFixed(3)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="0.01" value="${p.y.toFixed(3)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="0.01" value="${p.z.toFixed(3)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="0.01" value="${p.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="0.01" value="${p.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="0.01" value="${p.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>`;
   }
   // ── Splat: 軸反転ボタン (X / Y / Z 180°回転) ──
@@ -13870,13 +14803,16 @@ function renderTransformPanel(){
        hotkey / saved-project / scripted caller still resolves cleanly. -->`;
   }
   if(L.type==='cube'||L.type==='sphere'){
+    // サイズ(W/H/D)は球のみ表示。立方体は冗長なので非表示（拡縮=スケールで調整）。
+    if(L.type==='sphere'){
     html+=`<div class="lt-section">${T('lt-size')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">W</span><input type="number" id="lt-sw" step="0.1" min="0.01" value="${s.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">H</span><input type="number" id="lt-sh" step="0.1" min="0.01" value="${s.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">D</span><input type="number" id="lt-sd" step="0.1" min="0.01" value="${s.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-  </div>
-  <div class="lt-section">${T('lt-appear')}</div>
+    <span class="la" style="color:#ff5566">W</span><input type="number" id="lt-sw" step="0.01" min="0.01" value="${s.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">H</span><input type="number" id="lt-sh" step="0.01" min="0.01" value="${s.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">D</span><input type="number" id="lt-sd" step="0.01" min="0.01" value="${s.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+  </div>`;
+    }
+    html+=`<div class="lt-section">${T('lt-appear')}</div>
   <div class="lt-row" style="align-items:center;gap:6px">
     <span class="la" style="color:#D8D8D8;width:auto;font-size:.68em">${T('lt-color')}</span>
     <input type="color" value="${L.cubeColor||'#ffffff'}" oninput="setCubeColor(${L.id},this.value)"
@@ -15300,27 +16236,40 @@ document.addEventListener('click',e=>{
   const transform=document.getElementById('layer-transform');
   if(!divider||!list||!transform) return;
   let dragging=false, startY=0, startH=0;
-  divider.addEventListener('mousedown',e=>{
-    dragging=true; startY=e.clientY;
+  // Shared start/move/end so BOTH mouse and touch can drag the divider — on
+  // iPad/iPhone the mouse-only handlers never fired, so the layer↔object-info
+  // split couldn't be adjusted by long-press/drag (user 2026-06-27).
+  function onStart(clientY){
+    dragging=true; startY=clientY;
     startH=list.getBoundingClientRect().height;
     document.body.style.cursor='ns-resize';
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove',e=>{
+  }
+  function onMove(clientY){
     if(!dragging) return;
-    const footer=document.getElementById('lp-footer-bar');
-    const footerTop=footer?footer.getBoundingClientRect().top:window.innerHeight-60;
     const divH=divider.getBoundingClientRect().height||4;
     const listTop=list.getBoundingClientRect().top;
     const panel=document.getElementById('layer-panel');
     const panelBottom=panel?panel.getBoundingClientRect().bottom:window.innerHeight;
     const maxH=Math.max(60,panelBottom-listTop-divH-80);
-    const newH=Math.max(60,Math.min(maxH,startH+(e.clientY-startY)));
+    const newH=Math.max(60,Math.min(maxH,startH+(clientY-startY)));
     list.style.flex='none'; list.style.height=newH+'px';
-  });
-  document.addEventListener('mouseup',()=>{
-    if(dragging){ dragging=false; document.body.style.cursor=''; }
-  });
+  }
+  function onEnd(){ if(dragging){ dragging=false; document.body.style.cursor=''; } }
+  divider.addEventListener('mousedown',e=>{ onStart(e.clientY); e.preventDefault(); });
+  document.addEventListener('mousemove',e=>onMove(e.clientY));
+  document.addEventListener('mouseup',onEnd);
+  // Touch (iPad / phone): mirror the mouse drag. touchstart is non-passive so we
+  // can preventDefault and stop the panel from scrolling while resizing.
+  divider.addEventListener('touchstart',e=>{
+    if(!e.touches.length) return;
+    onStart(e.touches[0].clientY); e.preventDefault();
+  },{passive:false});
+  document.addEventListener('touchmove',e=>{
+    if(!dragging||!e.touches.length) return;
+    onMove(e.touches[0].clientY); e.preventDefault();
+  },{passive:false});
+  document.addEventListener('touchend',onEnd);
+  document.addEventListener('touchcancel',onEnd);
   // Show divider when transform is visible
   const _origRTP=renderTransformPanel;
   // Hook: show/hide divider based on layer-transform visibility
@@ -15956,19 +16905,6 @@ const _SPLAT_ACTIVE_MS = (typeof _isMac !== 'undefined' && _isMac) ? 1800 : 4000
 // never ticks and the splats never finish streaming. Zero effect for normal users
 // (flag is off unless explicitly present in the URL).
 const _headless = /[?&]headless=1/.test(location.search);
-// Keep background tab timers alive by running a silent AudioContext.
-// Chrome throttles setTimeout to 1s minimum in background tabs, but an
-// active audio context prevents this — letting headless render at ~60fps.
-if(_headless){
-  try{
-    const _actx = new (window.AudioContext||window.webkitAudioContext)();
-    const _osc = _actx.createOscillator();
-    const _gain = _actx.createGain();
-    _gain.gain.value = 0;
-    _osc.connect(_gain); _gain.connect(_actx.destination);
-    _osc.start();
-  }catch(_e){}
-}
 function animate(now) {
   if(_headless) setTimeout(()=>animate(performance.now()), 16);
   else          requestAnimationFrame(animate);
@@ -16292,20 +17228,52 @@ function animate(now) {
           if(typeof drawCamGrid === 'function'){ try { drawCamGrid(); } catch(_){} }
         }
       }
-      // Clear the full canvas first so the area outside the safe-frame
-      // is solid black instead of stale framebuffer content from the
-      // previous, larger render.
+      // ── Two-pass render: show the scene at 20% brightness OUTSIDE the
+      // safe-frame so the user has spatial context beyond the crop, then
+      // re-render the frame area at full brightness with the correct
+      // sensor aspect ratio for precise composition. ──
+      const yFromBottom = r.viewportH - r.y - r.h;
+
+      // The frame (Pass 2) shows the true lens vertical FOV (`fov` = sensor VFOV)
+      // across the SHORTER frame height r.h. For the dim CONTEXT (Pass 1) to be
+      // continuous with the frame — same angular scale (deg per pixel), so the
+      // scene doesn't visibly jump scale at the frame edge (user 2026-06-27
+      // "枠内とレンズ画角が違う") — Pass 1 must use a WIDER vertical FOV that fills the
+      // full viewport height H at that same scale: fov_context = fov · (H / r.h).
+      const _lensVFov = fov;
+      // ★枠の内外を完全に連続させる: 同じ「焦点距離(px)」かつ同じ「主点(光軸が当たる点)」で描く。
+      //   焦点距離 f_px = (h/2)/tan(fov/2)。主点は枠の中心(_fcx,_fcy)に合わせる。
+      //   枠は画面中心からズレているので、Pass1は setViewOffset で主点を枠中心へ寄せた
+      //   非対称フラスタムにする（これでスケールだけでなく位置も連続する）。
+      const _fovRad = _lensVFov * Math.PI / 180;
+      const _fpx = (r.h / 2) / Math.tan(_fovRad / 2);          // 焦点距離(px・縦)
+      const _fcx = r.x + r.w / 2, _fcy = r.y + r.h / 2;        // 枠の中心＝主点に合わせる
+      const _Hw  = Math.max(_fcx, innerWidth  - _fcx);
+      const _Hh  = Math.max(_fcy, innerHeight - _fcy);
+      const _fullW = 2 * _Hw, _fullH = 2 * _Hh;
+
+      // Pass 1 — outside context: 主点を枠中心に合わせた拡張フラスタム（焦点距離は枠と一致）。
       renderer.setScissorTest(false);
       renderer.setViewport(0, 0, innerWidth, innerHeight);
-      renderer.setScissor(0, 0, innerWidth, innerHeight);
-      renderer.clear();
-      // Convert CSS top-down → GL bottom-up viewport coords.
-      const yFromBottom = r.viewportH - r.y - r.h;
+      camera.aspect = _fullW / Math.max(1, _fullH);
+      camera.fov = 2 * Math.atan(_Hh / _fpx) * 180 / Math.PI;
+      camera.setViewOffset(_fullW, _fullH, _Hw - _fcx, _Hh - _fcy, innerWidth, innerHeight);
+      camera.updateProjectionMatrix();
+      if(_useOrtho){ _syncOrthoCamera(); renderer.render(scene,_orthoCamera); }
+      else renderer.render(scene, camera);
+
+      // Pass 2 — frame composition: 主点=枠中心の対称フラスタム（オフセット解除）。
+      camera.clearViewOffset();
       renderer.setViewport(r.x, yFromBottom, r.w, r.h);
       renderer.setScissor(r.x, yFromBottom, r.w, r.h);
       renderer.setScissorTest(true);
+      renderer.clear();
       camera.aspect = r.w / Math.max(1, r.h);
+      camera.fov = _lensVFov;
       camera.updateProjectionMatrix();
+
+      // Update the CSS letterbox overlay that darkens the outside area.
+      _camUpdateLetterbox(r);
     } catch(e){ _camViewportRect = null; }
   }
   if(_useOrtho){ _syncOrthoCamera(); renderer.render(scene,_orthoCamera); }
@@ -16316,6 +17284,7 @@ function animate(now) {
     renderer.setScissorTest(false);
     renderer.setViewport(0, 0, innerWidth, innerHeight);
     renderer.setScissor(0, 0, innerWidth, innerHeight);
+    camera.clearViewOffset();   // Pass1のオフセットが残らないよう確実に解除
     camera.aspect = innerWidth / Math.max(1, innerHeight);
     camera.updateProjectionMatrix();
   }
@@ -16616,8 +17585,7 @@ async function loadFromURL(url, displayName){
     const buf = await resp.arrayBuffer();
     const name = (displayName || url.split('/').pop().split('?')[0]) || 'autoload.ply';
     const file = new File([buf], name, {type:'application/octet-stream'});
-    if(ext === 'zip' && typeof _loadProjectZipFromFile === 'function') await _loadProjectZipFromFile(file);
-    else if(['obj','gltf','glb','fbx'].includes(ext)) await loadObjFile(file);
+    if(['obj','gltf','glb','fbx'].includes(ext)) await loadObjFile(file);
     else await loadSplatFile(file);
   }catch(e){
     console.warn('loadFromURL failed', e);
@@ -16647,218 +17615,6 @@ setTimeout(async ()=>{
     await loadFromURL(DEMO_SCENE_URL, (typeof T==='function'?T('demo-btn-lbl'):DEMO_SCENE_LABEL));
   }
 }, 0);
-
-// ══════════════════════════════════════════════════
-//  ?orbit=1 — Slow 360° auto-orbit for inline preview embeds.
-//  Waits for the scene to load, then gently rotates yaw a full turn
-//  over ~35 s. Stops immediately on any pointer interaction so the
-//  user can take manual control.
-// ══════════════════════════════════════════════════
-if(/[?&]orbit=1/.test(location.search)){
-  (function(){
-    // Preview mode: hide ALL UI, show only the rotating 3D scene
-    const style = document.createElement('style');
-    style.textContent = '#topbar,#hud,#layer-panel,#overlay,#dropzone,#orient-lock,#sun-panel,#immersive-exit,#env-tint,#light-halo-layer,#view-tl-btns,#qp-panel,[id^="lfi-"],[id^="obj-type-menu"]{display:none!important}body{overflow:hidden!important;margin:0!important}#c{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:0!important}';
-    document.head.appendChild(style);
-
-    // When capture=1 is also active, capture code drives the orbit itself.
-    if(/[?&]capture=1/.test(location.search)) return;
-
-    const ORBIT_DURATION_S = 35;
-    const RAD_PER_S = (2 * Math.PI) / ORBIT_DURATION_S;
-    let orbitRaf = 0;
-    let baseYaw = 0;
-
-    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
-
-    async function startOrbit(){
-      for(let i=0; i<160 && !hasScene(); i++) await new Promise(r=>setTimeout(r,500));
-      if(!hasScene()) return;
-      await new Promise(r=>setTimeout(r,1500));
-
-      baseYaw = yaw;
-      let prev = performance.now();
-
-      (function loop(now){
-        const dt = (now - prev) / 1000;
-        prev = now;
-        _yawTarget += RAD_PER_S * dt;
-        yaw = _yawTarget;
-        if(typeof markDirty === 'function') markDirty(2);
-        if(yaw - baseYaw >= 2 * Math.PI) return;
-        orbitRaf = requestAnimationFrame(loop);
-      })(performance.now());
-    }
-    setTimeout(startOrbit, 200);
-  })();
-}
-
-// ══════════════════════════════════════════════════
-//  ?capture=1 — Record the orbit as a WebM video and postMessage the blob
-//  back to the parent window. Used by the admin editor to auto-generate
-//  lightweight preview videos after 3DGS upload.
-//
-//  Flow: load scene → warmup (5s, GPU settles + splats stream in)
-//        → wait for orbit to be running → record for captureSec → post blob
-// ══════════════════════════════════════════════════
-if(/[?&]capture=1/.test(location.search)){
-  (function(){
-    const params = new URLSearchParams(location.search);
-    const ORBIT_S = parseInt(params.get('orbitSec')||'35', 10);
-    const canvas = document.getElementById('c');
-    if(!canvas) return;
-
-    const target = window.opener || parent;
-    const msg = (type, extra)=> target.postMessage(Object.assign({type}, extra||{}), '*');
-
-    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
-    const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
-
-    async function run(){
-      // Phase 1: wait for a renderable scene (up to 90s).
-      // hasScene() inspects layers[].mesh, but a streaming RAD keeps its data
-      // on the global splatMesh (not the layer ref) — so __nSplat()>0 ("splats
-      // are present & rendering") is an equally valid readiness signal. Accept
-      // either, else ZIP-restored streaming scenes hang here and time out.
-      const sceneReady = ()=> hasScene() || nSplat() > 0;
-      msg('capture-progress',{phase:'loading', text:'3DGS 読み込み中…'});
-      for(let i=0; i<180 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
-      if(!sceneReady()){ msg('capture-error',{error:'no-scene'}); return; }
-
-      // Phase 2: readiness.
-      //  - Streaming RAD (__nSplat()>0): wait for splats to stream in & stabilise.
-      //  - Non-streaming ZIP/PLY/SPLAT: __nSplat (a RAD-only counter) stays 0/-1
-      //    even though geometry is fully baked & present once the scene layer
-      //    exists, so gate on hasScene() instead of forcing a 'no-splats' abort.
-      if(nSplat() > 0){
-        msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
-        let lastCount = 0, stableMs = 0;
-        const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = 60000;
-        let elapsed = 0;
-        while(elapsed < MAX_MS){
-          await new Promise(r=>setTimeout(r, POLL_MS));
-          elapsed += POLL_MS;
-          const c = nSplat();
-          if(c > 0 && c === lastCount){ stableMs += POLL_MS; if(stableMs >= STABLE_MS) break; }
-          else { stableMs = 0; lastCount = c; }
-          msg('capture-progress',{phase:'loading', text:'RAD 読み込み中… '+(c>0?c.toLocaleString()+' splats':'待機中'), pct:Math.min(30, Math.round(elapsed/MAX_MS*30))});
-        }
-        if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
-      } else {
-        // Non-streaming scene (ZIP project / PLY / SPLAT): let Spark settle, then go.
-        msg('capture-progress',{phase:'loading', text:'シーン安定化中…', pct:20});
-        await new Promise(r=>setTimeout(r, 2500));
-        if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
-      }
-
-      // Phase 3: Lock resize handler and force 1920×1080 capture resolution.
-      const CAP_W = 1920, CAP_H = 1080;
-      const CAP_FOV = 70;   // 固定FOV（70）でキャプチャ
-      if(typeof _captureLock!=='undefined') _captureLock = true;
-      // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
-      // 上げてしまい VideoEncoder の 1920×1080 と不整合になるため、ここでは
-      // 品質変数と RAD lodScale だけ高に寄せ、pixelRatio は下で 1 に固定する。
-      try {
-        if(typeof qualScale!=='undefined') qualScale = 1.5;
-        if(typeof qualIdx!=='undefined') qualIdx = 2;
-        if(typeof _qualPreferred!=='undefined') _qualPreferred = 1.5;
-        if(typeof _radEffectiveLodScale==='function' && typeof layers!=='undefined' && layers){
-          const hi = _radEffectiveLodScale();
-          for(const L of layers){
-            if(L && L.mesh && L.mesh.paged && typeof L.mesh.lodScale === 'number') L.mesh.lodScale = hi;
-          }
-        }
-      } catch(_){}
-      if(typeof renderer!=='undefined'){
-        renderer.setPixelRatio(1);          // キャプチャ backing を厳密に 1920×1080 に
-        renderer.setSize(CAP_W, CAP_H);
-      } else {
-        canvas.width = CAP_W; canvas.height = CAP_H;
-      }
-      if(typeof camera!=='undefined'){
-        camera.aspect = CAP_W / CAP_H;
-        if('fov' in camera) camera.fov = CAP_FOV;
-        camera.updateProjectionMatrix();
-      }
-      // Warm-up: let the viewer's render loop run for ~2s at capture resolution
-      // so Spark can re-sort splats and stabilise LOD at 1920×1080.
-      if(typeof markDirty==='function') markDirty(120);
-      msg('capture-progress',{phase:'loading', text:'解像度安定化中…', pct:28});
-      for(let w=0; w<120; w++) await new Promise(r=>requestAnimationFrame(r));
-
-      // Phase 4: rAF-driven frame-by-frame capture.
-      // No setTimeout loop — tight for-loop with encoder backpressure yield.
-      const FPS = 24;
-      const TOTAL_FRAMES = FPS * ORBIT_S;
-      const ANGLE_PER_FRAME = (2 * Math.PI) / TOTAL_FRAMES;
-
-      const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
-
-      const muxTarget = new ArrayBufferTarget();
-      const muxer = new Muxer({
-        target: muxTarget,
-        video: { codec: 'avc', width: CAP_W, height: CAP_H },
-        fastStart: 'in-memory',
-        firstTimestampBehavior: 'offset',
-      });
-
-      const encoder = new VideoEncoder({
-        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-        error: e => msg('capture-error',{error:'VideoEncoder: '+e.message}),
-      });
-      encoder.configure({
-        codec: 'avc1.640028',
-        width: CAP_W, height: CAP_H,
-        bitrate: 8_000_000,
-        framerate: FPS,
-      });
-
-      msg('capture-started',{durationSec: ORBIT_S});
-
-      // Capture: set yaw → force render → GPU flush → capture.
-      // Direct renderer.render() guarantees the canvas is painted before
-      // VideoFrame reads it (rAF alone races with the viewer's own loop).
-      for(let f = 0; f < TOTAL_FRAMES; f++){
-        while(encoder.encodeQueueSize > 5){
-          await new Promise(r => setTimeout(r, 1));
-        }
-
-        if(typeof _yawTarget!=='undefined') _yawTarget += ANGLE_PER_FRAME;
-        if(typeof yaw!=='undefined') yaw = _yawTarget;
-        // FOV を毎フレーム固定（カメラモード等が触っても 70 を維持）。
-        if(typeof camera!=='undefined' && 'fov' in camera && camera.fov !== CAP_FOV){
-          camera.fov = CAP_FOV; camera.updateProjectionMatrix();
-        }
-        if(typeof markDirty==='function') markDirty(30);
-
-        // Spark needs multiple rAFs to process sort/LOD after yaw change.
-        for(let w=0; w<3; w++) await new Promise(r => requestAnimationFrame(r));
-        if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
-          renderer.render(scene, camera);
-          const gl = renderer.getContext();
-          if(gl) gl.finish();
-        }
-
-        const vf = new VideoFrame(canvas, { timestamp: f * (1_000_000 / FPS) });
-        encoder.encode(vf, { keyFrame: f % (FPS * 2) === 0 });
-        vf.close();
-
-        if(f % 24 === 0){
-          const pct = Math.round(f / TOTAL_FRAMES * 100);
-          msg('capture-progress',{phase:'recording', text:'録画中… '+pct+'%  ('+f+'/'+TOTAL_FRAMES+')', pct:30+Math.round(pct*0.7)});
-        }
-      }
-
-      // Finalize
-      await encoder.flush();
-      encoder.close();
-      muxer.finalize();
-      const blob = new Blob([muxTarget.buffer], {type:'video/mp4'});
-      msg('capture-done',{blob, mimeType:'video/mp4', ext:'mp4'});
-    }
-    setTimeout(run, 300);
-  })();
-}
 
 // ══════════════════════════════════════════════════
 //  ?showcase=1 — AUTO-PLAY feature showcase for recording a ~40 s promo clip.
@@ -18052,6 +18808,9 @@ window.saveProjectZip = async function(){
       camera:{pos:{x:camPos.x,y:camPos.y,z:camPos.z},yaw,pitch},
       layerNextId:_layerNextId,
       layers:serialized,
+      // 日照シミュの都道府県のみ保存（天気・日時・ON状態は流動的なので保存しない）。
+      // 新潟のスキャンを新潟に合わせて保存→受け渡し先で場所が再現される。
+      sun:{ city:sun.city },
     };
     files['project.json']=fflate.strToU8(JSON.stringify(project,null,2));
 
@@ -18360,6 +19119,8 @@ window.saveProject = async function() {
       camera:{ pos:{x:camPos.x,y:camPos.y,z:camPos.z}, yaw, pitch },
       layerNextId:_layerNextId,
       layers:serialized,
+      // 日照シミュの都道府県のみ保存（ZIP保存と同様。天気・日時・ON状態は保存しない）。
+      sun:{ city:sun.city },
     };
 
     const jsonStr=JSON.stringify(project);
@@ -18755,6 +19516,13 @@ async function restoreProject(project) {
   // skips real work). Recompute from the freshly restored `layers` array.
   if(typeof _recountLayerActivity === 'function') _recountLayerActivity();
 
+  // ── 日照シミュの都道府県のみ復元 ──（天気・日時・ON状態は保存しない＝現状維持）
+  if(project.sun && typeof project.sun==='object' && typeof project.sun.city==='string' && SUN_CITIES[project.sun.city]){
+    const c=SUN_CITIES[project.sun.city];
+    sun.city=project.sun.city; sun.lat=c.lat; sun.lng=c.lng; sun.tz=c.tz;
+    if(typeof _sunSyncForm==='function') _sunSyncForm();
+  }
+
   renderLayerList(); renderTransformPanel();
 
   // Show HUD / hide drop zone (same as normal file load)
@@ -18924,7 +19692,10 @@ window.addEventLayer = function(posHint){
   }
   const p=group.position;
   group.scale.set(0.25,0.25,0.25);
-  const L=addLayer({name:'Event '+_nextLayerNameNumber('event'), type:'event', mesh:group, size:{x:1,y:1,z:1}});
+  // Events are camera-facing billboards — a per-object rotation is meaningless and
+  // made the pivot gizmo look "tilted" at placement. Use a WORLD-aligned pivot (no
+  // tilt; position only) — matches the ZIP-restore default. user 2026-06-27.
+  const L=addLayer({name:'Event '+_nextLayerNameNumber('event'), type:'event', mesh:group, size:{x:1,y:1,z:1}, pivotSpace:'world'});
   L.pos={x:p.x,y:p.y,z:p.z};
   L.scale={x:0.25,y:0.25,z:0.25};
   L.eventImage=null; L.eventImageName=null;
@@ -19175,12 +19946,12 @@ function _finalizePath(){
 
 window.addPathLayer=function(){
   if(_pathMode){ _cancelPath(); return; }
+  if(_placeMode && typeof _cancelPlace==='function') _cancelPlace();
   if(typeof closeAllPanels==='function') closeAllPanels();
   _pathClearHandles();   // 配置中は既存パスの編集ハンドルを隠す
   _pathMode=true; _pathPts=[]; _clearPathTemp();
   document.addEventListener('keydown', _onPathKey, true);
   _pathHint(true);
-  showUndoToast('🛣 4点を左クリック長押しで配置（押している間プレビュー、離して確定 / Escで中止）');
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -19232,8 +20003,6 @@ window._beginPlace=function(kind){
   _placeMode=kind; _placeHideProbe();
   document.addEventListener('keydown', _onPlaceKey, true);
   _placeHint(true);
-  const labels={cube:'Cube',event:'Event',figure:'Figure'};
-  showUndoToast((window._lang==='en'?'📍 Click in the scene to place ':'📍 シーン内を左クリック長押しで配置 ')+(labels[kind]||''));
 };
 function _commitPlace(clientX, clientY){
   const p=pickWorldPos(clientX, clientY);
@@ -19416,7 +20185,7 @@ Object.assign(I18N.ja,{
   'dz-h1':'ロケハン3D',
   'dz-sub':'3D Gaussian Splatting ビューア',
   'dz-drop-text':'3DGS、Zipファイルをドロップ、またはクリックして選択',
-  'dz-empty-text':'空プロジェクトを開く',
+  'dz-empty-text':'空プロジェクトを開く','dz-back-site-lbl':'← ロケハン3D サイトへ戻る',
   'dz-zip-text':'プロジェクトを開く (.zip)',
   'dz-continue-text':'編集を続ける',
   'mf-title':'ミニマップ',
@@ -19444,7 +20213,7 @@ Object.assign(I18N.ja,{
   'lbl-sun':'日照',
   'sun-h-title':'日照シミュレーション',
   'sun-l-loc':'📍 場所（都道府県）',
-  'sun-l-weather':'🌤 天気','sun-wx-clear':'☀ 晴れ','sun-wx-cloudy':'☁ 曇り','sun-wx-rain':'🌧 雨',
+  'sun-l-weather':'🌤 天気','sun-wx-clear':'☀ 晴れ','sun-wx-cloudy':'☁ 曇り','sun-wx-rain':'🌧 雨','sun-wx-snow':'❄ 雪',
   'sun-fetch-wx':'🌐 実際の天気予報を取得（オンライン時）','immersive-exit':'⤢ 表示','tb-brand':'ロケハン3D',
   'sun-l-date':'📅 日付','sun-btn-now':'今',
   'sun-l-time':'🕐 時刻',
@@ -19514,7 +20283,8 @@ Object.assign(I18N.ja,{
   'ct-grid-cols':'列',
   'ct-grid-rows':'行',
   'ct-grid-opacity':'不透明度',
-  'tb-save-lbl':'オフライン保存',
+  'tb-save-lbl':'Zip保存',
+  'tb-undo-lbl':'戻る',
   'tb-load-lbl':'読込',
   'tb-report-lbl':'エラー報告',
   'tt-report':'エラー / 不具合を開発者に報告',
@@ -19560,7 +20330,7 @@ Object.assign(I18N.ja,{
   'ar-off':'AR モードを終了しました',
   'ar-unsupported':'⚠ この端末では AR モードが利用できません',
   'ar-permission-denied':'⚠ カメラ / モーションセンサの許可が必要です',
-  'ar-perm-motion-denied':'⚠ モーションセンサが拒否されています。設定 > Safari > モーションと画面の向きのアクセス をオンにして再読み込みしてください',
+  'ar-perm-motion-denied':'ジャイロは無効です（指で見回せます）。傾けて見回すには 設定 > Safari > モーションと画面の向きのアクセス をオン＋再読み込み',
   'ar-perm-camera-denied':'⚠ カメラが拒否されています。設定 > Safari > カメラ を「許可」にして再読み込みしてください',
   'giz-pt-a':'点 A',
   'giz-pt-b':'点 B',
@@ -19648,6 +20418,7 @@ Object.assign(I18N.ja,{
   'manual-link-camtool':'📷 カメラツール',
   'manual-link-salvage':'📥 サルベージ',
   'manual-link-env':'☀ 日照・天気',
+  'manual-link-walkar':'🚶 アバター歩行・AR',
   'manual-link-map':'🗺 ミニマップ',
   'manual-link-quality':'🖥 画質と速度',
   'manual-link-save':'💾 プロジェクト保存',
@@ -19656,7 +20427,8 @@ Object.assign(I18N.ja,{
   'tt-help':'ユーザーマニュアル',
   'tt-cam-reset':'カメラを初期位置にリセット',
   'tt-add-obj':'オブジェクト追加',
-  'tt-edit-name':'ダブルクリックで編集',
+  'tt-edit-name':'クリックで名前を編集',
+  'tt-undo':'一つ前に戻す (Ctrl+Z)',
   'tt-folder-add':'フォルダを追加',
   'tt-mf-collapse':'折りたたむ',
   'tt-zip-save':'ZIPで保存',
@@ -19680,7 +20452,7 @@ Object.assign(I18N.en,{
   'dz-h1':'LOCAHUN 3D',
   'dz-sub':'3D Gaussian Splatting Viewer',
   'dz-drop-text':'Drop 3DGS / ZIP file(s) or click to browse',
-  'dz-empty-text':'Open Empty Project',
+  'dz-empty-text':'Open Empty Project','dz-back-site-lbl':'← Back to Locahun3D site',
   'dz-zip-text':'Open Project (.zip)',
   'dz-continue-text':'Continue Editing',
   'mf-title':'Minimap',
@@ -19708,7 +20480,7 @@ Object.assign(I18N.en,{
   'lbl-sun':'Sun',
   'sun-h-title':'Sun / Daylight',
   'sun-l-loc':'📍 Location (Prefecture)',
-  'sun-l-weather':'🌤 Weather','sun-wx-clear':'☀ Clear','sun-wx-cloudy':'☁ Cloudy','sun-wx-rain':'🌧 Rain',
+  'sun-l-weather':'🌤 Weather','sun-wx-clear':'☀ Clear','sun-wx-cloudy':'☁ Cloudy','sun-wx-rain':'🌧 Rain','sun-wx-snow':'❄ Snow',
   'sun-fetch-wx':'🌐 Get live weather forecast (online)','immersive-exit':'⤢ View','tb-brand':'LOCAHUN 3D',
   'sun-l-date':'📅 Date','sun-btn-now':'Now',
   'sun-l-time':'🕐 Time',
@@ -19778,7 +20550,8 @@ Object.assign(I18N.en,{
   'ct-grid-cols':'Cols',
   'ct-grid-rows':'Rows',
   'ct-grid-opacity':'Opacity',
-  'tb-save-lbl':'Offline Save',
+  'tb-save-lbl':'Zip Save',
+  'tb-undo-lbl':'Undo',
   'tb-load-lbl':'Load',
   'tb-report-lbl':'Report Bug',
   'tt-report':'Report a bug or issue to the developer',
@@ -19824,7 +20597,7 @@ Object.assign(I18N.en,{
   'ar-off':'AR mode ended',
   'ar-unsupported':'⚠ This device does not support AR mode',
   'ar-permission-denied':'⚠ Camera / motion sensor permission required',
-  'ar-perm-motion-denied':'⚠ Motion sensor is blocked. Enable Settings > Safari > Motion & Orientation Access, then reload',
+  'ar-perm-motion-denied':'Gyro is off (drag to look around). To look by tilting, enable Settings > Safari > Motion & Orientation Access, then reload',
   'ar-perm-camera-denied':'⚠ Camera is blocked. Set Settings > Safari > Camera to Allow, then reload',
   'giz-pt-a':'Point A',
   'giz-pt-b':'Point B',
@@ -19912,6 +20685,7 @@ Object.assign(I18N.en,{
   'manual-link-camtool':'📷 Camera tool',
   'manual-link-salvage':'📥 Salvage',
   'manual-link-env':'☀ Sun & Weather',
+  'manual-link-walkar':'🚶 Avatar walk / AR',
   'manual-link-map':'🗺 Minimap',
   'manual-link-quality':'🖥 Quality & speed',
   'manual-link-save':'💾 Save project',
@@ -19920,7 +20694,8 @@ Object.assign(I18N.en,{
   'tt-help':'User Manual',
   'tt-cam-reset':'Reset camera to initial position',
   'tt-add-obj':'Add Object',
-  'tt-edit-name':'Double-click to edit',
+  'tt-edit-name':'Click to edit name',
+  'tt-undo':'Undo last action (Ctrl+Z)',
   'tt-folder-add':'Add folder',
   'tt-mf-collapse':'Collapse',
   'tt-zip-save':'ZIP Save',
@@ -20000,6 +20775,21 @@ window.addEventListener('keydown',e=>{
   // Don't let camera / global shortcuts fire while the user is typing into a field.
   // Esc still escapes (browsers treat it specially anyway, and we use it to close).
   if(_isTypingInInput() && e.code !== 'Escape') return;
+  // ── TV / game-console D-pad navigation (user 2026-06-28) ──
+  // On no-hover devices (smart TV remote, controller, etc.) the D-pad maps to
+  // the Arrow keys, which the browser uses for SPATIAL FOCUS NAVIGATION between
+  // controls. This app otherwise eats the arrows to fly the camera — which would
+  // make the UI un-navigable by remote. So: on hover:none devices, when a UI
+  // control (button/input/link) is focused, let the arrows move focus instead of
+  // the camera. The 3D view (body/canvas focus) keeps arrow camera control, and
+  // DESKTOP (hover:hover) is entirely unaffected — WASD also always flies the
+  // camera regardless of focus.
+  if(e.code.startsWith('Arrow') && window.matchMedia && window.matchMedia('(hover: none)').matches){
+    const _ae = document.activeElement;
+    const _uiFocused = _ae && _ae !== document.body && _ae.id !== 'c' && _ae.id !== 'overlay'
+      && _ae.matches && _ae.matches('button,a,input,select,textarea,[tabindex],[role="button"]');
+    if(_uiFocused) return;   // let the browser move focus; don't record/eat the key
+  }
   // While avatar walk is active, Space is the JUMP key — prevent the browser
   // default (page scroll / re-activating the focused button) so a Space press
   // doesn't toggle walk mode off via the previously-clicked button.
@@ -20270,54 +21060,9 @@ window.addEventListener('mousemove',e=>{
     return;
   }
   // ── Axis drag (XZ plane or single axis) ──
-  if(msr.axisDragging){
-    const rect=canvas.getBoundingClientRect();
-    _v2.set(((e.clientX-rect.left)/rect.width)*2-1,
-            -((e.clientY-rect.top)/rect.height)*2+1);
-    _ray.setFromCamera(_v2,camera);
-    const hit=new THREE.Vector3();
-    if(_ray.ray.intersectPlane(msr.axisDragging.dragPlane, hit)){
-      let newPos;
-      if(msr.axisDragging.isXZ){
-        // Free XZ movement, Y locked
-        newPos = new THREE.Vector3(
-          msr.axisDragging.startPos.x + (hit.x - msr.axisDragging.startHit.x),
-          msr.axisDragging.startPos.y,
-          msr.axisDragging.startPos.z + (hit.z - msr.axisDragging.startHit.z)
-        );
-      } else {
-        const delta=hit.clone().sub(msr.axisDragging.startHit);
-        const proj=delta.dot(msr.axisDragging.axisDir);
-        newPos=msr.axisDragging.startPos.clone()
-          .addScaledVector(msr.axisDragging.axisDir, proj);
-      }
-      const dp = msr.axisDragging.point;
-      if(dp==='A'){
-        msr.ptA.copy(newPos); msr.markerA.position.copy(newPos);
-      } else if(dp==='B'){
-        msr.ptB.copy(newPos); msr.markerB.position.copy(newPos);
-      } else if(dp==='C'){
-        msr.ptC.copy(newPos); if(msr.markerC) msr.markerC.position.copy(newPos);
-      }
-      syncGizmoToMsr();
-    }
-    return;
-  }
+  if(msr.axisDragging){ _updateAxisDragAt(e.clientX, e.clientY); return; }
   // ── Drag marker ──
-  if(msr.dragging){
-    const rect=canvas.getBoundingClientRect();
-    _v2.set(((e.clientX-rect.left)/rect.width)*2-1,
-            -((e.clientY-rect.top)/rect.height)*2+1);
-    _ray.setFromCamera(_v2,camera);
-    const hit=new THREE.Vector3();
-    if(_ray.ray.intersectPlane(msr.dragPlane,hit)){
-      if(msr.dragging==='A'){msr.ptA.copy(hit);msr.markerA.position.copy(hit);}
-      else if(msr.dragging==='B'){msr.ptB.copy(hit);msr.markerB.position.copy(hit);}
-      else if(msr.dragging==='C'){msr.ptC.copy(hit);if(msr.markerC)msr.markerC.position.copy(hit);}
-      syncGizmoToMsr();
-    }
-    return;
-  }
+  if(msr.dragging){ _updateMarkerDragAt(e.clientX, e.clientY); return; }
   // ── Look rotation ──
   if(!dragOn)return;
   // While pointer is locked to the canvas, e.clientX/Y don't update — use
@@ -20464,12 +21209,71 @@ canvas.addEventListener('wheel',e=>{
   }
 },{passive:false});
 
+// ── Shared drag-update helpers (used by BOTH mouse and touch paths) ──
+// Extracted from the inline mousemove handler so the touch handlers can reuse
+// the EXACT same math. Both take screen-space client coordinates.
+function _updateAxisDragAt(clientX, clientY){
+  if(!msr.axisDragging) return;
+  const rect=canvas.getBoundingClientRect();
+  _v2.set(((clientX-rect.left)/rect.width)*2-1,
+          -((clientY-rect.top)/rect.height)*2+1);
+  _ray.setFromCamera(_v2,camera);
+  const hit=new THREE.Vector3();
+  if(_ray.ray.intersectPlane(msr.axisDragging.dragPlane, hit)){
+    let newPos;
+    if(msr.axisDragging.isXZ){
+      // Free XZ movement, Y locked
+      newPos = new THREE.Vector3(
+        msr.axisDragging.startPos.x + (hit.x - msr.axisDragging.startHit.x),
+        msr.axisDragging.startPos.y,
+        msr.axisDragging.startPos.z + (hit.z - msr.axisDragging.startHit.z)
+      );
+    } else {
+      const delta=hit.clone().sub(msr.axisDragging.startHit);
+      const proj=delta.dot(msr.axisDragging.axisDir);
+      newPos=msr.axisDragging.startPos.clone()
+        .addScaledVector(msr.axisDragging.axisDir, proj);
+    }
+    const dp = msr.axisDragging.point;
+    if(dp==='A'){
+      msr.ptA.copy(newPos); msr.markerA.position.copy(newPos);
+    } else if(dp==='B'){
+      msr.ptB.copy(newPos); msr.markerB.position.copy(newPos);
+    } else if(dp==='C'){
+      msr.ptC.copy(newPos); if(msr.markerC) msr.markerC.position.copy(newPos);
+    }
+    syncGizmoToMsr();
+  }
+}
+function _updateMarkerDragAt(clientX, clientY){
+  if(!msr.dragging) return;
+  const rect=canvas.getBoundingClientRect();
+  _v2.set(((clientX-rect.left)/rect.width)*2-1,
+          -((clientY-rect.top)/rect.height)*2+1);
+  _ray.setFromCamera(_v2,camera);
+  const hit=new THREE.Vector3();
+  if(_ray.ray.intersectPlane(msr.dragPlane,hit)){
+    if(msr.dragging==='A'){msr.ptA.copy(hit);msr.markerA.position.copy(hit);}
+    else if(msr.dragging==='B'){msr.ptB.copy(hit);msr.markerB.position.copy(hit);}
+    else if(msr.dragging==='C'){msr.ptC.copy(hit);if(msr.markerC)msr.markerC.position.copy(hit);}
+    syncGizmoToMsr();
+  }
+}
+
 // Touch look
 let tlId=-1,tlX=0,tlY=0;
 // Pivot-gizmo touch-drag (v0.0.43): the finger identifier currently dragging a
 // transform handle of the selected object. Lets iPad users grab the pivot and
 // move/rotate/scale, mirroring the desktop mouse gizmo drag.
 let _lpvTouchId=-1;
+let _lpvTouchHit=null;   // the lpv handle currently highlighted for a touch-drag (reset on release)
+// Generic handle touch-drag (2026-06): the finger identifier currently dragging
+// a NON-lpv transform handle — measurement axis arrow / XZ plane, measurement
+// marker, figure bone-rotation ring, figure IK handle, or path edit point.
+// Mirrors the desktop mousedown→mousemove→mouseup path for these widgets, which
+// previously had NO touch wiring at all (iPad/phone users couldn't drag them).
+let _handleTouchId=-1;
+let _handleTouchKind='';   // 'axis' | 'marker' | 'bone' | 'ik' | 'path'
 // ── Long-press tap placement for measure mode ──
 // In measure mode a finger held still for ~350 ms on the canvas enters
 // "preview placement" — mirrors the desktop left-click-hold flow. The
@@ -20490,24 +21294,96 @@ function _cancelMsrLongPress(){
 }
 
 canvas.addEventListener('touchstart',e=>{
-  // ── Pivot gizmo touch-drag (highest priority) ──
+  // ── Figure bone-rotation ring / IK handle touch-drag (highest priority) ──
+  // Mirrors the desktop mousedown order (bone ring → IK → lpv). Only outside
+  // measure mode and only when a figure widget is actually pickable. Previously
+  // these had NO touch wiring, so iPad/phone users couldn't rotate bones or
+  // drag IK targets.
+  if(_handleTouchId === -1 && _lpvTouchId === -1 && !(msr && msr.active) && e.changedTouches.length){
+    const tg = e.changedTouches[0];
+    const cx = tg.clientX, cy = tg.clientY;
+    let grabbed = false;
+    if(typeof _checkBoneRotateRingHit === 'function'){
+      const ringHit = _checkBoneRotateRingHit(cx, cy);
+      if(ringHit){ _startBoneRotateDrag(ringHit, cx, cy);
+        _handleTouchId = tg.identifier; _handleTouchKind = 'bone'; grabbed = true; }
+    }
+    if(!grabbed && typeof _checkIKHandleHit === 'function'){
+      const ikHit = _checkIKHandleHit(cx, cy);
+      if(ikHit){ _startIKHandleDrag(ikHit, cx, cy);
+        _handleTouchId = tg.identifier; _handleTouchKind = 'ik'; grabbed = true; }
+    }
+    if(grabbed){
+      try { if(navigator.vibrate) navigator.vibrate(12); } catch(_){}
+      markDirty(6);
+    }
+  }
+  // ── Pivot gizmo touch-drag (object translate / rotate / scale) ──
   // If a finger lands on a transform handle of the selected object, grab it
   // and drag instead of rotating the camera. The fat invisible hit-shafts make
   // the small arrows touch-friendly.
-  if(_lpvTouchId === -1 && typeof lpv!=='undefined' && lpv.group && lpv.group.visible
+  if(_handleTouchId === -1 && _lpvTouchId === -1 && typeof lpv!=='undefined' && lpv.group && lpv.group.visible
      && !(msr && msr.active) && e.changedTouches.length){
     const tg = e.changedTouches[0];
     const hit = checkLpvHandle(tg.clientX, tg.clientY);
     if(hit){
       startLpvDrag(hit, tg.clientX, tg.clientY);
       _lpvTouchId = tg.identifier;
+      // Highlight the grabbed handle (arrow / rotation ring / scale cube) so it's
+      // obvious WHICH axis is being dragged on touch — there's no hover on a finger
+      // (user 2026-06-27 "どこが長押しで選択されているかわかりずらい"). Reset on release.
+      _lpvTouchHit = hit;
+      if(typeof _applyLpvHighlight==='function') _applyLpvHighlight(hit);
       try { if(navigator.vibrate) navigator.vibrate(12); } catch(_){}
       markDirty(6);
     }
   }
+  // ── Path edit handle touch-drag (path layers, outside measure mode) ──
+  if(_handleTouchId === -1 && _lpvTouchId === -1 && typeof _pathEditId!=='undefined' && _pathEditId!=null
+     && !(msr && msr.active) && e.changedTouches.length){
+    const tg = e.changedTouches[0];
+    const h = _pathHandleAt(tg.clientX, tg.clientY);
+    if(h>=0){
+      _pathDragH = h; _handleTouchId = tg.identifier; _handleTouchKind = 'path';
+      try { if(navigator.vibrate) navigator.vibrate(12); } catch(_){}
+      markDirty(6);
+    }
+  }
+  // ── Measurement axis-arrow / XZ-plane / marker touch-drag (measure mode) ──
+  // Mirrors the desktop mousedown order inside measure mode: axis handle first
+  // (constrained drag along an arrow or the XZ plane), then a free marker grab.
+  // These also had no touch wiring before — the user could place points but not
+  // nudge them along an axis or move an existing marker with a finger.
+  if(_handleTouchId === -1 && msr && msr.active && e.changedTouches.length){
+    const tg = e.changedTouches[0];
+    const cx = tg.clientX, cy = tg.clientY;
+    const axHit = (typeof checkAxisHandle === 'function') ? checkAxisHandle(cx, cy) : null;
+    if(axHit){
+      pushUndo();
+      startAxisDrag(axHit, cx, cy);
+      _handleTouchId = tg.identifier; _handleTouchKind = 'axis';
+      try { if(navigator.vibrate) navigator.vibrate(12); } catch(_){}
+      markDirty(6);
+    } else {
+      const mHit = (typeof nearMarker === 'function') ? nearMarker(cx, cy) : null;
+      if(mHit){
+        pushUndo();
+        msr.dragging = mHit;
+        const pt = _msrPt(mHit);
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        msr.dragPlane.setFromNormalAndCoplanarPoint(camDir, pt);
+        _handleTouchId = tg.identifier; _handleTouchKind = 'marker';
+        try { if(navigator.vibrate) navigator.vibrate(12); } catch(_){}
+        markDirty(6);
+      }
+    }
+  }
   // Measure-mode long-press scheduler — only when no placement is already
-  // in progress AND a single finger is going down.
-  if(msr.active && _msrPlacingId === -1 && _msrLongPressId === -1 && e.changedTouches.length){
+  // in progress AND a single finger is going down. Skip entirely if a measure
+  // handle (axis/marker) was just grabbed, so dragging a handle doesn't also
+  // arm a point-placement.
+  if(msr.active && _handleTouchId === -1 && _msrPlacingId === -1 && _msrLongPressId === -1 && e.changedTouches.length){
     const t0 = e.changedTouches[0];
     _msrLongPressId = t0.identifier;
     _msrLongPressX = t0.clientX;
@@ -20537,13 +21413,28 @@ canvas.addEventListener('touchstart',e=>{
   // (z-index 60, pointer-events) that capture their own touches before the canvas
   // sees them, so the only thing the wider zone claims is empty canvas left-of-centre.
   for(const t of e.changedTouches)
-    if(t.identifier!==_lpvTouchId && t.clientX>innerWidth*0.3){tlId=t.identifier;tlX=t.clientX;tlY=t.clientY;}
+    if(t.identifier!==_lpvTouchId && t.identifier!==_handleTouchId && t.clientX>innerWidth*0.3){tlId=t.identifier;tlX=t.clientX;tlY=t.clientY;}
 },{passive:true});
 canvas.addEventListener('touchmove',e=>{
   // ── Pivot gizmo touch-drag update (highest priority) ──
   if(_lpvTouchId !== -1){
     for(const t of e.changedTouches){
       if(t.identifier === _lpvTouchId){ updateLpvDrag(t.clientX, t.clientY); markDirty(3); return; }
+    }
+  }
+  // ── Generic handle touch-drag update (bone ring / IK / axis / marker / path) ──
+  if(_handleTouchId !== -1){
+    for(const t of e.changedTouches){
+      if(t.identifier === _handleTouchId){
+        const cx = t.clientX, cy = t.clientY;
+        if(_handleTouchKind === 'bone'){ if(_boneRotDrag.active) _updateBoneRotateDrag(cx, cy); }
+        else if(_handleTouchKind === 'ik'){ if(_ikDrag.active) _updateIKHandleDrag(cx, cy); }
+        else if(_handleTouchKind === 'axis'){ _updateAxisDragAt(cx, cy); }
+        else if(_handleTouchKind === 'marker'){ _updateMarkerDragAt(cx, cy); }
+        else if(_handleTouchKind === 'path'){ if(_pathDragH>=0) _pathUpdateHandleDrag(cx, cy); }
+        markDirty(3);
+        return;
+      }
     }
   }
   // ── Measure-mode placement preview update (active long-press) ──
@@ -20609,7 +21500,23 @@ canvas.addEventListener('touchend',e=>{
     for(const t of e.changedTouches){
       if(t.identifier === _lpvTouchId){
         _lpvTouchId = -1;
+        if(_lpvTouchHit){ if(typeof _resetLpvHighlight==='function') _resetLpvHighlight(_lpvTouchHit); _lpvTouchHit=null; }
         if(typeof lpv!=='undefined' && lpv.dragging){ lpv.dragging=null; markDirty(6); }
+        break;
+      }
+    }
+  }
+  // End a generic handle touch-drag (bone ring / IK / axis / marker / path)
+  // when its finger lifts — mirrors the desktop mouseup cleanup.
+  if(_handleTouchId !== -1){
+    for(const t of e.changedTouches){
+      if(t.identifier === _handleTouchId){
+        if(_handleTouchKind === 'bone'){ if(_boneRotDrag.active) _endBoneRotateDrag(); }
+        else if(_handleTouchKind === 'ik'){ if(_ikDrag.active) _endIKHandleDrag(); }
+        else if(_handleTouchKind === 'path'){ _pathDragH = -1; }
+        if(_handleTouchKind === 'axis' || _handleTouchKind === 'marker'){ msr.dragging=null; msr.axisDragging=null; }
+        _handleTouchId = -1; _handleTouchKind = '';
+        markDirty(6);
         break;
       }
     }
@@ -20639,7 +21546,17 @@ canvas.addEventListener('touchcancel',e=>{
   // Abort a pivot gizmo touch-drag on cancel (e.g. iOS palm rejection).
   if(_lpvTouchId !== -1){
     _lpvTouchId = -1;
+    if(_lpvTouchHit){ if(typeof _resetLpvHighlight==='function') _resetLpvHighlight(_lpvTouchHit); _lpvTouchHit=null; }
     if(typeof lpv!=='undefined' && lpv.dragging){ lpv.dragging=null; markDirty(6); }
+  }
+  // Abort a generic handle touch-drag on cancel (e.g. iOS palm rejection).
+  if(_handleTouchId !== -1){
+    if(_boneRotDrag.active) _endBoneRotateDrag();
+    if(_ikDrag.active) _endIKHandleDrag();
+    if(_pathDragH>=0) _pathDragH = -1;
+    msr.dragging=null; msr.axisDragging=null;
+    _handleTouchId = -1; _handleTouchKind = '';
+    markDirty(6);
   }
   // Abort placement / arming on touchcancel (e.g. iOS palm rejection).
   if(_msrPlacingId !== -1){
@@ -21086,7 +22003,12 @@ window.startEditProjectName = function(){
     _projectName = v;
     const span = document.createElement('span');
     span.id = 'tb-project-name';
-    span.style.cssText = 'font-size:.78em;color:rgba(200,200,200,.85);cursor:default;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:2px 8px;border-radius:4px;border:1px solid transparent;user-select:none;letter-spacing:.02em;';
+    // Re-create with the SAME framed/editable style as the markup (class tb-pn +
+    // visible border + bg + ✎ + single-click edit) so the affordance survives a
+    // rename — user 2026-06-27.
+    span.className = 'tb-pn';
+    span.style.cssText = 'font-size:.78em;color:rgba(200,200,200,.9);cursor:text;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;padding:2px 22px 2px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);user-select:none;letter-spacing:.02em;';
+    span.onclick = startEditProjectName;
     span.ondblclick = startEditProjectName;
     span.title = T('tt-edit-name');
     span.textContent = v;
@@ -21335,7 +22257,6 @@ const REPORT_EMAIL = 'contact@locahun3d.com';   // Bug reports — opens user's 
 // the user (a) copy the address, (b) copy the body, or (c) open Gmail Web
 // in a new tab with everything pre-filled.
 function _showReportFallback(to, subject, body){
-  // Reuse existing modal style if present, otherwise inject a minimal one.
   const old = document.getElementById('report-fallback-modal');
   if(old) old.remove();
   const m = document.createElement('div');
@@ -21343,20 +22264,15 @@ function _showReportFallback(to, subject, body){
   m.setAttribute('style', 'position:fixed;inset:0;z-index:99999;display:flex;' +
     'align-items:center;justify-content:center;background:rgba(0,0,0,.78);' +
     'font-family:system-ui,"Segoe UI",sans-serif;color:#e8e8e8;');
-  const gmail = 'https://mail.google.com/mail/?view=cm&fs=1'
-              + '&to='      + encodeURIComponent(to)
-              + '&su='      + encodeURIComponent(subject)
-              + '&body='    + encodeURIComponent(body);
   const _en = (window._lang === 'en');
   const _t = {
-    title:  _en ? '🐛 Bug Report — couldn\'t open your mail app'
-                : '🐛 エラー報告 — メーラを開けませんでした',
-    intro:  _en ? 'No default mail app is configured, so <code>mailto:</code> couldn\'t launch. Send it one of these ways:'
-                : '既定のメールアプリが未設定のため <code>mailto:</code> を起動できませんでした。以下のいずれかで送信してください:',
-    gmail:  _en ? '📧 Open in Gmail (new tab)'      : '📧 Gmail で開く(新規タブ)',
-    copyTo: _en ? '📋 Copy recipient'               : '📋 宛先をコピー',
-    copyBody:_en ? '📋 Copy subject + body'         : '📋 件名+本文をコピー',
-    toLbl:  _en ? 'To:'                             : '宛先:',
+    title:  _en ? '❗ Bug Report' : '❗ エラー報告',
+    intro:  _en ? 'Describe the symptom & steps below, then press Send. It is emailed directly — no mail app needed.'
+                : '下に症状・再現手順を書いて「送信」してください。メールアプリ不要で直接送られます。',
+    send:   _en ? '📧 Send' : '📧 送信',
+    mail:   _en ? 'Open in mail app' : 'メールアプリで開く',
+    gmail:  _en ? 'Gmail' : 'Gmail で開く',
+    copyBody:_en ? 'Copy text' : '本文をコピー',
   };
   m.innerHTML = `
     <div style="background:#1a1a1c;border:1px solid #444;border-radius:10px;max-width:640px;
@@ -21368,47 +22284,57 @@ function _showReportFallback(to, subject, body){
         <button id="rfb-close" style="background:none;border:0;color:#aaa;font-size:1.4em;
                 cursor:pointer;line-height:1">×</button>
       </div>
-      <div style="padding:14px 18px 6px;font-size:.9em;line-height:1.55;color:#bbb">
-        ${_t.intro}
-      </div>
-      <div style="padding:0 18px 10px;display:flex;flex-wrap:wrap;gap:8px;">
-        <a id="rfb-gmail" href="${gmail}" target="_blank" rel="noopener"
-           style="background:#5b4632;border:1px solid #b9883b;color:#ffd87a;
-                  padding:8px 14px;border-radius:6px;text-decoration:none;font-size:.9em">
-          ${_t.gmail}
-        </a>
-        <button id="rfb-copy-to" style="background:#2c3c4e;border:1px solid #4a6478;color:#cfe4ff;
-                  padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.9em">
-          ${_t.copyTo}
-        </button>
-        <button id="rfb-copy-body" style="background:#2c3c4e;border:1px solid #4a6478;color:#cfe4ff;
-                  padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.9em">
-          ${_t.copyBody}
-        </button>
-      </div>
-      <div style="padding:6px 18px 4px;font-size:.78em;color:#888">
-        ${_t.toLbl} <code id="rfb-to-text"></code></div>
-      <textarea id="rfb-body" readonly style="margin:6px 18px 18px;flex:1;min-height:200px;
+      <div style="padding:14px 18px 6px;font-size:.9em;line-height:1.55;color:#bbb">${_t.intro}</div>
+      <textarea id="rfb-body" style="margin:8px 18px 6px;flex:1;min-height:200px;
                 background:#0e0e10;color:#dadada;border:1px solid #333;border-radius:6px;
                 padding:10px 12px;font:.82em/1.5 ui-monospace,Menlo,Consolas,monospace;
                 resize:vertical;"></textarea>
+      <div id="rfb-status" style="padding:0 18px;font-size:.82em;color:#9ad59a;min-height:1.2em"></div>
+      <div style="padding:6px 18px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <button id="rfb-send" style="background:#3a5b3a;border:1px solid #6abf6a;color:#dfffdf;
+                  padding:9px 18px;border-radius:6px;cursor:pointer;font-size:.95em;font-weight:600">${_t.send}</button>
+        <span style="flex:1"></span>
+        <a id="rfb-mail" href="#" style="color:#9ab;text-decoration:none;font-size:.82em">${_t.mail}</a>
+        <a id="rfb-gmail" href="#" target="_blank" rel="noopener" style="color:#9ab;text-decoration:none;font-size:.82em">${_t.gmail}</a>
+        <button id="rfb-copy-body" style="background:none;border:0;color:#9ab;cursor:pointer;font-size:.82em">${_t.copyBody}</button>
+      </div>
     </div>`;
   document.body.appendChild(m);
-  m.querySelector('#rfb-to-text').textContent = to;
-  m.querySelector('#rfb-body').value = 'Subject: ' + subject + '\n\n' + body;
+  const ta = m.querySelector('#rfb-body');
+  ta.value = body;
+  const status = m.querySelector('#rfb-status');
+  const mailto = ()=> 'mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(ta.value);
+  const gmailUrl = ()=> 'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(to)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(ta.value);
+  m.querySelector('#rfb-mail').onclick  = (e)=>{ e.preventDefault(); try{ location.href = mailto(); }catch(_){} };
+  m.querySelector('#rfb-gmail').onclick = (e)=>{ e.preventDefault(); window.open(gmailUrl(),'_blank','noopener'); };
   const close = () => m.remove();
   m.querySelector('#rfb-close').onclick = close;
   m.addEventListener('click', e => { if(e.target === m) close(); });
-  m.querySelector('#rfb-copy-to').onclick = async () => {
-    try{ await navigator.clipboard.writeText(to);
-      if(typeof showUndoToast === 'function') showUndoToast(_en ? 'Recipient copied' : '宛先をコピーしました'); }
-    catch(_){ m.querySelector('#rfb-to-text').focus && m.querySelector('#rfb-to-text').focus(); }
-  };
   m.querySelector('#rfb-copy-body').onclick = async () => {
-    const text = 'To: ' + to + '\nSubject: ' + subject + '\n\n' + body;
-    try{ await navigator.clipboard.writeText(text);
-      if(typeof showUndoToast === 'function') showUndoToast(_en ? 'Subject + body copied' : '件名+本文をコピーしました'); }
-    catch(_){ m.querySelector('#rfb-body').select(); }
+    try{ await navigator.clipboard.writeText('To: '+to+'\nSubject: '+subject+'\n\n'+ta.value);
+      status.style.color='#9ad59a'; status.textContent = _en?'Copied':'コピーしました'; }
+    catch(_){ ta.select(); }
+  };
+  // ── 直接サーバー送信（/api/report → Worker → Resend）。メーラ不要。 ──
+  const sendBtn = m.querySelector('#rfb-send');
+  sendBtn.onclick = async () => {
+    sendBtn.disabled = true;
+    status.style.color = '#cdd'; status.textContent = _en ? 'Sending…' : '送信中…';
+    try {
+      const r = await fetch('/api/report', { method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ subject, body: ta.value }) });
+      const j = await r.json().catch(()=>({}));
+      if(r.ok && j && j.ok){
+        status.style.color='#9ad59a'; status.textContent = _en ? 'Sent ✓ — thank you!' : '送信しました ✓ ありがとうございます';
+        setTimeout(close, 1400);
+        return;
+      }
+      throw new Error((j && j.error) || ('HTTP '+r.status));
+    } catch(e){
+      sendBtn.disabled = false;
+      status.style.color = '#e6a';
+      status.textContent = (_en ? 'Send failed — use mail / Gmail / copy below. ' : '送信に失敗しました。下のメール/Gmail/コピーをご利用ください。 ') + (e && e.message ? '('+e.message+')' : '');
+    }
   };
 }
 
@@ -21448,26 +22374,10 @@ window.reportBug = function(){
       'UA      : ' + ua,
     ].join('\n');
     const body = bodyLines;
-    const url = 'mailto:' + encodeURIComponent(REPORT_EMAIL)
-              + '?subject=' + encodeURIComponent(subject)
-              + '&body='    + encodeURIComponent(body);
-    // Try the simplest mailto trigger first: location.href. Then detect
-    // whether anything actually happened by listening for `blur` — if the
-    // browser handed mailto to an external app the page typically loses
-    // focus within ~250 ms. If no blur fires (no handler registered), fall
-    // back to the modal.
-    let handed = false;
-    const onBlur = () => { handed = true; };
-    window.addEventListener('blur', onBlur, { once: true });
-    try { location.href = url; } catch(_){}
-    setTimeout(() => {
-      window.removeEventListener('blur', onBlur);
-      // If still focused after 600 ms, mailto: was silently dropped. Open the
-      // fallback modal so the user has *some* way to send the report.
-      if(!handed && document.hasFocus()){
-        _showReportFallback(REPORT_EMAIL, subject, body);
-      }
-    }, 600);
+    // メーラ依存をやめ、報告ダイアログを直接開く。ダイアログの「送信」ボタンが
+    // /api/report (Cloudflare Worker→Resend) で直接メール送信する（メーラ不要）。
+    // 送信できない環境向けに メールアプリ/Gmail/コピー の手段も残す。
+    _showReportFallback(REPORT_EMAIL, subject, body);
   } catch(e){
     console.warn('[reportBug] failed:', e);
     if(typeof showUndoToast === 'function') showUndoToast('メール起動に失敗しました');

@@ -67,3 +67,20 @@ next-env.d.ts
 
 # Site settings (local) — 限定無料期間 などの運用設定。Migrates to D1.
 /data/site-settings.json
+
+# Build / deploy logs
+build-*.log
+deploy-*.log
+dev-server*.log
+tail*.log
+
+# Temp files
+temp-*.png
+temp-*.mp4
+cors.json
+
+# OpenNext build output
+/.open-next/
+
+# Viewer backup copies
+public/viewer/*.bak
