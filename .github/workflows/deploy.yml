@@ -41,8 +41,13 @@ jobs:
         continue-on-error: true
 
       # ここが本番デプロイの実ゲート: 型エラー/ビルド失敗ならデプロイしない。
+      # Clerk は NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY/CLERK_SECRET_KEY をビルド時に
+      # 必須チェックしているため（Stripe と異なりランタイム secret では足りない）。
       - name: Build (OpenNext for Cloudflare)
         run: npx opennextjs-cloudflare build
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
 
       - name: Apply D1 migrations (remote)
         run: npx wrangler d1 migrations apply locahun3d-db --remote
