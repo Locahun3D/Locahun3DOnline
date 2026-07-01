@@ -18,6 +18,7 @@ export const CORS_PROXY =
 interface ViewerUrlOptions {
   orbit?: boolean;
   capture?: boolean;
+  protected?: boolean;
 }
 
 export function buildViewerUrl(
@@ -29,6 +30,7 @@ export function buildViewerUrl(
   params.set("autoload", splatUrl);
   if (options?.orbit) params.set("orbit", "1");
   if (options?.capture) params.set("capture", "1");
+  if (options?.protected) params.set("protected", "1");
   return `${VIEWER_PATH}?${params}`;
 }
 

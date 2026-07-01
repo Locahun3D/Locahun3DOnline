@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
+import { useLocale, useHref } from "@/components/locale-provider";
+import { tokenCostLabel } from "@/lib/schemas";
 
 interface Props {
   splatUrl: string;
@@ -15,12 +17,6 @@ interface Props {
   signedIn?: boolean;
 }
 
-const SIZE_LABEL: Record<1 | 2 | 3, string> = {
-  1: "ハウス / 小規模",
-  2: "中規模スタジオ",
-  3: "ドーム / 大規模",
-};
-
 export default function ViewerGate({
   splatUrl,
   propertyId,
@@ -32,16 +28,18 @@ export default function ViewerGate({
   freeAccess = false,
   signedIn = false,
 }: Props) {
+  const en = useLocale() === "en";
+  const lh = useHref();
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
   const proxied = proxySplatUrl(splatUrl);
-  const fullViewerUrl = buildViewerUrl(proxied);
+  const fullViewerUrl = buildViewerUrl(proxied, { protected: true });
 
   /* --- Paywall (no subscription) --- */
   if (!effectiveSubscription) {
     return (
-      <div className="group relative aspect-video max-w-sm border border-line overflow-hidden">
+      <div className="group relative aspect-video w-full border border-line overflow-hidden">
         {previewVideoUrl ? (
           <video
             src={previewVideoUrl}
@@ -61,36 +59,58 @@ export default function ViewerGate({
         {/* ゲート文言はホバー時のみフェードイン表示。通常はプレビューを見せる。 */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-md bg-black/70 opacity-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 group-hover:pointer-events-auto">
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
-            ● Subscriber only · {tokenCost} トークン消費
+            {en
+              ? `● Subscriber only · ${tokenCost} token(s)`
+              : `● Subscriber only · ${tokenCost} トークン消費`}
           </div>
           <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] mb-4 text-white drop-shadow-lg">
-            3DGS ウォークスルーは
-            <br />
-            メンバー限定です。
+            {en ? (
+              <>
+                The 3DGS walkthrough
+                <br />
+                is members only.
+              </>
+            ) : (
+              <>
+                3DGS ウォークスルーは
+                <br />
+                メンバー限定です。
+              </>
+            )}
           </div>
           <div className="text-[13px] text-white/85 mb-5">
-            このスタジオ（{SIZE_LABEL[tokenCost]}）は{" "}
-            <span className="text-accent font-bold">{tokenCost} トークン</span>
-            {" "}消費 / 視聴
+            {en ? (
+              <>
+                This studio ({tokenCostLabel(tokenCost, "en")}) costs{" "}
+                <span className="text-accent font-bold">{tokenCost} token(s)</span> / view
+              </>
+            ) : (
+              <>
+                このスタジオ（{tokenCostLabel(tokenCost, "ja")}）は{" "}
+                <span className="text-accent font-bold">{tokenCost} トークン</span>
+                {" "}消費 / 視聴
+              </>
+            )}
           </div>
           <p className="text-[14px] text-white/80 max-w-[42ch] leading-[1.9] mb-7">
-            実空間を 3D で歩き回り、レンズ画角・天井距離・光源位置を
-            ブラウザだけで検証できます。
+            {en
+              ? "Walk the real space in 3D and check lens angles, ceiling distance and light positions from your browser alone."
+              : "実空間を 3D で歩き回り、レンズ画角・天井距離・光源位置をブラウザだけで検証できます。"}
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
-              href={`/pricing?from=${propertyId}`}
+              href={lh(`/pricing?from=${propertyId}`)}
               className="px-7 py-3.5 text-[14px] font-bold rounded-md bg-accent text-white hover:bg-accent/85 transition shadow-lg"
             >
-              プランを見る
+              {en ? "See plans" : "プランを見る"}
             </Link>
             {/* サインイン済みの非会員には Sign in を出さない（プラン加入へ誘導）。 */}
             {!signedIn && (
               <Link
-                href={`/sign-in?redirect=/properties/${propertyId}`}
+                href={lh(`/sign-in?redirect=/properties/${propertyId}`)}
                 className="px-7 py-3.5 text-[14px] font-semibold rounded-md border border-white/50 text-white hover:bg-white/10 transition"
               >
-                既にメンバーの方はサインイン
+                {en ? "Already a member? Sign in" : "既にメンバーの方はサインイン"}
               </Link>
             )}
           </div>
@@ -139,7 +159,7 @@ export default function ViewerGate({
       if (!res.ok) return fallback();
       const data = (await res.json()) as { url?: string };
       if (!data.url) return fallback();
-      const target = buildViewerUrl(data.url);
+      const target = buildViewerUrl(data.url, { protected: true });
       if (win) win.location.href = target;
       else window.open(target, "_blank");
     } catch {
@@ -149,7 +169,7 @@ export default function ViewerGate({
 
   /* --- Always open in new tab --- */
   return (
-    <div className="relative aspect-video max-w-sm border border-line overflow-hidden bg-[#141414]">
+    <div className="relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
       {previewVideoUrl ? (
         <video
           src={previewVideoUrl}
@@ -174,11 +194,13 @@ export default function ViewerGate({
             freeAccess ? "text-green-400" : "text-accent"
           }`}
         >
-          {freeAccess ? "● 限定無料期間中 · トークン消費なし" : `● ${sizeMb} MB`}
+          {freeAccess
+            ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
+            : `● ${sizeMb} MB`}
         </div>
 
         <p className="text-[11px] text-muted max-w-[44ch] leading-[1.75] mb-4">
-          別タブで 3D ウォークスルーを開きます
+          {en ? "Opens the 3D walkthrough in a new tab" : "別タブで 3D ウォークスルーを開きます"}
         </p>
 
         <a
@@ -188,7 +210,7 @@ export default function ViewerGate({
           onClick={openViewer}
           className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition bg-black/50 backdrop-blur-sm"
         >
-          3Dビューアーを開く ↗
+          {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
         </a>
       </div>
     </div>
