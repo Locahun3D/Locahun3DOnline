@@ -1,4 +1,4 @@
-import { getPublishedProperties, getAllAreas } from "@/lib/properties";
+import { getPublishedProperties } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
 import CatalogClient from "@/components/properties/catalog-client";
 
@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function PropertiesPage() {
   const items = await getPublishedProperties();
-  const areas = await getAllAreas();
+  const areas = Array.from(new Set(items.map((p) => p.area))).sort();
   const studioTypes = Array.from(
     new Set(items.map((p) => p.studioType).filter((s) => s)),
   ).sort();
