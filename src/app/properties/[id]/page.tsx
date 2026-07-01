@@ -55,36 +55,31 @@ export default async function PropertyDetailPage({
 
   const locale = await getLocale();
 
-  const others = (await getPublishedProperties())
-    .filter((p) => p.id !== property.id)
-    .slice(0, 3);
+  const [allPublished, settings, user] = await Promise.all([
+    getPublishedProperties(),
+    getSettings(),
+    getCurrentUser().catch(() => null),
+  ]);
 
-  const settings = await getSettings();
+  const others = allPublished.filter((p) => p.id !== property.id).slice(0, 3);
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
-  let canViewRestrictedItems = false;
-  let canViewNdaOnlyItems = false;
-  let hasViewerAccess = false;
-  let signedIn = false;
-  let bookmarked = false;
+  const canViewRestrictedItems = canViewBackyard(user);
+  const canViewNdaOnlyItems = canViewNdaOnly(user);
+  const hasViewerAccess =
+    !!user && (user.role === "admin" || (!!user.plan && user.plan !== "free"));
+  const signedIn = !!user;
+  const bookmarked = user ? (user.bookmarks ?? []).includes(property.id) : false;
   const purchasedIndices: number[] = [];
-  try {
-    const user = await getCurrentUser();
-    signedIn = !!user;
-    canViewRestrictedItems = canViewBackyard(user);
-    canViewNdaOnlyItems = canViewNdaOnly(user);
-    // 管理者・有料サブスク会員はサインイン済みなら 3DGS を視聴可（paywall を出さない）。
-    hasViewerAccess =
-      !!user && (user.role === "admin" || (!!user.plan && user.plan !== "free"));
-    if (user) {
-      bookmarked = (user.bookmarks ?? []).includes(property.id);
+  if (user) {
+    try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
       for (const p of mine) {
         if (p.status === "completed") purchasedIndices.push(p.splatItemIndex);
       }
+    } catch {
+      // purchase lookup failure is non-fatal
     }
-  } catch {
-    // No auth context (build time) — treat as no access
   }
 
   return (
