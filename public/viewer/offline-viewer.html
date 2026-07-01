@@ -8998,6 +8998,22 @@ window.camAnimRecordExport = function(){
   // captured MP4 — they're an editing aid, not part of the final shot.
   _camAnimSetVisualsVisible(false);
 
+  // ── Camera-frame cropped recording ─────────────────────────────────────
+  // When the camera tool is active, record only the camera frame region
+  // (matching the user's chosen aspect ratio) instead of the full viewport.
+  // An offscreen canvas at the target delivery resolution receives a copy
+  // of the frame rect after every render; the MediaRecorder captures it.
+  const _useCamFrame = cam.active;
+  let _recCanvas = null, _recCtx = null, _recFr = null;
+  if(_useCamFrame){
+    const target = _camTargetResolution();
+    _recCanvas = document.createElement('canvas');
+    _recCanvas.width  = target.w;
+    _recCanvas.height = target.h;
+    _recCtx = _recCanvas.getContext('2d');
+    _recFr  = _camFrameRect();
+  }
+
   // ── WARM-UP ────────────────────────────────────────────────────────────
   // Snap to key 0 and let Spark settle to full LOD/SH BEFORE the recorder
   // turns on, so the first recorded frame isn't the coarse just-jumped state.
@@ -9024,8 +9040,72 @@ window.camAnimRecordExport = function(){
   const _beginRecording = () => {
     camAnim.warming = false;
     if(camAnim.warmNudgeId){ clearInterval(camAnim.warmNudgeId); camAnim.warmNudgeId = 0; }
-    // Start the existing canvas recorder; it writes a file on stop().
-    window.startViewRecording();
+
+    if(_useCamFrame){
+      // ── Cropped recorder on the offscreen canvas ──
+      const mime = _pickRecorderMime();
+      if(!mime){
+        showUndoToast((window._lang === 'en')
+          ? 'Recording not supported on this browser'
+          : 'このブラウザでは録画非対応');
+        return;
+      }
+      const stream = _recCanvas.captureStream(60);
+      const rec = new MediaRecorder(stream, {
+        mimeType: mime,
+        videoBitsPerSecond: 12_000_000,
+      });
+      const _chunks = [];
+      const _ext = mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm';
+      rec.ondataavailable = (e) => { if(e.data && e.data.size > 0) _chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(_chunks, { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const ts = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const stamp = ts.getFullYear() + pad(ts.getMonth()+1) + pad(ts.getDate())
+                    + '_' + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
+        const projectEl = document.getElementById('tb-project-name');
+        const proj = (projectEl && projectEl.textContent.trim()) || 'Untitled';
+        a.href = url;
+        a.download = `${proj}_${stamp}.${_ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showUndoToast((window._lang === 'en')
+          ? `Saved ${a.download}` : `保存しました: ${a.download}`);
+      };
+      rec.start(1000);
+      camAnim._recRec = rec;
+      // Install the post-render copy hook so every animate-loop frame is
+      // mirrored to the offscreen canvas at the camera-frame crop.
+      const PR = renderer.getPixelRatio();
+      camAnim._recCopyFn = () => {
+        try {
+          _recCtx.drawImage(canvas,
+            Math.round(_recFr.x * PR), Math.round(_recFr.y * PR),
+            Math.round(_recFr.w * PR), Math.round(_recFr.h * PR),
+            0, 0, _recCanvas.width, _recCanvas.height);
+        } catch(_){}
+      };
+      _setCaptureUIHidden(true);
+      _setRecButtonState(true);
+      const el = _ensureRecTimerEl();
+      camAnim._recStart = performance.now();
+      const rtick = () => {
+        const sec = (performance.now() - camAnim._recStart) / 1000;
+        const t = document.getElementById('view-rec-time');
+        if(t) t.textContent = _fmtRecSeconds(sec);
+      };
+      rtick();
+      camAnim._recInterval = setInterval(rtick, 250);
+    } else {
+      // Start the existing canvas recorder; it writes a file on stop().
+      window.startViewRecording();
+    }
+
     // Re-pin key 0 so frame 0 is exactly the start pose (warm-up nudges only
     // touched the splat sort, not the camera, but be explicit).
     _camAnimApplySample(camAnim.keys[0]);
@@ -9043,7 +9123,17 @@ window.camAnimRecordExport = function(){
       _camAnimApplySample(camAnim.keys[camAnim.keys.length - 1]);
       camAnim.playing = false;
       setTimeout(() => {
-        window.stopViewRecording();
+        if(_useCamFrame){
+          try { camAnim._recRec.stop(); } catch(_){}
+          if(camAnim._recInterval){ clearInterval(camAnim._recInterval); camAnim._recInterval = 0; }
+          camAnim._recCopyFn = null;
+          camAnim._recRec = null;
+          _setRecButtonState(false);
+          _hideRecTimer();
+          _setCaptureUIHidden(false);
+        } else {
+          window.stopViewRecording();
+        }
         if(p)  p.style.display  = prevDisplay;
         if(cf) cf.style.display = prevCf;
         if(camAnim.open) _camAnimSetVisualsVisible(true);
@@ -17354,6 +17444,7 @@ function animate(now) {
     camera.aspect = innerWidth / Math.max(1, innerHeight);
     camera.updateProjectionMatrix();
   }
+  if(camAnim._recCopyFn) camAnim._recCopyFn();
   const _renderMs = performance.now() - _t0;
   // CSS reprojection bookkeeping: the freshly-rendered frame embeds the
   // current yaw/pitch, so any predictive canvas offset that was applied
