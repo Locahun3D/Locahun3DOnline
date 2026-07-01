@@ -33,12 +33,12 @@
     "R2_BUCKET": "locahun3d-assets",
     "R2_PUBLIC_URL": "https://pub-6fe11fc6301a424ba739695a7c4d2dd9.r2.dev",
     "UPLOAD_MODE": "r2",
-    "STRIPE_PRICE_INDIVIDUAL_MONTHLY": "price_1Tlb2LRyHEgXelRysKE4Giy7",
-    "STRIPE_PRICE_INDIVIDUAL_ANNUAL": "price_1Tlb2MRyHEgXelRy6CEiIoya",
-    "STRIPE_PRICE_STUDIO_MONTHLY": "price_1Tlb2NRyHEgXelRyEOHhpPxa",
-    "STRIPE_PRICE_STUDIO_ANNUAL": "price_1Tlb2NRyHEgXelRyZqwghKCL",
-    "STRIPE_PRICE_TEAM_MONTHLY": "price_1Tlb2ORyHEgXelRywSLcbT7s",
-    "STRIPE_PRICE_TEAM_ANNUAL": "price_1Tlb2ORyHEgXelRyZnqqhqEP"
+    "STRIPE_PRICE_INDIVIDUAL_MONTHLY": "price_1ToV9w3G4r5QaMCIJJmi6WQU",
+    "STRIPE_PRICE_INDIVIDUAL_ANNUAL": "price_1ToVA33G4r5QaMCI441wSpf9",
+    "STRIPE_PRICE_STUDIO_MONTHLY": "price_1ToVAV3G4r5QaMCIQ6C4CjrS",
+    "STRIPE_PRICE_STUDIO_ANNUAL": "price_1ToVAX3G4r5QaMCIQuL3gvIS",
+    "STRIPE_PRICE_TEAM_MONTHLY": "price_1ToVB43G4r5QaMCIO3xLjUCb",
+    "STRIPE_PRICE_TEAM_ANNUAL": "price_1ToVB73G4r5QaMCIlQMEmIPG"
   },
   "routes": [
     { "pattern": "locahun3d.com", "custom_domain": true },

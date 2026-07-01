@@ -71,14 +71,14 @@
           "height": 1000
         }
       ],
-      "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+      "splatUrl": "/api/demo-asset/Kousaten_ForDemo_point_cloud.rad",
       "zipUrl": "",
       "zipSizeMb": 0,
       "splatSizeMb": 356,
       "splatItems": [
         {
           "label": "1F",
-          "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+          "splatUrl": "/api/demo-asset/Kousaten_ForDemo_point_cloud.rad",
           "previewVideoUrl": "/api/r2/uploads/wh-002/0-preview.mp4",
           "sizeMb": 356,
           "notes": "1階エントランス〜メインホール",
@@ -112,7 +112,7 @@
         },
         {
           "label": "2F",
-          "splatUrl": "/uploads/wh-002/Kousaten_ForDemo_point_cloud.rad",
+          "splatUrl": "/api/demo-asset/Kousaten_ForDemo_point_cloud.rad",
           "previewVideoUrl": "/api/r2/uploads/wh-002/1-preview.mp4",
           "sizeMb": 356,
           "notes": "2階スタジオ・控室",

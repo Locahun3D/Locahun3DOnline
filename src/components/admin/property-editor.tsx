@@ -2082,7 +2082,7 @@ function Checklist({ data }: { data: Property }) {
     { ok: data.city.length > 0, label: "市区町村" },
     { ok: data.hourlyPrice > 0, label: "料金 (0 円以上)" },
     { ok: !!data.cover.src && /^https?:\/\//.test(data.cover.src), label: "カバー画像 URL" },
-    { ok: !!data.splatUrl && /^https?:\/\//.test(data.splatUrl), label: "3DGS Splat URL" },
+    { ok: !!data.splatUrl && (/^https?:\/\//.test(data.splatUrl) || data.splatUrl.startsWith("/api/")), label: "3DGS Splat URL" },
   ];
   const allOk = checks.every((c) => c.ok);
   return (

@@ -76,7 +76,17 @@ export function usePreviewCapture(): UseCaptureResult {
       setCapturedIdx(itemIdx);
 
       try { winRef.current?.close(); } catch {}
-      const directSplatUrl = splatUrl.startsWith("/") ? `${CORS_PROXY}${splatUrl}` : splatUrl;
+      // /api/r2/ blocks .rad/.splat/.ply files (security); for capture the admin
+      // is authenticated, so route 3DGS assets through viewer-stream instead.
+      // Other relative paths still go through the CORS proxy.
+      let directSplatUrl: string;
+      if (/^\/api\/r2\//i.test(splatUrl) && /\.(splat|ply|ksplat|rad)$/i.test(splatUrl)) {
+        directSplatUrl = splatUrl.replace(/^\/api\/r2\//, "/api/viewer-stream/");
+      } else if (splatUrl.startsWith("/")) {
+        directSplatUrl = `${CORS_PROXY}${splatUrl}`;
+      } else {
+        directSplatUrl = splatUrl;
+      }
       const url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true });
       const capWin = openCaptureWindow(url);
       winRef.current = capWin;
