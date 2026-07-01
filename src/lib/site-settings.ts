@@ -5,6 +5,7 @@
  * 初回は旧本番(R2 doc)またはビルド時seedを非破壊で D1 に投入する。
  */
 import "server-only";
+import { cache } from "react";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
@@ -54,7 +55,7 @@ async function seedValue(): Promise<SiteSettings> {
   }
 }
 
-export async function getSettings(): Promise<SiteSettings> {
+export const getSettings = cache(async (): Promise<SiteSettings> => {
   if (canAccessLocalFs()) {
     try {
       const raw = await fs.readFile(DATA_FILE, "utf8");
@@ -75,7 +76,7 @@ export async function getSettings(): Promise<SiteSettings> {
   const seed = await seedValue();
   await d1PutSettings(db, seed);
   return seed;
-}
+});
 
 export async function saveSettings(s: SiteSettings): Promise<SiteSettings> {
   const validated = siteSettingsSchema.parse(s);
