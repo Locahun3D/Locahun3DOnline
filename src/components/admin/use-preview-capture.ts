@@ -85,6 +85,23 @@ async function downloadChunkedBlob(
   onPct: (pct: number) => void,
   abortRef: { current: boolean },
 ): Promise<Blob> {
+  // 切断バグはこのアプリ自身の Worker 経由プロキシ（同一オリジン）で実測された
+  // もので、R2 の署名付き直リンク（別オリジン）は対象外。別オリジンは 1 本の
+  // fetch で取得し、無駄なチャンク分割リクエストを避ける。
+  try {
+    const u = new URL(url, typeof location !== "undefined" ? location.href : url);
+    if (typeof location !== "undefined" && u.origin !== location.origin) {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const buf = await resp.arrayBuffer();
+      const cl = parseInt(resp.headers.get("content-length") || "0", 10);
+      if (cl && buf.byteLength !== cl) throw new Error(`truncated (${buf.byteLength}/${cl})`);
+      onPct(100);
+      return new Blob([buf]);
+    }
+  } catch (e) {
+    if (e instanceof Error && /truncated/.test(e.message)) throw e;
+  }
   const CHUNK = 8 * 1024 * 1024;
   const ATTEMPTS = 5;
   // probe: 先頭 1 byte の Range 応答から総サイズを得る

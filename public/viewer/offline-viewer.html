@@ -17683,6 +17683,25 @@ async function _fetchBinaryChunked(url){
     if(!r.ok) throw new Error('blob fetch failed');
     return await r.arrayBuffer();
   }
+  // 切断バグは「このアプリ自身の Workers 経由プロキシ (/api/r2, /api/viewer-stream
+  // 等、同一オリジン)」で実測されたもので、R2 の署名付き直リンク（別オリジン、
+  // 例 *.r2.cloudflarestorage.com）は R2 が直接ストリーム配信するため対象外。
+  // 別オリジンの絶対URLは 1 本の fetch で取得し、チャンク分割によるリクエスト数
+  // の水増しを避ける（content-length で欠損だけは検証する）。
+  try{
+    const u = new URL(url, location.href);
+    if(u.origin !== location.origin){
+      const resp = await fetch(url, { cache:'no-store' });
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const buf = await resp.arrayBuffer();
+      const cl = parseInt(resp.headers.get('content-length') || '0', 10);
+      if(cl && buf.byteLength !== cl) throw new Error('通信が途中で切断されました ('+buf.byteLength+'/'+cl+' bytes)');
+      return buf;
+    }
+  }catch(e){
+    // URL 解析失敗等は下の同一オリジン想定チャンク経路にフォールバック
+    if(e instanceof Error && /切断/.test(e.message)) throw e;
+  }
   // 8MB × リトライ5回。16MB 連投だと Workers 経由で「206 なのに body 0 byte」
   // という一過性の切断が実測で出た（5 チャンク目以降）。小さめ＋間隔＋
   // 粘り強いリトライで吸収する。
