@@ -17677,7 +17677,11 @@ const DEMO_SCENE_SIZE_MB = 357;
 //   fetch は cache:'no-store' で HTTP キャッシュを完全バイパス
 //   （過去に汚染されたキャッシュエントリにも当たらない）。
 async function _fetchBinaryChunked(url){
-  const CHUNK = 16 * 1024 * 1024;
+  // 8MB × リトライ5回。16MB 連投だと Workers 経由で「206 なのに body 0 byte」
+  // という一過性の切断が実測で出た（5 チャンク目以降）。小さめ＋間隔＋
+  // 粘り強いリトライで吸収する。
+  const CHUNK = 8 * 1024 * 1024;
+  const ATTEMPTS = 5;
   // 1) probe: 先頭 1 byte の Range 応答から総サイズを取得
   let total = 0;
   let probe = null;
@@ -17702,7 +17706,7 @@ async function _fetchBinaryChunked(url){
   while(got < total){
     const end = Math.min(got + CHUNK, total) - 1;
     let ok = false, lastErr = null;
-    for(let attempt = 0; attempt < 3 && !ok; attempt++){
+    for(let attempt = 0; attempt < ATTEMPTS && !ok; attempt++){
       try{
         const r = await fetch(url, { cache:'no-store', headers:{ range:'bytes='+got+'-'+end } });
         if(r.status !== 206 && r.status !== 200) throw new Error('HTTP '+r.status);
@@ -17714,10 +17718,12 @@ async function _fetchBinaryChunked(url){
         }
         if(part.byteLength !== (end - got + 1)) throw new Error('chunk truncated ('+part.byteLength+'/'+(end - got + 1)+')');
         out.set(part, got); got += part.byteLength; ok = true;
-      }catch(e){ lastErr = e; await new Promise(res=>setTimeout(res, 800 * (attempt + 1))); }
+      }catch(e){ lastErr = e; await new Promise(res=>setTimeout(res, 1200 * (attempt + 1))); }
     }
     if(!ok) throw new Error('チャンク取得失敗 @'+got+': '+(lastErr && lastErr.message ? lastErr.message : lastErr));
     if(typeof setBar === 'function') setBar(5 + Math.round((got / total) * 35));
+    // Workers への連投を避ける小休止（一過性の空応答対策）
+    if(got < total) await new Promise(res=>setTimeout(res, 120));
   }
   return out.buffer;
 }
