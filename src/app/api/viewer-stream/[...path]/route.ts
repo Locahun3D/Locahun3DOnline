@@ -7,7 +7,13 @@ import { isFreePeriodActive } from "@/lib/settings-schema";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
 
-const ALLOWED_RE = /\.(splat|ply|ksplat|rad)$/i;
+// Formats the offline viewer can actually load (mirrors the dropzone accept list:
+// .splat,.ply,.spz,.ksplat,.rad,.sog,.pcsogs,.pcsogszip,.obj,.gltf,.glb,.fbx,.zip,.json).
+// The original list omitted .zip et al, so every ZIP-packaged scene 403'd here and the
+// viewer fell back to the blank dropzone. This route is already gated by auth + viewer
+// access, so widening the extension allowlist to the viewer's real set is safe.
+const ALLOWED_RE =
+  /\.(splat|ply|spz|ksplat|rad|sog|pcsogs|pcsogszip|obj|gltf|glb|fbx|zip|json)$/i;
 
 function toR2Range(header: string): { offset: number; length: number } | { suffix: number } | null {
   const m1 = header.match(/^bytes=(\d+)-(\d+)$/);

@@ -17862,7 +17862,14 @@ setTimeout(async ()=>{
   if(m){
     let autoUrl = decodeURIComponent(m[1]);
     if(_protected && !(/^https?:\/\//.test(autoUrl)) && !autoUrl.startsWith('blob:')){
-      autoUrl = '/api/viewer-stream/' + autoUrl.replace(/^\/+/, '');
+      // Stored splatUrls are the raw R2-proxy path (e.g. /api/r2/assets/splat/foo.zip).
+      // The authenticated same-origin stream lives at /api/viewer-stream/<r2key>, so we
+      // must reduce the value to the bare R2 object key first — strip leading slashes AND
+      // the /api/r2/ proxy prefix (matching toR2Key() in /api/viewer-asset). Without the
+      // prefix strip the key became "api/r2/assets/..." and R2 returned 404 (or the ext
+      // check 403'd), leaving the viewer on the blank dropzone.
+      const r2key = autoUrl.replace(/^\/+/, '').replace(/^api\/r2\//, '');
+      autoUrl = '/api/viewer-stream/' + r2key;
     }
     // ?autoname=<filename> — blob: URL 等で拡張子が URL から取れない時の
     // 形式判定用ファイル名（admin のプレビューキャプチャが使用）。
