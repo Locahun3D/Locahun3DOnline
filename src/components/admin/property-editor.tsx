@@ -189,9 +189,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     const data = getValues();
     const result = publishablePropertySchema.safeParse(data);
     if (!result.success) {
-      setPublishError(
-        result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(" / "),
+      // 同一フィールドで複数ルールが同じ文言を出すことがあるため重複排除する。
+      const msgs = Array.from(
+        new Set(result.error.issues.map((i) => i.message)),
       );
+      setPublishError(msgs.join(" / "));
       return;
     }
     startPublish(async () => {
@@ -294,7 +296,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             {(savedAt || watch("updatedAt")) && (
               <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">
                 {savedAt
-                  ? `Saved ${savedAt.slice(11, 19)}`
+                  ? // ISO 文字列を slice すると UTC 時刻になり日本では9時間ズレる。
+                    // 必ずローカル（JST）で整形する。
+                    `Saved ${new Date(savedAt).toLocaleTimeString("ja-JP", { hour12: false })}`
                   : (() => {
                       const dt = watch("updatedAt");
                       if (!dt) return "";
@@ -2100,7 +2104,14 @@ function Checklist({ data }: { data: Property }) {
     { ok: data.city.length > 0, label: "市区町村" },
     { ok: data.hourlyPrice > 0, label: "料金 (0 円以上)" },
     { ok: !!data.cover.src && /^https?:\/\//.test(data.cover.src), label: "カバー画像 URL" },
-    { ok: !!data.splatUrl && (/^https?:\/\//.test(data.splatUrl) || data.splatUrl.startsWith("/api/")), label: "3DGS Splat URL" },
+    {
+      ok:
+        (!!data.splatUrl && (/^https?:\/\//.test(data.splatUrl) || data.splatUrl.startsWith("/"))) ||
+        (data.splatItems ?? []).some(
+          (it) => !!it.splatUrl && (/^https?:\/\//.test(it.splatUrl) || it.splatUrl.startsWith("/")),
+        ),
+      label: "3DGS データ",
+    },
   ];
   const allOk = checks.every((c) => c.ok);
   return (

@@ -272,6 +272,7 @@ body::before {
 .theme-online :is(
   [class~="bg-[#0a0906]"],
   [class~="bg-[#1a0f00]"],
+  [class~="bg-[#1a0c00]"],
   [class~="bg-[#2a1f10]"]
 ) {
   background-color: rgba(30, 160, 196, 0.06);
