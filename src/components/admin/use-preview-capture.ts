@@ -268,7 +268,7 @@ export function usePreviewCapture(): UseCaptureResult {
         }
       }
       const fileName = splatUrl.split("/").pop()?.split("?")[0] || "";
-      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true });
+      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 20 });
       // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
       // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
       if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;
@@ -285,7 +285,7 @@ export function usePreviewCapture(): UseCaptureResult {
 
       // ⚠ Chrome はウィンドウが他のウィンドウに隠れている（occluded）と
       // rAF を約1fpsに絞るため、キャプチャ中はこのタブを前面に表示しておくこと。
-      // 通常（前面表示）ならロード数秒＋録画10秒程度で完了する。
+      // 通常（前面表示）ならロード数秒＋録画20秒程度で完了する。
       const timeout = setTimeout(() => {
         if (abortRef.current) return;
         cleanup();

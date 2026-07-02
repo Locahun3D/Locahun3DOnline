@@ -17929,7 +17929,7 @@ if(/[?&]orbit=1/.test(location.search)){
 if(/[?&]capture=1/.test(location.search)){
   (function(){
     const params = new URLSearchParams(location.search);
-    const ORBIT_S = parseInt(params.get('orbitSec')||'10', 10);
+    const ORBIT_S = parseInt(params.get('orbitSec')||'20', 10);
     const canvas = document.getElementById('c');
     if(!canvas) return;
 
@@ -17984,7 +17984,7 @@ if(/[?&]capture=1/.test(location.search)){
 
       // Phase 3: Lock resize handler and force 1920×1080 capture resolution.
       const CAP_W = 1920, CAP_H = 1080;
-      const CAP_FOV = 70;   // 固定FOV（70）でキャプチャ
+      const CAP_FOV = 90;   // 固定FOV（90）でキャプチャ
       if(typeof _captureLock!=='undefined') _captureLock = true;
       // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
       // 上げてしまい VideoEncoder の 1920×1080 と不整合になるため、ここでは
@@ -18056,7 +18056,7 @@ if(/[?&]capture=1/.test(location.search)){
 
         if(typeof _yawTarget!=='undefined') _yawTarget += ANGLE_PER_FRAME;
         if(typeof yaw!=='undefined') yaw = _yawTarget;
-        // FOV を毎フレーム固定（カメラモード等が触っても 70 を維持）。
+        // FOV を毎フレーム固定（カメラモード等が触っても 90 を維持）。
         if(typeof camera!=='undefined' && 'fov' in camera && camera.fov !== CAP_FOV){
           camera.fov = CAP_FOV; camera.updateProjectionMatrix();
         }
