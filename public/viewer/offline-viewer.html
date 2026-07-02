@@ -17815,7 +17815,7 @@ if(/[?&]orbit=1/.test(location.search)){
     // When capture=1 is also active, capture code drives the orbit itself.
     if(/[?&]capture=1/.test(location.search)) return;
 
-    const ORBIT_DURATION_S = 35;
+    const ORBIT_DURATION_S = 10;
     const RAD_PER_S = (2 * Math.PI) / ORBIT_DURATION_S;
     let orbitRaf = 0;
     let baseYaw = 0;
@@ -17855,7 +17855,7 @@ if(/[?&]orbit=1/.test(location.search)){
 if(/[?&]capture=1/.test(location.search)){
   (function(){
     const params = new URLSearchParams(location.search);
-    const ORBIT_S = parseInt(params.get('orbitSec')||'35', 10);
+    const ORBIT_S = parseInt(params.get('orbitSec')||'10', 10);
     const canvas = document.getElementById('c');
     if(!canvas) return;
 
