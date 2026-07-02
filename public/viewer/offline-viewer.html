@@ -17677,6 +17677,12 @@ const DEMO_SCENE_SIZE_MB = 357;
 //   fetch は cache:'no-store' で HTTP キャッシュを完全バイパス
 //   （過去に汚染されたキャッシュエントリにも当たらない）。
 async function _fetchBinaryChunked(url){
+  // blob: URL（親ページが先にダウンロード済み）はローカル読みなので一括で良い
+  if(url.startsWith('blob:')){
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('blob fetch failed');
+    return await r.arrayBuffer();
+  }
   // 8MB × リトライ5回。16MB 連投だと Workers 経由で「206 なのに body 0 byte」
   // という一過性の切断が実測で出た（5 チャンク目以降）。小さめ＋間隔＋
   // 粘り強いリトライで吸収する。
@@ -17737,7 +17743,15 @@ async function loadFromURL(url, displayName){
     // Request internally, so we skip the whole-file ArrayBuffer fetch
     // and hand the URL straight to SplatMesh. This is the entire point
     // of the .RAD format — chunked streaming with O(log N) LoD walk.
-    const ext = (url.split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
+    let ext = (url.split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
+    // blob: URL 等、URL から拡張子が取れない場合は displayName（?autoname= 経由）
+    // の拡張子で判定する。既知の拡張子が URL から取れているときは触らない
+    // （デモのラベル等、拡張子を持たない displayName で壊さないため）。
+    const _KNOWN_EXTS = ['zip','obj','gltf','glb','fbx','ply','splat','ksplat','rad','spz','sog'];
+    if(!_KNOWN_EXTS.includes(ext) && displayName){
+      const dnExt = (String(displayName).split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
+      if(_KNOWN_EXTS.includes(dnExt)) ext = dnExt;
+    }
     const ft = _splatFileTypeFor(ext);
     if(ext === 'rad'){
       if(ft === undefined){
@@ -17847,10 +17861,13 @@ setTimeout(async ()=>{
   const dm = /[?&]demo=1/.test(location.search);
   if(m){
     let autoUrl = decodeURIComponent(m[1]);
-    if(_protected && !(/^https?:\/\//.test(autoUrl))){
+    if(_protected && !(/^https?:\/\//.test(autoUrl)) && !autoUrl.startsWith('blob:')){
       autoUrl = '/api/viewer-stream/' + autoUrl.replace(/^\/+/, '');
     }
-    await loadFromURL(autoUrl);
+    // ?autoname=<filename> — blob: URL 等で拡張子が URL から取れない時の
+    // 形式判定用ファイル名（admin のプレビューキャプチャが使用）。
+    const an = location.search.match(/[?&]autoname=([^&]+)/);
+    await loadFromURL(autoUrl, an ? decodeURIComponent(an[1]) : undefined);
   } else if(dm && DEMO_SCENE_URL){
     await loadFromURL(DEMO_SCENE_URL, (typeof T==='function'?T('demo-btn-lbl'):DEMO_SCENE_LABEL));
   }
@@ -17930,7 +17947,8 @@ if(/[?&]capture=1/.test(location.search)){
       // either, else ZIP-restored streaming scenes hang here and time out.
       const sceneReady = ()=> hasScene() || nSplat() > 0;
       msg('capture-progress',{phase:'loading', text:'3DGS 読み込み中…'});
-      for(let i=0; i<180 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
+      // 240s: 大きい ZIP はダウンロード＋解凍で 90s を超えることがある
+      for(let i=0; i<480 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
       if(!sceneReady()){ msg('capture-error',{error:'no-scene'}); return; }
 
       // Phase 2: readiness.

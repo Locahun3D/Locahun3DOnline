@@ -73,6 +73,70 @@ function createCaptureFrame(url: string): CaptureFrame {
   return { container, iframe };
 }
 
+/**
+ * 大容量ファイルの信頼できるダウンローダ（親ページ用）。
+ * Workers 経由の 1 本ストリームは途中切断され得るため、HTTP Range で
+ * 8MB ずつ取得し、各チャンク長を検証・リトライして Blob に組み立てる。
+ * cache:'no-store' で HTTP キャッシュを完全バイパス（切断本体で汚染された
+ * キャッシュにも当たらない）。
+ */
+async function downloadChunkedBlob(
+  url: string,
+  onPct: (pct: number) => void,
+  abortRef: { current: boolean },
+): Promise<Blob> {
+  const CHUNK = 8 * 1024 * 1024;
+  const ATTEMPTS = 5;
+  // probe: 先頭 1 byte の Range 応答から総サイズを得る
+  let total = 0;
+  try {
+    const probe = await fetch(url, { cache: "no-store", headers: { range: "bytes=0-0" } });
+    if (probe.status === 206) {
+      const m = (probe.headers.get("content-range") || "").match(/\/(\d+)\s*$/);
+      if (m) total = parseInt(m[1], 10);
+      try { await probe.arrayBuffer(); } catch {}
+    }
+  } catch {}
+  if (!total) {
+    // Range 非対応: 一括 fetch（content-length 検証つき）
+    const resp = await fetch(url, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const buf = await resp.arrayBuffer();
+    const cl = parseInt(resp.headers.get("content-length") || "0", 10);
+    if (cl && buf.byteLength !== cl) throw new Error(`truncated (${buf.byteLength}/${cl})`);
+    return new Blob([buf]);
+  }
+  const parts: BlobPart[] = [];
+  let got = 0;
+  while (got < total) {
+    if (abortRef.current) throw new Error("aborted");
+    const end = Math.min(got + CHUNK, total) - 1;
+    let ok = false;
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < ATTEMPTS && !ok; attempt++) {
+      try {
+        const r = await fetch(url, { cache: "no-store", headers: { range: `bytes=${got}-${end}` } });
+        if (r.status !== 206 && r.status !== 200) throw new Error(`HTTP ${r.status}`);
+        const buf = await r.arrayBuffer();
+        if (r.status === 200) {
+          if (buf.byteLength !== total) throw new Error(`range ignored + truncated (${buf.byteLength}/${total})`);
+          return new Blob([buf]);
+        }
+        if (buf.byteLength !== end - got + 1) throw new Error(`chunk truncated (${buf.byteLength}/${end - got + 1})`);
+        parts.push(buf);
+        got += buf.byteLength;
+        ok = true;
+      } catch (e) {
+        lastErr = e;
+        await new Promise((res) => setTimeout(res, 1000 * (attempt + 1)));
+      }
+    }
+    if (!ok) throw new Error(`chunk failed @${got}: ${lastErr instanceof Error ? lastErr.message : lastErr}`);
+    onPct(Math.round((got / total) * 100));
+  }
+  return new Blob(parts);
+}
+
 function destroyCaptureFrame(frame: CaptureFrame | null) {
   if (!frame) return;
   try {
@@ -132,19 +196,65 @@ export function usePreviewCapture(): UseCaptureResult {
 
       destroyCaptureFrame(frameRef.current);
       frameRef.current = null;
+      void startOne(splatUrl, propertyId, itemIdx);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  async function startOne(splatUrl: string, propertyId: string, itemIdx: number) {
+      function processQueueOuter() {
+        const next = queueRef.current.shift();
+        setQueueLength(queueRef.current.length);
+        if (next) {
+          setTimeout(() => runOne(next.splatUrl, next.propertyId, next.itemIdx), 500);
+        }
+      }
+
       // /api/r2/ blocks .rad/.splat/.ply files (security); for capture the admin
       // is authenticated, so route 3DGS assets through viewer-stream instead.
-      // その他の相対パス（.zip 等）はそのまま使う: キャプチャ iframe は
-      // アプリと同一オリジンなので相対 URL で Cookie 込みの直 fetch が通る。
-      // 旧実装の CORS プロキシ経由は、プロキシ Worker が死んでおり
-      // 「Failed to fetch」→ no-scene で毎回失敗していた（実測確認済）。
+      // .rad は Spark が Range でストリーミングするので URL をそのまま渡す。
       let directSplatUrl: string;
+      let blobUrl: string | null = null;
       if (/^\/api\/r2\//i.test(splatUrl) && /\.(splat|ply|ksplat|rad)$/i.test(splatUrl)) {
         directSplatUrl = splatUrl.replace(/^\/api\/r2\//, "/api/viewer-stream/");
-      } else {
+      } else if (/\.rad(\?|#|$)/i.test(splatUrl)) {
+        // .rad は Spark の Range ストリーミング前提 — blob 化せず URL のまま渡す
         directSplatUrl = splatUrl;
+      } else {
+        // 非 RAD（.zip 等の一括読み込みファイル）は「親ページ側」でダウンロード
+        // して Blob URL を iframe に渡す。iframe 内からの大容量 fetch は途中で
+        // 切断される事象が再現性をもって実測された（同じチャンクループが
+        // 親ページでは 15/15 成功、viewer iframe 内では途中 truncate）。
+        // 親でダウンロード → blob: URL なら iframe 内の読み込みはローカルで完結する。
+        try {
+          const blob = await downloadChunkedBlob(splatUrl, (pct) => {
+            if (abortRef.current) return;
+            setProgress(`3DGSデータをダウンロード中… ${pct}%`);
+          }, abortRef);
+          if (abortRef.current) { busyRef.current = false; return; }
+          blobUrl = URL.createObjectURL(blob);
+          directSplatUrl = blobUrl;
+        } catch (e) {
+          if (abortRef.current) { busyRef.current = false; return; }
+          if (/^https?:\/\//i.test(splatUrl)) {
+            // 外部 URL は CORS でダウンロードできないことがある → 従来通り URL を渡す
+            directSplatUrl = splatUrl;
+          } else {
+            console.error("[preview-capture] download failed:", e);
+            busyRef.current = false;
+            setState("error");
+            setProgress("3DGSデータのダウンロードに失敗しました");
+            processQueueOuter();
+            return;
+          }
+        }
       }
-      const url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true });
+      const fileName = splatUrl.split("/").pop()?.split("?")[0] || "";
+      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true });
+      // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
+      // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
+      if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;
       const frame = createCaptureFrame(url);
       frameRef.current = frame;
 
@@ -152,6 +262,7 @@ export function usePreviewCapture(): UseCaptureResult {
         window.removeEventListener("message", handler);
         destroyCaptureFrame(frame);
         if (frameRef.current === frame) frameRef.current = null;
+        if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
         busyRef.current = false;
       };
 
@@ -197,6 +308,7 @@ export function usePreviewCapture(): UseCaptureResult {
           window.removeEventListener("message", handler);
           destroyCaptureFrame(frame);
           if (frameRef.current === frame) frameRef.current = null;
+          if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
           setState("uploading");
           setProgress("アップロード準備中…");
 
@@ -262,9 +374,7 @@ export function usePreviewCapture(): UseCaptureResult {
       }
 
       window.addEventListener("message", handler);
-    },
-    [],
-  );
+  }
 
   const startCapture = useCallback(
     (splatUrl: string, propertyId: string, itemIdx: number) => {
