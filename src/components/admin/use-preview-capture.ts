@@ -283,13 +283,15 @@ export function usePreviewCapture(): UseCaptureResult {
         busyRef.current = false;
       };
 
+      // 大規模シーン（数百万 splat）は 1920×1080 での録画が低 fps になり
+      // 全体で 10 分近くかかることがある（実測）。6 分では途中で殺してしまう。
       const timeout = setTimeout(() => {
         if (abortRef.current) return;
         cleanup();
         setState("error");
-        setProgress("タイムアウト（6分経過）");
+        setProgress("タイムアウト（15分経過）");
         processQueue();
-      }, 360_000);
+      }, 900_000);
 
       function processQueue() {
         const next = queueRef.current.shift();
