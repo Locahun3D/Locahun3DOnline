@@ -97,15 +97,33 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
     name: "blueprints",
   });
 
+  // ── マルチタブ楽観ロック（クライアント側）──
+  // 最後にサーバーで確定した updatedAt を保持し、保存のたびにサーバーへ渡す。
+  // サーバー値と食い違う＝別タブが先に保存 → 衝突。以後の autosave を止めて
+  // 「再読み込みしてください」を表示（古い内容での無言上書きを防ぐ）。
+  const baseUpdatedAtRef = useRef<string | undefined>(initial.updatedAt);
+  const conflictRef = useRef(false);
+
   // 下書き保存はフォーム全体のバリデーションでゲートしない（下書きは不完全でも
   // 保存できるべき）。getValues() を直接サーバーへ送り、サーバー側の寛容な
   // propertySchema で検証。失敗は無言にせず画面に表示する。
   const onSaveDraft = useCallback(() => {
+    if (conflictRef.current) return; // 衝突検出後は再読み込みまで保存停止
     setSaveError(null);
     const data = getValues();
     startSave(async () => {
       try {
-        await saveDraftAction(data);
+        const res = await saveDraftAction(data, {
+          expectedUpdatedAt: baseUpdatedAtRef.current,
+        });
+        if (!res.ok) {
+          conflictRef.current = true;
+          setSaveError(
+            "別のタブ（または別の端末）でこの物件が更新されています。上書き事故を防ぐため自動保存を停止しました。ページを再読み込みしてから編集を続けてください。",
+          );
+          return;
+        }
+        baseUpdatedAtRef.current = res.updatedAt;
         setSavedAt(new Date().toISOString());
         setSaveError(null);
         router.refresh();

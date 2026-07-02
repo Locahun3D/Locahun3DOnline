@@ -25,8 +25,62 @@ interface UseCaptureResult {
 
 import { buildViewerUrl, CORS_PROXY } from "@/lib/viewer";
 
-function openCaptureWindow(url: string): Window | null {
-  return window.open(url, '_blank', 'width=1920,height=1080,menubar=no,toolbar=no,location=no');
+/**
+ * キャプチャは別ウィンドウ(window.open)ではなく「同じタブ内の iframe」で実行する。
+ *  - ポップアップブロックに殺されない／別窓を放置監視しなくてよい。
+ *  - ビューアーの ?capture=1 は postMessage を `window.opener || parent` に送る
+ *    ため、iframe(parent) でもそのまま動く（ビューアー側の変更は不要）。
+ *  - ⚠ iframe を display:none にすると requestAnimationFrame が止まり
+ *    キャプチャが進まない。必ず「見える」状態でレンダリングさせる。
+ *    → 右下に縮小サムネイル（1920×1080 を CSS transform で 320×180 に縮小）
+ *      として表示し、進行が目視できるようにする。
+ */
+const FRAME_W = 1920;
+const FRAME_H = 1080;
+const THUMB_W = 320;
+const THUMB_H = 180;
+
+interface CaptureFrame {
+  container: HTMLDivElement;
+  iframe: HTMLIFrameElement;
+}
+
+function createCaptureFrame(url: string): CaptureFrame {
+  const container = document.createElement("div");
+  container.style.cssText =
+    "position:fixed;right:16px;bottom:16px;z-index:9999;" +
+    "background:#111;border:1px solid #ffb454;box-shadow:0 8px 32px rgba(0,0,0,.6);";
+  const label = document.createElement("div");
+  label.textContent = "プレビュー録画中（このタブ内で自動実行）";
+  label.style.cssText =
+    "font:10px/1.6 ui-monospace,monospace;letter-spacing:.08em;color:#ffb454;" +
+    "padding:6px 10px;border-bottom:1px solid #333;user-select:none;";
+  const stage = document.createElement("div");
+  stage.style.cssText = `width:${THUMB_W}px;height:${THUMB_H}px;overflow:hidden;position:relative;background:#000;`;
+  const iframe = document.createElement("iframe");
+  iframe.src = url;
+  iframe.setAttribute("title", "3DGS preview capture");
+  // iframe 自体は 1920×1080 のビューポートを持たせ（キャプチャ解像度と一致）、
+  // CSS transform で右下サムネイルに縮小表示する。ユーザー操作は不要なので
+  // pointer-events は切る。
+  iframe.style.cssText =
+    `width:${FRAME_W}px;height:${FRAME_H}px;border:0;` +
+    `transform:scale(${THUMB_W / FRAME_W});transform-origin:top left;pointer-events:none;`;
+  stage.appendChild(iframe);
+  container.appendChild(label);
+  container.appendChild(stage);
+  document.body.appendChild(container);
+  return { container, iframe };
+}
+
+function destroyCaptureFrame(frame: CaptureFrame | null) {
+  if (!frame) return;
+  try {
+    frame.iframe.src = "about:blank"; // レンダリング/エンコードを確実に停止
+  } catch {}
+  try {
+    frame.container.remove();
+  } catch {}
 }
 
 export function usePreviewCapture(): UseCaptureResult {
@@ -36,7 +90,7 @@ export function usePreviewCapture(): UseCaptureResult {
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
   const [capturedIdx, setCapturedIdx] = useState<number | null>(null);
   const [queueLength, setQueueLength] = useState(0);
-  const winRef = useRef<Window | null>(null);
+  const frameRef = useRef<CaptureFrame | null>(null);
   const abortRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const busyRef = useRef(false);
@@ -44,7 +98,8 @@ export function usePreviewCapture(): UseCaptureResult {
   useEffect(() => {
     return () => {
       abortRef.current = true;
-      try { winRef.current?.close(); } catch {}
+      destroyCaptureFrame(frameRef.current);
+      frameRef.current = null;
     };
   }, []);
 
@@ -52,8 +107,8 @@ export function usePreviewCapture(): UseCaptureResult {
     abortRef.current = true;
     queueRef.current = [];
     setQueueLength(0);
-    try { winRef.current?.close(); } catch {}
-    winRef.current = null;
+    destroyCaptureFrame(frameRef.current);
+    frameRef.current = null;
     busyRef.current = false;
     setState("idle");
     setProgress("");
@@ -75,7 +130,8 @@ export function usePreviewCapture(): UseCaptureResult {
       setCapturedUrl(null);
       setCapturedIdx(itemIdx);
 
-      try { winRef.current?.close(); } catch {}
+      destroyCaptureFrame(frameRef.current);
+      frameRef.current = null;
       // /api/r2/ blocks .rad/.splat/.ply files (security); for capture the admin
       // is authenticated, so route 3DGS assets through viewer-stream instead.
       // Other relative paths still go through the CORS proxy.
@@ -88,19 +144,13 @@ export function usePreviewCapture(): UseCaptureResult {
         directSplatUrl = splatUrl;
       }
       const url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true });
-      const capWin = openCaptureWindow(url);
-      winRef.current = capWin;
-      if (!capWin) {
-        setState("error");
-        setProgress("ポップアップがブロックされました。許可してください。");
-        busyRef.current = false;
-        return;
-      }
+      const frame = createCaptureFrame(url);
+      frameRef.current = frame;
 
       const cleanup = () => {
         window.removeEventListener("message", handler);
-        try { capWin.close(); } catch {}
-        winRef.current = null;
+        destroyCaptureFrame(frame);
+        if (frameRef.current === frame) frameRef.current = null;
         busyRef.current = false;
       };
 
@@ -121,7 +171,8 @@ export function usePreviewCapture(): UseCaptureResult {
       }
 
       function handler(e: MessageEvent) {
-        if (e.source !== capWin) return;
+        // 送信元がこのキャプチャ用 iframe であるものだけ処理する
+        if (e.source !== frame.iframe.contentWindow) return;
         const d = e.data;
         if (!d || typeof d.type !== "string") return;
 
@@ -141,8 +192,10 @@ export function usePreviewCapture(): UseCaptureResult {
         if (d.type === "capture-done" && d.blob instanceof Blob) {
           clearTimeout(timeout);
           if (abortRef.current) { cleanup(); return; }
-          try { capWin?.close(); } catch {}
-          winRef.current = null;
+          // 録画は完了 — レンダリング用 iframe はもう不要なので撤去
+          window.removeEventListener("message", handler);
+          destroyCaptureFrame(frame);
+          if (frameRef.current === frame) frameRef.current = null;
           setState("uploading");
           setProgress("アップロード準備中…");
 
@@ -182,7 +235,6 @@ export function usePreviewCapture(): UseCaptureResult {
 
           uploadWithRetry()
             .then((videoUrl: string) => {
-              window.removeEventListener("message", handler);
               busyRef.current = false;
               if (abortRef.current) return;
               setState("done");
@@ -191,7 +243,6 @@ export function usePreviewCapture(): UseCaptureResult {
               processQueue();
             })
             .catch((err) => {
-              window.removeEventListener("message", handler);
               busyRef.current = false;
               console.error("[preview-capture] upload error:", err);
               setState("error");

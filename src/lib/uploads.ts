@@ -157,6 +157,40 @@ export async function createPresignedUpload(input: {
   return { putUrl: signed.url, publicUrl: buildPublicUrl(input.r2Key, publicBase) };
 }
 
+/**
+ * R2 オブジェクトの実在確認（commit の必須ゲート）。
+ * presign は「D1 に uploading 行を作ってから」ブラウザが直 PUT する構造なので、
+ * PUT が失敗/中断しても D1 行だけ残る。存在確認せずに ready へ倒すと
+ * 「404 する splatUrl」が正として保存されてしまう（実害発生済）。
+ * Workers では R2 バインディングの head()、dev(UPLOAD_MODE=r2) では
+ * S3 HEAD（aws4fetch 署名）で確認する。
+ */
+export async function statR2Object(
+  r2Key: string,
+): Promise<{ size: number } | null> {
+  // 1) Workers binding（本番経路）
+  try {
+    const { env } = await getCloudflareContext();
+    const bucket = (env as Record<string, unknown>).R2_ASSETS as
+      | { head(key: string): Promise<{ size: number } | null> }
+      | undefined;
+    if (bucket) {
+      const head = await bucket.head(r2Key);
+      return head ? { size: head.size } : null;
+    }
+  } catch {
+    /* not on Workers */
+  }
+  // 2) S3 HEAD（dev で UPLOAD_MODE=r2 のとき。presign と同じクレデンシャル）
+  const { client, endpoint, bucket } = await r2Client();
+  const res = await client.fetch(r2ObjectUrl(endpoint, bucket, r2Key), {
+    method: "HEAD",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`R2 HEAD failed (${res.status})`);
+  return { size: Number(res.headers.get("content-length") ?? 0) };
+}
+
 export async function deleteR2Object(r2Key: string): Promise<void> {
   const { client, endpoint, bucket } = await r2Client();
   const res = await client.fetch(r2ObjectUrl(endpoint, bucket, r2Key), {

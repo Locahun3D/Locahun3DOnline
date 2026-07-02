@@ -98,17 +98,36 @@ export async function createDraftAction() {
   redirect(`/admin/properties/${draft.id}/edit`);
 }
 
-export async function saveDraftAction(input: unknown) {
+export async function saveDraftAction(
+  input: unknown,
+  opts?: { expectedUpdatedAt?: string },
+) {
   const parsed = propertySchema.parse(input);
   await assertPropertyAccess(parsed.id);
   // 編集フォームが保持しないサーバ管理フィールドは既存値を保全する。
   // pageBlocks（スタジオページビルダー）と ownerId（所有権＝権限の根拠）は
   // エディタの入力対象外なので、autosave で default(空) に上書きさせない。
   const existing = await repo.get(parsed.id);
-  await repo.upsert(mergeManaged(parsed, existing));
+  // ── マルチタブ楽観ロック ──
+  // 同じ物件を 2 タブで開くと、古いタブの autosave が新しいタブの保存
+  // （splatUrl 差し替え等）を無言で巻き戻す事故が起きる。クライアントが
+  // 最後に読んだ updatedAt と現在のサーバ値が食い違うなら、別タブが先に
+  // 保存している → 上書きせず衝突として返す（クライアント側で保存停止＋表示）。
+  if (
+    opts?.expectedUpdatedAt &&
+    existing?.updatedAt &&
+    existing.updatedAt !== opts.expectedUpdatedAt
+  ) {
+    return {
+      ok: false as const,
+      conflict: true as const,
+      serverUpdatedAt: existing.updatedAt,
+    };
+  }
+  const saved = await repo.upsert(mergeManaged(parsed, existing));
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
-  return { ok: true as const, id: parsed.id };
+  return { ok: true as const, id: parsed.id, updatedAt: saved.updatedAt };
 }
 
 export async function publishAction(input: unknown) {
