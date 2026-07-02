@@ -23,6 +23,20 @@ async function getBucket(): Promise<AnyBucket> {
 const BLOCKED_3DGS_RE = /\.(splat|ply|ksplat|rad)$/i;
 
 /**
+ * 大きいボディは Cache-Control: public を付けない。
+ * Workers 経由の大容量ストリームは途中切断されることがあり（実測: 116MB zip が
+ * 56MB/40KB で truncate）、切れた本体が public キャッシュに保存されると、その URL は
+ * TTL が切れるまで「壊れた ZIP」を返し続ける（invalid zip data が固定化する事故の元）。
+ * 小さいファイル（画像等）は従来どおりキャッシュしてよい。
+ */
+const NO_CACHE_BYTES = 8 * 1024 * 1024;
+function cacheControlFor(totalSize: number): string {
+  return totalSize > NO_CACHE_BYTES
+    ? "no-store"
+    : "public, max-age=3600, stale-while-revalidate=86400";
+}
+
+/**
  * Serve files from R2 bucket at /api/r2/<key>.
  * 3DGS data files (.splat/.ply/.ksplat/.rad) are blocked — use /api/viewer-asset instead.
  * Single R2 call per Range request — avoids head()+get() double-call
@@ -66,7 +80,7 @@ export async function GET(
       headers.set("Content-Length", String(length));
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
-      headers.set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
+      headers.set("Cache-Control", cacheControlFor(total));
 
       return new NextResponse(obj.body as ReadableStream, { status: 206, headers });
     }
@@ -79,7 +93,7 @@ export async function GET(
     headers.set("Content-Type", obj.httpMetadata?.contentType || "application/octet-stream");
     if (obj.size) headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
-    headers.set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
+    headers.set("Cache-Control", cacheControlFor(obj.size ?? 0));
 
     return new NextResponse(obj.body as ReadableStream, { headers });
   } catch (e) {
