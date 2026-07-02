@@ -144,4 +144,37 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
       res.headers.get("x-middleware-request-x-clerk-auth-status"),
     ).toBe("signed-out");
   });
+
+  it("expires the broken Clerk cookies on a PUBLIC route so the browser self-heals", async () => {
+    mockClerkHandler.mockRejectedValue(new SyntaxError("malformed token"));
+
+    const req = makeRequest("/", {
+      __session: "garbage.bad.token",
+      __client_uat: "1",
+    });
+    const res = await middleware(req, {} as never);
+
+    const setCookies = res.headers.getSetCookie();
+    const joined = setCookies.join("\n");
+    // Each Clerk cookie is cleared (Max-Age=0), in both host-only and
+    // apex-domain forms.
+    for (const name of ["__session", "__client_uat", "__client"]) {
+      expect(joined, `${name} host-only cleared`).toContain(
+        `${name}=; Path=/; Max-Age=0; Secure; SameSite=Lax`,
+      );
+      expect(joined, `${name} apex-domain cleared`).toContain(
+        `${name}=; Path=/; Max-Age=0; Domain=.locahun3d.com; Secure; SameSite=Lax`,
+      );
+    }
+  });
+
+  it("does NOT emit Set-Cookie when no Clerk cookie is present", async () => {
+    mockClerkHandler.mockRejectedValue(new SyntaxError("some other error"));
+
+    const req = makeRequest("/"); // no cookies at all
+    const res = await middleware(req, {} as never);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.getSetCookie()).toHaveLength(0);
+  });
 });

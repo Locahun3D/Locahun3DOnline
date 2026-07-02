@@ -46,11 +46,19 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
  * - Public route → return NextResponse.next() pre-seeded with
  *   `x-clerk-auth-status: signed-out` so RSC sees a valid (signed-out)
  *   auth state.  The user is treated as unauthenticated, exactly as if
- *   they had no cookie at all.
+ *   they had no cookie at all.  We ALSO expire the offending Clerk cookies
+ *   so the browser stops resending them — otherwise a returning visitor
+ *   keeps hitting the same broken-cookie path on every request (server
+ *   degrades fine, but Clerk's client JS still chokes and the sign-in flow
+ *   never works until the user manually clears site data).  Clearing lets
+ *   the browser self-heal on the next load.
  * - Protected route → rethrow so the request is not silently admitted;
  *   in practice Clerk's handshake mechanism handles expired-but-validly-
  *   formed tokens before this fallback is reached.
  */
+// Clerk's browser cookies (prod). Cleared on a broken-token error so a stale
+// cookie can't wedge the client-side sign-in flow.
+const CLERK_COOKIES = ["__session", "__client_uat", "__client"];
 export default async function middleware(
   req: NextRequest,
   event: Parameters<typeof clerkHandler>[1],
@@ -84,6 +92,27 @@ export default async function middleware(
       res.headers.set(`${PREFIX}-${key}`, val);
     });
     res.headers.set(`${PREFIX}-${STATUS_HEADER}`, "signed-out");
+
+    // Self-heal: expire the broken Clerk cookies so the browser drops them.
+    // Only when one is actually present (this error path can also fire for
+    // unrelated reasons — don't emit needless Set-Cookie otherwise).
+    const hasClerkCookie = CLERK_COOKIES.some((n) => req.cookies.has(n));
+    if (hasClerkCookie) {
+      for (const name of CLERK_COOKIES) {
+        // Clear both the host-only and the apex-domain (.locahun3d.com)
+        // variants — Clerk's production instance sets cookies on the apex so
+        // they are shared with sub-domains, and we can't know which form the
+        // browser holds. Two Set-Cookie headers cover both.
+        res.headers.append(
+          "set-cookie",
+          `${name}=; Path=/; Max-Age=0; Secure; SameSite=Lax`,
+        );
+        res.headers.append(
+          "set-cookie",
+          `${name}=; Path=/; Max-Age=0; Domain=.locahun3d.com; Secure; SameSite=Lax`,
+        );
+      }
+    }
 
     return res;
   }
