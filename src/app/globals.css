@@ -322,6 +322,13 @@ body::before {
   color: #1a1f25;
 }
 
+/* 上記は白背景フォーム前提の暗色文字ルール。管理プレビューのプラン
+   シミュレーターSelect (#plan-preview) は暗色テーマ (amber-on-dark) な
+   ので、IDセレクタで上書きして視認性を確保する。 */
+#plan-preview {
+  color: #fde68a;
+}
+
 /* font-light (300) を白テーマでは Medium に引き上げ */
 .theme-online [class~="font-light"] {
   font-weight: 500;
