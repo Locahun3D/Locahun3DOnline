@@ -189,29 +189,31 @@ export default function ViewerGate({
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 text-center px-6"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)" }}
       >
-        <div
-          className={`mono text-[10px] tracking-[0.32em] uppercase mb-3 ${
-            freeAccess ? "text-green-400" : "text-accent"
-          }`}
-        >
-          {freeAccess
-            ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
-            : `● ${sizeMb} MB`}
+        <div className="flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-black/80 backdrop-blur-md">
+          <div
+            className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
+              freeAccess ? "text-green-400" : "text-accent"
+            }`}
+          >
+            {freeAccess
+              ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
+              : `● ${sizeMb} MB`}
+          </div>
+
+          <p className="text-[12px] font-semibold text-white max-w-[44ch] leading-[1.75]">
+            {en ? "Opens the 3D walkthrough in a new tab" : "別タブで 3D ウォークスルーを開きます"}
+          </p>
+
+          <a
+            href={fullViewerUrl}
+            target="_blank"
+            rel="noopener"
+            onClick={openViewer}
+            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] font-bold tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+          >
+            {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
+          </a>
         </div>
-
-        <p className="text-[11px] text-muted max-w-[44ch] leading-[1.75] mb-4">
-          {en ? "Opens the 3D walkthrough in a new tab" : "別タブで 3D ウォークスルーを開きます"}
-        </p>
-
-        <a
-          href={fullViewerUrl}
-          target="_blank"
-          rel="noopener"
-          onClick={openViewer}
-          className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition bg-black/50 backdrop-blur-sm"
-        >
-          {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
-        </a>
       </div>
     </div>
   );
