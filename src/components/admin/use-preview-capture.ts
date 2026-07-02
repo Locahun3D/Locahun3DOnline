@@ -23,7 +23,7 @@ interface UseCaptureResult {
   clearResult: () => void;
 }
 
-import { buildViewerUrl, CORS_PROXY } from "@/lib/viewer";
+import { buildViewerUrl } from "@/lib/viewer";
 
 /**
  * キャプチャは別ウィンドウ(window.open)ではなく「同じタブ内の iframe」で実行する。
@@ -134,12 +134,13 @@ export function usePreviewCapture(): UseCaptureResult {
       frameRef.current = null;
       // /api/r2/ blocks .rad/.splat/.ply files (security); for capture the admin
       // is authenticated, so route 3DGS assets through viewer-stream instead.
-      // Other relative paths still go through the CORS proxy.
+      // その他の相対パス（.zip 等）はそのまま使う: キャプチャ iframe は
+      // アプリと同一オリジンなので相対 URL で Cookie 込みの直 fetch が通る。
+      // 旧実装の CORS プロキシ経由は、プロキシ Worker が死んでおり
+      // 「Failed to fetch」→ no-scene で毎回失敗していた（実測確認済）。
       let directSplatUrl: string;
       if (/^\/api\/r2\//i.test(splatUrl) && /\.(splat|ply|ksplat|rad)$/i.test(splatUrl)) {
         directSplatUrl = splatUrl.replace(/^\/api\/r2\//, "/api/viewer-stream/");
-      } else if (splatUrl.startsWith("/")) {
-        directSplatUrl = `${CORS_PROXY}${splatUrl}`;
       } else {
         directSplatUrl = splatUrl;
       }
