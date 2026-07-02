@@ -228,7 +228,24 @@ export function usePreviewCapture(): UseCaptureResult {
         // 親ページでは 15/15 成功、viewer iframe 内では途中 truncate）。
         // 親でダウンロード → blob: URL なら iframe 内の読み込みはローカルで完結する。
         try {
-          const blob = await downloadChunkedBlob(splatUrl, (pct) => {
+          // Worker 経由 (/api/r2) の大容量ストリームは負荷時に途中切断が
+          // 実測されたため、可能なら署名付き URL で R2 から直接読む。
+          let downloadUrl = splatUrl;
+          const keyMatch = splatUrl.match(/^\/api\/r2\/(.+)$/i);
+          if (keyMatch) {
+            try {
+              const pres = await fetch(
+                `/api/admin/assets/presign-get?key=${encodeURIComponent(keyMatch[1])}`,
+              );
+              if (pres.ok) {
+                const j = (await pres.json()) as { url?: string };
+                if (j.url) downloadUrl = j.url;
+              }
+            } catch {
+              /* 署名発行に失敗したら Worker 経由にフォールバック */
+            }
+          }
+          const blob = await downloadChunkedBlob(downloadUrl, (pct) => {
             if (abortRef.current) return;
             setProgress(`3DGSデータをダウンロード中… ${pct}%`);
           }, abortRef);

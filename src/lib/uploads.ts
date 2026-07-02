@@ -158,6 +158,23 @@ export async function createPresignedUpload(input: {
 }
 
 /**
+ * 署名付き GET URL（ブラウザ→R2 直ダウンロード用）。
+ * Worker 経由 (/api/r2) の大容量ストリームは負荷時に途中切断が実測されるため、
+ * 管理画面の大容量ダウンロード（プレビューキャプチャ等）はストレージ直で読む。
+ * バケット CORS は locahun3d.com からの GET/HEAD + range を許可済み。
+ */
+export async function createPresignedGet(r2Key: string): Promise<string> {
+  const { client, endpoint, bucket } = await r2Client();
+  const url = new URL(r2ObjectUrl(endpoint, bucket, r2Key));
+  url.searchParams.set("X-Amz-Expires", "3600");
+  const signed = await client.sign(url.toString(), {
+    method: "GET",
+    aws: { signQuery: true },
+  });
+  return signed.url;
+}
+
+/**
  * R2 オブジェクトの実在確認（commit の必須ゲート）。
  * presign は「D1 に uploading 行を作ってから」ブラウザが直 PUT する構造なので、
  * PUT が失敗/中断しても D1 行だけ残る。存在確認せずに ready へ倒すと
