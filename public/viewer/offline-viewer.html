@@ -17956,6 +17956,13 @@ if(/[?&]capture=1/.test(location.search)){
       //  - Non-streaming ZIP/PLY/SPLAT: __nSplat (a RAD-only counter) stays 0/-1
       //    even though geometry is fully baked & present once the scene layer
       //    exists, so gate on hasScene() instead of forcing a 'no-splats' abort.
+      // ZIP から展開された RAD はストリーミング開始が遅れ、nSplat が「後から」
+      // >0 になる。即時判定すると非ストリーミング扱いになり、直後の重さ判定
+      // （_heavy）も 0 のまま誤判定する → 少し待ってから分岐し直す。
+      if(nSplat() <= 0){
+        msg('capture-progress',{phase:'loading', text:'シーン安定化中…', pct:20});
+        await new Promise(r=>setTimeout(r, 2500));
+      }
       if(nSplat() > 0){
         msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
         let lastCount = 0, stableMs = 0;
@@ -17971,9 +17978,7 @@ if(/[?&]capture=1/.test(location.search)){
         }
         if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
       } else {
-        // Non-streaming scene (ZIP project / PLY / SPLAT): let Spark settle, then go.
-        msg('capture-progress',{phase:'loading', text:'シーン安定化中…', pct:20});
-        await new Promise(r=>setTimeout(r, 2500));
+        // Non-streaming scene (PLY / SPLAT): already settled above.
         if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
       }
 
