@@ -20,6 +20,17 @@ export async function GET(req: Request) {
   const ok = (plan?: string) =>
     NextResponse.redirect(`${origin}/account?plan=${plan ?? ""}&checkout=success`);
   const fail = () => NextResponse.redirect(`${origin}/pricing?checkout=error`);
+  // このルートは Stripe Checkout の success_url としてのみ呼ばれ、購入開始
+  // (subscribeAction) は requireOnboarded() 済みなので買い手のブラウザには
+  // Clerk セッションが載っているはず。とはいえ session_id は URL パラメータ
+  // なので、未認証者がこの URL を直接叩いて再生（replay）できてしまうと、
+  // 認証を経ずに他人のアカウントへプランを反映できてしまう（支払い自体は
+  // Stripe 側で検証済みなので無償アップグレードにはならないが、状態変更が
+  // 呼び出し元に紐付いていない）。そこで反映前に必ず本人確認する。
+  const needsSignIn = () =>
+    NextResponse.redirect(
+      `${origin}/sign-in?redirect_url=${encodeURIComponent("/account")}`,
+    );
 
   if (!sessionId || !stripeEnabled()) return fail();
 
@@ -37,6 +48,12 @@ export async function GET(req: Request) {
       (session.metadata?.userId as string | undefined) ??
       "";
     if (!userId) return fail();
+
+    // 本人確認: 未認証なら反映せずサインインへ。認証済みでもセッションの
+    // 持ち主と一致しない場合は反映せず account へ戻す（付与しない）。
+    const me = await getCurrentUser();
+    if (!me) return needsSignIn();
+    if (me.id !== userId) return NextResponse.redirect(`${origin}/account`);
 
     const customerId =
       typeof session.customer === "string"
@@ -62,10 +79,6 @@ export async function GET(req: Request) {
         viaStripe: true,
       });
     }
-
-    // 本人確認（ベストエフォート）。
-    const me = await getCurrentUser();
-    if (me && me.id !== userId) return ok(plan);
 
     return ok(plan);
   } catch {

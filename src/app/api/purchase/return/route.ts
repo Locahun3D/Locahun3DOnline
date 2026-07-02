@@ -21,6 +21,17 @@ export async function GET(req: Request) {
     NextResponse.redirect(
       `${origin}/properties/${propertyId ?? ""}?purchase=cancel`,
     );
+  // 購入開始 (POST /api/purchase) は getCurrentUser() で 401 ガード済みなので、
+  // 買い手のブラウザはこの success_url に戻ってきた時点で Clerk セッションを
+  // 持っているはず。session_id は URL パラメータとして誰でも再生できるため、
+  // 未認証のまま完了処理をすると呼び出し元と購入の所有者が紐付かず、他人の
+  // pending 購入を勝手に completed へ進められてしまう。反映前に必ず本人確認する。
+  const needsSignIn = () =>
+    NextResponse.redirect(
+      `${origin}/sign-in?redirect_url=${encodeURIComponent(
+        `/api/purchase/return?session_id=${sessionId ?? ""}`,
+      )}`,
+    );
 
   if (!sessionId || !stripeEnabled()) return fail();
 
@@ -33,16 +44,20 @@ export async function GET(req: Request) {
 
     if (session.payment_status !== "paid") return fail(propertyId);
 
-    // このセッションに紐づく購入を全て取得（カートは複数 pending を共有）。
+    // 本人確認: 未認証なら何も完了させずサインインへ。
     const user = await getCurrentUser();
-    const all = await purchaseRepo.list(user ? { userId: user.id } : undefined);
+    if (!user) return needsSignIn();
+
+    // このセッションに紐づく購入を全て取得（カートは複数 pending を共有）。
+    // 呼び出し元のユーザーに限定してリストし、他人の購入には触れない。
+    const all = await purchaseRepo.list({ userId: user.id });
     const matched = all.filter((p) => p.stripeSessionId === sessionId);
     if (matched.length === 0) return fail(propertyId);
 
     const now = new Date();
     const day = now.toISOString().slice(0, 10);
     for (const purchase of matched) {
-      if (user && user.id !== purchase.userId) continue;
+      if (user.id !== purchase.userId) continue;
       if (purchase.status === "pending") {
         const completed = await purchaseRepo.upsert({
           ...purchase,
