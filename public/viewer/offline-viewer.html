@@ -17797,7 +17797,165 @@ setTimeout(async ()=>{
   } else if(dm && DEMO_SCENE_URL){
     await loadFromURL(DEMO_SCENE_URL, (typeof T==='function'?T('demo-btn-lbl'):DEMO_SCENE_LABEL));
   }
+  // ── Admin "preview generation" capture mode (?capture=1) ──
+  // Fires only after the autoload branch above has had a chance to run.
+  // loadFromURL() swallows its own errors internally (never rejects), so we
+  // detect success the same way the rest of the file does: a main splat/mesh
+  // layer landed in `layers`. See _runCaptureMode() below for the full flow.
+  if(/[?&]capture=1/.test(location.search)){
+    _runCaptureMode();
+  }
 }, 0);
+
+// ══════════════════════════════════════════════════
+//  ?capture=1 — Admin "preview generation" viewer side.
+//  Opened as a popup from src/components/admin/use-preview-capture.ts via
+//  buildViewerUrl(splatUrl, {orbit:true, capture:true}) → `?autoload=<url>&orbit=1&capture=1`.
+//  Flow: wait for the autoload above to land a main layer → brief settle →
+//  postMessage("capture-started") → start a simple circular camera orbit →
+//  MediaRecorder the canvas for a fixed duration → postMessage("capture-done", blob).
+//  Message contract (postMessage to window.opener, target origin "*" — parent
+//  matches by `e.source !== capWin` so this is safe):
+//    {type:"capture-progress", phase, pct, text}  (optional, best-effort)
+//    {type:"capture-started"}
+//    {type:"capture-done", blob, ext:"webm", mimeType}
+//    {type:"capture-error", error}
+// ══════════════════════════════════════════════════
+function _capturePostMessage(msg){
+  if(!window.opener){
+    console.warn('[capture] window.opener missing — not opened via window.open, skipping postMessage', msg);
+    return;
+  }
+  try{ window.opener.postMessage(msg, '*'); }
+  catch(e){ console.warn('[capture] postMessage failed', e); }
+}
+
+async function _runCaptureMode(){
+  const CAPTURE_SETTLE_MS = 2000;   // let progressively-streamed splats pop in
+  const CAPTURE_RECORD_MS = 9000;   // fixed recording duration (well under the 6 min parent timeout)
+  const CAPTURE_FPS = 30;
+  const ORBIT_RADIUS = 3.2;
+  const ORBIT_HEIGHT_BOB = 0.15;
+  const ORBIT_ANGULAR_SPEED = (Math.PI * 2) / 14; // rad/s → ~14s per full revolution (we only record ~9s of it)
+
+  let orbitRAF = null;
+
+  function stopOrbit(){
+    if(orbitRAF != null){ cancelAnimationFrame(orbitRAF); orbitRAF = null; }
+  }
+
+  try{
+    console.info('[capture] waiting for autoload to land a main layer…');
+    // Wait (bounded) for the autoload above to finish and register a main layer.
+    // loadFromURL() never rejects, so this poll is the actual success signal.
+    let waited = 0;
+    while(!(typeof layers !== 'undefined' && layers.find(l => l && l._isMain)) && waited < 60000){
+      await new Promise(r => setTimeout(r, 250));
+      waited += 250;
+    }
+    if(!(typeof layers !== 'undefined' && layers.find(l => l && l._isMain))){
+      throw new Error('シーンの読み込みに失敗しました（タイムアウト）');
+    }
+    console.info('[capture] scene loaded, main layer present');
+
+    _capturePostMessage({ type:'capture-progress', phase:'loading', pct:80, text:'シーン読み込み完了' });
+
+    // Brief settle so progressively-streamed splats (Spark LoD / RAD paging)
+    // have a moment to pop in before we start recording.
+    await new Promise(r => setTimeout(r, CAPTURE_SETTLE_MS));
+
+    // ── Canvas / renderer lookup ──
+    // `renderer` is the module-level THREE.WebGLRenderer created against the
+    // `#c` canvas (see "RENDERER / SCENE" section above); `renderer.domElement`
+    // is that same canvas and is used elsewhere in this file (e.g. the
+    // ~line 9373 screenshot helper) as the capture source.
+    if(typeof renderer === 'undefined' || !renderer || !renderer.domElement){
+      throw new Error('レンダラーが初期化されていません');
+    }
+    const captureCanvas = renderer.domElement;
+
+    // ── Camera orbit setup ──
+    // Simple circular orbit around the point the camera is currently looking
+    // at (camPos + forward*radius), reusing the same camPos/yaw/pitch/markDirty
+    // mechanism the ?showcase=1 startDrift() function uses further down this
+    // file (search "function startDrift") — updateCamera() (called every
+    // frame from animate(), ~line 17265/17288) picks these up automatically,
+    // so no scene-bbox math is needed.
+    const _fwd0 = new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch), Math.sin(pitch), Math.cos(yaw)*Math.cos(pitch)).normalize();
+    const center = camPos.clone().addScaledVector(_fwd0, ORBIT_RADIUS);
+    const baseY = camPos.y;
+    const t0 = performance.now();
+    (function orbitLoop(now){
+      const t = (now - t0) / 1000;
+      const ang = t * ORBIT_ANGULAR_SPEED;
+      camPos.set(
+        center.x + Math.sin(ang) * ORBIT_RADIUS,
+        baseY + Math.sin(t * 0.5) * ORBIT_HEIGHT_BOB,
+        center.z + Math.cos(ang) * ORBIT_RADIUS
+      );
+      // Look at the orbit center: yaw from horizontal delta, pitch from vertical delta.
+      const dx = center.x - camPos.x, dz = center.z - camPos.z, dy = center.y - camPos.y;
+      const newYaw = Math.atan2(dx, dz);
+      const horizDist = Math.sqrt(dx*dx + dz*dz);
+      const newPitch = Math.atan2(dy, horizDist);
+      yaw = _yawTarget = newYaw;
+      pitch = _pitchTarget = newPitch;
+      if(typeof markDirty === 'function') markDirty(2);
+      orbitRAF = requestAnimationFrame(orbitLoop);
+    })(performance.now());
+    console.info('[capture] orbit started');
+
+    // ── MediaRecorder setup ──
+    let mimeType = 'video/webm';
+    if(typeof MediaRecorder === 'undefined') throw new Error('このブラウザは MediaRecorder に対応していません');
+    if(MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
+    else if(MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) mimeType = 'video/webm;codecs=vp8';
+    else if(MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
+    console.info('[capture] using mimeType', mimeType);
+
+    const stream = captureCanvas.captureStream(CAPTURE_FPS);
+    const chunks = [];
+    const mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size > 0) chunks.push(e.data); };
+
+    const recordDone = new Promise((resolve, reject)=>{
+      mediaRecorder.onstop = ()=>{
+        console.info('[capture] mediaRecorder stopped, state=', mediaRecorder.state, 'chunks=', chunks.length);
+        resolve();
+      };
+      mediaRecorder.onerror = (e)=>{
+        console.warn('[capture] mediaRecorder error', e);
+        reject(e.error || new Error('MediaRecorder error'));
+      };
+    });
+
+    mediaRecorder.start();
+    console.info('[capture] mediaRecorder started, state=', mediaRecorder.state);
+    _capturePostMessage({ type:'capture-started' });
+    _capturePostMessage({ type:'capture-progress', phase:'recording', pct:90, text:'録画中…' });
+
+    await new Promise(r => setTimeout(r, CAPTURE_RECORD_MS));
+
+    if(mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    await recordDone;
+
+    stopOrbit();
+    console.info('[capture] orbit stopped');
+
+    const blob = new Blob(chunks, { type: mimeType });
+    console.info('[capture] blob assembled, size=', blob.size, 'bytes');
+    if(!blob.size){
+      throw new Error('録画データが空です');
+    }
+
+    _capturePostMessage({ type:'capture-done', blob, ext:'webm', mimeType });
+    console.info('[capture] capture-done posted');
+  }catch(e){
+    stopOrbit();
+    console.warn('[capture] failed', e);
+    _capturePostMessage({ type:'capture-error', error: (e && e.message) || String(e) });
+  }
+}
 
 // ══════════════════════════════════════════════════
 //  ?showcase=1 — AUTO-PLAY feature showcase for recording a ~40 s promo clip.
