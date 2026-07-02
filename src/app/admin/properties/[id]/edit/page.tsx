@@ -27,14 +27,11 @@ export default async function EditPropertyPage({
         </Link>
         <span>/</span>
         <span className="opacity-50">{property.id}</span>
-        <Link
-          href={`/admin/properties/${property.id}/preview`}
-          target="_blank"
-          className="ml-auto border border-line text-ink px-3 py-1.5 hover:border-accent hover:text-accent transition"
-        >
-          プレビュー ↗
-        </Link>
       </nav>
+      {/* ページ全体プレビューへの導線はエディタのsticky headerパネル内の
+          「プレビュー ↗」に一本化した（スクロールしても押せる）。ここに
+          重複して置くと、ここは非stickyでスクロールで消えるうえ2つ並ぶ
+          ので紛らわしいだけになる。 */}
 
       {/* 公開URL（スラッグ）はエディタのヘッダー枠内に統合表示される */}
       <PropertyEditor initial={property} />
