@@ -17982,21 +17982,14 @@ if(/[?&]capture=1/.test(location.search)){
         if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
       }
 
-      // Phase 3: Lock resize handler and force capture resolution.
-      // 重いシーン（>300万 splat）は 1080p＋画質最大だと 1 フレーム描画が
-      // 数百 ms〜秒単位になり、240 フレームの録画が 15 分を超えて
-      // タイムアウトする（実測）。720p に落とし画質ブーストを省くことで
-      // 実用時間（数分）に収める。フレーム正確性の機構（render→gl.finish→
-      // VideoFrame）は一切変えない。
-      const _heavy = nSplat() > 3_000_000;
-      const CAP_W = _heavy ? 1280 : 1920, CAP_H = _heavy ? 720 : 1080;
+      // Phase 3: Lock resize handler and force 1920×1080 capture resolution.
+      const CAP_W = 1920, CAP_H = 1080;
       const CAP_FOV = 70;   // 固定FOV（70）でキャプチャ
       if(typeof _captureLock!=='undefined') _captureLock = true;
       // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
-      // 上げてしまい VideoEncoder の解像度と不整合になるため、ここでは
+      // 上げてしまい VideoEncoder の 1920×1080 と不整合になるため、ここでは
       // 品質変数と RAD lodScale だけ高に寄せ、pixelRatio は下で 1 に固定する。
-      // （重いシーンではこのブースト自体を省く）
-      if(!_heavy) try {
+      try {
         if(typeof qualScale!=='undefined') qualScale = 1.5;
         if(typeof qualIdx!=='undefined') qualIdx = 2;
         if(typeof _qualPreferred!=='undefined') _qualPreferred = 1.5;
@@ -18022,8 +18015,7 @@ if(/[?&]capture=1/.test(location.search)){
       // so Spark can re-sort splats and stabilise LOD at 1920×1080.
       if(typeof markDirty==='function') markDirty(120);
       msg('capture-progress',{phase:'loading', text:'解像度安定化中…', pct:28});
-      // 重いシーンは rAF が数百 ms/回になるため warmup を半分にする
-      for(let w=0; w<(_heavy?60:120); w++) await new Promise(r=>requestAnimationFrame(r));
+      for(let w=0; w<120; w++) await new Promise(r=>requestAnimationFrame(r));
 
       // Phase 4: rAF-driven frame-by-frame capture.
       // No setTimeout loop — tight for-loop with encoder backpressure yield.

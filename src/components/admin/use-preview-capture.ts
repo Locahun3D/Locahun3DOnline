@@ -283,15 +283,16 @@ export function usePreviewCapture(): UseCaptureResult {
         busyRef.current = false;
       };
 
-      // 大規模シーン（数百万 splat）は 1920×1080 での録画が低 fps になり
-      // 全体で 10 分近くかかることがある（実測）。6 分では途中で殺してしまう。
+      // ⚠ Chrome はウィンドウが他のウィンドウに隠れている（occluded）と
+      // rAF を約1fpsに絞るため、キャプチャ中はこのタブを前面に表示しておくこと。
+      // 通常（前面表示）ならロード数秒＋録画10秒程度で完了する。
       const timeout = setTimeout(() => {
         if (abortRef.current) return;
         cleanup();
         setState("error");
-        setProgress("タイムアウト（15分経過）");
+        setProgress("タイムアウト（6分経過）— キャプチャ中はこのタブを前面に表示したままにしてください");
         processQueue();
-      }, 900_000);
+      }, 360_000);
 
       function processQueue() {
         const next = queueRef.current.shift();
