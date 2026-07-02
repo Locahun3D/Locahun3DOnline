@@ -3,7 +3,6 @@ import Link from "next/link";
 import { repo } from "@/lib/store";
 import { assertPropertyAccess } from "@/lib/dal";
 import PropertyEditor from "@/components/admin/property-editor";
-import SlugEditor from "@/components/admin/slug-editor";
 
 export default async function EditPropertyPage({
   params,
@@ -37,10 +36,7 @@ export default async function EditPropertyPage({
         </Link>
       </nav>
 
-      <div className="mb-5">
-        <SlugEditor id={property.id} status={property.status} />
-      </div>
-
+      {/* 公開URL（スラッグ）はエディタのヘッダー枠内に統合表示される */}
       <PropertyEditor initial={property} />
     </div>
   );

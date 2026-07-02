@@ -38,6 +38,7 @@ import FileDropzone, {
   type UploadedFile,
 } from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
+import SlugEditor from "./slug-editor";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 
@@ -64,6 +65,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [pickSplat, setPickSplat] = useState(false);
   const [previewSplat, setPreviewSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
+  // ヘッダーの「プレビュー」ボタン — 3DGS ステップまでスクロールせずに
+  // 最初の 3DGS アセットのプレビュー（動画 or ビューアー）をオーバーレイ表示。
+  const [headerPreview, setHeaderPreview] = useState(false);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiTagsNote, setAiTagsNote] = useState<string | null>(null);
@@ -248,6 +252,12 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const currentIdx = STEPS.findIndex((s) => s.id === step);
   const progress = ((currentIdx + 1) / STEPS.length) * 100;
 
+  // ヘッダーのプレビュー対象 = 最初に splatUrl を持つ 3DGS アセット。
+  const splatItemsLive = watch("splatItems") ?? [];
+  const headerPreviewIdx = splatItemsLive.findIndex((it) => !!it?.splatUrl);
+  const headerPreviewItem =
+    headerPreviewIdx >= 0 ? splatItemsLive[headerPreviewIdx] : null;
+
   return (
     <form
       onSubmit={(e) => {
@@ -284,8 +294,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
       {/* Form pane */}
       <div className="min-w-0">
-        {/* Sticky header */}
-        <div className="sticky top-16 z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 flex flex-wrap items-center gap-3 justify-between">
+        {/* Sticky header（公開URL も同じ枠に統合） */}
+        <div className="sticky top-16 z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 space-y-3">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-baseline gap-3 min-w-0">
             <StatusPill status={currentStatus} />
             <div className="serif text-xl truncate">
@@ -309,6 +320,15 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     })()
                 }
               </span>
+            )}
+            {headerPreviewItem && (
+              <button
+                type="button"
+                onClick={() => setHeaderPreview(true)}
+                className="px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent/10 transition"
+              >
+                プレビュー
+              </button>
             )}
             <button
               type="submit"
@@ -337,7 +357,65 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               </button>
             )}
           </div>
+          </div>
+
+          {/* 公開URL（スラッグ）— 独立パネルではなくこの枠の2行目に統合 */}
+          <div className="pt-3 border-t border-line">
+            <SlugEditor id={initial.id} status={currentStatus} embedded />
+          </div>
         </div>
+
+        {/* ヘッダー「プレビュー」— 最初の 3DGS アセットをオーバーレイ表示
+            （3DGS ステップ内の各行プレビューと同じ 動画 or ビューアー を再利用） */}
+        {headerPreview && headerPreviewItem && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 sm:p-8"
+            onClick={() => setHeaderPreview(false)}
+          >
+            <div
+              className="w-full max-w-5xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="mono text-[11px] tracking-[0.22em] uppercase text-white/85">
+                  3DGS プレビュー:{" "}
+                  {headerPreviewItem.label || `#${headerPreviewIdx + 1}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setHeaderPreview(false)}
+                  className="mono text-[11px] tracking-[0.22em] uppercase border border-white/50 text-white px-3 py-1.5 hover:bg-white/10 transition"
+                >
+                  × 閉じる
+                </button>
+              </div>
+              <div
+                className="border border-white/20 bg-black overflow-hidden"
+                style={{ aspectRatio: "16/9" }}
+              >
+                {headerPreviewItem.previewVideoUrl ? (
+                  <video
+                    src={headerPreviewItem.previewVideoUrl}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                  />
+                ) : (
+                  <iframe
+                    src={buildViewerUrl(headerPreviewItem.splatUrl)}
+                    title={`3DGS プレビュー: ${headerPreviewItem.label || `#${headerPreviewIdx + 1}`}`}
+                    className="w-full h-full border-0"
+                    allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
+                    sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="h-px bg-line mb-6 relative overflow-hidden">

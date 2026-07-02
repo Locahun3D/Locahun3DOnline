@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { renamePropertyAction, type RenameState } from "@/app/admin/_actions";
 
 /**
@@ -11,9 +11,12 @@ import { renamePropertyAction, type RenameState } from "@/app/admin/_actions";
 export default function SlugEditor({
   id,
   status,
+  embedded = false,
 }: {
   id: string;
   status: string;
+  /** true = 親のパネル（エディタのヘッダー枠）内に埋め込むため、独自の枠線・背景を持たない。 */
+  embedded?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(id);
@@ -21,10 +24,25 @@ export default function SlugEditor({
     renamePropertyAction,
     undefined,
   );
+  // embedded 時は親（エディタ全体）の <form> の中に置かれるため、<form> を
+  // ネストできない（HTML 不正・submit が親に食われる）。div + 手動 action 実行にする。
+  const [, startTransition] = useTransition();
+  const submitRename = () => {
+    const fd = new FormData();
+    fd.set("oldId", id);
+    fd.set("newId", value);
+    startTransition(() => action(fd));
+  };
   const published = status === "published";
 
   return (
-    <div className="border border-neutral-300 bg-white px-4 py-3 rounded-md shadow-sm">
+    <div
+      className={
+        embedded
+          ? ""
+          : "border border-neutral-300 bg-white px-4 py-3 rounded-md shadow-sm"
+      }
+    >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="mono text-[11px] font-semibold tracking-[0.22em] uppercase text-neutral-500 shrink-0">
           公開URL
@@ -48,8 +66,7 @@ export default function SlugEditor({
             </button>
           </>
         ) : (
-          <form action={action} className="flex flex-wrap items-center gap-2 w-full">
-            <input type="hidden" name="oldId" value={id} />
+          <div className="flex flex-wrap items-center gap-2 w-full">
             <span className="text-[13px] text-neutral-500 mono shrink-0">
               /properties/
             </span>
@@ -57,12 +74,19 @@ export default function SlugEditor({
               name="newId"
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitRename();
+                }
+              }}
               autoFocus
               placeholder="shibuya-kitaya-park"
               className="flex-1 min-w-[160px] bg-white text-neutral-900 border border-neutral-300 rounded-md px-3 py-2 text-[14px] font-medium mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition"
             />
             <button
-              type="submit"
+              type="button"
+              onClick={submitRename}
               disabled={pending}
               className="text-[13px] font-bold bg-accent text-white px-4 py-2 rounded-md hover:bg-accent/85 transition disabled:opacity-50 shrink-0"
             >
@@ -75,7 +99,7 @@ export default function SlugEditor({
             >
               キャンセル
             </button>
-          </form>
+          </div>
         )}
       </div>
 
@@ -83,12 +107,14 @@ export default function SlugEditor({
         <p className="mt-2 text-[12px] text-red-600">{state.error}</p>
       )}
 
-      <p className="mt-2 text-[12px] text-neutral-500 leading-relaxed">
-        英小文字・数字・ハイフンのみ。
-        {published
-          ? "公開中のため、変更すると既存リンク・ブックマークのURLも変わります。"
-          : "公開前に決めておくのがおすすめです。"}
-      </p>
+      {(!embedded || editing) && (
+        <p className="mt-2 text-[12px] text-neutral-500 leading-relaxed">
+          英小文字・数字・ハイフンのみ。
+          {published
+            ? "公開中のため、変更すると既存リンク・ブックマークのURLも変わります。"
+            : "公開前に決めておくのがおすすめです。"}
+        </p>
+      )}
     </div>
   );
 }
