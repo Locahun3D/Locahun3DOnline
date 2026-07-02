@@ -98,7 +98,7 @@ export default function PropertyDetailView({
   return (
     <article className="theme-online">
       {preview && (
-        <div className="frame mb-0 border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-[13px] mono tracking-[0.08em] text-amber-300 flex flex-wrap items-center justify-between gap-3">
+        <div className="frame mb-0 sticky top-16 z-40 border border-amber-400/50 bg-amber-950 backdrop-blur-sm px-4 py-3 text-[13px] mono tracking-[0.08em] text-amber-300 flex flex-wrap items-center justify-between gap-3">
           <span>
             ● 管理プレビュー — ステータス:{" "}
             <strong className="uppercase">{property.status}</strong>
