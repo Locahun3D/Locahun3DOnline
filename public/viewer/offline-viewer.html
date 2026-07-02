@@ -17756,7 +17756,15 @@ async function loadFromURL(url, displayName){
     const buf = await resp.arrayBuffer();
     const name = (displayName || url.split('/').pop().split('?')[0]) || 'autoload.ply';
     const file = new File([buf], name, {type:'application/octet-stream'});
-    if(['obj','gltf','glb','fbx'].includes(ext)) await loadObjFile(file);
+    if(ext === 'zip'){
+      // Zipped splat/mesh (e.g. a large .rad zipped for upload-size limits).
+      // _loadProjectZipFromFile already knows how to unzip + auto-detect a
+      // raw splat/mesh when there's no project.json, and fully owns the
+      // loading UI (showLd/setBar/hideLd) from here on — don't call hideLd
+      // ourselves before/after this, let it drive to completion.
+      await _loadProjectZipFromFile(file);
+    }
+    else if(['obj','gltf','glb','fbx'].includes(ext)) await loadObjFile(file);
     else await loadSplatFile(file);
   }catch(e){
     console.warn('loadFromURL failed', e);
