@@ -39,16 +39,25 @@ jobs:
       - name: Test
         run: npm test -- --passWithNoTests
 
-      # Clerk keys must be inlined into the compiled Worker bundle, not just
-      # visible to the build *process* — Next.js only performs that inlining
-      # for vars it loads from a .env.production.local file, not for vars set
-      # via the shell/CI `env:` block. Without this, CLERK_SECRET_KEY resolves
-      # to undefined at Workers runtime (env.ts throws => every request 500s),
-      # even though the build itself succeeds.
+      # Clerk keys/URLs must be inlined into the compiled Worker bundle, not
+      # just visible to the build *process* — Next.js only performs that
+      # inlining for vars it loads from a .env.production.local file, not for
+      # vars set via the shell/CI `env:` block. Without this, CLERK_SECRET_KEY
+      # resolves to undefined at Workers runtime (env.ts throws => every
+      # request 500s), even though the build itself succeeds.
+      #
+      # The SIGN_IN/SIGN_UP_URL vars aren't secret (plain paths) but need the
+      # same file-based inlining. Without them, auth.protect() falls back to
+      # Clerk's hosted Account Portal (accounts.locahun3d.com) on protected
+      # routes instead of staying on the app's own /sign-in page.
       - name: Write .env.production.local (Clerk keys)
         run: |
           echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}" >> .env.production.local
           echo "CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}" >> .env.production.local
+          echo "NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in" >> .env.production.local
+          echo "NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up" >> .env.production.local
+          echo "NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard" >> .env.production.local
+          echo "NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard" >> .env.production.local
 
       # ここが本番デプロイの実ゲート: 型エラー/ビルド失敗ならデプロイしない。
       - name: Build (OpenNext for Cloudflare)
