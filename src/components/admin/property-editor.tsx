@@ -107,12 +107,30 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   // 「再読み込みしてください」を表示（古い内容での無言上書きを防ぐ）。
   const baseUpdatedAtRef = useRef<string | undefined>(initial.updatedAt);
   const conflictRef = useRef(false);
+  // 同一タブ内の「保存の多重発火」を直列化するためのフラグ。
+  //  - saveInFlightRef: いま1本の保存が実行中か。
+  //  - pendingSaveRef : 実行中に来た保存要求を1本に畳み込み、完了後に流す。
+  // これがないと、動画キャプチャ完了(複数行)＋debounce watch が短時間に
+  // 複数の onSaveDraft を同時発火し、どれもが「実行中の保存が返す前の古い
+  // baseUpdatedAt」を expectedUpdatedAt に使ってしまう。サーバは毎回 updatedAt を
+  // 新しくするため、後続の保存が自分自身の直前の保存と衝突判定され、
+  // 単独タブなのに「別タブで更新」という誤検知（＝autosave 停止）を起こす。
+  // 直列化すれば expectedUpdatedAt は常に直前の保存が返した最新値になる。
+  const saveInFlightRef = useRef(false);
+  const pendingSaveRef = useRef(false);
 
   // 下書き保存はフォーム全体のバリデーションでゲートしない（下書きは不完全でも
   // 保存できるべき）。getValues() を直接サーバーへ送り、サーバー側の寛容な
   // propertySchema で検証。失敗は無言にせず画面に表示する。
   const onSaveDraft = useCallback(() => {
     if (conflictRef.current) return; // 衝突検出後は再読み込みまで保存停止
+    // 既に保存中なら、新規保存を同時発火せず「あとで1本だけ」に畳み込む。
+    // （直列化しないと自分自身の直前保存と updatedAt が食い違い誤衝突する）
+    if (saveInFlightRef.current) {
+      pendingSaveRef.current = true;
+      return;
+    }
+    saveInFlightRef.current = true;
     setSaveError(null);
     const data = getValues();
     startSave(async () => {
@@ -138,9 +156,19 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             ? `保存に失敗しました: ${e.message}`
             : "保存に失敗しました（入力内容をご確認ください）",
         );
+      } finally {
+        saveInFlightRef.current = false;
+        // 実行中に溜まった保存要求があれば、最新の baseUpdatedAt で1本だけ流す。
+        if (pendingSaveRef.current && !conflictRef.current) {
+          pendingSaveRef.current = false;
+          onSaveDraftRef.current?.();
+        }
       }
     });
   }, [getValues, startSave, router]);
+  // onSaveDraft を finally から自己参照するための ref（宣言順の循環を避ける）。
+  const onSaveDraftRef = useRef<typeof onSaveDraft>(onSaveDraft);
+  useEffect(() => { onSaveDraftRef.current = onSaveDraft; }, [onSaveDraft]);
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const triggerAutoSave = useCallback(
@@ -327,7 +355,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 onClick={() => setHeaderPreview(true)}
                 className="px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent/10 transition"
               >
-                プレビュー
+                3DGSプレビュー
               </button>
             )}
             <button

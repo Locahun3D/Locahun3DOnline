@@ -17939,6 +17939,20 @@ if(/[?&]capture=1/.test(location.search)){
     const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
     const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
 
+    // ── フレーム待ち（hidden タブ対応）─────────────────────────────
+    // requestAnimationFrame はブラウザが「非表示/背面のタブ」で完全停止させる。
+    // キャプチャは右下に縮小表示された iframe 内で走るが、親タブが背面に回る
+    // （別ウィンドウに隠れる/別タブに切替）と rAF が止まり、解像度安定化ループが
+    // 永久にハングする（実測: visibilityState=hidden で rAF が 0 回/4秒）。
+    // headless モード（?headless=1、capture 時は必ず付与）では setTimeout で
+    // 待つ — こちらは hidden タブでも発火し続けるため確実に前進する。
+    // レンダーループ自体も headless では setTimeout 駆動なので、この待ちの間に
+    // Spark の sort/LoD/RAD ストリーミングは進む。
+    const _capHeadless = /[?&]headless=1/.test(location.search);
+    const nextFrame = ()=> _capHeadless
+      ? new Promise(r=>setTimeout(r, 16))
+      : new Promise(r=>requestAnimationFrame(r));
+
     async function run(){
       // Phase 1: wait for a renderable scene (up to 90s).
       // hasScene() inspects layers[].mesh, but a streaming RAD keeps its data
@@ -18015,7 +18029,7 @@ if(/[?&]capture=1/.test(location.search)){
       // so Spark can re-sort splats and stabilise LOD at 1920×1080.
       if(typeof markDirty==='function') markDirty(120);
       msg('capture-progress',{phase:'loading', text:'解像度安定化中…', pct:28});
-      for(let w=0; w<120; w++) await new Promise(r=>requestAnimationFrame(r));
+      for(let w=0; w<120; w++) await nextFrame();
 
       // Phase 4: rAF-driven frame-by-frame capture.
       // No setTimeout loop — tight for-loop with encoder backpressure yield.
@@ -18062,8 +18076,9 @@ if(/[?&]capture=1/.test(location.search)){
         }
         if(typeof markDirty==='function') markDirty(30);
 
-        // Spark needs multiple rAFs to process sort/LOD after yaw change.
-        for(let w=0; w<3; w++) await new Promise(r => requestAnimationFrame(r));
+        // Spark needs multiple frames to process sort/LOD after yaw change.
+        // hidden タブでも進むよう nextFrame()（headless では setTimeout）を使う。
+        for(let w=0; w<3; w++) await nextFrame();
         if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
           renderer.render(scene, camera);
           const gl = renderer.getContext();
