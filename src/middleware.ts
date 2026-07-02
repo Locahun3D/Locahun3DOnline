@@ -48,17 +48,27 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
  *   auth state.  The user is treated as unauthenticated, exactly as if
  *   they had no cookie at all.  We ALSO expire the offending Clerk cookies
  *   so the browser stops resending them — otherwise a returning visitor
- *   keeps hitting the same broken-cookie path on every request (server
- *   degrades fine, but Clerk's client JS still chokes and the sign-in flow
- *   never works until the user manually clears site data).  Clearing lets
- *   the browser self-heal on the next load.
+ *   keeps hitting the same broken-cookie path on every request. Server-side
+ *   degradation alone is not enough: Clerk's own client-side JS
+ *   (clerk.browser.js) reads these cookies directly and can itself hang
+ *   mid-init on a stale/duplicate one, leaving the sign-in widget blank and
+ *   forcing an unexplained redirect away from /sign-in — independent of
+ *   whatever the server returned. Clearing lets the browser self-heal.
+ *
+ *   Clerk suffixes its cookie names per-instance (e.g. `__session_MgkJwgE_`
+ *   alongside plain `__session`) — this shows up in the wild whenever a
+ *   browser has cookies from more than one Clerk instance (dev vs. prod,
+ *   or after a Clerk instance was recreated). A fixed name list would miss
+ *   the suffixed variants, so we scan the request's actual cookie jar and
+ *   clear anything matching a known Clerk prefix instead of a fixed list.
  * - Protected route → rethrow so the request is not silently admitted;
  *   in practice Clerk's handshake mechanism handles expired-but-validly-
  *   formed tokens before this fallback is reached.
  */
-// Clerk's browser cookies (prod). Cleared on a broken-token error so a stale
-// cookie can't wedge the client-side sign-in flow.
-const CLERK_COOKIES = ["__session", "__client_uat", "__client"];
+// Clerk cookie name prefixes (prod + suffixed instance variants, e.g.
+// `__session_MgkJwgE_`). Any cookie starting with one of these is cleared
+// on a broken-token error so it can't wedge the client-side sign-in flow.
+const CLERK_COOKIE_PREFIXES = ["__session", "__client", "clerk_active_context"];
 export default async function middleware(
   req: NextRequest,
   event: Parameters<typeof clerkHandler>[1],
@@ -93,25 +103,28 @@ export default async function middleware(
     });
     res.headers.set(`${PREFIX}-${STATUS_HEADER}`, "signed-out");
 
-    // Self-heal: expire the broken Clerk cookies so the browser drops them.
-    // Only when one is actually present (this error path can also fire for
-    // unrelated reasons — don't emit needless Set-Cookie otherwise).
-    const hasClerkCookie = CLERK_COOKIES.some((n) => req.cookies.has(n));
-    if (hasClerkCookie) {
-      for (const name of CLERK_COOKIES) {
-        // Clear both the host-only and the apex-domain (.locahun3d.com)
-        // variants — Clerk's production instance sets cookies on the apex so
-        // they are shared with sub-domains, and we can't know which form the
-        // browser holds. Two Set-Cookie headers cover both.
-        res.headers.append(
-          "set-cookie",
-          `${name}=; Path=/; Max-Age=0; Secure; SameSite=Lax`,
-        );
-        res.headers.append(
-          "set-cookie",
-          `${name}=; Path=/; Max-Age=0; Domain=.locahun3d.com; Secure; SameSite=Lax`,
-        );
-      }
+    // Self-heal: expire every Clerk cookie actually present on the request
+    // (matched by prefix, so suffixed instance variants are caught too), so
+    // the browser drops them and stops resending stale/duplicate state.
+    const clerkCookieNames = req.cookies
+      .getAll()
+      .map((c) => c.name)
+      .filter((name) =>
+        CLERK_COOKIE_PREFIXES.some((prefix) => name.startsWith(prefix)),
+      );
+    for (const name of clerkCookieNames) {
+      // Clear both the host-only and the apex-domain (.locahun3d.com)
+      // variants — Clerk's production instance sets cookies on the apex so
+      // they are shared with sub-domains, and we can't know which form the
+      // browser holds. Two Set-Cookie headers cover both.
+      res.headers.append(
+        "set-cookie",
+        `${name}=; Path=/; Max-Age=0; Secure; SameSite=Lax`,
+      );
+      res.headers.append(
+        "set-cookie",
+        `${name}=; Path=/; Max-Age=0; Domain=.locahun3d.com; Secure; SameSite=Lax`,
+      );
     }
 
     return res;

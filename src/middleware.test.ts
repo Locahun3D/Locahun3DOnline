@@ -156,15 +156,44 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
 
     const setCookies = res.headers.getSetCookie();
     const joined = setCookies.join("\n");
-    // Each Clerk cookie is cleared (Max-Age=0), in both host-only and
-    // apex-domain forms.
-    for (const name of ["__session", "__client_uat", "__client"]) {
+    // Only cookies actually present on the request are cleared (Max-Age=0),
+    // in both host-only and apex-domain forms.
+    for (const name of ["__session", "__client_uat"]) {
       expect(joined, `${name} host-only cleared`).toContain(
         `${name}=; Path=/; Max-Age=0; Secure; SameSite=Lax`,
       );
       expect(joined, `${name} apex-domain cleared`).toContain(
         `${name}=; Path=/; Max-Age=0; Domain=.locahun3d.com; Secure; SameSite=Lax`,
       );
+    }
+  });
+
+  it("expires suffixed instance-variant cookies too (e.g. __session_MgkJwgE_)", async () => {
+    // Real-world case: a browser holding cookies from more than one Clerk
+    // instance (e.g. after the prod instance was recreated) ends up with
+    // both plain __session and a suffixed __session_XXXXX. A fixed-name
+    // list would miss the suffixed one and leave the client-side Clerk JS
+    // stuck reading stale state.
+    mockClerkHandler.mockRejectedValue(new SyntaxError("malformed token"));
+
+    const req = makeRequest("/", {
+      __session: "garbage",
+      __session_MgkJwgE_: "also-garbage",
+      __client_uat: "1",
+      __client_uat_MgkJwgE_: "1",
+      clerk_active_context: "some-org-id",
+    });
+    const res = await middleware(req, {} as never);
+
+    const joined = res.headers.getSetCookie().join("\n");
+    for (const name of [
+      "__session",
+      "__session_MgkJwgE_",
+      "__client_uat",
+      "__client_uat_MgkJwgE_",
+      "clerk_active_context",
+    ]) {
+      expect(joined, `${name} cleared`).toContain(`${name}=; Path=/; Max-Age=0;`);
     }
   });
 
