@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/dal";
 import { repo } from "@/lib/store";
 import PropertyDetailView from "@/components/property-detail-view";
-import PlanPreviewSwitcher, {
+import PlanPreviewSwitcher from "@/components/admin/plan-preview-switcher";
+import {
   PREVIEW_PLAN_OPTIONS,
   type PreviewPlan,
-} from "@/components/admin/plan-preview-switcher";
+} from "@/components/admin/plan-preview-options";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 

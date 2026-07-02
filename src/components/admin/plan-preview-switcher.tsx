@@ -1,23 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import {
+  PREVIEW_PLAN_OPTIONS,
+  type PreviewPlan,
+} from "./plan-preview-options";
 
 /**
  * 管理プレビューの「プラン別の見え方」シミュレーター。
  * 選ぶと ?plan=… を付けて再読み込みし、サーバー側でそのプランの
  * 閲覧フラグ（サブスク有無 / 制限あり / NDA限定）を再現して描画する。
  */
-export const PREVIEW_PLAN_OPTIONS = [
-  { value: "admin", label: "管理者（実際の状態）" },
-  { value: "guest", label: "未ログイン" },
-  { value: "free", label: "無料会員（Free）" },
-  { value: "individual", label: "個人プラン" },
-  { value: "studio", label: "スタジオプラン" },
-  { value: "team", label: "Team（制作会社）" },
-  { value: "team_nda", label: "Team + NDA締結済み" },
-] as const;
-
-export type PreviewPlan = (typeof PREVIEW_PLAN_OPTIONS)[number]["value"];
 
 export default function PlanPreviewSwitcher({
   plan,
