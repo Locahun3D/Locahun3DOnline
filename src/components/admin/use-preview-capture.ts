@@ -247,8 +247,11 @@ export function usePreviewCapture(): UseCaptureResult {
         try {
           // Worker 経由 (/api/r2) の大容量ストリームは負荷時に途中切断が
           // 実測されたため、可能なら署名付き URL で R2 から直接読む。
-          let downloadUrl = splatUrl;
+          // /api/r2 は 3DGS 形式(.zip 含む)を認証なしでは配信しない（セキュリティ
+          // 修正済み）ため、署名発行に失敗した場合は認証付きの /api/viewer-stream
+          // にフォールバックする（/api/r2 に投げ直すと 403 になる）。
           const keyMatch = splatUrl.match(/^\/api\/r2\/(.+)$/i);
+          let downloadUrl = keyMatch ? `/api/viewer-stream/${keyMatch[1]}` : splatUrl;
           if (keyMatch) {
             try {
               const pres = await fetch(
@@ -259,7 +262,7 @@ export function usePreviewCapture(): UseCaptureResult {
                 if (j.url) downloadUrl = j.url;
               }
             } catch {
-              /* 署名発行に失敗したら Worker 経由にフォールバック */
+              /* 署名発行に失敗したら /api/viewer-stream 経由にフォールバック（上で設定済み） */
             }
           }
           const blob = await downloadChunkedBlob(downloadUrl, (pct) => {

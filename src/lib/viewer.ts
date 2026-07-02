@@ -44,5 +44,11 @@ export function proxySplatUrl(splatUrl: string): string {
   if (/^https?:\/\//.test(splatUrl)) {
     return `/api/admin/splat-proxy?url=${encodeURIComponent(splatUrl)}`;
   }
+  // /api/r2 は 3DGS データ形式（.zip 含む）を認証なしでは配信しない
+  // （セキュリティ修正済み）。この関数の呼び出し元は署名付きURL取得に
+  // 失敗した場合のフォールバック用URLを組み立てるため、/api/r2 のキーは
+  // 認証付きの /api/viewer-stream に書き換える（そのまま渡すと 403 になる）。
+  const m = splatUrl.match(/^\/api\/r2\/(.+)$/i);
+  if (m) return `/api/viewer-stream/${m[1]}`;
   return splatUrl;
 }

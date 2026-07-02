@@ -20,7 +20,15 @@ async function getBucket(): Promise<AnyBucket> {
   return (env as Record<string, unknown>).R2_ASSETS;
 }
 
-const BLOCKED_3DGS_RE = /\.(splat|ply|ksplat|rad)$/i;
+// この route は GET に認証チェックが一切無い（画像等の公開アセット配信用）。
+// 3DGS データ形式は /api/viewer-stream （Clerk 認証 + 閲覧権限チェック済み）
+// 経由でのみ配信すること。以前は .zip 等が抜けており、URL さえ知っていれば
+// 誰でも購読/トークン消費なしに 3DGS スキャンを丸ごと取得できてしまう欠陥が
+// あった（実測で確認・修正済み）。オフラインビューアーの対応形式一覧
+// （.splat/.ply/.spz/.ksplat/.rad/.sog/.pcsogs/.pcsogszip/.obj/.gltf/.glb/.fbx/.zip）
+// を漏れなくブロックする。
+const BLOCKED_3DGS_RE =
+  /\.(splat|ply|spz|ksplat|rad|sog|pcsogs|pcsogszip|obj|gltf|glb|fbx|zip)$/i;
 
 /**
  * 大きいボディは Cache-Control: public を付けない。
