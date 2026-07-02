@@ -68,6 +68,7 @@ export default function PropertyDetailView({
   signedIn = false,
   bookmarked = false,
   locale = "ja",
+  previewControls = null,
 }: {
   property: Property;
   others: Property[];
@@ -80,6 +81,8 @@ export default function PropertyDetailView({
   signedIn?: boolean;
   bookmarked?: boolean;
   locale?: Locale;
+  /** 管理プレビューのバナー内に差し込む追加コントロール（プラン切替等）。 */
+  previewControls?: React.ReactNode;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -101,6 +104,7 @@ export default function PropertyDetailView({
             <strong className="uppercase">{property.status}</strong>
             （未公開でもこの画面で確認できます）
           </span>
+          {previewControls}
           <Link
             href={`/admin/properties/${property.id}/edit`}
             className="underline hover:text-amber-200"
