@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   useForm,
   useFieldArray,
@@ -63,11 +64,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
   const [pickSplat, setPickSplat] = useState(false);
-  const [previewSplat, setPreviewSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
-  // ヘッダーの「プレビュー」ボタン — 3DGS ステップまでスクロールせずに
-  // 最初の 3DGS アセットのプレビュー（動画 or ビューアー）をオーバーレイ表示。
-  const [headerPreview, setHeaderPreview] = useState(false);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiTagsNote, setAiTagsNote] = useState<string | null>(null);
@@ -280,12 +277,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const currentIdx = STEPS.findIndex((s) => s.id === step);
   const progress = ((currentIdx + 1) / STEPS.length) * 100;
 
-  // ヘッダーのプレビュー対象 = 最初に splatUrl を持つ 3DGS アセット。
-  const splatItemsLive = watch("splatItems") ?? [];
-  const headerPreviewIdx = splatItemsLive.findIndex((it) => !!it?.splatUrl);
-  const headerPreviewItem =
-    headerPreviewIdx >= 0 ? splatItemsLive[headerPreviewIdx] : null;
-
   return (
     <form
       onSubmit={(e) => {
@@ -349,15 +340,19 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 }
               </span>
             )}
-            {headerPreviewItem && (
-              <button
-                type="button"
-                onClick={() => setHeaderPreview(true)}
-                className="px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent/10 transition"
-              >
-                3DGSプレビュー
-              </button>
-            )}
+            {/* スクロール位置に関わらず常にアクセスできるページ全体プレビュー。
+                このヘッダーは sticky（top-16）なので、ここに置けば下方向へ
+                スクロールしても押せる。中身はパンくずの「プレビュー ↗」と
+                同じ /admin/properties/[id]/preview（物件詳細ページの全体プレビュー）。
+                以前ここにあった「3DGSプレビュー」（3DGSキャプチャのオーバーレイを
+                開くボタン）は不要になったため撤去した。 */}
+            <Link
+              href={`/admin/properties/${initial.id}/preview`}
+              target="_blank"
+              className="px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+            >
+              プレビュー ↗
+            </Link>
             <button
               type="submit"
               disabled={saving || publishing}
@@ -392,58 +387,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             <SlugEditor id={initial.id} status={currentStatus} embedded />
           </div>
         </div>
-
-        {/* ヘッダー「プレビュー」— 最初の 3DGS アセットをオーバーレイ表示
-            （3DGS ステップ内の各行プレビューと同じ 動画 or ビューアー を再利用） */}
-        {headerPreview && headerPreviewItem && (
-          <div
-            className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 sm:p-8"
-            onClick={() => setHeaderPreview(false)}
-          >
-            <div
-              className="w-full max-w-5xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="mono text-[11px] tracking-[0.22em] uppercase text-white/85">
-                  3DGS プレビュー:{" "}
-                  {headerPreviewItem.label || `#${headerPreviewIdx + 1}`}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setHeaderPreview(false)}
-                  className="mono text-[11px] tracking-[0.22em] uppercase border border-white/50 text-white px-3 py-1.5 hover:bg-white/10 transition"
-                >
-                  × 閉じる
-                </button>
-              </div>
-              <div
-                className="border border-white/20 bg-black overflow-hidden"
-                style={{ aspectRatio: "16/9" }}
-              >
-                {headerPreviewItem.previewVideoUrl ? (
-                  <video
-                    src={headerPreviewItem.previewVideoUrl}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls
-                  />
-                ) : (
-                  <iframe
-                    src={buildViewerUrl(headerPreviewItem.splatUrl)}
-                    title={`3DGS プレビュー: ${headerPreviewItem.label || `#${headerPreviewIdx + 1}`}`}
-                    className="w-full h-full border-0"
-                    allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
-                    sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Progress bar */}
         <div className="h-px bg-line mb-6 relative overflow-hidden">
@@ -1249,7 +1192,20 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           >
                             {previewItemIdx === idx ? "閉じる" : "プレビュー"}
                           </button>
-                          {watch(`splatItems.${idx}.splatUrl`) && capture.state === "idle" && (
+                          {/* 再撮影/動画生成ボタンの表示条件は「行ごと」に判定する。
+                              以前は `capture.state === "idle"` というグローバル状態で
+                              ゲートしていたため、いずれかの行で 1 度キャプチャすると
+                              state が "done"/"error" のまま idle に戻らず、全行から
+                              ボタンが消えて他の 3DGS を再撮影できなくなっていた。
+                              → 「この行で今まさにキャプチャ実行中」のときだけ隠す。
+                                 他行は常に表示し、実行中なら startCapture がキューへ積む。 */}
+                          {watch(`splatItems.${idx}.splatUrl`) &&
+                            !(
+                              capture.capturedIdx === idx &&
+                              (capture.state === "loading" ||
+                                capture.state === "recording" ||
+                                capture.state === "uploading")
+                            ) && (
                             <button
                               type="button"
                               onClick={() => capture.startCapture(watch(`splatItems.${idx}.splatUrl`), initial.id, idx)}
