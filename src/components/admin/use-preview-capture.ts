@@ -284,15 +284,16 @@ export function usePreviewCapture(): UseCaptureResult {
       };
 
       // ⚠ Chrome はウィンドウが他のウィンドウに隠れている（occluded）と
-      // rAF を約1fpsに絞るため、キャプチャ中はこのタブを前面に表示しておくこと。
-      // 通常（前面表示）ならロード数秒＋録画20秒程度で完了する。
+      // rAF を絞るため、キャプチャ中はこのタブを前面に表示しておくこと。
+      // 実測: 480フレーム(20秒×24fps)の録画は重いシーンで約1フレーム/秒まで
+      // 落ちることがあり、全体で10分近くかかる。6分だと途中で殺してしまう。
       const timeout = setTimeout(() => {
         if (abortRef.current) return;
         cleanup();
         setState("error");
-        setProgress("タイムアウト（6分経過）— キャプチャ中はこのタブを前面に表示したままにしてください");
+        setProgress("タイムアウト（15分経過）— キャプチャ中はこのタブを前面に表示したままにしてください");
         processQueue();
-      }, 360_000);
+      }, 900_000);
 
       function processQueue() {
         const next = queueRef.current.shift();
