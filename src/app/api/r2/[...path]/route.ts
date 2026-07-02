@@ -61,24 +61,13 @@ export async function GET(
     return NextResponse.json({ error: "Use /api/viewer-asset for 3DGS data" }, { status: 403 });
   }
 
-  const rangeHeader = req.headers.get("range");
-
-  // Next.js/OpenNext は既定で全レスポンスに RSC 用の Vary（next-router-state-tree
-  // 等）を付与し、ヘッダーで上書きしても消えず追記される。これだと Cloudflare の
-  // エッジキャッシュが Vary 起因で実質効かない（実測: CF-Cache-Status が付かない）。
-  // 画像等の小容量・非 Range リクエストは Workers の Cache API で明示的に
-  // キャッシュし、Vary の挙動に依存せず確実にエッジで完結させる。
-  const cache = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
-  if (cache && !rangeHeader) {
-    const hit = await cache.match(req);
-    if (hit) return hit;
-  }
-
   try {
     const bucket = await getBucket();
     if (!bucket) {
       return NextResponse.json({ error: "R2 not configured" }, { status: 503 });
     }
+
+    const rangeHeader = req.headers.get("range");
 
     if (rangeHeader) {
       const r2range = toR2Range(rangeHeader);
@@ -114,30 +103,12 @@ export async function GET(
     const obj = await bucket.get(key);
     if (!obj) return new NextResponse("Not found", { status: 404 });
 
-    const size = obj.size ?? 0;
-    const cacheable = cache && size > 0 && size <= NO_CACHE_BYTES;
-
     const headers = new Headers();
     headers.set("Content-Type", obj.httpMetadata?.contentType || "application/octet-stream");
     if (obj.size) headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
-    headers.set("Cache-Control", cacheControlFor(size));
+    headers.set("Cache-Control", cacheControlFor(obj.size ?? 0));
     headers.set("Vary", "Accept-Encoding");
-
-    // 小容量ファイル（画像等）は Cache API に保存できるよう body をバッファ化
-    // する（ReadableStream は 1 回しか消費できないため）。cache.put は非同期で
-    // 待たずに ctx.waitUntil に流し、レスポンス自体は即座に返す。
-    if (cacheable) {
-      const buf = await obj.arrayBuffer();
-      const res = new NextResponse(buf, { headers });
-      try {
-        const { ctx } = await getCloudflareContext();
-        ctx.waitUntil(cache!.put(req, res.clone()));
-      } catch {
-        /* waitUntil が使えない環境ではキャッシュ保存だけ諦める */
-      }
-      return res;
-    }
 
     return new NextResponse(obj.body as ReadableStream, { headers });
   } catch (e) {
