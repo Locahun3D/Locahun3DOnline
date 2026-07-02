@@ -26,6 +26,7 @@ export default async function AdminLayout({
         <nav className="flex flex-col gap-1 text-sm">
           <Link
             href="/admin/properties"
+            prefetch={false}
             className="px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
           >
             物件
@@ -34,60 +35,70 @@ export default async function AdminLayout({
             <>
               <Link
                 href="/admin/properties?status=draft"
+                prefetch={false}
                 className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
               >
                 ↳ 下書きのみ
               </Link>
               <Link
                 href="/admin/properties?status=published"
+                prefetch={false}
                 className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
               >
                 ↳ 公開中のみ
               </Link>
               <Link
                 href="/admin/accounts"
+                prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 アカウント
               </Link>
               <Link
                 href="/admin/accounts?status=pending"
+                prefetch={false}
                 className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
               >
                 ↳ 承認待ちのみ
               </Link>
               <Link
                 href="/admin/analytics"
+                prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 アナリティクス
               </Link>
               <Link
                 href="/admin/assets"
+                prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 アセット
               </Link>
               <Link
                 href="/admin/gift-codes"
+                prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 ギフトコード・無料期間
               </Link>
               <Link
                 href="/admin/inquiries"
+                prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 問い合わせ
               </Link>
               <Link
                 href="/admin/purchases"
+                prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 データ販売
               </Link>
               <Link
                 href="/admin/pricing"
+                prefetch={false}
                 className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
               >
                 ↳ 価格管理

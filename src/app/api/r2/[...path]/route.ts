@@ -89,6 +89,12 @@ export async function GET(
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
       headers.set("Cache-Control", cacheControlFor(total));
+      // Next.js/OpenNext は既定で全レスポンスに RSC 用の
+      // "Vary: rsc, next-router-state-tree, ..." を付与するが、これは生バイナリ
+      // 配信には無関係かつリクエストごとに変わり得るヘッダーのため、Cloudflare
+      // のエッジキャッシュがほぼ効かなくなる（実測: CF-Cache-Status が付かない）。
+      // 明示的に上書きして純粋なバイナリ配信として正しくキャッシュさせる。
+      headers.set("Vary", "Accept-Encoding");
 
       return new NextResponse(obj.body as ReadableStream, { status: 206, headers });
     }
@@ -102,6 +108,7 @@ export async function GET(
     if (obj.size) headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", cacheControlFor(obj.size ?? 0));
+    headers.set("Vary", "Accept-Encoding");
 
     return new NextResponse(obj.body as ReadableStream, { headers });
   } catch (e) {
