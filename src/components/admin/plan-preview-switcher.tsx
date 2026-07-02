@@ -36,10 +36,10 @@ export default function PlanPreviewSwitcher({
           const v = e.target.value;
           router.replace(v === "admin" ? "?" : `?plan=${v}`, { scroll: false });
         }}
-        className="bg-black/40 border border-amber-300/60 text-amber-100 text-[12px] rounded px-2 py-1 focus:outline-none focus:border-amber-200"
+        className="appearance-none bg-neutral-900 border border-amber-300/60 text-amber-100 text-[12px] rounded px-2 py-1 focus:outline-none focus:border-amber-200"
       >
         {PREVIEW_PLAN_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value} className="bg-neutral-900">
+          <option key={o.value} value={o.value} className="bg-neutral-900 text-amber-100">
             {o.label}
           </option>
         ))}
