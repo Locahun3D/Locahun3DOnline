@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import { purchaseRepo } from "@/lib/purchases";
 
 export const metadata = { title: "ダッシュボード" };
 
@@ -13,6 +14,10 @@ export default async function DashboardPage() {
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
+
+  const purchaseCount = (
+    await purchaseRepo.list({ userId: user.id })
+  ).filter((p) => p.status === "completed").length;
 
   const planLabel = user.plan === "free"
     ? (en ? "Free" : "無料")
@@ -70,7 +75,7 @@ export default async function DashboardPage() {
 
         <section className="border border-line p-6">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Purchases</div>
-          <div className="serif text-2xl">—</div>
+          <div className="serif text-2xl">{purchaseCount}</div>
           <p className="text-[12px] text-muted mt-2 leading-[1.7]">
             {en ? "Your 3DGS data purchases & receipts." : "3DGSデータの購入履歴・領収書はこちら。"}
           </p>
