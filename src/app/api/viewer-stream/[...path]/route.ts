@@ -1,11 +1,29 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
+import { repo as propertyRepo } from "@/lib/store";
+import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
+
+/** 保存済みURL（絶対URL / 相対 /api/r2/... ...）から R2 オブジェクトキーを導く。
+ *  /api/viewer-asset の toR2Key と同一ロジック（キー突合のため揃える必要がある）。 */
+function toR2Key(url: string): string | null {
+  if (!url) return null;
+  let path = url;
+  if (/^https?:\/\//.test(url)) {
+    try {
+      path = new URL(url).pathname;
+    } catch {
+      return null;
+    }
+  }
+  path = path.replace(/^\/+/, "").replace(/^api\/r2\//, "");
+  return path || null;
+}
 
 // Formats the offline viewer can actually load (mirrors the dropzone accept list:
 // .splat,.ply,.spz,.ksplat,.rad,.sog,.pcsogs,.pcsogszip,.obj,.gltf,.glb,.fbx,.zip,.json).
@@ -55,6 +73,30 @@ export async function GET(
   const hasAccess = freeAccess || (!!user && (user.role === "admin" || (!!user.plan && user.plan !== "free")));
   if (!hasAccess) {
     return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
+  }
+
+  // サブスクプラン単位のチェックだけでは、物件ごとの制限あり/NDA限定
+  // splatItem まで防げない（/api/viewer-asset は元々ここまでチェックしている）。
+  // この route は管理画面のキャプチャ/差し替えフローからも使われるため、admin は
+  // canViewBackyard/canViewNdaOnly で常に通る（下の関数を参照）。
+  const props = await propertyRepo.list();
+  let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
+  for (const p of props) {
+    for (const item of p.splatItems) {
+      if (item.splatUrl && toR2Key(item.splatUrl) === key) {
+        matchedItem = item;
+        break;
+      }
+    }
+    if (matchedItem) break;
+  }
+  if (matchedItem) {
+    if (matchedItem.accessLevel === "restricted" && !canViewBackyard(user)) {
+      return NextResponse.json({ error: "制限付きデータです" }, { status: 403 });
+    }
+    if (matchedItem.accessLevel === "nda_only" && !canViewNdaOnly(user)) {
+      return NextResponse.json({ error: "NDA限定データです" }, { status: 403 });
+    }
   }
 
   try {
