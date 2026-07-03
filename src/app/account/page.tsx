@@ -7,6 +7,7 @@ import { openBillingPortalAction } from "@/lib/subscribe-actions";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
+import { viewUnlockRepo } from "@/lib/view-unlocks";
 
 export const metadata = { title: "プロフィール" };
 
@@ -21,6 +22,10 @@ export default async function AccountPage({
   const en = locale === "en";
   const lc = en ? "en" : "ja";
   const lh = (href: string) => localizedHref(href, locale);
+  const nowIso = new Date().toISOString();
+  const unlockedCount = (
+    await viewUnlockRepo.list({ userId: user.id })
+  ).filter((u) => u.expiresAt > nowIso).length;
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -223,6 +228,19 @@ export default async function AccountPage({
           </div>
 
           <RedeemGift />
+
+          <Link
+            href={lh("/dashboard/unlocked")}
+            className="border border-line p-5 block hover:border-accent transition"
+          >
+            <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+              {en ? "Unlocked scenes" : "閲覧履歴・解除済みシーン"}
+            </div>
+            <div className="serif text-3xl">{unlockedCount}</div>
+            <div className="mt-3 mono text-[10px] tracking-[0.22em] uppercase text-accent">
+              {en ? "View history →" : "履歴を見る →"}
+            </div>
+          </Link>
 
           <Link href={lh("/dashboard/purchases")} className="block border border-line p-5 hover:border-accent/40 transition">
             <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">

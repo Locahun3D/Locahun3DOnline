@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { purchaseRepo } from "@/lib/purchases";
+import { viewUnlockRepo } from "@/lib/view-unlocks";
 
 export const metadata = { title: "ダッシュボード" };
 
@@ -18,6 +19,11 @@ export default async function DashboardPage() {
   const purchaseCount = (
     await purchaseRepo.list({ userId: user.id })
   ).filter((p) => p.status === "completed").length;
+
+  const now = new Date().toISOString();
+  const unlockedCount = (
+    await viewUnlockRepo.list({ userId: user.id })
+  ).filter((u) => u.expiresAt > now).length;
 
   const planLabel = user.plan === "free"
     ? (en ? "Free" : "無料")
@@ -40,14 +46,14 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         <section className="border border-line p-6">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Plan</div>
           <div className="serif text-2xl">{planLabel}</div>
           <p className="text-[12px] text-muted mt-2 leading-[1.7]">
-            {user.plan === "free"
-              ? en ? "3DGS walkthrough not unlocked." : "3DGS ウォークスルーは未開放。"
-              : en ? "3DGS walkthroughs enabled." : "3DGS ウォークスルー利用可能。"}
+            {en
+              ? "Manage your plan and token balance."
+              : "プランとトークン残高はこちら。"}
           </p>
           <Link
             href={lh(user.plan === "free" ? "/pricing" : "/account")}
@@ -56,6 +62,20 @@ export default async function DashboardPage() {
             {user.plan === "free"
               ? en ? "Upgrade" : "アップグレード"
               : en ? "Manage account" : "アカウント管理"}
+          </Link>
+        </section>
+
+        <section className="border border-line p-6">
+          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Unlocked scenes</div>
+          <div className="serif text-2xl">{unlockedCount}</div>
+          <p className="text-[12px] text-muted mt-2 leading-[1.7]">
+            {en ? "3DGS scenes you can re-view free (2 years)." : "無償で再視聴できる3DGSシーン(2年間)。"}
+          </p>
+          <Link
+            href={lh("/dashboard/unlocked")}
+            className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
+          >
+            {en ? "Viewing history →" : "閲覧履歴 →"}
           </Link>
         </section>
 
