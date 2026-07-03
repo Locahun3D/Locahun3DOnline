@@ -127,13 +127,34 @@ export default function PropertyDetailView({
   });
 
   // ── スレート・データ行（実データのみ。無ければ行ごと省略） ──
-  const slateRows: { k: string; v: string; acc?: boolean }[] = [
-    { k: "PROD.", v: "LOCAHUN 3D" },
-    { k: "SCENE", v: property.id.toUpperCase(), acc: true },
-  ];
-  if (property.scannedAt) slateRows.push({ k: "DATE", v: property.scannedAt });
-  if (property.prefecture || property.city) {
-    slateRows.push({ k: "LOC.", v: `${property.prefecture} ${property.city}`.trim() });
+  // 撮影メタ情報（PROD./SCENE/DATE/LOC.）ではなく、すぐ使える連絡先を
+  // 同じ「スレート・データシート」の見た目のまま表示する。
+  const slateRows: { k: string; v: string; href?: string }[] = [];
+  if (property.contactPhone) {
+    slateRows.push({ k: "TEL", v: property.contactPhone, href: `tel:${property.contactPhone}` });
+  }
+  if (property.contactEmail) {
+    slateRows.push({
+      k: "MAIL",
+      v: property.contactEmail,
+      href: `mailto:${property.contactEmail}`,
+    });
+  }
+  if (property.contactWebsite) {
+    slateRows.push({
+      k: "HP",
+      v: property.contactWebsite,
+      href: /^https?:\/\//.test(property.contactWebsite)
+        ? property.contactWebsite
+        : `https://${property.contactWebsite}`,
+    });
+  }
+  // 連絡先が一切無ければ、SCENE / LOC. の最小フォールバックに戻す。
+  if (slateRows.length === 0) {
+    slateRows.push({ k: "SCENE", v: property.id.toUpperCase() });
+    if (property.prefecture || property.city) {
+      slateRows.push({ k: "LOC.", v: `${property.prefecture} ${property.city}`.trim() });
+    }
   }
 
   return (
@@ -180,8 +201,11 @@ export default function PropertyDetailView({
             <div
               className="h-[34px] border-b border-white/[0.16]"
               style={{
+                /* 斜めの繰り返しグラデーションはハードな色境界だとブラウザが
+                   アンチエイリアスをかけずギザギザに描画される。各境界に
+                   0.75px だけぼかしを挟んで滑らかにする（縞の見た目・幅は不変）。 */
                 background:
-                  "repeating-linear-gradient(-55deg, #fafaf6 0 26px, #14181c 26px 52px)",
+                  "repeating-linear-gradient(-55deg, #fafaf6 0, #fafaf6 25.25px, #14181c 26.75px, #14181c 51.25px, #fafaf6 52.75px)",
               }}
             />
             <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1">
@@ -192,11 +216,18 @@ export default function PropertyDetailView({
                     className="flex justify-between gap-3 py-2.5 border-b border-dashed border-white/[0.16]"
                   >
                     <span>{row.k}</span>
-                    <b
-                      className={`font-normal text-right ${row.acc ? "text-accent" : "text-[#fafaf6]"}`}
-                    >
-                      {row.v}
-                    </b>
+                    {row.href ? (
+                      <a
+                        href={row.href}
+                        target={row.href.startsWith("http") ? "_blank" : undefined}
+                        rel={row.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                        className="font-normal text-right text-[#fafaf6] hover:text-accent transition break-all"
+                      >
+                        {row.v}
+                      </a>
+                    ) : (
+                      <b className="font-normal text-right text-[#fafaf6]">{row.v}</b>
+                    )}
                   </div>
                 ))}
               </div>
@@ -261,20 +292,11 @@ export default function PropertyDetailView({
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  {!preview && (
-                    <BookmarkButton
-                      propertyId={property.id}
-                      initialBookmarked={bookmarked}
-                      signedIn={signedIn}
-                      revalidate={`/properties/${property.id}`}
-                      variant="hero"
-                    />
-                  )}
                   <a
                     href="#inquiry"
                     className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 bg-accent border border-accent text-[#0a2a35] hover:brightness-[1.06] transition"
                   >
-                    {en ? "Request a quote" : "見積もり依頼"}
+                    {en ? "Contact us" : "お問い合わせ"}
                   </a>
                 </div>
               </div>
@@ -290,6 +312,17 @@ export default function PropertyDetailView({
               className="absolute inset-0 w-full h-full object-cover"
               style={{ objectPosition: property.cover.focus || "center" }}
             />
+            {!preview && (
+              <div className="absolute top-3 right-3 z-[3]">
+                <BookmarkButton
+                  propertyId={property.id}
+                  initialBookmarked={bookmarked}
+                  signedIn={signedIn}
+                  revalidate={`/properties/${property.id}`}
+                  variant="overlay"
+                />
+              </div>
+            )}
             <span className="absolute bottom-3.5 right-4 z-[2] mono text-[10px] tracking-[0.22em] uppercase text-[#fafaf6] bg-[#14181c]/72 px-3 py-1.5">
               TAKE 01 — EXT.
             </span>
@@ -684,6 +717,16 @@ export default function PropertyDetailView({
           )}
         </section>
       </div>
+
+      {/* ══════════════════════════════════════════════════
+       *  Footer-gap filler — SiteFooter (site-wide) sits in <main>'s next
+       *  sibling with `mt-32` (128px). That margin lives on <body>'s default
+       *  black background, not inside this article's light `.theme-online`
+       *  background, so a dark band shows above the footer. Rather than
+       *  touching the shared footer/global CSS (used by every page), pull a
+       *  themed filler up into exactly that margin with a matching negative
+       *  margin — scoped to this component only. */}
+      <div className="theme-online h-32 -mb-32" aria-hidden />
     </article>
   );
 }

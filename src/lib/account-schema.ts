@@ -132,6 +132,13 @@ export const userSchema = z.object({
   /** Property IDs this studio owner is authorized to manage. Set by admin. */
   linkedPropertyIds: z.array(z.string()).max(100).default([]),
   bookmarks: z.array(z.string()).max(500).default([]),
+  /** ユーザー定義のブックマーク・フォルダ一覧（v1: フラット、ネスト無し）。 */
+  bookmarkFolders: z
+    .array(z.object({ id: z.string(), name: z.string().max(60) }))
+    .max(50)
+    .default([]),
+  /** propertyId -> folderId。エントリが無い bookmark 済み物件は「未整理」。 */
+  bookmarkFolderAssignments: z.record(z.string(), z.string()).default({}),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });

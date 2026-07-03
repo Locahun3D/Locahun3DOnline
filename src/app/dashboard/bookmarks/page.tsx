@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { getPublishedProperties } from "@/lib/properties";
-import PropertyCard from "@/components/property-card";
+import BookmarksManager from "@/components/dashboard/bookmarks-manager";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
@@ -58,11 +58,12 @@ export default async function BookmarksPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {saved.map((p) => (
-            <PropertyCard key={p.id} property={p} locale={locale} />
-          ))}
-        </div>
+        <BookmarksManager
+          properties={saved}
+          initialFolders={user.bookmarkFolders ?? []}
+          initialAssignments={user.bookmarkFolderAssignments ?? {}}
+          locale={locale}
+        />
       )}
 
       <div className="mt-10 text-center">
