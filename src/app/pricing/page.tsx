@@ -23,6 +23,7 @@ const COMPARE_ROWS: Array<{
   { label: ["図面ダウンロード", "Floor-plan downloads"], free: ["—", "—"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
   { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["登録時 1 トークン", "1 token at signup"], individual: ["月 8 トークン", "8 tokens / mo"], studio: ["月 12 トークン", "12 tokens / mo"], team: ["月 30 トークン", "30 tokens / mo"] },
+  { label: ["制限あり / NDA 限定シーンの閲覧", "Restricted / NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
   { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["制限なし", "No limit"], studio: ["5 端末", "5 devices"], team: ["20 端末", "20 devices"] },
   { label: ["見積もり依頼", "Quote requests"], free: ["月 1 件", "1 / mo"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
   { label: ["請求書 自動送付 / 電子帳簿対応", "Invoice auto-send / e-bookkeeping"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓ 一括", "✓ batch"] },
@@ -162,8 +163,8 @@ export default async function PricingPage() {
           </div>
           <p>
             {en
-              ? "Tokens expire 1 year after they are granted, resetting oldest-first. Revisiting the same location does not consume extra tokens."
-              : "トークンは付与（追加）から 1 年で有効期限。期限が来たものから順にリセット（失効）します。同じ物件を再訪してもトークンは追加消費されません。"}
+              ? "Tokens expire 1 year after they are granted, resetting oldest-first. Unlocking a scene costs tokens once — you can revisit that exact scene free for 2 years afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
+              : "トークンは付与（追加）から 1 年で有効期限。期限が来たものから順にリセット（失効）します。シーンのアンロックにトークンを消費するのは初回のみで、その後 2 年間は同じシーンを無償で再視聴できます。1 物件に複数シーンがある場合（例: 4 部屋あるスタジオ）は、シーンごとに個別に消費されます。"}
           </p>
         </div>
         <div className="border-t border-line pt-5">
