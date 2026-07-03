@@ -17,7 +17,7 @@ export default function StudioPageBlocks({
   canViewNdaOnly = false,
   hasViewerAccess = false,
   signedIn = false,
-  unlockedIndices = [],
+  unlockedItemIds = [],
 }: {
   blocks: PageBlock[];
   property: Property;
@@ -26,12 +26,12 @@ export default function StudioPageBlocks({
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
   signedIn?: boolean;
-  unlockedIndices?: number[];
+  unlockedItemIds?: string[];
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} unlockedIndices={unlockedIndices} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} unlockedItemIds={unlockedItemIds} />
       ))}
     </div>
   );
@@ -45,7 +45,7 @@ function BlockView({
   canViewNdaOnly = false,
   hasViewerAccess = false,
   signedIn = false,
-  unlockedIndices = [],
+  unlockedItemIds = [],
 }: {
   block: PageBlock;
   property: Property;
@@ -54,7 +54,7 @@ function BlockView({
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
   signedIn?: boolean;
-  unlockedIndices?: number[];
+  unlockedItemIds?: string[];
 }) {
   switch (block.kind) {
     case "heading":
@@ -128,7 +128,7 @@ function BlockView({
                 freeAccess={freeAccess}
                 hasSubscription={hasViewerAccess}
                 signedIn={signedIn}
-                alreadyUnlocked={unlockedIndices.includes(origIndex)}
+                alreadyUnlocked={unlockedItemIds.includes(item.id)}
               />
             ))}
           </div>

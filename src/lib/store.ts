@@ -161,9 +161,10 @@ class PropertyRepoImpl implements PropertyRepo {
     const props = raw
       .map((r) => coerceProperty(r))
       .filter((p): p is Property => p !== null);
+    const backfilled = await Promise.all(props.map((p) => this.ensureSplatItemIds(p)));
     const out = opts.status
-      ? props.filter((p) => p.status === opts.status)
-      : props;
+      ? backfilled.filter((p) => p.status === opts.status)
+      : backfilled;
     return out.sort((a, b) =>
       (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""),
     );
@@ -183,7 +184,23 @@ class PropertyRepoImpl implements PropertyRepo {
     }
     if (!raw) return null;
     // get() は編集経路でも使うため lenient: 型崩れでも開いて直せるよう salvage。
-    return coerceProperty(raw, { lenient: true });
+    const coerced = coerceProperty(raw, { lenient: true });
+    return coerced ? this.ensureSplatItemIds(coerced) : null;
+  }
+
+  /**
+   * splatItem.id が空(旧データ)の物件を検出したら、その場で採番して書き戻す。
+   * トークン解除(view-unlocks)は index ではなく id で紐付けるため、id は
+   * 一度採番されたら並び替え・データ差し替えを経ても不変でなければならない。
+   */
+  private async ensureSplatItemIds(p: Property): Promise<Property> {
+    if (p.splatItems.every((it) => it.id)) return p;
+    const fixed: Property = {
+      ...p,
+      splatItems: p.splatItems.map((it) => (it.id ? it : { ...it, id: crypto.randomUUID() })),
+    };
+    await this.upsert(fixed);
+    return fixed;
   }
 
   async upsert(p: Property): Promise<Property> {

@@ -98,12 +98,16 @@ export async function GET(req: Request) {
     if (!isAdmin && !freeAccess) {
       const propertyId = matchedProperty.id;
       const splatItemIndex = matchedIndex;
+      const splatItemId = matchedItem.id;
       const tokenCost = matchedProperty.tokenCost ?? 1;
 
       // 既に有効なアンロックがあれば課金せずそのまま署名へ（2年間の再視聴無償）。
+      // splatItemId（永続識別子）で判定。並び替え前の旧レコード向けに、現在の
+      // index ベースの旧キーにもフォールバックする（hasValidUnlock 内部で実施）。
       const alreadyUnlocked = await viewUnlockRepo.hasValidUnlock(
         user.id,
         propertyId,
+        splatItemId,
         splatItemIndex,
       );
       if (!alreadyUnlocked) {
@@ -130,9 +134,10 @@ export async function GET(req: Request) {
         //       hasValidUnlock=false のまま再度減算され「二重課金」になる。逆順なら
         //       最悪でも「無償視聴（課金漏れ）」で、二重課金より遥かに安全。
         await viewUnlockRepo.upsert({
-          id: unlockId(user.id, propertyId, splatItemIndex),
+          id: unlockId(user.id, propertyId, splatItemId),
           userId: user.id,
           propertyId,
+          splatItemId,
           splatItemIndex,
           tokensSpent: tokenCost,
           unlockedAt: now,

@@ -26,7 +26,11 @@ export default async function UnlockedScenesPage() {
 
   const rows = unlocks.map((u) => {
     const property = propertyMap.get(u.propertyId) ?? null;
-    const item = property?.splatItems[u.splatItemIndex];
+    // 新レコードは splatItemId（永続識別子）で解決。旧レコードは記録当時の
+    // index にフォールバック（並び替え後はズレ得るが表示上の劣化に留まる）。
+    const item = u.splatItemId
+      ? property?.splatItems.find((it) => it.id === u.splatItemId)
+      : property?.splatItems[u.splatItemIndex];
     const valid = u.expiresAt > now;
     return {
       unlock: u,

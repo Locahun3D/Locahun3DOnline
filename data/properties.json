@@ -3,6 +3,7 @@
   "properties": [
     {
       "id": "wh-002",
+      "ownerId": "",
       "status": "published",
       "visibility": "public",
       "title": "Yokohama Industrial Warehouse｜重厚な質感",
@@ -34,6 +35,8 @@
       "contactWebsite": "https://yokohama-warehouse.example.com",
       "contactPhone": "045-123-4567",
       "contactEmail": "info@yokohama-warehouse.example.com",
+      "permitRequired": false,
+      "permitNotes": "",
       "blueprints": [
         {
           "label": "1F 平面図",
@@ -49,26 +52,30 @@
         "src": "https://picsum.photos/seed/locahun3d-2/1600/1000",
         "alt": "Yokohama 倉庫外観",
         "width": 1600,
-        "height": 1000
+        "height": 1000,
+        "focus": "center"
       },
       "gallery": [
         {
           "src": "https://picsum.photos/seed/locahun3d-21/1600/1000",
           "alt": "倉庫内部俯瞰",
           "width": 1600,
-          "height": 1000
+          "height": 1000,
+          "focus": "center"
         },
         {
           "src": "https://picsum.photos/seed/locahun3d-22/1600/1000",
           "alt": "鉄骨梁",
           "width": 1600,
-          "height": 1000
+          "height": 1000,
+          "focus": "center"
         },
         {
           "src": "https://picsum.photos/seed/locahun3d-23/1600/1000",
           "alt": "シャッター開口",
           "width": 1600,
-          "height": 1000
+          "height": 1000,
+          "focus": "center"
         }
       ],
       "splatUrl": "/api/demo-asset/Kousaten_ForDemo_point_cloud.rad",
@@ -77,6 +84,7 @@
       "splatSizeMb": 356,
       "splatItems": [
         {
+          "id": "7b9cf3a7-e146-4930-a80d-635e02230f55",
           "label": "1F",
           "splatUrl": "/api/demo-asset/Kousaten_ForDemo_point_cloud.rad",
           "previewVideoUrl": "/api/r2/uploads/wh-002/0-preview.mp4",
@@ -111,6 +119,7 @@
           "license": "standard"
         },
         {
+          "id": "6af534c6-5c03-4c1a-b751-ba75c496fb80",
           "label": "2F",
           "splatUrl": "/api/demo-asset/Kousaten_ForDemo_point_cloud.rad",
           "previewVideoUrl": "/api/r2/uploads/wh-002/1-preview.mp4",
@@ -152,7 +161,7 @@
       "annotations": [],
       "pageBlocks": [],
       "createdAt": "2026-03-22T00:00:00.000Z",
-      "updatedAt": "2026-06-21T00:18:29.397Z"
+      "updatedAt": "2026-07-03T12:07:36.335Z"
     }
   ]
 }

@@ -65,7 +65,7 @@ export default function PropertyDetailView({
   canViewRestricted = false,
   canViewNdaOnly = false,
   purchasedIndices = [],
-  unlockedIndices = [],
+  unlockedItemIds = [],
   hasViewerAccess = false,
   signedIn = false,
   bookmarked = false,
@@ -79,8 +79,8 @@ export default function PropertyDetailView({
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
   purchasedIndices?: number[];
-  /** 2年以内にアンロック済みのシーンの元 splatItems index 群。 */
-  unlockedIndices?: number[];
+  /** 2年以内にアンロック済みのシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
+  unlockedItemIds?: string[];
   hasViewerAccess?: boolean;
   signedIn?: boolean;
   bookmarked?: boolean;
@@ -510,7 +510,7 @@ export default function PropertyDetailView({
               canViewNdaOnly={canViewNdaOnly}
               hasViewerAccess={hasViewerAccess}
               signedIn={signedIn}
-              unlockedIndices={unlockedIndices}
+              unlockedItemIds={unlockedItemIds}
             />
           </section>
         ) : (
@@ -543,7 +543,7 @@ export default function PropertyDetailView({
                   freeAccess={freeAccess}
                   hasSubscription={hasViewerAccess}
                   signedIn={signedIn}
-                  alreadyUnlocked={unlockedIndices.includes(origIndex)}
+                  alreadyUnlocked={unlockedItemIds.includes(item.id)}
                 />
                 {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
                     出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。 */}

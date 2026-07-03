@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 import { useLocale, useHref } from "@/components/locale-provider";
-import { tokenCostLabel } from "@/lib/schemas";
 
 interface Props {
   splatUrl: string;
@@ -37,13 +36,14 @@ export default function ViewerGate({
   const [tokenError, setTokenError] = useState<
     { tokenBalance: number; bonusTokens: number; tokenCost: number } | null
   >(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
   const proxied = proxySplatUrl(splatUrl);
   const fullViewerUrl = buildViewerUrl(proxied, { protected: true });
 
-  /* --- Paywall (no subscription) --- */
+  /* --- Paywall (signed out) --- */
   if (!effectiveSubscription) {
     return (
       <div className="group relative aspect-video w-full border border-line overflow-hidden">
@@ -63,63 +63,88 @@ export default function ViewerGate({
             }}
           />
         )}
-        {/* ゲート文言はホバー時のみフェードイン表示。通常はプレビューを見せる。 */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-md bg-black/70 opacity-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 group-hover:pointer-events-auto">
+        {/* タップ/クリックで登録ポップアップを開く（ホバー非依存＝モバイルでも機能する）。 */}
+        <button
+          type="button"
+          onClick={() => setShowAuthModal(true)}
+          className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-6 cursor-pointer backdrop-blur-md bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        >
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
             {en
-              ? `● Sign in required · ${tokenCost} token(s)`
-              : `● サインインが必要 · ${tokenCost} トークン消費`}
+              ? `● Free account required · ${tokenCost} token(s)`
+              : `● 無料登録が必要 · ${tokenCost} トークン消費`}
           </div>
-          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] mb-4 text-white drop-shadow-lg">
+          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
             {en ? (
               <>
-                Sign in to unlock
+                Create a free account
                 <br />
-                the 3DGS walkthrough.
+                to unlock the 3DGS walkthrough.
               </>
             ) : (
               <>
-                サインインすると
+                無料アカウント登録で
                 <br />
                 3DGS ウォークスルーが見られます。
               </>
             )}
           </div>
-          <div className="text-[13px] text-white/85 mb-5">
-            {en ? (
-              <>
-                This studio ({tokenCostLabel(tokenCost, "en")}) costs{" "}
-                <span className="text-accent font-bold">{tokenCost} token(s)</span> to unlock —
-                even the Free plan gets tokens at signup.
-              </>
-            ) : (
-              <>
-                このスタジオ（{tokenCostLabel(tokenCost, "ja")}）のアンロックには{" "}
-                <span className="text-accent font-bold">{tokenCost} トークン</span>
-                {" "}必要です。Free プランでも登録時にトークンが付与されます。
-              </>
-            )}
-          </div>
-          <p className="text-[14px] text-white/80 max-w-[42ch] leading-[1.9] mb-7">
-            {en
-              ? "Walk the real space in 3D and check lens angles, ceiling distance and light positions from your browser alone."
-              : "実空間を 3D で歩き回り、レンズ画角・天井距離・光源位置をブラウザだけで検証できます。"}
-          </p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link
-              href={lh(`/sign-in?redirect=/properties/${propertyId}`)}
-              className="px-7 py-3.5 text-[14px] font-bold rounded-md bg-accent text-white hover:bg-accent/85 transition shadow-lg"
+        </button>
+
+        {showAuthModal && (
+          <div
+            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+            onClick={() => setShowAuthModal(false)}
+          >
+            <div
+              className="bg-[#1a1a1a] border border-accent/60 max-w-sm w-full p-7 text-center"
+              onClick={(e) => e.stopPropagation()}
             >
-              {en ? "Sign in" : "サインイン"}
-            </Link>
-            <Link
-              href={lh(`/pricing?from=${propertyId}`)}
-              className="px-7 py-3.5 text-[14px] font-semibold rounded-md border border-white/50 text-white hover:bg-white/10 transition"
-            >
-              {en ? "See plans for more tokens" : "もっとトークンが欲しい方はプランを見る"}
-            </Link>
+              <div className="flex justify-end -mt-2 -mr-2 mb-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModal(false)}
+                  className="text-muted hover:text-ink text-lg leading-none p-2"
+                  aria-label={en ? "Close" : "閉じる"}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-3">
+                {en ? "ACCOUNT REGISTRATION" : "アカウント登録"}
+              </div>
+              <h3 className="serif text-xl font-bold mb-3 text-white">
+                {en ? "A free account is required" : "無料アカウント登録が必要です"}
+              </h3>
+              <p className="text-[13px] text-white/70 leading-[1.85] mb-6">
+                {en ? (
+                  <>
+                    Sign up free and get tokens instantly — even the Free plan can unlock and
+                    walk this space in 3D.
+                  </>
+                ) : (
+                  <>
+                    無料登録するとトークンがすぐに付与され、Free プランでもこの空間を 3D で歩き回れます。
+                  </>
+                )}
+              </p>
+              <div className="flex flex-col gap-2.5">
+                <Link
+                  href={lh("/sign-up")}
+                  className="px-6 py-3 text-[14px] font-bold rounded-md bg-accent text-white hover:bg-accent/85 transition"
+                >
+                  {en ? "Create free account" : "無料で登録する"}
+                </Link>
+                <Link
+                  href={lh(`/sign-in?redirect=/properties/${propertyId}`)}
+                  className="px-6 py-2.5 text-[13px] font-semibold text-white/70 hover:text-white transition"
+                >
+                  {en ? "Already a member? Sign in" : "すでに会員の方はサインイン"}
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -237,15 +262,13 @@ export default function ViewerGate({
                   : `● ${tokenCost} トークン消費`}
           </div>
 
-          <p className="text-[12px] font-semibold text-ink/85 max-w-[44ch] leading-[1.75]">
-            {alreadyUnlocked
-              ? en
-                ? "You've already unlocked this scene — re-view it free for 2 years."
-                : "このシーンはアンロック済みです（2年間は無料で再視聴できます）"
-              : en
+          {!alreadyUnlocked && (
+            <p className="text-[12px] font-semibold text-ink/85 max-w-[44ch] leading-[1.75]">
+              {en
                 ? "Opens the 3D walkthrough in a new tab"
                 : "別タブで 3D ウォークスルーを開きます"}
-          </p>
+            </p>
+          )}
 
           <a
             href={fullViewerUrl}

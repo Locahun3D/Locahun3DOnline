@@ -267,6 +267,10 @@ export const propertySchema = z.object({
   zipSizeMb: z.number().min(0).max(99999).default(0),
   splatSizeMb: z.number().min(0).max(99999).default(0),
   splatItems: z.array(z.object({
+    // シーンの永続識別子。配列内の位置(index)は並び替え/削除で動くため、
+    // トークン解除(view-unlocks)の紐付けキーには index ではなくこの id を使う。
+    // 空文字なら store.ts の読み込み時に一度だけ自動採番して書き戻す。
+    id: z.string().default(""),
     label: z.string().max(60).default(""),
     splatUrl: urlOrPath(),
     previewVideoUrl: urlOrPath(),

@@ -11,19 +11,28 @@ import { z } from "zod";
  * サブスク会員が 3DGS シーン（splatItem 単位）を初めて開くとき tokenCost トークンを
  * 消費し、その「アンロック」をここに記録する。一度アンロックしたシーンは 2 年間
  * 無償で再視聴できる（`expiresAt` まで）。物件に複数シーンがある場合は
- * (propertyId, splatItemIndex) の組でシーンごとに独立してアンロックする。
+ * シーンごとに独立してアンロックする。
  *
  * 保存先は purchases.ts と同じ二層構成:
  *  - dev (local fs): `data/view-unlocks.json`
  *  - deployed (Workers): D1 テーブル `view_unlocks`
  *
- * id は `${userId}:${propertyId}:${splatItemIndex}` の自然キー。同一シーンの再
+ * id は `${userId}:${propertyId}:${splatItemId}` の自然キー。同一シーンの再
  * アンロックは同じ id になるため upsert が冪等（リトライで二重生成しない）。
+ *
+ * splatItemId は splatItem.id（永続識別子）。旧レコードはこれが無く、代わりに
+ * splatItemIndex（当時の配列位置）だけを持つ。並び替えで index はズレ得るため
+ * 新規アンロックは必ず splatItemId で記録する。hasValidUnlock は新方式の id で
+ * 見つからない場合、旧方式のキー（index ベース）にもフォールバックして、既存
+ * ユーザーの過去のアンロックを壊さない。
  */
 export const viewUnlockSchema = z.object({
   id: z.string(),
   userId: z.string(),
   propertyId: z.string(),
+  /** splatItem.id（永続識別子）。新規レコードは必ず設定。旧レコードは空文字。 */
+  splatItemId: z.string().default(""),
+  /** 旧方式の配列位置スナップショット（監査・後方互換用）。 */
   splatItemIndex: z.number().int().min(0).default(0),
   /** アンロック時点の tokenCost のスナップショット（監査用）。 */
   tokensSpent: z.number().int().min(0).default(0),
@@ -42,9 +51,9 @@ interface StoreShape {
   unlocks: ViewUnlock[];
 }
 
-/** 自然キー（冪等 upsert 用）。 */
-export function unlockId(userId: string, propertyId: string, splatItemIndex: number): string {
-  return `${userId}:${propertyId}:${splatItemIndex}`;
+/** 自然キー（冪等 upsert 用）。sceneKey は splatItemId、旧方式呼び出しでは index の文字列表現。 */
+export function unlockId(userId: string, propertyId: string, sceneKey: string): string {
+  return `${userId}:${propertyId}:${sceneKey}`;
 }
 
 /** unlockedAt から 2 年後の ISO。 */
@@ -75,6 +84,7 @@ function unlockCols(u: ViewUnlock): Record<string, string | number | null> {
     id: u.id,
     user_id: u.userId,
     property_id: u.propertyId,
+    splat_item_id: u.splatItemId || null,
     splat_item_index: u.splatItemIndex ?? 0,
     expires_at: u.expiresAt,
     created_at: u.unlockedAt,
@@ -116,24 +126,35 @@ export const viewUnlockRepo = {
   /**
    * このユーザーが該当シーンを「まだ有効な（未失効の）」アンロック済みか。
    * expiresAt が現在より未来なら true。
+   *
+   * splatItemId（永続識別子）で主判定し、見つからなければ legacySplatItemIndex
+   * （現在の配列位置）ベースの旧キーにもフォールバックする。並び替え前に作られた
+   * 既存ユーザーのアンロックを、id 方式への移行で無効化してしまわないため。
    */
   async hasValidUnlock(
     userId: string,
     propertyId: string,
-    splatItemIndex: number,
+    splatItemId: string,
+    legacySplatItemIndex?: number,
   ): Promise<boolean> {
     const now = new Date().toISOString();
-    const id = unlockId(userId, propertyId, splatItemIndex);
+    const ids = [unlockId(userId, propertyId, splatItemId)];
+    if (legacySplatItemIndex !== undefined) {
+      ids.push(unlockId(userId, propertyId, String(legacySplatItemIndex)));
+    }
     if (canAccessLocalFs()) {
       const all = await fileReadAll();
-      const rec = all.find((u) => u.id === id);
-      return !!rec && rec.expiresAt > now;
+      return ids.some((id) => {
+        const rec = all.find((u) => u.id === id);
+        return !!rec && rec.expiresAt > now;
+      });
     }
     const db = await getD1();
     if (!db) return false;
+    const placeholders = ids.map(() => "?").join(", ");
     const row = await db
-      .prepare(`SELECT 1 FROM ${TABLE} WHERE id = ? AND expires_at > ? LIMIT 1`)
-      .bind(id, now)
+      .prepare(`SELECT 1 FROM ${TABLE} WHERE id IN (${placeholders}) AND expires_at > ? LIMIT 1`)
+      .bind(...ids, now)
       .first();
     return !!row;
   },
