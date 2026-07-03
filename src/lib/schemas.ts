@@ -472,13 +472,13 @@ export function tokenCostLabel(t: 1 | 2 | 3, locale?: string): string {
 /** Monthly recurring token budget per plan (resets on the 1st). */
 export const PLAN_TOKEN_BUDGET = {
   free: 0,       // free has no monthly budget — only the signup bonus below
-  individual: 8,
-  studio: 12,
-  team: 30,
+  individual: 24,
+  studio: 36,
+  team: 90,
 } as const;
 
 /** One-time bonus tokens granted at account creation. Currently only used by Free. */
-export const SIGNUP_BONUS_TOKENS = 1;
+export const SIGNUP_BONUS_TOKENS = 6;
 
 /** 3DGS data resale price by size class (per scan; "ドーム" is per zone/区画). */
 export const DATA_SALE_PRICE: Record<1 | 2 | 3, number> = {

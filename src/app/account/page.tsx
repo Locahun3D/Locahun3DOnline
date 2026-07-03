@@ -6,6 +6,7 @@ import RedeemGift from "@/components/account/redeem-gift";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
 
 export const metadata = { title: "プロフィール" };
 
@@ -44,9 +45,9 @@ export default async function AccountPage({
               </>
             )
           ) : en ? (
-            <>Registration complete. We&apos;ve granted you <strong className="text-accent">1 token</strong>.</>
+            <>Registration complete. We&apos;ve granted you <strong className="text-accent">{SIGNUP_BONUS_TOKENS} tokens</strong>.</>
           ) : (
-            <>登録が完了しました。<strong className="text-accent">1 トークン</strong>を付与しました。</>
+            <>登録が完了しました。<strong className="text-accent">{SIGNUP_BONUS_TOKENS} トークン</strong>を付与しました。</>
           )}
         </div>
       )}

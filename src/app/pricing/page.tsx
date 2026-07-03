@@ -22,7 +22,7 @@ const COMPARE_ROWS: Array<{
   { label: ["地図 + 距離検索", "Map + distance search"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
   { label: ["図面ダウンロード", "Floor-plan downloads"], free: ["—", "—"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
   { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
-  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["登録時 1 トークン", "1 token at signup"], individual: ["月 8 トークン", "8 tokens / mo"], studio: ["月 12 トークン", "12 tokens / mo"], team: ["月 30 トークン", "30 tokens / mo"] },
+  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["登録時 6 トークン", "6 tokens at signup"], individual: ["月 24 トークン", "24 tokens / mo"], studio: ["月 36 トークン", "36 tokens / mo"], team: ["月 90 トークン", "90 tokens / mo"] },
   { label: ["制限あり / NDA 限定シーンの閲覧", "Restricted / NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
   { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["制限なし", "No limit"], studio: ["5 端末", "5 devices"], team: ["20 端末", "20 devices"] },
   { label: ["見積もり依頼", "Quote requests"], free: ["月 1 件", "1 / mo"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
