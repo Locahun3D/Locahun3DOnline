@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/dal";
+import { getSettings } from "@/lib/site-settings";
+import { isFreePeriodActive } from "@/lib/settings-schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +13,23 @@ const ALLOWED_HOSTS = [
   "locahun3d-assets.r2.dev",
 ];
 
+/**
+ * このルート自体には認可チェックが無かった（R2側の公開アクセス無効化に
+ * 依存する二次防御だけだった）。/api/r2 の3DGS無認証DL穴を塞いだのと同じ
+ * クラスの欠陥が将来再発しないよう、/api/viewer-stream と同水準の
+ * 認証＋閲覧資格チェックをこの route 自身にも持たせる。
+ */
 export async function GET(req: NextRequest) {
+  const [user, settings] = await Promise.all([getCurrentUser(), getSettings()]);
+  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
+  if (!user && !freeAccess) {
+    return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  }
+  const hasAccess = freeAccess || (!!user && (user.role === "admin" || (!!user.plan && user.plan !== "free")));
+  if (!hasAccess) {
+    return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
+  }
+
   const target = req.nextUrl.searchParams.get("url");
   if (!target) {
     return NextResponse.json({ error: "missing url" }, { status: 400 });
