@@ -13,6 +13,20 @@ import InquiryPanel from "@/components/inquiry-panel";
 import ZoomableImage from "@/components/zoomable-image";
 
 /**
+ * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
+ * rule line, used throughout the SLATE BOARD (pattern-07) restyle.
+ */
+function Eyebrow({ en, jp }: { en: string; jp: string }) {
+  return (
+    <h2 className="flex items-center gap-4 mono text-[10.5px] tracking-[0.26em] uppercase text-muted mb-6">
+      <span className="text-accent font-medium">{en}</span>
+      <span>—— {jp}</span>
+      <span className="flex-1 h-px bg-current opacity-30" />
+    </h2>
+  );
+}
+
+/**
  * 概要テキストを描画。`【見出し】` 行を見出しとして強調し、本文は読みやすい
  * 段落に整形する（項目ごとに見出しが立ち、文字が細い問題を解消）。
  */
@@ -41,7 +55,7 @@ function renderOverview(text: string) {
         .map((s, i) => (
           <div key={i}>
             {s.heading && (
-              <h3 className="serif text-[18px] font-bold text-ink mb-2.5 flex items-center gap-2.5">
+              <h3 className="text-[16px] font-bold text-ink mb-2.5 flex items-center gap-2.5">
                 <span className="inline-block w-1 h-4 bg-accent rounded-sm shrink-0" />
                 {s.heading}
               </h3>
@@ -104,6 +118,24 @@ export default function PropertyDetailView({
       return true;
     });
 
+  // ── ギャラリー: カバー画像はヒーローに出るので除外、重複 src も除外 ──
+  const seen = new Set<string>([property.cover.src]);
+  const galleryPhotos = property.gallery.filter((p) => {
+    if (!p?.src || seen.has(p.src)) return false;
+    seen.add(p.src);
+    return true;
+  });
+
+  // ── スレート・データ行（実データのみ。無ければ行ごと省略） ──
+  const slateRows: { k: string; v: string; acc?: boolean }[] = [
+    { k: "PROD.", v: "LOCAHUN 3D" },
+    { k: "SCENE", v: property.id.toUpperCase(), acc: true },
+  ];
+  if (property.scannedAt) slateRows.push({ k: "DATE", v: property.scannedAt });
+  if (property.prefecture || property.city) {
+    slateRows.push({ k: "LOC.", v: `${property.prefecture} ${property.city}`.trim() });
+  }
+
   return (
     <article className="theme-online">
       {preview && (
@@ -124,248 +156,174 @@ export default function PropertyDetailView({
       )}
 
       {/* ══════════════════════════════════════════════════
-       *  Cinematic Hero — full-width cover + dark gradient overlay
+       *  Breadcrumb — mono uppercase tracked, accent first segment
        * ══════════════════════════════════════════════════ */}
-      <section className="relative w-full overflow-hidden" style={{ height: "clamp(340px, 40vw, 520px)" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={property.cover.src}
-          alt={property.cover.alt}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: property.cover.focus || "center" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
-
-        <div className="absolute inset-0 flex flex-col justify-end frame pb-10 sm:pb-14">
-          <nav className="mono text-[11px] tracking-[0.28em] uppercase text-white/50 mb-4 flex gap-2 items-center">
-            <Link href={lh("/properties")} className="hover:text-white/80 transition">
-              CATALOG
-            </Link>
-            <span>/</span>
-            <span>{categoryLabel(property.category, locale)}</span>
-            <span>/</span>
-            <span>{property.id.toUpperCase()}</span>
-          </nav>
-
-          <div className="mono text-[12px] tracking-[0.2em] uppercase text-white/60 mb-2">
-            {property.prefecture} {property.city}
-            {property.studioType && (
-              <span className="ml-3 text-white/40">{property.studioType}</span>
-            )}
-          </div>
-
-          <h1 className="serif text-[clamp(1.6rem,4vw,2.8rem)] font-bold leading-[1.25] text-white max-w-[900px]">
-            {property.title || (en ? "(Untitled location)" : "（無題の物件）")}
-          </h1>
-
-          <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
-            <div className="flex items-baseline gap-1">
-              <span className="serif text-3xl sm:text-4xl text-accent font-bold">
-                ¥{yen}
-              </span>
-              <span className="mono text-[11px] text-white/50">/hr</span>
-            </div>
-            {property.dailyPrice > 0 && (
-              <div className="mono text-[12px] text-white/60">
-                {en ? "Daily" : "日貸し"} ¥{property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}/day
-              </div>
-            )}
-            <div className="flex flex-wrap gap-1.5 sm:ml-auto">
-              {property.tags.map((t) => (
-                <span
-                  key={t}
-                  className="mono text-[10px] tracking-[0.12em] uppercase bg-white/15 backdrop-blur-sm text-white/80 px-2.5 py-1 rounded-sm"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Top-right actions on the hero */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 flex items-center gap-2.5">
-          {!preview && (
-            <BookmarkButton
-              propertyId={property.id}
-              initialBookmarked={bookmarked}
-              signedIn={signedIn}
-              revalidate={`/properties/${property.id}`}
-              variant="hero"
-            />
-          )}
-          <a
-            href="#inquiry"
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] tracking-[0.04em] bg-accent text-black font-bold shadow-lg hover:bg-accent/90 transition rounded-sm"
-          >
-            <span className="text-[15px] leading-none">✎</span>
-            {en ? "Request a quote" : "見積もり依頼"}
-          </a>
-        </div>
-      </section>
+      <div className="frame pt-6">
+        <nav className="mono text-[10.5px] tracking-[0.24em] uppercase text-muted flex gap-2 items-center">
+          <Link href={lh("/properties")} className="text-accent hover:opacity-75 transition font-medium">
+            CATALOG
+          </Link>
+          <span>/</span>
+          <span>{categoryLabel(property.category, locale)}</span>
+          <span>/</span>
+          <span>{property.id.toUpperCase()}</span>
+        </nav>
+      </div>
 
       {/* ══════════════════════════════════════════════════
-       *  Dashboard body
+       *  Slate hero — dark clapperboard panel (left) + cover photo (right)
        * ══════════════════════════════════════════════════ */}
-      <div className="frame pt-6 pb-16">
-        {/* ── Gallery — Airbnb 風（主1 + サムネ）。多様な幅/解像度/アスペクト比の
-             写真も object-cover でセル比率に統一トリミング。写真がカバー1枚だけ
-             ならヒーローで足りるため非表示。 ── */}
-        {(() => {
-          // カバー画像はヒーローで全幅表示済みなのでギャラリーには出さない
-          // （ヒーローとギャラリーで同じ画像が二重に出るのを防ぐ）。
-          // gallery 内の重複も src で除外する。
-          const seen = new Set<string>([property.cover.src]);
-          const photos = property.gallery.filter((p) => {
-            if (!p?.src || seen.has(p.src)) return false;
-            seen.add(p.src);
-            return true;
-          });
-          const total = photos.length;
-          if (total <= 1) return null;
-
-          // 画像1枚分。どんなアスペクト比でもセルを object-cover で埋める。
-          // focus（object-position）で「写真のどこを残すか」を画像ごとに指定可能。
-          const img = (p: { src: string; alt: string; focus?: string }) => (
-            <ZoomableImage
-              src={p.src}
-              alt={p.alt}
-              focus={p.focus}
-              className="w-full h-full object-cover"
+      <div className="frame pt-4">
+        <header className="grid lg:grid-cols-[420px_1fr] border border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.05)]">
+          {/* ── slate panel ── */}
+          <div className="bg-[#14181c] text-[#fafaf6] flex flex-col">
+            <div
+              className="h-[34px] border-b border-white/[0.16]"
+              style={{
+                background:
+                  "repeating-linear-gradient(-55deg, #fafaf6 0 26px, #14181c 26px 52px)",
+              }}
             />
-          );
-
-          // 2枚: 2カラム
-          if (total === 2) {
-            return (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 rounded-lg overflow-hidden mb-8">
-                {photos.map((p, i) => (
+            <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1">
+              <div className="mono text-[10.5px] tracking-[0.18em] uppercase text-white/55">
+                {slateRows.map((row) => (
                   <div
-                    key={i}
-                    className="aspect-[16/10] sm:aspect-auto sm:h-[clamp(280px,32vw,460px)] overflow-hidden"
+                    key={row.k}
+                    className="flex justify-between gap-3 py-2.5 border-b border-dashed border-white/[0.16]"
                   >
-                    {img(p)}
+                    <span>{row.k}</span>
+                    <b
+                      className={`font-normal text-right ${row.acc ? "text-accent" : "text-[#fafaf6]"}`}
+                    >
+                      {row.v}
+                    </b>
                   </div>
                 ))}
               </div>
-            );
-          }
 
-          // 3枚: 主1（左・2行分）+ 右2枚
-          if (total === 3) {
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-[1.5fr_1fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(300px,36vw,480px)]">
-                <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
-                  {img(photos[0])}
-                </div>
-                {photos.slice(1).map((p, i) => (
-                  <div key={i} className="aspect-[4/3] sm:aspect-auto overflow-hidden">
-                    {img(p)}
-                  </div>
+              <h1 className="text-[clamp(24px,3vw,32px)] font-bold leading-[1.34] mt-6 mb-1.5">
+                {property.title || (en ? "(Untitled location)" : "（無題の物件）")}
+              </h1>
+              <p className="text-[13px] text-white/55">
+                {property.prefecture} {property.city}
+              </p>
+
+              <div className="flex flex-wrap gap-1.5 mt-4">
+                <span className="text-[11px] font-bold px-3 py-1 bg-accent border border-accent text-[#0a2a35]">
+                  {categoryLabel(property.category, locale)}
+                </span>
+                {property.studioType && (
+                  <span className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]">
+                    {property.studioType}
+                  </span>
+                )}
+                {property.tags.slice(0, 3).map((t) => (
+                  <span
+                    key={t}
+                    className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]"
+                  >
+                    {t}
+                  </span>
                 ))}
               </div>
-            );
-          }
 
-          // 4枚以上: Airbnb 5グリッド（主1 + サムネ4スロット）。スロットが余る
-          // 場合は「すべての写真」プレースホルダで埋める（2枚目スクショの形）。
-          const grid5 = photos.slice(0, 5);
-          return (
-            <div className="grid grid-cols-2 sm:grid-cols-[1fr_0.5fr_0.5fr] sm:grid-rows-2 gap-1.5 rounded-lg overflow-hidden mb-8 h-auto sm:h-[clamp(320px,38vw,540px)]">
-              <div className="col-span-2 sm:col-span-1 sm:row-span-2 aspect-[16/10] sm:aspect-auto overflow-hidden">
-                {img(grid5[0])}
-              </div>
-              {[1, 2, 3, 4].map((idx) => (
-                <div
-                  key={idx}
-                  className="relative aspect-square sm:aspect-auto overflow-hidden"
-                >
-                  {grid5[idx] ? (
+              <div className="mt-auto pt-6">
+                <p className="mono text-[24px] mb-3.5">
+                  {property.hourlyPrice > 0 ? (
                     <>
-                      {img(grid5[idx])}
-                      {idx === 4 && total > 5 && (
-                        <button
-                          type="button"
-                          className="absolute bottom-3 right-3 bg-white/95 text-ink/80 text-[13px] font-medium px-4 py-2 rounded-md shadow-sm border border-line hover:bg-white transition"
-                        >
-                          {en ? `All photos (${total})` : `すべての写真 (${total})`}
-                        </button>
-                      )}
+                      ¥{yen}{" "}
+                      <small className="text-[11px] text-white/55 tracking-[0.16em]">/HR</small>
                     </>
                   ) : (
-                    <div className="w-full h-full bg-ink/[0.05] flex items-center justify-center">
-                      <span className="text-[13px] text-ink/45 font-medium">
-                        {en ? `All photos (${total})` : `すべての写真 (${total})`}
-                      </span>
-                    </div>
+                    <small className="text-[13px] text-white/55 tracking-[0.1em]">
+                      {en ? "Contact for pricing" : "お問い合わせください"}
+                    </small>
                   )}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* ── Description + Spec/Contact sidebar ── */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-10">
-          <div className="lg:col-span-2 space-y-6">
-            <div>{renderOverview(property.description)}</div>
-
-            {/* ── 4-column metric cards ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="border border-line rounded-md p-4">
-                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  {en ? "Area" : "面積"}
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                    {property.floorAreaSqm}
-                  </span>
-                  <span className="text-[13px] text-ink/65">㎡</span>
-                </div>
-              </div>
-
-              <div className="border border-line rounded-md p-4">
-                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  {en ? "Ceiling" : "天井高"}
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                    {property.ceilingHeightM || "—"}
-                  </span>
-                  <span className="text-[13px] text-ink/65">m</span>
-                </div>
-              </div>
-
-              <div className="border border-line rounded-md p-4">
-                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  {en ? "Capacity" : "収容"}
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                    {property.capacity}
-                  </span>
-                  <span className="text-[13px] text-ink/65">{en ? "ppl" : "名"}</span>
-                </div>
-              </div>
-
-              <div className="border border-line rounded-md p-4">
-                <div className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 mb-1.5 font-semibold">
-                  {en ? "Natural light" : "自然光"}
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="serif text-[28px] md:text-[32px] leading-none font-semibold">
-                    {property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし"}
-                  </span>
+                </p>
+                {property.dailyPrice > 0 && (
+                  <p className="mono text-[11px] text-white/50 mb-4 -mt-2">
+                    {en ? "Daily" : "日貸し"} ¥
+                    {property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}/day
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {!preview && (
+                    <BookmarkButton
+                      propertyId={property.id}
+                      initialBookmarked={bookmarked}
+                      signedIn={signedIn}
+                      revalidate={`/properties/${property.id}`}
+                      variant="hero"
+                    />
+                  )}
+                  <a
+                    href="#inquiry"
+                    className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 bg-accent border border-accent text-[#0a2a35] hover:brightness-[1.06] transition"
+                  >
+                    {en ? "Request a quote" : "見積もり依頼"}
+                  </a>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right sidebar: CTA + specs + blueprints */}
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            {/* ── 許可が必要な公共スポットの注意書き ── */}
+          {/* ── cover photo ── */}
+          <div className="relative min-h-[280px] lg:min-h-[440px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={property.cover.src}
+              alt={property.cover.alt}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: property.cover.focus || "center" }}
+            />
+            <span className="absolute bottom-3.5 right-4 z-[2] mono text-[10px] tracking-[0.22em] uppercase text-[#fafaf6] bg-[#14181c]/72 px-3 py-1.5">
+              TAKE 01 — EXT.
+            </span>
+          </div>
+        </header>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+       *  Overview + Specs — side-by-side white cards
+       * ══════════════════════════════════════════════════ */}
+      <section className="frame pt-14">
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+            <Eyebrow en="OVERVIEW" jp={en ? "Overview" : "概要"} />
+            <div className="max-w-[36em]">
+              {renderOverview(property.description) || (
+                <p className="text-[15px] text-ink/60">
+                  {en ? "No description yet." : "紹介文は準備中です。"}
+                </p>
+              )}
+            </div>
+
+            {/* 4-metric mini grid, folded into the Overview card */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7">
+              {[
+                [en ? "Area" : "面積", `${property.floorAreaSqm}`, "㎡"],
+                [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", "m"],
+                [en ? "Capacity" : "収容", `${property.capacity}`, en ? "ppl" : "名"],
+                [
+                  en ? "Natural light" : "自然光",
+                  property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",
+                  "",
+                ],
+              ].map(([label, value, unit]) => (
+                <div key={label as string} className="border border-line px-3 py-3">
+                  <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
+                    {label}
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[22px] leading-none font-bold">{value}</span>
+                    {unit && <span className="text-[12px] text-ink/60">{unit}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {property.permitRequired && (
-              <div className="rounded-lg border border-amber-400/60 bg-amber-50 px-4 py-3">
+              <div className="mt-6 border border-amber-400/60 bg-amber-50 px-4 py-3">
                 <div className="text-[11px] font-bold tracking-[0.12em] text-amber-700 mb-1">
                   {en ? "⚠ Permit required for filming" : "⚠ 撮影には許可の取得が必要です"}
                 </div>
@@ -376,104 +334,53 @@ export default function PropertyDetailView({
                 )}
               </div>
             )}
-            {/* ── CTA card (accent) ── */}
-            <div id="inquiry" className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
-              <div className="bg-accent px-5 py-4">
-                <div className="text-[11px] font-bold tracking-[0.15em] text-white/80 mb-1">
-                  {en ? "Contact" : "お問い合わせ"}
-                </div>
-                {property.contactPhone && (
-                  <a
-                    href={`tel:${property.contactPhone}`}
-                    className="flex items-center gap-2 text-white"
-                  >
-                    <span className="text-[11px] font-bold tracking-wider">TEL</span>
-                    <span className="text-[22px] font-bold tracking-wide leading-none">
-                      {property.contactPhone}
-                    </span>
-                  </a>
-                )}
-              </div>
-              <div className="bg-white px-5 py-4 space-y-3">
-                <InquiryPanel
-                  propertyId={property.id}
-                  propertyTitle={property.title}
-                  locale={locale}
-                />
-                <div className="flex items-center gap-2">
-                  {property.contactEmail && (
-                    <a
-                      href={`mailto:${property.contactEmail}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 text-[12px] text-ink/60 border border-line rounded-md py-2 hover:border-accent hover:text-accent transition"
-                    >
-                      <span>✉</span>
-                      <span>{en ? "Email" : "メール"}</span>
-                    </a>
-                  )}
-                  {property.contactWebsite && (
-                    <a
-                      href={
-                        /^https?:\/\//.test(property.contactWebsite)
-                          ? property.contactWebsite
-                          : `https://${property.contactWebsite}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 text-[12px] text-ink/60 border border-line rounded-md py-2 hover:border-accent hover:text-accent transition"
-                    >
-                      <span>↗</span>
-                      <span>HP</span>
-                    </a>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 pt-1 border-t border-line">
-                  <BookmarkButton
-                    propertyId={property.id}
-                    initialBookmarked={bookmarked}
-                    signedIn={signedIn}
-                    revalidate={`/properties/${property.id}`}
-                  />
-                </div>
-              </div>
-            </div>
+          </div>
 
-            {/* ── Specs ── */}
-            <div className="border border-line rounded-md overflow-hidden">
-              <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
-                <span className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 font-semibold">
-                  {en ? "Specs" : "スペック"}
-                </span>
-              </div>
-              <table className="w-full text-[14px]">
-                <tbody>
-                  {[
-                    [en ? "Power" : "電源", property.powerVoltage || "—"],
-                    [en ? "Parking" : "駐車場", property.parking ? (en ? "Available" : "利用可") : en ? "None" : "なし"],
-                    [en ? "Loading" : "搬入口", property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常"],
-                    [en ? "Scanned" : "スキャン日", property.scannedAt || "—"],
-                  ].map(([label, value]) => (
-                    <tr key={label} className="border-b border-line last:border-0">
-                      <td className="px-4 py-3 mono text-[11px] tracking-[0.1em] uppercase text-ink/60 font-semibold w-[100px]">
-                        {label}
-                      </td>
-                      <td className="px-4 py-3 text-[14px] text-ink/90 font-medium">{value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8 flex flex-col">
+            <Eyebrow en="SPECS" jp={en ? "Specs" : "仕様"} />
+            <table className="w-full text-[14px]">
+              <tbody>
+                {[
+                  [en ? "POWER ／ 電源" : "POWER ／ 電源", property.powerVoltage || "—"],
+                  [
+                    "PARKING ／ 駐車場",
+                    property.parking ? (en ? "Available" : "利用可") : en ? "None" : "なし",
+                  ],
+                  [
+                    "LOAD-IN ／ 搬入口",
+                    property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常",
+                  ],
+                  ["SCAN DATE ／ スキャン日", property.scannedAt || "—"],
+                ].map(([label, value], i) => (
+                  <tr key={label as string}>
+                    <th
+                      className={`text-left py-3.5 pr-2 mono text-[10px] tracking-[0.22em] uppercase text-muted font-normal w-[46%] border-b border-line ${
+                        i === 0 ? "border-t-2 border-t-ink" : ""
+                      }`}
+                    >
+                      {label}
+                    </th>
+                    <td
+                      className={`text-left py-3.5 font-bold border-b border-line ${
+                        i === 0 ? "border-t-2 border-t-ink" : ""
+                      }`}
+                    >
+                      {value}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
             {/* ── Blueprints ── */}
             {property.blueprints &&
               property.blueprints.length > 0 &&
               property.blueprints.some((b) => b.url) && (
-                <div className="border border-line rounded-md overflow-hidden">
-                  <div className="bg-ink/[0.03] px-4 py-2.5 border-b border-line">
-                    <span className="mono text-[11px] tracking-[0.14em] uppercase text-ink/60 font-semibold">
-                      {en ? "Floor plans" : "図面 / フロアプラン"}
-                    </span>
+                <div className="mt-6 pt-6 border-t border-line">
+                  <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
+                    {en ? "Floor plans" : "図面 ／ フロアプラン"}
                   </div>
-                  <div className="p-3 space-y-2">
+                  <div className="space-y-2">
                     {property.blueprints
                       .filter((b) => b.url)
                       .map((b, i) => (
@@ -483,7 +390,7 @@ export default function PropertyDetailView({
                           download
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 rounded-sm hover:border-accent hover:text-accent transition"
+                          className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition"
                         >
                           <span className="text-accent">⬇</span>
                           <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">
@@ -497,10 +404,53 @@ export default function PropertyDetailView({
                   </div>
                 </div>
               )}
-          </aside>
-        </div>
 
-        {/* ── Content sections (3DGS / Gallery / Page blocks) ── */}
+            {/* ── mobile-only CTA fallback so #inquiry / bookmark are reachable
+                 without needing to scroll all the way to Contact ── */}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+       *  Gallery — "contact sheet" band, white print frames
+       * ══════════════════════════════════════════════════ */}
+      {galleryPhotos.length > 0 && (
+        <section className="mt-14 py-14 bg-[#e9edf1] border-y border-line">
+          <div className="frame">
+            <Eyebrow en="CONTACT SHEET" jp={en ? "Gallery" : "ギャラリー"} />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {galleryPhotos.map((p, i) => (
+                <figure
+                  key={i}
+                  className="bg-white p-2 pb-7 relative shadow-[0_2px_8px_rgba(20,24,28,0.09)]"
+                  style={{
+                    transform:
+                      i % 3 === 0 ? "rotate(-0.6deg)" : i % 3 === 2 ? "rotate(0.5deg)" : undefined,
+                  }}
+                >
+                  <div className="aspect-[4/3] overflow-hidden">
+                    <ZoomableImage
+                      src={p.src}
+                      alt={p.alt}
+                      focus={p.focus}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <figcaption className="absolute bottom-2 left-2.5 right-2.5 flex justify-between mono text-[9px] tracking-[0.2em] uppercase text-muted">
+                    <span>FRAME {String(i + 1).padStart(2, "0")}</span>
+                    <span className="truncate max-w-[50%] text-right">{p.alt}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+       *  3DGS — GS-xx mono chrome around untouched ViewerGate
+       * ══════════════════════════════════════════════════ */}
+      <div className="frame pt-14">
         {property.pageBlocks && property.pageBlocks.length > 0 ? (
           <section className="mb-16">
             <StudioPageBlocks
@@ -515,112 +465,198 @@ export default function PropertyDetailView({
             />
           </section>
         ) : (
-          <>
+          <section className="mb-16">
+            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
             {/* 3DGSが複数ある時はページ幅で2つ並べる（1つなら全幅で大きく）。 */}
             <div
               className={
                 visibleSplatItems.length > 1
-                  ? "grid lg:grid-cols-2 gap-x-8 gap-y-12 mb-12"
-                  : "space-y-12 mb-12"
+                  ? "grid lg:grid-cols-2 gap-x-8 gap-y-10"
+                  : "space-y-10"
               }
             >
-            {visibleSplatItems.map(({ it: item, origIndex }) => (
-              <section key={origIndex}>
-                <div className="chapter-rule">
-                  <span className="text-ink/50">3DGS</span>
-                  <span className="text-ink/80">
-                    {item.label || "Virtual Walkthrough"}
-                  </span>
-                  <span className="flex-1 h-px bg-current opacity-25" />
-                  <span className="text-ink/50">{item.sizeMb} MB</span>
-                </div>
-                <ViewerGate
-                  splatUrl={item.splatUrl}
-                  propertyId={property.id}
-                  label={item.label || `#${origIndex + 1}`}
-                  sizeMb={item.sizeMb}
-                  previewVideoUrl={item.previewVideoUrl}
-                  tokenCost={property.tokenCost}
-                  freeAccess={freeAccess}
-                  hasSubscription={hasViewerAccess}
-                  signedIn={signedIn}
-                  alreadyUnlocked={unlockedItemIds.includes(item.id)}
-                />
-                {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
-                    出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。 */}
-                {item.forSale && item.salePrice > 0 && resolveDownloadFiles(item).length > 0 && (
-                  <DataSalePanel
+              {visibleSplatItems.map(({ it: item, origIndex }, i) => (
+                <section key={origIndex}>
+                  <div className="flex items-baseline gap-3 mb-4 mono text-[11px] tracking-[0.16em] uppercase">
+                    <span className="text-accent font-medium">
+                      GS-{String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-ink/80 normal-case tracking-[0.02em] font-sans text-[13px] font-bold">
+                      {item.label || (en ? "Virtual Walkthrough" : "3Dウォークスルー")}
+                    </span>
+                    <span className="flex-1 h-px bg-current opacity-20" />
+                    <span className="text-muted">{item.sizeMb} MB</span>
+                  </div>
+                  <ViewerGate
+                    splatUrl={item.splatUrl}
                     propertyId={property.id}
-                    propertyTitle={property.title}
-                    splatItemIndex={origIndex}
-                    itemLabel={item.label}
-                    price={item.salePrice}
-                    description={item.saleDescription}
-                    scannedAt={property.scannedAt}
-                    splatSizeMb={item.sizeMb}
-                    zipSizeMb={property.zipSizeMb}
-                    splatItemCount={property.splatItems.length}
-                    tokenCost={property.tokenCost as 1 | 2 | 3}
-                    downloadFileFormat={item.downloadFileFormat}
-                    downloadFileSizeMb={item.downloadFileSizeMb}
-                    pointCount={item.pointCount}
-                    captureDevice={item.captureDevice}
-                    license={item.license}
-                    alreadyPurchased={purchasedItemIds.includes(item.id)}
+                    label={item.label || `#${origIndex + 1}`}
+                    sizeMb={item.sizeMb}
+                    previewVideoUrl={item.previewVideoUrl}
+                    tokenCost={property.tokenCost}
+                    freeAccess={freeAccess}
+                    hasSubscription={hasViewerAccess}
+                    signedIn={signedIn}
+                    alreadyUnlocked={unlockedItemIds.includes(item.id)}
                   />
-                )}
-              </section>
-            ))}
+                  {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
+                      出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。 */}
+                  {item.forSale && item.salePrice > 0 && resolveDownloadFiles(item).length > 0 && (
+                    <DataSalePanel
+                      propertyId={property.id}
+                      propertyTitle={property.title}
+                      splatItemIndex={origIndex}
+                      itemLabel={item.label}
+                      price={item.salePrice}
+                      description={item.saleDescription}
+                      scannedAt={property.scannedAt}
+                      splatSizeMb={item.sizeMb}
+                      zipSizeMb={property.zipSizeMb}
+                      splatItemCount={property.splatItems.length}
+                      tokenCost={property.tokenCost as 1 | 2 | 3}
+                      downloadFileFormat={item.downloadFileFormat}
+                      downloadFileSizeMb={item.downloadFileSizeMb}
+                      pointCount={item.pointCount}
+                      captureDevice={item.captureDevice}
+                      license={item.license}
+                      alreadyPurchased={purchasedItemIds.includes(item.id)}
+                    />
+                  )}
+                </section>
+              ))}
             </div>
-          </>
+          </section>
         )}
 
-        {/* 問い合わせフォームは右サイドの「お問い合わせ」パネル内に統合済み
-            （InquiryPanel）。重複する全幅セクションは撤去した。 */}
+        {/* ══════════════════════════════════════════════════
+         *  Contact — white card, mono-keyed rows + stacked CTAs
+         * ══════════════════════════════════════════════════ */}
+        <section id="inquiry" className="mb-14">
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
+            <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
+            <div className="grid lg:grid-cols-2 gap-10 items-start">
+              <div className="text-[14px]">
+                {property.contactPhone && (
+                  <div className="flex gap-5 py-3.5 border-b border-line">
+                    <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                      TEL
+                    </span>
+                    <a
+                      href={`tel:${property.contactPhone}`}
+                      className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition"
+                    >
+                      {property.contactPhone}
+                    </a>
+                  </div>
+                )}
+                {property.contactEmail && (
+                  <div className="flex gap-5 py-3.5 border-b border-line">
+                    <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                      MAIL
+                    </span>
+                    <a
+                      href={`mailto:${property.contactEmail}`}
+                      className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                    >
+                      {property.contactEmail}
+                    </a>
+                  </div>
+                )}
+                {property.contactWebsite && (
+                  <div className="flex gap-5 py-3.5 border-b border-line last:border-0">
+                    <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                      HP
+                    </span>
+                    <a
+                      href={
+                        /^https?:\/\//.test(property.contactWebsite)
+                          ? property.contactWebsite
+                          : `https://${property.contactWebsite}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                    >
+                      {property.contactWebsite}
+                    </a>
+                  </div>
+                )}
+                {!property.contactPhone && !property.contactEmail && !property.contactWebsite && (
+                  <p className="text-ink/50 text-[13px] py-3">
+                    {en
+                      ? "Use the inquiry form to get in touch."
+                      : "フォームからお問い合わせください。"}
+                  </p>
+                )}
+              </div>
 
-        {/* ── Related studios ── */}
-        <section className="mt-8">
-          <div className="chapter-rule">
-            <span className="text-ink/50">RELATED</span>
-            <span className="text-ink/80">{en ? "Similar studios" : "類似スタジオ"}</span>
-            <span className="flex-1 h-px bg-current opacity-25" />
+              <div className="space-y-2.5">
+                <InquiryPanel
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                  locale={locale}
+                />
+                <div className="[&>button]:w-full [&>button]:justify-center">
+                  <BookmarkButton
+                    propertyId={property.id}
+                    initialBookmarked={bookmarked}
+                    signedIn={signedIn}
+                    revalidate={`/properties/${property.id}`}
+                  />
+                </div>
+                <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
+                  {en ? "RESPONSE WITHIN 1 BUSINESS DAY" : "RESPONSE WITHIN 1 BUSINESS DAY"}
+                </p>
+              </div>
+            </div>
           </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════
+         *  Related studios
+         * ══════════════════════════════════════════════════ */}
+        <section className="mb-20">
+          <Eyebrow en="RELATED" jp={en ? "Similar studios" : "類似スタジオ"} />
           {others.length > 0 ? (
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid gap-4">
               {others.map((p) => (
                 <Link
                   key={p.id}
                   href={lh(`/properties/${p.id}`)}
-                  className="group block border border-line rounded-md overflow-hidden hover:border-accent transition"
+                  className="group grid grid-cols-[120px_1fr_auto] sm:grid-cols-[170px_1fr_auto] gap-4 sm:gap-6 items-center border border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-4 py-4 sm:px-6 hover:border-accent transition max-w-[720px]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={p.cover.src}
                     alt={p.cover.alt}
-                    className="w-full aspect-[16/10] object-cover"
+                    className="w-full aspect-[2.39/1] object-cover"
                   />
-                  <div className="p-4 space-y-1.5">
-                    <div className="mono text-[10px] tracking-[0.22em] uppercase text-ink/45 font-medium">
-                      {p.area} · {p.city}
-                    </div>
-                    <div className="serif text-[15px] text-ink/85 group-hover:text-accent transition leading-snug">
+                  <div>
+                    <h3 className="font-bold text-[15px] leading-snug group-hover:text-accent transition">
                       {p.title}
-                    </div>
-                    <div className="flex items-center gap-3 text-[12px] text-ink/50 mt-2">
+                    </h3>
+                    <p className="text-[12px] text-muted mt-0.5">
+                      {p.area} · {p.city}
+                    </p>
+                    <div className="mono text-[10.5px] tracking-[0.12em] text-muted mt-1.5 flex gap-3.5">
                       {p.floorAreaSqm > 0 && <span>{p.floorAreaSqm} m²</span>}
-                      {p.ceilingHeightM > 0 && <span>{en ? "Ceiling" : "天井"} {p.ceilingHeightM}m</span>}
-                      {p.hourlyPrice > 0 && (
-                        <span className="ml-auto font-medium text-ink/70">
-                          ¥{p.hourlyPrice.toLocaleString()}/h
+                      {p.ceilingHeightM > 0 && (
+                        <span>
+                          {en ? "Ceiling" : "天井"} {p.ceilingHeightM}m
                         </span>
                       )}
                     </div>
                   </div>
+                  {p.hourlyPrice > 0 && (
+                    <span className="mono text-[16px] text-accent whitespace-nowrap">
+                      ¥{p.hourlyPrice.toLocaleString()}/h
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="border border-dashed border-line rounded-md py-16 text-center">
+            <div className="border border-dashed border-line py-16 text-center bg-white">
               <p className="text-ink/40 text-[14px]">
                 {en ? "Similar studios are coming soon." : "現在、類似スタジオの掲載準備中です"}
               </p>
