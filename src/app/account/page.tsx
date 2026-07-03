@@ -184,6 +184,31 @@ export default async function AccountPage({
               )}
             </div>
           )}
+
+          {user.role !== "production" && user.role !== "admin" && (
+            <div className="pt-5 border-t border-line">
+              <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
+                {en ? "Team plan / NDA viewing" : "Teamプラン・NDA閲覧"}
+              </div>
+              <p className="text-[12px] text-muted leading-[1.8] mb-3">
+                {en
+                  ? "Team's NDA / restricted-scene viewing is limited to Production accounts. Apply to switch your account type — reviewed by our team."
+                  : "TeamプランのNDA / 制限あり閲覧は「制作会社」アカウント限定です。申請するとアカウント種別を切り替えられます（運営が確認）。"}
+              </p>
+              {user.status === "pending" ? (
+                <span className="mono text-[10px] tracking-[0.2em] uppercase border border-amber-400/40 text-amber-400 px-4 py-2 inline-block">
+                  {en ? "Application under review" : "審査中です"}
+                </span>
+              ) : (
+                <Link
+                  href={lh("/account/upgrade")}
+                  className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-4 py-2 hover:border-accent hover:text-accent transition inline-block"
+                >
+                  {en ? "Apply for a Production account" : "制作会社アカウントを申請"}
+                </Link>
+              )}
+            </div>
+          )}
         </section>
 
         <aside className="space-y-5">

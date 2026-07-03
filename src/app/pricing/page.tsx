@@ -1,6 +1,8 @@
+import Link from "next/link";
 import PlanCards from "@/components/pricing/plan-cards";
 import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export const metadata = {
   title: "料金プラン",
@@ -40,6 +42,8 @@ export default async function PricingPage({
   const en = locale === "en";
   const c = (cell: Cell) => cell[en ? 1 : 0];
   const { checkout } = await searchParams;
+  const lh = (href: string) => localizedHref(href, locale);
+  const canApplyForProduction = !!user && user.role !== "production" && user.role !== "admin";
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -51,9 +55,19 @@ export default async function PricingPage({
 
       {checkout === "team_role_required" && (
         <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
-          {en
-            ? "Team is only available to “Production” accounts (NDA-signed). Your current account type can't unlock its restricted/NDA-only viewing benefit, so we didn't process the subscription."
-            : "Team プランは「制作会社（NDA締結）」アカウント限定です。現在のアカウント種別では制限あり/NDA限定シーンの閲覧特典を得られないため、お申し込みを処理しませんでした。"}
+          <p>
+            {en
+              ? "Team is only available to “Production” accounts (NDA-signed). Your current account type can't unlock its restricted/NDA-only viewing benefit, so we didn't process the subscription."
+              : "Team プランは「制作会社（NDA締結）」アカウント限定です。現在のアカウント種別では制限あり/NDA限定シーンの閲覧特典を得られないため、お申し込みを処理しませんでした。"}
+          </p>
+          {canApplyForProduction && (
+            <Link
+              href={lh("/account/upgrade")}
+              className="inline-block mt-2 mono text-[11px] tracking-[0.2em] uppercase text-accent underline hover:no-underline"
+            >
+              {en ? "Apply for a Production account →" : "制作会社アカウントを申請する →"}
+            </Link>
+          )}
         </div>
       )}
 

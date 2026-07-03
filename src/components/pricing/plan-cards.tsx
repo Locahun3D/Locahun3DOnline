@@ -230,13 +230,16 @@ export default function PlanCards({
                   // Team の NDA/制限あり閲覧特典は role==="production" のアカウント
                   // にしか効かない（account-schema.ts）。他ロールに購入させても
                   // 課金だけ発生して特典を得られないため、ここで先に案内する。
-                  if (planKey === "team" && signedIn && currentRole && currentRole !== "production") {
+                  if (planKey === "team" && signedIn && currentRole && currentRole !== "production" && currentRole !== "admin") {
                     return (
-                      <div className="text-center text-[11px] text-muted leading-[1.6] border border-line px-3 py-2.5">
+                      <Link
+                        href={lh("/account/upgrade")}
+                        className="block text-center text-[11px] text-muted leading-[1.6] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition"
+                      >
                         {locale === "en"
-                          ? "Production accounts only"
-                          : "制作会社アカウント限定"}
-                      </div>
+                          ? "Production accounts only — apply →"
+                          : "制作会社アカウント限定 — 申請する →"}
+                      </Link>
                     );
                   }
                   if (signedIn) {

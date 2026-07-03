@@ -63,3 +63,51 @@ export async function acceptNdaAction(): Promise<void> {
   await userRepo.upsert({ ...u, ndaAcceptedAt: new Date().toISOString() });
   redirect("/account?nda=1");
 }
+
+/**
+ * 制作会社（production）アカウントへの昇格申請。
+ *
+ * onboarding は初回サインイン時の一回きりのフローなので、個人/スタジオとして
+ * 登録済みのユーザーが後から Team プラン・NDA限定閲覧を必要とする場合、
+ * このアクションが唯一の自己申請経路になる。production は requiresApproval が
+ * 常に true なので、承認されるまでは status="pending"（既存の onboarding 時
+ * pending と同じ扱い＝サインインは可能・プロ機能は未解放）。
+ * canViewBackyard 等はいずれも status==="active" を要求するため、role を
+ * 先に "production" へ切り替えても承認前に閲覧範囲が広がることはない。
+ */
+export async function requestProductionUpgradeAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const current = await getCurrentUser();
+  if (!current) redirect("/sign-in");
+  if (current.role === "production" || current.role === "admin") {
+    redirect("/account");
+  }
+  if (current.status === "pending") {
+    redirect("/account?upgrade=pending");
+  }
+
+  const company = String(formData.get("company") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const nda = formData.get("nda") === "on" || formData.get("nda") === "true";
+  if (!company) {
+    return { errors: { company: ["制作会社名を入力してください"] } };
+  }
+  if (!nda) {
+    return { errors: { nda: ["NDA への同意が必要です"] } };
+  }
+
+  const u = await userRepo.get(current.id);
+  if (!u) redirect("/sign-in");
+  await userRepo.upsert({
+    ...u,
+    role: "production",
+    status: "pending",
+    company,
+    phone: phone || u.phone,
+    ndaAcceptedAt: new Date().toISOString(),
+  });
+
+  redirect("/account?welcome=pending");
+}
