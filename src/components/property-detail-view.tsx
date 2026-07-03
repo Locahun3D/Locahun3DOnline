@@ -212,19 +212,33 @@ export default function PropertyDetailView({
                 <span className="text-[11px] font-bold px-3 py-1 bg-accent border border-accent text-[#0a2a35]">
                   {categoryLabel(property.category, locale)}
                 </span>
-                {property.studioType && (
-                  <span className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]">
-                    {property.studioType}
-                  </span>
-                )}
-                {property.tags.slice(0, 3).map((t) => (
-                  <span
-                    key={t}
-                    className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]"
-                  >
-                    {t}
-                  </span>
-                ))}
+                {/* カテゴリ・種別・タグは実データ上で重複しがち（例: カテゴリ=学校、
+                    タグにも「学校」）なので、既に表示したラベルと同名のものは出さない。 */}
+                {(() => {
+                  const shown = new Set([
+                    categoryLabel(property.category, locale),
+                    categoryLabel(property.category, "ja"),
+                  ]);
+                  const rest: string[] = [];
+                  if (property.studioType && !shown.has(property.studioType)) {
+                    shown.add(property.studioType);
+                    rest.push(property.studioType);
+                  }
+                  for (const t of property.tags) {
+                    if (rest.length >= 4) break;
+                    if (shown.has(t)) continue;
+                    shown.add(t);
+                    rest.push(t);
+                  }
+                  return rest.map((t) => (
+                    <span
+                      key={t}
+                      className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]"
+                    >
+                      {t}
+                    </span>
+                  ));
+                })()}
               </div>
 
               <div className="mt-auto pt-6">
