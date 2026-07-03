@@ -59,6 +59,7 @@ async function classifyBucket(): Promise<{
   referenced: R2ObjInfo[];
   legacy: R2ObjInfo[];
   orphans: R2ObjInfo[];
+  keyOwners: Map<string, string[]>;
 } | null> {
   const bucket = await getR2Bucket();
   if (!bucket) return null;
@@ -91,20 +92,33 @@ async function classifyBucket(): Promise<{
   ]);
 
   const referencedKeys = new Set<string>();
+  // どの物件（複数可）がこのキーを参照しているか。未使用のライブラリ資産は
+  // "(asset library, unattached)" として別枠にする。
+  const keyOwners = new Map<string, string[]>();
+  const addOwner = (key: string, owner: string) => {
+    const list = keyOwners.get(key) ?? [];
+    if (!list.includes(owner)) list.push(owner);
+    keyOwners.set(key, list);
+  };
   for (const p of properties) {
     const urls = new Set<string>();
     collectUrls(p, urls);
     for (const u of urls) {
       const k = toR2Key(u);
-      if (k) referencedKeys.add(k);
+      if (k) {
+        referencedKeys.add(k);
+        addOwner(k, p.title || p.id);
+      }
     }
   }
   for (const a of assets) {
-    if (a.r2Key) referencedKeys.add(a.r2Key);
-    const k = toR2Key(a.url);
-    if (k) referencedKeys.add(k);
-    const tk = toR2Key(a.thumbnailUrl);
-    if (tk) referencedKeys.add(tk);
+    const keys = [a.r2Key, toR2Key(a.url), toR2Key(a.thumbnailUrl)].filter(
+      (k): k is string => !!k,
+    );
+    for (const k of keys) {
+      referencedKeys.add(k);
+      if (!keyOwners.has(k)) addOwner(k, "(asset library, unattached)");
+    }
   }
 
   // 3) 旧本番ストア（D1移行前のR2-JSONシード元）は現在の参照グラフに乗らないが、
@@ -125,7 +139,25 @@ async function classifyBucket(): Promise<{
     }
   }
 
-  return { objects, referenced, legacy, orphans };
+  return { objects, referenced, legacy, orphans, keyOwners };
+}
+
+/** 参照済みオブジェクトを「持ち主（物件タイトル / 未紐付ライブラリ資産）」別に集計。 */
+function byOwner(arr: R2ObjInfo[], keyOwners: Map<string, string[]>) {
+  const map = new Map<string, { count: number; bytes: number; sample: R2ObjInfo[] }>();
+  for (const o of arr) {
+    const owners = keyOwners.get(o.key) ?? ["(unknown)"];
+    for (const owner of owners) {
+      const e = map.get(owner) ?? { count: 0, bytes: 0, sample: [] };
+      e.count++;
+      e.bytes += o.size;
+      if (e.sample.length < 8) e.sample.push(o);
+      map.set(owner, e);
+    }
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[1].bytes - a[1].bytes)
+    .map(([owner, e]) => ({ owner, ...e }));
 }
 
 const sum = (arr: R2ObjInfo[]) => arr.reduce((s, o) => s + o.size, 0);
@@ -165,6 +197,7 @@ export async function GET() {
       orphanCount: c.orphans.length,
       orphanBytes: sum(c.orphans),
     },
+    referencedByOwner: byOwner(c.referenced, c.keyOwners),
     orphansByPrefix: byPrefix(c.orphans),
     legacyByPrefix: byPrefix(c.legacy),
   });
