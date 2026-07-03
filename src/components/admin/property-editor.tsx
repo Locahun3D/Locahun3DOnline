@@ -68,6 +68,13 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiTagsNote, setAiTagsNote] = useState<string | null>(null);
+  // タイムスタンプは new Date(...).getHours() 等でローカル(JST)整形するが、
+  // SSR は Cloudflare Workers 上で UTC 実行されるため、サーバは UTC・クライアントは
+  // JST で異なるテキストを描画し React #418（hydration text mismatch）を起こす。
+  // mounted は SSR/初回クライアント描画とも false（＝同一テキスト）で、マウント後に
+  // true へ切り替えてローカル時刻を出す。これで初期HTMLが一致し hydration が成立する。
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const capture = usePreviewCapture();
 
   const form = useForm<Property>({
@@ -323,19 +330,18 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(savedAt || watch("updatedAt")) && (
+            {/* mounted 前は空文字（SSR/初回クライアントとも同一）。マウント後に
+                ローカル(JST)時刻を出す。savedAt/updatedAt は共にローカル整形のため
+                SSR(UTC)と食い違い hydration mismatch を起こすので mounted でゲート。 */}
+            {mounted && (savedAt || watch("updatedAt")) && (
               <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">
                 {savedAt
                   ? // ISO 文字列を slice すると UTC 時刻になり日本では9時間ズレる。
                     // 必ずローカル（JST）で整形する。
                     `Saved ${new Date(savedAt).toLocaleTimeString("ja-JP", { hour12: false })}`
                   : (() => {
-                      const dt = watch("updatedAt");
-                      if (!dt) return "";
-                      try {
-                        const d = new Date(dt);
-                        return `Updated ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                      } catch { return ""; }
+                      const s = fmtLocalDateTime(watch("updatedAt"));
+                      return s ? `Updated ${s}` : "";
                     })()
                 }
               </span>
@@ -1530,16 +1536,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </Field>
                   <Field label="最終更新">
                     <div className={`${inputClass} bg-[#1a1a1a] cursor-default`}>
-                      {(() => {
-                        const dt = watch("splatDataUpdatedAt");
-                        if (!dt) return "—";
-                        try {
-                          const d = new Date(dt);
-                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                        } catch {
-                          return dt;
-                        }
-                      })()}
+                      {mounted ? (fmtLocalDateTime(watch("splatDataUpdatedAt")) || "—") : "—"}
                     </div>
                   </Field>
                 </div>
@@ -1598,25 +1595,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[12px]">
                     <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">作成</dt>
                     <dd className="mono text-[11px]">
-                      {(() => {
-                        const dt = watch("createdAt");
-                        if (!dt) return "—";
-                        try {
-                          const d = new Date(dt);
-                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                        } catch { return dt; }
-                      })()}
+                      {mounted ? (fmtLocalDateTime(watch("createdAt")) || "—") : "—"}
                     </dd>
                     <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50">最終更新</dt>
                     <dd className="mono text-[11px]">
-                      {(() => {
-                        const dt = watch("updatedAt");
-                        if (!dt) return "—";
-                        try {
-                          const d = new Date(dt);
-                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                        } catch { return dt; }
-                      })()}
+                      {mounted ? (fmtLocalDateTime(watch("updatedAt")) || "—") : "—"}
                     </dd>
                   </dl>
                 </div>
@@ -2291,6 +2274,20 @@ function SalePriceInput({
       )}
     </div>
   );
+}
+
+// ISO文字列をローカル(JST)の "YYYY-MM-DD HH:mm" に整形する。
+// getHours() 等はローカルTZ依存なので、必ずクライアント側マウント後にのみ呼ぶこと
+// （SSRのUTC結果と食い違うと hydration mismatch=React #418 になる）。
+function fmtLocalDateTime(dt: string | undefined | null): string {
+  if (!dt) return "";
+  try {
+    const d = new Date(dt);
+    if (Number.isNaN(d.getTime())) return String(dt);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  } catch {
+    return String(dt);
+  }
 }
 
 function parseCoordsFromInput(input: string): { lat: number; lng: number } | null {
