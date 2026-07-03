@@ -243,6 +243,11 @@ export const propertySchema = z.object({
   contactPhone: z.string().max(40).default(""),
   contactEmail: z.string().max(120).default(""),
 
+  // 2.55 Permit-required public spot (例: スクランブル交差点など、施設所有者への
+  // 通常の問い合わせ先が存在せず、撮影に道路使用許可等の別手続きが必要な場所)
+  permitRequired: z.boolean().default(false),
+  permitNotes: z.string().max(1000).default(""),
+
   // 2.6 Blueprints / floor plans
   blueprints: z.array(z.object({
     label: z.string().max(60).default(""),

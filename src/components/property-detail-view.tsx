@@ -354,6 +354,19 @@ export default function PropertyDetailView({
 
           {/* Right sidebar: CTA + specs + blueprints */}
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            {/* ── 許可が必要な公共スポットの注意書き ── */}
+            {property.permitRequired && (
+              <div className="rounded-lg border border-amber-400/60 bg-amber-50 px-4 py-3">
+                <div className="text-[11px] font-bold tracking-[0.12em] text-amber-700 mb-1">
+                  {en ? "⚠ Permit required for filming" : "⚠ 撮影には許可の取得が必要です"}
+                </div>
+                {property.permitNotes && (
+                  <p className="text-[12px] text-amber-900/90 leading-relaxed whitespace-pre-wrap">
+                    {property.permitNotes}
+                  </p>
+                )}
+              </div>
+            )}
             {/* ── CTA card (accent) ── */}
             <div id="inquiry" className="rounded-lg overflow-hidden shadow-sm border border-accent/20">
               <div className="bg-accent px-5 py-4">

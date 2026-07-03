@@ -585,10 +585,45 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 </button>
               </Field>
 
+              {/* ── 許可が必要な公共スポット ── */}
+              <div className="border-t border-line pt-5 mt-4">
+                <label className="flex items-center gap-3 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    {...register("permitRequired")}
+                    className="w-4 h-4 accent-accent"
+                  />
+                  <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-70">
+                    施設所有者への問い合わせ不要（道路使用許可等が必要な公共スポット）
+                  </span>
+                </label>
+                {watch("permitRequired") && (
+                  <div className="pl-7">
+                    <Field
+                      label="許可・注意事項"
+                      hint="例: スクランブル交差点など。道路使用許可の申請先・条件・注意点を記入"
+                    >
+                      <textarea
+                        {...register("permitNotes")}
+                        className={`${inputClass} resize-y min-h-[80px]`}
+                        rows={3}
+                        maxLength={1000}
+                        placeholder="例: 撮影には所轄警察署への道路使用許可申請が必要です。詳細はお問い合わせください。"
+                      />
+                    </Field>
+                  </div>
+                )}
+              </div>
+
               {/* ── 連絡先 ── */}
               <div className="border-t border-line pt-5 mt-4">
                 <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
                   スタジオ連絡先
+                  {watch("permitRequired") && (
+                    <span className="normal-case tracking-normal opacity-60">
+                      {" "}（任意。公共スポットのため空欄でも公開できます）
+                    </span>
+                  )}
                 </div>
                 <div className="grid md:grid-cols-3 gap-5">
                   <Field label="HP / ウェブサイト" hint="https:// から入力">
