@@ -36,18 +36,25 @@ export function isHoneypotTripped(value: FormDataEntryValue | null): boolean {
 
 export type TimingVerdict = "ok" | "too-fast" | "stale";
 
+/** 端末とサーバの時計ずれの許容幅。これを超える負の経過は「粗大なずれ」とみなし
+ *  fail-open（誤検知回避）。この幅の中の負値は「送信が描画より前＝bot」として扱う。 */
+const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
+
 /**
- * 時間ガード。フォーム描画時刻から現在までの経過で判定する。
+ * 時間ガード。フォーム描画時刻(_rt, 端末クロック)から現在(サーバクロック)までの
+ * 経過で判定する。端末とサーバの時計はずれ得るため、小さな負値も「速すぎ」に含める
+ * （描画時刻より前に届く送信は人間には不可能＝bot）。粗大な負のずれのみ通す。
  * - 値が無い/壊れている場合は "ok"（旧クライアント互換。ガードは他の層に委ねる）。
- * - 速すぎ → "too-fast"（bot 扱い、静かに成功）。
+ * - 速すぎ / 描画前 → "too-fast"（bot 扱い、静かに成功）。
  * - 古すぎ → "stale"（リロードを促すエラー）。
  */
 export function checkTiming(renderedAtRaw: FormDataEntryValue | null): TimingVerdict {
   const renderedAt = Number(renderedAtRaw);
   if (!Number.isFinite(renderedAt) || renderedAt <= 0) return "ok";
   const elapsed = Date.now() - renderedAt;
-  // 未来時刻（時計ずれ/改ざん）は判定不能として通す。
-  if (elapsed < 0) return "ok";
+  // 粗大な時計ずれ（端末が数分以上進んでいる等）は判定不能として通す。
+  if (elapsed < -CLOCK_SKEW_TOLERANCE_MS) return "ok";
+  // 小さな負値〜MIN_FILL_MS 未満は「速すぎ／描画前」= bot。
   if (elapsed < MIN_FILL_MS) return "too-fast";
   if (elapsed > MAX_FORM_AGE_MS) return "stale";
   return "ok";

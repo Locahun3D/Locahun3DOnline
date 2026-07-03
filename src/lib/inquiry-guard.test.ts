@@ -35,9 +35,15 @@ describe("checkTiming", () => {
     const twoDaysAgo = String(Date.now() - 2 * 24 * 60 * 60 * 1000);
     expect(checkTiming(twoDaysAgo)).toBe("stale");
   });
-  it("passes future timestamps (clock skew) rather than false-flagging", () => {
-    const future = String(Date.now() + 5_000);
-    expect(checkTiming(future)).toBe("ok");
+  it("flags small client-ahead skew (submit before render) as too-fast, not ok", () => {
+    // Real production case: client clock ~1s ahead of server -> elapsed slightly
+    // negative for an instant bot POST. Must NOT slip through as ok.
+    const clientAhead = String(Date.now() + 1_000);
+    expect(checkTiming(clientAhead)).toBe("too-fast");
+  });
+  it("fails open only for gross clock skew (client minutes ahead)", () => {
+    const grosslyAhead = String(Date.now() + 10 * 60 * 1000);
+    expect(checkTiming(grosslyAhead)).toBe("ok");
   });
 });
 
