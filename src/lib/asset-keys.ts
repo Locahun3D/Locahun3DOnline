@@ -46,6 +46,25 @@ export function buildPublicUrl(r2Key: string, _publicBase?: string): string {
   return `/api/r2/${r2Key}`;
 }
 
+/**
+ * 保存済みURL（公開r2.dev絶対URL / 相対 /uploads / /api/r2/... 等）から
+ * R2オブジェクトキーを導く。buildPublicUrl の逆変換。複数箇所（viewer-asset、
+ * purchase download、r2-audit）で個別実装されていたのを共通化。
+ */
+export function toR2Key(url: string): string | null {
+  if (!url) return null;
+  let path = url;
+  if (/^https?:\/\//.test(url)) {
+    try {
+      path = new URL(url).pathname;
+    } catch {
+      return null;
+    }
+  }
+  path = path.replace(/^\/+/, "").replace(/^api\/r2\//, "");
+  return path || null;
+}
+
 export type ValidateResult =
   | { ok: true }
   | { ok: false; status: number; error: string; message: string };

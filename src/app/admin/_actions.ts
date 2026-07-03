@@ -8,6 +8,7 @@ import { userRepo } from "@/lib/users";
 import { purchaseRepo } from "@/lib/purchases";
 import { inquiryRepo } from "@/lib/inquiries";
 import { deleteR2Object, getUploadMode } from "@/lib/uploads";
+import { toR2Key } from "@/lib/asset-keys";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
 import {
   propertySchema,
@@ -24,6 +25,107 @@ async function assertPropertyAccess(propertyId: string) {
   const prop = await repo.get(propertyId);
   if (prop && (prop.ownerId === user.id || linked.includes(propertyId))) return user;
   throw new Error("forbidden");
+}
+
+/** 物件オブジェクト内の url/src っぽい全フィールドの値を再帰的に集める（重複除去）。 */
+function collectPropertyFileUrls(p: Property): string[] {
+  const urls = new Set<string>();
+  const walk = (obj: unknown) => {
+    if (!obj || typeof obj !== "object") return;
+    if (Array.isArray(obj)) {
+      obj.forEach(walk);
+      return;
+    }
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (typeof v === "string" && /url|src/i.test(k) && v) urls.add(v);
+      else if (v && typeof v === "object") walk(v);
+    }
+  };
+  walk(p);
+  return [...urls];
+}
+
+/**
+ * このURLが「全物件の保存済み最新状態」で他に何件、参照されているか数える
+ * （excludePropertyId を渡すとその物件自体はカウントから除外）。
+ *
+ * アセットライブラリは複数物件・同一物件内の複数フィールド（例: カバーと
+ * ギャラリーで同じ写真を使い回す）から参照される前提の共有リソースなので、
+ * 「差し替え/削除しようとしている箇所以外にまだ使われていないか」を必ず
+ * 確認してから実体を消す。確認せず消すと、他物件・他フィールドの画像が
+ * 突然壊れる事故になる。
+ */
+async function countOtherUrlUsages(url: string, excludePropertyId?: string): Promise<number> {
+  const props = await repo.list();
+  let count = 0;
+  for (const p of props) {
+    if (p.id === excludePropertyId) continue;
+    if (collectPropertyFileUrls(p).includes(url)) count++;
+  }
+  return count;
+}
+
+/**
+ * URLに対応する実体ファイルをベストエフォートで削除する。アセットライブラリに
+ * 一致レコードがあれば assetRepo.remove（実体+メタデータ）、無ければ（旧来の
+ * 手動URL等）直接R2削除を試みる。失敗しても呼び出し元の処理は止めない
+ * （差し替え/保存自体をファイル削除の失敗で失敗させない）。
+ */
+async function deleteFileAsset(url: string, assetsByUrl?: Map<string, { id: string }>): Promise<void> {
+  const byUrl = assetsByUrl ?? new Map((await assetRepo.list()).map((a) => [a.url, a] as const));
+  const match = byUrl.get(url);
+  if (match) {
+    await assetRepo.remove(match.id);
+    return;
+  }
+  if ((await getUploadMode()) === "r2") {
+    const key = toR2Key(url);
+    if (key) {
+      try {
+        await deleteR2Object(key);
+      } catch (e) {
+        console.error("[deleteFileAsset] direct R2 delete failed", url, e);
+      }
+    }
+  }
+}
+
+/**
+ * 物件エディターで1件のファイルを差し替え/削除したとき、他のどこからも
+ * 参照されていなければ古い実体を消す。物件エディター配下（差し替えボタン等）
+ * から呼ばれるので、保存と同じ assertPropertyAccess（admin または所有スタジオ）
+ * で権限を揃える。
+ *
+ * oldUrl は呼び出し時点でまだフォームが未保存の「差し替え対象そのフィールド」
+ * にも一致し得る（D1の最新保存値がまだ古いURLのまま）。そのため物件自体は
+ * 除外せず数え、合計参照数が1（＝この差し替え対象フィールド自身のみ）以下
+ * なら安全に削除する。
+ */
+export async function cleanupReplacedFileAction(
+  propertyId: string,
+  oldUrl: string,
+): Promise<void> {
+  await assertPropertyAccess(propertyId);
+  if (!oldUrl) return;
+  const usages = await countOtherUrlUsages(oldUrl);
+  if (usages > 1) return; // 他のフィールド/物件でまだ使用中
+  await deleteFileAsset(oldUrl);
+}
+
+/**
+ * 物件削除時、その物件が参照する全ファイル（splat/画像/DL等）のうち、
+ * 他のどの物件からも参照されていないものだけを一緒に消す。
+ */
+async function cleanupPropertyFiles(p: Property): Promise<void> {
+  const urls = collectPropertyFileUrls(p);
+  if (urls.length === 0) return;
+  const assetsByUrl = new Map((await assetRepo.list()).map((a) => [a.url, a] as const));
+  for (const url of urls) {
+    // eslint-disable-next-line no-await-in-loop
+    const usedElsewhere = await countOtherUrlUsages(url, p.id);
+    // eslint-disable-next-line no-await-in-loop
+    if (usedElsewhere === 0) await deleteFileAsset(url, assetsByUrl);
+  }
 }
 
 /**
@@ -187,6 +289,8 @@ export async function archiveAction(id: string) {
 
 export async function deleteAction(id: string) {
   await requireAdmin();
+  const existing = await repo.get(id);
+  if (existing) await cleanupPropertyFiles(existing);
   await repo.remove(id);
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
@@ -227,7 +331,14 @@ export async function bulkSetStatusAction(
 /** 一括: 選択した物件をまとめて削除。 */
 export async function bulkDeleteAction(ids: string[]) {
   await requireAdmin();
-  for (const id of ids) await repo.remove(id);
+  for (const id of ids) {
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await repo.get(id);
+    // eslint-disable-next-line no-await-in-loop
+    if (existing) await cleanupPropertyFiles(existing);
+    // eslint-disable-next-line no-await-in-loop
+    await repo.remove(id);
+  }
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   return { ok: true as const, count: ids.length };

@@ -34,6 +34,7 @@ import {
   unpublishAction,
   archiveAction,
   deleteAction,
+  cleanupReplacedFileAction,
 } from "@/app/admin/_actions";
 import FileDropzone, {
   type UploadedFile,
@@ -190,11 +191,15 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
   useEffect(() => {
     if (capture.capturedUrl && capture.capturedIdx !== null) {
+      const prevUrl = getValues(`splatItems.${capture.capturedIdx}.previewVideoUrl`);
       setValue(`splatItems.${capture.capturedIdx}.previewVideoUrl`, capture.capturedUrl, { shouldDirty: true });
       triggerAutoSave();
       capture.clearResult();
+      if (prevUrl && prevUrl !== capture.capturedUrl) {
+        cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
+      }
     }
-  }, [capture.capturedUrl, capture.capturedIdx, setValue, triggerAutoSave, capture.clearResult]);
+  }, [capture.capturedUrl, capture.capturedIdx, setValue, getValues, triggerAutoSave, capture.clearResult, initial.id]);
 
   // Auto-queue video capture for splatItems missing previewVideoUrl
   const autoQueuedRef = useRef(false);
@@ -852,7 +857,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         />
                         <button
                           type="button"
-                          onClick={() => blueprintsArray.remove(idx)}
+                          onClick={() => {
+                            const url = watch(`blueprints.${idx}.url`);
+                            blueprintsArray.remove(idx);
+                            if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                          }}
                           className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
                         >
                           削除
@@ -874,7 +883,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           </a>
                           <button
                             type="button"
-                            onClick={() => setValue(`blueprints.${idx}.url`, "", { shouldDirty: true })}
+                            onClick={() => {
+                              const url = watch(`blueprints.${idx}.url`);
+                              setValue(`blueprints.${idx}.url`, "", { shouldDirty: true });
+                              if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                            }}
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                           >
                             差し替え
@@ -985,7 +998,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 onClose={() => setPickImageFor(null)}
                 onPick={(a: Asset) => {
                   if (pickImageFor === "cover") {
+                    const prevSrc = getValues("cover.src");
                     setValue("cover.src", a.url, { shouldDirty: true, shouldValidate: true });
+                    if (prevSrc && prevSrc !== a.url) cleanupReplacedFileAction(initial.id, prevSrc).catch(() => {});
                     setValue("cover.alt", a.label, { shouldDirty: true });
                     if (a.width) setValue("cover.width", a.width, { shouldDirty: true });
                     if (a.height) setValue("cover.height", a.height, { shouldDirty: true });
@@ -1030,8 +1045,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     <button
                       type="button"
                       onClick={() => {
+                        const prevSrc = getValues("cover.src");
                         setValue("cover.src", "", { shouldDirty: true });
                         setValue("cover.alt", "", { shouldDirty: true });
+                        if (prevSrc) cleanupReplacedFileAction(initial.id, prevSrc).catch(() => {});
                       }}
                       className="absolute top-3 right-3 mono text-[10px] tracking-[0.22em] uppercase border border-line bg-bg/80 px-2 py-1 hover:border-accent hover:text-accent transition"
                     >
@@ -1122,7 +1139,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         )}
                         <button
                           type="button"
-                          onClick={() => galleryArray.remove(i)}
+                          onClick={() => {
+                            const src = watch(`gallery.${i}.src`);
+                            galleryArray.remove(i);
+                            if (src) cleanupReplacedFileAction(initial.id, src).catch(() => {});
+                          }}
                           className="absolute top-1.5 right-1.5 mono text-[9px] tracking-[0.22em] uppercase border border-line bg-bg/80 px-1.5 py-0.5 hover:border-accent hover:text-accent transition"
                         >
                           ×
@@ -1203,8 +1224,18 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         <button
                           type="button"
                           onClick={() => {
+                            const item = getValues(`splatItems.${idx}`);
                             splatItemsArray.remove(idx);
                             if (previewItemIdx === idx) setPreviewItemIdx(null);
+                            const urls = [
+                              item.splatUrl,
+                              item.previewVideoUrl,
+                              item.downloadFileUrl,
+                              ...(item.downloadFiles ?? []).map((f) => f.url),
+                            ].filter(Boolean) as string[];
+                            for (const url of urls) {
+                              cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                            }
                           }}
                           className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
                         >
@@ -1258,9 +1289,11 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           <button
                             type="button"
                             onClick={() => {
+                              const prevUrl = getValues(`splatItems.${idx}.splatUrl`);
                               setValue(`splatItems.${idx}.splatUrl`, "", { shouldDirty: true });
                               setValue(`splatItems.${idx}.sizeMb`, 0, { shouldDirty: true });
                               if (previewItemIdx === idx) setPreviewItemIdx(null);
+                              if (prevUrl) cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
                             }}
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                           >
@@ -1409,8 +1442,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      const prevUrl = getValues(`splatItems.${idx}.downloadFileUrl`);
                                       setValue(`splatItems.${idx}.downloadFileUrl`, "", { shouldDirty: true });
                                       setValue(`splatItems.${idx}.downloadFileSizeMb`, 0, { shouldDirty: true });
+                                      if (prevUrl) cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
                                     }}
                                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                                   >
@@ -1847,7 +1882,10 @@ function DownloadFilesEditor({
               />
               <button
                 type="button"
-                onClick={() => fa.remove(fi)}
+                onClick={() => {
+                  fa.remove(fi);
+                  if (url) cleanupReplacedFileAction(propertyId, url).catch(() => {});
+                }}
                 className="mono text-[12px] border border-line px-2 py-2 hover:border-red-400 hover:text-red-400 transition"
                 aria-label="削除"
               >
@@ -1866,6 +1904,7 @@ function DownloadFilesEditor({
                   onClick={() => {
                     setValue(`splatItems.${idx}.downloadFiles.${fi}.url`, "", { shouldDirty: true });
                     setValue(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`, 0, { shouldDirty: true });
+                    if (url) cleanupReplacedFileAction(propertyId, url).catch(() => {});
                   }}
                   className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                 >
