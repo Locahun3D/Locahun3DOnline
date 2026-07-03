@@ -67,21 +67,21 @@ export default function ViewerGate({
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 backdrop-blur-md bg-black/70 opacity-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 group-hover:pointer-events-auto">
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
             {en
-              ? `● Subscriber only · ${tokenCost} token(s)`
-              : `● Subscriber only · ${tokenCost} トークン消費`}
+              ? `● Sign in required · ${tokenCost} token(s)`
+              : `● サインインが必要 · ${tokenCost} トークン消費`}
           </div>
           <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] mb-4 text-white drop-shadow-lg">
             {en ? (
               <>
-                The 3DGS walkthrough
+                Sign in to unlock
                 <br />
-                is members only.
+                the 3DGS walkthrough.
               </>
             ) : (
               <>
-                3DGS ウォークスルーは
+                サインインすると
                 <br />
-                メンバー限定です。
+                3DGS ウォークスルーが見られます。
               </>
             )}
           </div>
@@ -89,13 +89,14 @@ export default function ViewerGate({
             {en ? (
               <>
                 This studio ({tokenCostLabel(tokenCost, "en")}) costs{" "}
-                <span className="text-accent font-bold">{tokenCost} token(s)</span> / view
+                <span className="text-accent font-bold">{tokenCost} token(s)</span> to unlock —
+                even the Free plan gets tokens at signup.
               </>
             ) : (
               <>
-                このスタジオ（{tokenCostLabel(tokenCost, "ja")}）は{" "}
+                このスタジオ（{tokenCostLabel(tokenCost, "ja")}）のアンロックには{" "}
                 <span className="text-accent font-bold">{tokenCost} トークン</span>
-                {" "}消費 / 視聴
+                {" "}必要です。Free プランでも登録時にトークンが付与されます。
               </>
             )}
           </div>
@@ -106,20 +107,17 @@ export default function ViewerGate({
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
-              href={lh(`/pricing?from=${propertyId}`)}
+              href={lh(`/sign-in?redirect=/properties/${propertyId}`)}
               className="px-7 py-3.5 text-[14px] font-bold rounded-md bg-accent text-white hover:bg-accent/85 transition shadow-lg"
             >
-              {en ? "See plans" : "プランを見る"}
+              {en ? "Sign in" : "サインイン"}
             </Link>
-            {/* サインイン済みの非会員には Sign in を出さない（プラン加入へ誘導）。 */}
-            {!signedIn && (
-              <Link
-                href={lh(`/sign-in?redirect=/properties/${propertyId}`)}
-                className="px-7 py-3.5 text-[14px] font-semibold rounded-md border border-white/50 text-white hover:bg-white/10 transition"
-              >
-                {en ? "Already a member? Sign in" : "既にメンバーの方はサインイン"}
-              </Link>
-            )}
+            <Link
+              href={lh(`/pricing?from=${propertyId}`)}
+              className="px-7 py-3.5 text-[14px] font-semibold rounded-md border border-white/50 text-white hover:bg-white/10 transition"
+            >
+              {en ? "See plans for more tokens" : "もっとトークンが欲しい方はプランを見る"}
+            </Link>
           </div>
         </div>
       </div>
