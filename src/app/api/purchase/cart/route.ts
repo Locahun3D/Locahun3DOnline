@@ -36,9 +36,11 @@ export async function POST(req: Request) {
   // 検証 + 重複/購入済み除外。
   const resolved: {
     propertyId: string;
+    splatItemId: string;
     splatItemIndex: number;
     title: string;
     label: string;
+    license: string;
     price: number;
   }[] = [];
   const seen = new Set<string>();
@@ -54,13 +56,15 @@ export async function POST(req: Request) {
     if (!property || !item || !item.forSale || item.salePrice <= 0) continue;
     // DLファイル未設定の項目は代金だけ取って何も渡せない事故になるため除外。
     if (resolveDownloadFiles(item).length === 0) continue;
-    if (await purchaseRepo.hasPurchased(user.id, propertyId, idx)) continue;
+    if (await purchaseRepo.hasPurchased(user.id, propertyId, item.id, idx)) continue;
 
     resolved.push({
       propertyId,
+      splatItemId: item.id,
       splatItemIndex: idx,
       title: property.title,
       label: item.label,
+      license: item.license,
       price: item.salePrice,
     });
   }
@@ -83,8 +87,10 @@ export async function POST(req: Request) {
         userEmail: user.email,
         propertyId: r.propertyId,
         propertyTitle: r.title,
+        splatItemId: r.splatItemId,
         splatItemIndex: r.splatItemIndex,
         itemLabel: r.label,
+        license: r.license,
         priceYen: r.price,
         status: "completed",
         stripeSessionId: "",
@@ -145,8 +151,10 @@ export async function POST(req: Request) {
       userEmail: user.email,
       propertyId: r.propertyId,
       propertyTitle: r.title,
+      splatItemId: r.splatItemId,
       splatItemIndex: r.splatItemIndex,
       itemLabel: r.label,
+      license: r.license,
       priceYen: r.price,
       status: "pending",
       stripeSessionId: session.id,

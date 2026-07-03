@@ -75,7 +75,10 @@ export default async function PropertyDetailPage({
   const hasViewerAccess = !!user;
   const signedIn = !!user;
   const bookmarked = user ? (user.bookmarks ?? []).includes(property.id) : false;
-  const purchasedIndices: number[] = [];
+  // 購入済みシーンの id 群。splatItem.id で判定する（index だと並び替え/差し替え
+  // で対応がズレる）。旧レコード（splatItemId 未設定）は記録時の index から
+  // 現在の id を逆引きする。
+  const purchasedItemIds: string[] = [];
   // シーン(splatItem)ごとに「2年以内のアンロック済みか」を集計。true のシーンは
   // ViewerGate 側で「視聴済み（無料再視聴）」表示になり、開いても課金されない。
   // splatItem.id で判定する（index だと並び替え/3DGS差し替えで対応がズレる）。
@@ -85,7 +88,9 @@ export default async function PropertyDetailPage({
     try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
       for (const p of mine) {
-        if (p.status === "completed") purchasedIndices.push(p.splatItemIndex);
+        if (p.status !== "completed") continue;
+        const itemId = p.splatItemId || property.splatItems[p.splatItemIndex]?.id;
+        if (itemId) purchasedItemIds.push(itemId);
       }
     } catch {
       // purchase lookup failure is non-fatal
@@ -119,7 +124,7 @@ export default async function PropertyDetailPage({
         freeAccess={freeAccess}
         canViewRestricted={canViewRestrictedItems}
         canViewNdaOnly={canViewNdaOnlyItems}
-        purchasedIndices={purchasedIndices}
+        purchasedItemIds={purchasedItemIds}
         unlockedItemIds={unlockedItemIds}
         hasViewerAccess={hasViewerAccess}
         signedIn={signedIn}

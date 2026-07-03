@@ -1,7 +1,6 @@
 import "server-only";
 import { generateReceiptHtml } from "./receipt";
-import { repo as propertyRepo } from "./store";
-import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC, PLAN_TOKEN_BUDGET } from "./schemas";
+import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC, PLAN_TOKEN_BUDGET, type DataLicense } from "./schemas";
 import type { AccountPlan } from "./account-schema";
 import type { Purchase } from "./purchases";
 
@@ -95,9 +94,9 @@ function shell(title: string, bodyHtml: string): string {
 export async function notifyPurchase(p: Purchase): Promise<void> {
   if (!emailEnabled() || !p.userEmail) return;
   try {
-    const property = await propertyRepo.get(p.propertyId);
-    const license =
-      property?.splatItems[p.splatItemIndex]?.license ?? "standard";
+    // 購入時点のライセンス区分スナップショットを使う（物件側を後から変更しても
+    // 過去の購入の利用範囲は変わらない — receipt route と同じ理由）。
+    const license = (p.license as DataLicense) || "standard";
 
     const receiptHtml = generateReceiptHtml(
       {

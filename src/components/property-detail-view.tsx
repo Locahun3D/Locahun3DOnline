@@ -64,7 +64,7 @@ export default function PropertyDetailView({
   freeAccess = false,
   canViewRestricted = false,
   canViewNdaOnly = false,
-  purchasedIndices = [],
+  purchasedItemIds = [],
   unlockedItemIds = [],
   hasViewerAccess = false,
   signedIn = false,
@@ -78,7 +78,8 @@ export default function PropertyDetailView({
   freeAccess?: boolean;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
-  purchasedIndices?: number[];
+  /** 購入済みシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
+  purchasedItemIds?: string[];
   /** 2年以内にアンロック済みのシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
   unlockedItemIds?: string[];
   hasViewerAccess?: boolean;
@@ -565,7 +566,7 @@ export default function PropertyDetailView({
                     pointCount={item.pointCount}
                     captureDevice={item.captureDevice}
                     license={item.license}
-                    alreadyPurchased={purchasedIndices.includes(origIndex)}
+                    alreadyPurchased={purchasedItemIds.includes(item.id)}
                   />
                 )}
               </section>

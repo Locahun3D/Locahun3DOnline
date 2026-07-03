@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getCurrentUser } from "@/lib/dal";
-import { purchaseRepo } from "@/lib/purchases";
+import { purchaseRepo, resolvePurchasedItem } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { pickDownloadFile } from "@/lib/downloads";
 
@@ -63,7 +63,7 @@ export async function GET(
   }
 
   const property = await propertyRepo.get(purchase.propertyId);
-  const item = property?.splatItems[purchase.splatItemIndex];
+  const item = property ? resolvePurchasedItem(property.splatItems, purchase) : null;
   if (!item) {
     return NextResponse.json({ error: "データが見つかりません" }, { status: 404 });
   }

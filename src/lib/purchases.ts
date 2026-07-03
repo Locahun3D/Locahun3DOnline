@@ -18,8 +18,17 @@ export const purchaseSchema = z.object({
   userEmail: z.string(),
   propertyId: z.string(),
   propertyTitle: z.string().default(""),
+  /** splatItem.id（永続識別子）のスナップショット。並び替え/差し替えに強い解決に使う。 */
+  splatItemId: z.string().default(""),
+  /** 旧方式の配列位置スナップショット（後方互換フォールバック用）。 */
   splatItemIndex: z.number().int().min(0).default(0),
   itemLabel: z.string().max(60).default(""),
+  /**
+   * 購入時点のライセンス区分スナップショット（standard/editorial/extended/custom）。
+   * 管理画面で後から license を変更しても、既存の購入者の領収書/利用範囲は
+   * 購入時点の値のまま固定する（利用許諾は購入時点で確定した契約内容のため）。
+   */
+  license: z.string().default("standard"),
   priceYen: z.number().int().min(0),
   status: purchaseStatusSchema.default("pending"),
   stripeSessionId: z.string().default(""),
@@ -31,6 +40,27 @@ export const purchaseSchema = z.object({
 
 export type Purchase = z.infer<typeof purchaseSchema>;
 export type PurchaseStatus = z.infer<typeof purchaseStatusSchema>;
+
+interface SplatItemLike {
+  id: string;
+}
+
+/**
+ * 購入がどの splatItem を指しているかを解決する。splatItemId（永続識別子）を
+ * 優先し、旧購入レコード（splatItemId が空）は記録当時の splatItemIndex に
+ * フォールバックする。並び替え/追加削除で index がズレても、新しい購入は
+ * 正しいアイテムを指し続ける（ダウンロード誤配布・領収書の内容相違を防ぐ）。
+ */
+export function resolvePurchasedItem<T extends SplatItemLike>(
+  splatItems: T[],
+  purchase: Pick<Purchase, "splatItemId" | "splatItemIndex">,
+): T | null {
+  if (purchase.splatItemId) {
+    const byId = splatItems.find((it) => it.id === purchase.splatItemId);
+    if (byId) return byId;
+  }
+  return splatItems[purchase.splatItemIndex] ?? null;
+}
 
 const DATA_FILE = path.join(process.cwd(), "data", "purchases.json");
 
@@ -127,25 +157,37 @@ export const purchaseRepo = {
     return rows[0] ?? null;
   },
 
-  async hasPurchased(userId: string, propertyId: string, splatItemIndex?: number): Promise<boolean> {
+  /**
+   * splatItemId（永続識別子）優先で判定し、splatItemId 未指定の呼び出し/旧
+   * レコード（splatItemId が空）は splatItemIndex にフォールバックする。1物件
+   * あたり最大20アイテムなので、該当ユーザー×物件の完了済み購入をまとめて
+   * 取得してからアプリ側で判定する（D1に新カラムを増やさず後方互換を保てる）。
+   */
+  async hasPurchased(
+    userId: string,
+    propertyId: string,
+    splatItemId?: string,
+    legacySplatItemIndex?: number,
+  ): Promise<boolean> {
+    let rows: Purchase[];
     if (canAccessLocalFs()) {
-      const all = await fileReadAll();
-      return all.some(
-        (p) => p.userId === userId && p.propertyId === propertyId &&
-               (splatItemIndex == null || p.splatItemIndex === splatItemIndex) &&
-               p.status === "completed",
+      rows = (await fileReadAll()).filter(
+        (p) => p.userId === userId && p.propertyId === propertyId && p.status === "completed",
       );
+    } else {
+      const db = await getD1();
+      if (!db) return false;
+      rows = await d1ListData<Purchase>(db, TABLE, {
+        sql: "user_id = ? AND property_id = ? AND status = 'completed'",
+        binds: [userId, propertyId],
+      });
     }
-    const db = await getD1();
-    if (!db) return false;
-    const conds = ["user_id = ?", "property_id = ?", "status = 'completed'"];
-    const binds: (string | number)[] = [userId, propertyId];
-    if (splatItemIndex != null) { conds.push("splat_item_index = ?"); binds.push(splatItemIndex); }
-    const row = await db
-      .prepare(`SELECT 1 FROM ${TABLE} WHERE ${conds.join(" AND ")} LIMIT 1`)
-      .bind(...binds)
-      .first();
-    return !!row;
+    if (splatItemId == null && legacySplatItemIndex == null) return rows.length > 0;
+    return rows.some((p) => {
+      if (splatItemId && p.splatItemId) return p.splatItemId === splatItemId;
+      const fallbackIndex = legacySplatItemIndex ?? 0;
+      return p.splatItemIndex === fallbackIndex;
+    });
   },
 
   async upsert(p: Purchase): Promise<Purchase> {

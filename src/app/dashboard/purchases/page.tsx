@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/dal";
-import { purchaseRepo } from "@/lib/purchases";
+import { purchaseRepo, resolvePurchasedItem } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { redirect } from "next/navigation";
@@ -84,7 +84,7 @@ export default async function UserPurchasesPage() {
         <div className="space-y-4">
           {purchases.map((p) => {
             const prop = propMap.get(p.propertyId);
-            const item = prop?.splatItems[p.splatItemIndex];
+            const item = prop ? resolvePurchasedItem(prop.splatItems, p) : null;
             const files = item ? resolveDownloadFiles(item) : [];
             // 一括DL（全形式まとめZip）= バンドル downloadFileUrl、無ければ先頭形式。
             const bundled = item?.downloadFileUrl || files[0]?.url || "";

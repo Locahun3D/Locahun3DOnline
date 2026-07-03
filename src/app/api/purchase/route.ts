@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const already = await purchaseRepo.hasPurchased(user.id, propertyId, splatItemIndex);
+  const already = await purchaseRepo.hasPurchased(user.id, propertyId, item.id, splatItemIndex);
   if (already) {
     return NextResponse.json({ error: "すでに購入済みです", ok: false }, { status: 409 });
   }
@@ -58,8 +58,10 @@ export async function POST(req: Request) {
       userEmail: user.email,
       propertyId,
       propertyTitle: property.title,
+      splatItemId: item.id,
       splatItemIndex,
       itemLabel: item.label,
+      license: item.license,
       priceYen: price,
       status: "completed",
       stripeSessionId: "",
@@ -111,8 +113,10 @@ export async function POST(req: Request) {
     userEmail: user.email,
     propertyId,
     propertyTitle: property.title,
+    splatItemId: item.id,
     splatItemIndex,
     itemLabel: item.label,
+    license: item.license,
     priceYen: price,
     status: "pending",
     stripeSessionId: session.id,
