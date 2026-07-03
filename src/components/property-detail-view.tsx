@@ -4,6 +4,7 @@ import {
   type Property,
 } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
+import { resolveDownloadFiles } from "@/lib/downloads";
 import ViewerGate from "@/components/viewer-gate";
 import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
@@ -535,7 +536,9 @@ export default function PropertyDetailView({
                   hasSubscription={hasViewerAccess}
                   signedIn={signedIn}
                 />
-                {item.forSale && item.salePrice > 0 && (
+                {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
+                    出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。 */}
+                {item.forSale && item.salePrice > 0 && resolveDownloadFiles(item).length > 0 && (
                   <DataSalePanel
                     propertyId={property.id}
                     propertyTitle={property.title}
