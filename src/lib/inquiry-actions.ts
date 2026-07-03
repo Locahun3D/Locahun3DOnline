@@ -2,9 +2,18 @@
 
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { headers } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 import { repo as propertyRepo } from "./store";
 import { inquiryRepo } from "./inquiries";
 import { notifyInquiry } from "./email";
+import {
+  HONEYPOT_FIELD,
+  RENDERED_AT_FIELD,
+  isHoneypotTripped,
+  checkTiming,
+  allowByRate,
+} from "./inquiry-guard";
 
 const inputSchema = z.object({
   propertyId: z.string().min(1),
@@ -31,6 +40,26 @@ export async function submitInquiryAction(
   _prev: InquiryState,
   formData: FormData,
 ): Promise<InquiryState> {
+  // ── スパム対策（3層） ──────────────────────────────────────
+  // 外部サービス（Turnstile 等）に依存しない自己完結の防御。実データ保存/メール
+  // 転送の前で弾く。bot と分かる場合は「静かに成功」を返して再試行/学習を防ぐ。
+  //
+  // (1) ハニーポット: 人間に見えない隠しフィールドに値があれば bot。
+  if (isHoneypotTripped(formData.get(HONEYPOT_FIELD))) {
+    return { ok: true };
+  }
+  // (2) 時間ガード: 開いてから送信までの経過時間で判定。
+  const timing = checkTiming(formData.get(RENDERED_AT_FIELD));
+  if (timing === "too-fast") {
+    return { ok: true }; // bot 疑い、静かに成功
+  }
+  if (timing === "stale") {
+    return {
+      ok: false,
+      error: "フォームの有効期限が切れました。ページを再読み込みのうえ再度お試しください。",
+    };
+  }
+
   const parsed = inputSchema.safeParse({
     propertyId: formData.get("propertyId"),
     name: formData.get("name"),
@@ -50,6 +79,30 @@ export async function submitInquiryAction(
   const property = await propertyRepo.get(d.propertyId);
   if (!property) {
     return { ok: false, error: "対象のスタジオが見つかりませんでした。" };
+  }
+
+  // (3) 送信元レート制限: 同一 IP（サインイン済なら userId 優先）× 同一物件で
+  //     直近の件数を上限に抑える。Worker インスタンス内メモリの TTL カウンタ。
+  let source = "";
+  try {
+    const { userId } = await auth();
+    if (userId) {
+      source = `u:${userId}`;
+    } else {
+      const h = await headers();
+      source =
+        h.get("cf-connecting-ip") ??
+        h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        "";
+    }
+  } catch {
+    // ヘッダ/認証が取れない環境（ローカル等）はレート制限をスキップ。
+  }
+  if (!allowByRate(source, property.id)) {
+    return {
+      ok: false,
+      error: "短時間に送信が集中しています。しばらく時間をおいて再度お試しください。",
+    };
   }
 
   // 1) 先方メールへ転送（キー未設定なら false）。

@@ -1,8 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { submitInquiryAction, type InquiryState } from "@/lib/inquiry-actions";
 import { useLocale } from "@/components/locale-provider";
+
+// スパム対策で共有する隠しフィールド名（サーバ側 inquiry-guard と一致させる）。
+const HONEYPOT_FIELD = "website";
+const RENDERED_AT_FIELD = "_rt";
 
 const inputClass =
   "w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition";
@@ -24,6 +28,12 @@ export default function InquiryForm({
     submitInquiryAction,
     undefined,
   );
+  // フォームが表示された時刻を隠しフィールドに入れ、サーバ側の時間ガードで
+  // 「速すぎる送信＝bot」を弾く。マウント後に実時刻をセット（SSR 値は使わない）。
+  const renderedAtRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (renderedAtRef.current) renderedAtRef.current.value = String(Date.now());
+  }, []);
   const req = <span className="text-red-500 text-[11px]">{en ? "required" : "必須"}</span>;
 
   if (state?.ok) {
@@ -55,6 +65,21 @@ export default function InquiryForm({
   return (
     <form action={formAction} className="bg-white p-6 space-y-5">
       <input type="hidden" name="propertyId" value={propertyId} />
+      {/* スパム対策の隠しフィールド（人間には見えない）。 */}
+      <input type="hidden" name={RENDERED_AT_FIELD} ref={renderedAtRef} defaultValue="" />
+      {/* ハニーポット: bot だけが埋める。見えない・タブ移動不可・自動補完無効。 */}
+      <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+        <label>
+          Website
+          <input
+            type="text"
+            name={HONEYPOT_FIELD}
+            tabIndex={-1}
+            autoComplete="off"
+            defaultValue=""
+          />
+        </label>
+      </div>
 
       {/* 2-col: name + company */}
       <div className="grid md:grid-cols-2 gap-4">
