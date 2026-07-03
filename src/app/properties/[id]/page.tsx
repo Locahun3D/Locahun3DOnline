@@ -42,6 +42,9 @@ export async function generateMetadata({
     title: p.title,
     description: p.summary,
     openGraph: ogImage ? { images: [ogImage] } : undefined,
+    // ルートlayoutのtwitter.imagesは汎用の /og-cover.jpg 固定。ここで上書きしないと
+    // iMessage等 twitter:image を優先するクローラで物件写真ではなく汎用画像が出る。
+    twitter: ogImage ? { card: "summary_large_image", images: [ogImage] } : undefined,
   };
 }
 
