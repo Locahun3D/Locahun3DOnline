@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { repo as propertyRepo } from "@/lib/store";
-import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
+import { canViewBackyard, canViewNdaOnly, totalTokens } from "@/lib/account-schema";
+import { userRepo } from "@/lib/users";
+import {
+  viewUnlockRepo,
+  unlockId,
+  twoYearsFrom,
+} from "@/lib/view-unlocks";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { presignViewerAsset, presignConfigured } from "@/lib/r2-presign";
@@ -47,16 +53,21 @@ export async function GET(req: Request) {
 
     const props = await propertyRepo.list();
     let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
+    let matchedProperty: (typeof props)[number] | null = null;
+    let matchedIndex = -1;
     for (const p of props) {
-      for (const item of p.splatItems) {
+      for (let i = 0; i < p.splatItems.length; i++) {
+        const item = p.splatItems[i];
         if (item.splatUrl && toR2Key(item.splatUrl) === key) {
           matchedItem = item;
+          matchedProperty = p;
+          matchedIndex = i;
           break;
         }
       }
       if (matchedItem) break;
     }
-    if (!matchedItem) {
+    if (!matchedItem || !matchedProperty) {
       return NextResponse.json({ error: "視聴対象が見つかりません" }, { status: 404 });
     }
 
@@ -73,6 +84,78 @@ export async function GET(req: Request) {
     }
     if (matchedItem.accessLevel === "nda_only" && !canViewNdaOnly(user)) {
       return NextResponse.json({ error: "NDA限定データです" }, { status: 403 });
+    }
+
+    /* ── トークン消費ゲート ─────────────────────────────────────────
+     * サブスク会員は「シーン(splatItem)単位」で tokenCost トークンを消費して
+     * 視聴をアンロックする。一度アンロックしたシーンは 2 年間無償で再視聴できる。
+     *
+     * バイパス（既存のサブスク段チェックと同様に無条件で通す）:
+     *   - 管理者 (role === "admin")
+     *   - 限定無料期間中 (freeAccess)
+     * フリープランは上の hasViewerAccess で既に弾かれており、ここには到達しない。
+     * （doc コメントの「Free gives 1 walk-through」は今回スコープ外＝別途要検討。）
+     */
+    const isAdmin = user.role === "admin";
+    if (!isAdmin && !freeAccess) {
+      const propertyId = matchedProperty.id;
+      const splatItemIndex = matchedIndex;
+      const tokenCost = matchedProperty.tokenCost ?? 1;
+
+      // 既に有効なアンロックがあれば課金せずそのまま署名へ（2年間の再視聴無償）。
+      const alreadyUnlocked = await viewUnlockRepo.hasValidUnlock(
+        user.id,
+        propertyId,
+        splatItemIndex,
+      );
+      if (!alreadyUnlocked) {
+        // 残高は「stale な user」ではなく直前に取り直す（gift-actions.ts と同様、
+        // 二度クリック等の並行リクエストによる二重消費/lost-update を避ける）。
+        const fresh = (await userRepo.get(user.id)) ?? user;
+        const spendable = totalTokens(fresh); // tokenBalance + bonusTokens
+        if (spendable < tokenCost) {
+          return NextResponse.json(
+            {
+              error: "insufficient_tokens",
+              tokenBalance: fresh.tokenBalance,
+              bonusTokens: fresh.bonusTokens ?? 0,
+              tokenCost,
+            },
+            { status: 402 },
+          );
+        }
+
+        const now = new Date().toISOString();
+
+        // 順序: ①アンロック記録を先に作成（自然キーで冪等なのでリトライ安全）→
+        //       ②残高を減算。理由: 減算を先にして記録作成に失敗すると、リトライ時
+        //       hasValidUnlock=false のまま再度減算され「二重課金」になる。逆順なら
+        //       最悪でも「無償視聴（課金漏れ）」で、二重課金より遥かに安全。
+        await viewUnlockRepo.upsert({
+          id: unlockId(user.id, propertyId, splatItemIndex),
+          userId: user.id,
+          propertyId,
+          splatItemIndex,
+          tokensSpent: tokenCost,
+          unlockedAt: now,
+          expiresAt: twoYearsFrom(now),
+        });
+
+        // サブスク付与分 (tokenBalance) を優先消費し、不足分のみ貢献特別枠
+        // (bonusTokens) から引く。ユーザー要件は「サブスクのプールから消費」なので
+        // tokenBalance を先に減らす。ゲスト等の bonusTokens も使えるようにして
+        // 有効残高が枯渇しない限りは視聴を止めない。
+        let remaining = tokenCost;
+        const fromBalance = Math.min(fresh.tokenBalance, remaining);
+        remaining -= fromBalance;
+        const fromBonus = Math.min(fresh.bonusTokens ?? 0, remaining);
+        remaining -= fromBonus;
+        await userRepo.upsert({
+          ...fresh,
+          tokenBalance: fresh.tokenBalance - fromBalance,
+          bonusTokens: (fresh.bonusTokens ?? 0) - fromBonus,
+        });
+      }
     }
 
     const signed = await presignViewerAsset(key, 3600);
