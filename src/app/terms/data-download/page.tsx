@@ -43,6 +43,16 @@ export default async function DataDownloadTermsPage() {
             <li>購入者は、本データを映像・映画・CM・ドラマ・MV等の制作における<strong>ロケーション検証・プリビズ・バーチャルプロダクション</strong>の目的で利用できます。</li>
             <li>本データの利用は、購入者の所属する制作チーム・プロジェクト内に限定されます。</li>
             <li>利用許諾は非独占的であり、同一データを他の購入者にも提供する場合があります。</li>
+            <li>
+              具体的な利用範囲は、購入時に選択したライセンス区分により異なります。区分は購入完了時の領収書に記載されます。
+              {/* schemas.ts の DATA_LICENSE_LABEL/DATA_LICENSE_DESC と内容を一致させること */}
+              <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
+                <li><strong>標準ライセンス</strong> — 商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。</li>
+                <li><strong>エディトリアル限定</strong> — 報道・教育・個人利用に限定。広告等の商用利用は不可。</li>
+                <li><strong>拡張ライセンス</strong> — 商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。</li>
+                <li><strong>カスタム（要相談）</strong> — 利用範囲を個別に取り決め。購入前にお問い合わせください。</li>
+              </ul>
+            </li>
           </ol>
         </section>
 
@@ -170,6 +180,15 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>The Purchaser may use the Data for <strong>location review, previs and virtual production</strong> in the production of video, film, commercials, drama, music videos and the like.</li>
             <li>Use of the Data is limited to the Purchaser&apos;s own production team and project.</li>
             <li>The license is non-exclusive; the same Data may be provided to other purchasers.</li>
+            <li>
+              The specific scope of use depends on the license tier selected at purchase. The tier is shown on the purchase receipt.
+              <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
+                <li><strong>Standard license</strong> — Use in commercial &amp; non-commercial productions. Redistribution or resale of the data itself is not permitted.</li>
+                <li><strong>Editorial only</strong> — Limited to news, education and personal use. Commercial use such as advertising is not permitted.</li>
+                <li><strong>Extended license</strong> — Commercial use plus bundling into templates / embedded products and modified redistribution.</li>
+                <li><strong>Custom (by arrangement)</strong> — Scope arranged individually. Please contact us before purchasing.</li>
+              </ul>
+            </li>
           </ol>
         </section>
 
