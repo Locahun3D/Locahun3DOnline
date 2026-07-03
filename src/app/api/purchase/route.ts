@@ -5,6 +5,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
+import { resolveDownloadFiles } from "@/lib/downloads";
 import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -30,6 +31,15 @@ export async function POST(req: Request) {
   const item = property.splatItems[splatItemIndex];
   if (!item || !item.forSale || item.salePrice <= 0) {
     return NextResponse.json({ error: "このデータは販売されていません" }, { status: 404 });
+  }
+  // 管理画面(価格管理)は「⚠DLファイル未設定」を警告表示するだけで販売自体は
+  // 止めない。ここでブロックしないと、配布物ゼロのまま決済だけ成立し、購入者が
+  // ダウンロード時に404を踏む（＝代金を払って何も手に入らない）事故になる。
+  if (resolveDownloadFiles(item).length === 0) {
+    return NextResponse.json(
+      { error: "このデータはダウンロードファイルが未設定のため購入できません" },
+      { status: 409 },
+    );
   }
 
   const already = await purchaseRepo.hasPurchased(user.id, propertyId, splatItemIndex);

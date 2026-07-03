@@ -5,6 +5,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
+import { resolveDownloadFiles } from "@/lib/downloads";
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 
@@ -51,6 +52,8 @@ export async function POST(req: Request) {
     const property = await propertyRepo.get(propertyId);
     const item = property?.splatItems[idx];
     if (!property || !item || !item.forSale || item.salePrice <= 0) continue;
+    // DLファイル未設定の項目は代金だけ取って何も渡せない事故になるため除外。
+    if (resolveDownloadFiles(item).length === 0) continue;
     if (await purchaseRepo.hasPurchased(user.id, propertyId, idx)) continue;
 
     resolved.push({
