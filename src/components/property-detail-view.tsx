@@ -65,6 +65,7 @@ export default function PropertyDetailView({
   canViewRestricted = false,
   canViewNdaOnly = false,
   purchasedIndices = [],
+  unlockedIndices = [],
   hasViewerAccess = false,
   signedIn = false,
   bookmarked = false,
@@ -78,6 +79,8 @@ export default function PropertyDetailView({
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
   purchasedIndices?: number[];
+  /** 2年以内にアンロック済みのシーンの元 splatItems index 群。 */
+  unlockedIndices?: number[];
   hasViewerAccess?: boolean;
   signedIn?: boolean;
   bookmarked?: boolean;
@@ -89,12 +92,16 @@ export default function PropertyDetailView({
   const lh = (href: string) => localizedHref(href, locale);
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
 
-  const visibleSplatItems = property.splatItems.filter((it) => {
-    if (!it.splatUrl) return false;
-    if (it.accessLevel === "restricted" && !canViewRestricted) return false;
-    if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
-    return true;
-  });
+  // フィルタ後も「元の splatItems 内 index」を保持する。トークン課金・アンロック
+  // 判定はサーバ側の元 index を基準にするため、表示側もそれに合わせる必要がある。
+  const visibleSplatItems = property.splatItems
+    .map((it, origIndex) => ({ it, origIndex }))
+    .filter(({ it }) => {
+      if (!it.splatUrl) return false;
+      if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+      if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
+      return true;
+    });
 
   return (
     <article className="theme-online">
@@ -503,6 +510,7 @@ export default function PropertyDetailView({
               canViewNdaOnly={canViewNdaOnly}
               hasViewerAccess={hasViewerAccess}
               signedIn={signedIn}
+              unlockedIndices={unlockedIndices}
             />
           </section>
         ) : (
@@ -515,8 +523,8 @@ export default function PropertyDetailView({
                   : "space-y-12 mb-12"
               }
             >
-            {visibleSplatItems.map((item, idx) => (
-              <section key={idx}>
+            {visibleSplatItems.map(({ it: item, origIndex }) => (
+              <section key={origIndex}>
                 <div className="chapter-rule">
                   <span className="text-ink/50">3DGS</span>
                   <span className="text-ink/80">
@@ -528,13 +536,14 @@ export default function PropertyDetailView({
                 <ViewerGate
                   splatUrl={item.splatUrl}
                   propertyId={property.id}
-                  label={item.label || `#${idx + 1}`}
+                  label={item.label || `#${origIndex + 1}`}
                   sizeMb={item.sizeMb}
                   previewVideoUrl={item.previewVideoUrl}
                   tokenCost={property.tokenCost}
                   freeAccess={freeAccess}
                   hasSubscription={hasViewerAccess}
                   signedIn={signedIn}
+                  alreadyUnlocked={unlockedIndices.includes(origIndex)}
                 />
                 {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
                     出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。 */}
@@ -542,7 +551,7 @@ export default function PropertyDetailView({
                   <DataSalePanel
                     propertyId={property.id}
                     propertyTitle={property.title}
-                    splatItemIndex={idx}
+                    splatItemIndex={origIndex}
                     itemLabel={item.label}
                     price={item.salePrice}
                     description={item.saleDescription}
@@ -556,7 +565,7 @@ export default function PropertyDetailView({
                     pointCount={item.pointCount}
                     captureDevice={item.captureDevice}
                     license={item.license}
-                    alreadyPurchased={purchasedIndices.includes(idx)}
+                    alreadyPurchased={purchasedIndices.includes(origIndex)}
                   />
                 )}
               </section>

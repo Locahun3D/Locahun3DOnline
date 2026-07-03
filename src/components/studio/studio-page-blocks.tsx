@@ -17,6 +17,7 @@ export default function StudioPageBlocks({
   canViewNdaOnly = false,
   hasViewerAccess = false,
   signedIn = false,
+  unlockedIndices = [],
 }: {
   blocks: PageBlock[];
   property: Property;
@@ -25,11 +26,12 @@ export default function StudioPageBlocks({
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
   signedIn?: boolean;
+  unlockedIndices?: number[];
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} unlockedIndices={unlockedIndices} />
       ))}
     </div>
   );
@@ -43,6 +45,7 @@ function BlockView({
   canViewNdaOnly = false,
   hasViewerAccess = false,
   signedIn = false,
+  unlockedIndices = [],
 }: {
   block: PageBlock;
   property: Property;
@@ -51,6 +54,7 @@ function BlockView({
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
   signedIn?: boolean;
+  unlockedIndices?: number[];
 }) {
   switch (block.kind) {
     case "heading":
@@ -98,28 +102,33 @@ function BlockView({
       );
 
     case "splat": {
-      const splats = property.splatItems.filter((it) => {
-        if (!it.splatUrl) return false;
-        if (it.accessLevel === "restricted" && !canViewRestricted) return false;
-        if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
-        return true;
-      });
+      // フィルタ後も元 index を保持（トークン課金・アンロック判定はサーバの
+      // 元 splatItems index を基準にするため、表示側も揃える）。
+      const splats = property.splatItems
+        .map((it, origIndex) => ({ it, origIndex }))
+        .filter(({ it }) => {
+          if (!it.splatUrl) return false;
+          if (it.accessLevel === "restricted" && !canViewRestricted) return false;
+          if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
+          return true;
+        });
       return (
         <div>
           {/* 複数あればページ幅で2つ並べる（1つなら全幅で大きく） */}
           <div className={splats.length > 1 ? "grid lg:grid-cols-2 gap-8" : "space-y-10"}>
-            {splats.map((item, idx) => (
+            {splats.map(({ it: item, origIndex }) => (
               <ViewerGate
-                key={idx}
+                key={origIndex}
                 splatUrl={item.splatUrl}
                 propertyId={property.id}
-                label={item.label || `#${idx + 1}`}
+                label={item.label || `#${origIndex + 1}`}
                 sizeMb={item.sizeMb}
                 previewVideoUrl={item.previewVideoUrl}
                 tokenCost={property.tokenCost}
                 freeAccess={freeAccess}
                 hasSubscription={hasViewerAccess}
                 signedIn={signedIn}
+                alreadyUnlocked={unlockedIndices.includes(origIndex)}
               />
             ))}
           </div>

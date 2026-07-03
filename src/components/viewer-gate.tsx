@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 import { useLocale, useHref } from "@/components/locale-provider";
 import { tokenCostLabel } from "@/lib/schemas";
@@ -15,6 +16,8 @@ interface Props {
   hasSubscription?: boolean;
   freeAccess?: boolean;
   signedIn?: boolean;
+  /** 既にこのシーンをアンロック済み（2年以内）なら無償再視聴。 */
+  alreadyUnlocked?: boolean;
 }
 
 export default function ViewerGate({
@@ -27,9 +30,13 @@ export default function ViewerGate({
   hasSubscription = false,
   freeAccess = false,
   signedIn = false,
+  alreadyUnlocked = false,
 }: Props) {
   const en = useLocale() === "en";
   const lh = useHref();
+  const [tokenError, setTokenError] = useState<
+    { tokenBalance: number; bonusTokens: number; tokenCost: number } | null
+  >(null);
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
@@ -140,8 +147,13 @@ export default function ViewerGate({
    */
   const openViewer = async (e: React.MouseEvent) => {
     e.preventDefault();
+    setTokenError(null);
     trackOpen();
     const win = window.open("", "_blank");
+    const closeWin = () => {
+      // トークン不足で開かない場合、先に開いた空タブは閉じる。
+      try { win?.close(); } catch { /* ignore */ }
+    };
     const fallback = () => {
       if (win) win.location.href = fullViewerUrl;
       else window.open(fullViewerUrl, "_blank");
@@ -156,6 +168,29 @@ export default function ViewerGate({
         `/api/viewer-asset?key=${encodeURIComponent(splatUrl)}`,
         { cache: "no-store" },
       );
+      // 402 = トークン不足。ここで fallback すると /api/viewer-stream 経由で
+      // トークン未チェックのまま視聴できてしまい機能が骨抜きになる。だから
+      // 402 は絶対にフォールバックさせず、明確なエラーをユーザーに提示する。
+      if (res.status === 402) {
+        closeWin();
+        let info: { tokenBalance: number; bonusTokens: number; tokenCost: number } =
+          { tokenBalance: 0, bonusTokens: 0, tokenCost };
+        try {
+          const j = (await res.json()) as {
+            tokenBalance?: number;
+            bonusTokens?: number;
+            tokenCost?: number;
+          };
+          info = {
+            tokenBalance: j.tokenBalance ?? 0,
+            bonusTokens: j.bonusTokens ?? 0,
+            tokenCost: j.tokenCost ?? tokenCost,
+          };
+        } catch { /* keep defaults */ }
+        setTokenError(info);
+        return;
+      }
+      // その他の非200（503 署名未設定 / ネットワーク不良等）のみ従来フォールバック。
       if (!res.ok) return fallback();
       const data = (await res.json()) as { url?: string };
       if (!data.url) return fallback();
@@ -192,16 +227,26 @@ export default function ViewerGate({
         <div className="flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
           <div
             className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
-              freeAccess ? "text-green-600" : "text-accent"
+              freeAccess || alreadyUnlocked ? "text-green-600" : "text-accent"
             }`}
           >
             {freeAccess
               ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
-              : `● ${sizeMb} MB`}
+              : alreadyUnlocked
+                ? en ? "● Unlocked · free re-view" : "● 視聴済み · 無料で再視聴"
+                : en
+                  ? `● ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
+                  : `● ${tokenCost} トークン消費`}
           </div>
 
           <p className="text-[12px] font-semibold text-ink/85 max-w-[44ch] leading-[1.75]">
-            {en ? "Opens the 3D walkthrough in a new tab" : "別タブで 3D ウォークスルーを開きます"}
+            {alreadyUnlocked
+              ? en
+                ? "You've already unlocked this scene — re-view it free for 2 years."
+                : "このシーンはアンロック済みです（2年間は無料で再視聴できます）"
+              : en
+                ? "Opens the 3D walkthrough in a new tab"
+                : "別タブで 3D ウォークスルーを開きます"}
           </p>
 
           <a
@@ -213,6 +258,38 @@ export default function ViewerGate({
           >
             {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
           </a>
+
+          {/* トークン不足（サーバ 402）。フォールバックさせずここで明示する。 */}
+          {tokenError && (
+            <div className="mt-1 w-full max-w-[46ch] rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left">
+              <div className="text-[12px] font-bold text-red-700 mb-1">
+                {en ? "Not enough tokens" : "トークンが足りません"}
+              </div>
+              <p className="text-[12px] text-red-800/90 leading-[1.7]">
+                {en
+                  ? `This scene needs ${tokenError.tokenCost} token${
+                      tokenError.tokenCost > 1 ? "s" : ""
+                    }, but you have ${tokenError.tokenBalance + tokenError.bonusTokens}.`
+                  : `このシーンの視聴には ${tokenError.tokenCost} トークン必要ですが、残高は ${
+                      tokenError.tokenBalance + tokenError.bonusTokens
+                    } です。`}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                <Link
+                  href={lh(`/pricing?from=${propertyId}`)}
+                  className="px-3.5 py-1.5 text-[11px] font-bold rounded-sm bg-accent text-white hover:bg-accent/85 transition"
+                >
+                  {en ? "See plans" : "プランを見る"}
+                </Link>
+                <Link
+                  href={lh("/account")}
+                  className="px-3.5 py-1.5 text-[11px] font-semibold rounded-sm border border-red-300 text-red-700 hover:bg-red-100 transition"
+                >
+                  {en ? "My tokens" : "トークン残高"}
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

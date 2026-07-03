@@ -7,6 +7,7 @@ import {
 } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
+import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
@@ -71,6 +72,9 @@ export default async function PropertyDetailPage({
   const signedIn = !!user;
   const bookmarked = user ? (user.bookmarks ?? []).includes(property.id) : false;
   const purchasedIndices: number[] = [];
+  // シーン(splatItem)ごとに「2年以内のアンロック済みか」を集計。true のシーンは
+  // ViewerGate 側で「視聴済み（無料再視聴）」表示になり、開いても課金されない。
+  const unlockedIndices: number[] = [];
   if (user) {
     try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
@@ -79,6 +83,19 @@ export default async function PropertyDetailPage({
       }
     } catch {
       // purchase lookup failure is non-fatal
+    }
+    // admin / free-period は課金対象外なので「アンロック済み」表示は不要
+    // （常に無料で開ける）。それ以外のサブスク会員のみ判定する。
+    if (user.role !== "admin" && !freeAccess) {
+      try {
+        const unlocks = await viewUnlockRepo.list({ userId: user.id, propertyId: property.id });
+        const now = new Date().toISOString();
+        for (const u of unlocks) {
+          if (u.expiresAt > now) unlockedIndices.push(u.splatItemIndex);
+        }
+      } catch {
+        // unlock lookup failure is non-fatal（表示が「未アンロック」に倒れるだけ）
+      }
     }
   }
 
@@ -95,6 +112,7 @@ export default async function PropertyDetailPage({
         canViewRestricted={canViewRestrictedItems}
         canViewNdaOnly={canViewNdaOnlyItems}
         purchasedIndices={purchasedIndices}
+        unlockedIndices={unlockedIndices}
         hasViewerAccess={hasViewerAccess}
         signedIn={signedIn}
         bookmarked={bookmarked}
