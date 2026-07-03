@@ -337,7 +337,7 @@ export const publishablePropertySchema = propertySchema.extend({
   hourlyPrice: z.number().int().min(1, "料金を入力してください"),
   summary: z
     .string()
-    .min(10, "10 文字以上で入力してください")
+    .min(10, "紹介文は 10 文字以上で入力してください")
     .max(200),
   cover: propertyImageSchema.extend({
     src: z
