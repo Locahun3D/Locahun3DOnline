@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import {
   publishByIdAction,
   unpublishAction,
+  archiveAction,
   deleteAction,
 } from "@/app/admin/_actions";
 import type { PropertyStatus } from "@/lib/schemas";
@@ -34,6 +35,19 @@ export default function PropertyRowActions({
     setError(null);
     start(async () => {
       await unpublishAction(id);
+    });
+  };
+  const archive = () => {
+    if (
+      !window.confirm(
+        "この物件をアーカイブします。公開一覧から外れます（削除ではありません）。よろしいですか？",
+      )
+    )
+      return;
+    setError(null);
+    start(async () => {
+      const r = await archiveAction(id);
+      if (r && !r.ok) setError("アーカイブに失敗しました");
     });
   };
   const remove = () => {
@@ -82,6 +96,16 @@ export default function PropertyRowActions({
             className={`${BTN} border-accent text-accent hover:bg-accent hover:text-bg`}
           >
             公開
+          </button>
+        )}
+        {status !== "archived" && (
+          <button
+            type="button"
+            onClick={archive}
+            disabled={pending}
+            className={`${BTN} border-line hover:border-ink`}
+          >
+            アーカイブ
           </button>
         )}
         <button
