@@ -14,15 +14,16 @@ export const metadata = { title: "プレビュー" };
 
 /**
  * プランごとの閲覧フラグを再現する（本番の /properties/[id] と同じロジックを
- * シミュレーション: hasViewerAccess = plan!=free、restricted = Team、
- * nda_only = Team + NDA 締結済み）。
+ * シミュレーション: hasViewerAccess = サインイン済みか（トークン保有量は
+ * このシミュレーターでは再現しないため、実際に開けるかは残高次第）、
+ * restricted = Team、nda_only = Team + NDA 締結済み）。
  */
 function simulateFlags(plan: PreviewPlan) {
   switch (plan) {
     case "guest":
       return { signedIn: false, hasViewerAccess: false, canViewRestricted: false, canViewNdaOnly: false };
     case "free":
-      return { signedIn: true, hasViewerAccess: false, canViewRestricted: false, canViewNdaOnly: false };
+      return { signedIn: true, hasViewerAccess: true, canViewRestricted: false, canViewNdaOnly: false };
     case "individual":
     case "studio":
       return { signedIn: true, hasViewerAccess: true, canViewRestricted: false, canViewNdaOnly: false };

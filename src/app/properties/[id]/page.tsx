@@ -67,8 +67,12 @@ export default async function PropertyDetailPage({
 
   const canViewRestrictedItems = canViewBackyard(user);
   const canViewNdaOnlyItems = canViewNdaOnly(user);
-  const hasViewerAccess =
-    !!user && (user.role === "admin" || (!!user.plan && user.plan !== "free"));
+  // 閲覧ゲートはプラン階層ではなくトークン保有量そのもの。フリープランでも
+  // トークンさえあれば視聴できる（実際の残高チェック/消費は /api/viewer-asset
+  // 側で行う — ここはサインイン済みかどうかだけを見る「試行してよいか」判定）。
+  // Team プランの特別扱い（NDA/制限あり閲覧の突破）は canViewRestrictedItems /
+  // canViewNdaOnlyItems の方で別途処理される。
+  const hasViewerAccess = !!user;
   const signedIn = !!user;
   const bookmarked = user ? (user.bookmarks ?? []).includes(property.id) : false;
   const purchasedIndices: number[] = [];

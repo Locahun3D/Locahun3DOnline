@@ -73,11 +73,10 @@ export async function GET(req: Request) {
 
     const settings = await getSettings();
     const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
-    const hasViewerAccess =
-      user.role === "admin" || (!!user.plan && user.plan !== "free") || freeAccess;
-    if (!hasViewerAccess) {
-      return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
-    }
+    // 閲覧ゲートはプラン階層ではなくトークン保有量そのもの。フリープランでも
+    // サインインしてさえいれば試行でき、下のトークン消費ゲートで実際の可否が
+    // 決まる（残高不足なら 402）。プラン階層で差が出るのは月額料金とトークン
+    // 付与量、および Team の NDA/制限あり閲覧バイパスのみ。
 
     if (matchedItem.accessLevel === "restricted" && !canViewBackyard(user)) {
       return NextResponse.json({ error: "制限付きデータです" }, { status: 403 });
@@ -87,14 +86,13 @@ export async function GET(req: Request) {
     }
 
     /* ── トークン消費ゲート ─────────────────────────────────────────
-     * サブスク会員は「シーン(splatItem)単位」で tokenCost トークンを消費して
-     * 視聴をアンロックする。一度アンロックしたシーンは 2 年間無償で再視聴できる。
+     * 全プラン共通で「シーン(splatItem)単位」で tokenCost トークンを消費して
+     * 視聴をアンロックする（フリープランも含む — 月次付与分等で保有していれば
+     * 視聴可）。一度アンロックしたシーンは 2 年間無償で再視聴できる。
      *
-     * バイパス（既存のサブスク段チェックと同様に無条件で通す）:
+     * バイパス（無条件で通す）:
      *   - 管理者 (role === "admin")
      *   - 限定無料期間中 (freeAccess)
-     * フリープランは上の hasViewerAccess で既に弾かれており、ここには到達しない。
-     * （doc コメントの「Free gives 1 walk-through」は今回スコープ外＝別途要検討。）
      */
     const isAdmin = user.role === "admin";
     if (!isAdmin && !freeAccess) {
