@@ -189,10 +189,10 @@ export default function ViewerGate({
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 text-center px-6"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)" }}
       >
-        <div className="flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-black/80 backdrop-blur-md">
+        <div className="flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
           <div
             className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
-              freeAccess ? "text-green-400" : "text-accent"
+              freeAccess ? "text-green-600" : "text-accent"
             }`}
           >
             {freeAccess
@@ -200,7 +200,7 @@ export default function ViewerGate({
               : `● ${sizeMb} MB`}
           </div>
 
-          <p className="text-[12px] font-semibold text-white max-w-[44ch] leading-[1.75]">
+          <p className="text-[12px] font-semibold text-ink/85 max-w-[44ch] leading-[1.75]">
             {en ? "Opens the 3D walkthrough in a new tab" : "別タブで 3D ウォークスルーを開きます"}
           </p>
 
@@ -209,7 +209,7 @@ export default function ViewerGate({
             target="_blank"
             rel="noopener"
             onClick={openViewer}
-            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] font-bold tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] font-bold tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-white transition"
           >
             {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
           </a>
