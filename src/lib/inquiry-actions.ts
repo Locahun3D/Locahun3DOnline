@@ -49,6 +49,15 @@ export async function submitInquiryAction(
     return { ok: true };
   }
   // (2) 時間ガード: 開いてから送信までの経過時間で判定。
+  // TEMP DIAG: 送信元検証用。phone==="__diag__" のとき生値を返す（後で削除）。
+  if (formData.get("phone") === "__diag__") {
+    const raw = formData.get(RENDERED_AT_FIELD);
+    const n = Number(raw);
+    return {
+      ok: false,
+      error: `DIAG raw=${JSON.stringify(raw)} num=${n} elapsed=${Date.now() - n} verdict=${checkTiming(raw)}`,
+    };
+  }
   const timing = checkTiming(formData.get(RENDERED_AT_FIELD));
   if (timing === "too-fast") {
     return { ok: true }; // bot 疑い、静かに成功
