@@ -61,13 +61,42 @@ export async function GET(
     return NextResponse.json({ error: "Use /api/viewer-asset for 3DGS data" }, { status: 403 });
   }
 
+  const rangeHeader = req.headers.get("range");
+
+  // Next.js/OpenNext は既定で全レスポンスに RSC 用の Vary（next-router-state-tree
+  // 等）を付与し、ヘッダーで上書きしても消えず追記される。これだと Cloudflare の
+  // エッジキャッシュが Vary 起因で実質効かない（実測: CF-Cache-Status が付かない。
+  // Cache Rule をダッシュボード側で作っても同様に無反応だった＝この Workers Route
+  // 構成では zone 側のキャッシュ評価自体が素通りしている可能性が高い）。
+  // 画像等の小容量・非 Range リクエストは Workers の Cache API で明示的に
+  // キャッシュする。
+  //
+  // ⚠ 過去に一度この方式で本番 500 エラーを起こした（ctx.waitUntil に渡した
+  // 非同期 cache.put() の失敗が同一 Worker 内の他リクエストへ波及したと推定）。
+  // 今回は cache 読み書きを丸ごと try/catch で包み、失敗しても必ず通常の R2
+  // レスポンスを返す（キャッシュはあくまで副次的な高速化で、失敗しても機能に
+  // 影響させない）。put も待ち受けずに投げっぱなしにしない（await して例外を
+  // このリクエストのスコープ内で確実に握り潰す）。
+  let cache: Cache | undefined;
+  try {
+    cache = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
+  } catch {
+    cache = undefined;
+  }
+  if (cache && !rangeHeader) {
+    try {
+      const hit = await cache.match(req);
+      if (hit) return hit;
+    } catch (e) {
+      console.warn("[r2] cache match failed, falling through to R2:", e);
+    }
+  }
+
   try {
     const bucket = await getBucket();
     if (!bucket) {
       return NextResponse.json({ error: "R2 not configured" }, { status: 503 });
     }
-
-    const rangeHeader = req.headers.get("range");
 
     if (rangeHeader) {
       const r2range = toR2Range(rangeHeader);
@@ -103,12 +132,33 @@ export async function GET(
     const obj = await bucket.get(key);
     if (!obj) return new NextResponse("Not found", { status: 404 });
 
+    const size = obj.size ?? 0;
+    const cacheable = !!cache && size > 0 && size <= NO_CACHE_BYTES;
+
     const headers = new Headers();
     headers.set("Content-Type", obj.httpMetadata?.contentType || "application/octet-stream");
     if (obj.size) headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
-    headers.set("Cache-Control", cacheControlFor(obj.size ?? 0));
+    headers.set("Cache-Control", cacheControlFor(size));
     headers.set("Vary", "Accept-Encoding");
+
+    // 小容量ファイル（画像等）は body をバッファ化して Cache API にも保存する
+    // （ReadableStream は 1 回しか消費できないため、バッファ化するなら
+    // obj.body を後から使うフォールバックは書かない — 既に消費済みで空になる
+    // 事故になる。バッファ化に失敗したら素直にエラーとして扱う）。
+    if (cacheable) {
+      const buf = await obj.arrayBuffer();
+      const res = new NextResponse(buf, { headers });
+      // キャッシュ保存は完全に副次的な処理。プレーンな Response（NextResponse
+      // ではない）に対して行い、失敗してもこのリクエストの応答には影響しない。
+      try {
+        const cacheEntry = new Response(buf, { status: 200, headers: new Headers(headers) });
+        await cache!.put(req, cacheEntry);
+      } catch (e) {
+        console.warn("[r2] cache put failed (non-fatal):", e);
+      }
+      return res;
+    }
 
     return new NextResponse(obj.body as ReadableStream, { headers });
   } catch (e) {
