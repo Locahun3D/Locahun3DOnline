@@ -119,6 +119,12 @@ export const userSchema = z.object({
   bonusTokens: z.number().int().min(0).default(0),
   /** 月次/付与トークン(tokenBalance)の失効予定日 (ISO)。null = 失効予定なし。 */
   tokenExpiresAt: z.string().nullable().default(null),
+  /**
+   * 次回の月次トークン補充予定日 (ISO)。有料プランのみ設定。null = 補充対象外
+   * (freeプラン/未契約)。Stripe の請求サイクル(年払いなら年1回)とは独立して、
+   * ユーザーの読み込み時に毎月自動で満タン補充するための内部クロック。
+   */
+  tokenRefillAt: z.string().nullable().default(null),
   /** Stripe Customer ID (cus_…)。サブスク契約後に紐付け。null = 未連携。 */
   stripeCustomerId: z.string().nullable().default(null),
   /** ISO timestamp when the NDA was accepted; null = not accepted. */
@@ -147,6 +153,13 @@ export function totalTokens(u: Pick<User, "tokenBalance" | "bonusTokens">): numb
 export function oneYearFrom(nowIso: string): string {
   const d = new Date(nowIso);
   d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString();
+}
+
+/** 月次トークン補充の次回予定日 = 今から1ヶ月後。 */
+export function oneMonthFrom(nowIso: string): string {
+  const d = new Date(nowIso);
+  d.setMonth(d.getMonth() + 1);
   return d.toISOString();
 }
 

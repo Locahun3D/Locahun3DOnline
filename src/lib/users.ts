@@ -17,7 +17,8 @@ import {
   d1IsEmpty,
   type D1,
 } from "./d1";
-import { userSchema, type User } from "./account-schema";
+import { userSchema, oneYearFrom, oneMonthFrom, type User } from "./account-schema";
+import { PLAN_TOKEN_BUDGET } from "./schemas";
 
 const DATA_FILE = path.join(process.cwd(), "data", "users.json");
 const TABLE = "users";
@@ -115,24 +116,66 @@ class UserRepoImpl implements UserRepo {
         users = await d1ListData<User>(db, TABLE);
       }
     }
-    return [...users].sort((a, b) =>
+    const settled = await Promise.all(users.map((u) => this.applyTokenLifecycle(u)));
+    return settled.sort((a, b) =>
       (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
     );
   }
 
   async get(id: string): Promise<User | null> {
+    let u: User | null;
     if (canAccessLocalFs()) {
       const s = await readStore();
-      return s.users.find((u) => u.id === id) ?? null;
+      u = s.users.find((x) => x.id === id) ?? null;
+    } else {
+      const db = await getD1();
+      if (!db) return SEED_USERS.find((x) => x.id === id) ?? null;
+      await ensureSeeded(db);
+      u =
+        (await d1GetData<User>(db, TABLE, "id", id)) ??
+        SEED_USERS.find((x) => x.id === id) ??
+        null;
     }
-    const db = await getD1();
-    if (!db) return SEED_USERS.find((u) => u.id === id) ?? null;
-    await ensureSeeded(db);
-    return (
-      (await d1GetData<User>(db, TABLE, "id", id)) ??
-      SEED_USERS.find((u) => u.id === id) ??
-      null
-    );
+    return u ? this.applyTokenLifecycle(u) : null;
+  }
+
+  /**
+   * 読み込みのたびにトークンの寿命を精算する（store.ts の splatItem.id 遅延採番
+   * と同じ「読み取り時に自己修復して書き戻す」パターン）。
+   *
+   * 1) 失効判定: tokenExpiresAt を過ぎていたら tokenBalance を 0 にする。
+   *    これが無いと、料金ページ/アカウントページで案内している「1年で失効」が
+   *    実装として一切効かず、トークンが無期限に使い続けられてしまっていた。
+   * 2) 月次補充: 有料プランは tokenRefillAt を過ぎるたびプラン予算まで満タン
+   *    補充する。Stripe の invoice.paid(subscription_cycle) は年払いだと年1回
+   *    しか発火しないため、それに頼るだけだと年払い会員は「月◯トークン」の
+   *    謳い文句どおり毎月補充されない。ここで請求サイクルと独立した月次クロック
+   *    を持たせ、年払いでも実際に毎月満タンになるようにする（Stripe側の課金
+   *    サイクル自体は変えない。トークン付与だけ月次にする）。
+   */
+  private async applyTokenLifecycle(u: User): Promise<User> {
+    const now = new Date().toISOString();
+    let next = u;
+    let changed = false;
+
+    if (next.tokenExpiresAt && next.tokenExpiresAt <= now && next.tokenBalance > 0) {
+      next = { ...next, tokenBalance: 0, tokenExpiresAt: null };
+      changed = true;
+    }
+
+    if (next.plan !== "free" && next.tokenRefillAt && next.tokenRefillAt <= now) {
+      const budget = PLAN_TOKEN_BUDGET[next.plan];
+      next = {
+        ...next,
+        tokenBalance: budget,
+        tokenExpiresAt: budget > 0 ? oneYearFrom(now) : null,
+        tokenRefillAt: oneMonthFrom(now),
+      };
+      changed = true;
+    }
+
+    if (!changed) return u;
+    return this.upsert(next);
   }
 
   async getByEmail(email: string): Promise<User | null> {

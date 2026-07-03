@@ -6,7 +6,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
-import { oneYearFrom, type AccountPlan } from "@/lib/account-schema";
+import { oneYearFrom, oneMonthFrom, type AccountPlan } from "@/lib/account-schema";
 
 export const runtime = "nodejs";
 
@@ -42,13 +42,17 @@ async function applyPlan(
     return;
   }
 
-  // プラン変更 → 新プランの枠を付与（年次失効）。
+  // プラン変更 → 新プランの枠を付与（年次失効）。tokenRefillAt は「1ヶ月後に
+  // 満タン補充」の起点。年払いプランは Stripe の請求サイクル自体が年1回なので、
+  // これが無いと年払い会員だけ月次補充を受けられない（users.ts 側で毎月精算）。
   const budget = PLAN_TOKEN_BUDGET[plan];
+  const now = new Date().toISOString();
   await userRepo.upsert({
     ...u,
     plan,
     tokenBalance: budget,
-    tokenExpiresAt: budget > 0 ? oneYearFrom(new Date().toISOString()) : null,
+    tokenExpiresAt: budget > 0 ? oneYearFrom(now) : null,
+    tokenRefillAt: budget > 0 ? oneMonthFrom(now) : null,
     stripeCustomerId: nextCustomer,
   });
 }
@@ -154,12 +158,15 @@ export async function POST(req: Request) {
         const u = await findByCustomer(customerId);
         if (!u) break;
         const budget = PLAN_TOKEN_BUDGET[u.plan];
+        const now = new Date().toISOString();
         // budget へ「セット」（加算でない）なので Stripe の再送でも冪等。
+        // tokenRefillAt もここで1ヶ月後に更新し、実際の請求と内部クロックを
+        // 揃える（次の自動補充は users.ts 側の月次クロックに委ねる）。
         await userRepo.upsert({
           ...u,
           tokenBalance: budget,
-          tokenExpiresAt:
-            budget > 0 ? oneYearFrom(new Date().toISOString()) : null,
+          tokenExpiresAt: budget > 0 ? oneYearFrom(now) : null,
+          tokenRefillAt: budget > 0 ? oneMonthFrom(now) : null,
         });
         break;
       }

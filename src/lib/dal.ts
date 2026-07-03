@@ -69,6 +69,9 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     tokenBalance: isAdmin ? 9999 : isGuest ? 0 : SIGNUP_BONUS_TOKENS,
     // 登録時の無料トークンは付与から1年で失効。admin/guest は対象外。
     tokenExpiresAt: !isAdmin && !isGuest ? oneYearFrom(now) : null,
+    // 登録時ボーナスは一回きり（月次補充の対象外）。有料プラン加入時に
+    // applyPlan/webhook 側で改めてセットされる。
+    tokenRefillAt: null,
     stripeCustomerId: null,
     bonusTokens: isGuest ? GUEST_BONUS_TOKENS : 0,
     ndaAcceptedAt: null,

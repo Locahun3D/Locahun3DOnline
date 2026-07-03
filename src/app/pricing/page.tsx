@@ -30,11 +30,16 @@ const COMPARE_ROWS: Array<{
   { label: ["年払 -15% 適用", "Annual −15%"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
 ];
 
-export default async function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
   const user = await getCurrentUser();
   const locale = await getLocale();
   const en = locale === "en";
   const c = (cell: Cell) => cell[en ? 1 : 0];
+  const { checkout } = await searchParams;
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -43,6 +48,14 @@ export default async function PricingPage() {
         <span>Plans</span>
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
+
+      {checkout === "team_role_required" && (
+        <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
+          {en
+            ? "Team is only available to “Production” accounts (NDA-signed). Your current account type can't unlock its restricted/NDA-only viewing benefit, so we didn't process the subscription."
+            : "Team プランは「制作会社（NDA締結）」アカウント限定です。現在のアカウント種別では制限あり/NDA限定シーンの閲覧特典を得られないため、お申し込みを処理しませんでした。"}
+        </div>
+      )}
 
       <header className="text-center mb-12">
         <h1 className="serif text-[clamp(2rem,4vw,3.6rem)] font-bold leading-[1.3] max-w-[26ch] mx-auto">
@@ -80,7 +93,7 @@ export default async function PricingPage() {
       </header>
 
       {/* 4 plans + billing mode toggle */}
-      <PlanCards signedIn={!!user} currentPlan={user?.plan} />
+      <PlanCards signedIn={!!user} currentPlan={user?.plan} currentRole={user?.role} />
       <p className="text-center text-[11px] text-muted mt-5 leading-[1.7]">
         {en ? (
           <>

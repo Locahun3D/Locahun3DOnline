@@ -94,9 +94,11 @@ function priceFor(plan: Plan, mode: BillingMode): number {
 export default function PlanCards({
   signedIn = false,
   currentPlan,
+  currentRole,
 }: {
   signedIn?: boolean;
   currentPlan?: string;
+  currentRole?: string;
 }) {
   const [mode, setMode] = useState<BillingMode>("monthly");
   const [pending, startTransition] = useTransition();
@@ -222,6 +224,18 @@ export default function PlanCards({
                     return (
                       <div className="block text-center w-full px-4 py-2.5 mono text-[11px] tracking-[0.22em] uppercase border border-green-400/50 text-green-400">
                         {t("plan.current")}
+                      </div>
+                    );
+                  }
+                  // Team の NDA/制限あり閲覧特典は role==="production" のアカウント
+                  // にしか効かない（account-schema.ts）。他ロールに購入させても
+                  // 課金だけ発生して特典を得られないため、ここで先に案内する。
+                  if (planKey === "team" && signedIn && currentRole && currentRole !== "production") {
+                    return (
+                      <div className="text-center text-[11px] text-muted leading-[1.6] border border-line px-3 py-2.5">
+                        {locale === "en"
+                          ? "Production accounts only"
+                          : "制作会社アカウント限定"}
                       </div>
                     );
                   }

@@ -45,6 +45,14 @@ export async function subscribeAction(
   const user = await requireOnboarded();
   if (!(ACCOUNT_PLANS as readonly string[]).includes(plan)) redirect("/pricing");
 
+  // Team の「NDA締結で全て閲覧可」は canViewBackyard/canViewNdaOnly
+  // (account-schema.ts) が role==="production" を要求する。ここで弾かないと、
+  // production 以外のロールが Team を購入して料金を払っても、広告どおりの
+  // 閲覧特典を一切得られないまま課金だけ発生してしまう。
+  if (plan === "team" && user.role !== "production") {
+    redirect("/pricing?checkout=team_role_required");
+  }
+
   // Free はダウングレード扱い。Stripe解約は Customer Portal 側で行う。
   if (plan === "free") {
     await applyPlanStub(user.id, "free", user.email);
