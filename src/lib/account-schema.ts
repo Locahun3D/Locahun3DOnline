@@ -139,6 +139,12 @@ export const userSchema = z.object({
     .default([]),
   /** propertyId -> folderId。エントリが無い bookmark 済み物件は「未整理」。 */
   bookmarkFolderAssignments: z.record(z.string(), z.string()).default({}),
+  /**
+   * propertyId -> タグ配列。フォルダ（排他的な1箱）とは別に、案件をまたいで
+   * 複数付けられる横断ラベル（例: 1物件に「CM案件A」「屋外候補」の両方）。
+   * タグ自体のマスタ一覧は持たず、使用中のタグは表示時に一覧から動的に集計する。
+   */
+  bookmarkTags: z.record(z.string(), z.array(z.string().max(30)).max(10)).default({}),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });

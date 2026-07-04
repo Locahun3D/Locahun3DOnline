@@ -10,6 +10,7 @@ import {
   renameBookmarkFolderAction,
   deleteBookmarkFolderAction,
   assignBookmarkFolderAction,
+  setBookmarkTagsAction,
 } from "@/lib/bookmark-actions";
 
 type Folder = { id: string; name: string };
@@ -20,24 +21,48 @@ const UNSORTED = "__unsorted__";
  * ブックマーク・フォルダ管理 UI（v1）。ドラッグ&ドロップ・ネスト無しの
  * シンプルな構成: フォルダ作成フォーム + フォルダ毎のセクション + 各物件行に
  * 割り当て用セレクト。フォルダ名の変更・削除はセクション見出しの小さな操作。
+ * タグはフォルダと違い1物件に複数付けられる横断ラベル（例:「CM案件A」と
+ * 「屋外候補」を同時に付ける）。タグを選ぶとフォルダ分けを無視した横断ビューになる。
  */
 export default function BookmarksManager({
   properties,
   initialFolders,
   initialAssignments,
+  initialTags,
   locale,
 }: {
   properties: Property[];
   initialFolders: Folder[];
   initialAssignments: Record<string, string>;
+  initialTags: Record<string, string[]>;
   locale: Locale;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [assignments, setAssignments] = useState<Record<string, string>>(initialAssignments);
+  const [tags, setTags] = useState<Record<string, string[]>>(initialTags);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [pending, startTransition] = useTransition();
+
+  const onTagsChange = (propertyId: string, next: string[]) => {
+    setTags((t) => {
+      const copy = { ...t };
+      if (next.length > 0) copy[propertyId] = next;
+      else delete copy[propertyId];
+      return copy;
+    });
+    startTransition(async () => {
+      await setBookmarkTagsAction(propertyId, next);
+    });
+    // アクティブなフィルタから外れたタグが消えても表示が壊れないよう、
+    // フィルタ自体はそのまま（対象0件になれば下の空表示が出る）。
+  };
+
+  const allTags = [...new Set(Object.values(tags).flat())].sort((a, b) =>
+    a.localeCompare(b, "ja"),
+  );
 
   const onCreateFolder = () => {
     const name = newFolderName.trim();
@@ -130,6 +155,54 @@ export default function BookmarksManager({
     </select>
   );
 
+  const TagEditor = ({ propertyId }: { propertyId: string }) => {
+    const [draft, setDraft] = useState("");
+    const current = tags[propertyId] ?? [];
+    const addTag = () => {
+      const t = draft.trim().slice(0, 30);
+      if (!t || current.includes(t) || current.length >= 10) {
+        setDraft("");
+        return;
+      }
+      onTagsChange(propertyId, [...current, t]);
+      setDraft("");
+    };
+    const removeTag = (t: string) => {
+      onTagsChange(propertyId, current.filter((x) => x !== t));
+    };
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {current.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => removeTag(t)}
+            title={en ? `Remove tag "${t}"` : `タグ「${t}」を外す`}
+            className="mono text-[9.5px] tracking-[0.08em] border border-accent/40 text-accent px-2 py-1 hover:border-red-400 hover:text-red-400 transition"
+          >
+            {t} ✕
+          </button>
+        ))}
+        {current.length < 10 && (
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+            onBlur={addTag}
+            placeholder={en ? "+ tag" : "+ タグ"}
+            maxLength={30}
+            className="w-20 text-[10.5px] border border-line bg-bg px-2 py-1"
+          />
+        )}
+      </div>
+    );
+  };
+
+  const filteredByTag = activeTag
+    ? properties.filter((p) => (tags[p.id] ?? []).includes(activeTag))
+    : [];
+
   return (
     <div className="space-y-10">
       {/* ── フォルダ作成 ── */}
@@ -156,6 +229,63 @@ export default function BookmarksManager({
         </button>
       </div>
 
+      {/* ── タグで絞り込み（フォルダを横断） ── */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted shrink-0">
+            {en ? "Filter by tag" : "タグで絞り込み"}
+          </span>
+          {allTags.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setActiveTag((cur) => (cur === t ? null : t))}
+              className={`mono text-[10.5px] tracking-[0.08em] border px-3 py-1.5 transition ${
+                activeTag === t
+                  ? "border-accent bg-accent text-bg"
+                  : "border-line text-ink/80 hover:border-accent hover:text-accent"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeTag ? (
+        /* ── タグ絞り込みビュー（フォルダ分けを無視した横断表示） ── */
+        <section>
+          <div className="flex items-center gap-3 mb-4 pb-2 border-b border-line">
+            <h2 className="font-bold text-[15px]">
+              {en ? `Tag: ${activeTag}` : `タグ: ${activeTag}`}
+            </h2>
+            <span className="mono text-[10px] text-muted">{filteredByTag.length}</span>
+            <span className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setActiveTag(null)}
+              className="mono text-[10px] tracking-[0.14em] uppercase text-muted hover:text-accent transition"
+            >
+              {en ? "✕ Clear filter" : "✕ フィルタ解除"}
+            </button>
+          </div>
+          {filteredByTag.length === 0 ? (
+            <p className="text-[12px] text-ink/40 pb-2">
+              {en ? "No properties with this tag." : "このタグの物件はありません。"}
+            </p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredByTag.map((p) => (
+                <div key={p.id} className="space-y-2">
+                  <PropertyCard property={p} locale={locale} />
+                  <TagEditor propertyId={p.id} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+      <>
       {/* ── フォルダ毎のセクション ── */}
       {folders.map((f) => {
         const items = grouped.get(f.id) ?? [];
@@ -192,6 +322,7 @@ export default function BookmarksManager({
                   <div key={p.id} className="space-y-2">
                     <PropertyCard property={p} locale={locale} />
                     <AssignSelect propertyId={p.id} />
+                    <TagEditor propertyId={p.id} />
                   </div>
                 ))}
               </div>
@@ -218,11 +349,14 @@ export default function BookmarksManager({
               <div key={p.id} className="space-y-2">
                 <PropertyCard property={p} locale={locale} />
                 {folders.length > 0 && <AssignSelect propertyId={p.id} />}
+                <TagEditor propertyId={p.id} />
               </div>
             ))}
           </div>
         )}
       </section>
+      </>
+      )}
 
       <div className="mt-4 text-center">
         <Link

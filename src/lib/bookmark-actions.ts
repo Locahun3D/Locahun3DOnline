@@ -140,3 +140,38 @@ export async function assignBookmarkFolderAction(
   revalidatePath(BOOKMARKS_PATH);
   return { ok: true };
 }
+
+/**
+ * 物件のタグ一覧を丸ごと置き換える（フォルダと違い1物件に複数付けられる、
+ * 案件をまたぐ横断ラベル）。空配列ならエントリごと削除。
+ */
+export async function setBookmarkTagsAction(
+  propertyId: string,
+  tags: string[],
+): Promise<{ ok: boolean; tags: string[] }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, tags: [] };
+  if (!propertyId) return { ok: false, tags: [] };
+
+  const cleaned = [
+    ...new Set(
+      tags
+        .map((t) => t.trim().slice(0, 30))
+        .filter(Boolean),
+    ),
+  ].slice(0, 10);
+
+  const u = await userRepo.get(user.id);
+  if (!u) return { ok: false, tags: [] };
+
+  const bookmarkTags = { ...(u.bookmarkTags ?? {}) };
+  if (cleaned.length > 0) {
+    bookmarkTags[propertyId] = cleaned;
+  } else {
+    delete bookmarkTags[propertyId];
+  }
+  await userRepo.upsert({ ...u, bookmarkTags });
+
+  revalidatePath(BOOKMARKS_PATH);
+  return { ok: true, tags: cleaned };
+}
