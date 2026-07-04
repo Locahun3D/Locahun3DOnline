@@ -476,8 +476,8 @@ export function tokenCostLabel(t: 1 | 2 | 3, locale?: string): string {
 /** Monthly recurring token budget per plan (resets on the 1st). */
 export const PLAN_TOKEN_BUDGET = {
   free: 0,       // free has no monthly budget — only the signup bonus below
-  individual: 24,
-  studio: 36,
+  individual: 16,
+  studio: 32,
   team: 90,
 } as const;
 
