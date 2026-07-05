@@ -472,7 +472,12 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 <Field
                   label="時間料金 (¥/hr)"
                   error={formState.errors.hourlyPrice?.message}
-                  required
+                  hint={
+                    watch("permitRequired")
+                      ? "許可制の物件（下記チェック）は 0 のままで公開できます"
+                      : undefined
+                  }
+                  required={!watch("permitRequired")}
                 >
                   <input
                     type="number"
@@ -1584,7 +1589,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     {...register("tokenCost", { valueAsNumber: true })}
                     className={inputClass}
                   >
-                    {([1, 2, 3] as const).map((n) => (
+                    {([1, 2, 3, 5] as const).map((n) => (
                       <option key={n} value={n} className="bg-bg">
                         {n} トークン — {TOKEN_COST_LABEL[n]}
                       </option>
@@ -2221,7 +2226,10 @@ function Checklist({ data }: { data: Property }) {
     { ok: data.title.length >= 2, label: "物件名" },
     { ok: data.summary.length >= 10, label: "サマリー (10 文字以上)" },
     { ok: data.city.length > 0, label: "市区町村" },
-    { ok: data.hourlyPrice > 0, label: "料金 (0 円以上)" },
+    {
+      ok: data.permitRequired || data.hourlyPrice > 0,
+      label: data.permitRequired ? "料金（許可制のため入力不要）" : "料金 (0 円以上)",
+    },
     {
       ok: !!data.cover.src && (/^https?:\/\//.test(data.cover.src) || data.cover.src.startsWith("/")),
       label: "カバー画像 URL",

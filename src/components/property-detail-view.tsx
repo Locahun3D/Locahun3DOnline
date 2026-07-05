@@ -293,10 +293,16 @@ export default function PropertyDetailView({
                 )}
                 <div className="flex flex-wrap gap-2">
                   <a
-                    href="#inquiry"
+                    href={property.permitRequired ? "#permit-notice" : "#inquiry"}
                     className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 bg-accent border border-accent text-[#0a2a35] hover:brightness-[1.06] transition"
                   >
-                    {en ? "Contact us" : "お問い合わせ"}
+                    {property.permitRequired
+                      ? en
+                        ? "Permit info"
+                        : "道路使用許可について"
+                      : en
+                        ? "Contact us"
+                        : "お問い合わせ"}
                   </a>
                 </div>
               </div>
@@ -370,7 +376,7 @@ export default function PropertyDetailView({
             </div>
 
             {property.permitRequired && (
-              <div className="mt-6 border border-amber-400/60 bg-amber-50 px-4 py-3">
+              <div id="permit-notice" className="mt-6 border border-amber-400/60 bg-amber-50 px-4 py-3 scroll-mt-20">
                 <div className="text-[11px] font-bold tracking-[0.12em] text-amber-700 mb-1">
                   {en ? "⚠ Permit required for filming" : "⚠ 撮影には許可の取得が必要です"}
                 </div>
@@ -560,7 +566,7 @@ export default function PropertyDetailView({
                       splatSizeMb={item.sizeMb}
                       zipSizeMb={property.zipSizeMb}
                       splatItemCount={property.splatItems.length}
-                      tokenCost={property.tokenCost as 1 | 2 | 3}
+                      tokenCost={property.tokenCost as 1 | 2 | 3 | 5}
                       downloadFileFormat={item.downloadFileFormat}
                       downloadFileSizeMb={item.downloadFileSizeMb}
                       pointCount={item.pointCount}

@@ -22,7 +22,7 @@ export default async function SiteHeader() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-bg/85 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
       <div className="frame flex items-center h-16 gap-3">
         {/* Left zone — hamburger (< lg) + nav (lg+) */}
         <div className="flex items-center gap-7 flex-1 min-w-0">

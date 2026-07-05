@@ -309,10 +309,11 @@ export const propertySchema = z.object({
    *   1 = ハウススタジオ / 小規模 (≤ 150㎡ 目安)
    *   2 = 中規模スタジオ (150-400㎡ 目安)
    *   3 = ドーム / 大規模 / 屋外 (400㎡ 超 or 複雑な空間)
+   *   5 = 大型ドーム・複合施設 (複数区画/複数シーン規模)
    * Subscription plans grant a monthly token budget; Free gives 1 walk-through
    * irrespective of cost.
    */
-  tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
+  tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(5)]).default(1),
   annotations: z.array(annotationSchema).max(200).default([]),
 
   // Data sale fields moved to splatItems[].forSale/salePrice/saleDescription
@@ -338,7 +339,6 @@ export const publishablePropertySchema = propertySchema.extend({
   area: z.string().min(1, "エリアを入力してください").max(40),
   prefecture: z.string().min(1, "都道府県を入力してください").max(20),
   city: z.string().min(1, "市区町村を入力してください").max(40),
-  hourlyPrice: z.number().int().min(1, "料金を入力してください"),
   summary: z
     .string()
     .min(10, "紹介文は 10 文字以上で入力してください")
@@ -366,6 +366,17 @@ export const publishablePropertySchema = propertySchema.extend({
       code: z.ZodIssueCode.custom,
       path: ["splatUrl"],
       message: "公開には 3DGS データが必須です（STEP 05 でアップロード）",
+    });
+  }
+
+  // スクランブル交差点など「施設所有者への通常の問い合わせ先が存在せず、撮影に
+  // 道路使用許可等の別手続きが必要な場所」(permitRequired) はレンタル料金という
+  // 概念自体がないため、料金入力を必須にしない。それ以外は従来通り必須。
+  if (!data.permitRequired && data.hourlyPrice < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["hourlyPrice"],
+      message: "料金を入力してください",
     });
   }
 });
@@ -457,19 +468,21 @@ export const AREA_SUGGESTIONS = [
 ] as const;
 
 /** Token cost labels and per-plan monthly budgets. */
-export const TOKEN_COST_LABEL: Record<1 | 2 | 3, string> = {
+export const TOKEN_COST_LABEL: Record<1 | 2 | 3 | 5, string> = {
   1: "ハウス / 小規模",
   2: "中規模スタジオ",
   3: "ドーム / 大規模",
+  5: "大型ドーム / 複合施設",
 };
 
-export const TOKEN_COST_LABEL_EN: Record<1 | 2 | 3, string> = {
+export const TOKEN_COST_LABEL_EN: Record<1 | 2 | 3 | 5, string> = {
   1: "House / small",
   2: "Mid-size studio",
   3: "Dome / large",
+  5: "Large dome / multi-venue complex",
 };
 
-export function tokenCostLabel(t: 1 | 2 | 3, locale?: string): string {
+export function tokenCostLabel(t: 1 | 2 | 3 | 5, locale?: string): string {
   return locale === "en" ? TOKEN_COST_LABEL_EN[t] : TOKEN_COST_LABEL[t];
 }
 
@@ -485,10 +498,11 @@ export const PLAN_TOKEN_BUDGET = {
 export const SIGNUP_BONUS_TOKENS = 6;
 
 /** 3DGS data resale price by size class (per scan; "ドーム" is per zone/区画). */
-export const DATA_SALE_PRICE: Record<1 | 2 | 3, number> = {
+export const DATA_SALE_PRICE: Record<1 | 2 | 3 | 5, number> = {
   1: 100_000,
   2: 250_000,
   3: 300_000, // per 区画
+  5: 500_000,
 };
 
 /** Reference location presets for the catalog "from X km" feature. */

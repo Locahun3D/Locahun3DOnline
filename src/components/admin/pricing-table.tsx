@@ -9,7 +9,7 @@ export type PricingRow = {
   idx: number;
   propertyTitle: string;
   label: string;
-  tokenCost: 1 | 2 | 3;
+  tokenCost: 1 | 2 | 3 | 5;
   recommended: number;
   forSale: boolean;
   salePrice: number;
@@ -17,10 +17,11 @@ export type PricingRow = {
   hasDownload: boolean;
 };
 
-const SIZE_LABEL: Record<1 | 2 | 3, string> = {
+const SIZE_LABEL: Record<1 | 2 | 3 | 5, string> = {
   1: "小規模",
   2: "中規模",
   3: "大規模/ドーム",
+  5: "大型ドーム/複合施設",
 };
 
 function yen(n: number) {

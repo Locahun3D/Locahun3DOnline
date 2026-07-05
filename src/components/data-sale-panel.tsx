@@ -26,7 +26,7 @@ interface DataSalePanelProps {
   splatSizeMb: number;
   zipSizeMb: number;
   splatItemCount: number;
-  tokenCost: 1 | 2 | 3;
+  tokenCost: 1 | 2 | 3 | 5;
   downloadFileFormat?: string;
   downloadFileSizeMb?: number;
   pointCount?: number;

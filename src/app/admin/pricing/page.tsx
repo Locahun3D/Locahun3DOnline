@@ -16,7 +16,7 @@ export default async function PricingPage() {
 
   const rows: PricingRow[] = [];
   for (const p of allProps) {
-    const tokenCost = (p.tokenCost ?? 1) as 1 | 2 | 3;
+    const tokenCost = (p.tokenCost ?? 1) as 1 | 2 | 3 | 5;
     p.splatItems.forEach((item, idx) => {
       // 販売対象になり得るデータ＝ビューアー用splat or DLファイル or 既に販売中。
       const isCandidate =

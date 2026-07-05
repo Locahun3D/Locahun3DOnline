@@ -11,7 +11,7 @@ interface Props {
   label: string;
   sizeMb: number;
   previewVideoUrl?: string;
-  tokenCost?: 1 | 2 | 3;
+  tokenCost?: 1 | 2 | 3 | 5;
   hasSubscription?: boolean;
   freeAccess?: boolean;
   signedIn?: boolean;
