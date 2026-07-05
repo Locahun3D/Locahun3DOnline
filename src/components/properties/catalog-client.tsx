@@ -660,7 +660,7 @@ function FiltersPanel(p: FiltersProps) {
 
       {/* Categorical: category, studioType, area */}
       <Row label={en ? "Type / area" : "種別 / エリア"}>
-        <div className="grid md:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
           <ChoiceSelect
             value={p.category}
             onChange={(v) => p.setCategory(v as PropertyCategory | "all")}
@@ -770,7 +770,7 @@ function FiltersPanel(p: FiltersProps) {
 // All filter inputs/selects use a light-gray field — dark text on gray so every
 // entry point reads as "type/pick here" against the dark panel.
 const inputCls =
-  "bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition placeholder:text-black/40";
+  "bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition placeholder:text-black/40 truncate";
 
 // Alias kept for the keyword search (identical gray style).
 const inputWhiteCls = inputCls;
