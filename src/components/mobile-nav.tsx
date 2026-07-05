@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useT, useHref, useLocale } from "@/components/locale-provider";
 import type { DictKey } from "@/lib/i18n/dictionaries";
@@ -45,9 +46,9 @@ export default function MobileNav({
         <span className="block w-5 h-px bg-current" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="fixed inset-0 z-[60] bg-bg/[0.97] backdrop-blur-sm flex flex-col px-8 pt-6 pb-12 lg:hidden"
+          className="fixed inset-0 z-[60] bg-bg/[0.97] backdrop-blur-sm flex flex-col px-8 pt-6 pb-12 overflow-y-auto lg:hidden"
           onClick={close}
         >
           <button
@@ -106,7 +107,8 @@ export default function MobileNav({
               </>
             )}
           </nav>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
