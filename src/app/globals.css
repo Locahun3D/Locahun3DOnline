@@ -72,7 +72,14 @@ body::before {
   text-wrap: balance;
 }
 @utility mono {
-  font-family: var(--font-mono);
+  /* JetBrains Mono has no Japanese glyphs, and Next.js's font loader
+     overrides --font-mono at runtime to drop the ui-monospace/Consolas
+     fallbacks declared above — so any 日本語 inside a .mono element
+     (token labels, dates mixed with copy, etc.) fell through to an
+     unstyled system fallback and rendered garbled. Fall back explicitly
+     to --font-sans (Noto Sans JP, proven to render 日本語 everywhere
+     else on the site) before the generic monospace fonts. */
+  font-family: "JetBrains Mono", var(--font-sans), ui-monospace, Consolas, monospace;
 }
 /* Brand wordmark "ロケハン3D" — gothic black, matching the 3DGS viewer. */
 @utility brand {
