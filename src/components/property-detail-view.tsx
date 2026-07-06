@@ -282,7 +282,7 @@ export default function PropertyDetailView({
                     <>
                       ¥{yen}{" "}
                       <small className="text-[11px] text-white/55 tracking-[0.16em]">
-                        {en ? "(flat)" : "（定額）"}
+                        {en ? "(permit fee)" : "（撮影許可）"}
                       </small>
                     </>
                   ) : property.hourlyPrice > 0 ? (

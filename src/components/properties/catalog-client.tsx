@@ -1249,7 +1249,7 @@ function PropertyCardLite({
             <div>
               <span className="serif text-xl text-accent">¥{yen}</span>
               <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
-                {en ? "(flat)" : "（定額）"}
+                {en ? "(permit fee)" : "（撮影許可）"}
               </span>
             </div>
           ) : property.hourlyPrice > 0 ? (

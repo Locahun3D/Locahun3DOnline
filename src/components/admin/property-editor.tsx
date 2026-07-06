@@ -473,7 +473,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 <Field
                   label={
                     watch("priceType") === "flat"
-                      ? "定額料金 (¥)"
+                      ? "撮影許可費用 (¥)"
                       : watch("priceType") === "free"
                         ? "料金（無料のため入力不要）"
                         : "時間料金 (¥/hr)"
@@ -629,7 +629,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   <div className="pl-7 space-y-5">
                     <Field
                       label="料金の性質"
-                      hint="道路使用許可が必要な公共スポットは、時間貸しではなく「定額」「無料」の場合がある"
+                      hint="道路使用許可が必要な公共スポットは、時間貸しではなく「撮影許可」「無料」の場合がある"
                     >
                       <select
                         {...register("priceType")}
@@ -2456,7 +2456,7 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   } else if (priceType === "flat") {
     if (hourlyPrice > 0) {
       lines.push("【料金目安】");
-      lines.push(`定額 ¥${hourlyPrice.toLocaleString()}（時間に関わらず一定）`);
+      lines.push(`撮影許可 ¥${hourlyPrice.toLocaleString()}（時間に関わらず一定）`);
       lines.push("");
     }
   } else if (hourlyPrice > 0 || dailyPrice > 0) {
