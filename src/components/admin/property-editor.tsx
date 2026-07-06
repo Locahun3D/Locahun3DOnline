@@ -69,6 +69,8 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiLocationLoading, setAiLocationLoading] = useState(false);
+  const [aiLocationError, setAiLocationError] = useState<string | null>(null);
   const [aiTagsNote, setAiTagsNote] = useState<string | null>(null);
   // タイムスタンプは new Date(...).getHours() 等でローカル(JST)整形するが、
   // SSR は Cloudflare Workers 上で UTC 実行されるため、サーバは UTC・クライアントは
@@ -516,6 +518,61 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 />
               </Field>
 
+              <div className="flex items-center justify-between gap-3">
+                <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+                  エリア / 座標
+                </div>
+                <button
+                  type="button"
+                  disabled={aiLocationLoading}
+                  onClick={async () => {
+                    setAiLocationError(null);
+                    setAiLocationLoading(true);
+                    try {
+                      const d = getValues();
+                      const res = await fetch("/api/admin/suggest-location", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          title: d.title,
+                          category: d.category,
+                          studioType: d.studioType,
+                          prefecture: d.prefecture,
+                          city: d.city,
+                          area: d.area,
+                        }),
+                      });
+                      const data = (await res.json()) as {
+                        prefecture?: string;
+                        city?: string;
+                        area?: string;
+                        coords?: { lat: number; lng: number };
+                        error?: string;
+                      };
+                      if (!res.ok || !data.coords) {
+                        setAiLocationError(data.error || "検索に失敗しました");
+                        return;
+                      }
+                      if (data.prefecture) setValue("prefecture", data.prefecture, { shouldDirty: true });
+                      if (data.city) setValue("city", data.city, { shouldDirty: true });
+                      if (data.area) setValue("area", data.area, { shouldDirty: true });
+                      setValue("coords", data.coords, { shouldDirty: true, shouldValidate: true });
+                      triggerAutoSave();
+                    } catch {
+                      setAiLocationError("通信エラーが発生しました");
+                    } finally {
+                      setAiLocationLoading(false);
+                    }
+                  }}
+                  className="mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
+                >
+                  {aiLocationLoading ? "検索中…" : "✦ 物件名からAIで検索"}
+                </button>
+              </div>
+              {aiLocationError && (
+                <p className="text-[12px] text-red-400 -mt-3">{aiLocationError}</p>
+              )}
+
               <div className="grid md:grid-cols-3 gap-5">
                 <Field label="エリア" error={formState.errors.area?.message} required>
                   <SuggestSelect
@@ -535,7 +592,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               <Field
                 label="座標 (lat, lng) — 地図ピンと距離計算に使用"
-                hint="下の欄に「日本の住所」「Google Maps の URL」「座標」のいずれかを貼り、解析でピン位置を取得。空欄でも下書き OK、公開時は地図に出ません。"
+                hint="上の「物件名からAIで検索」で自動取得できます。または下の欄に「日本の住所」「Google Maps の URL」「座標」のいずれかを貼り、解析でピン位置を取得。空欄でも下書き OK、公開時は地図に出ません。"
               >
                 <CoordsInput
                   value={watch("coords")}
