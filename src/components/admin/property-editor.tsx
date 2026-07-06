@@ -25,7 +25,6 @@ import {
   DATA_LICENSES,
   DATA_LICENSE_LABEL,
   DATA_LICENSE_DESC,
-  PRICE_TYPE_LABEL,
   type Property,
   type Asset,
 } from "@/lib/schemas";
@@ -486,20 +485,39 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
                       : watch("priceType") === "free"
                         ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
-                        : watch("permitRequired")
-                          ? "許可制の物件（下記チェック）は 0 のままで公開できます"
-                          : undefined
+                        : undefined
                   }
-                  required={!watch("permitRequired") && watch("priceType") !== "free"}
+                  required={watch("priceType") === "hourly"}
                 >
-                  <input
-                    type="number"
-                    min={0}
-                    step={1000}
-                    disabled={watch("priceType") === "free"}
-                    {...register("hourlyPrice", { valueAsNumber: true })}
-                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={watch("priceType") || "hourly"}
+                      onChange={(e) => {
+                        const v = e.target.value as "hourly" | "flat" | "free";
+                        setValue("priceType", v, { shouldDirty: true });
+                        // 撮影許可/無料は「施設所有者への通常の問い合わせ先が無い
+                        // 公共スポット」を前提にした料金モードなので、選ぶだけで
+                        // permitRequired も連動させる（Step02 の仕様欄も切り替わる）。
+                        setValue("permitRequired", v !== "hourly", { shouldDirty: true });
+                        triggerAutoSave();
+                      }}
+                      className={`${inputClass} shrink-0 w-[9.5rem]`}
+                    >
+                      {(["hourly", "flat", "free"] as const).map((t) => (
+                        <option key={t} value={t} className="bg-bg">
+                          {t === "hourly" ? "時間貸し" : t === "flat" ? "撮影許可" : "無料"}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000}
+                      disabled={watch("priceType") === "free"}
+                      {...register("hourlyPrice", { valueAsNumber: true })}
+                      className={`${inputClass} flex-1 disabled:opacity-40 disabled:cursor-not-allowed`}
+                    />
+                  </div>
                 </Field>
               </div>
 
@@ -671,50 +689,17 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 </button>
               </Field>
 
-              {/* ── 許可が必要な公共スポット ── */}
-              <div className="border-t border-line pt-5 mt-4">
-                <label className="flex items-center gap-3 cursor-pointer mb-3">
-                  <input
-                    type="checkbox"
-                    {...register("permitRequired")}
-                    className="w-4 h-4 accent-accent"
-                  />
-                  <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-70">
-                    施設所有者への問い合わせ不要（道路使用許可等が必要な公共スポット）
-                  </span>
-                </label>
-                {watch("permitRequired") && (
-                  <div className="pl-7 space-y-5">
-                    <Field
-                      label="料金の性質"
-                      hint="道路使用許可が必要な公共スポットは、時間貸しではなく「撮影許可」「無料」の場合がある"
-                    >
-                      <select
-                        {...register("priceType")}
-                        className={inputClass}
-                      >
-                        {(["hourly", "flat", "free"] as const).map((t) => (
-                          <option key={t} value={t} className="bg-bg">
-                            {PRICE_TYPE_LABEL[t]}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field
-                      label="許可・注意事項"
-                      hint="例: スクランブル交差点など。道路使用許可の申請先・条件・注意点を記入"
-                    >
-                      <textarea
-                        {...register("permitNotes")}
-                        className={`${inputClass} resize-y min-h-[80px]`}
-                        rows={3}
-                        maxLength={1000}
-                        placeholder="例: 撮影には所轄警察署への道路使用許可申請が必要です。詳細はお問い合わせください。"
-                      />
-                    </Field>
+              {watch("permitRequired") && (
+                <div className="border-t border-line pt-4 mt-4">
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                    ● 施設所有者への問い合わせ不要（道路使用許可等が必要な公共スポットとして扱われます）
                   </div>
-                )}
-              </div>
+                  <p className="text-[11px] text-muted mt-1.5">
+                    「許可・注意事項」は STEP 02（仕様・設備）に移動しました。
+                    通常の時間貸しに戻すには、上の料金欄で「時間貸し」を選び直してください。
+                  </p>
+                </div>
+              )}
 
               {/* ── 連絡先 ── */}
               <div className="border-t border-line pt-5 mt-4">
@@ -761,82 +746,108 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
           {step === "specs" && (
             <StepCard n="02" title="仕様・設備" desc="フィルター検索に使われます。">
-              <div className="grid md:grid-cols-3 gap-5">
-                <Field label="収容人数 (名)">
-                  <input
-                    type="number"
-                    min={0}
-                    {...register("capacity", { valueAsNumber: true })}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="床面積 (㎡)">
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    {...register("floorAreaSqm", { valueAsNumber: true })}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field
-                  label="天井高 (m)"
-                  hint={
-                    watch("category") === "outdoor"
-                      ? "屋外のため対象外（自動で「—」表示）"
-                      : undefined
-                  }
-                >
-                  {watch("category") === "outdoor" ? (
+              {watch("priceType") !== "hourly" ? (
+                <div className="border border-accent/40 bg-accent/5 px-4 py-4 space-y-4">
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                    道路使用許可 情報（レンタルスタジオ向け仕様は非表示中）
+                  </div>
+                  <p className="text-[11px] text-muted">
+                    料金が「時間貸し」以外（撮影許可・無料）のため、収容人数・床面積・天井高・電源仕様
+                    などスタジオ向けの項目は非表示にしています。代わりに許可申請に関する情報を入力してください。
+                  </p>
+                  <Field
+                    label="許可・注意事項"
+                    hint="例: スクランブル交差点など。道路使用許可の申請先・条件・注意点を記入"
+                  >
+                    <textarea
+                      {...register("permitNotes")}
+                      className={`${inputClass} resize-y min-h-[120px]`}
+                      rows={5}
+                      maxLength={1000}
+                      placeholder="例: 撮影には所轄警察署への道路使用許可申請が必要です。申請先・必要日数・当日の交通規制・保険加入の要否などを記入してください。"
+                    />
+                  </Field>
+                </div>
+              ) : (
+                <>
+                  <div className="grid md:grid-cols-3 gap-5">
+                    <Field label="収容人数 (名)">
+                      <input
+                        type="number"
+                        min={0}
+                        {...register("capacity", { valueAsNumber: true })}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="床面積 (㎡)">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        {...register("floorAreaSqm", { valueAsNumber: true })}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field
+                      label="天井高 (m)"
+                      hint={
+                        watch("category") === "outdoor"
+                          ? "屋外のため対象外（自動で「—」表示）"
+                          : undefined
+                      }
+                    >
+                      {watch("category") === "outdoor" ? (
+                        <input
+                          type="text"
+                          disabled
+                          value="— 屋外のため対象外"
+                          className={inputClass + " opacity-60 cursor-not-allowed"}
+                        />
+                      ) : (
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.1}
+                          {...register("ceilingHeightM", { valueAsNumber: true })}
+                          className={inputClass}
+                        />
+                      )}
+                    </Field>
+                  </div>
+
+                  <Field
+                    label="電源仕様"
+                    hint="下のボタンで素早く入力。屋外・電源不可の場合は「なし」。"
+                  >
                     <input
                       type="text"
-                      disabled
-                      value="— 屋外のため対象外"
-                      className={inputClass + " opacity-60 cursor-not-allowed"}
-                    />
-                  ) : (
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.1}
-                      {...register("ceilingHeightM", { valueAsNumber: true })}
+                      {...register("powerVoltage")}
                       className={inputClass}
+                      placeholder="100V 30A など"
                     />
-                  )}
-                </Field>
-              </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {POWER_PRESETS.map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() =>
+                            setValue("powerVoltage", p, { shouldDirty: true })
+                          }
+                          className="mono text-[10px] tracking-[0.1em] border border-line px-2.5 py-1 hover:border-accent hover:text-accent transition"
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
 
-              <Field
-                label="電源仕様"
-                hint="下のボタンで素早く入力。屋外・電源不可の場合は「なし」。"
-              >
-                <input
-                  type="text"
-                  {...register("powerVoltage")}
-                  className={inputClass}
-                  placeholder="100V 30A など"
-                />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {POWER_PRESETS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() =>
-                        setValue("powerVoltage", p, { shouldDirty: true })
-                      }
-                      className="mono text-[10px] tracking-[0.1em] border border-line px-2.5 py-1 hover:border-accent hover:text-accent transition"
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-
-              <div className="grid md:grid-cols-3 gap-5">
-                <Toggle label="自然光あり" register={register("hasNaturalLight")} />
-                <Toggle label="駐車可" register={register("parking")} />
-                <Toggle label="搬入口 大" register={register("loadingDock")} />
-              </div>
+                  <div className="grid md:grid-cols-3 gap-5">
+                    <Toggle label="自然光あり" register={register("hasNaturalLight")} />
+                    <Toggle label="駐車可" register={register("parking")} />
+                    <Toggle label="搬入口 大" register={register("loadingDock")} />
+                  </div>
+                </>
+              )}
 
               <Field
                 label="タグ"
