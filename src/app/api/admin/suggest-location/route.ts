@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     prefecture: String(body.prefecture ?? ""),
     city: String(body.city ?? ""),
     area: String(body.area ?? ""),
+    contactWebsite: String(body.contactWebsite ?? ""),
   };
 
   const result = await suggestLocation(input);

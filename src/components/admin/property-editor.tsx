@@ -540,6 +540,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                           prefecture: d.prefecture,
                           city: d.city,
                           area: d.area,
+                          contactWebsite: d.contactWebsite,
                         }),
                       });
                       const data = (await res.json()) as {

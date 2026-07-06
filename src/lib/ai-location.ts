@@ -5,10 +5,13 @@ import { AREA_SUGGESTIONS } from "@/lib/schemas";
 
 /**
  * スタジオ名称から、地名（都道府県/市区町村/エリア）と座標を自動検索する。
- *  - ANTHROPIC_API_KEY あり: Claude が web_search でその施設の実在の所在地
+ *  - ANTHROPIC_API_KEY あり: 公式サイトURLがあれば Claude がまず web_fetch で
+ *    「アクセス/access」ページ等を直接読み、無ければ web_search で実在の所在地
  *    （住所）を確認 → 住所を @/lib/geocode の GSI/Nominatim に渡して座標を
  *    確定させる（座標の数値精度自体は AI に出させず、ジオコーディングAPIに
  *    委ねるハイブリッド構成 — LLM は数値の丸め/桁を誤りやすいため）。
+ *    公式サイト本文から住所を直接読める web_fetch の方が、名称だけの
+ *    web_search より的中率が高い（[[ai-summary]] と同じ知見）。
  *  - キー無し、または住所が特定できない場合はエラーを返す（ヒューリスティック
  *    フォールバックは意味がないため無し。入力欄への手動貼り付けに任せる）。
  * [[ai-summary]] と同じ「キー無し=利用不可、キー投入=本番」パターン。
@@ -22,6 +25,8 @@ export interface LocationSuggestInput {
   prefecture: string;
   city: string;
   area: string;
+  /** 公式サイトURL。あれば web_fetch で直接読み、住所特定の精度が上がる。 */
+  contactWebsite: string;
 }
 
 export interface LocationSuggestResult {
@@ -58,12 +63,17 @@ function buildPrompt(input: LocationSuggestInput): string {
     .join(" ");
   return [
     "あなたは日本の撮影ロケ地プラットフォームの編集者です。",
-    "次の施設名について、web_search で実在の所在地（正式な住所）を確認してください。",
+    "次の施設について、実在の所在地（正式な住所）を確認してください。",
+    "① 公式サイトURLがあれば web_fetch でトップページと「アクセス/access/会社概要」",
+    "   等のページを取得し、そこに書かれている住所を最優先で採用する。",
+    "② 公式サイトが無い、または住所が見つからない場合のみ web_search で",
+    "   「施設名 + 住所」等を検索して確認する。",
     "同名の別施設・別チェーン店と混同しないよう、渡された手がかり（都道府県/市区町村/エリア）",
     "と矛盾しない候補を優先してください。",
     "",
     `■ 施設名: ${input.title || "（不明）"}`,
     input.studioType ? `■ 種別: ${input.studioType}` : "",
+    input.contactWebsite ? `■ 公式サイト: ${input.contactWebsite}` : "",
     hint ? `■ 手がかり（既存入力）: ${hint}` : "",
     "",
     "見つかった住所から、以下を JSON で返してください:",
@@ -104,8 +114,9 @@ function parseLocation(
 }
 
 /**
- * Claude(web_search) で住所を特定 → geocodeAddress で座標に変換。
- * web_search 未対応アカウントの場合はツール無しで再試行（住所特定の精度は落ちる）。
+ * Claude(web_fetch+web_search) で住所を特定 → geocodeAddress で座標に変換。
+ * web_fetch/web_search 未対応アカウントでもツール無しで再試行→最後はエラー
+ * （[[ai-summary]] と同じツールセット段階フォールバック）。
  */
 export async function suggestLocation(
   input: LocationSuggestInput,
@@ -120,6 +131,10 @@ export async function suggestLocation(
   }
 
   const TOOL_SETS = [
+    [
+      { type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 },
+      { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+    ],
     [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
     [],
   ];
