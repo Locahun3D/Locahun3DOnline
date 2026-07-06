@@ -288,7 +288,7 @@ export function usePreviewCapture(): UseCaptureResult {
         }
       }
       const fileName = splatUrl.split("/").pop()?.split("?")[0] || "";
-      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 20 });
+      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 10 });
       // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
       // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
       if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;
@@ -305,8 +305,8 @@ export function usePreviewCapture(): UseCaptureResult {
 
       // ⚠ Chrome はウィンドウが他のウィンドウに隠れている（occluded）と
       // rAF を絞るため、キャプチャ中はこのタブを前面に表示しておくこと。
-      // 実測: 480フレーム(20秒×24fps)の録画は重いシーンで約1フレーム/秒まで
-      // 落ちることがあり、全体で10分近くかかる。6分だと途中で殺してしまう。
+      // 実測: 240フレーム(10秒×24fps)の録画は重いシーンで約1フレーム/秒まで
+      // 落ちることがある。タイムアウトは旧仕様(480フレーム)の余裕を残したまま維持。
       const timeout = setTimeout(() => {
         if (abortRef.current) return;
         cleanup();

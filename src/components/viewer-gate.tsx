@@ -1,9 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 import { useLocale, useHref } from "@/components/locale-provider";
+
+/**
+ * 1物件に複数シーンがあると ViewerGate が並ぶ分だけ自動再生プレビュー動画も
+ * 並び、初期表示だけで全動画を同時ダウンロード/デコードしてページが重くなる。
+ * IntersectionObserver で画面付近に入るまで <video> 自体をマウントしない。
+ */
+function LazyPreviewVideo({ src, className }: { src: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (visible || !ref.current) return;
+    const el = ref.current;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visible]);
+
+  return (
+    <div ref={ref} className="absolute inset-0 w-full h-full">
+      {visible && (
+        <video src={src} autoPlay loop muted playsInline className={className} />
+      )}
+    </div>
+  );
+}
 
 interface Props {
   splatUrl: string;
@@ -48,11 +82,7 @@ export default function ViewerGate({
     return (
       <div className="group relative aspect-video w-full border border-line overflow-hidden">
         {previewVideoUrl ? (
-          <video
-            src={previewVideoUrl}
-            autoPlay loop muted playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <div
             className="absolute inset-0 bg-[#222]"
@@ -229,11 +259,7 @@ export default function ViewerGate({
   return (
     <div className="relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
       {previewVideoUrl ? (
-        <video
-          src={previewVideoUrl}
-          autoPlay loop muted playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
       ) : (
         <div
           className="absolute inset-0"

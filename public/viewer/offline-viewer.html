@@ -18022,12 +18022,14 @@ if(/[?&]capture=1/.test(location.search)){
         if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
       }
 
-      // Phase 3: Lock resize handler and force 1920×1080 capture resolution.
-      const CAP_W = 1920, CAP_H = 1080;
+      // Phase 3: Lock resize handler and force 1280×720 (HD) capture resolution.
+      // プレビュー動画は物件ページで複数同時に自動再生されるため、画質より
+      // ファイルサイズ（ページの重さ）を優先し 1920×1080 から落としてある。
+      const CAP_W = 1280, CAP_H = 720;
       const CAP_FOV = 90;   // 固定FOV（90）でキャプチャ
       if(typeof _captureLock!=='undefined') _captureLock = true;
       // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
-      // 上げてしまい VideoEncoder の 1920×1080 と不整合になるため、ここでは
+      // 上げてしまい VideoEncoder の 1280×720 と不整合になるため、ここでは
       // 品質変数と RAD lodScale だけ高に寄せ、pixelRatio は下で 1 に固定する。
       try {
         if(typeof qualScale!=='undefined') qualScale = 1.5;
@@ -18041,7 +18043,7 @@ if(/[?&]capture=1/.test(location.search)){
         }
       } catch(_){}
       if(typeof renderer!=='undefined'){
-        renderer.setPixelRatio(1);          // キャプチャ backing を厳密に 1920×1080 に
+        renderer.setPixelRatio(1);          // キャプチャ backing を厳密に CAP_W×CAP_H に
         renderer.setSize(CAP_W, CAP_H);
       } else {
         canvas.width = CAP_W; canvas.height = CAP_H;
@@ -18052,7 +18054,7 @@ if(/[?&]capture=1/.test(location.search)){
         camera.updateProjectionMatrix();
       }
       // Warm-up: let the viewer's render loop run for ~2s at capture resolution
-      // so Spark can re-sort splats and stabilise LOD at 1920×1080.
+      // so Spark can re-sort splats and stabilise LOD at 1280×720.
       if(typeof markDirty==='function') markDirty(120);
       msg('capture-progress',{phase:'loading', text:'解像度安定化中…', pct:28});
       for(let w=0; w<120; w++) await nextFrame();
@@ -18061,7 +18063,11 @@ if(/[?&]capture=1/.test(location.search)){
       // No setTimeout loop — tight for-loop with encoder backpressure yield.
       const FPS = 24;
       const TOTAL_FRAMES = FPS * ORBIT_S;
-      const ANGLE_PER_FRAME = (2 * Math.PI) / TOTAL_FRAMES;
+      // 回転速度は ORBIT_S に連動させない — 常に「360° を FULL_ROTATION_SEC 秒で
+      // 一周する」一定ペースを保つ。ORBIT_S を短くしても等速のまま途中で止まる
+      // だけにして、短尺化のために早回しになるのを防ぐ（一周する必要はない）。
+      const FULL_ROTATION_SEC = 20;
+      const ANGLE_PER_FRAME = (2 * Math.PI) / (FPS * FULL_ROTATION_SEC);
 
       const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
 
@@ -18080,7 +18086,7 @@ if(/[?&]capture=1/.test(location.search)){
       encoder.configure({
         codec: 'avc1.640028',
         width: CAP_W, height: CAP_H,
-        bitrate: 8_000_000,
+        bitrate: 4_000_000, // 720p 相当に下げたビットレート（旧 1080p 時は 8Mbps）
         framerate: FPS,
       });
 
