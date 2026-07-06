@@ -199,7 +199,7 @@ export default function PropertyDetailView({
           {/* ── slate panel ── */}
           <div className="bg-[#14181c] text-[#fafaf6] flex flex-col">
             <div
-              className="h-[34px] border-b border-white/[0.16]"
+              className="h-[34px]"
               style={{
                 /* 斜めの繰り返しグラデーションはハードな色境界だとブラウザが
                    アンチエイリアスをかけずギザギザに描画される。各境界に
