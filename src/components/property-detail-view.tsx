@@ -195,7 +195,7 @@ export default function PropertyDetailView({
        *  Slate hero — dark clapperboard panel (left) + cover photo (right)
        * ══════════════════════════════════════════════════ */}
       <div className="frame pt-4">
-        <header className="grid lg:grid-cols-[420px_1fr] border border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.05)]">
+        <header className="grid lg:grid-cols-[420px_1fr] border-x border-b border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.05)]">
           {/* ── slate panel ── */}
           <div className="bg-[#14181c] text-[#fafaf6] flex flex-col">
             <div
