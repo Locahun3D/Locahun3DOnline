@@ -1243,10 +1243,25 @@ function PropertyCardLite({
           <div className="mono text-[10px] text-muted truncate">⚡ {property.powerVoltage}</div>
         )}
         <div className="flex items-baseline justify-between pt-2 border-t border-line mt-auto">
-          <div>
-            <span className="serif text-xl text-accent">¥{yen}</span>
-            <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
-          </div>
+          {property.priceType === "free" ? (
+            <span className="serif text-xl text-accent">{en ? "Free" : "無料"}</span>
+          ) : property.priceType === "flat" ? (
+            <div>
+              <span className="serif text-xl text-accent">¥{yen}</span>
+              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
+                {en ? "(flat)" : "（定額）"}
+              </span>
+            </div>
+          ) : property.hourlyPrice > 0 ? (
+            <div>
+              <span className="serif text-xl text-accent">¥{yen}</span>
+              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
+            </div>
+          ) : (
+            <span className="serif text-[13px] text-accent">
+              {en ? "Contact for pricing" : "お問い合わせください"}
+            </span>
+          )}
           <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-60">{en ? "Details →" : "詳細 →"}</span>
         </div>
       </div>

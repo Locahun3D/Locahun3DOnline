@@ -214,6 +214,13 @@ export const propertySchema = z.object({
     .min(0)
     .max(99999999)
     .default(0),
+  /**
+   * 料金の性質。道路使用許可が必要な屋外スポット等（permitRequired）向け:
+   *   hourly = 通常の時間単価（既定値。hourlyPrice を ¥X/HR として表示）
+   *   flat   = 時間に関わらず定額（hourlyPrice の値を「定額」として表示）
+   *   free   = 使用料無料（金額を表示せず「無料」と表示）
+   */
+  priceType: z.enum(["hourly", "flat", "free"]).default("hourly"),
   summary: z.string().max(200, "200 文字以内で入力してください").default(""),
 
   // 1.5 — Studio kind (subdivides `category`, free-text with suggestions)
@@ -413,6 +420,20 @@ export const CATEGORY_LABEL_EN: Record<PropertyCategory, string> = {
 export function categoryLabel(cat: PropertyCategory, locale?: string): string {
   return locale === "en" ? CATEGORY_LABEL_EN[cat] : CATEGORY_LABEL[cat];
 }
+
+export type PriceType = "hourly" | "flat" | "free";
+
+export const PRICE_TYPE_LABEL: Record<PriceType, string> = {
+  hourly: "時間単価（¥/HR）",
+  flat: "定額（時間に関わらず一定）",
+  free: "無料（使用料なし）",
+};
+
+export const PRICE_TYPE_LABEL_EN: Record<PriceType, string> = {
+  hourly: "Hourly rate (¥/HR)",
+  flat: "Flat fee (regardless of duration)",
+  free: "Free (no usage fee)",
+};
 
 export const STATUS_LABEL: Record<PropertyStatus, string> = {
   draft: "下書き",

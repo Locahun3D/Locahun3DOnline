@@ -25,6 +25,7 @@ import {
   DATA_LICENSES,
   DATA_LICENSE_LABEL,
   DATA_LICENSE_DESC,
+  PRICE_TYPE_LABEL,
   type Property,
   type Asset,
 } from "@/lib/schemas";
@@ -470,21 +471,32 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   />
                 </Field>
                 <Field
-                  label="時間料金 (¥/hr)"
+                  label={
+                    watch("priceType") === "flat"
+                      ? "定額料金 (¥)"
+                      : watch("priceType") === "free"
+                        ? "料金（無料のため入力不要）"
+                        : "時間料金 (¥/hr)"
+                  }
                   error={formState.errors.hourlyPrice?.message}
                   hint={
-                    watch("permitRequired")
-                      ? "許可制の物件（下記チェック）は 0 のままで公開できます"
-                      : undefined
+                    watch("priceType") === "flat"
+                      ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
+                      : watch("priceType") === "free"
+                        ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
+                        : watch("permitRequired")
+                          ? "許可制の物件（下記チェック）は 0 のままで公開できます"
+                          : undefined
                   }
-                  required={!watch("permitRequired")}
+                  required={!watch("permitRequired") && watch("priceType") !== "free"}
                 >
                   <input
                     type="number"
                     min={0}
                     step={1000}
+                    disabled={watch("priceType") === "free"}
                     {...register("hourlyPrice", { valueAsNumber: true })}
-                    className={inputClass}
+                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
                   />
                 </Field>
               </div>
@@ -614,7 +626,22 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </span>
                 </label>
                 {watch("permitRequired") && (
-                  <div className="pl-7">
+                  <div className="pl-7 space-y-5">
+                    <Field
+                      label="料金の性質"
+                      hint="道路使用許可が必要な公共スポットは、時間貸しではなく「定額」「無料」の場合がある"
+                    >
+                      <select
+                        {...register("priceType")}
+                        className={inputClass}
+                      >
+                        {(["hourly", "flat", "free"] as const).map((t) => (
+                          <option key={t} value={t} className="bg-bg">
+                            {PRICE_TYPE_LABEL[t]}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
                     <Field
                       label="許可・注意事項"
                       hint="例: スクランブル交差点など。道路使用許可の申請先・条件・注意点を記入"
@@ -2380,6 +2407,7 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   const tags = Array.isArray(d.tags) ? d.tags : [];
   const hourlyPrice = Number(d.hourlyPrice) || 0;
   const dailyPrice = Number(d.dailyPrice) || 0;
+  const priceType = String(d.priceType || "hourly");
   const contactWebsite = String(d.contactWebsite || "");
 
   if (!title && !category) return "";
@@ -2421,7 +2449,17 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   // 3DGS の一般説明も全物件共通で自明なため生成しない。
 
   // ── 料金 セクション ──
-  if (hourlyPrice > 0 || dailyPrice > 0) {
+  if (priceType === "free") {
+    lines.push("【料金目安】");
+    lines.push("使用料無料。");
+    lines.push("");
+  } else if (priceType === "flat") {
+    if (hourlyPrice > 0) {
+      lines.push("【料金目安】");
+      lines.push(`定額 ¥${hourlyPrice.toLocaleString()}（時間に関わらず一定）`);
+      lines.push("");
+    }
+  } else if (hourlyPrice > 0 || dailyPrice > 0) {
     lines.push("【料金目安】");
     if (hourlyPrice > 0) lines.push(`時間利用: ¥${hourlyPrice.toLocaleString()}/hr〜`);
     if (dailyPrice > 0) lines.push(`日貸し: ¥${dailyPrice.toLocaleString()}/日〜`);

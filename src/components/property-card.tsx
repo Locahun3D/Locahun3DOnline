@@ -68,11 +68,26 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
 
         <div className="flex items-baseline justify-between pt-3 border-t border-line">
           <div>
-            <div>
-              <span className="serif text-2xl text-accent">¥{yen}</span>
-              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
-            </div>
-            {property.dailyPrice > 0 && (
+            {property.priceType === "free" ? (
+              <span className="serif text-2xl text-accent">{en ? "Free" : "無料"}</span>
+            ) : property.priceType === "flat" ? (
+              <div>
+                <span className="serif text-2xl text-accent">¥{yen}</span>
+                <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
+                  {en ? "(flat)" : "（定額）"}
+                </span>
+              </div>
+            ) : property.hourlyPrice > 0 ? (
+              <div>
+                <span className="serif text-2xl text-accent">¥{yen}</span>
+                <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">/hr</span>
+              </div>
+            ) : (
+              <span className="serif text-[15px] text-accent">
+                {en ? "Contact for pricing" : "お問い合わせください"}
+              </span>
+            )}
+            {property.priceType === "hourly" && property.dailyPrice > 0 && (
               <div className="mono text-[10px] text-muted mt-0.5">
                 Day: ¥{property.dailyPrice.toLocaleString("ja-JP")}
               </div>

@@ -274,7 +274,18 @@ export default function PropertyDetailView({
 
               <div className="mt-auto pt-6">
                 <p className="mono text-[24px] mb-3.5">
-                  {property.hourlyPrice > 0 ? (
+                  {property.priceType === "free" ? (
+                    <small className="text-[13px] text-white/55 tracking-[0.1em]">
+                      {en ? "Free" : "無料"}
+                    </small>
+                  ) : property.priceType === "flat" ? (
+                    <>
+                      ¥{yen}{" "}
+                      <small className="text-[11px] text-white/55 tracking-[0.16em]">
+                        {en ? "(flat)" : "（定額）"}
+                      </small>
+                    </>
+                  ) : property.hourlyPrice > 0 ? (
                     <>
                       ¥{yen}{" "}
                       <small className="text-[11px] text-white/55 tracking-[0.16em]">/HR</small>
@@ -285,7 +296,7 @@ export default function PropertyDetailView({
                     </small>
                   )}
                 </p>
-                {property.dailyPrice > 0 && (
+                {property.priceType === "hourly" && property.dailyPrice > 0 && (
                   <p className="mono text-[11px] text-white/50 mb-4 -mt-2">
                     {en ? "Daily" : "日貸し"} ¥
                     {property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}/day
