@@ -71,12 +71,18 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
             {property.priceType === "free" ? (
               <span className="serif text-2xl text-accent">{en ? "Free" : "無料"}</span>
             ) : property.priceType === "flat" ? (
-              <div>
-                <span className="serif text-2xl text-accent">¥{yen}</span>
-                <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
-                  {en ? "(permit fee)" : "（撮影許可）"}
+              property.hourlyPrice > 0 ? (
+                <div>
+                  <span className="serif text-2xl text-accent">¥{yen}</span>
+                  <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">
+                    {en ? "(permit fee)" : "（撮影許可）"}
+                  </span>
+                </div>
+              ) : (
+                <span className="serif text-[15px] text-accent">
+                  {en ? "Road-use permit required" : "道路使用許可の申請が必要です"}
                 </span>
-              </div>
+              )
             ) : property.hourlyPrice > 0 ? (
               <div>
                 <span className="serif text-2xl text-accent">¥{yen}</span>

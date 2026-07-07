@@ -279,12 +279,18 @@ export default function PropertyDetailView({
                       {en ? "Free" : "無料"}
                     </small>
                   ) : property.priceType === "flat" ? (
-                    <>
-                      ¥{yen}{" "}
-                      <small className="text-[11px] text-white/55 tracking-[0.16em]">
-                        {en ? "(permit fee)" : "（撮影許可）"}
+                    property.hourlyPrice > 0 ? (
+                      <>
+                        ¥{yen}{" "}
+                        <small className="text-[11px] text-white/55 tracking-[0.16em]">
+                          {en ? "(permit fee)" : "（撮影許可）"}
+                        </small>
+                      </>
+                    ) : (
+                      <small className="text-[13px] text-white/55 tracking-[0.1em]">
+                        {en ? "Road-use permit required" : "道路使用許可の申請が必要です"}
                       </small>
-                    </>
+                    )
                   ) : property.hourlyPrice > 0 ? (
                     <>
                       ¥{yen}{" "}

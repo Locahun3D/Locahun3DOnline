@@ -482,7 +482,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   error={formState.errors.hourlyPrice?.message}
                   hint={
                     watch("priceType") === "flat"
-                      ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
+                      ? watch("hourlyPrice") > 0
+                        ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
+                        : "0 のままだと金額を出さず「道路使用許可の申請が必要です」と表示されます（無料という意味にはなりません）"
                       : watch("priceType") === "free"
                         ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
                         : undefined
