@@ -49,7 +49,7 @@ interface Props {
   hasSubscription?: boolean;
   freeAccess?: boolean;
   signedIn?: boolean;
-  /** 既にこのシーンをアンロック済み（2年以内）なら無償再視聴。 */
+  /** 既にこのシーンをアンロック済み（1年以内）なら無償再視聴。 */
   alreadyUnlocked?: boolean;
 }
 

@@ -9,7 +9,7 @@ import { z } from "zod";
  * 視聴アンロック記録。
  *
  * サブスク会員が 3DGS シーン（splatItem 単位）を初めて開くとき tokenCost トークンを
- * 消費し、その「アンロック」をここに記録する。一度アンロックしたシーンは 2 年間
+ * 消費し、その「アンロック」をここに記録する。一度アンロックしたシーンは 1 年間
  * 無償で再視聴できる（`expiresAt` まで）。物件に複数シーンがある場合は
  * シーンごとに独立してアンロックする。
  *
@@ -37,7 +37,7 @@ export const viewUnlockSchema = z.object({
   /** アンロック時点の tokenCost のスナップショット（監査用）。 */
   tokensSpent: z.number().int().min(0).default(0),
   unlockedAt: z.string().default(() => new Date().toISOString()),
-  /** unlockedAt + 2年 (ISO)。この時刻を過ぎると無償再視聴の対象外になる。 */
+  /** unlockedAt + 1年 (ISO)。この時刻を過ぎると無償再視聴の対象外になる。 */
   expiresAt: z.string(),
 });
 
@@ -56,10 +56,10 @@ export function unlockId(userId: string, propertyId: string, sceneKey: string): 
   return `${userId}:${propertyId}:${sceneKey}`;
 }
 
-/** unlockedAt から 2 年後の ISO。 */
-export function twoYearsFrom(nowIso: string): string {
+/** unlockedAt から 1 年後の ISO。 */
+export function oneYearFrom(nowIso: string): string {
   const d = new Date(nowIso);
-  d.setFullYear(d.getFullYear() + 2);
+  d.setFullYear(d.getFullYear() + 1);
   return d.toISOString();
 }
 

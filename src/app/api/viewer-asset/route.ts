@@ -6,7 +6,7 @@ import { userRepo } from "@/lib/users";
 import {
   viewUnlockRepo,
   unlockId,
-  twoYearsFrom,
+  oneYearFrom,
 } from "@/lib/view-unlocks";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
       const splatItemId = matchedItem.id;
       const tokenCost = matchedProperty.tokenCost ?? 1;
 
-      // 既に有効なアンロックがあれば課金せずそのまま署名へ（2年間の再視聴無償）。
+      // 既に有効なアンロックがあれば課金せずそのまま署名へ（1年間の再視聴無償）。
       // splatItemId（永続識別子）で判定。並び替え前の旧レコード向けに、現在の
       // index ベースの旧キーにもフォールバックする（hasValidUnlock 内部で実施）。
       const alreadyUnlocked = await viewUnlockRepo.hasValidUnlock(
@@ -141,7 +141,7 @@ export async function GET(req: Request) {
           splatItemIndex,
           tokensSpent: tokenCost,
           unlockedAt: now,
-          expiresAt: twoYearsFrom(now),
+          expiresAt: oneYearFrom(now),
         });
 
         // サブスク付与分 (tokenBalance) を優先消費し、不足分のみ貢献特別枠

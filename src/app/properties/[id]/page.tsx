@@ -82,7 +82,7 @@ export default async function PropertyDetailPage({
   // で対応がズレる）。旧レコード（splatItemId 未設定）は記録時の index から
   // 現在の id を逆引きする。
   const purchasedItemIds: string[] = [];
-  // シーン(splatItem)ごとに「2年以内のアンロック済みか」を集計。true のシーンは
+  // シーン(splatItem)ごとに「1年以内のアンロック済みか」を集計。true のシーンは
   // ViewerGate 側で「視聴済み（無料再視聴）」表示になり、開いても課金されない。
   // splatItem.id で判定する（index だと並び替え/3DGS差し替えで対応がズレる）。
   // 旧レコード（splatItemId 未設定）は記録時の index から現在の id を逆引きする。

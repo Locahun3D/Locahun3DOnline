@@ -69,7 +69,7 @@ export default async function DashboardPage() {
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Unlocked scenes</div>
           <div className="serif text-2xl">{unlockedCount}</div>
           <p className="text-[12px] text-muted mt-2 leading-[1.7]">
-            {en ? "3DGS scenes you can re-view free (2 years)." : "無償で再視聴できる3DGSシーン(2年間)。"}
+            {en ? "3DGS scenes you can re-view free (1 year)." : "無償で再視聴できる3DGSシーン(1年間)。"}
           </p>
           <Link
             href={lh("/dashboard/unlocked")}

@@ -94,7 +94,7 @@ export default function PropertyDetailView({
   canViewNdaOnly?: boolean;
   /** 購入済みシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
   purchasedItemIds?: string[];
-  /** 2年以内にアンロック済みのシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
+  /** 1年以内にアンロック済みのシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
   unlockedItemIds?: string[];
   hasViewerAccess?: boolean;
   signedIn?: boolean;

@@ -55,8 +55,8 @@ export default async function UnlockedScenesPage() {
         </h1>
         <p className="text-[14px] text-muted mt-2 max-w-[60ch] leading-[1.85]">
           {en
-            ? `Scenes you've unlocked with tokens. Each stays free to re-view for 2 years from the unlock date. ${rows.length} item(s).`
-            : `トークンで解除した3DGSシーンの一覧です。解除日から2年間は無償で再視聴できます。${rows.length} 件。`}
+            ? `Scenes you've unlocked with tokens. Each stays free to re-view for 1 year from the unlock date. ${rows.length} item(s).`
+            : `トークンで解除した3DGSシーンの一覧です。解除日から1年間は無償で再視聴できます。${rows.length} 件。`}
         </p>
       </header>
 
