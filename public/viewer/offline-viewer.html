@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- GENERATED FILE — DO NOT EDIT. Source: src/ in F:/Htlml/3DGS/Locahun3D (build: node build.mjs) -->
 <html lang="ja" id="html-root">
 <head>
 <meta charset="UTF-8">
@@ -3973,8 +3974,9 @@ body.ar-active #dz{display:none !important;}
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-    "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.0.0/dist/spark.module.js",
-    "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"
+    "@sparkjsdev/spark": "./vendor/spark-2.0.0-workers16-incrtraverse.module.js",
+    "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js",
+    "mp4-muxer": "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.mjs"
   }
 }
 </script>
@@ -4001,6 +4003,9 @@ body.ar-active #dz{display:none !important;}
 <script type="module">
 import * as THREE from 'three';
 import { SplatMesh, SplatFileType, SplatLoader, SparkRenderer, PagedSplats } from '@sparkjsdev/spark';
+// Used only by the camera-animation MP4 exporter (113b) to mux WebCodecs
+// VideoEncoder output into a playable MP4 with perfectly even frame timing.
+import { Muxer as Mp4Muxer, ArrayBufferTarget as Mp4ArrayBufferTarget } from 'mp4-muxer';
 // OBJLoader / GLTFLoader / FBXLoader are now LAZY-loaded on first use so
 // the splat viewer boots fully offline even when the addon CDN is down.
 // _addonLoader('OBJLoader') etc. resolves to the constructor or null on
@@ -4248,12 +4253,25 @@ const _qualTouchLike = (function(){
 })();
 let qualScale = _qualTouchLike ? 0.75 : 1.0;
 let qualIdx   = _qualTouchLike ? 0    : 1;
-// "Preferred" quality — the ceiling the continuous-watchdog up-steps toward
-// after a downgrade. Starts as the device-tier auto pick; setQuality()
-// updates it when the user manually picks a level (so the watchdog won't
+// "Preferred" quality — the CEILING the continuous-watchdog up-steps toward
+// after a downgrade. setQuality() (via applyQualityTier, source:'manual')
+// overwrites it when the user manually picks a level, so the watchdog won't
 // quietly raise quality above the user's explicit choice, but WILL still
-// drop quality below it whenever frame-time threatens to push below 30 fps).
-let _qualPreferred = qualScale;
+// drop quality below it whenever frame-time threatens the 30 fps floor.
+//
+// WHY the seed is the top preset, NOT the device-tier START value:
+// Previously this was seeded to `qualScale` (the conservative device-tier
+// START level — 中 on desktop, 低 on touch). That created the "default =
+// ceiling" trap: since the watchdog can never up-step past _qualPreferred,
+// an idle RTX 5090 could NEVER auto-climb above 中 even with 100+ fps of
+// headroom, because nothing ever raised the ceiling (RC2). The probe used
+// to bump it, but the probe never ran on URL/demo loads. We now seed the
+// ceiling at the tier MAXIMUM the auto-governor is allowed to reach on its
+// own — 高(1.5) for desktop/pointer:fine, 中(1.0) for touch-like devices
+// (phones/tablets can't sustain 高 comfortably) — so auto-quality can
+// actually exploit spare GPU headroom. Manual picks still overwrite this
+// (and become the new cap in both directions).
+let _qualPreferred = _qualTouchLike ? 1.0 : 1.5;
 // Sync the always-visible top-right quality badge to whichever preset we
 // just auto-selected. Runs once DOM is ready since the badge element is
 // emitted later in the body.
@@ -4491,7 +4509,11 @@ scene = new THREE.Scene();
 // （実測: 120ms/chunk 模擬でフル解像 fetchers3=5.6s → 12=3.0s、本番R2の
 //  HTTP/2 多重化では更に効く）。共有 SplatPager に渡り全RADに適用される。
 // モバイルは従量/帯域に配慮して控えめ。
-const _numLodFetchers = isMobile ? 6 : 12;
+// 2026-07-05: 12→16。実効並列 = min(numFetchers, decodeワーカープール) で、
+// プールは vendored Spark (vendor/spark-2.0.0-workers16.module.js) により
+// 4固定→hardwareConcurrency-2(上限16)へ拡大済み。デスクトップはプールを
+// フルに使えるよう16に合わせる。
+const _numLodFetchers = isMobile ? 6 : 16;
 const sparkRenderer = new SparkRenderer({ renderer, numLodFetchers: _numLodFetchers });
 scene.add(sparkRenderer);
 
@@ -8393,6 +8415,17 @@ window.stopViewRecording = function(){
 };
 
 window.toggleViewRecording = function(){
+  // カメラワークのクロップ録画(camAnim._recRec)は _viewRec と別レコーダー。
+  // 従来この分岐がなく、クロップ録画中に「停止」(赤ボタン)を押すと
+  // _viewRec.active=false のため誤って2本目の全画面録画が始まり、
+  // 「録画が終わらない・保存されない」に見えるバグだった(2026-07-03修正)。
+  // ウォームアップ中(warming)や非クロップのカメラワーク録画(_recFinish)も
+  // camAnimStopRecord が適切に中止/終了保存する。
+  if(typeof camAnim !== 'undefined' && camAnim &&
+     (camAnim._recRec || camAnim.warming || camAnim._recFinish)){
+    if(typeof window.camAnimStopRecord === 'function') window.camAnimStopRecord();
+    return;
+  }
   if(_viewRec.active) window.stopViewRecording();
   else                window.startViewRecording();
 };
@@ -8565,12 +8598,36 @@ function _camAnimSampleAt(t){
   // along the curve even though Catmull-Rom's native parameterisation is
   // not arc-length linear.
   let u     = t / camAnim.totalSec;
-  // Ease in/out (user-selectable). Smoothstep on the normalised progress so the
-  // shot accelerates from rest and decelerates to a stop; position AND every
-  // scalar field derive from the same eased u, so they stay in lockstep.
-  // Strength dialed to ~1/3 (user: "イージングが強すぎる") by blending the
-  // smoothstep result back toward linear: eased = lerp(u, smoothstep, 1/3).
-  if(camAnim.easing){ const _sm = u*u*(3 - 2*u); u = u + (_sm - u) * (1/3); }
+  // Ease in/out (user-selectable); position AND every scalar field derive
+  // from the same eased u, so they stay in lockstep.
+  //
+  // 2026-07-06 replacement: the previous version blended a full cubic
+  // smoothstep back toward linear (~1/3 strength) to soften an earlier
+  // "easing is too strong" complaint. That blend is mathematically unable to
+  // produce a true stop: smoothstep alone has zero derivative at u=0/1, but
+  // averaging ANY of it with linear (constant, nonzero derivative) leaves a
+  // nonzero residual velocity at the endpoints — the shot's motion gets cut
+  // off abruptly rather than decelerating to rest, exactly the "stops like
+  // linear at the end" symptom reported once real exports could finally be
+  // watched. Fixed with a quadratic ease-in / linear cruise / quadratic
+  // ease-out curve instead: C1-continuous at both internal seams, EXACTLY
+  // zero velocity at u=0 and u=1 (guaranteed true start/stop regardless of
+  // EASE_FRAC), and — because only the first/last EASE_FRAC of the duration
+  // is easing at all — the cruise speed is just 1/(1-EASE_FRAC) ≈ 1.25× the
+  // average (vs. 1.5× for a full cubic smoothstep), i.e. gentler throughout
+  // than before while still genuinely resting at both ends.
+  if(camAnim.easing){
+    const EASE_FRAC = 0.2;
+    const m = 1 / (1 - EASE_FRAC);
+    if(u <= EASE_FRAC){
+      u = (m / (2 * EASE_FRAC)) * u * u;
+    } else if(u >= 1 - EASE_FRAC){
+      const w = 1 - u;
+      u = 1 - (m / (2 * EASE_FRAC)) * w * w;
+    } else {
+      u = (m * EASE_FRAC) / 2 + m * (u - EASE_FRAC);
+    }
+  }
   // CRITICAL: getPointAt(u) is ARC-LENGTH parameterised, but _catRom1D()
   // below is parameterised UNIFORMLY in key index (f = param*(n-1)). Passing
   // the arc-length u straight into _catRom1D phase-shifts the ORIENTATION
@@ -8813,6 +8870,12 @@ function _camAnimRenderPanel(){
           style="accent-color:#b594ff;cursor:pointer"> ${t('Burn in grid / safe zone','グリッド/セーフ枠を焼き込み')}
       </label>
     </div>
+    <div style="margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:.82em;cursor:pointer">
+        <input type="checkbox" id="ca-export-4k"
+          style="accent-color:#b594ff;cursor:pointer"> ${t('4K recording','4K 録画')}
+      </label>
+    </div>
     <div style="display:flex;gap:4px">
       <button onclick="window.camAnimPreview()" ${ready ? '' : 'disabled'}
         style="flex:1;padding:5px 6px;background:rgba(120,200,255,.18);
@@ -8987,6 +9050,135 @@ window.camAnimPreview = function(){
   _camAnimRenderPanel();
 };
 
+// Frame rate for camera-animation exports.
+const CAM_ANIM_REC_FPS = 30;
+// One keyframe per second of output — reasonable GOP size for a 30fps export.
+const CAM_ANIM_REC_KEYFRAME_INTERVAL = CAM_ANIM_REC_FPS;
+
+// 2026-07-06: WebCodecs rewrite. Two prior approaches were tried and both
+// have a fundamental ceiling that only shows up under a heavy scene:
+//  1) Real-time captureStream(60) + MediaRecorder — samples the canvas 60
+//     times/sec on ITS OWN clock, independent of how often content actually
+//     changed. Spark's real render rate rarely divides 60 evenly, so frames
+//     get duplicated unevenly → visible judder.
+//  2) captureStream(0) manual mode + track.requestFrame() — still routes
+//     through MediaRecorder, which timestamps each frame by the REAL
+//     wall-clock moment requestFrame() was called. Any render slowdown
+//     (exactly what happens on a heavy scene, the case this was supposed to
+//     fix) still shows up directly as an unevenly-held frame in the output,
+//     because the recorder has no concept of "this frame belongs at exactly
+//     t=i/30s" — only "this frame arrived at real time T".
+// Fix: bypass MediaRecorder/captureStream entirely. Each rendered pose is
+// wrapped in a VideoFrame with an EXPLICIT, mathematically even synthetic
+// timestamp (i * 1e6/FPS microseconds) and fed straight to a VideoEncoder;
+// mp4-muxer packages the encoded chunks into a real MP4. However long any
+// individual frame actually took to render in wall-clock time is now
+// irrelevant to the output — every frame's PRESENTATION timestamp is exactly
+// where it belongs, so the exported video is always perfectly even at
+// CAM_ANIM_REC_FPS. A slow render can only make the EXPORT (not the VIDEO)
+// take longer, which is the correct trade-off for an offline-style export.
+async function _camAnimMakeExporter(width, height){
+  if(typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
+  // H.264 4:2:0 chroma subsampling requires even dimensions.
+  width  = Math.max(2, width  - (width  % 2));
+  height = Math.max(2, height - (height % 2));
+  const bitrate = 12_000_000;
+  const codecCandidates = [
+    'avc1.640034', // High Profile, Level 5.2 — best quality/size for large frames
+    'avc1.4d0034', // Main Profile, Level 5.2
+    'avc1.42001f', // Baseline Profile, Level 3.1 — widest-compatibility fallback
+  ];
+  let codec = null;
+  for(const c of codecCandidates){
+    try {
+      const support = await VideoEncoder.isConfigSupported({ codec: c, width, height, bitrate });
+      if(support && support.supported){ codec = c; break; }
+    } catch(_){}
+  }
+  if(!codec) return null;
+
+  const muxer = new Mp4Muxer({
+    target: new Mp4ArrayBufferTarget(),
+    video: { codec: 'avc', width, height, frameRate: CAM_ANIM_REC_FPS },
+    fastStart: 'in-memory',
+  });
+  // VideoEncoder reports encode-time failures (e.g. a misconfigured/odd
+  // frame size) ASYNCHRONOUSLY through this callback, not by throwing from
+  // encode() itself — a caller that only logs here and keeps pushing frames
+  // ends up feeding a doomed encoder for the rest of the export, producing a
+  // structurally-valid-looking MP4 container with no (or too few) actual
+  // samples once muxed. Surface it via `errored` so pushFrame can abort the
+  // export immediately instead of silently limping to a broken file.
+  let errored = null;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: (e) => { errored = e; console.error('[Locahun][CamAnimRec] VideoEncoder error', e); },
+  });
+  encoder.configure({ codec, width, height, bitrate, framerate: CAM_ANIM_REC_FPS });
+
+  return {
+    width, height,
+    get errored(){ return errored; },
+    async pushFrame(source, timestampUs, keyFrame){
+      if(errored) throw errored;
+      // Backpressure — caps how many frames can be in flight so a slow
+      // encoder can't make memory grow unbounded on a long export. Bounded
+      // (2026-07-06): a genuinely slow-but-healthy encoder draining its
+      // queue is exactly what this loop is for and should keep waiting, but
+      // an encoder that's truly wedged (not erroring, just never advancing)
+      // must not be allowed to hang the export forever — the same class of
+      // bug already fixed once for the render-wait step (see stepFrame).
+      const backpressureStartedAt = performance.now();
+      while(encoder.encodeQueueSize > 8){
+        if(performance.now() - backpressureStartedAt > 10_000){
+          throw new Error('VideoEncoder queue did not drain (encoder appears stuck)');
+        }
+        await new Promise(r => setTimeout(r, 4));
+      }
+      if(errored) throw errored;
+      const frame = new VideoFrame(source, { timestamp: timestampUs });
+      try { encoder.encode(frame, { keyFrame: !!keyFrame }); }
+      finally { frame.close(); }
+    },
+    async finish(){
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      // The exact codec string is REQUIRED here, not cosmetic: a bare
+      // 'video/mp4' MIME type makes Chrome's <video>/MSE demuxer fail with a
+      // generic "Format error" for less-common profile/level combinations
+      // like avc1.640034 (High Profile) when the file arrives via a blob:
+      // URL, even though the underlying H.264 stream decodes perfectly fine
+      // (confirmed directly with a standalone VideoDecoder, bypassing <video>
+      // entirely, while debugging this exact symptom on 2026-07-06) — the
+      // container and codec content were never the problem, only the missing
+      // codecs parameter that <video> needs to select a decoder path at all.
+      return new Blob([muxer.target.buffer], { type: `video/mp4; codecs="${codec}"` });
+    },
+  };
+}
+
+// Downloads `blob` as an MP4 using the same filename convention (project
+// name + timestamp) previously used by the MediaRecorder onstop handler.
+function _camAnimSaveBlob(blob){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = ts.getFullYear() + pad(ts.getMonth()+1) + pad(ts.getDate())
+              + '_' + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
+  const projectEl = document.getElementById('tb-project-name');
+  const proj = (projectEl && projectEl.textContent.trim()) || 'Untitled';
+  a.href = url;
+  a.download = `${proj}_${stamp}.mp4`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  showUndoToast((window._lang === 'en')
+    ? `Saved ${a.download}` : `保存しました: ${a.download}`);
+}
+
 window.camAnimRecordExport = function(){
   if(camAnim.keys.length < 2) return;
   _camAnimRebuild();
@@ -9004,6 +9196,31 @@ window.camAnimRecordExport = function(){
   // captured MP4 — they're an editing aid, not part of the final shot.
   _camAnimSetVisualsVisible(false);
 
+  // ── 4K recording ─────────────────────────────────────────────────────
+  // Boosts the renderer's actual pixel ratio (not just an upscale after the
+  // fact) so the full-viewport path genuinely renders at ~3840px on the long
+  // side; the cropped path already derives its target from _camTargetResolution
+  // (2× applied below via the same cam.export4K flag the still-capture 4K
+  // toggle uses, so cropped recordings share that logic instead of duplicating
+  // it). Pins the auto-quality watchdog for the duration — otherwise it would
+  // see the sudden resolution jump as "too slow" and immediately reverse it.
+  const _export4K = !!(document.getElementById('ca-export-4k') || {}).checked;
+  const _prevExport4K = cam.export4K;
+  const _prevPixelRatio = renderer.getPixelRatio();
+  const _prevWatchdogPin = window._gpuWatchdog ? window._gpuWatchdog.manualOverride : undefined;
+  if(_export4K){
+    cam.export4K = true; // so _camTargetResolution() (cropped path) doubles its size too
+    if(window._gpuWatchdog) window._gpuWatchdog.manualOverride = true;
+    const cssLong = Math.max(innerWidth, innerHeight);
+    if(cssLong > 0) renderer.setPixelRatio(3840 / cssLong);
+  }
+  const _restore4K = () => {
+    if(!_export4K) return;
+    cam.export4K = _prevExport4K;
+    renderer.setPixelRatio(_prevPixelRatio);
+    if(window._gpuWatchdog) window._gpuWatchdog.manualOverride = _prevWatchdogPin;
+  };
+
   // ── Camera-frame cropped recording ─────────────────────────────────────
   // When the camera tool is active, record only the camera frame region
   // (matching the user's chosen aspect ratio) instead of the full viewport.
@@ -9012,14 +9229,39 @@ window.camAnimRecordExport = function(){
   const _useCamFrame = cam.active;
   const _recBurnGrid = _useCamFrame
     && !!(document.getElementById('ca-burnin-grid') || {}).checked;
+  // Always mirror into an offscreen 2D canvas (cropped to the camera frame,
+  // or a 1:1 full-viewport copy) rather than ever handing the live WebGL
+  // canvas straight to VideoFrame. The renderer runs with
+  // `preserveDrawingBuffer: false` (030_renderer_scene.js) — its drawing
+  // buffer content is only guaranteed valid immediately after a render, not
+  // whenever the exporter's async frame-push loop later gets around to
+  // reading it. Capturing the copy synchronously inside the render loop
+  // itself (via _recCopyFn, called right after renderer.render() — see
+  // 291_render_loop.js) sidesteps that entirely; a 2D canvas has no such
+  // buffer-clearing behavior.
+  // H.264 requires even width/height (4:2:0 chroma subsampling) — round DOWN
+  // here so _recCanvas, the VideoFrame built from it, and the VideoEncoder's
+  // own config (_camAnimMakeExporter applies the same rounding) always agree.
+  // A mismatch here — canvas at an odd size while only the encoder config
+  // gets rounded — makes VideoEncoder silently reject every frame ("H264
+  // only supports even sized frames", reported async via the encoder's
+  // `error` callback, never thrown at the encode() call site), which
+  // produces a structurally-valid-looking but sample-less/broken MP4: this
+  // was the actual cause of exported videos failing to play (2026-07-06).
+  const _evenFloor = (n) => Math.max(2, n - (n % 2));
   let _recCanvas = null, _recCtx = null, _recFr = null;
   if(_useCamFrame){
     const target = _camTargetResolution();
     _recCanvas = document.createElement('canvas');
-    _recCanvas.width  = target.w;
-    _recCanvas.height = target.h;
+    _recCanvas.width  = _evenFloor(target.w);
+    _recCanvas.height = _evenFloor(target.h);
     _recCtx = _recCanvas.getContext('2d');
     _recFr  = _camFrameRect();
+  } else {
+    _recCanvas = document.createElement('canvas');
+    _recCanvas.width  = _evenFloor(canvas.width);
+    _recCanvas.height = _evenFloor(canvas.height);
+    _recCtx = _recCanvas.getContext('2d');
   }
 
   // ── WARM-UP ────────────────────────────────────────────────────────────
@@ -9028,6 +9270,19 @@ window.camAnimRecordExport = function(){
   // The recorder + animation start only after camAnim.warmupMs has elapsed.
   _camAnimApplySample(camAnim.keys[0]);
   camAnim.warming = true;
+  // ウォームアップ中の手動中止経路（録画ボタン→camAnimStopRecord から呼ばれる）。
+  // レコーダー起動前なのでファイルは作らず、隠したUIを復元して静かに戻るだけ。
+  camAnim._recAbort = () => {
+    if(camAnim.warmTimer){ clearTimeout(camAnim.warmTimer); camAnim.warmTimer = 0; }
+    if(camAnim.warmNudgeId){ clearInterval(camAnim.warmNudgeId); camAnim.warmNudgeId = 0; }
+    camAnim.warming = false;
+    _restore4K();
+    if(p)  p.style.display  = prevDisplay;
+    if(cf) cf.style.display = prevCf;
+    if(camAnim.open) _camAnimSetVisualsVisible(true);
+    camAnim._recAbort = null;
+    _camAnimRenderPanel();
+  };
   const _warmMs = Math.max(0, camAnim.warmupMs || 0);
   // Keep the splat sort / LoD walker running across the whole warm-up so it
   // actually pages in higher detail (a single markDirty would only paint a
@@ -9044,51 +9299,30 @@ window.camAnimRecordExport = function(){
   }
 
   // Everything that actually starts the recording + drives the fly-through,
-  // deferred until the warm-up window closes.
-  const _beginRecording = () => {
+  // deferred until the warm-up window closes. See the WebCodecs rewrite note
+  // above _camAnimMakeExporter for why this no longer uses MediaRecorder.
+  const _beginRecording = async () => {
     camAnim.warming = false;
     if(camAnim.warmNudgeId){ clearInterval(camAnim.warmNudgeId); camAnim.warmNudgeId = 0; }
 
+    // Restores the UI (+ 4K pixel-ratio boost) applied at the top of
+    // camAnimRecordExport. Used both by the unsupported-browser early-out
+    // below and by finishRec.
+    const _restoreUi = () => {
+      _restore4K();
+      if(p)  p.style.display  = prevDisplay;
+      if(cf) cf.style.display = prevCf;
+      if(camAnim.open) _camAnimSetVisualsVisible(true);
+      _camAnimRenderPanel();
+    };
+
+    // Both recording modes now feed the exporter from the same offscreen
+    // _recCanvas, kept in sync via _recCopyFn (see the comment above where
+    // it's created for why the live WebGL canvas is never read directly).
+    const source = _recCanvas;
+    const width   = _recCanvas.width;
+    const height  = _recCanvas.height;
     if(_useCamFrame){
-      // ── Cropped recorder on the offscreen canvas ──
-      const mime = _pickRecorderMime();
-      if(!mime){
-        showUndoToast((window._lang === 'en')
-          ? 'Recording not supported on this browser'
-          : 'このブラウザでは録画非対応');
-        return;
-      }
-      const stream = _recCanvas.captureStream(60);
-      const rec = new MediaRecorder(stream, {
-        mimeType: mime,
-        videoBitsPerSecond: 12_000_000,
-      });
-      const _chunks = [];
-      const _ext = mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm';
-      rec.ondataavailable = (e) => { if(e.data && e.data.size > 0) _chunks.push(e.data); };
-      rec.onstop = () => {
-        const blob = new Blob(_chunks, { type: mime });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const ts = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        const stamp = ts.getFullYear() + pad(ts.getMonth()+1) + pad(ts.getDate())
-                    + '_' + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
-        const projectEl = document.getElementById('tb-project-name');
-        const proj = (projectEl && projectEl.textContent.trim()) || 'Untitled';
-        a.href = url;
-        a.download = `${proj}_${stamp}.${_ext}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        showUndoToast((window._lang === 'en')
-          ? `Saved ${a.download}` : `保存しました: ${a.download}`);
-      };
-      rec.start(1000);
-      camAnim._recRec = rec;
-      // Install the post-render copy hook so every animate-loop frame is
-      // mirrored to the offscreen canvas at the camera-frame crop.
       const PR = renderer.getPixelRatio();
       camAnim._recCopyFn = () => {
         try {
@@ -9099,77 +9333,161 @@ window.camAnimRecordExport = function(){
           if(_recBurnGrid) _drawGridOnCanvas(_recCtx, _recCanvas.width, _recCanvas.height);
         } catch(_){}
       };
-      _setCaptureUIHidden(true);
-      _setRecButtonState(true);
-      const el = _ensureRecTimerEl();
-      camAnim._recStart = performance.now();
-      const rtick = () => {
-        const sec = (performance.now() - camAnim._recStart) / 1000;
-        const t = document.getElementById('view-rec-time');
-        if(t) t.textContent = _fmtRecSeconds(sec);
-      };
-      rtick();
-      camAnim._recInterval = setInterval(rtick, 250);
     } else {
-      // Start the existing canvas recorder; it writes a file on stop().
-      window.startViewRecording();
+      camAnim._recCopyFn = () => {
+        try { _recCtx.drawImage(canvas, 0, 0); } catch(_){}
+      };
     }
+
+    const exporter = await _camAnimMakeExporter(width, height);
+    if(!exporter){
+      showUndoToast((window._lang === 'en')
+        ? 'Recording not supported on this browser'
+        : 'このブラウザでは録画非対応');
+      _restoreUi();
+      return;
+    }
+    camAnim._recRec = exporter;   // truthy marker read by 112_view_recording.js
+
+    _setCaptureUIHidden(true);
+    _setRecButtonState(true);
+    const el = _ensureRecTimerEl();
+    camAnim._recStart = performance.now();
+    const rtick = () => {
+      const sec = (performance.now() - camAnim._recStart) / 1000;
+      const t = document.getElementById('view-rec-time');
+      if(t) t.textContent = _fmtRecSeconds(sec);
+    };
+    rtick();
+    camAnim._recInterval = setInterval(rtick, 250);
 
     // Re-pin key 0 so frame 0 is exactly the start pose (warm-up nudges only
     // touched the splat sort, not the camera, but be explicit).
     _camAnimApplySample(camAnim.keys[0]);
     camAnim.playing   = true;
     camAnim.startedAt = performance.now();
-    // Dual-driver (rAF + setTimeout backup + hard-deadline watchdog) so
-    // recording duration matches camAnim.totalSec even if Chrome throttles
-    // rAF during the export. Same pattern as window.camAnimPreview.
-    let recRafId = 0, recTimeoutId = 0, recDeadlineId = 0;
-    const finishRec = () => {
-      if(recRafId)     cancelAnimationFrame(recRafId);
-      if(recTimeoutId) clearTimeout(recTimeoutId);
-      if(recDeadlineId){ clearTimeout(recDeadlineId); recDeadlineId = 0; }
-      recRafId = recTimeoutId = 0;
-      _camAnimApplySample(camAnim.keys[camAnim.keys.length - 1]);
+
+    const totalFrames = Math.max(1, Math.round(camAnim.totalSec * CAM_ANIM_REC_FPS));
+    const frameDurationUs = 1e6 / CAM_ANIM_REC_FPS;
+    let frameIdx = 0;
+    let stepTimeoutId = 0, stepDeadlineId = 0;
+    // Per-frame wait cap for a confirmed render (see stepFrame). Generous
+    // enough that a genuinely heavy frame still renders fresh (its content is
+    // still worth waiting for), but bounded so a single stalled frame can
+    // never hang the whole export — see the 2026-07-06 correction note below.
+    const FRAME_WAIT_MS = 300;
+
+    // manual=true は録画ボタンからの手動停止(camAnimStopRecord経由)。
+    // その場合は最終キーへカメラをジャンプさせない(今見ている画で止める)。
+    const finishRec = (manual) => {
+      if(stepTimeoutId) clearTimeout(stepTimeoutId);
+      if(stepDeadlineId){ clearTimeout(stepDeadlineId); stepDeadlineId = 0; }
+      stepTimeoutId = 0;
+      camAnim._recFinish = null;   // 二重呼び出し防止(手動停止→直後にdeadline等)
+      if(!manual) _camAnimApplySample(camAnim.keys[camAnim.keys.length - 1]);
       camAnim.playing = false;
-      setTimeout(() => {
-        if(_useCamFrame){
-          try { camAnim._recRec.stop(); } catch(_){}
-          if(camAnim._recInterval){ clearInterval(camAnim._recInterval); camAnim._recInterval = 0; }
-          camAnim._recCopyFn = null;
-          camAnim._recRec = null;
-          _setRecButtonState(false);
-          _hideRecTimer();
-          _setCaptureUIHidden(false);
-        } else {
-          window.stopViewRecording();
+      setTimeout(async () => {
+        try {
+          const blob = await exporter.finish();
+          _camAnimSaveBlob(blob);
+        } catch(e){
+          console.error('[Locahun][CamAnimRec] export finalize failed', e);
+          showUndoToast((window._lang === 'en') ? 'Export failed' : '書き出しに失敗しました');
         }
-        if(p)  p.style.display  = prevDisplay;
-        if(cf) cf.style.display = prevCf;
-        if(camAnim.open) _camAnimSetVisualsVisible(true);
-        _camAnimRenderPanel();
+        if(camAnim._recInterval){ clearInterval(camAnim._recInterval); camAnim._recInterval = 0; }
+        camAnim._recCopyFn = null;
+        camAnim._recRec = null;
+        _setRecButtonState(false);
+        _hideRecTimer();
+        _setCaptureUIHidden(false);
+        _restoreUi();
       }, 300);
     };
-    const tickRec = () => {
+
+    // 2026-07-06 correction: the first version of this stepper drove
+    // waitForRender purely via requestAnimationFrame with NO bound on how
+    // long it would wait for __riCounter to advance. rAF is suspended
+    // whenever the tab isn't the active/visible one — even a brief window
+    // switch, a modal grabbing focus, or any transient OS-level visibility
+    // hiccup during a long export — and with no other driver, that silently
+    // wedged the whole export (only the multi-minute hard-deadline watchdog
+    // would eventually cut it off mid-recording, which is exactly what
+    // looked like "recording never stops"). Fixed by driving every step via
+    // setTimeout (which keeps firing regardless of rAF suspension) AND
+    // bounding each frame's wait to FRAME_WAIT_MS — a real render is still
+    // awaited (so normal frames stay exactly as smooth as before), but a
+    // single frame can never block the exporter indefinitely.
+    const stepFrame = () => {
       if(!camAnim.playing) return;
-      if(recRafId)     { cancelAnimationFrame(recRafId); recRafId = 0; }
-      if(recTimeoutId) { clearTimeout(recTimeoutId);     recTimeoutId = 0; }
-      const tSec = (performance.now() - camAnim.startedAt) / 1000;
-      if(tSec >= camAnim.totalSec){ finishRec(); return; }
-      _camAnimApplySample(_camAnimSampleAt(tSec));
-      recRafId     = requestAnimationFrame(tickRec);
-      recTimeoutId = setTimeout(tickRec, 33);
+      try {
+        if(frameIdx >= totalFrames){ finishRec(); return; }
+        const t = frameIdx / CAM_ANIM_REC_FPS;
+        _camAnimApplySample(_camAnimSampleAt(t));
+        markDirty(4);
+        const targetRiCount = (window.__riCounter || 0) + 1;
+        const waitStartedAt = performance.now();
+        const thisFrameIdx = frameIdx;
+        const waitForRender = () => {
+          if(!camAnim.playing) return;
+          const rendered = (window.__riCounter || 0) >= targetRiCount;
+          const timedOut = (performance.now() - waitStartedAt) >= FRAME_WAIT_MS;
+          if(rendered || timedOut){
+            (async () => {
+              try {
+                await exporter.pushFrame(
+                  source,
+                  thisFrameIdx * frameDurationUs,
+                  thisFrameIdx % CAM_ANIM_REC_KEYFRAME_INTERVAL === 0,
+                );
+              } catch(e){
+                // A VideoEncoder failure (e.g. a misconfigured frame size)
+                // dooms every subsequent encode() too — limping through the
+                // remaining frames would just produce a broken file with a
+                // false "saved!" toast. Stop the export now instead.
+                console.error('[Locahun][CamAnimRec] pushFrame failed, aborting export', e);
+                showUndoToast((window._lang === 'en') ? 'Export failed' : '書き出しに失敗しました');
+                finishRec(true);
+                return;
+              }
+              frameIdx++;
+              stepTimeoutId = setTimeout(stepFrame, 0);
+            })();
+          } else {
+            stepTimeoutId = setTimeout(waitForRender, 16);
+          }
+        };
+        waitForRender();
+      } catch(e){
+        console.warn('[Locahun][CamAnimRec] frame step error, skipping frame', e);
+        frameIdx++;
+        stepTimeoutId = setTimeout(stepFrame, 0);
+      }
     };
-    // Watchdog: force-finish at totalSec + 50 ms in case both rAF and
-    // setTimeout are throttled deep enough that the tick never observes
-    // the deadline.
-    recDeadlineId = setTimeout(() => { if(camAnim.playing) finishRec(); },
-                               Math.max(50, camAnim.totalSec * 1000 + 50));
-    tickRec();
+    // Hard-deadline watchdog, now a true last-resort: with FRAME_WAIT_MS
+    // bounding every single frame, total export time is naturally capped at
+    // roughly totalFrames * FRAME_WAIT_MS in the worst case — this only
+    // needs to catch something outside that model entirely (e.g. finishRec
+    // itself throwing).
+    stepDeadlineId = setTimeout(() => { if(camAnim.playing) finishRec(); },
+                                Math.max(10000, totalFrames * FRAME_WAIT_MS + 10000));
+    // 録画が始まったので warm-up 中止経路は無効化し、手動停止経路を有効化。
+    camAnim._recAbort  = null;
+    camAnim._recFinish = finishRec;
+    stepFrame();
   };
 
   if(camAnim.warmTimer){ clearTimeout(camAnim.warmTimer); camAnim.warmTimer = 0; }
   if(_warmMs > 0) camAnim.warmTimer = setTimeout(_beginRecording, _warmMs);
   else            _beginRecording();
+};
+
+// カメラワーク録画の手動停止（録画ボタン=「停止」表示 から toggleViewRecording
+// 経由で呼ばれる）。録画中なら即座に終了して保存、ウォームアップ中ならレコーダー
+// 起動前なので中止のみ（ファイルは作られない）。従来はこの経路が存在せず、
+// クロップ録画中の「停止」クリックが2本目の全画面録画を誤起動していた。
+window.camAnimStopRecord = function(){
+  if(camAnim._recFinish){ camAnim._recFinish(true); return; }
+  if(camAnim._recAbort){ camAnim._recAbort(); }
 };
 
 // Render the active grids onto a 2D canvas of the cropped image. Mirrors the SVG
@@ -9414,6 +9732,27 @@ window.captureCamShot = async function(){
   // is the preview, pixel for pixel.
   const fr = _camFrameRect();                 // CSS px; aspect === cam.aspect
   const PR = renderer.getPixelRatio();        // live buffer = CSS px × PR
+  // ── FHDブースト (2026-07-02) ──
+  // 従来は「ライブ画面の枠部分を切り出して1920幅へ拡大」だったため、枠が画面上で
+  // 小さいと実ソースピクセルが不足しぼやけた。撮影の間だけ pixelRatio を引き上げ、
+  // 枠の実ピクセルを target 以上にしてから切り出す（拡大コピーの根絶）。
+  // renderer.setSize による黒帯バグ経路(下コメント参照)は使わない — PRブーストは
+  // 望遠スーパサンプル(030 _camZoomResBoost, 2026-06-27)で実証済みの安全機構。
+  // 上限: desktop 4.0 / touch系は既存スーパサンプル上限(dPR×2.2)。さらに
+  // WebGL最大バッファ寸法(16384)でクランプ。
+  const _needPR = target.w / Math.max(1, fr.w);
+  const _tierCap = (typeof _qualTouchLike !== 'undefined' && _qualTouchLike)
+    ? (devicePixelRatio || 1) * 2.2 : 4.0;
+  const _dimCap = 16384 / Math.max(innerWidth, innerHeight);
+  const _boostPR = Math.min(Math.max(_needPR, PR), _tierCap, _dimCap);
+  const capPR = (_boostPR > PR + 1e-3) ? _boostPR : PR;
+  window._captureBusy = true;          // 294のLODプリフェッチを撮影中サスペンド
+  // img/ictx は try 内で代入するが、finally の後（env-tint/WB/グリッド焼込）でも
+  // 使うため宣言は try の外に置く（try内 const だと後続から見えず ictx is not
+  // defined で撮影全体が落ちる — 2026-07-03 実機検証で検出・修正）。
+  let img, ictx;
+  try {
+  if(capPR !== PR) renderer.setPixelRatio(capPR);
   // Use the camera's CURRENT vFOV (== what the live preview is rendering right
   // now), NOT a re-derived _camSensorVFovDeg(). captureCamShot() runs
   // _camPullFields() first, and if the UI fields are even slightly out of sync
@@ -9450,17 +9789,22 @@ window.captureCamShot = async function(){
 
   // Crop the frame-rect region out of the live canvas (intrinsic px = CSS × PR)
   // and scale it to the delivery resolution.
-  const img = document.createElement('canvas');
+  img = document.createElement('canvas');
   img.width  = target.w;
   img.height = target.h;
-  const ictx = img.getContext('2d');
+  ictx = img.getContext('2d');
   ictx.imageSmoothingEnabled = true;
   ictx.imageSmoothingQuality = 'high';
-  const _sx = Math.max(0, Math.round(fr.x * PR));
-  const _sy = Math.max(0, Math.round(fr.y * PR));
-  const _sw = Math.round(fr.w * PR);
-  const _sh = Math.round(fr.h * PR);
+  const _sx = Math.max(0, Math.round(fr.x * capPR));
+  const _sy = Math.max(0, Math.round(fr.y * capPR));
+  const _sw = Math.round(fr.w * capPR);
+  const _sh = Math.round(fr.h * capPR);
   ictx.drawImage(canvas, _sx, _sy, _sw, _sh, 0, 0, target.w, target.h);
+  } finally {
+    // PRは既存の復元部(下)でも戻すが、例外時にも画面解像度が壊れないよう二重化
+    if(capPR !== PR){ try{ renderer.setPixelRatio(PR); }catch(_){} }
+    window._captureBusy = false;
+  }
   // ── Environment scene-tint (matches live #env-tint overlay) ──
   // Applied BEFORE WB so the order is "scene lighting first, then camera correction".
   if(env.preset !== 'off' && ENV_PRESETS[env.preset] && ENV_PRESETS[env.preset].sceneTint){
@@ -10764,16 +11108,16 @@ function _radLodScaleForStride(stride){
 // splat 数は GPU 負荷に直結し、qualScale/PR は解像度しか下げず splat 数を減らせ
 // ないため、弱い端末で数百万 splat を出すと FPS を守れない。よって端末ティアで
 // 上限を調整する（desktop=5090級はほぼ全精細まで引き上げる）。
-//   desktop:     低0.8 / 中1.5 / 高2.2  (中≈2.4M, 高=cap~2.5M)
-//   laptop_ok:   低0.7 / 中1.1 / 高1.6
+//   desktop:     低0.8 / 中1.5 / 高3.0  (中≈2.4M, 高=Task2のlodSplatCount拡大とセットで飽和が外れる)
+//   laptop_ok:   低0.7 / 中1.1 / 高2.0  (高はTask2のlodSplatCount拡大とセットで飽和が外れる)
 //   laptop_weak: 低0.6 / 中0.9 / 高1.3
 //   tablet:      低0.5 / 中0.8 / 高1.2
 //   phone:       低0.45/ 中0.7 / 高1.0
 function _radLodScaleForQuality(idx){
   const tier = (typeof _splatPerfTier !== 'undefined') ? _splatPerfTier : 'laptop_ok';
   let lo, mid, hi;
-  if(tier === 'desktop')          { lo=0.8;  mid=1.5; hi=2.2; }
-  else if(tier === 'laptop_ok')   { lo=0.7;  mid=1.1; hi=1.6; }
+  if(tier === 'desktop')          { lo=0.8;  mid=1.5; hi=3.0; }
+  else if(tier === 'laptop_ok')   { lo=0.7;  mid=1.1; hi=2.0; }
   else if(tier === 'laptop_weak') { lo=0.6;  mid=0.9; hi=1.3; }
   else if(tier === 'tablet')      { lo=0.5;  mid=0.8; hi=1.2; }
   else /* phone */                { lo=0.45; mid=0.7; hi=1.0; }
@@ -10788,14 +11132,19 @@ window.__loadRad = (url)=>{ try{ return loadFromURL(url,'RADtest'); }catch(e){ r
 window.__nSplat = ()=> (typeof splatMesh!=='undefined'&&splatMesh&&splatMesh.paged)?splatMesh.paged.numSplats:-1;
 window.__keepAlive = (ms)=>{ _splatActiveUntil=performance.now()+(ms||6000); markDirty(240); };
 window.__setCam = (y,p)=>{ if(typeof yaw!=='undefined'){yaw=_yawTarget=y;} if(typeof pitch!=='undefined'){pitch=_pitchTarget=(p||0);} _splatActiveUntil=performance.now()+8000; markDirty(240); };
+window.__setCamPos = (x,y,z)=>{ if(typeof camPos!=='undefined'){ camPos.set(x,y,z); } _splatActiveUntil=performance.now()+8000; markDirty(240); };
 // sparkRenderer のLOD関連プロパティをライブ設定（lodSplatCount/lodSplatScale/coneFov等）
 window.__setRenderer = (p)=>{ if(typeof sparkRenderer==='undefined') return 'no sr'; const out={}; for(const k in p){ sparkRenderer[k]=p[k]; out[k]=sparkRenderer[k]; } if(typeof markDirty==='function') markDirty(240); return out; };
 window.__srDump = ()=>{ if(typeof sparkRenderer==='undefined') return 'no sr'; const o={}; for(const k of ['lodSplatCount','lodSplatScale','lodRenderScale','coneFov','coneFov0','coneFoveate','behindFoveate','maxPagedSplats','numLodFetchers','enableLod','enableDriveLod']){ o[k]=sparkRenderer[k]; } return o; };
+// Deeper paging/streaming state than __srDump exposes — used by the online
+// SaaS's admin preview-capture flow to confirm a streamed RAD scene has
+// loaded enough splats before it starts recording. Harmless everywhere else
+// (just an inert debug getter, same as __srDump above).
 window.__srDeep = ()=>{
   if(typeof sparkRenderer==='undefined') return 'no sr';
   const sr = sparkRenderer;
   const r = { hasPager:!!sr.pager, lodMeshes:sr.lodMeshes?.length, lastFrame:sr.lastFrame, activeSplats:sr.activeSplats };
-  if(typeof splatMesh!=='undefined'&&splatMesh&&splatMesh.paged) r.nSplat=splatMesh.paged.numSplats;
+  if(typeof splatMesh!=='undefined' && splatMesh && splatMesh.paged) r.nSplat = splatMesh.paged.numSplats;
   return r;
 };
 // 予算設定→再ウォーク→収束numSplats と FPS を返す
@@ -11388,6 +11737,52 @@ const SPARK_QUALITY_OPTS = {
 // ══════════════════════════════════════════════════
 //  FILE LOADING
 // ══════════════════════════════════════════════════
+// A local PLY/SPLAT file over ~2 GiB throws "The requested file could not be
+// read, typically due to permission problems that have occurred after a
+// reference to a file was acquired" partway through `file.arrayBuffer()`
+// (2026-07-05: reproduced with a real 2.36GB .ply, failed exactly at that
+// call). Root cause confirmed live in this Chrome/V8 build (bisected in
+// devtools): a PLAIN `new ArrayBuffer(n)` itself throws "Array buffer
+// allocation failed" for any n at/above ~2,145,386,819 bytes — this is V8's
+// own single-ArrayBuffer size ceiling (~2^31-1), NOT a Blob-transfer-specific
+// bug. That means reading in chunks does NOT fix files past this ceiling —
+// the DESTINATION Uint8Array we'd assemble them into hits the exact same
+// wall. PLY/SPLAT/OBJ hand Spark one contiguous buffer by design (unlike
+// .rad, which streams via HTTP Range and never needs the whole file in one
+// buffer) — there is no in-browser workaround for a single PLY/SPLAT file
+// this large. We fail fast with a clear, actionable message instead of
+// letting the confusing native error surface, and point the user at RAD.
+const MAX_SINGLE_BUFFER_BYTES = 2_000_000_000; // safe margin under the ~2.145B wall
+function _assertReadableFileSize(file){
+  if(file.size >= MAX_SINGLE_BUFFER_BYTES){
+    const gb = (file.size / 1024 / 1024 / 1024).toFixed(2);
+    throw new Error(
+      `このファイルは${gb}GBあり、ブラウザの技術的な上限（単一バッファ約2GB）を超えているため ` +
+      `PLY/SPLAT/OBJ形式では読み込めません。.rad（ストリーミング形式）に変換してください — ` +
+      `RADは容量に依らず正常に読み込めます。`
+    );
+  }
+}
+// Reads the file in <512MB slices — this is NOT a >2GiB workaround (see
+// above), just a mitigation for a SEPARATE, smaller-scale Chromium
+// blob-transfer flakiness some builds show even under 2GB. Files at/above
+// the true ceiling are rejected up front by _assertReadableFileSize.
+async function _readFileArrayBufferChunked(file, onProgress){
+  _assertReadableFileSize(file);
+  const CHUNK = 512 * 1024 * 1024; // 512MB
+  const total = file.size;
+  if(total < CHUNK) return await file.arrayBuffer();
+  const out = new Uint8Array(total);
+  let offset = 0;
+  while(offset < total){
+    const end = Math.min(offset + CHUNK, total);
+    const chunkBuf = await file.slice(offset, end).arrayBuffer();
+    out.set(new Uint8Array(chunkBuf), offset);
+    offset = end;
+    if(typeof onProgress === 'function') onProgress(offset / total);
+  }
+  return out.buffer;
+}
 async function loadSplatFile(file){
   try{
     showLd(T('loading')); setBar(5); setMsg(T('preparing'));
@@ -11414,30 +11809,52 @@ async function loadSplatFile(file){
     // "ポリゴン 1/4" from the quality panel after observing slow FPS or
     // memory pressure.
 
-    // ── 常にバッファを読み込む（ZIP保存キャッシュ兼用）──
-    setMsg(T('loading-file')); setBar(15);
-    const rawBuf=await file.arrayBuffer();
-
-    // Stats for camera placement + position cache for picking
+    // ── .RAD: never read the whole file into one buffer ──
+    // .RAD is Spark's OWN format for scans too large to hold as one buffer
+    // (that's the entire point of paged/streaming). Reading it upfront via
+    // _readFileArrayBufferChunked — like every other format below — would
+    // hit the exact >2GiB ceiling RAD exists to avoid, on a file that is
+    // BY DESIGN often the largest thing a user drops on this viewer. So:
+    // peek only the JSON header (first 1MB, plenty for `_parseRadHeaderCount`)
+    // and hand Spark a `blob:` URL instead of bytes — Chrome's blob: URLs
+    // DO honour Range requests against a local File (confirmed live: 206 +
+    // correct Content-Range past the 2GiB file-size mark), so Spark's normal
+    // url+paged Range-fetch path (identical to the online-demo/URL loader)
+    // streams it exactly like a real HTTP .rad, no matter how large the file.
+    let rawBuf = null, _splatBytes = null, blobUrl = null;
     let stats={center:new THREE.Vector3(),size:5,cache:null,cacheCount:0};
-    if(ext==='splat'||ext==='ply'){
-      setMsg(T('parsing')); setBar(22);
-      const flipYZ=(ext==='ply');
-      stats=(ext==='ply')?estimatePLYStats(rawBuf,flipYZ):estimateSplatStats(rawBuf);
-      msr.cachedPts   = stats.cache;
-      msr.cachedCount = stats.cacheCount;
-    } else {
+    if(ext === 'rad'){
+      setMsg(T('loading-file')); setBar(15);
+      const headBuf = await file.slice(0, 1024*1024).arrayBuffer();
+      var _radTargetCountLocal = _parseRadHeaderCount(new Uint8Array(headBuf));
       msr.cachedPts = null; msr.cachedCount = 0;
-    }
+      blobUrl = URL.createObjectURL(file);
+      setMsg(T('building-3dgs')); setBar(50);
+    } else {
+      // ── 常にバッファを読み込む（ZIP保存キャッシュ兼用）──
+      setMsg(T('loading-file')); setBar(15);
+      rawBuf=await _readFileArrayBufferChunked(file, p => setBar(15 + Math.round(p*7)));
 
-    setMsg(T('building-3dgs')); setBar(50);
+      // Stats for camera placement + position cache for picking
+      if(ext==='splat'||ext==='ply'){
+        setMsg(T('parsing')); setBar(22);
+        const flipYZ=(ext==='ply');
+        stats=(ext==='ply')?estimatePLYStats(rawBuf,flipYZ):estimateSplatStats(rawBuf);
+        msr.cachedPts   = stats.cache;
+        msr.cachedCount = stats.cacheCount;
+      } else {
+        msr.cachedPts = null; msr.cachedCount = 0;
+      }
+
+      setMsg(T('building-3dgs')); setBar(50);
+    }
 
     // Load-time decimation has been REMOVED across all device classes.
     // Every device — including iPhone — loads at full quality. The
     // "ポリゴン 1/4" toggle is now strictly OPT-IN: it only takes effect
     // when the user explicitly flips it (reloadAllSplatLayers continues
     // to honour _splatStride() so the manual toggle path still works).
-    const _splatBytes = rawBuf;
+    if(ext !== 'rad') _splatBytes = rawBuf;
     // Force-sync the persisted preference + every visible toggle to OFF
     // so a stale `locahun_splat_stride=4` entry from a previous session
     // (e.g. earlier iPhone build that seeded it on big files) doesn't
@@ -11450,12 +11867,19 @@ async function loadSplatFile(file){
       if(_hCb) _hCb.checked = false;
     }
 
-    // Spark 2.x: feed the loader the ArrayBuffer directly via `fileBytes`.
-    // Going through a blob: URL was observed to hang indefinitely
-    // ("pending" forever on large 3DGS PLY scans), and large buffers also
-    // round-trip badly through the loader's Worker fetch. fileBytes skips
-    // both. fileType + fileName let Spark pick the right parser.
-    const opts={fileBytes:_splatBytes, fileName:file.name, ...SPARK_QUALITY_OPTS};
+    // Spark 2.x: feed the loader the ArrayBuffer directly via `fileBytes`
+    // (PLY/SPLAT/SPZ/KSPLAT/OBJ — all read whole above) — EXCEPT .RAD,
+    // which gets `url:` + `paged:true` instead (see the ext==='rad' branch
+    // above: never materializes the whole file, streams via blob: Range
+    // fetches exactly like the online-demo/URL loader). Going through a
+    // blob: URL for the non-RAD *bytes* path was observed to hang
+    // indefinitely ("pending" forever on large 3DGS PLY scans) — that
+    // observation doesn't apply to RAD, whose Spark-internal paged reader
+    // already Range-fetches in bounded chunks rather than awaiting one
+    // whole-blob read.
+    const opts = (ext === 'rad')
+      ? { url: blobUrl, fileName: file.name, ...SPARK_QUALITY_OPTS }
+      : { fileBytes: _splatBytes, fileName: file.name, ...SPARK_QUALITY_OPTS };
     // ?lod=1 — allow Spark to build the SplatMesh with its runtime LOD
     // machinery ON (overrides SPARK_QUALITY_OPTS for this load only).
     if(/[?&]lod=1/.test(location.search)){
@@ -11475,36 +11899,34 @@ async function loadSplatFile(file){
         // .RAD is the streaming format from World Labs (Spark 2.x). If
         // this Spark build hasn't shipped SplatFileType.RAD yet, fail
         // loud rather than silently treating it as PLY.
+        if(blobUrl) try{ URL.revokeObjectURL(blobUrl); }catch(_){}
         throw new Error('このファイル形式は Spark が認識できませんでした。対応形式: PLY / SPLAT / SPZ / KSPLAT / RAD / SOG / PCSOGS');
       }
     }
-    // .RAD is built around LoD chunks (matsutomato Qiita 2026-05): we
-    // need Spark's PagedSplats reader, which is the only code path that
-    // handles RAD. The naive `opts.paged = true` shortcut DOES NOT WORK
-    // here: SplatMesh's constructor builds `new PagedSplats({ rootUrl })`
-    // in that case — it never forwards `fileBytes` or `fileType`, so
-    // PagedSplats then throws "Unable to determine file type". The only
-    // supported way to feed fileBytes through paged is to construct the
-    // PagedSplats ourselves and pass it as `options.paged`. Confirmed by
-    // source inspection of @sparkjsdev/spark@2.0.0 (2026-05).
+    // .RAD via url+paged:true (Spark builds its own url-backed PagedSplats
+    // internally — the SAME mechanism the online-demo/URL loader uses, just
+    // pointed at a blob: URL instead of an http(s) one). This is what makes
+    // local .rad loading actually stream instead of requiring one buffer.
     let _radTargetCount = 0;
     if(ext === 'rad'){
-      const _radBytes = _splatBytes instanceof ArrayBuffer
-        ? new Uint8Array(_splatBytes)
-        : _splatBytes;
-      _radTargetCount = _parseRadHeaderCount(_radBytes);
-      opts.paged = new PagedSplats({
-        fileBytes: _radBytes,
-        fileType: _splatFileTypeFor('rad'),
-      });
+      _radTargetCount = _radTargetCountLocal;
+      // NOTE: `opts.paged = true` (the shortcut the demo/URL loader uses)
+      // does NOT work for a blob: URL — confirmed live ("エラー: Unable to
+      // determine file type"). SplatMesh's `paged:true` branch builds
+      // `new PagedSplats({ rootUrl })` internally and does NOT forward the
+      // outer opts.fileType to it; PagedSplats then falls back to sniffing
+      // the type from the rootUrl STRING's extension (SplatPager.ts:89-93
+      // `getSplatFileTypeFromPath`), which only works for real .rad URLs —
+      // a blob: URL has no extension to sniff. Building PagedSplats
+      // ourselves with an explicit fileType (same pattern the old fileBytes
+      // path used) sidesteps the sniffing entirely.
+      opts.paged = new PagedSplats({ rootUrl: blobUrl, fileType: _splatFileTypeFor('rad') });
+      delete opts.url;
+      delete opts.fileType;
       opts.lod = true;
       opts.enableLod = true;
       // Honour the "ポリゴン 1/4" toggle for RAD too — see _radLodScaleForStride.
       opts.lodScale = _radEffectiveLodScale();
-      // PagedSplats now owns the bytes; remove SplatMesh-level fileBytes
-      // so Spark doesn't try to double-parse.
-      delete opts.fileBytes;
-      delete opts.fileType;
       // .RAD streaming uses Spark's LoD walker, which relies on the cone
       // foveation parameters to decide which chunks to fetch. The defaults
       // in SPARK_QUALITY_OPTS (`coneFoveate:0`, `coneFov:π`) were tuned for
@@ -11520,7 +11942,14 @@ async function loadSplatFile(file){
     }
     // Remove previous main splat layer
     const _prevMain=layers.find(l=>l._isMain);
-    if(_prevMain){ scene.remove(_prevMain.mesh); const _i=layers.indexOf(_prevMain); if(_i>=0)layers.splice(_i,1); }
+    if(_prevMain){
+      scene.remove(_prevMain.mesh); const _i=layers.indexOf(_prevMain); if(_i>=0)layers.splice(_i,1);
+      // Local .rad layers own a blob: URL for their streamed lifetime —
+      // release it now that this layer is being replaced (real http(s)
+      // URLs on _prevMain._streamUrl are harmless no-ops here since
+      // revokeObjectURL only affects blob: URLs it created).
+      if(_prevMain._blobUrl){ try{ URL.revokeObjectURL(_prevMain._blobUrl); }catch(_){} }
+    }
     if(splatMesh && !layers.find(l=>l.mesh===splatMesh)) scene.remove(splatMesh);
     splatMesh=new SplatMesh(opts);
     // Stash target count for the render-loop streaming guard.
@@ -11543,6 +11972,16 @@ async function loadSplatFile(file){
     // desktop / iPad (stride=1) `_splatBytes === rawBuf` so this is a no-op.
     mainL._rawBuffer=_splatBytes;
     mainL._rawExt=ext;
+    if(ext === 'rad'){
+      // No _rawBuffer for a streamed local .rad (that's the whole point —
+      // never materialize the file). _streamUrl matches the existing
+      // ZIP-save contract for streamed splats (310_zip_project_save_load_
+      // fflate.js already knows how to handle a layer with _streamUrl and
+      // no _rawBuffer); _blobUrl additionally marks it for revocation when
+      // this layer is replaced (see the _prevMain._blobUrl cleanup above).
+      mainL._streamUrl = blobUrl;
+      mainL._blobUrl = blobUrl;
+    }
     // Explicitly release the reference to the (possibly huge) original so
     // GC can reclaim it now that Spark + cache no longer need it.
     if(_splatBytes !== rawBuf) { /* hint to GC — original Float buffer goes here */ }
@@ -14828,9 +15267,9 @@ function renderTransformPanel(){
   ${coordToggle}
   <div class="lt-section">${T('lt-pos')} (${pivSp==='local'?T('lt-pos-local'):T('lt-pos-world')})</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="0.01" value="${p.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="0.01" value="${p.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="0.01" value="${p.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="1" value="${p.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="1" value="${p.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="1" value="${p.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>
   <div class="lt-section">${T('lt-rot')}</div>
   <div class="lt-row">
@@ -14840,18 +15279,18 @@ function renderTransformPanel(){
   </div>
   <div class="lt-section">${T('lt-scale')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff6677">X</span><input type="number" id="lt-scx" step="0.01" min="0.01" value="${sc.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#66ee88">Y</span><input type="number" id="lt-scy" step="0.01" min="0.01" value="${sc.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#77aaff">Z</span><input type="number" id="lt-scz" step="0.01" min="0.01" value="${sc.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff6677">X</span><input type="number" id="lt-scx" step="1" min="0.01" value="${sc.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#66ee88">Y</span><input type="number" id="lt-scy" step="1" min="0.01" value="${sc.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#77aaff">Z</span><input type="number" id="lt-scz" step="1" min="0.01" value="${sc.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>`;
   // ── Event: position-only panel (no rotation/scale) ──
   if(L.type==='event'){
     html=`<div class="lt-title">${LAYER_ICONS[L.type]} ${L.name}</div>
   <div class="lt-section">${T('lt-pos')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="0.01" value="${p.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="0.01" value="${p.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="0.01" value="${p.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff5566">X</span><input type="number" id="lt-px" step="1" value="${p.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">Y</span><input type="number" id="lt-py" step="1" value="${p.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">Z</span><input type="number" id="lt-pz" step="1" value="${p.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>`;
   }
   // ── Splat: 軸反転ボタン (X / Y / Z 180°回転) ──
@@ -14975,9 +15414,9 @@ function renderTransformPanel(){
     if(L.type==='sphere'){
     html+=`<div class="lt-section">${T('lt-size')}</div>
   <div class="lt-row">
-    <span class="la" style="color:#ff5566">W</span><input type="number" id="lt-sw" step="0.01" min="0.01" value="${s.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#55ee66">H</span><input type="number" id="lt-sh" step="0.01" min="0.01" value="${s.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
-    <span class="la" style="color:#5599ff">D</span><input type="number" id="lt-sd" step="0.01" min="0.01" value="${s.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#ff5566">W</span><input type="number" id="lt-sw" step="1" min="0.01" value="${s.x.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#55ee66">H</span><input type="number" id="lt-sh" step="1" min="0.01" value="${s.y.toFixed(2)}" oninput="readTransformInputs(${L.id})">
+    <span class="la" style="color:#5599ff">D</span><input type="number" id="lt-sd" step="1" min="0.01" value="${s.z.toFixed(2)}" oninput="readTransformInputs(${L.id})">
   </div>`;
     }
     html+=`<div class="lt-section">${T('lt-appear')}</div>
@@ -16458,7 +16897,9 @@ async function loadAdditionalSplat(file){
     setMsg(T('preparing')); setBar(5);
     const ext=file.name.split('.').pop().toLowerCase();
     setMsg(T('loading-file')); setBar(15);
-    const rawBuf=await file.arrayBuffer();  // read for caching
+    // Chunked read: single-call file.arrayBuffer() fails on files > ~2GiB
+    // (V8 ArrayBuffer size ceiling ~2GiB; unfixable in-browser past that — see 200_file_loading.js) —
+    const rawBuf=await _readFileArrayBufferChunked(file, p => setBar(15 + Math.round(p*30)));  // read for caching
     setBar(45);
     // Full-quality load on every device — load-time decimation removed
     // (per user direction 2026-05). Users opt in to "ポリゴン 1/4" via
@@ -16541,7 +16982,9 @@ async function loadObjFile(file){
     const ext=file.name.split('.').pop().toLowerCase();
     setMsg(T('loading-file')); setBar(15);
     let object3d;
-    const buf=await file.arrayBuffer();
+    // Chunked read: single-call file.arrayBuffer() fails on files > ~2GiB
+    // (V8 ArrayBuffer size ceiling ~2GiB; unfixable in-browser past that — see 200_file_loading.js) —
+    const buf=await _readFileArrayBufferChunked(file, p => setBar(15 + Math.round(p*25)));
     setBar(40);
     setMsg(T('parsing'));
     if(ext==='obj'){
@@ -16983,6 +17426,10 @@ function _queuePixelRatio(pr){
 }
 function _applyDeferredPixelRatio(now){
   if(_pendingPixelRatio == null) return;
+  // JPEG撮影中は絶対に適用しない: 撮影は「PRブースト→2回レンダー(90ms待ち込み)→
+  // crop」の間、crop座標を撮影開始時のPRで計算する。この待ちの間にキュー済みPRが
+  // 適用されるとバッファ解像度とcrop座標がズレ、切り出し範囲が壊れる。
+  if(window._captureBusy) return;
   // Defer while any input/motion is in flight
   const moving = dragOn || (typeof joyDX!=='undefined' && (joyDX!==0||joyDY!==0)) ||
                  (keys.KeyW||keys.KeyS||keys.KeyA||keys.KeyD||keys.KeyQ||keys.KeyE||keys.ShiftLeft||keys.ShiftRight) ||
@@ -16997,6 +17444,15 @@ function _applyDeferredPixelRatio(now){
   } catch(_){}
   _pendingPixelRatio = null;
   _pendingPRStableSince = 0;
+  // Apply-then-observe handshake: tell the watchdog a queued swap just LANDED.
+  // It stamps lastApply (the watchdog holds all decisions for 2 s after) and
+  // clears both streaks so the next evaluation starts fresh against the newly
+  // applied pixel ratio, instead of on stale pre-swap frame-time history (RC4).
+  if(window._gpuWatchdog){
+    window._gpuWatchdog.lastApply = now;
+    window._gpuWatchdog.slowStreak = 0;
+    window._gpuWatchdog.fastStreak = 0;
+  }
 }
 
 // ── WebGL context loss recovery ──
@@ -17031,18 +17487,21 @@ document.addEventListener('visibilitychange', ()=>{
 }, false);
 
 // ── Battery-aware quality (Mac laptops, when running unplugged + low battery) ──
-// One-shot reduction: if battery falls under 25 % and not charging, drop qualScale
-// to 0.7 (unless user already manually set quality). Logs to console for transparency.
+// One-shot reduction: if battery falls under 25 % and not charging, drop to the
+// lowest preset (低 / 0.75) unless the user already pinned quality. Routes
+// through the shared applier so the badge/panel/RAD lodScale all follow (the
+// old path set qualScale=0.7 + _queuePixelRatio directly, leaving the badge and
+// RAD density stale — RC3). 0.75 instead of the former 0.7 is an accepted
+// change: 0.7 wasn't a real preset, so the badge already showed 低 for it.
 if(typeof navigator.getBattery === 'function'){
   navigator.getBattery().then(bat => {
     function _checkBattery(){
       if(window._gpuWatchdog && window._gpuWatchdog.manualOverride) return;
-      if(!bat.charging && bat.level < 0.25 && qualScale > 0.7){
-        qualScale = 0.7;
-        // Defer the actual setPixelRatio swap to an idle window — applying it
-        // mid-interaction would cause a visible flash + low-res frame.
-        _queuePixelRatio(Math.min(devicePixelRatio, _PR_CAP) * qualScale);
-        console.info('[Locahun] Battery low (' + Math.round(bat.level*100) + '%) — quality queued at 0.7 (apply on idle)');
+      if(!bat.charging && bat.level < 0.25 && qualScale > 0.75){
+        // Deferred (immediate:false) — applying mid-interaction would flash a
+        // low-res frame; the applier queues the swap for the next idle window.
+        applyQualityTier(0, { source:'battery' });
+        console.info('[Locahun] Battery low (' + Math.round(bat.level*100) + '%) — quality queued at 低 (apply on idle)');
       }
     }
     bat.addEventListener('chargingchange', _checkBattery);
@@ -17076,6 +17535,31 @@ const _headless = /[?&]headless=1/.test(location.search);
 const _protected = /[?&]protected=1/.test(location.search);
 if(_protected){
   document.body.classList.add('protected-mode');
+}
+// ── Paged(RAD) ストリーム活動判定 ──
+// 旧判定「numSplats が総数(_radTargetCount)に達したらロード完了」は、ヘッダ総数
+// (交差点=19.8M)が LOD 予算(250万〜)を超える大型 RAD では永遠に到達せず、
+// ①アイドルでも描画が止まらない ②watchdogのストリーミングガードが永久凍結
+// (UP不能) ③較正/プリウォームが永遠に'wait'、を引き起こしていた。さらに URL
+// ストリーム読込(292)はヘッダbytesを持たず _radTargetCount 自体が undefined で
+// 同じ穴に落ちる。そこで「numSplats のプラトー検出」(1.5秒変化なし＝ストリーム
+// 収束)に置換。回転後のチャンク補充中は再び true になるので「読込/精細化が
+// 進行中」というセマンティクスは保たれる。総数到達できる小型RADは従来どおり
+// 即確定する。animate と 420 の較正ポーラーの両方から呼ばれる。
+function _pagedStreamActive(now){
+  if(typeof layers === 'undefined' || !layers || !layers.length) return false;
+  for(let i=0;i<layers.length;i++){
+    const _L = layers[i];
+    const _mesh = _L && _L.mesh;
+    const _pm = _mesh && _mesh.paged;
+    if(!_pm) continue;
+    const _n = _pm.numSplats || 0;
+    const _target = _mesh._radTargetCount || 0;
+    if(_target > 0 && _n >= _target) continue;          // 総数到達＝確定完了
+    if(_n !== _mesh._lastPagedN){ _mesh._lastPagedN = _n; _mesh._lastPagedNAt = now; }
+    if(_n === 0 || (now - (_mesh._lastPagedNAt || now)) < 1500) return true;
+  }
+  return false;
 }
 function animate(now) {
   if(_headless) setTimeout(()=>animate(performance.now()), 16);
@@ -17161,25 +17645,12 @@ function animate(now) {
   // but never get consumed → record.rootPage is never set → next traversal
   // can't request more chunks → the scene shows zero splats forever.
   //
-  // We keep rendering as long as the paged splat hasn't reached its target
-  // splat count (`_radTargetCount`, stashed on the mesh at construction
-  // time from the RAD JSON header). After it does, we stop the continuous
-  // tick so the page goes idle; camera motion will wake it back up via
-  // the regular shouldRender path.
-  let hasPagedLoading = false;
-  if(typeof layers !== 'undefined' && layers && layers.length){
-    for(let i=0;i<layers.length;i++){
-      const _L = layers[i];
-      const _mesh = _L && _L.mesh;
-      const _pm = _mesh && _mesh.paged;
-      if(!_pm) continue;
-      const _target = _mesh._radTargetCount || 0;
-      if(_target === 0 || (_pm.numSplats||0) < _target){
-        hasPagedLoading = true;
-        break;
-      }
-    }
-  }
+  // We keep rendering as long as the paged stream is still ACTIVE (numSplats
+  // still changing — see _pagedStreamActive above; the old reach-the-target
+  // predicate never completed on big RADs / URL streams). After it plateaus,
+  // we stop the continuous tick so the page goes idle; camera motion wakes it
+  // back up via the regular shouldRender path.
+  const hasPagedLoading = _pagedStreamActive(now);
 
   const shouldRender = hasCamKey||hasDrag||hasJoy||hasMsrInteract||hasGamepad||
                        splatStreaming||_renderDirtyTimer>0||hasPagedLoading;
@@ -17542,6 +18013,9 @@ function animate(now) {
   //   respected as a cap; below it the watchdog still defends 30 fps.
   if(!window._gpuWatchdog) window._gpuWatchdog = { slowStreak:0, fastStreak:0, lastStep:0 };
   const _wd = window._gpuWatchdog;
+  if(!_wd.burned) _wd.burned = {};        // scale → expiry-timestamp burn map
+  if(!('lastApply' in _wd)) _wd.lastApply = 0;
+  if(!('calibrationUntil' in _wd)) _wd.calibrationUntil = 0;
   // STEPS_ALL matches the three user-pickable presets. The watchdog
   // normally doesn't go below 低 (0.75) — at that point the recommended
   // next step is the "ポリゴン半減" toggle. EXCEPTION: when wall time is
@@ -17563,66 +18037,115 @@ function animate(now) {
     if(s >= 0.95) return 1;
     return 0;
   };
-  if(_ftSamples.length >= 30 && (now - _wd.lastStep) > 4000){
-    // Trigger on either signal:
-    //   • _ftAvg > 28 ms : GPU-bound (render call itself is expensive)
-    //   • _wallMsAvg > 30 ms : CPU-bound (JS work between frames eats the
-    //     wall-clock budget). 30 ms wall = ~33 fps, leaving headroom
-    //     before we actually fall below the 30 fps user-facing target.
+  // Only the three real presets are routable through applyQualityTier (which
+  // owns badge/RAD/pixel-ratio). Emergency sub-0.75 Mac floors are NOT presets
+  // — they keep the legacy direct qualScale/_queuePixelRatio path (badge stays
+  // 低). This predicate decides which route a chosen step takes.
+  const _IS_PRESET = s => (s === 0.75 || s === 1.0 || s === 1.5);
+  // ── vsync-normalized budget ──
+  // One display frame in ms, clamped to a sane 30–240 Hz range. The old UP
+  // condition compared _wallMsAvg against a fixed 14 ms, which is impossible
+  // on a 60 Hz panel where wall-clock is vsync-locked to ~16.7 ms — so quality
+  // could only ever decay, never recover (RC1). Normalizing every threshold to
+  // the real refresh makes UP satisfiable on 60/90/120/144 Hz alike.
+  const budget = 1000 / Math.min(Math.max((_refreshHz||60), 30), 240);
+  // Lazily purge expired burn entries so the map can't grow unbounded.
+  for(const _k in _wd.burned){ if(_wd.burned[_k] <= now) delete _wd.burned[_k]; }
+  // ── Apply-then-observe gate ──
+  // A watchdog decision changes the pixel ratio, but the actual GPU buffer
+  // realloc is DEFERRED to the next idle window (_applyDeferredPixelRatio).
+  // If we kept deciding while a swap is still pending, one long camera motion
+  // could cascade several DOWN steps before ANY of them was observed (RC4).
+  // So: freeze streaks + skip all decisions while a swap is queued, and for
+  // 2 s after one finally lands (measured via _wd.lastApply, set in 290).
+  const _swapPending = (typeof _pendingPixelRatio !== 'undefined' && _pendingPixelRatio !== null);
+  const _settling    = (now - (_wd.lastApply || 0)) <= 2000;
+  // Honour the ?qual= diag pin (sets manualOverride) — freeze completely.
+  const _pinned = !!(_wd.manualOverride);
+  // Never re-evaluate during .RAD streaming: wall-clock spikes to ~49 ms while
+  // chunks decode, which would false-trigger DOWN (RC5). `hasPagedLoading` was
+  // computed earlier in this same function scope.
+  const _streaming = !!hasPagedLoading;
+  if(_swapPending || _settling){
+    // Freeze streaks so a queued/settling swap doesn't accrue phantom history.
+    _wd.slowStreak = 0;
+    _wd.fastStreak = 0;
+  } else if(_pinned || _streaming){
+    // Pinned or streaming: hold, don't accrue, don't act.
+  } else if(_ftSamples.length >= 30 && (now - _wd.lastStep) > 4000){
+    // Are we inside a post-load calibration window? During it, UP needs only
+    // 180 sustained frames (~3 s) instead of 600 (~10 s) so a fresh scene on a
+    // fast GPU climbs to its true ceiling quickly instead of crawling.
+    const _inCalib = now < (_wd.calibrationUntil || 0);
+    const _upStreakNeeded = _inCalib ? 180 : 600;
+    // Trigger DOWN on either signal (UNCHANGED thresholds):
+    //   • _ftAvg > 28 ms     : GPU-bound (render call itself is expensive)
+    //   • _wallMsAvg > 30 ms : CPU-bound (JS between frames eats the budget)
     if(_ftAvg > 28 || _wallMsAvg > 30){
       _wd.slowStreak++;
       _wd.fastStreak = 0;
-      // Three-tier down-step trigger:
-      //   • normal:    180 active frames (~3 s at 60 fps)
-      //   • severe:     60 active frames (~1 s)  when render > 45 ms OR
-      //                                          wall > 45 ms (~22 fps)
-      //   • dire:       12 active frames (~0.2 s) when wall > 80 ms
-      //                                          (~12 fps or worse)
-      // The "dire" tier catches Mac Chrome's compositor-throttled state
-      // where wall jumps to 100+ ms while GPU submit stays under 1 ms —
-      // waiting 60 active frames at 6 fps is 10 seconds of pain.
+      // Three-tier down-step trigger (UNCHANGED):
+      //   • normal: 180 frames (~3 s @60) ; severe: 60 (~1 s) when
+      //     ft>45||wall>45 ; dire: 12 (~0.2 s) when wall>80.
       const _severe = (_ftAvg > 45 || _wallMsAvg > 45);
-      // _dire is already declared in outer scope (same condition) —
-      // reuse it here rather than redeclaring.
       const _streakThreshold = _dire ? 12 : (_severe ? 60 : 180);
       if(_wd.slowStreak > _streakThreshold){
         const cur = qualScale;
         const next = STEPS_ALL.slice().reverse().find(s => s < cur - 0.001);
         if(next !== undefined && next < cur){
-          qualScale = next;
-          qualIdx = PRESET_FOR_SCALE(qualScale);
-          _queuePixelRatio(Math.min(devicePixelRatio, _PR_CAP) * qualScale);
-          if(typeof _updateQiBadgeLabel === 'function') _updateQiBadgeLabel(qualIdx);
-          document.querySelectorAll('#quality-panel #qbtns button')
-            .forEach((b,i)=>b.classList.toggle('on', i === qualIdx));
+          // ── Burn memory ──
+          // If this DOWN leaves a tier we UP-stepped INTO within the last 20 s,
+          // that tier is unstable for the current scene — mark it "burned" for
+          // 5 min so the UP path won't immediately re-select it and oscillate.
+          if((now - (_wd.lastStep || 0)) < 20000 && _wd.lastStepDir === 'up'){
+            _wd.burned[cur] = now + 300000;
+          }
+          if(_IS_PRESET(next)){
+            // Route real presets through the shared applier (badge/RAD/PR).
+            applyQualityTier(PRESET_FOR_SCALE(next), { source:'watchdog' });
+          } else {
+            // Emergency Mac sub-0.75 floor — legacy direct path, badge stays 低.
+            qualScale = next;
+            qualIdx = PRESET_FOR_SCALE(qualScale);
+            _queuePixelRatio(Math.min(devicePixelRatio, _PR_CAP) * qualScale);
+            if(typeof _updateQiBadgeLabel === 'function') _updateQiBadgeLabel(qualIdx);
+            document.querySelectorAll('#quality-panel #qbtns button')
+              .forEach((b,i)=>b.classList.toggle('on', i === qualIdx));
+          }
           _wd.lastStep = now;
+          _wd.lastStepDir = 'down';
           _wd.slowStreak = 0;
           console.info('[Locahun] Auto-quality DOWN →', qualScale.toFixed(2),
             `(render ~${_ftAvg.toFixed(1)} ms, wall ~${_wallMsAvg.toFixed(1)} ms, target 30 fps)`);
         }
       }
-    } else if(_ftAvg < 11 && _wallMsAvg < 14 && qualScale < _qualPreferred - 0.001 &&
+    } else if(_ftAvg < 0.6*budget && _wallMsAvg < 1.25*budget &&
+              qualScale < _qualPreferred - 0.001 &&
               !(typeof arMode !== 'undefined' && arMode && arMode.active)){
-      // While EITHER AR variant is active we intentionally hold the
-      // pixel-ratio at the AR-entry override so iOS Safari compositor /
-      // texImage2D cost stays manageable. Letting the watchdog up-step
-      // here would defeat the override and pull fps back down.
+      // UP: vsync-normalized headroom test (RC1). ft < 60 % of a frame AND
+      // wall < 125 % of a frame (wall is vsync-bound so it hugs the budget;
+      // 1.25× tolerates the occasional coalesced frame). Cap = _qualPreferred
+      // (tier max 高/中, or the user's manual pick). While AR is active we hold
+      // the AR-entry override — up-stepping would pull fps back down.
       _wd.fastStreak++;
       _wd.slowStreak = Math.max(0, _wd.slowStreak - 2);
-      if(_wd.fastStreak > 600){
+      if(_wd.fastStreak > _upStreakNeeded){
         const cur = qualScale;
-        const next = STEPS_ALL.find(s => s > cur + 0.001 && s <= _qualPreferred + 0.001);
+        // Highest non-burned preset step that's > cur and within the ceiling.
+        const _cap = _qualPreferred + 0.001;
+        let next;
+        for(let s = STEPS_ALL.length - 1; s >= 0; s--){
+          const cand = STEPS_ALL[s];
+          if(cand > cur + 0.001 && cand <= _cap && !(_wd.burned[cand] > now)){ next = cand; break; }
+        }
         if(next !== undefined && next > cur){
-          qualScale = next;
-          qualIdx = PRESET_FOR_SCALE(qualScale);
-          _queuePixelRatio(Math.min(devicePixelRatio, _PR_CAP) * qualScale);
-          if(typeof _updateQiBadgeLabel === 'function') _updateQiBadgeLabel(qualIdx);
-          document.querySelectorAll('#quality-panel #qbtns button')
-            .forEach((b,i)=>b.classList.toggle('on', i === qualIdx));
+          // UP always lands on a real preset (cap ≤ 1.5) → shared applier.
+          applyQualityTier(PRESET_FOR_SCALE(next), { source:'watchdog' });
           _wd.lastStep = now;
+          _wd.lastStepDir = 'up';
           _wd.fastStreak = 0;
           console.info('[Locahun] Auto-quality UP →', qualScale.toFixed(2),
-            `(render ~${_ftAvg.toFixed(1)} ms, plenty of headroom)`);
+            `(render ~${_ftAvg.toFixed(1)} ms, budget ${budget.toFixed(1)} ms, plenty of headroom)`);
         }
       }
     } else {
@@ -17654,123 +18177,51 @@ else          requestAnimationFrame(animate);
 // ══════════════════════════════════════════════════
 
 // Demo .rad (Spark 2.x streaming RAD format, ~357 MB, ~19.8 M splats).
-// Hosted on R2 and served through the `locahun3d-demo` Worker, which adds
-// the `Access-Control-Allow-Origin: *` headers that Cloudflare's public
-// pub-*.r2.dev subdomain doesn't return on its own. Without that
-// passthrough Spark's chunked Range fetches fail with `TypeError: Failed
-// to fetch` from cross-origin viewers and the `?demo=1` auto-start
-// silently shows a black screen. Worker source + deploy instructions are
-// in `demo-proxy/` next to this file.
+// Served by the viewer's own Cloudflare Worker (worker.js) at
+// /api/demo-asset/, which reads the object straight from the R2 bucket
+// (binding R2_ASSETS → locahun3d-assets) and re-emits it with Range +
+// `Access-Control-Allow-Origin: *`. We do NOT use the public pub-*.r2.dev
+// URL any more: it returns no CORS headers AND public bucket access has
+// been disabled (401), which is why the demo silently showed a black
+// screen — Spark's chunked Range fetches failed. Handler + whitelist are
+// in worker.js (DEMO_ALLOWED_KEYS / handleDemoAsset). The old demo-proxy/
+// Worker (which proxied the now-dead public URL) is obsolete.
 //
-// デモ(交差点)はログイン不要の公開プレビュー。R2公開アクセスは無効化したので、
-// デモ専用の公開ストリーミング(/api/demo-asset)経由で配信する。相対URLなので
-// locahun3d.com から配信された時のみ機能する（オフライン単体HTMLでは非対応）。
-const DEMO_SCENE_URL = '/api/demo-asset/Kousaten_ForDemo_point_cloud.rad';
+// Absolute URL (not relative) so offline copies of this single-file
+// viewer — opened from file://, Dropbox, or any other origin — can still
+// stream the demo cross-origin thanks to the CORS headers above.
+//
+// _protected (?protected=1, set by src/js/291_render_loop.js which loads
+// before this file) means we're embedded in the online SaaS, which proxies
+// this same route through its own Next.js API — use a same-origin relative
+// URL there instead of the public CDN Worker URL. The standalone/offline
+// download (opened via file://, Dropbox, etc.) has no such backend, so it
+// always needs the absolute URL.
+const DEMO_SCENE_URL = (typeof _protected !== 'undefined' && _protected)
+  ? '/api/demo-asset/Kousaten_ForDemo_point_cloud.rad'
+  : 'https://viewer.locahun3d.com/api/demo-asset/Kousaten_ForDemo_point_cloud.rad';
 const DEMO_SCENE_LABEL = 'デモシーン(交差点)';
 const DEMO_SCENE_SIZE_MB = 357;
 
-// 大容量バイナリの取得。1 本の fetch で全量ストリームすると Workers 経由
-// (/api/r2) で応答が途中切断されることがあり、さらに Cache-Control: public が
-// 付いていると「切れた本体」がキャッシュされて以後ずっと invalid zip data に
-// なる事故が実測で発生（116MB zip → 56MB/40KB に truncate）。
-// → HTTP Range で 16MB ずつ取得し、各チャンク長を検証・自動リトライする。
-//   fetch は cache:'no-store' で HTTP キャッシュを完全バイパス
-//   （過去に汚染されたキャッシュエントリにも当たらない）。
-async function _fetchBinaryChunked(url){
-  // blob: URL（親ページが先にダウンロード済み）はローカル読みなので一括で良い
-  if(url.startsWith('blob:')){
-    const r = await fetch(url);
-    if(!r.ok) throw new Error('blob fetch failed');
-    return await r.arrayBuffer();
-  }
-  // 切断バグは「このアプリ自身の Workers 経由プロキシ (/api/r2, /api/viewer-stream
-  // 等、同一オリジン)」で実測されたもので、R2 の署名付き直リンク（別オリジン、
-  // 例 *.r2.cloudflarestorage.com）は R2 が直接ストリーム配信するため対象外。
-  // 別オリジンの絶対URLは 1 本の fetch で取得し、チャンク分割によるリクエスト数
-  // の水増しを避ける（content-length で欠損だけは検証する）。
-  try{
-    const u = new URL(url, location.href);
-    if(u.origin !== location.origin){
-      const resp = await fetch(url, { cache:'no-store' });
-      if(!resp.ok) throw new Error('HTTP '+resp.status);
-      const buf = await resp.arrayBuffer();
-      const cl = parseInt(resp.headers.get('content-length') || '0', 10);
-      if(cl && buf.byteLength !== cl) throw new Error('通信が途中で切断されました ('+buf.byteLength+'/'+cl+' bytes)');
-      return buf;
-    }
-  }catch(e){
-    // URL 解析失敗等は下の同一オリジン想定チャンク経路にフォールバック
-    if(e instanceof Error && /切断/.test(e.message)) throw e;
-  }
-  // 8MB × リトライ5回。16MB 連投だと Workers 経由で「206 なのに body 0 byte」
-  // という一過性の切断が実測で出た（5 チャンク目以降）。小さめ＋間隔＋
-  // 粘り強いリトライで吸収する。
-  const CHUNK = 8 * 1024 * 1024;
-  const ATTEMPTS = 5;
-  // 1) probe: 先頭 1 byte の Range 応答から総サイズを取得
-  let total = 0;
-  let probe = null;
-  try { probe = await fetch(url, { cache:'no-store', headers:{ range:'bytes=0-0' } }); } catch(_){}
-  if(probe && probe.status === 206){
-    const cr = probe.headers.get('content-range') || '';
-    const m = cr.match(/\/(\d+)\s*$/);
-    if(m) total = parseInt(m[1], 10);
-    try { await probe.arrayBuffer(); } catch(_){}
-  }
-  if(!total){
-    // Range 非対応サーバ: 一括 fetch にフォールバック（content-length 検証付き）
-    const resp = await fetch(url, { cache:'no-store' });
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const buf = await resp.arrayBuffer();
-    const cl = parseInt(resp.headers.get('content-length') || '0', 10);
-    if(cl && buf.byteLength !== cl) throw new Error('通信が途中で切断されました ('+buf.byteLength+'/'+cl+' bytes)');
-    return buf;
-  }
-  const out = new Uint8Array(total);
-  let got = 0;
-  while(got < total){
-    const end = Math.min(got + CHUNK, total) - 1;
-    let ok = false, lastErr = null;
-    for(let attempt = 0; attempt < ATTEMPTS && !ok; attempt++){
-      try{
-        const r = await fetch(url, { cache:'no-store', headers:{ range:'bytes='+got+'-'+end } });
-        if(r.status !== 206 && r.status !== 200) throw new Error('HTTP '+r.status);
-        const part = new Uint8Array(await r.arrayBuffer());
-        if(r.status === 200){
-          // サーバが Range を無視して全量を返してきた場合
-          if(part.byteLength !== total) throw new Error('range ignored + truncated ('+part.byteLength+'/'+total+')');
-          out.set(part, 0); got = total; ok = true; break;
-        }
-        if(part.byteLength !== (end - got + 1)) throw new Error('chunk truncated ('+part.byteLength+'/'+(end - got + 1)+')');
-        out.set(part, got); got += part.byteLength; ok = true;
-      }catch(e){ lastErr = e; await new Promise(res=>setTimeout(res, 1200 * (attempt + 1))); }
-    }
-    if(!ok) throw new Error('チャンク取得失敗 @'+got+': '+(lastErr && lastErr.message ? lastErr.message : lastErr));
-    if(typeof setBar === 'function') setBar(5 + Math.round((got / total) * 35));
-    // Workers への連投を避ける小休止（一過性の空応答対策）
-    if(got < total) await new Promise(res=>setTimeout(res, 120));
-  }
-  return out.buffer;
-}
-
 async function loadFromURL(url, displayName){
   try{
-    // Show loader UI early so user sees feedback during the ~30s fetch
-    if(typeof showLd === 'function') showLd(`読み込み中: ${displayName || url}`);
+    // Show loader UI early so user sees feedback during the ~30s fetch.
+    // Never show the raw URL — presigned R2 URLs are hundreds of chars of
+    // query-string noise (and leak signature params on screen). Fall back
+    // to the path's filename, then to a plain label.
+    if(typeof showLd === 'function'){
+      let label = displayName;
+      if(!label){
+        try{ label = decodeURIComponent(new URL(url, location.href).pathname.split('/').pop()) || ''; }catch(_){ label = ''; }
+      }
+      showLd(label ? `読み込み中: ${label}` : '読み込み中...');
+    }
     if(typeof setBar === 'function') setBar(5);
     // .RAD URLs get a streaming path: Spark fetches via HTTP Range
     // Request internally, so we skip the whole-file ArrayBuffer fetch
     // and hand the URL straight to SplatMesh. This is the entire point
     // of the .RAD format — chunked streaming with O(log N) LoD walk.
-    let ext = (url.split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
-    // blob: URL 等、URL から拡張子が取れない場合は displayName（?autoname= 経由）
-    // の拡張子で判定する。既知の拡張子が URL から取れているときは触らない
-    // （デモのラベル等、拡張子を持たない displayName で壊さないため）。
-    const _KNOWN_EXTS = ['zip','obj','gltf','glb','fbx','ply','splat','ksplat','rad','spz','sog'];
-    if(!_KNOWN_EXTS.includes(ext) && displayName){
-      const dnExt = (String(displayName).split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
-      if(_KNOWN_EXTS.includes(dnExt)) ext = dnExt;
-    }
+    const ext = (url.split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
     const ft = _splatFileTypeFor(ext);
     if(ext === 'rad'){
       if(ft === undefined){
@@ -17839,23 +18290,29 @@ async function loadFromURL(url, displayName){
       if(typeof showHUD === 'function') showHUD();
       if(typeof hideDZ === 'function') hideDZ();
       if(typeof showUndoToast === 'function') showUndoToast('📡 .RAD ストリーミング読込開始: ' + name);
+      // Demo/URL parity (RC2): the local-file load path schedules auto-quality
+      // calibration, but this URL/RAD-stream path never did — so ?demo=1 and
+      // ?autoload= scenes were stuck at the device-tier default and auto-quality
+      // could never climb. Schedule it here too (poller waits for the stream to
+      // finish paging before opening the calibration window).
+      if(typeof window._scheduleQualityProbe === 'function') window._scheduleQualityProbe();
       return;
     }
-    // Non-RAD URL: fetch whole file (Range チャンク + 検証つき), route by extension.
-    const buf = await _fetchBinaryChunked(url);
+    // Non-RAD URL: fetch whole file, route by extension.
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
     if(typeof setBar === 'function') setBar(40);
+    const buf = await resp.arrayBuffer();
     const name = (displayName || url.split('/').pop().split('?')[0]) || 'autoload.ply';
     const file = new File([buf], name, {type:'application/octet-stream'});
-    if(ext === 'zip'){
-      // Zipped splat/mesh (e.g. a large .rad zipped for upload-size limits).
-      // _loadProjectZipFromFile already knows how to unzip + auto-detect a
-      // raw splat/mesh when there's no project.json, and fully owns the
-      // loading UI (showLd/setBar/hideLd) from here on — don't call hideLd
-      // ourselves before/after this, let it drive to completion.
-      await _loadProjectZipFromFile(file);
+    if(['obj','gltf','glb','fbx'].includes(ext)) await loadObjFile(file);
+    else {
+      await loadSplatFile(file);
+      // Same parity: loadSplatFile already schedules calibration internally,
+      // but call it explicitly here too so the URL path is self-evidently
+      // covered. The _qualityProbeScheduled flag coalesces the double-call.
+      if(typeof window._scheduleQualityProbe === 'function') window._scheduleQualityProbe();
     }
-    else if(['obj','gltf','glb','fbx'].includes(ext)) await loadObjFile(file);
-    else await loadSplatFile(file);
   }catch(e){
     console.warn('loadFromURL failed', e);
     if(typeof hideLd === 'function') hideLd();
@@ -17880,263 +18337,28 @@ setTimeout(async ()=>{
   const dm = /[?&]demo=1/.test(location.search);
   if(m){
     let autoUrl = decodeURIComponent(m[1]);
-    if(_protected && !(/^https?:\/\//.test(autoUrl)) && !autoUrl.startsWith('blob:')){
-      // Stored splatUrls are the raw R2-proxy path (e.g. /api/r2/assets/splat/foo.zip).
-      // The authenticated same-origin stream lives at /api/viewer-stream/<r2key>, so we
-      // must reduce the value to the bare R2 object key first — strip leading slashes AND
-      // the /api/r2/ proxy prefix (matching toR2Key() in /api/viewer-asset). Without the
-      // prefix strip the key became "api/r2/assets/..." and R2 returned 404 (or the ext
-      // check 403'd), leaving the viewer on the blank dropzone.
+    // Online SaaS only: stored asset URLs are the public R2-proxy path
+    // (e.g. /api/r2/assets/splat/foo.zip). Under ?protected=1 the
+    // authenticated same-origin stream lives at /api/viewer-stream/<r2key>,
+    // so reduce the value to the bare R2 object key (strip leading slashes
+    // and the /api/r2/ proxy prefix, matching toR2Key() in /api/viewer-asset
+    // on the online SaaS side) and route it through that endpoint instead.
+    // blob: URLs (local-file salvage flows) and already-absolute http(s)
+    // URLs are left untouched.
+    if(typeof _protected !== 'undefined' && _protected &&
+       !(/^https?:\/\//.test(autoUrl)) && !autoUrl.startsWith('blob:')){
       const r2key = autoUrl.replace(/^\/+/, '').replace(/^api\/r2\//, '');
       autoUrl = '/api/viewer-stream/' + r2key;
     }
-    // ?autoname=<filename> — blob: URL 等で拡張子が URL から取れない時の
-    // 形式判定用ファイル名（admin のプレビューキャプチャが使用）。
+    // ?autoname=<filename> — online SaaS admin preview-capture only: when a
+    // blob: URL is auto-loaded (no extension to sniff), this supplies a
+    // filename so format detection still works.
     const an = location.search.match(/[?&]autoname=([^&]+)/);
     await loadFromURL(autoUrl, an ? decodeURIComponent(an[1]) : undefined);
   } else if(dm && DEMO_SCENE_URL){
     await loadFromURL(DEMO_SCENE_URL, (typeof T==='function'?T('demo-btn-lbl'):DEMO_SCENE_LABEL));
   }
 }, 0);
-
-// ══════════════════════════════════════════════════
-//  ?orbit=1 — Slow 360° auto-orbit for inline preview embeds.
-//  Waits for the scene to load, then gently rotates yaw a full turn
-//  over ~35 s. Stops immediately on any pointer interaction so the
-//  user can take manual control.
-// ══════════════════════════════════════════════════
-if(/[?&]orbit=1/.test(location.search)){
-  (function(){
-    // Preview mode: hide ALL UI, show only the rotating 3D scene
-    const style = document.createElement('style');
-    style.textContent = '#topbar,#hud,#layer-panel,#overlay,#dropzone,#orient-lock,#sun-panel,#immersive-exit,#env-tint,#light-halo-layer,#view-tl-btns,#qp-panel,[id^="lfi-"],[id^="obj-type-menu"]{display:none!important}body{overflow:hidden!important;margin:0!important}#c{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:0!important}';
-    document.head.appendChild(style);
-
-    // When capture=1 is also active, capture code drives the orbit itself.
-    if(/[?&]capture=1/.test(location.search)) return;
-
-    const ORBIT_DURATION_S = 10;
-    const RAD_PER_S = (2 * Math.PI) / ORBIT_DURATION_S;
-    let orbitRaf = 0;
-    let baseYaw = 0;
-
-    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
-
-    async function startOrbit(){
-      for(let i=0; i<160 && !hasScene(); i++) await new Promise(r=>setTimeout(r,500));
-      if(!hasScene()) return;
-      await new Promise(r=>setTimeout(r,1500));
-
-      baseYaw = yaw;
-      let prev = performance.now();
-
-      (function loop(now){
-        const dt = (now - prev) / 1000;
-        prev = now;
-        _yawTarget += RAD_PER_S * dt;
-        yaw = _yawTarget;
-        if(typeof markDirty === 'function') markDirty(2);
-        if(yaw - baseYaw >= 2 * Math.PI) return;
-        orbitRaf = requestAnimationFrame(loop);
-      })(performance.now());
-    }
-    setTimeout(startOrbit, 200);
-  })();
-}
-
-// ══════════════════════════════════════════════════
-//  ?capture=1 — Record the orbit as a WebM video and postMessage the blob
-//  back to the parent window. Used by the admin editor to auto-generate
-//  lightweight preview videos after 3DGS upload.
-//
-//  Flow: load scene → warmup (5s, GPU settles + splats stream in)
-//        → wait for orbit to be running → record for captureSec → post blob
-// ══════════════════════════════════════════════════
-if(/[?&]capture=1/.test(location.search)){
-  (function(){
-    const params = new URLSearchParams(location.search);
-    const ORBIT_S = parseInt(params.get('orbitSec')||'20', 10);
-    const canvas = document.getElementById('c');
-    if(!canvas) return;
-
-    const target = window.opener || parent;
-    const msg = (type, extra)=> target.postMessage(Object.assign({type}, extra||{}), '*');
-
-    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
-    const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
-
-    // ── フレーム待ち（hidden タブ対応）─────────────────────────────
-    // requestAnimationFrame はブラウザが「非表示/背面のタブ」で完全停止させる。
-    // キャプチャは右下に縮小表示された iframe 内で走るが、親タブが背面に回る
-    // （別ウィンドウに隠れる/別タブに切替）と rAF が止まり、解像度安定化ループが
-    // 永久にハングする（実測: visibilityState=hidden で rAF が 0 回/4秒）。
-    // headless モード（?headless=1、capture 時は必ず付与）では setTimeout で
-    // 待つ — こちらは hidden タブでも発火し続けるため確実に前進する。
-    // レンダーループ自体も headless では setTimeout 駆動なので、この待ちの間に
-    // Spark の sort/LoD/RAD ストリーミングは進む。
-    const _capHeadless = /[?&]headless=1/.test(location.search);
-    const nextFrame = ()=> _capHeadless
-      ? new Promise(r=>setTimeout(r, 16))
-      : new Promise(r=>requestAnimationFrame(r));
-
-    async function run(){
-      // Phase 1: wait for a renderable scene (up to 90s).
-      // hasScene() inspects layers[].mesh, but a streaming RAD keeps its data
-      // on the global splatMesh (not the layer ref) — so __nSplat()>0 ("splats
-      // are present & rendering") is an equally valid readiness signal. Accept
-      // either, else ZIP-restored streaming scenes hang here and time out.
-      const sceneReady = ()=> hasScene() || nSplat() > 0;
-      msg('capture-progress',{phase:'loading', text:'3DGS 読み込み中…'});
-      // 240s: 大きい ZIP はダウンロード＋解凍で 90s を超えることがある
-      for(let i=0; i<480 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
-      if(!sceneReady()){ msg('capture-error',{error:'no-scene'}); return; }
-
-      // Phase 2: readiness.
-      //  - Streaming RAD (__nSplat()>0): wait for splats to stream in & stabilise.
-      //  - Non-streaming ZIP/PLY/SPLAT: __nSplat (a RAD-only counter) stays 0/-1
-      //    even though geometry is fully baked & present once the scene layer
-      //    exists, so gate on hasScene() instead of forcing a 'no-splats' abort.
-      // ZIP から展開された RAD はストリーミング開始が遅れ、nSplat が「後から」
-      // >0 になる。即時判定すると非ストリーミング扱いになり、直後の重さ判定
-      // （_heavy）も 0 のまま誤判定する → 少し待ってから分岐し直す。
-      if(nSplat() <= 0){
-        msg('capture-progress',{phase:'loading', text:'シーン安定化中…', pct:20});
-        await new Promise(r=>setTimeout(r, 2500));
-      }
-      if(nSplat() > 0){
-        msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
-        let lastCount = 0, stableMs = 0;
-        const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = 60000;
-        let elapsed = 0;
-        while(elapsed < MAX_MS){
-          await new Promise(r=>setTimeout(r, POLL_MS));
-          elapsed += POLL_MS;
-          const c = nSplat();
-          if(c > 0 && c === lastCount){ stableMs += POLL_MS; if(stableMs >= STABLE_MS) break; }
-          else { stableMs = 0; lastCount = c; }
-          msg('capture-progress',{phase:'loading', text:'RAD 読み込み中… '+(c>0?c.toLocaleString()+' splats':'待機中'), pct:Math.min(30, Math.round(elapsed/MAX_MS*30))});
-        }
-        if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
-      } else {
-        // Non-streaming scene (PLY / SPLAT): already settled above.
-        if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
-      }
-
-      // Phase 3: Lock resize handler and force 1280×720 (HD) capture resolution.
-      // プレビュー動画は物件ページで複数同時に自動再生されるため、画質より
-      // ファイルサイズ（ページの重さ）を優先し 1920×1080 から落としてある。
-      const CAP_W = 1280, CAP_H = 720;
-      const CAP_FOV = 90;   // 固定FOV（90）でキャプチャ
-      if(typeof _captureLock!=='undefined') _captureLock = true;
-      // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
-      // 上げてしまい VideoEncoder の 1280×720 と不整合になるため、ここでは
-      // 品質変数と RAD lodScale だけ高に寄せ、pixelRatio は下で 1 に固定する。
-      try {
-        if(typeof qualScale!=='undefined') qualScale = 1.5;
-        if(typeof qualIdx!=='undefined') qualIdx = 2;
-        if(typeof _qualPreferred!=='undefined') _qualPreferred = 1.5;
-        if(typeof _radEffectiveLodScale==='function' && typeof layers!=='undefined' && layers){
-          const hi = _radEffectiveLodScale();
-          for(const L of layers){
-            if(L && L.mesh && L.mesh.paged && typeof L.mesh.lodScale === 'number') L.mesh.lodScale = hi;
-          }
-        }
-      } catch(_){}
-      if(typeof renderer!=='undefined'){
-        renderer.setPixelRatio(1);          // キャプチャ backing を厳密に CAP_W×CAP_H に
-        renderer.setSize(CAP_W, CAP_H);
-      } else {
-        canvas.width = CAP_W; canvas.height = CAP_H;
-      }
-      if(typeof camera!=='undefined'){
-        camera.aspect = CAP_W / CAP_H;
-        if('fov' in camera) camera.fov = CAP_FOV;
-        camera.updateProjectionMatrix();
-      }
-      // Warm-up: let the viewer's render loop run for ~2s at capture resolution
-      // so Spark can re-sort splats and stabilise LOD at 1280×720.
-      if(typeof markDirty==='function') markDirty(120);
-      msg('capture-progress',{phase:'loading', text:'解像度安定化中…', pct:28});
-      for(let w=0; w<120; w++) await nextFrame();
-
-      // Phase 4: rAF-driven frame-by-frame capture.
-      // No setTimeout loop — tight for-loop with encoder backpressure yield.
-      const FPS = 24;
-      const TOTAL_FRAMES = FPS * ORBIT_S;
-      // 回転速度は ORBIT_S に連動させない — 常に「360° を FULL_ROTATION_SEC 秒で
-      // 一周する」一定ペースを保つ。ORBIT_S を短くしても等速のまま途中で止まる
-      // だけにして、短尺化のために早回しになるのを防ぐ（一周する必要はない）。
-      const FULL_ROTATION_SEC = 20;
-      const ANGLE_PER_FRAME = (2 * Math.PI) / (FPS * FULL_ROTATION_SEC);
-
-      const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
-
-      const muxTarget = new ArrayBufferTarget();
-      const muxer = new Muxer({
-        target: muxTarget,
-        video: { codec: 'avc', width: CAP_W, height: CAP_H },
-        fastStart: 'in-memory',
-        firstTimestampBehavior: 'offset',
-      });
-
-      const encoder = new VideoEncoder({
-        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-        error: e => msg('capture-error',{error:'VideoEncoder: '+e.message}),
-      });
-      encoder.configure({
-        codec: 'avc1.640028',
-        width: CAP_W, height: CAP_H,
-        bitrate: 4_000_000, // 720p 相当に下げたビットレート（旧 1080p 時は 8Mbps）
-        framerate: FPS,
-      });
-
-      msg('capture-started',{durationSec: ORBIT_S});
-
-      // Capture: set yaw → force render → GPU flush → capture.
-      // Direct renderer.render() guarantees the canvas is painted before
-      // VideoFrame reads it (rAF alone races with the viewer's own loop).
-      for(let f = 0; f < TOTAL_FRAMES; f++){
-        while(encoder.encodeQueueSize > 5){
-          await new Promise(r => setTimeout(r, 1));
-        }
-
-        if(typeof _yawTarget!=='undefined') _yawTarget += ANGLE_PER_FRAME;
-        if(typeof yaw!=='undefined') yaw = _yawTarget;
-        // FOV を毎フレーム固定（カメラモード等が触っても 90 を維持）。
-        if(typeof camera!=='undefined' && 'fov' in camera && camera.fov !== CAP_FOV){
-          camera.fov = CAP_FOV; camera.updateProjectionMatrix();
-        }
-        if(typeof markDirty==='function') markDirty(30);
-
-        // Spark needs multiple frames to process sort/LOD after yaw change.
-        // hidden タブでも進むよう nextFrame()（headless では setTimeout）を使う。
-        for(let w=0; w<3; w++) await nextFrame();
-        if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
-          renderer.render(scene, camera);
-          const gl = renderer.getContext();
-          if(gl) gl.finish();
-        }
-
-        const vf = new VideoFrame(canvas, { timestamp: f * (1_000_000 / FPS) });
-        encoder.encode(vf, { keyFrame: f % (FPS * 2) === 0 });
-        vf.close();
-
-        if(f % 24 === 0){
-          const pct = Math.round(f / TOTAL_FRAMES * 100);
-          msg('capture-progress',{phase:'recording', text:'録画中… '+pct+'%  ('+f+'/'+TOTAL_FRAMES+')', pct:30+Math.round(pct*0.7)});
-        }
-      }
-
-      // Finalize
-      await encoder.flush();
-      encoder.close();
-      muxer.finalize();
-      const blob = new Blob([muxTarget.buffer], {type:'video/mp4'});
-      msg('capture-done',{blob, mimeType:'video/mp4', ext:'mp4'});
-    }
-    setTimeout(run, 300);
-  })();
-}
 
 // ══════════════════════════════════════════════════
 //  ?showcase=1 — AUTO-PLAY feature showcase for recording a ~40 s promo clip.
@@ -18433,6 +18655,48 @@ window.__diagState = {
   get splatActiveUntil(){ return _splatActiveUntil; },
   get splatMesh(){ return splatMesh; },
   get renderer(){ return renderer; },
+  // ── Auto-quality governor internals (redesign 2026-07) ──
+  // budgetMs: computed identically to the watchdog's vsync-normalized budget.
+  get budgetMs(){ return 1000 / Math.min(Math.max(((typeof _refreshHz!=='undefined'&&_refreshHz)||60), 30), 240); },
+  // burned: JSON-safe shallow copy of the burn map (scale → expiry ts).
+  get burned(){ const w = window._gpuWatchdog; const o = {}; if(w && w.burned){ for(const k in w.burned) o[k] = w.burned[k]; } return o; },
+  get lastApply(){ const w = window._gpuWatchdog; return w ? (w.lastApply||0) : null; },
+  get slowStreak(){ const w = window._gpuWatchdog; return w ? (w.slowStreak||0) : null; },
+  get fastStreak(){ const w = window._gpuWatchdog; return w ? (w.fastStreak||0) : null; },
+  get calibrationUntil(){ const w = window._gpuWatchdog; return w ? (w.calibrationUntil||0) : null; },
+  get lodPrefetch(){ return window.__lodPrefetch || null; },
+  get pagedNumSplats(){
+    try{
+      const L = (typeof layers!=='undefined') ? layers.find(l=>l&&l._isMain&&l.mesh&&l.mesh.paged) : null;
+      return L ? L.mesh.paged.numSplats : null;
+    }catch(_){ return null; }
+  },
+  get lodQuatOverrideSet(){
+    try{ return !!(typeof sparkRenderer!=='undefined' && sparkRenderer && sparkRenderer.lodQuatOverride); }catch(_){ return null; }
+  },
+  // ── RAD LODボトルネック特定用 (2026-07-06) ──
+  // lastTraverseTime: 直近の WASM traverseLodTrees 所要ms（SparkRendererが計測）。
+  // pagerQ/pagerActive: フェッチ待ち行列長と実行中フェッチ数。
+  // 「n の伸びが遅い」とき、pagerActive が張り付き → decode/fetch律速、
+  // 両方ゼロで n が伸びる待ち → ツリー更新/トラバース波の直列律速、と読み分ける。
+  get lastTraverseMs(){
+    try{ return (typeof sparkRenderer!=='undefined' && sparkRenderer) ? (sparkRenderer.lastTraverseTime||null) : null; }catch(_){ return null; }
+  },
+  get pagerQ(){
+    try{ return sparkRenderer.pager ? sparkRenderer.pager.fetchPriority.length : null; }catch(_){ return null; }
+  },
+  get pagerActive(){
+    try{ return sparkRenderer.pager ? sparkRenderer.pager.fetchers.length : null; }catch(_){ return null; }
+  },
+  get lodSplatCount(){
+    try{ return (typeof sparkRenderer!=='undefined' && sparkRenderer) ? sparkRenderer.lodSplatCount : null; }catch(_){ return null; }
+  },
+  get splatPerfTier(){
+    try{ return (typeof _splatPerfTier!=='undefined') ? _splatPerfTier : null; }catch(_){ return null; }
+  },
+  get lastTraverseResumed(){
+    try{ return (typeof sparkRenderer!=='undefined' && sparkRenderer) ? !!sparkRenderer.lastTraverseResumed : null; }catch(_){ return null; }
+  },
 };
 
 // ── Self-installing sampler ───────────────────────────────────────────────
@@ -18671,16 +18935,21 @@ if(/[?&]prof=1/.test(location.search)){
   }, 1000);
   console.info('[Locahun-diag] CPU profiler ENABLED — per-section averages logged');
 }
-// Manual quality override (?qual=N where N = 0.5/0.75/1.0/1.5/2.0) — bypasses
-// the _probeOptimalQuality + watchdog so we can sweep quality at the same load.
+// Manual quality override (?qual=N where N = 0.75/1.0/1.5, i.e. 低/中/高) —
+// bypasses calibration + watchdog so we can pin a preset during a test load.
+// FIX (2026-07-04): idx mapping was stale from a pre-redesign 4-preset scheme
+// (0.5→0,0.75→1,1.0→2,1.5→3) that no longer matches the current 3-preset
+// SCALES=[0.75,1.0,1.5] table (idx 低=0/中=1/高=2). Passing ?qual=1.0 silently
+// pinned idx=2 (高, 5M lodSplatCount on desktop) instead of idx=1 (中) — found
+// live while trying to pin a 500k budget for a real-file RAD test. Mapping now
+// matches PRESET_FOR_SCALE in 291_render_loop.js: s>=1.4→高, s>=0.95→中, else低.
 if(/[?&]qual=([\d.]+)/.test(location.search)){
   const q = parseFloat(RegExp.$1);
   if(q > 0 && q <= 3){
     setTimeout(()=>{
       try {
         if(typeof window.setQuality === 'function'){
-          // Map scale → idx best-effort: 0.5→0, 0.75→1, 1.0→2, 1.5→3, else 3
-          const idx = q < 0.6 ? 0 : q < 0.9 ? 1 : q < 1.2 ? 2 : 3;
+          const idx = q >= 1.4 ? 2 : q >= 0.95 ? 1 : 0;
           window.setQuality(q, idx);
           // Also pin the watchdog so it can't oscillate during the test
           window._gpuWatchdog = window._gpuWatchdog || {};
@@ -18691,6 +18960,76 @@ if(/[?&]qual=([\d.]+)/.test(location.search)){
     }, 6000);
   }
 }
+// Raw LOD-budget override (?diag=1 only) — lets a test pin
+// sparkRenderer.lodSplatCount to an arbitrary value, bypassing the 3-preset
+// table entirely (e.g. to compare a RAD scene at the same splat count a PLY
+// load would use). Re-applied every 500ms so calibration/watchdog quality
+// changes can't silently override it mid-test.
+window.__setLodBudget = function(n){
+  window.__lodBudgetPin = (typeof n === 'number' && n > 0) ? n : null;
+  window._gpuWatchdog = window._gpuWatchdog || {};
+  window._gpuWatchdog.manualOverride = true; // also freeze the watchdog/calibration
+  try{
+    if(typeof sparkRenderer !== 'undefined' && sparkRenderer && window.__lodBudgetPin){
+      sparkRenderer.lodSplatCount = window.__lodBudgetPin;
+      // Read back immediately — devtools console runs outside the module's
+      // lexical scope so it can't see `sparkRenderer` directly. Exposing the
+      // read-back value lets a test detect internal clamping (e.g. Spark
+      // silently capping an assigned value below what was set).
+      window.__lodBudgetReadback = sparkRenderer.lodSplatCount;
+    }
+  }catch(e){ window.__lodBudgetErr = String(e && e.message || e); }
+};
+setInterval(()=>{
+  if(window.__lodBudgetPin == null) return;
+  try{
+    if(typeof sparkRenderer !== 'undefined' && sparkRenderer){
+      sparkRenderer.lodSplatCount = window.__lodBudgetPin;
+      window.__lodBudgetReadback = sparkRenderer.lodSplatCount;
+    }
+  }catch(_){}
+}, 500);
+// Test helpers for the >2GiB file.arrayBuffer() fix (2026-07-05). Builds a
+// File of arbitrary size (content doesn't matter — only the SIZE triggers
+// the Chrome blob-transfer limit) so the failure/fix can be verified without
+// transferring real multi-GB data over the network.
+// Exercise the real local-file drag-drop path (loadSplatFile is module-
+// scoped, not otherwise reachable from devtools) — lets a test pass a real
+// File object (e.g. wrapping fetched .rad bytes) through the exact same
+// code a drag-drop would run, including the new blob:-URL RAD streaming.
+window.__testLoadSplatFile = function(file){ return loadSplatFile(file); };
+window.__makeTestFile = function(sizeBytes, name){
+  const buf = new ArrayBuffer(sizeBytes);
+  return new File([buf], name || 'test.ply', { type: 'application/octet-stream' });
+};
+window.__testRawArrayBuffer = async function(file){
+  const t0 = performance.now();
+  try{ const b = await file.arrayBuffer(); return { ok:true, byteLength:b.byteLength, ms:Math.round(performance.now()-t0) }; }
+  catch(e){ return { ok:false, err:String(e && e.message || e), ms:Math.round(performance.now()-t0) }; }
+};
+window.__testChunkedRead = async function(file){
+  const t0 = performance.now();
+  try{ const b = await _readFileArrayBufferChunked(file); return { ok:true, byteLength:b.byteLength, ms:Math.round(performance.now()-t0) }; }
+  catch(e){ return { ok:false, err:String(e && e.message || e), ms:Math.round(performance.now()-t0) }; }
+};
+// Renderer-level pixelScaleLimit multiplier (distinct from mesh.lodScale —
+// this one scales the actual screen-space-error THRESHOLD Spark uses to
+// decide whether a splat needs finer LOD, per SparkRenderer.ts's own
+// `pixelScaleLimit *= this.lodRenderScale`). Lower = finer/more detail.
+window.__setLodRenderScale = function(n){
+  window.__lodRenderScalePin = (typeof n === 'number' && n > 0) ? n : null;
+  try{ if(typeof sparkRenderer !== 'undefined' && sparkRenderer && window.__lodRenderScalePin){
+    sparkRenderer.lodRenderScale = window.__lodRenderScalePin;
+    window.__lodRenderScaleReadback = sparkRenderer.lodRenderScale;
+  }}catch(e){ window.__lodRenderScaleErr = String(e && e.message || e); }
+};
+setInterval(()=>{
+  if(window.__lodRenderScalePin == null) return;
+  try{ if(typeof sparkRenderer !== 'undefined' && sparkRenderer){
+    sparkRenderer.lodRenderScale = window.__lodRenderScalePin;
+    window.__lodRenderScaleReadback = sparkRenderer.lodRenderScale;
+  }}catch(_){}
+}, 500);
 if(/[?&]stress=(\d+)/.test(location.search)){
   const stressLevel = parseInt(RegExp.$1, 10) || 1;
   setTimeout(()=>{
@@ -18906,6 +19245,412 @@ function updateLightHalos(){
 // updateLightHalos() also caches its writes (skips DOM updates if values are unchanged)
 // to avoid forcing unnecessary repaints/reflows.
 
+// ══════════════════════════════════════════════════
+//  RAD LOD PREFETCH (2026-07-02, spec S3 / 2026-07-06 カメラ巡回追加)
+//  1) 全方位プリウォーム: RADロード安定後に lodQuatOverride を12方位へ順に向け、
+//     周囲チャンクをページプール(LRU)へ常駐化 → 一度読んだ方向への回転は即精細。
+//     desktopのみ(モバイルは帯域配慮)。ユーザー操作で即中断、アイドル1秒で再開、
+//     1シーン1周で終了。
+//  2) 回転先読み: 慣性回転中は目標方向を override に先出し → 到達前にフェッチ開始。
+//  3) 配置カメラのプリウォーム: スイープ後、type==='camera' レイヤーの savedPose
+//     (pos+yaw+pitch)を lodPosOverride+lodQuatOverride で順に巡回し、各カメラ地点の
+//     チャンクを事前常駐化 → カメラへ飛ぶ操作が常に即精細(実測: シーン端の未訪問
+//     カメラで7.7s→0s)。後から追加されたカメラも検知して随時ウォームする。
+//  LODウォーカーは renderer.render() 内でしか回らないため、プリウォーム中は
+//  _splatActiveUntil を延長してレンダーを起こし続ける。
+//  安全規則: 撮影(window._captureBusy)・録画(camAnim._recCopyFn)・walk中は
+//  override(quat/pos両方)を必ず null（実カメラのLODを最優先）。
+(function(){
+  const DIRS = 12;
+  const DWELL_MS = 500;               // 1方位あたりの滞在
+  const CAM_DWELL_MS = 1500;          // 1カメラ地点あたりの滞在（位置が遠く新規チャンクが多い）
+  const st = { phase:'wait', dir:0, dirAt:0, idleAt:0, mesh:null,
+               camQueue:[], camAt:0, warmedCams:{}, curCam:null };
+  window.__lodPrefetch = st;          // diag可視化用
+  const _sr = () => (typeof sparkRenderer !== 'undefined' && sparkRenderer) ? sparkRenderer : null;
+  const _isDesktop = () => (typeof _splatPerfTier !== 'undefined' && _splatPerfTier === 'desktop');
+  const _mainPaged = () => {
+    if(typeof layers === 'undefined' || !layers) return null;
+    const L = layers.find(l => l && l._isMain && l.mesh && l.mesh.paged);
+    return L ? L.mesh : null;
+  };
+  // override(quat+pos)を両方解放する。pos を残すと LOD 選択視点が遠隔地に
+  // 固定されたまま実カメラの画が粗くなるため、解放は必ずペアで行う。
+  const _releaseOverrides = (sr) => {
+    if(sr.lodQuatOverride) sr.lodQuatOverride = null;
+    if(sr.lodPosOverride)  sr.lodPosOverride  = null;
+  };
+  // 撮影/録画/walk = override禁止（実カメラ優先）
+  const _mustReleaseOverride = () =>
+    !!window._captureBusy ||
+    (typeof camAnim !== 'undefined' && camAnim && !!camAnim._recCopyFn) ||
+    (typeof walkMode !== 'undefined' && walkMode && walkMode.active);
+  // ユーザーが今シーンを操作しているか（プリウォームは邪魔しない）
+  const _userActive = () =>
+    (typeof dragOn !== 'undefined' && dragOn) ||
+    (typeof joyDX !== 'undefined' && (joyDX !== 0 || joyDY !== 0)) ||
+    (typeof keys !== 'undefined' && !!(keys.KeyW||keys.KeyS||keys.KeyA||keys.KeyD||keys.KeyQ||keys.KeyE)) ||
+    (typeof yaw !== 'undefined' && (Math.abs(_yawTarget - yaw) > 1e-3 || Math.abs(_pitchTarget - pitch) > 1e-3));
+  // 現在ビューを world-Y 軸で dy 回した LOD 選択用クォータニオン（カメラ規約非依存）
+  const _qY = new THREE.Quaternion();
+  const _UP = new THREE.Vector3(0, 1, 0);
+  const _quatYawOffset = (dy) => _qY.setFromAxisAngle(_UP, dy).clone().multiply(camera.quaternion);
+  // 絶対 yaw/pitch から LOD 選択用クォータニオンを構築。ビューアのカメラ規約は
+  // updateCamera の rotation.set(pitch, yaw + π, roll, 'YXZ')（200 のコメント参照）。
+  const _quatForYawPitch = (y, p) =>
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(p, y + Math.PI, 0, 'YXZ'));
+  // まだウォームしていない配置カメラ(type==='camera' & savedPose持ち)を列挙
+  const _pendingCams = () => {
+    if(typeof layers === 'undefined' || !layers) return [];
+    return layers.filter(l => l && l.type === 'camera' && l.savedPose && l.savedPose.pos &&
+                              !st.warmedCams[l.id]);
+  };
+
+  setInterval(() => {
+    const sr = _sr(); if(!sr) return;
+    const mesh = _mainPaged();
+    // シーン差し替え/破棄 → 状態リセット（ウォーム済みカメラ記録もクリア）
+    if(mesh !== st.mesh){
+      st.mesh = mesh; st.phase = mesh ? 'wait' : 'off';
+      st.dir = 0; st.camQueue = []; st.camAt = 0; st.warmedCams = {}; st.curCam = null;
+    }
+    if(!mesh){ _releaseOverrides(sr); return; }
+    if(_mustReleaseOverride()){ _releaseOverrides(sr); st.idleAt = 0; return; }
+
+    // ── 2) 回転先読み（プリウォームより優先。全ティアで有効・コストほぼゼロ）──
+    const dy = (typeof _yawTarget !== 'undefined') ? (_yawTarget - yaw) : 0;
+    if(Math.abs(dy) > 0.05){
+      if(sr.lodPosOverride) sr.lodPosOverride = null; // 先読みは向きだけ・位置は実カメラ
+      sr.lodQuatOverride = _quatYawOffset(dy);
+      st.idleAt = 0;
+      return;
+    }
+
+    // ── 1)+3) プリウォーム（desktopのみ）──
+    if(!_isDesktop()){ if(st.phase !== 'done') _releaseOverrides(sr); return; }
+    const now = performance.now();
+    if(st.phase === 'wait'){
+      if(typeof _sceneSettledForCalibration === 'function' && _sceneSettledForCalibration()){
+        st.phase = 'sweep'; st.dir = 0; st.dirAt = 0;
+        console.info('[Locahun][Prefetch] 全方位プリウォーム開始 (' + DIRS + '方位)');
+      }
+      return;
+    }
+    if(_userActive()){
+      // 操作中は中断・override解放。アイドル1秒で再開（sweep/cams共通）。
+      _releaseOverrides(sr);
+      st.idleAt = now + 1000; st.dirAt = 0; st.camAt = 0;
+      return;
+    }
+    if(now < st.idleAt) return;
+
+    if(st.phase === 'sweep'){
+      if(st.dirAt === 0){ st.dirAt = now; }
+      sr.lodQuatOverride = _quatYawOffset(st.dir * Math.PI * 2 / DIRS);
+      // LODウォーカーを回すためレンダーを起こし続ける
+      if(typeof _splatActiveUntil !== 'undefined') _splatActiveUntil = now + DWELL_MS + 200;
+      if(typeof markDirty === 'function') markDirty(2);
+      if(now - st.dirAt >= DWELL_MS){
+        st.dir++; st.dirAt = 0;
+        if(st.dir >= DIRS){
+          st.phase = 'cams';
+          _releaseOverrides(sr);
+          console.info('[Locahun][Prefetch] 方位スイープ完了 — 配置カメラのウォームへ');
+        }
+      }
+      return;
+    }
+
+    // phase 'cams' / 'done': 配置カメラのウォーム（doneでも新規カメラを監視）
+    if(st.phase === 'cams' || st.phase === 'done'){
+      if(!st.curCam){
+        if(st.camQueue.length === 0){
+          const pend = _pendingCams();
+          if(pend.length > 0){
+            st.camQueue = pend.map(l => l.id);
+            if(st.phase === 'done') st.phase = 'cams';
+            console.info('[Locahun][Prefetch] カメラウォーム対象: ' + pend.length + '台');
+          } else if(st.phase === 'cams'){
+            st.phase = 'done';
+            _releaseOverrides(sr);
+            console.info('[Locahun][Prefetch] プリウォーム完了 — 周囲＋全カメラ地点を常駐化');
+            return;
+          } else {
+            return; // done & 新規なし
+          }
+        }
+        const id = st.camQueue.shift();
+        const L = (typeof layers !== 'undefined') ? layers.find(l => l && l.id === id) : null;
+        if(!L || !L.savedPose || !L.savedPose.pos){ st.warmedCams[id] = true; return; }
+        st.curCam = L; st.camAt = now;
+      }
+      const sp = st.curCam.savedPose;
+      sr.lodPosOverride  = new THREE.Vector3(sp.pos.x, sp.pos.y, sp.pos.z);
+      sr.lodQuatOverride = _quatForYawPitch(sp.yaw || 0, sp.pitch || 0);
+      if(typeof _splatActiveUntil !== 'undefined') _splatActiveUntil = now + 400;
+      if(typeof markDirty === 'function') markDirty(2);
+      if(now - st.camAt >= CAM_DWELL_MS){
+        st.warmedCams[st.curCam.id] = true;
+        st.curCam = null; st.camAt = 0;
+        _releaseOverrides(sr);
+      }
+      return;
+    }
+  }, 100);
+})();
+// ══════════════════════════════════════════════════
+//  ?orbit=1 — Slow 360° auto-orbit for inline preview embeds (online SaaS
+//  property listing pages). Waits for the scene to load, then gently
+//  rotates yaw a full turn over ~10 s. Stops on any pointer interaction so
+//  the user can take manual control. OFF by default — zero effect unless
+//  the URL explicitly requests it, so this is inert in the standalone app.
+// ══════════════════════════════════════════════════
+if(/[?&]orbit=1/.test(location.search)){
+  (function(){
+    // Preview mode: hide ALL UI, show only the rotating 3D scene
+    const style = document.createElement('style');
+    style.textContent = '#topbar,#hud,#layer-panel,#overlay,#dropzone,#orient-lock,#sun-panel,#immersive-exit,#env-tint,#light-halo-layer,#view-tl-btns,#qp-panel,[id^="lfi-"],[id^="obj-type-menu"]{display:none!important}body{overflow:hidden!important;margin:0!important}#c{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:0!important}';
+    document.head.appendChild(style);
+
+    // When capture=1 is also active, capture code drives the orbit itself.
+    if(/[?&]capture=1/.test(location.search)) return;
+
+    const ORBIT_DURATION_S = 10;
+    const RAD_PER_S = (2 * Math.PI) / ORBIT_DURATION_S;
+    let orbitRaf = 0;
+    let baseYaw = 0;
+
+    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
+
+    async function startOrbit(){
+      for(let i=0; i<160 && !hasScene(); i++) await new Promise(r=>setTimeout(r,500));
+      if(!hasScene()) return;
+      await new Promise(r=>setTimeout(r,1500));
+
+      baseYaw = yaw;
+      let prev = performance.now();
+
+      (function loop(now){
+        const dt = (now - prev) / 1000;
+        prev = now;
+        _yawTarget += RAD_PER_S * dt;
+        yaw = _yawTarget;
+        if(typeof markDirty === 'function') markDirty(2);
+        if(yaw - baseYaw >= 2 * Math.PI) return;
+        orbitRaf = requestAnimationFrame(loop);
+      })(performance.now());
+    }
+    setTimeout(startOrbit, 200);
+  })();
+}
+// ══════════════════════════════════════════════════
+//  ?capture=1 — Record the orbit as a video and postMessage the blob back
+//  to the parent window. Used by the online SaaS's admin editor to
+//  auto-generate lightweight preview videos after 3DGS upload. OFF by
+//  default — zero effect unless the URL explicitly requests it, so this is
+//  inert in the standalone app.
+//
+//  Known trade-off: postMessage(...,'*') below is a wildcard-origin send,
+//  ported as-is from the online SaaS where both ends are first-party. In
+//  the standalone build this means whatever iframes/opens this page with
+//  ?capture=1 receives the rendered video blob. Not a live confidentiality
+//  hole in practice — the capturer never sees content it didn't itself
+//  supply via ?autoload=/local file selection — but flagged here so it
+//  isn't mistaken for an oversight if this file is read in isolation.
+//
+//  Flow: load scene → warmup (5s, GPU settles + splats stream in)
+//        → wait for orbit to be running → record for captureSec → post blob
+// ══════════════════════════════════════════════════
+if(/[?&]capture=1/.test(location.search)){
+  (function(){
+    const params = new URLSearchParams(location.search);
+    const ORBIT_S = parseInt(params.get('orbitSec')||'20', 10);
+    const canvas = document.getElementById('c');
+    if(!canvas) return;
+
+    const target = window.opener || parent;
+    const msg = (type, extra)=> target.postMessage(Object.assign({type}, extra||{}), '*');
+
+    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
+    const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
+
+    // ── フレーム待ち（hidden タブ対応）─────────────────────────────
+    // requestAnimationFrame はブラウザが「非表示/背面のタブ」で完全停止させる。
+    // キャプチャは右下に縮小表示された iframe 内で走るが、親タブが背面に回る
+    // （別ウィンドウに隠れる/別タブに切替）と rAF が止まり、解像度安定化ループが
+    // 永久にハングする（実測: visibilityState=hidden で rAF が 0 回/4秒）。
+    // headless モード（?headless=1、capture 時は必ず付与）では setTimeout で
+    // 待つ — こちらは hidden タブでも発火し続けるため確実に前進する。
+    // レンダーループ自体も headless では setTimeout 駆動なので、この待ちの間に
+    // Spark の sort/LoD/RAD ストリーミングは進む。
+    const _capHeadless = /[?&]headless=1/.test(location.search);
+    const nextFrame = ()=> _capHeadless
+      ? new Promise(r=>setTimeout(r, 16))
+      : new Promise(r=>requestAnimationFrame(r));
+
+    async function run(){
+      // Phase 1: wait for a renderable scene (up to 90s).
+      // hasScene() inspects layers[].mesh, but a streaming RAD keeps its data
+      // on the global splatMesh (not the layer ref) — so __nSplat()>0 ("splats
+      // are present & rendering") is an equally valid readiness signal. Accept
+      // either, else ZIP-restored streaming scenes hang here and time out.
+      const sceneReady = ()=> hasScene() || nSplat() > 0;
+      msg('capture-progress',{phase:'loading', text:'3DGS 読み込み中…'});
+      // 240s: 大きい ZIP はダウンロード＋解凍で 90s を超えることがある
+      for(let i=0; i<480 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
+      if(!sceneReady()){ msg('capture-error',{error:'no-scene'}); return; }
+
+      // Phase 2: readiness.
+      //  - Streaming RAD (__nSplat()>0): wait for splats to stream in & stabilise.
+      //  - Non-streaming ZIP/PLY/SPLAT: __nSplat (a RAD-only counter) stays 0/-1
+      //    even though geometry is fully baked & present once the scene layer
+      //    exists, so gate on hasScene() instead of forcing a 'no-splats' abort.
+      // ZIP から展開された RAD はストリーミング開始が遅れ、nSplat が「後から」
+      // >0 になる。即時判定すると非ストリーミング扱いになり、直後の重さ判定
+      // （_heavy）も 0 のまま誤判定する → 少し待ってから分岐し直す。
+      if(nSplat() <= 0){
+        msg('capture-progress',{phase:'loading', text:'シーン安定化中…', pct:20});
+        await new Promise(r=>setTimeout(r, 2500));
+      }
+      if(nSplat() > 0){
+        msg('capture-progress',{phase:'loading', text:'RAD データ読み込み中…'});
+        let lastCount = 0, stableMs = 0;
+        const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = 60000;
+        let elapsed = 0;
+        while(elapsed < MAX_MS){
+          await new Promise(r=>setTimeout(r, POLL_MS));
+          elapsed += POLL_MS;
+          const c = nSplat();
+          if(c > 0 && c === lastCount){ stableMs += POLL_MS; if(stableMs >= STABLE_MS) break; }
+          else { stableMs = 0; lastCount = c; }
+          msg('capture-progress',{phase:'loading', text:'RAD 読み込み中… '+(c>0?c.toLocaleString()+' splats':'待機中'), pct:Math.min(30, Math.round(elapsed/MAX_MS*30))});
+        }
+        if(nSplat() <= 0){ msg('capture-error',{error:'no-splats'}); return; }
+      } else {
+        // Non-streaming scene (PLY / SPLAT): already settled above.
+        if(!hasScene()){ msg('capture-error',{error:'no-scene'}); return; }
+      }
+
+      // Phase 3: Lock resize handler and force 1280×720 (HD) capture resolution.
+      // プレビュー動画は物件ページで複数同時に自動再生されるため、画質より
+      // ファイルサイズ（ページの重さ）を優先し 1920×1080 から落としてある。
+      const CAP_W = 1280, CAP_H = 720;
+      const CAP_FOV = 90;   // 固定FOV（90）でキャプチャ
+      if(typeof _captureLock!=='undefined') _captureLock = true;
+      // 画質=高: RAD の LoD 密度を最大化。setQuality は pixelRatio を 1.5 に
+      // 上げてしまい VideoEncoder の 1280×720 と不整合になるため、ここでは
+      // 品質変数と RAD lodScale だけ高に寄せ、pixelRatio は下で 1 に固定する。
+      try {
+        if(typeof qualScale!=='undefined') qualScale = 1.5;
+        if(typeof qualIdx!=='undefined') qualIdx = 2;
+        if(typeof _qualPreferred!=='undefined') _qualPreferred = 1.5;
+        if(typeof _radEffectiveLodScale==='function' && typeof layers!=='undefined' && layers){
+          const hi = _radEffectiveLodScale();
+          for(const L of layers){
+            if(L && L.mesh && L.mesh.paged && typeof L.mesh.lodScale === 'number') L.mesh.lodScale = hi;
+          }
+        }
+      } catch(_){}
+      if(typeof renderer!=='undefined'){
+        renderer.setPixelRatio(1);          // キャプチャ backing を厳密に CAP_W×CAP_H に
+        renderer.setSize(CAP_W, CAP_H);
+      } else {
+        canvas.width = CAP_W; canvas.height = CAP_H;
+      }
+      if(typeof camera!=='undefined'){
+        camera.aspect = CAP_W / CAP_H;
+        if('fov' in camera) camera.fov = CAP_FOV;
+        camera.updateProjectionMatrix();
+      }
+      // Warm-up: let the viewer's render loop run for ~2s at capture resolution
+      // so Spark can re-sort splats and stabilise LOD at 1280×720.
+      if(typeof markDirty==='function') markDirty(120);
+      msg('capture-progress',{phase:'loading', text:'解像度安定化中…', pct:28});
+      for(let w=0; w<120; w++) await nextFrame();
+
+      // Phase 4: rAF-driven frame-by-frame capture.
+      // No setTimeout loop — tight for-loop with encoder backpressure yield.
+      const FPS = 24;
+      const TOTAL_FRAMES = FPS * ORBIT_S;
+      // 回転速度は ORBIT_S に連動させない — 常に「360° を FULL_ROTATION_SEC 秒で
+      // 一周する」一定ペースを保つ。ORBIT_S を短くしても等速のまま途中で止まる
+      // だけにして、短尺化のために早回しになるのを防ぐ（一周する必要はない）。
+      const FULL_ROTATION_SEC = 20;
+      const ANGLE_PER_FRAME = (2 * Math.PI) / (FPS * FULL_ROTATION_SEC);
+
+      // Reuse the module-wide Mp4Muxer/Mp4ArrayBufferTarget imported in
+      // 010_state.js (added for the camera-animation WebCodecs rewrite)
+      // instead of dynamically importing a second, different mp4-muxer
+      // version — same library, one fewer network fetch, one fewer version
+      // to keep in sync. (Original online-only code did
+      // `await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm')`
+      // here — this is the one intentional deviation from the source.)
+      const muxTarget = new Mp4ArrayBufferTarget();
+      const muxer = new Mp4Muxer({
+        target: muxTarget,
+        video: { codec: 'avc', width: CAP_W, height: CAP_H },
+        fastStart: 'in-memory',
+        firstTimestampBehavior: 'offset',
+      });
+
+      const encoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: e => msg('capture-error',{error:'VideoEncoder: '+e.message}),
+      });
+      encoder.configure({
+        codec: 'avc1.640028',
+        width: CAP_W, height: CAP_H,
+        bitrate: 4_000_000, // 720p 相当に下げたビットレート（旧 1080p 時は 8Mbps）
+        framerate: FPS,
+      });
+
+      msg('capture-started',{durationSec: ORBIT_S});
+
+      // Capture: set yaw → force render → GPU flush → capture.
+      // Direct renderer.render() guarantees the canvas is painted before
+      // VideoFrame reads it (rAF alone races with the viewer's own loop).
+      for(let f = 0; f < TOTAL_FRAMES; f++){
+        while(encoder.encodeQueueSize > 5){
+          await new Promise(r => setTimeout(r, 1));
+        }
+
+        if(typeof _yawTarget!=='undefined') _yawTarget += ANGLE_PER_FRAME;
+        if(typeof yaw!=='undefined') yaw = _yawTarget;
+        // FOV を毎フレーム固定（カメラモード等が触っても 90 を維持）。
+        if(typeof camera!=='undefined' && 'fov' in camera && camera.fov !== CAP_FOV){
+          camera.fov = CAP_FOV; camera.updateProjectionMatrix();
+        }
+        if(typeof markDirty==='function') markDirty(30);
+
+        // Spark needs multiple frames to process sort/LOD after yaw change.
+        // hidden タブでも進むよう nextFrame()（headless では setTimeout）を使う。
+        for(let w=0; w<3; w++) await nextFrame();
+        if(typeof renderer!=='undefined' && typeof scene!=='undefined' && typeof camera!=='undefined'){
+          renderer.render(scene, camera);
+          const gl = renderer.getContext();
+          if(gl) gl.finish();
+        }
+
+        const vf = new VideoFrame(canvas, { timestamp: f * (1_000_000 / FPS) });
+        encoder.encode(vf, { keyFrame: f % (FPS * 2) === 0 });
+        vf.close();
+
+        if(f % 24 === 0){
+          const pct = Math.round(f / TOTAL_FRAMES * 100);
+          msg('capture-progress',{phase:'recording', text:'録画中… '+pct+'%  ('+f+'/'+TOTAL_FRAMES+')', pct:30+Math.round(pct*0.7)});
+        }
+      }
+
+      // Finalize
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+      const blob = new Blob([muxTarget.buffer], {type:'video/mp4'});
+      msg('capture-done',{blob, mimeType:'video/mp4', ext:'mp4'});
+    }
+    setTimeout(run, 300);
+  })();
+}
 // ══════════════════════════════════════════════════
 //  EXPORT / SAVE / LOAD
 // ══════════════════════════════════════════════════
@@ -19417,7 +20162,9 @@ async function _loadProjectZipFromFile(file){
     const fflate=await getFflate();
 
     setMsg(T('zip-decomp')); setBar(20);
-    const zipBuf=new Uint8Array(await file.arrayBuffer());
+    // Chunked read: single-call file.arrayBuffer() fails on files > ~2GiB
+    // (V8 ArrayBuffer size ceiling ~2GiB; unfixable in-browser past that — see 200_file_loading.js) —
+    const zipBuf=new Uint8Array(await _readFileArrayBufferChunked(file, p => setBar(20 + Math.round(p*15))));
     let unzipped;
     try{ unzipped=fflate.unzipSync(zipBuf); }
     catch(zipErr){ hideLd(); showUndoToast((_en()?'⚠ ZIP decompress failed: ':'⚠ ZIP解凍失敗: ')+zipErr.message); return; }
@@ -22258,19 +23005,49 @@ function _updateQiBadgeLabel(idx){
   const labels = [T('qt-low'),T('qt-mid'),T('qt-high')];
   if(el) el.textContent = labels[idx] || '?';
 }
-window.setQuality=function(scale,idx){
-  const before = qualIdx;
-  qualScale=scale; qualIdx=idx;
-  // Manual user choice → apply immediately; cancel any deferred swap so the
-  // user's selection isn't overwritten when the next idle window opens.
-  _pendingPixelRatio = null;
-  renderer.setPixelRatio(Math.min(devicePixelRatio,_PR_CAP)*scale);
-  document.querySelectorAll('#quality-panel #qbtns button').forEach((b,i)=>b.classList.toggle('on',i===idx));
-  _updateQiBadgeLabel(idx);
-  // RAD scenes use a per-mesh `lodScale` to drive how aggressively Spark's
-  // LoD walker subdivides chunks. Updating it on the fly lets a quality
-  // preset change (低/中/高) raise or lower splat density in view without
-  // rebuilding the mesh. PLY/SPLAT ignore lodScale (geometry is baked).
+// The three user-pickable quality presets: 低 / 中 / 高.
+//   idx 0 → 0.75  (低)
+//   idx 1 → 1.0   (中)
+//   idx 2 → 1.5   (高)
+// Kept module-scope so the applier, the undo callback and the watchdog all
+// agree on one table (the old code duplicated `[0.75,1.0,1.5]` in three
+// places, which drifted).
+const _QUALITY_SCALES = [0.75, 1.0, 1.5];
+
+// ── Shared quality-tier applier ─────────────────────────────────────────
+// ONE place that mutates qualScale/qualIdx and reflects the change to the
+// renderer, RAD meshes, badge and panel. Every quality actor now routes
+// through here — manual clicks (setQuality), the continuous watchdog, the
+// post-load calibration path, and the battery one-shot — so those four
+// previously-divergent code paths can no longer disagree about pixel ratio
+// vs. RAD lodScale vs. badge (RC3). `opts`:
+//   • source:    'manual' | 'watchdog' | 'calibration' | 'battery'
+//   • immediate: true  → renderer.setPixelRatio() NOW (+ cancel pending swap)
+//                 false → _queuePixelRatio() (applied on the next idle window)
+// Only manual picks are immediate (the user expects instant feedback and no
+// mid-motion flash is acceptable for a deliberate click); everything else is
+// queued so the buffer reallocation lands between interactions.
+function applyQualityTier(idx, opts){
+  opts = opts || {};
+  const source = opts.source || 'watchdog';
+  const immediate = !!opts.immediate;
+  const i = Math.max(0, Math.min(2, idx|0));
+  qualIdx = i;
+  qualScale = _QUALITY_SCALES[i];
+  const pr = Math.min(devicePixelRatio, _PR_CAP) * qualScale;
+  if(immediate){
+    // Cancel any deferred swap so a queued change can't overwrite this one
+    // when the next idle window opens.
+    _pendingPixelRatio = null;
+    renderer.setPixelRatio(pr);
+  } else {
+    _queuePixelRatio(pr);
+  }
+  // ALWAYS reapply RAD lodScale. RAD scenes use a per-mesh `lodScale` to
+  // drive how aggressively Spark's LoD walker subdivides chunks; updating it
+  // on the fly lets a preset change raise/lower in-view splat density without
+  // rebuilding the mesh. PLY/SPLAT ignore lodScale (geometry is baked) — the
+  // `mesh.paged` guard keeps this a no-op for them.
   try {
     const newLod = _radEffectiveLodScale();
     if(typeof layers !== 'undefined' && layers){
@@ -22281,96 +23058,134 @@ window.setQuality=function(scale,idx){
       }
     }
   } catch(_){}
-  // The continuous watchdog stays ACTIVE even after a manual pick. The user's
-  // choice becomes the new "ceiling" the watchdog up-steps toward; if render
-  // time later threatens the 30 fps floor the watchdog will still drop
-  // quality below this level to defend the framerate. (Watchdog runs in
-  // the main animate loop, gated on _qualPreferred for its up-step path.)
-  _qualPreferred = scale;
-  // Reset streak counters so the watchdog re-evaluates against the new
-  // ceiling cleanly without immediately bouncing the user's pick.
+  // ── 高画質時のLOD総予算拡大 (spec S2) ──
+  // lodScale を 2.0 超に上げても総予算 lodSplatCount(desktop既定250万)が先に
+  // 頭打ちになり広範囲が精細化しない(実測で飽和確認済み)。「高」の時だけ予算も
+  // 引き上げ、低/中では undefined に戻して Spark の端末別既定に委ねる。
+  // VRAM上限 maxPagedSplats(desktop 1677万) は別枠なので触らない。
+  try {
+    if(typeof sparkRenderer !== 'undefined' && sparkRenderer){
+      const _tier = (typeof _splatPerfTier !== 'undefined') ? _splatPerfTier : 'laptop_ok';
+      if(i === 2 && _tier === 'desktop')        sparkRenderer.lodSplatCount = 5000000;
+      else if(i === 2 && _tier === 'laptop_ok') sparkRenderer.lodSplatCount = 3000000;
+      else sparkRenderer.lodSplatCount = undefined;
+    }
+  } catch(_){}
+  _updateQiBadgeLabel(i);
+  document.querySelectorAll('#quality-panel #qbtns button').forEach((b,k)=>b.classList.toggle('on',k===i));
+  if(source === 'manual'){
+    // Manual pick = the new ceiling in BOTH directions (existing semantics):
+    // the watchdog may still drop below it to defend 30 fps, but never
+    // auto-climbs past the user's explicit choice.
+    _qualPreferred = qualScale;
+  }
+  const _lbl = ['低','中','高'][i] || '?';
+  console.info('[Locahun][Quality] ' + source + ' → ' + _lbl);
+  markDirty(8);
+}
+// Expose for the calibration/watchdog fragments (concatenated into the same
+// module scope, so a bare reference already resolves — this is just belt-and-
+// suspenders for any external caller / diag console poking).
+window._applyQualityTier = applyQualityTier;
+
+window.setQuality=function(scale,idx){
+  const before = qualIdx;
+  // Delegate to the shared applier so a manual click is byte-for-byte the
+  // same as before: immediate pixel-ratio, RAD lodScale reapply, badge +
+  // panel sync, and _qualPreferred := the picked scale (manual = ceiling).
+  applyQualityTier(idx, { source:'manual', immediate:true });
+  // Reset watchdog streaks so it re-evaluates against the new ceiling cleanly
+  // without immediately bouncing the user's pick. (manualOverride is NOT set
+  // here — that flag is reserved for the ?qual= diag pin, matching prior
+  // behavior; a normal manual click keeps the watchdog active as a floor
+  // defender.)
   if(window._gpuWatchdog){
     window._gpuWatchdog.slowStreak = 0;
     window._gpuWatchdog.fastStreak = 0;
     window._gpuWatchdog.lastStep = performance.now();
   }
-  markDirty(8);
-  const SCALES = [0.75, 1.0, 1.5];
   pushGenericUndo('quality', before, idx, val=>{
     const i = Math.max(0, Math.min(2, val|0));
-    qualIdx = i; qualScale = SCALES[i];
-    renderer.setPixelRatio(Math.min(devicePixelRatio,_PR_CAP)*qualScale);
-    document.querySelectorAll('#quality-panel #qbtns button').forEach((b,k)=>b.classList.toggle('on',k===i));
-    _updateQiBadgeLabel(i);
-    markDirty(8);
+    // Undo/redo of a quality pick is also a manual choice → immediate + resets
+    // the ceiling, identical to a fresh click on that preset.
+    applyQualityTier(i, { source:'manual', immediate:true });
   });
 };
 // ══════════════════════════════════════════════════
-//  Auto quality probe (runs once after each file load)
+//  Auto-quality CALIBRATION (runs once after each file load)
 // ══════════════════════════════════════════════════
-// Samples the rolling render-time average (_ftAvg, maintained by the main
-// loop) a few seconds after a file finishes loading, then picks the
-// highest quality preset that still leaves enough frame-time headroom.
-// This way users land on an "optimal" preset matched to their actual
-// device + scene complexity, instead of always starting at the
-// device-tier default and discovering things are too slow only after
-// scrolling around for a while.
+// REDESIGN: the old one-shot "probe" read _ftAvg 3.5 s after load and directly
+// guessed a preset. That was unsound (RC5): _ftAvg is CPU *submit* time, which
+// is ~0.5 ms on big GPUs regardless of scene weight (so it always guessed 高),
+// yet spikes to ~49 ms mid-RAD-stream (so it could guess 低 on a monster GPU).
+// It also set pixel ratio directly, bypassing the applier (RC3), and never ran
+// for URL/demo loads (RC2).
 //
-// • Skipped entirely if the user already manually picked a quality
-//   (window._gpuWatchdog.manualOverride === true). The probe is meant
-//   for "first impression" tuning, not to override deliberate choice.
-// • Skipped if _ftAvg hasn't yet accumulated meaningful samples
-//   (the window is 60 render calls; pre-load it's noisy / zero).
-// • Picks based on render-call ms vs frame budget (3-preset system):
-//     <  8 ms  → 高 (preset 2, scale 1.5)
-//     <  12 ms → 中 (preset 1, scale 1.0)
-//     else    → 低 (preset 0, scale 0.75)
-//   Headroom values are chosen so 60 fps is sustained even when the
-//   scene gets busier (more layers, camera motion → more splat sorting).
-// • Does NOT push an undo entry — auto-tuning shouldn't clutter the
-//   undo stack. The user's first manual quality click after this still
-//   captures the auto-picked value as the "before" state correctly.
+// New behavior: we do NOT guess a tier here. Instead, once the scene has
+// SETTLED (all paged meshes reached their target splat count AND splat-active
+// window elapsed) we simply OPEN A 20 s CALIBRATION WINDOW: reset the watchdog
+// streaks and let the vsync-normalized closed-loop watchdog (in 291) climb to
+// the true sustainable tier on its own, using a faster UP streak (180 vs 600
+// frames) during the window. The watchdog measures real steady-state
+// frame-time, so it converges to the correct ceiling without a fragile guess.
+//
+// • Skipped entirely if the user already pinned quality
+//   (window._gpuWatchdog.manualOverride === true) — same as the old probe.
+// • Polls every 500 ms up to 30 s waiting for "settled"; if never settled
+//   (e.g. an endless stream), it just times out and does nothing.
+// • Multiple schedules coalesce via the _qualityProbeScheduled flag.
+// • Exported name `window._scheduleQualityProbe` is UNCHANGED so existing
+//   callers (200_file_loading.js, and now 292's loadFromURL) keep working.
 let _qualityProbeScheduled = false;
-function _probeOptimalQuality(){
+// "Settled" predicate — mirrors animate()'s `hasPagedLoading` check, but this
+// runs OUTSIDE the animate loop (from a setInterval poller) so it needs its
+// own copy of the loop rather than reading the frame-local variable.
+function _sceneSettledForCalibration(){
   try{
-    if(!_ftAvg || _ftAvg <= 0) return; // not enough samples yet — bail
-    const ms = _ftAvg;
-    let targetIdx;
-    if      (ms < 8)  targetIdx = 2;
-    else if (ms < 12) targetIdx = 1;
-    else              targetIdx = 0;
-    if(targetIdx === qualIdx) return; // already optimal — no-op
-    const SCALES = [0.75, 1.0, 1.5];
-    qualIdx   = targetIdx;
-    qualScale = SCALES[targetIdx];
-    // Also raise the watchdog's up-step ceiling to match: the probe just
-    // determined this preset is sustainable, so the continuous watchdog
-    // can use it as the "preferred" target after any temporary downstep.
-    _qualPreferred = qualScale;
-    _pendingPixelRatio = null;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, _PR_CAP) * qualScale);
-    document.querySelectorAll('#quality-panel #qbtns button')
-      .forEach((b,i)=>b.classList.toggle('on', i === targetIdx));
-    _updateQiBadgeLabel(targetIdx);
-    markDirty(8);
-    console.info('[Locahun][AutoQuality] probe →', ['低','中','高'][targetIdx],
-                 `(scale ${qualScale}, render ~${ms.toFixed(1)} ms, new ceiling)`);
+    // プラトー検出ベースの共有判定(291の_pagedStreamActive)を使う。旧「総数到達」
+    // 判定は大型RAD/URLストリームで永遠にfalseのままだった(2026-07-03修正)。
+    if(typeof _pagedStreamActive === 'function' && _pagedStreamActive(performance.now())) return false;
+    // Also wait out the splat-active window (Spark's progressive re-sort tail).
+    if(typeof _splatActiveUntil === 'number' && performance.now() <= _splatActiveUntil) return false;
+    return true;
+  } catch(_){ return true; } // on any error, don't block calibration forever
+}
+function _openCalibrationWindow(){
+  try{
+    if(window._gpuWatchdog && window._gpuWatchdog.manualOverride) return; // pinned
+    const wd = (window._gpuWatchdog = window._gpuWatchdog || { slowStreak:0, fastStreak:0, lastStep:0 });
+    const now = performance.now();
+    // Reset streaks + clear the step lockout so the watchdog can act promptly
+    // once the window opens, and give it a clean 20 s window during which the
+    // UP requirement is 180 frames instead of 600 (see 291).
+    wd.slowStreak = 0;
+    wd.fastStreak = 0;
+    wd.lastStep = 0;
+    wd.calibrationUntil = now + 20000;
+    console.info('[Locahun][AutoQuality] calibration window open (20s)');
   } catch(e){
-    console.warn('[Locahun][AutoQuality] probe failed:', e);
+    console.warn('[Locahun][AutoQuality] calibration failed:', e);
   }
 }
-// Schedule the probe ~3.5 s after the splat finishes loading. The delay
-// gives Spark's progressive sort time to stabilise so _ftAvg samples a
-// representative steady-state render cost, not the heavy first frames.
-// Safe to call multiple times — only the first scheduling per file
-// actually runs.
+// Schedule calibration after the splat finishes loading. Polls every 500 ms
+// (max 30 s) until the scene is settled, THEN opens the calibration window.
+// Safe to call multiple times — only the first scheduling per file runs.
 window._scheduleQualityProbe = function(){
   if(_qualityProbeScheduled) return;
+  if(window._gpuWatchdog && window._gpuWatchdog.manualOverride) return; // pinned → no-op
   _qualityProbeScheduled = true;
-  setTimeout(()=>{
-    _probeOptimalQuality();
-    _qualityProbeScheduled = false; // allow re-probe on next file load
-  }, 3500);
+  let _polls = 0;
+  const _iv = setInterval(()=>{
+    _polls++;
+    if(_sceneSettledForCalibration()){
+      clearInterval(_iv);
+      _qualityProbeScheduled = false; // allow re-schedule on next file load
+      _openCalibrationWindow();
+    } else if(_polls >= 240){ // 240 × 500 ms = 120 s cap (大型RADの初回ストリームは40-60s+かかる)
+      clearInterval(_iv);
+      _qualityProbeScheduled = false;
+    }
+  }, 500);
 };
 
 window.setFOV=function(degrees,idx){
