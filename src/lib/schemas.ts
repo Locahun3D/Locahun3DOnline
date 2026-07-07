@@ -532,8 +532,8 @@ export function tokenCostLabel(t: 1 | 2 | 3 | 5, locale?: string): string {
 export const PLAN_TOKEN_BUDGET = {
   free: 0,       // free has no monthly budget — only the signup bonus below
   individual: 16,
-  studio: 32,
-  team: 90,
+  studio: 24,
+  team: 60,
 } as const;
 
 /** One-time bonus tokens granted at account creation. Currently only used by Free. */
