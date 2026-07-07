@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   categoryLabel,
+  isNewProperty,
   type Property,
 } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
@@ -240,6 +241,11 @@ export default function PropertyDetailView({
               </p>
 
               <div className="flex flex-wrap gap-1.5 mt-4">
+                {isNewProperty(property) && (
+                  <span className="text-[11px] font-bold px-3 py-1 bg-[#e8443a] border border-[#e8443a] text-white mono tracking-[0.18em] uppercase">
+                    New
+                  </span>
+                )}
                 <span className="text-[11px] font-bold px-3 py-1 bg-accent border border-accent text-[#0a2a35]">
                   {categoryLabel(property.category, locale)}
                 </span>

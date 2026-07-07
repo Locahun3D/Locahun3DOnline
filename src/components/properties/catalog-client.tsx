@@ -9,6 +9,7 @@ import {
   REFERENCE_PRESETS,
   categoryLabel,
   tokenCostLabel,
+  isNewProperty,
   presetLabel,
   type Property,
   type PropertyCategory,
@@ -1190,9 +1191,16 @@ function PropertyCardLite({
           <div className="w-full h-full flex items-center justify-center mono text-[10px] opacity-40">no cover</div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
-        <div className="absolute top-2 left-2 mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
-          {categoryLabel(property.category, lc)}
-          {property.studioType ? ` · ${property.studioType}` : ""}
+        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+          {isNewProperty(property) && (
+            <div className="mono text-[10px] tracking-[0.24em] uppercase bg-[#e8443a] text-white px-2 py-1 font-bold">
+              New
+            </div>
+          )}
+          <div className="mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
+            {categoryLabel(property.category, lc)}
+            {property.studioType ? ` · ${property.studioType}` : ""}
+          </div>
         </div>
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>

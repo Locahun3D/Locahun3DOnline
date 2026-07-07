@@ -139,7 +139,14 @@ function mergeManaged<T extends Property>(incoming: T, existing: Property | null
     ...incoming,
     pageBlocks: existing.pageBlocks,
     ownerId: existing.ownerId || incoming.ownerId,
+    // 初回公開時刻はサーバ管理（"New" バッジの基準）。フォーム値で消さない。
+    publishedAt: existing.publishedAt || incoming.publishedAt,
   };
+}
+
+/** 初回公開時のみ publishedAt を刻む（再公開では既存値を保持）。 */
+function stampPublishedAt<T extends Property>(p: T): T {
+  return { ...p, publishedAt: p.publishedAt || new Date().toISOString() };
 }
 
 function newDraft(id: string): Property {
@@ -236,7 +243,7 @@ export async function publishAction(input: unknown) {
   const parsed = publishablePropertySchema.parse(input);
   await assertPropertyAccess(parsed.id);
   const existing = await repo.get(parsed.id);
-  await repo.upsert({ ...mergeManaged(parsed, existing), status: "published" });
+  await repo.upsert(stampPublishedAt({ ...mergeManaged(parsed, existing), status: "published" }));
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   revalidatePath("/properties");
@@ -257,7 +264,7 @@ export async function publishByIdAction(id: string) {
       error: "公開に必要な項目が未入力です。エディタで入力してください。",
     };
   }
-  await repo.upsert({ ...parsed.data, status: "published" });
+  await repo.upsert(stampPublishedAt({ ...parsed.data, status: "published" }));
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   revalidatePath(`/properties/${id}`);
@@ -317,7 +324,7 @@ export async function bulkSetStatusAction(
         skipped.push(id); // 公開要件を満たさないものはスキップ
         continue;
       }
-      await repo.upsert({ ...parsed.data, status: "published" });
+      await repo.upsert(stampPublishedAt({ ...parsed.data, status: "published" }));
     } else {
       await repo.upsert({ ...existing, status });
     }

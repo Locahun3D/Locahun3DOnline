@@ -332,7 +332,28 @@ export const propertySchema = z.object({
   // Meta
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
+  /**
+   * 初回公開時刻 (ISO)。publish 系アクションが「未設定のときだけ」刻む
+   * サーバ管理フィールド（下書き⇄公開を往復しても最初の公開日を保持）。
+   * カタログの "New" バッジ（公開から2ヶ月間）の基準。旧データは未設定
+   * のため、判定側は createdAt にフォールバックする。
+   */
+  publishedAt: z.string().datetime().optional(),
 });
+
+/** 公開(初回)から2ヶ月以内なら true — カタログの "New" バッジ判定。 */
+export function isNewProperty(
+  p: { publishedAt?: string; createdAt?: string },
+  now: Date = new Date(),
+): boolean {
+  const base = p.publishedAt || p.createdAt;
+  if (!base) return false;
+  const d = new Date(base);
+  if (Number.isNaN(d.getTime())) return false;
+  const cutoff = new Date(d);
+  cutoff.setMonth(cutoff.getMonth() + 2);
+  return now < cutoff;
+}
 
 /**
  * Schema used when publishing — re-validates with stricter rules.

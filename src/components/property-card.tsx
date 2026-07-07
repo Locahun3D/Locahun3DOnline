@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Property } from "@/lib/schemas";
-import { categoryLabel, tokenCostLabel } from "@/lib/schemas";
+import { categoryLabel, tokenCostLabel, isNewProperty } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 
 export default function PropertyCard({ property, locale = "ja" }: { property: Property; locale?: Locale }) {
@@ -21,8 +21,15 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
-        <div className="absolute top-3 left-3 mono text-[10px] tracking-[0.28em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
-          {categoryLabel(property.category, locale)}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          {isNewProperty(property) && (
+            <div className="mono text-[10px] tracking-[0.28em] uppercase bg-[#e8443a] text-white px-2 py-1 font-bold">
+              New
+            </div>
+          )}
+          <div className="mono text-[10px] tracking-[0.28em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
+            {categoryLabel(property.category, locale)}
+          </div>
         </div>
         <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
           <div className="mono text-[10px] tracking-[0.28em] uppercase bg-accent text-bg px-2 py-1">
