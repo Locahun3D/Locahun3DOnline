@@ -79,7 +79,14 @@ export default function CatalogMap({
       onMouseDown={(e) => {
         if (e.button === 1) e.preventDefault();
       }}
-      className="relative w-full h-full overscroll-contain border border-line bg-[#222] [&_.leaflet-container]:bg-[#222] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
+      // isolate: Leaflet の内部ペイン(tile/marker/tooltip/popup)は z-index
+      // 200〜700 を持つが、.leaflet-container 自体は position:absolute の
+      // くせに z-index:auto（=独自のスタッキングコンテキストを作らない）。
+      // そのため、この z-index はここでせき止められず親の比較に漏れ出し、
+      // ヘッダー(z-50)より高い値としてグローバルに競合し、スクロールで
+      // マップがヘッダーの上に乗ってしまう。isolate でこの階層に確実に
+      // 閉じ込める。
+      className="relative isolate w-full h-full overscroll-contain border border-line bg-[#222] [&_.leaflet-container]:bg-[#222] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-bg/60 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted"
     >
       <MapContainer
         // Initial center / zoom — ViewportFitter immediately recenters on `reference`
