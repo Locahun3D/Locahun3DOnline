@@ -25,9 +25,9 @@ export default async function TokushohoPage() {
       </header>
 
       <div className="prose-terms space-y-8 text-[14px] leading-[1.85]">
-        <Row label="販売業者" value="中村 航（個人事業主）" />
+        <Row label="販売業者" value="Kawaii World Industries株式会社" />
         <Row label="運営統括責任者" value="中村 航" />
-        <Row label="所在地" value="〒204-0003 東京都清瀬市中里 828-8 チャームツートン 101" />
+        <Row label="所在地" value="〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F" />
         <Row label="電話番号" value="080-4623-0377（受付: 平日 10:00–18:00）" />
         <Row label="メールアドレス" value="contact@locahun3d.com" />
         <Row label="URL" value={<a href="https://locahun3d.com" className="text-accent hover:underline">https://locahun3d.com</a>} />
@@ -63,7 +63,7 @@ export default async function TokushohoPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月1日<br />
-            ロケハン3D — 中村 航
+            ロケハン3D（運営：Kawaii World Industries株式会社）
           </p>
         </div>
       </div>
@@ -100,9 +100,9 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
       </header>
 
       <div className="prose-terms space-y-8 text-[14px] leading-[1.85]">
-        <Row label="Seller" value="Ko Nakamura (Sole Proprietor)" />
+        <Row label="Seller" value="Kawaii World Industries Co., Ltd." />
         <Row label="Operations Manager" value="Ko Nakamura" />
-        <Row label="Address" value="Charm Two-Tone 101, 828-8 Nakazato, Kiyose-shi, Tokyo 204-0003, Japan" />
+        <Row label="Address" value="THE GATE Shinjuku Gyoen 1F, 1-24-12 Shinjuku, Shinjuku-ku, Tokyo 160-0022, Japan" />
         <Row label="Phone" value="+81-80-4623-0377 (Weekdays 10:00–18:00 JST)" />
         <Row label="Email" value="contact@locahun3d.com" />
         <Row label="URL" value={<a href="https://locahun3d.com" className="text-accent hover:underline">https://locahun3d.com</a>} />
@@ -138,7 +138,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: July 1, 2026<br />
-            Locahun 3D — Ko Nakamura
+            Locahun 3D (operated by Kawaii World Industries Co., Ltd.)
           </p>
         </div>
       </div>

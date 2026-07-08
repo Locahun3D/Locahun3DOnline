@@ -123,7 +123,7 @@ export default async function DataDownloadTermsPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年6月23日<br />
-            ロケハン3D — 中村 航
+            ロケハン3D（運営：Kawaii World Industries株式会社）
           </p>
         </div>
       </div>
@@ -259,7 +259,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
-            Locahun 3D — Ko Nakamura
+            Locahun 3D (operated by Kawaii World Industries Co., Ltd.)
           </p>
         </div>
       </div>
