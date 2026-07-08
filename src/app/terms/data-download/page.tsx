@@ -259,7 +259,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
-            Locahun 3D (operated by Kawaii World Industries Co., Ltd.)
+            Locahun 3D (operated by Kawaii World Industries Inc.)
           </p>
         </div>
       </div>
