@@ -11,8 +11,19 @@ import {
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { presignViewerAsset, presignConfigured } from "@/lib/r2-presign";
+import { allowAssetDownload } from "@/lib/asset-rate-limit";
 
 export const runtime = "nodejs";
+
+/**
+ * 署名URLの有効期限。実ダウンロードは R2 に直接飛びアプリコードを経由しないため、
+ * 発行したURLはこの秒数の間は誰でも(URLを知っていれば)再利用できてしまう。
+ * 以前は 3600 (1時間) だったが、流出/転用の窓を絞るため短縮。ビューアーは
+ * 1回の視聴セッションで発行された1つの署名URLを使い回すので、極端に短くすると
+ * 大容量シーンの読み込み中に失効し得る — 実測の初回ロード(数秒〜十数秒)に対して
+ * 十分な余裕を残しつつ、放置後の再利用は防げる値としている。
+ */
+const PRESIGN_TTL_SECONDS = 900;
 
 /** 保存済みURL（公開r2.dev / 相対 /uploads / /api/r2 ...）から R2 オブジェクトキーを導く。 */
 function toR2Key(url: string): string | null {
@@ -161,7 +172,13 @@ export async function GET(req: Request) {
       }
     }
 
-    const signed = await presignViewerAsset(key, 3600);
+    // 同一ユーザー×同一アセットへの短時間の連続発行要求を検出してレート制限。
+    // 唯一の制御点はここ（この先の実ダウンロードはR2直リンクでアプリを経由しない）。
+    if (!isAdmin && !allowAssetDownload(user.id, key)) {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    }
+
+    const signed = await presignViewerAsset(key, PRESIGN_TTL_SECONDS);
     if (!signed) {
       return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
     }
