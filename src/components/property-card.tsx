@@ -2,8 +2,24 @@ import Link from "next/link";
 import type { Property } from "@/lib/schemas";
 import { categoryLabel, tokenCostLabel, isNewProperty } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
+import BookmarkButton from "@/components/bookmark-button";
 
-export default function PropertyCard({ property, locale = "ja" }: { property: Property; locale?: Locale }) {
+export default function PropertyCard({
+  property,
+  locale = "ja",
+  showBookmark = false,
+  bookmarked = false,
+  signedIn = false,
+  revalidate,
+}: {
+  property: Property;
+  locale?: Locale;
+  /** ★ で保存解除できるオーバーレイを画像右下に出す（保存一覧など）。 */
+  showBookmark?: boolean;
+  bookmarked?: boolean;
+  signedIn?: boolean;
+  revalidate?: string;
+}) {
   const en = locale === "en";
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
   return (
@@ -45,6 +61,17 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
         <div className="absolute bottom-3 left-3 mono text-[10px] tracking-[0.24em] opacity-80">
           {property.id.toUpperCase()}
         </div>
+        {showBookmark && (
+          <div className="absolute bottom-3 right-3 z-[2]">
+            <BookmarkButton
+              propertyId={property.id}
+              initialBookmarked={bookmarked}
+              signedIn={signedIn}
+              revalidate={revalidate}
+              variant="overlay"
+            />
+          </div>
+        )}
       </div>
 
       <div className="p-5 flex flex-col gap-3">

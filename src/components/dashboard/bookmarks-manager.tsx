@@ -469,7 +469,14 @@ export default function BookmarksManager({
                 draggingId === p.id ? "opacity-40 ring-2 ring-accent ring-offset-2 ring-offset-bg" : ""
               }`}
             >
-              <PropertyCard property={p} locale={locale} />
+              <PropertyCard
+                property={p}
+                locale={locale}
+                showBookmark
+                bookmarked
+                signedIn
+                revalidate="/dashboard/bookmarks"
+              />
               <TagEditor propertyId={p.id} />
             </div>
           ))}
