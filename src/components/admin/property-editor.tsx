@@ -503,7 +503,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         setValue("permitRequired", v !== "hourly", { shouldDirty: true });
                         triggerAutoSave();
                       }}
-                      className={`${inputClass} shrink-0 w-[9.5rem]`}
+                      className={`${inputClass.replace("w-full ", "")} shrink-0 w-[9.5rem]`}
                     >
                       {(["hourly", "flat", "free"] as const).map((t) => (
                         <option key={t} value={t} className="bg-bg">
@@ -516,8 +516,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       min={0}
                       step={1000}
                       disabled={watch("priceType") === "free"}
+                      placeholder={watch("priceType") === "free" ? "" : "金額を入力"}
                       {...register("hourlyPrice", { valueAsNumber: true })}
-                      className={`${inputClass} flex-1 disabled:opacity-40 disabled:cursor-not-allowed`}
+                      className={`${inputClass} flex-1 min-w-[7rem] disabled:opacity-40 disabled:cursor-not-allowed`}
                     />
                   </div>
                 </Field>
