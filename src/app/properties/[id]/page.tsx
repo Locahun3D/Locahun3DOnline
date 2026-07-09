@@ -4,6 +4,7 @@ import {
   getPublishedProperty,
   getPublishedProperties,
   getPublishedPropertyIds,
+  findRelatedProperties,
 } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
@@ -65,7 +66,7 @@ export default async function PropertyDetailPage({
     getCurrentUser().catch(() => null),
   ]);
 
-  const others = allPublished.filter((p) => p.id !== property.id).slice(0, 3);
+  const others = findRelatedProperties(property, allPublished, 3);
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
   const canViewRestrictedItems = canViewBackyard(user);
