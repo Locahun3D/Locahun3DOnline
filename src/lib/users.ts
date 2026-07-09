@@ -55,6 +55,14 @@ export interface UserRepo {
   getByEmail(email: string): Promise<User | null>;
   upsert(u: User): Promise<User>;
   remove(id: string): Promise<void>;
+  /**
+   * トークン残高等をアトミックに加算する（ギフトコード引換の並行実行対策）。
+   * 通常の upsert は read-modify-write のため、同一ユーザーが2つの異なる
+   * ギフトコードをほぼ同時に引き換えると、片方の加算が後勝ちで消える
+   * lost-update が起き得る。ここでは D1 の楽観ロック（読取り時の updatedAt
+   * と一致する行だけ更新、競合時は再読込して再試行）で真に安全に加算する。
+   */
+  grantTokens(userId: string, patch: (u: User) => User): Promise<User | null>;
 }
 
 async function readStore(): Promise<StoreShape> {
@@ -218,6 +226,55 @@ class UserRepoImpl implements UserRepo {
     await ensureSeeded(db);
     await d1Upsert(db, TABLE, "id", userCols(validated), validated);
     return validated;
+  }
+
+  async grantTokens(userId: string, patch: (u: User) => User): Promise<User | null> {
+    if (canAccessLocalFs()) {
+      const s = await readStore();
+      const idx = s.users.findIndex((x) => x.id === userId);
+      if (idx < 0) return null;
+      const updated = userSchema.parse({
+        ...patch(s.users[idx]),
+        updatedAt: new Date().toISOString(),
+      });
+      s.users[idx] = updated;
+      await writeStore(s);
+      return updated;
+    }
+
+    const db = await getD1();
+    if (!db) return null;
+    await ensureSeeded(db);
+
+    const MAX_ATTEMPTS = 6;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const row = await db.prepare(`SELECT data FROM ${TABLE} WHERE id = ?`).bind(userId).first();
+      if (!row) return null;
+      let current: User;
+      try {
+        current = userSchema.parse(JSON.parse((row as { data: string }).data));
+      } catch {
+        return null;
+      }
+
+      // 最終試行は競合が続いても付与自体は必ず届けるため通常 upsert にフォール
+      // バックする（トークンを付与し損なう方が、稀な上書き競合より実害が大きい）。
+      if (attempt === MAX_ATTEMPTS - 1) {
+        return this.upsert(patch(current));
+      }
+
+      const guard = current.updatedAt ?? null;
+      const next = userSchema.parse({ ...patch(current), updatedAt: new Date().toISOString() });
+      const res = await db
+        .prepare(
+          `UPDATE ${TABLE} SET data = ? WHERE id = ? AND json_extract(data, '$.updatedAt') IS ?`,
+        )
+        .bind(JSON.stringify(next), userId, guard)
+        .run();
+      if ((res?.meta?.changes ?? 0) === 1) return next;
+      // 競合で負けた → 次ループで最新行を読み直して再試行。
+    }
+    return null;
   }
 
   async remove(id: string): Promise<void> {

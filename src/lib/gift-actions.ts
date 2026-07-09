@@ -113,11 +113,11 @@ export async function redeemGiftCodeAction(
   }
   const granted = claim.code.tokens;
 
-  // 2) ユーザーへ付与。付与直前に最新のユーザーレコードを取り直す（リクエスト
-  //    冒頭の stale な user に加算すると、並行する別付与/管理者操作を上書きして
-  //    トークンを失う lost-update を防ぐ）。
-  const u = (await userRepo.get(user.id)) ?? user;
-  const nextUser =
+  // 2) ユーザーへ付与。read-modify-write の単純な upsert だと、同一ユーザーが
+  //    2つの異なるギフトコードをほぼ同時に引き換えた際、片方の加算が後勝ちで
+  //    消える lost-update が起き得る。grantTokens は D1 の楽観ロックで読取り→
+  //    条件付きUPDATE→競合時再試行を行い、これを防ぐ。
+  const nextUser = await userRepo.grantTokens(user.id, (u) =>
     claim.code.bucket === "bonus"
       ? { ...u, bonusTokens: u.bonusTokens + granted }
       : {
@@ -125,8 +125,14 @@ export async function redeemGiftCodeAction(
           tokenBalance: u.tokenBalance + granted,
           // 通常トークンは付与から1年で失効。
           tokenExpiresAt: oneYearFrom(now),
-        };
-  await userRepo.upsert(nextUser);
+        },
+  );
+  if (!nextUser) {
+    return {
+      ok: false,
+      error: "コードは有効でしたが、トークン付与に失敗しました。もう一度お試しください。",
+    };
+  }
 
   revalidatePath("/account");
   return { ok: true, granted, bucket: claim.code.bucket };
