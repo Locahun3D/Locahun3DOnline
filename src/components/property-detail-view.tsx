@@ -173,6 +173,66 @@ export default function PropertyDetailView({
     }
   }
 
+  // ── SPECS 行 ──
+  // 屋外（公道・公園等）はスタジオ向け設備（電源/駐車場/搬入口/防音/ネット）が
+  // 軒並み「なし・—・通常」の無意味な羅列になりがちなので、値がある時だけ
+  // 出す。一般のスタジオ等は従来どおり常時表示（「なし」も検索軸として意味がある）。
+  const isOutdoorProperty = property.category === "outdoor";
+  const parkingValue = property.parking
+    ? property.parkingCapacity > 0
+      ? en
+        ? `Available (${property.parkingCapacity} cars)`
+        : `利用可（${property.parkingCapacity}台）`
+      : en
+        ? "Available"
+        : "利用可"
+    : en
+      ? "None"
+      : "なし";
+  const specRows: [string, string][] = [];
+  if (property.address) specRows.push(["ADDRESS ／ 住所", property.address]);
+  if (property.nearestStation) specRows.push(["STATION ／ 最寄り駅", property.nearestStation]);
+  if (property.availableHours) specRows.push(["HOURS ／ 利用可能時間", property.availableHours]);
+  if (property.availableDays) specRows.push(["DAYS ／ 撮影可能日", property.availableDays]);
+  if (property.bookingDeadline) specRows.push(["LEAD TIME ／ 申込期限", property.bookingDeadline]);
+  if (isOutdoorProperty) {
+    if (property.powerVoltage) specRows.push(["POWER ／ 電源", property.powerVoltage]);
+    if (property.parking) specRows.push(["PARKING ／ 駐車場", parkingValue]);
+    if (property.loadingDock) specRows.push(["LOAD-IN ／ 搬入口", en ? "Large OK" : "大型搬入可"]);
+    if (property.soundproofing) specRows.push(["SOUNDPROOF ／ 防音", en ? "Yes" : "あり"]);
+    if (property.hasInternet) specRows.push(["INTERNET ／ ネット", en ? "Yes" : "あり"]);
+  } else {
+    specRows.push(["POWER ／ 電源", property.powerVoltage || "—"]);
+    specRows.push(["PARKING ／ 駐車場", parkingValue]);
+    specRows.push([
+      "LOAD-IN ／ 搬入口",
+      property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常",
+    ]);
+    specRows.push([
+      "SOUNDPROOF ／ 防音",
+      property.soundproofing ? (en ? "Yes" : "あり") : en ? "No" : "なし",
+    ]);
+    specRows.push([
+      "INTERNET ／ ネット",
+      property.hasInternet ? (en ? "Yes" : "あり") : en ? "No" : "なし",
+    ]);
+  }
+  if (property.airConditioning) specRows.push(["AIR-CON ／ 空調", en ? "Yes" : "あり"]);
+  if (property.greenRoom) specRows.push(["GREEN ROOM ／ 控室", en ? "Yes" : "あり"]);
+  if (property.restroom) specRows.push(["RESTROOM ／ トイレ", en ? "Yes" : "あり"]);
+  if (property.smokingArea) specRows.push(["SMOKING ／ 喫煙所", en ? "Yes" : "あり"]);
+  if (property.fireAllowed) specRows.push(["OPEN FLAME ／ 火気使用", en ? "Allowed" : "可"]);
+  specRows.push(["SCAN DATE ／ スキャン日", property.scannedAt || "—"]);
+
+  // ── Pricing / Rules セクションの表示可否（横並び2カラム化の判定に使う） ──
+  const showPricing =
+    property.minUsageHours > 0 || !!property.scoutingFee || !!property.extraFees;
+  const showRules =
+    !!property.prohibitedItems ||
+    !!property.cancellationPolicy ||
+    property.insuranceRequired ||
+    property.attendanceRequired;
+
   return (
     <article className="theme-online">
       {preview && (
@@ -350,18 +410,34 @@ export default function PropertyDetailView({
           </div>
 
           {/* ── cover photo ── */}
-          <div className="relative min-h-[280px] lg:min-h-[440px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={property.cover.src}
-              alt={property.cover.alt}
-              width={property.cover.width || undefined}
-              height={property.cover.height || undefined}
-              fetchPriority="high"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ objectPosition: property.cover.focus || "center" }}
-            />
+          <div className="relative min-h-[280px] lg:min-h-[440px] bg-[#14181c]">
+            {property.cover.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={property.cover.src}
+                alt={property.cover.alt}
+                width={property.cover.width || undefined}
+                height={property.cover.height || undefined}
+                fetchPriority="high"
+                decoding="async"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ objectPosition: property.cover.focus || "center" }}
+              />
+            ) : (
+              // カバー未設定の下書きは真っ白な空洞に見えるため、テクスチャ付き
+              // プレースホルダで「準備中」と分かるようにする。
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 14px)",
+                }}
+              >
+                <span className="mono text-[10px] tracking-[0.28em] uppercase text-white/35">
+                  {en ? "Cover coming soon" : "カバー画像 準備中"}
+                </span>
+              </div>
+            )}
             {!preview && (
               <div className="absolute top-3 right-3 z-[3]">
                 <BookmarkButton
@@ -396,28 +472,38 @@ export default function PropertyDetailView({
             </div>
 
             {/* mini metric grid, folded into the Overview card */}
+            {/* 屋外は天井の概念がなく「自然光あり/なし」も常に自明（=矛盾して見える）
+                ため、天井高セルだけを全幅表示にして自然光セルは出さない。 */}
             <div className="grid grid-cols-2 gap-3 mt-7">
-              {[
-                // 屋外は天井が無いので「屋外」表記（数値がある時のみ m を付ける）。
-                property.category === "outdoor"
-                  ? [en ? "Ceiling" : "天井高", en ? "Outdoor" : "屋外", ""]
-                  : [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", property.ceilingHeightM ? "m" : ""],
-                [
-                  en ? "Natural light" : "自然光",
-                  property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-                  "",
-                ],
-              ].map(([label, value, unit]) => (
-                <div key={label as string} className="border border-line px-3 py-3">
+              {property.category === "outdoor" ? (
+                <div className="border border-line px-3 py-3 col-span-2">
                   <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
-                    {label}
+                    {en ? "Ceiling" : "天井高"}
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[22px] leading-none font-bold">{value}</span>
-                    {unit && <span className="text-[12px] text-ink/60">{unit}</span>}
-                  </div>
+                  <span className="text-[22px] leading-none font-bold">
+                    {en ? "Outdoor" : "屋外"}
+                  </span>
                 </div>
-              ))}
+              ) : (
+                [
+                  [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", property.ceilingHeightM ? "m" : ""],
+                  [
+                    en ? "Natural light" : "自然光",
+                    property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",
+                    "",
+                  ],
+                ].map(([label, value, unit]) => (
+                  <div key={label as string} className="border border-line px-3 py-3">
+                    <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
+                      {label}
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[22px] leading-none font-bold">{value}</span>
+                      {unit && <span className="text-[12px] text-ink/60">{unit}</span>}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {property.permitRequired && (
@@ -438,66 +524,7 @@ export default function PropertyDetailView({
             <Eyebrow en="SPECS" jp={en ? "Specs" : "仕様"} />
             <table className="w-full text-[14px]">
               <tbody>
-                {[
-                  ...(property.address
-                    ? [["ADDRESS ／ 住所", property.address]]
-                    : []),
-                  ...(property.nearestStation
-                    ? [["STATION ／ 最寄り駅", property.nearestStation]]
-                    : []),
-                  ...(property.availableHours
-                    ? [["HOURS ／ 利用可能時間", property.availableHours]]
-                    : []),
-                  ...(property.availableDays
-                    ? [["DAYS ／ 撮影可能日", property.availableDays]]
-                    : []),
-                  ...(property.bookingDeadline
-                    ? [["LEAD TIME ／ 申込期限", property.bookingDeadline]]
-                    : []),
-                  [en ? "POWER ／ 電源" : "POWER ／ 電源", property.powerVoltage || "—"],
-                  [
-                    "PARKING ／ 駐車場",
-                    property.parking
-                      ? property.parkingCapacity > 0
-                        ? en
-                          ? `Available (${property.parkingCapacity} cars)`
-                          : `利用可（${property.parkingCapacity}台）`
-                        : en
-                          ? "Available"
-                          : "利用可"
-                      : en
-                        ? "None"
-                        : "なし",
-                  ],
-                  [
-                    "LOAD-IN ／ 搬入口",
-                    property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常",
-                  ],
-                  [
-                    "SOUNDPROOF ／ 防音",
-                    property.soundproofing ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-                  ],
-                  [
-                    "INTERNET ／ ネット",
-                    property.hasInternet ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-                  ],
-                  ...(property.airConditioning
-                    ? [["AIR-CON ／ 空調", en ? "Yes" : "あり"]]
-                    : []),
-                  ...(property.greenRoom
-                    ? [["GREEN ROOM ／ 控室", en ? "Yes" : "あり"]]
-                    : []),
-                  ...(property.restroom
-                    ? [["RESTROOM ／ トイレ", en ? "Yes" : "あり"]]
-                    : []),
-                  ...(property.smokingArea
-                    ? [["SMOKING ／ 喫煙所", en ? "Yes" : "あり"]]
-                    : []),
-                  ...(property.fireAllowed
-                    ? [["OPEN FLAME ／ 火気使用", en ? "Allowed" : "可"]]
-                    : []),
-                  ["SCAN DATE ／ スキャン日", property.scannedAt || "—"],
-                ].map(([label, value], i) => (
+                {specRows.map(([label, value], i) => (
                   <tr key={label as string}>
                     <th
                       className={`text-left py-3.5 pr-2 mono text-[10px] tracking-[0.22em] uppercase text-muted font-normal w-[46%] border-b border-line ${
@@ -606,74 +633,71 @@ export default function PropertyDetailView({
       )}
 
       {/* ══════════════════════════════════════════════════
-       *  Pricing details
+       *  Pricing details + Rules & policy
+       *  両方あれば横並び2カラムにして、片方だけの時のスカスカな全幅白カードを防ぐ。
        * ══════════════════════════════════════════════════ */}
-      {(property.minUsageHours > 0 || property.scoutingFee || property.extraFees) && (
+      {(showPricing || showRules) && (
         <section className="frame pt-12">
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-            <Eyebrow en="PRICING" jp={en ? "Pricing details" : "料金・利用条件"} />
-            <div className="max-w-[46em]">
-              {property.minUsageHours > 0 && (
-                <KeyVal k={en ? "Min. booking" : "最低利用時間"}>
-                  {en ? `${property.minUsageHours} h~` : `${property.minUsageHours}時間〜`}
-                </KeyVal>
-              )}
-              <KeyVal k={en ? "Tax" : "税"}>
-                {property.taxIncluded
-                  ? en
-                    ? "Tax included"
-                    : "表示は税込"
-                  : en
-                    ? "Before tax"
-                    : "表示は税別"}
-              </KeyVal>
-              {property.scoutingFee && (
-                <KeyVal k={en ? "Scout fee" : "ロケハン費"}>{property.scoutingFee}</KeyVal>
-              )}
-              {property.extraFees && (
-                <KeyVal k={en ? "Extra fees" : "追加費用"}>{property.extraFees}</KeyVal>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
+          <div className={`grid gap-6 ${showPricing && showRules ? "lg:grid-cols-2" : ""}`}>
+            {showPricing && (
+              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+                <Eyebrow en="PRICING" jp={en ? "Pricing details" : "料金・利用条件"} />
+                <div className="max-w-[46em]">
+                  {property.minUsageHours > 0 && (
+                    <KeyVal k={en ? "Min. booking" : "最低利用時間"}>
+                      {en ? `${property.minUsageHours} h~` : `${property.minUsageHours}時間〜`}
+                    </KeyVal>
+                  )}
+                  <KeyVal k={en ? "Tax" : "税"}>
+                    {property.taxIncluded
+                      ? en
+                        ? "Tax included"
+                        : "表示は税込"
+                      : en
+                        ? "Before tax"
+                        : "表示は税別"}
+                  </KeyVal>
+                  {property.scoutingFee && (
+                    <KeyVal k={en ? "Scout fee" : "ロケハン費"}>{property.scoutingFee}</KeyVal>
+                  )}
+                  {property.extraFees && (
+                    <KeyVal k={en ? "Extra fees" : "追加費用"}>{property.extraFees}</KeyVal>
+                  )}
+                </div>
+              </div>
+            )}
 
-      {/* ══════════════════════════════════════════════════
-       *  Rules & policy
-       * ══════════════════════════════════════════════════ */}
-      {(property.prohibitedItems ||
-        property.cancellationPolicy ||
-        property.insuranceRequired ||
-        property.attendanceRequired) && (
-        <section className="frame pt-12">
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-            <Eyebrow en="RULES" jp={en ? "Rules & policy" : "ルール・規程"} />
-            <div className="max-w-[46em]">
-              {property.prohibitedItems && (
-                <KeyVal k={en ? "Prohibited" : "禁止事項"}>{property.prohibitedItems}</KeyVal>
-              )}
-              {property.cancellationPolicy && (
-                <KeyVal k={en ? "Cancellation" : "キャンセル"}>
-                  {property.cancellationPolicy}
-                </KeyVal>
-              )}
-              {(property.insuranceRequired || property.attendanceRequired) && (
-                <KeyVal k={en ? "Requirements" : "必須事項"}>
-                  <div className="flex flex-wrap gap-2">
-                    {property.insuranceRequired && (
-                      <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
-                        {en ? "Insurance required" : "保険加入 必須"}
-                      </span>
-                    )}
-                    {property.attendanceRequired && (
-                      <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
-                        {en ? "Attendance required" : "立ち会い 必須"}
-                      </span>
-                    )}
-                  </div>
-                </KeyVal>
-              )}
-            </div>
+            {showRules && (
+              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+                <Eyebrow en="RULES" jp={en ? "Rules & policy" : "ルール・規程"} />
+                <div className="max-w-[46em]">
+                  {property.prohibitedItems && (
+                    <KeyVal k={en ? "Prohibited" : "禁止事項"}>{property.prohibitedItems}</KeyVal>
+                  )}
+                  {property.cancellationPolicy && (
+                    <KeyVal k={en ? "Cancellation" : "キャンセル"}>
+                      {property.cancellationPolicy}
+                    </KeyVal>
+                  )}
+                  {(property.insuranceRequired || property.attendanceRequired) && (
+                    <KeyVal k={en ? "Requirements" : "必須事項"}>
+                      <div className="flex flex-wrap gap-2">
+                        {property.insuranceRequired && (
+                          <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
+                            {en ? "Insurance required" : "保険加入 必須"}
+                          </span>
+                        )}
+                        {property.attendanceRequired && (
+                          <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
+                            {en ? "Attendance required" : "立ち会い 必須"}
+                          </span>
+                        )}
+                      </div>
+                    </KeyVal>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -762,6 +786,15 @@ export default function PropertyDetailView({
               signedIn={signedIn}
               unlockedItemIds={unlockedItemIds}
             />
+          </section>
+        ) : visibleSplatItems.length === 0 ? (
+          <section className="mb-16">
+            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
+            <div className="border border-dashed border-line py-16 text-center bg-white">
+              <p className="text-ink/40 text-[14px]">
+                {en ? "3DGS data is coming soon." : "3DGSデータは準備中です。"}
+              </p>
+            </div>
           </section>
         ) : (
           <section className="mb-16">

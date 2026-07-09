@@ -58,11 +58,7 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
           {property.summary}
         </p>
 
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] mono text-muted">
-          <div>
-            <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">{en ? "Area" : "面積"}</div>
-            <div className="text-ink">{property.floorAreaSqm}㎡</div>
-          </div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] mono text-muted">
           <div>
             <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">{en ? "Ceiling" : "天井"}</div>
             <div className="text-ink">
@@ -74,8 +70,8 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
             </div>
           </div>
           <div>
-            <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">{en ? "Cap." : "収容"}</div>
-            <div className="text-ink">{en ? property.capacity : `${property.capacity}名`}</div>
+            <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">{en ? "Parking" : "駐車"}</div>
+            <div className="text-ink">{property.parking ? (en ? "Yes" : "可") : "—"}</div>
           </div>
         </div>
 
@@ -93,7 +89,7 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
                 </div>
               ) : (
                 <span className="serif text-[15px] text-accent">
-                  {en ? "Road-use permit required" : "道路使用許可の申請が必要です"}
+                  {en ? "Filming permit required" : `${property.permitType || "撮影許可"}の申請が必要です`}
                 </span>
               )
             ) : property.hourlyPrice > 0 ? (
