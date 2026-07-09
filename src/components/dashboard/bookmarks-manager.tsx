@@ -9,6 +9,7 @@ import {
   createBookmarkFolderAction,
   renameBookmarkFolderAction,
   deleteBookmarkFolderAction,
+  assignBookmarkFolderAction,
   setBookmarkTagsAction,
 } from "@/lib/bookmark-actions";
 
@@ -46,6 +47,9 @@ export default function BookmarksManager({
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [pending, startTransition] = useTransition();
+  // ドラッグ&ドロップ（物件カードを掴んでボードのタブへ落とす → 保存先を移動）
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverBoard, setDragOverBoard] = useState<string | null>(null);
 
   // ── フォルダ別グルーピング ──
   const byFolder = new Map<string, Property[]>();
@@ -130,6 +134,22 @@ export default function BookmarksManager({
     });
   };
 
+  // 物件をボードへ移動（ドロップ時）。ALL への移動は無効、UNSORTED は割り当て解除。
+  const moveToBoard = (propertyId: string, boardKey: string) => {
+    if (!propertyId || boardKey === ALL) return;
+    const target = boardKey === UNSORTED ? null : boardKey;
+    if ((assignments[propertyId] ?? null) === target) return; // 既に同じボード
+    setAssignments((a) => {
+      const next = { ...a };
+      if (target) next[propertyId] = target;
+      else delete next[propertyId];
+      return next;
+    });
+    startTransition(async () => {
+      await assignBookmarkFolderAction(propertyId, target);
+    });
+  };
+
   // ── ボードタイル ──
   const boardTiles: { key: string; name: string; count: number; cover?: string }[] = [
     { key: ALL, name: en ? "All" : "すべて", count: properties.length, cover: properties[0]?.cover.src },
@@ -140,7 +160,8 @@ export default function BookmarksManager({
         return { key: f.id, name: f.name, count: items.length, cover: items[0]?.cover.src };
       }),
   ];
-  if (unsortedCount > 0) {
+  // 未整理タブ: ドロップの受け皿として、フォルダがある間は 0 件でも常に表示する。
+  if (unsortedCount > 0 || folders.some((f) => !f.id.startsWith("__pending_"))) {
     boardTiles.push({
       key: UNSORTED,
       name: en ? "Unsorted" : "未整理",
@@ -149,41 +170,96 @@ export default function BookmarksManager({
     });
   }
 
+  // フォルダタブ型のボードタイル。物件カードをドラッグして落とせるドロップ先でもある
+  // （ALL は「すべての保存」ビューなのでドロップ不可）。
   const BoardTile = ({
     tile,
   }: {
     tile: { key: string; name: string; count: number; cover?: string };
   }) => {
     const active = activeBoard === tile.key;
+    const over = dragOverBoard === tile.key;
+    const droppable = tile.key !== ALL && draggingId !== null;
     return (
       <button
         type="button"
         onClick={() => setActiveBoard(tile.key)}
-        className={`group text-left border transition overflow-hidden ${
-          active ? "border-accent" : "border-line hover:border-ink/50"
+        onDragOver={
+          droppable
+            ? (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOverBoard !== tile.key) setDragOverBoard(tile.key);
+              }
+            : undefined
+        }
+        onDragLeave={
+          droppable
+            ? (e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node))
+                  setDragOverBoard((k) => (k === tile.key ? null : k));
+              }
+            : undefined
+        }
+        onDrop={
+          droppable
+            ? (e) => {
+                e.preventDefault();
+                const pid = e.dataTransfer.getData("text/plain");
+                setDragOverBoard(null);
+                moveToBoard(pid, tile.key);
+              }
+            : undefined
+        }
+        className={`group relative block w-full text-left pt-[18px] transition ${
+          over ? "scale-[1.03]" : ""
         }`}
+        aria-pressed={active}
       >
-        <div className="relative aspect-[4/3] bg-[#141414] overflow-hidden">
-          {tile.cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={tile.cover}
-              alt=""
-              loading="lazy"
-              className={`w-full h-full object-cover transition ${active ? "" : "opacity-80 group-hover:opacity-100"}`}
-            />
-          ) : (
-            <div className="w-full h-full grid place-items-center mono text-[10px] opacity-40">
-              {en ? "empty" : "空"}
-            </div>
-          )}
-          {active && <div className="absolute inset-0 ring-2 ring-inset ring-accent pointer-events-none" />}
-        </div>
-        <div className="px-2.5 py-2 flex items-baseline justify-between gap-2">
-          <span className={`text-[12px] font-bold truncate ${active ? "text-accent" : ""}`}>
-            {tile.name}
-          </span>
-          <span className="mono text-[10px] text-muted shrink-0">{tile.count}</span>
+        {/* タブ */}
+        <span
+          className={`absolute top-0 left-0 z-10 h-[22px] max-w-[88%] flex items-center pl-2.5 pr-5 text-[11px] font-bold truncate rounded-t-[8px] [clip-path:polygon(0_0,82%_0,100%_100%,0_100%)] transition ${
+            active || over ? "bg-accent text-[#062e38]" : "bg-ink/[0.07] text-ink/70"
+          }`}
+        >
+          {tile.name}
+        </span>
+        {/* フォルダ本体 */}
+        <div
+          className={`rounded-[2px] rounded-tr-[10px] border p-1.5 shadow-sm transition ${
+            active || over
+              ? "border-accent bg-accent/[0.06]"
+              : "border-line bg-bg group-hover:border-ink/40"
+          }`}
+        >
+          <div className="relative aspect-[16/10] overflow-hidden rounded-[3px] bg-[#141414]">
+            {tile.cover ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tile.cover}
+                alt=""
+                loading="lazy"
+                draggable={false}
+                className={`w-full h-full object-cover transition ${
+                  active ? "" : "opacity-85 group-hover:opacity-100"
+                }`}
+              />
+            ) : (
+              <div className="w-full h-full grid place-items-center mono text-[10px] opacity-40">
+                {en ? "empty" : "空"}
+              </div>
+            )}
+            <span className="absolute bottom-1 right-1 mono text-[10px] leading-[16px] text-white bg-black/55 px-1.5 rounded-full">
+              {tile.count}
+            </span>
+            {over && (
+              <div className="absolute inset-0 grid place-items-center border-2 border-dashed border-accent bg-accent/25">
+                <span className="text-[11px] font-bold text-[#062e38]">
+                  {en ? "Drop here" : "ここにドロップ"}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </button>
     );
@@ -234,20 +310,26 @@ export default function BookmarksManager({
     <div className="space-y-8">
       {/* ── ボード一覧 ── */}
       <section>
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-1.5">
           <h2 className="mono text-[10px] tracking-[0.22em] uppercase text-muted">
             {en ? "Boards" : "ボード"}
           </h2>
           <span className="flex-1 h-px bg-line" />
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        <p className="mb-3 text-[11px] text-muted">
+          {en
+            ? "Drag a property onto a board tab to file it. On mobile, use ☆ on each card."
+            : "物件をボードのタブへドラッグすると整理できます（スマホは各カードの ☆ から）。"}
+        </p>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-4 items-start">
           {boardTiles.map((tile) => (
             <BoardTile key={tile.key} tile={tile} />
           ))}
-          {/* 新規ボードタイル */}
-          <div className="border border-dashed border-line flex flex-col">
-            <div className="flex-1 grid place-items-center aspect-[4/3] text-muted text-2xl">＋</div>
-            <div className="p-1.5 flex gap-1">
+          {/* 新規ボードタイル（フォルダタブと高さを揃える） */}
+          <div className="pt-[18px]">
+            <div className="border border-dashed border-line rounded-[2px] rounded-tr-[10px] p-1.5">
+            <div className="grid place-items-center aspect-[16/10] text-muted text-2xl">＋</div>
+            <div className="pt-1.5 flex gap-1">
               <input
                 type="text"
                 value={newFolderName}
@@ -265,6 +347,7 @@ export default function BookmarksManager({
               >
                 {en ? "Add" : "作成"}
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -347,7 +430,22 @@ export default function BookmarksManager({
       ) : (
         <div className="columns-2 sm:columns-3 xl:columns-4 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
           {shown.map((p) => (
-            <div key={p.id}>
+            <div
+              key={p.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", p.id);
+                e.dataTransfer.effectAllowed = "move";
+                setDraggingId(p.id);
+              }}
+              onDragEnd={() => {
+                setDraggingId(null);
+                setDragOverBoard(null);
+              }}
+              className={`cursor-grab active:cursor-grabbing [&_a]:[-webkit-user-drag:none] [&_img]:[-webkit-user-drag:none] transition ${
+                draggingId === p.id ? "opacity-40 ring-2 ring-accent ring-offset-2 ring-offset-bg" : ""
+              }`}
+            >
               <PropertyCard property={p} locale={locale} />
               <TagEditor propertyId={p.id} />
             </div>
