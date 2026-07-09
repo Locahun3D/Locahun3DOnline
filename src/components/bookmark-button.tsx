@@ -50,6 +50,12 @@ export default function BookmarkButton({
   }>({ loading: true, folderId: null, folders: [] });
   const [newName, setNewName] = useState("");
 
+  // ポップオーバーは document.body へポータルするため .theme-online（明色テーマ）の
+  // CSS変数スコープ外に出てしまい、既定（暗色）の --color-bg/--color-ink を継承して
+  // 黒背景になる不具合があった。ボタンの祖先に .theme-online があるかをここで判定し、
+  // ポータル先の要素自身にも同じクラスを付けて変数を再宣言する。
+  const [inThemeOnline, setInThemeOnline] = useState(false);
+
   const openPopover = () => {
     const r = btnRef.current?.getBoundingClientRect();
     if (r) {
@@ -61,6 +67,7 @@ export default function BookmarkButton({
       left = Math.max(12, Math.min(left, vw - W - 12));
       setAnchor({ top: r.bottom + 6, left, width: r.width });
     }
+    setInThemeOnline(!!btnRef.current?.closest(".theme-online"));
     setOpen(true);
     setCtx((c) => ({ ...c, loading: true }));
     getBookmarkContextAction(propertyId).then((res) => {
@@ -183,6 +190,7 @@ export default function BookmarkButton({
       {open && anchor && (
         <SavePopover
           anchor={anchor}
+          themeOnline={inThemeOnline}
           en={en}
           loading={ctx.loading}
           bookmarked={bookmarked}
@@ -202,6 +210,7 @@ export default function BookmarkButton({
 
 function SavePopover({
   anchor,
+  themeOnline,
   en,
   loading,
   bookmarked,
@@ -215,6 +224,7 @@ function SavePopover({
   onClose,
 }: {
   anchor: { top: number; left: number; width: number };
+  themeOnline: boolean;
   en: boolean;
   loading: boolean;
   bookmarked: boolean;
@@ -256,7 +266,7 @@ function SavePopover({
     <div
       ref={ref}
       role="menu"
-      className="fixed z-[70] bg-bg border border-line shadow-2xl"
+      className={`fixed z-[70] bg-bg border border-line shadow-2xl ${themeOnline ? "theme-online" : ""}`}
       style={{ top: anchor.top, left: anchor.left, width: W }}
       onClick={(e) => e.stopPropagation()}
     >
