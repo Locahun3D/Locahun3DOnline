@@ -182,10 +182,21 @@ export default function BookmarksManager({
     // ALL は「すべての保存」ビューなのでドロップ不可。ハンドラは常時付ける
     // （draggingId でゲートすると再レンダ前の初回 dragover を取りこぼすため）。
     const droppable = tile.key !== ALL;
+    // 実フォルダ（すべて/未整理 以外）のみ改名・削除できる。
+    const isFolder = tile.key !== ALL && tile.key !== UNSORTED;
+    // 中にボタン（ゴミ箱）を置くため root は div（button 入れ子は不正）。
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={active}
         onClick={() => setActiveBoard(tile.key)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setActiveBoard(tile.key);
+          }
+        }}
         onDragOver={
           droppable
             ? (e) => {
@@ -213,16 +224,24 @@ export default function BookmarksManager({
               }
             : undefined
         }
-        className={`group relative block w-full text-left pt-[18px] transition ${
+        className={`group relative block w-full text-left pt-[18px] cursor-pointer transition ${
           over ? "scale-[1.03]" : ""
         }`}
-        aria-pressed={active}
       >
-        {/* タブ */}
+        {/* タブ（フォルダはダブルクリックで名称変更） */}
         <span
+          onDoubleClick={
+            isFolder
+              ? (e) => {
+                  e.stopPropagation();
+                  onRenameFolder(tile.key, tile.name);
+                }
+              : undefined
+          }
+          title={isFolder ? (en ? "Double-click to rename" : "ダブルクリックで名称変更") : undefined}
           className={`absolute top-0 left-0 z-10 h-[22px] max-w-[88%] flex items-center pl-2.5 pr-5 text-[11px] font-bold truncate rounded-t-[8px] [clip-path:polygon(0_0,82%_0,100%_100%,0_100%)] transition ${
-            active || over ? "bg-accent text-[#062e38]" : "bg-ink/[0.07] text-ink/70"
-          }`}
+            isFolder ? "cursor-text" : ""
+          } ${active || over ? "bg-accent text-[#062e38]" : "bg-ink/[0.07] text-ink/70"}`}
         >
           {tile.name}
         </span>
@@ -253,6 +272,24 @@ export default function BookmarksManager({
             <span className="absolute bottom-1 right-1 mono text-[10px] leading-[16px] text-white bg-black/55 px-1.5 rounded-full">
               {tile.count}
             </span>
+            {/* 削除（ゴミ箱）: 実フォルダのみ。左下に常時表示（ホバーで赤）。 */}
+            {isFolder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteFolder(tile.key, tile.name);
+                }}
+                disabled={pending}
+                title={en ? "Delete board" : "ボードを削除"}
+                aria-label={en ? "Delete board" : "ボードを削除"}
+                className="absolute bottom-1 left-1 grid place-items-center w-6 h-6 rounded-full bg-black/55 text-white/90 hover:bg-red-500 hover:text-white transition disabled:opacity-40"
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" />
+                </svg>
+              </button>
+            )}
             {over && (
               <div className="absolute inset-0 grid place-items-center border-2 border-dashed border-accent bg-accent/25">
                 <span className="text-[11px] font-bold text-[#062e38]">
@@ -262,7 +299,7 @@ export default function BookmarksManager({
             )}
           </div>
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -354,7 +391,7 @@ export default function BookmarksManager({
         </div>
       </section>
 
-      {/* ── 選択中ボードのヘッダ（名前変更・削除） ── */}
+      {/* ── 選択中ボードのヘッダ（改名/削除はボードタイル上で行う） ── */}
       <div className="flex items-center gap-3 pb-2 border-b border-line">
         <h2 className="font-bold text-[16px]">
           {activeBoard === ALL
@@ -370,24 +407,9 @@ export default function BookmarksManager({
         <span className="mono text-[11px] text-muted">{shown.length}</span>
         <span className="flex-1" />
         {activeFolder && (
-          <>
-            <button
-              type="button"
-              onClick={() => onRenameFolder(activeFolder.id, activeFolder.name)}
-              disabled={pending}
-              className="mono text-[10px] tracking-[0.14em] uppercase text-muted hover:text-accent transition disabled:opacity-40"
-            >
-              {en ? "Rename" : "名前変更"}
-            </button>
-            <button
-              type="button"
-              onClick={() => onDeleteFolder(activeFolder.id, activeFolder.name)}
-              disabled={pending}
-              className="mono text-[10px] tracking-[0.14em] uppercase text-muted hover:text-red-400 transition disabled:opacity-40"
-            >
-              {en ? "Delete" : "削除"}
-            </button>
-          </>
+          <span className="mono text-[10px] tracking-[0.1em] text-muted/70 hidden sm:inline">
+            {en ? "Rename: double-click the tab · Delete: 🗑 on the board" : "名称変更=タブをダブルクリック／削除=ボードの🗑"}
+          </span>
         )}
       </div>
 

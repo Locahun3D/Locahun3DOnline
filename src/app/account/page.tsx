@@ -8,6 +8,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
+import { getPublishedProperties } from "@/lib/properties";
 
 export const metadata = { title: "プロフィール" };
 
@@ -26,6 +27,41 @@ export default async function AccountPage({
   const unlockedCount = (
     await viewUnlockRepo.list({ userId: user.id })
   ).filter((u) => u.expiresAt > nowIso).length;
+
+  // ── 保存ボード（ブックマークフォルダ）タイルをマイページに表示 ──
+  const bookmarkIds = user.bookmarks ?? [];
+  const folders = user.bookmarkFolders ?? [];
+  const assignments = user.bookmarkFolderAssignments ?? {};
+  const boardTiles: { name: string; count: number; cover?: string }[] = [];
+  if (bookmarkIds.length > 0) {
+    const byId = new Map((await getPublishedProperties()).map((p) => [p.id, p]));
+    const coverOf = (ids: string[]) => {
+      for (const id of ids) {
+        const c = byId.get(id)?.cover?.src;
+        if (c) return c;
+      }
+      return undefined;
+    };
+    boardTiles.push({
+      name: en ? "All" : "すべて",
+      count: bookmarkIds.length,
+      cover: coverOf(bookmarkIds),
+    });
+    for (const f of folders) {
+      const ids = bookmarkIds.filter((id) => assignments[id] === f.id);
+      boardTiles.push({ name: f.name, count: ids.length, cover: coverOf(ids) });
+    }
+    const unsorted = bookmarkIds.filter(
+      (id) => !assignments[id] || !folders.some((f) => f.id === assignments[id]),
+    );
+    if (unsorted.length > 0 || folders.length > 0) {
+      boardTiles.push({
+        name: en ? "Unsorted" : "未整理",
+        count: unsorted.length,
+        cover: coverOf(unsorted),
+      });
+    }
+  }
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -207,6 +243,51 @@ export default async function AccountPage({
                   {en ? "Apply for a Production account" : "制作会社アカウントを申請"}
                 </Link>
               )}
+            </div>
+          )}
+
+          {/* ── 保存ボード（ブックマークフォルダ）群 ── */}
+          {boardTiles.length > 0 && (
+            <div className="pt-5 border-t border-line">
+              <div className="flex items-center justify-between mb-3">
+                <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+                  {en ? "Saved boards" : "保存ボード"}
+                </div>
+                <Link
+                  href={lh("/dashboard/bookmarks")}
+                  className="mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
+                >
+                  {en ? "Manage →" : "整理する →"}
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {boardTiles.map((t, i) => (
+                  <Link
+                    key={i}
+                    href={lh("/dashboard/bookmarks")}
+                    className="group border border-line overflow-hidden hover:border-accent transition"
+                  >
+                    <div className="relative aspect-[16/10] bg-[#141414]">
+                      {t.cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={t.cover}
+                          alt=""
+                          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition"
+                        />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center mono text-[9px] opacity-40">
+                          {en ? "empty" : "空"}
+                        </div>
+                      )}
+                      <span className="absolute bottom-1 right-1 mono text-[9px] leading-[14px] text-white bg-black/55 px-1.5 rounded-full">
+                        {t.count}
+                      </span>
+                    </div>
+                    <div className="px-2 py-1.5 text-[11px] font-bold truncate">{t.name}</div>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </section>
