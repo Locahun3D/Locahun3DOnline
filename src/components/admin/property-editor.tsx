@@ -752,12 +752,30 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               {watch("priceType") !== "hourly" ? (
                 <div className="border border-accent/40 bg-accent/5 px-4 py-4 space-y-4">
                   <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                    道路使用許可 情報（レンタルスタジオ向け仕様は非表示中）
+                    撮影許可 情報（レンタルスタジオ向け仕様は非表示中）
                   </div>
                   <p className="text-[11px] text-muted">
                     料金が「時間貸し」以外（撮影許可・無料）のため、天井高・電源仕様
                     などスタジオ向けの項目は非表示にしています。代わりに許可申請に関する情報を入力してください。
                   </p>
+                  <Field
+                    label="許可の種類"
+                    hint="表示文言に使われます（例:「公園使用許可の申請が必要です」）。空なら「撮影許可」。"
+                  >
+                    <input
+                      type="text"
+                      list="permit-type-options"
+                      {...register("permitType")}
+                      className={inputClass}
+                      placeholder="例: 道路使用許可"
+                    />
+                    <datalist id="permit-type-options">
+                      <option value="道路使用許可" />
+                      <option value="公園使用許可" />
+                      <option value="施設利用許可" />
+                      <option value="撮影許可" />
+                    </datalist>
+                  </Field>
                   <Field
                     label="許可・注意事項"
                     hint="例: スクランブル交差点など。道路使用許可の申請先・条件・注意点を記入"

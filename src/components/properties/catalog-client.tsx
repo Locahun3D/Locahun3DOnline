@@ -1238,7 +1238,9 @@ function PropertyCardLite({
               </div>
             ) : (
               <span className="serif text-[13px] text-accent">
-                {en ? "Road-use permit required" : "道路使用許可の申請が必要です"}
+                {en
+                  ? "Filming permit required"
+                  : `${property.permitType || "撮影許可"}の申請が必要です`}
               </span>
             )
           ) : property.hourlyPrice > 0 ? (

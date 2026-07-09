@@ -309,7 +309,9 @@ export default function PropertyDetailView({
                       </>
                     ) : (
                       <small className="text-[13px] text-white/55 tracking-[0.1em]">
-                        {en ? "Road-use permit required" : "道路使用許可の申請が必要です"}
+                        {en
+                          ? "Filming permit required"
+                          : `${property.permitType || "撮影許可"}の申請が必要です`}
                       </small>
                     )
                   ) : property.hourlyPrice > 0 ? (
@@ -337,7 +339,7 @@ export default function PropertyDetailView({
                     {property.permitRequired
                       ? en
                         ? "Permit info"
-                        : "道路使用許可について"
+                        : `${property.permitType || "撮影許可"}について`
                       : en
                         ? "Contact us"
                         : "お問い合わせ"}

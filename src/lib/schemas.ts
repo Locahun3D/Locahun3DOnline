@@ -221,6 +221,11 @@ export const propertySchema = z.object({
    *   free   = 使用料無料（金額を表示せず「無料」と表示）
    */
   priceType: z.enum(["hourly", "flat", "free"]).default("hourly"),
+  /**
+   * 許可の種類（例: 道路使用許可 / 公園使用許可 / 施設利用許可）。
+   * permitRequired な物件の表示文言に使う。空なら汎用の「撮影許可」。
+   */
+  permitType: z.string().max(40).default(""),
   summary: z.string().max(200, "200 文字以内で入力してください").default(""),
 
   // 1.5 — Studio kind (subdivides `category`, free-text with suggestions)
