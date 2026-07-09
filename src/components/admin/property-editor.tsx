@@ -870,6 +870,90 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 </Field>
               </div>
 
+              {/* ── アクセス・利用条件 ── */}
+              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                アクセス・利用条件
+              </div>
+              <div className="grid md:grid-cols-3 gap-5">
+                <Field label="利用可能時間" hint="例: 24時間可（要相談）">
+                  <input type="text" {...register("availableHours")} className={inputClass} placeholder="例: 24時間可（要相談）" />
+                </Field>
+                <Field label="撮影可能日" hint="例: 平日／土日祝（要相談）">
+                  <input type="text" {...register("availableDays")} className={inputClass} placeholder="例: 平日／土日祝" />
+                </Field>
+                <Field label="申込期限（リードタイム）" hint="例: 1週間前">
+                  <input type="text" {...register("bookingDeadline")} className={inputClass} placeholder="例: 1週間前" />
+                </Field>
+              </div>
+
+              {/* ── 撮影条件（設備の有無） ── */}
+              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                撮影条件（設備の有無）
+              </div>
+              <div className="grid md:grid-cols-3 gap-5">
+                <Toggle label="火気使用 可" register={register("fireAllowed")} />
+                <Toggle label="控室 あり" register={register("greenRoom")} />
+                <Toggle label="トイレ あり" register={register("restroom")} />
+                <Toggle label="空調 あり" register={register("airConditioning")} />
+                <Toggle label="喫煙所 あり" register={register("smokingArea")} />
+              </div>
+
+              {/* ── 料金の内訳 ── */}
+              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                料金の内訳
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="最低利用時間 (h)" hint="0 = 設定なし">
+                  <input type="number" min={0} {...register("minUsageHours", { valueAsNumber: true })} className={inputClass} placeholder="例: 2" />
+                </Field>
+                <Field label="ロケハン費" hint="例: 1.5hまで無料">
+                  <input type="text" {...register("scoutingFee")} className={inputClass} placeholder="例: 1.5hまで無料" />
+                </Field>
+              </div>
+              <Toggle label="表示金額は税込（オフ = 税別）" register={register("taxIncluded")} />
+              <Field label="追加費用" hint="照明・音響・機材・ピアノ使用など別途かかる費用（複数行可）">
+                <textarea {...register("extraFees")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: ホール照明・音響 別途／ピアノ使用 別途" />
+              </Field>
+
+              {/* ── ルール・規程 ── */}
+              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                ルール・規程
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="禁止事項" hint="複数行可">
+                  <textarea {...register("prohibitedItems")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 火気使用禁止／生活音より大きな音出し禁止" />
+                </Field>
+                <Field label="キャンセルポリシー" hint="複数行可">
+                  <textarea {...register("cancellationPolicy")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 7日前まで無料／前日50%／当日100%" />
+                </Field>
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Toggle label="保険加入 必須" register={register("insuranceRequired")} />
+                <Toggle label="立ち会い 必須" register={register("attendanceRequired")} />
+              </div>
+
+              {/* ── 実績・特徴 ── */}
+              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                実績・特徴
+              </div>
+              <Field label="撮影実績" hint="例: MV／映画／ドラマ／CM">
+                <input type="text" {...register("shootingHistory")} className={inputClass} placeholder="例: MV／映画／ドラマ／CM" />
+              </Field>
+              <Field label="撮影できるシーン・空間" hint="複数行可。例: 教室、屋上、図書館、ホール、中庭円形ステージ">
+                <textarea {...register("availableScenes")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: 教室、屋上、図書館、ホール、中庭円形ステージ" />
+              </Field>
+              <div className="grid md:grid-cols-3 gap-5">
+                <Field label="内装・素材" hint="床/壁の素材・色">
+                  <input type="text" {...register("interiorNotes")} className={inputClass} placeholder="例: 木床・白壁" />
+                </Field>
+                <Field label="自然光の方角" hint="例: 南向き大窓、午前順光">
+                  <input type="text" {...register("lightDirection")} className={inputClass} placeholder="例: 南向き大窓" />
+                </Field>
+                <Field label="周辺環境" hint="例: 湾岸の再開発エリア">
+                  <input type="text" {...register("surroundings")} className={inputClass} placeholder="例: 湾岸の再開発エリア" />
+                </Field>
+              </div>
+
               <Field
                 label="タグ"
                 hint="Enter で確定、× で削除。検索キーワードに使われます。"

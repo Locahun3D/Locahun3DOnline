@@ -253,6 +253,54 @@ export const propertySchema = z.object({
   address: z.string().max(120).default(""),
   /** 最寄り駅（路線・駅名・徒歩分など自由記述）。 */
   nearestStation: z.string().max(80).default(""),
+
+  // ── 利用条件・アクセス ──
+  /** 利用可能時間（例: 24時間可（要相談））。 */
+  availableHours: z.string().max(120).default(""),
+  /** 撮影可能日（例: 平日／土日祝（要相談））。 */
+  availableDays: z.string().max(120).default(""),
+  /** 申込期限・リードタイム（例: 1週間前）。 */
+  bookingDeadline: z.string().max(80).default(""),
+
+  // ── 撮影条件（設備の有無） ──
+  fireAllowed: z.boolean().default(false),
+  greenRoom: z.boolean().default(false),
+  restroom: z.boolean().default(false),
+  airConditioning: z.boolean().default(false),
+  smokingArea: z.boolean().default(false),
+
+  // ── 料金の内訳 ──
+  /** 最低利用時間（h）。0 = 設定なし。 */
+  minUsageHours: z.number().int().min(0).max(999).default(0),
+  /** 表示金額が税込なら true（false = 税別）。 */
+  taxIncluded: z.boolean().default(false),
+  /** ロケハン費（例: 1.5hまで無料）。 */
+  scoutingFee: z.string().max(120).default(""),
+  /** 追加費用（照明・音響・機材など。複数行可）。 */
+  extraFees: z.string().max(500).default(""),
+
+  // ── ルール・規程 ──
+  /** 禁止事項（複数行可）。 */
+  prohibitedItems: z.string().max(1000).default(""),
+  /** キャンセルポリシー（複数行可）。 */
+  cancellationPolicy: z.string().max(1000).default(""),
+  /** 保険加入の要否。 */
+  insuranceRequired: z.boolean().default(false),
+  /** 立ち会いの要否。 */
+  attendanceRequired: z.boolean().default(false),
+
+  // ── 実績・特徴 ──
+  /** 撮影実績（例: MV／映画／ドラマ／CM）。 */
+  shootingHistory: z.string().max(300).default(""),
+  /** 撮影できるシーン・空間（例: 教室、屋上、図書館、ホール。複数行可）。 */
+  availableScenes: z.string().max(500).default(""),
+  /** 内装・床/壁の素材・色。 */
+  interiorNotes: z.string().max(300).default(""),
+  /** 自然光の方角・入り方（例: 南向き大窓、午前順光）。 */
+  lightDirection: z.string().max(80).default(""),
+  /** 周辺環境（例: 静かな住宅街／湾岸の再開発エリア）。 */
+  surroundings: z.string().max(300).default(""),
+
   tags: z.array(z.string().min(1).max(20)).max(20).default([]),
 
   // 2.5 Contact — property-level contact info (overrides account-level)

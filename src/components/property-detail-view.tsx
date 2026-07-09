@@ -12,11 +12,26 @@ import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
 import ZoomableImage from "@/components/zoomable-image";
+import PropertyMap from "@/components/property-map";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
  * rule line, used throughout the SLATE BOARD (pattern-07) restyle.
  */
+/** 見出し付きの縦積みキー・バリュー行（SPECS 以外の詳細ブロック用）。 */
+function KeyVal({ k, children }: { k: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:gap-4 py-2.5 border-b border-line last:border-0">
+      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted sm:w-[150px] shrink-0 pt-0.5">
+        {k}
+      </div>
+      <div className="text-[14px] text-ink/90 whitespace-pre-line flex-1 leading-[1.8]">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Eyebrow({ en, jp }: { en: string; jp: string }) {
   return (
     <h2 className="flex items-center gap-4 mono text-[10.5px] tracking-[0.26em] uppercase text-muted mb-6">
@@ -425,6 +440,15 @@ export default function PropertyDetailView({
                   ...(property.nearestStation
                     ? [["STATION ／ 最寄り駅", property.nearestStation]]
                     : []),
+                  ...(property.availableHours
+                    ? [["HOURS ／ 利用可能時間", property.availableHours]]
+                    : []),
+                  ...(property.availableDays
+                    ? [["DAYS ／ 撮影可能日", property.availableDays]]
+                    : []),
+                  ...(property.bookingDeadline
+                    ? [["LEAD TIME ／ 申込期限", property.bookingDeadline]]
+                    : []),
                   [en ? "POWER ／ 電源" : "POWER ／ 電源", property.powerVoltage || "—"],
                   [
                     "PARKING ／ 駐車場",
@@ -452,6 +476,21 @@ export default function PropertyDetailView({
                     "INTERNET ／ ネット",
                     property.hasInternet ? (en ? "Yes" : "あり") : en ? "No" : "なし",
                   ],
+                  ...(property.airConditioning
+                    ? [["AIR-CON ／ 空調", en ? "Yes" : "あり"]]
+                    : []),
+                  ...(property.greenRoom
+                    ? [["GREEN ROOM ／ 控室", en ? "Yes" : "あり"]]
+                    : []),
+                  ...(property.restroom
+                    ? [["RESTROOM ／ トイレ", en ? "Yes" : "あり"]]
+                    : []),
+                  ...(property.smokingArea
+                    ? [["SMOKING ／ 喫煙所", en ? "Yes" : "あり"]]
+                    : []),
+                  ...(property.fireAllowed
+                    ? [["OPEN FLAME ／ 火気使用", en ? "Allowed" : "可"]]
+                    : []),
                   ["SCAN DATE ／ スキャン日", property.scannedAt || "—"],
                 ].map(([label, value], i) => (
                   <tr key={label as string}>
@@ -512,6 +551,159 @@ export default function PropertyDetailView({
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════════════
+       *  Access — single-marker map + address / station
+       * ══════════════════════════════════════════════════ */}
+      {property.coords && (
+        <section className="frame pt-12">
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+            <Eyebrow en="ACCESS" jp={en ? "Access" : "アクセス"} />
+            <div className="grid lg:grid-cols-[1fr_300px] gap-6">
+              <div className="relative min-h-[280px]">
+                <PropertyMap
+                  lat={property.coords.lat}
+                  lng={property.coords.lng}
+                  label={property.title}
+                />
+              </div>
+              <div className="flex flex-col">
+                <div className="space-y-3 text-[14px] flex-1">
+                  {property.address && (
+                    <div>
+                      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted mb-1">
+                        {en ? "Address" : "住所"}
+                      </div>
+                      <div className="font-medium">{property.address}</div>
+                    </div>
+                  )}
+                  {property.nearestStation && (
+                    <div>
+                      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted mb-1">
+                        {en ? "Nearest station" : "最寄り駅"}
+                      </div>
+                      <div>{property.nearestStation}</div>
+                    </div>
+                  )}
+                </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${property.coords.lat},${property.coords.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block mono text-[11px] tracking-[0.15em] uppercase text-accent hover:underline"
+                >
+                  {en ? "Open in Google Maps →" : "Google Maps で開く →"}
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+       *  Pricing details
+       * ══════════════════════════════════════════════════ */}
+      {(property.minUsageHours > 0 || property.scoutingFee || property.extraFees) && (
+        <section className="frame pt-12">
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+            <Eyebrow en="PRICING" jp={en ? "Pricing details" : "料金・利用条件"} />
+            <div className="max-w-[46em]">
+              {property.minUsageHours > 0 && (
+                <KeyVal k={en ? "Min. booking" : "最低利用時間"}>
+                  {en ? `${property.minUsageHours} h~` : `${property.minUsageHours}時間〜`}
+                </KeyVal>
+              )}
+              <KeyVal k={en ? "Tax" : "税"}>
+                {property.taxIncluded
+                  ? en
+                    ? "Tax included"
+                    : "表示は税込"
+                  : en
+                    ? "Before tax"
+                    : "表示は税別"}
+              </KeyVal>
+              {property.scoutingFee && (
+                <KeyVal k={en ? "Scout fee" : "ロケハン費"}>{property.scoutingFee}</KeyVal>
+              )}
+              {property.extraFees && (
+                <KeyVal k={en ? "Extra fees" : "追加費用"}>{property.extraFees}</KeyVal>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+       *  Rules & policy
+       * ══════════════════════════════════════════════════ */}
+      {(property.prohibitedItems ||
+        property.cancellationPolicy ||
+        property.insuranceRequired ||
+        property.attendanceRequired) && (
+        <section className="frame pt-12">
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+            <Eyebrow en="RULES" jp={en ? "Rules & policy" : "ルール・規程"} />
+            <div className="max-w-[46em]">
+              {property.prohibitedItems && (
+                <KeyVal k={en ? "Prohibited" : "禁止事項"}>{property.prohibitedItems}</KeyVal>
+              )}
+              {property.cancellationPolicy && (
+                <KeyVal k={en ? "Cancellation" : "キャンセル"}>
+                  {property.cancellationPolicy}
+                </KeyVal>
+              )}
+              {(property.insuranceRequired || property.attendanceRequired) && (
+                <KeyVal k={en ? "Requirements" : "必須事項"}>
+                  <div className="flex flex-wrap gap-2">
+                    {property.insuranceRequired && (
+                      <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
+                        {en ? "Insurance required" : "保険加入 必須"}
+                      </span>
+                    )}
+                    {property.attendanceRequired && (
+                      <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
+                        {en ? "Attendance required" : "立ち会い 必須"}
+                      </span>
+                    )}
+                  </div>
+                </KeyVal>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+       *  Track record & features
+       * ══════════════════════════════════════════════════ */}
+      {(property.shootingHistory ||
+        property.availableScenes ||
+        property.interiorNotes ||
+        property.lightDirection ||
+        property.surroundings) && (
+        <section className="frame pt-12">
+          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+            <Eyebrow en="HIGHLIGHTS" jp={en ? "Track record & features" : "実績・特徴"} />
+            <div className="max-w-[46em]">
+              {property.shootingHistory && (
+                <KeyVal k={en ? "Past shoots" : "撮影実績"}>{property.shootingHistory}</KeyVal>
+              )}
+              {property.availableScenes && (
+                <KeyVal k={en ? "Scenes" : "撮影シーン"}>{property.availableScenes}</KeyVal>
+              )}
+              {property.interiorNotes && (
+                <KeyVal k={en ? "Interior" : "内装・素材"}>{property.interiorNotes}</KeyVal>
+              )}
+              {property.lightDirection && (
+                <KeyVal k={en ? "Natural light" : "自然光"}>{property.lightDirection}</KeyVal>
+              )}
+              {property.surroundings && (
+                <KeyVal k={en ? "Surroundings" : "周辺環境"}>{property.surroundings}</KeyVal>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ══════════════════════════════════════════════════
        *  Gallery — "contact sheet" band, white print frames
