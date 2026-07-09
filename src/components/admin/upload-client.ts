@@ -2,6 +2,41 @@
 
 import type { Asset, AssetKind } from "@/lib/schemas";
 
+/**
+ * 画像アップロードをブラウザ側で WebP に再エンコードして軽量化する。
+ * JPEG/PNG のみ対象（既に webp/gif/svg のものは触らない）。長辺 1600px に収め、
+ * 品質 0.82 で変換。変換で逆に大きくなる/失敗した場合は元ファイルをそのまま使う。
+ * これにより公開ページの画像転送量を大幅に削減する（既存画像は別途一括変換）。
+ */
+async function toWebpIfImage(file: File): Promise<File> {
+  if (!/^image\/(jpeg|png)$/i.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const MAXW = 1600;
+    const scale = bmp.width > MAXW ? MAXW / bmp.width : 1;
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bmp.close();
+      return file;
+    }
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const blob = await new Promise<Blob | null>((res) =>
+      canvas.toBlob(res, "image/webp", 0.82),
+    );
+    if (!blob || blob.size >= file.size) return file;
+    const name = file.name.replace(/\.(png|jpe?g)$/i, "") + ".webp";
+    return new File([blob], name, { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
 async function readImageSize(
   file: File,
 ): Promise<{ width?: number; height?: number }> {
@@ -46,6 +81,8 @@ export async function uploadAsset(
   kind: AssetKind,
   opts: { onProgress?: (pct: number) => void } = {},
 ): Promise<Asset> {
+  // 画像は送信前に WebP へ再エンコードして軽量化（対象外/失敗時は原本のまま）。
+  if (kind === "image") file = await toWebpIfImage(file);
   const dims = await readImageSize(file);
 
   const presignRes = await fetch("/api/admin/assets/presign", {

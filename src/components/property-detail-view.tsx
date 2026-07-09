@@ -338,6 +338,10 @@ export default function PropertyDetailView({
             <img
               src={property.cover.src}
               alt={property.cover.alt}
+              width={property.cover.width || undefined}
+              height={property.cover.height || undefined}
+              fetchPriority="high"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-cover"
               style={{ objectPosition: property.cover.focus || "center" }}
             />
@@ -705,6 +709,8 @@ export default function PropertyDetailView({
                   <img
                     src={p.cover.src}
                     alt={p.cover.alt}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full aspect-[2.39/1] object-cover"
                   />
                   <div>

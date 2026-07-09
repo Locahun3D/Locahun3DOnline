@@ -74,6 +74,7 @@ export default function ZoomableImage({
         src={src}
         alt={alt}
         loading="lazy"
+        decoding="async"
         onClick={() => setOpen(true)}
         className={`${className} cursor-zoom-in`}
         style={{ objectPosition: focus || "center" }}
