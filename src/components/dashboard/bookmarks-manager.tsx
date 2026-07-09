@@ -240,7 +240,6 @@ export default function BookmarksManager({
               <img
                 src={tile.cover}
                 alt=""
-                loading="lazy"
                 draggable={false}
                 className={`w-full h-full object-cover transition ${
                   active ? "" : "opacity-85 group-hover:opacity-100"
