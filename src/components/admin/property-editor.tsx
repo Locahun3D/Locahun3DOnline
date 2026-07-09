@@ -831,9 +831,44 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     <Toggle label="自然光あり" register={register("hasNaturalLight")} />
                     <Toggle label="駐車可" register={register("parking")} />
                     <Toggle label="搬入口 大" register={register("loadingDock")} />
+                    <Toggle label="防音あり" register={register("soundproofing")} />
+                    <Toggle label="インターネット" register={register("hasInternet")} />
                   </div>
+
+                  <Field
+                    label="駐車可能台数 (台)"
+                    hint="駐車場が利用可能な場合の台数。0 = 未設定（詳細ページに出しません）。"
+                  >
+                    <input
+                      type="number"
+                      min={0}
+                      {...register("parkingCapacity", { valueAsNumber: true })}
+                      className={inputClass}
+                      placeholder="例: 5"
+                    />
+                  </Field>
                 </>
               )}
+
+              {/* 住所・最寄り駅（料金形態に関わらず入力可。詳細ページ SPECS に表示） */}
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="住所" hint="番地まで（任意）。詳細ページの SPECS に表示されます。">
+                  <input
+                    type="text"
+                    {...register("address")}
+                    className={inputClass}
+                    placeholder="例: 東京都江東区有明2-9-2"
+                  />
+                </Field>
+                <Field label="最寄り駅" hint="路線・駅名・徒歩分など（任意）。">
+                  <input
+                    type="text"
+                    {...register("nearestStation")}
+                    className={inputClass}
+                    placeholder="例: ゆりかもめ 有明駅 徒歩3分"
+                  />
+                </Field>
+              </div>
 
               <Field
                 label="タグ"

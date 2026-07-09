@@ -242,7 +242,17 @@ export const propertySchema = z.object({
   powerVoltage: z.string().max(80).default(""),
   hasNaturalLight: z.boolean().default(false),
   parking: z.boolean().default(false),
+  /** 駐車可能台数（0 = 未設定 / 台数不明）。 */
+  parkingCapacity: z.number().int().min(0).max(9999).default(0),
   loadingDock: z.boolean().default(false),
+  /** 防音設備の有無。 */
+  soundproofing: z.boolean().default(false),
+  /** インターネット回線の有無。 */
+  hasInternet: z.boolean().default(false),
+  /** 住所（都道府県・市区町村より詳細な番地まで）。 */
+  address: z.string().max(120).default(""),
+  /** 最寄り駅（路線・駅名・徒歩分など自由記述）。 */
+  nearestStation: z.string().max(80).default(""),
   tags: z.array(z.string().min(1).max(20)).max(20).default([]),
 
   // 2.5 Contact — property-level contact info (overrides account-level)

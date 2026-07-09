@@ -419,14 +419,38 @@ export default function PropertyDetailView({
             <table className="w-full text-[14px]">
               <tbody>
                 {[
+                  ...(property.address
+                    ? [["ADDRESS ／ 住所", property.address]]
+                    : []),
+                  ...(property.nearestStation
+                    ? [["STATION ／ 最寄り駅", property.nearestStation]]
+                    : []),
                   [en ? "POWER ／ 電源" : "POWER ／ 電源", property.powerVoltage || "—"],
                   [
                     "PARKING ／ 駐車場",
-                    property.parking ? (en ? "Available" : "利用可") : en ? "None" : "なし",
+                    property.parking
+                      ? property.parkingCapacity > 0
+                        ? en
+                          ? `Available (${property.parkingCapacity} cars)`
+                          : `利用可（${property.parkingCapacity}台）`
+                        : en
+                          ? "Available"
+                          : "利用可"
+                      : en
+                        ? "None"
+                        : "なし",
                   ],
                   [
                     "LOAD-IN ／ 搬入口",
                     property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常",
+                  ],
+                  [
+                    "SOUNDPROOF ／ 防音",
+                    property.soundproofing ? (en ? "Yes" : "あり") : en ? "No" : "なし",
+                  ],
+                  [
+                    "INTERNET ／ ネット",
+                    property.hasInternet ? (en ? "Yes" : "あり") : en ? "No" : "なし",
                   ],
                   ["SCAN DATE ／ スキャン日", property.scannedAt || "—"],
                 ].map(([label, value], i) => (
