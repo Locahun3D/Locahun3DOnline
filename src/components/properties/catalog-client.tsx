@@ -35,7 +35,6 @@ const CatalogMap = dynamic(() => import("./catalog-map"), {
 // to 100+ properties of future variety (white cyc walls / outdoor / mansion).
 const PRICE_HR_OPTS  = [5000, 10000, 15000, 20000, 30000, 50000, 100000];
 const PRICE_DAY_OPTS = [30000, 50000, 100000, 200000, 300000, 500000, 1000000];
-const AREA_OPTS      = [30, 50, 100, 200, 500, 1000, 2000];
 const CEILING_OPTS   = [2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0];
 const DISTANCE_OPTS  = [5, 10, 30, 50, 100, 200, 500];
 
@@ -105,7 +104,6 @@ type FilterSnapshot = {
   studioType: string;
   minPrice: number | ""; maxPrice: number | "";
   minDailyPrice: number | ""; maxDailyPrice: number | "";
-  minArea: number | ""; maxArea: number | "";
   minCeiling: number | ""; maxCeiling: number | "";
   maxKmFromRef: number | "";
   requiresDaily: boolean; requiresParking: boolean; requires200V: boolean;
@@ -139,7 +137,6 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
   if (s.area !== "all") parts.push(s.area);
   const pr = rangePart(s.minPrice, s.maxPrice, en ? "hr" : "時", yenFmt); if (pr) parts.push(pr);
   const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, en ? "day" : "日", yenFmt); if (dp) parts.push(dp);
-  const ar = rangePart(s.minArea, s.maxArea, en ? "area" : "面積", (n) => `${n}㎡`); if (ar) parts.push(ar);
   const ce = rangePart(s.minCeiling, s.maxCeiling, en ? "ceil." : "天井", (n) => `${n}m`); if (ce) parts.push(ce);
   if (typeof s.maxKmFromRef === "number") parts.push(`${s.reference.label}≤${s.maxKmFromRef}km`);
   if (s.requiresDaily) parts.push(en ? "daily" : "日貸し可");
@@ -157,7 +154,7 @@ function snapshotKey(s: FilterSnapshot): string {
   return JSON.stringify([
     s.q.trim(), s.category, s.area, s.studioType,
     s.minPrice, s.maxPrice, s.minDailyPrice, s.maxDailyPrice,
-    s.minArea, s.maxArea, s.minCeiling, s.maxCeiling,
+    s.minCeiling, s.maxCeiling,
     s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V,
     [...(s.facilities ?? [])].sort(),
     typeof s.maxKmFromRef === "number" ? s.reference.id : null,
@@ -228,8 +225,6 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
   const [maxPrice, setMaxPrice] = useState<number | "">("");
   const [minDailyPrice, setMinDailyPrice] = useState<number | "">("");
   const [maxDailyPrice, setMaxDailyPrice] = useState<number | "">("");
-  const [minArea, setMinArea] = useState<number | "">("");
-  const [maxArea, setMaxArea] = useState<number | "">("");
   const [minCeiling, setMinCeiling] = useState<number | "">("");
   const [maxCeiling, setMaxCeiling] = useState<number | "">("");
   const [maxKmFromRef, setMaxKmFromRef] = useState<number | "">("");
@@ -246,7 +241,6 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
     setCategory("all"); setArea("all"); setStudioType("all");
     setMinPrice(""); setMaxPrice("");
     setMinDailyPrice(""); setMaxDailyPrice("");
-    setMinArea(""); setMaxArea("");
     setMinCeiling(""); setMaxCeiling("");
     setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
@@ -260,14 +254,14 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
   const snapshot = useMemo<FilterSnapshot>(() => ({
     q, category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
-    minArea, maxArea, minCeiling, maxCeiling,
+    minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
     facilities,
     reference, sort,
   }), [
     q, category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
-    minArea, maxArea, minCeiling, maxCeiling,
+    minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
     facilities,
     reference, sort,
@@ -284,7 +278,6 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
     setCategory(s.category); setArea(s.area); setStudioType(s.studioType);
     setMinPrice(s.minPrice); setMaxPrice(s.maxPrice);
     setMinDailyPrice(s.minDailyPrice); setMaxDailyPrice(s.maxDailyPrice);
-    setMinArea(s.minArea); setMaxArea(s.maxArea);
     setMinCeiling(s.minCeiling); setMaxCeiling(s.maxCeiling);
     setMaxKmFromRef(s.maxKmFromRef);
     setRequiresDaily(s.requiresDaily); setRequiresParking(s.requiresParking); setRequires200V(s.requires200V);
@@ -326,10 +319,6 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
         // dailyPrice 0 means "not offered"; treat as out-of-range only if max filter active
         if (typeof minDailyPrice === "number" && (p.dailyPrice ?? 0) < minDailyPrice) return false;
         if (typeof maxDailyPrice === "number" && ((p.dailyPrice ?? 0) === 0 || (p.dailyPrice ?? 0) > maxDailyPrice)) return false;
-      }
-      if (rangeOk(minArea, maxArea)) {
-        if (typeof minArea === "number" && p.floorAreaSqm < minArea) return false;
-        if (typeof maxArea === "number" && p.floorAreaSqm > maxArea) return false;
       }
       if (rangeOk(minCeiling, maxCeiling)) {
         if (typeof minCeiling === "number" && p.ceilingHeightM < minCeiling) return false;
@@ -376,7 +365,7 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
     items, reference,
     category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
-    minArea, maxArea, minCeiling, maxCeiling,
+    minCeiling, maxCeiling,
     maxKmFromRef,
     requiresDaily, requiresParking, requires200V,
     facilities,
@@ -431,8 +420,6 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
             maxPrice={maxPrice} setMaxPrice={setMaxPrice}
             minDailyPrice={minDailyPrice} setMinDailyPrice={setMinDailyPrice}
             maxDailyPrice={maxDailyPrice} setMaxDailyPrice={setMaxDailyPrice}
-            minArea={minArea} setMinArea={setMinArea}
-            maxArea={maxArea} setMaxArea={setMaxArea}
             minCeiling={minCeiling} setMinCeiling={setMinCeiling}
             maxCeiling={maxCeiling} setMaxCeiling={setMaxCeiling}
             maxKmFromRef={maxKmFromRef} setMaxKmFromRef={setMaxKmFromRef}
@@ -514,8 +501,6 @@ interface FiltersProps {
   maxPrice: number | ""; setMaxPrice: (v: number | "") => void;
   minDailyPrice: number | ""; setMinDailyPrice: (v: number | "") => void;
   maxDailyPrice: number | ""; setMaxDailyPrice: (v: number | "") => void;
-  minArea: number | ""; setMinArea: (v: number | "") => void;
-  maxArea: number | ""; setMaxArea: (v: number | "") => void;
   minCeiling: number | ""; setMinCeiling: (v: number | "") => void;
   maxCeiling: number | ""; setMaxCeiling: (v: number | "") => void;
   maxKmFromRef: number | ""; setMaxKmFromRef: (v: number | "") => void;
@@ -704,12 +689,6 @@ function FiltersPanel(p: FiltersProps) {
           />
         </div>
         <div className="space-y-2">
-          <RangeRow
-            label={en ? "Floor area (㎡)" : "床面積 (㎡)"}
-            min={p.minArea} max={p.maxArea}
-            setMin={p.setMinArea} setMax={p.setMaxArea}
-            options={AREA_OPTS} format={(v) => `${v}㎡`}
-          />
           <RangeRow
             label={en ? "Ceiling (m)" : "天井高 (m)"}
             min={p.minCeiling} max={p.maxCeiling}
