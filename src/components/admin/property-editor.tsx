@@ -755,7 +755,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     道路使用許可 情報（レンタルスタジオ向け仕様は非表示中）
                   </div>
                   <p className="text-[11px] text-muted">
-                    料金が「時間貸し」以外（撮影許可・無料）のため、収容人数・床面積・天井高・電源仕様
+                    料金が「時間貸し」以外（撮影許可・無料）のため、天井高・電源仕様
                     などスタジオ向けの項目は非表示にしています。代わりに許可申請に関する情報を入力してください。
                   </p>
                   <Field
@@ -774,23 +774,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               ) : (
                 <>
                   <div className="grid md:grid-cols-3 gap-5">
-                    <Field label="収容人数 (名)">
-                      <input
-                        type="number"
-                        min={0}
-                        {...register("capacity", { valueAsNumber: true })}
-                        className={inputClass}
-                      />
-                    </Field>
-                    <Field label="床面積 (㎡)">
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        {...register("floorAreaSqm", { valueAsNumber: true })}
-                        className={inputClass}
-                      />
-                    </Field>
                     <Field
                       label="天井高 (m)"
                       hint={

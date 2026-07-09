@@ -1104,8 +1104,6 @@ const SORT_COLS: Array<{
   { label: "時間料金", labelEn: "Hourly",   ascKey: "priceAsc",     descKey: "priceDesc",    ascLabel: "安", descLabel: "高", ascLabelEn: "Low",  descLabelEn: "High" },
   { label: "日料金",   labelEn: "Daily",    ascKey: "dailyAsc",     descKey: "dailyDesc",    ascLabel: "安", descLabel: "高", ascLabelEn: "Low",  descLabelEn: "High" },
   { label: "天井",     labelEn: "Ceiling",  ascKey: "ceilingDesc",  descKey: "ceilingAsc",   ascLabel: "高", descLabel: "低", ascLabelEn: "High", descLabelEn: "Low" },
-  { label: "面積",     labelEn: "Area",     ascKey: "areaDesc",     descKey: "areaAsc",      ascLabel: "広", descLabel: "狭", ascLabelEn: "Big",  descLabelEn: "Small" },
-  { label: "収容",     labelEn: "Capacity", ascKey: "capacityDesc", descKey: "capacityAsc",  ascLabel: "多", descLabel: "少", ascLabelEn: "Many", descLabelEn: "Few" },
   { label: "距離",     labelEn: "Distance", ascKey: "distanceAsc",  descKey: "distanceDesc", ascLabel: "近", descLabel: "遠", ascLabelEn: "Near", descLabelEn: "Far" },
 ];
 
@@ -1241,10 +1239,8 @@ function PropertyCardLite({
         <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2 min-h-[3.05rem]">
           {property.title}
         </h3>
-        <div className="grid grid-cols-4 gap-1.5 text-[10px] mono text-muted">
-          <Stat label={en ? "Area" : "面積"} value={`${property.floorAreaSqm}㎡`} />
+        <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">
           <Stat label={en ? "Ceiling" : "天井"} value={property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
-          <Stat label={en ? "Cap." : "収容"} value={en ? `${property.capacity}` : `${property.capacity}名`} />
           <Stat label={en ? "Park" : "駐車"} value={property.parking ? (en ? "Yes" : "可") : "—"} accent={property.parking} />
         </div>
         {property.powerVoltage && (

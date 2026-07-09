@@ -378,12 +378,10 @@ export default function PropertyDetailView({
               )}
             </div>
 
-            {/* 4-metric mini grid, folded into the Overview card */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7">
+            {/* mini metric grid, folded into the Overview card */}
+            <div className="grid grid-cols-2 gap-3 mt-7">
               {[
-                [en ? "Area" : "面積", `${property.floorAreaSqm}`, "㎡"],
                 [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", "m"],
-                [en ? "Capacity" : "収容", `${property.capacity}`, en ? "ppl" : "名"],
                 [
                   en ? "Natural light" : "自然光",
                   property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",
