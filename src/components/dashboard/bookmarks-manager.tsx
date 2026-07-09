@@ -179,7 +179,9 @@ export default function BookmarksManager({
   }) => {
     const active = activeBoard === tile.key;
     const over = dragOverBoard === tile.key;
-    const droppable = tile.key !== ALL && draggingId !== null;
+    // ALL は「すべての保存」ビューなのでドロップ不可。ハンドラは常時付ける
+    // （draggingId でゲートすると再レンダ前の初回 dragover を取りこぼすため）。
+    const droppable = tile.key !== ALL;
     return (
       <button
         type="button"
