@@ -65,7 +65,13 @@ export default function PropertyCard({ property, locale = "ja" }: { property: Pr
           </div>
           <div>
             <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">{en ? "Ceiling" : "天井"}</div>
-            <div className="text-ink">{property.ceilingHeightM || "—"}m</div>
+            <div className="text-ink">
+              {property.category === "outdoor"
+                ? en ? "Outdoor" : "屋外"
+                : property.ceilingHeightM
+                  ? `${property.ceilingHeightM}m`
+                  : "—"}
+            </div>
           </div>
           <div>
             <div className="opacity-50 text-[9px] uppercase tracking-[0.22em]">{en ? "Cap." : "収容"}</div>

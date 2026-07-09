@@ -396,7 +396,10 @@ export default function PropertyDetailView({
             {/* mini metric grid, folded into the Overview card */}
             <div className="grid grid-cols-2 gap-3 mt-7">
               {[
-                [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", "m"],
+                // 屋外は天井が無いので「屋外」表記（数値がある時のみ m を付ける）。
+                property.category === "outdoor"
+                  ? [en ? "Ceiling" : "天井高", en ? "Outdoor" : "屋外", ""]
+                  : [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", property.ceilingHeightM ? "m" : ""],
                 [
                   en ? "Natural light" : "自然光",
                   property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",

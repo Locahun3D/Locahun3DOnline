@@ -1219,7 +1219,7 @@ function PropertyCardLite({
           {property.title}
         </h3>
         <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">
-          <Stat label={en ? "Ceiling" : "天井"} value={property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
+          <Stat label={en ? "Ceiling" : "天井"} value={property.category === "outdoor" ? (en ? "Outdoor" : "屋外") : property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
           <Stat label={en ? "Park" : "駐車"} value={property.parking ? (en ? "Yes" : "可") : "—"} accent={property.parking} />
         </div>
         {property.powerVoltage && (
