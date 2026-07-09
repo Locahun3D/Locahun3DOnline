@@ -52,7 +52,15 @@ export default function BookmarkButton({
 
   const openPopover = () => {
     const r = btnRef.current?.getBoundingClientRect();
-    if (r) setAnchor({ top: r.bottom + 6, left: r.left, width: r.width });
+    if (r) {
+      const W = 256;
+      const vw = window.innerWidth;
+      // 右寄りのボタンは左方向へ開く（右端はみ出し防止）。
+      let left = r.left;
+      if (r.left + W > vw - 12) left = r.right - W;
+      left = Math.max(12, Math.min(left, vw - W - 12));
+      setAnchor({ top: r.bottom + 6, left, width: r.width });
+    }
     setOpen(true);
     setCtx((c) => ({ ...c, loading: true }));
     getBookmarkContextAction(propertyId).then((res) => {
@@ -238,9 +246,8 @@ function SavePopover({
     };
   }, [onClose]);
 
-  // ビューポート右端からはみ出さないよう左位置をクランプ（幅 256px）。
+  // 位置は openPopover 側で右端はみ出しを考慮して算出済み（幅 256px）。
   const W = 256;
-  const left = Math.min(anchor.left, (typeof window !== "undefined" ? window.innerWidth : 1440) - W - 12);
 
   const rowCls =
     "w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] hover:bg-accent/10 transition";
@@ -250,7 +257,7 @@ function SavePopover({
       ref={ref}
       role="menu"
       className="fixed z-[70] bg-bg border border-line shadow-2xl"
-      style={{ top: anchor.top, left: Math.max(12, left), width: W }}
+      style={{ top: anchor.top, left: anchor.left, width: W }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-2 border-b border-line mono text-[10px] tracking-[0.22em] uppercase text-muted">
