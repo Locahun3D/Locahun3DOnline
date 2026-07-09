@@ -9,6 +9,7 @@ import {
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
+import { commentRepo } from "@/lib/comments";
 import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
@@ -88,6 +89,10 @@ export default async function PropertyDetailPage({
   // splatItem.id で判定する（index だと並び替え/3DGS差し替えで対応がズレる）。
   // 旧レコード（splatItemId 未設定）は記録時の index から現在の id を逆引きする。
   const unlockedItemIds: string[] = [];
+  // 会員限定掲示板: 未サインインには本文を一切渡さない（サーバーHTMLにも含めない）。
+  const comments = signedIn
+    ? await commentRepo.list(property.id).catch(() => [])
+    : [];
   if (user) {
     try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
@@ -134,6 +139,9 @@ export default async function PropertyDetailPage({
         signedIn={signedIn}
         bookmarked={bookmarked}
         locale={locale}
+        comments={comments}
+        currentUserId={user?.id ?? null}
+        isAdminUser={user?.role === "admin"}
       />
     </>
   );

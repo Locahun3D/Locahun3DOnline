@@ -13,6 +13,7 @@ import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
 import ZoomableImage from "@/components/zoomable-image";
 import PropertyMap from "@/components/property-map";
+import PropertyComments, { type CommentItem } from "@/components/property-comments";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
@@ -101,6 +102,9 @@ export default function PropertyDetailView({
   bookmarked = false,
   locale = "ja",
   previewControls = null,
+  comments = [],
+  currentUserId = null,
+  isAdminUser = false,
 }: {
   property: Property;
   others: Property[];
@@ -118,6 +122,10 @@ export default function PropertyDetailView({
   locale?: Locale;
   /** 管理プレビューのバナー内に差し込む追加コントロール（プラン切替等）。 */
   previewControls?: React.ReactNode;
+  /** 会員限定掲示板の初期コメント一覧。 */
+  comments?: CommentItem[];
+  currentUserId?: string | null;
+  isAdminUser?: boolean;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -856,6 +864,25 @@ export default function PropertyDetailView({
                   )}
                 </section>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════
+         *  Board — 会員限定の物件別掲示板
+         * ══════════════════════════════════════════════════ */}
+        {!preview && (
+          <section className="mb-14">
+            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
+              <Eyebrow en="BOARD" jp={en ? "Board (members only)" : "掲示板（会員限定）"} />
+              <PropertyComments
+                propertyId={property.id}
+                comments={comments}
+                currentUserId={currentUserId}
+                isAdmin={isAdminUser}
+                signedIn={signedIn}
+                locale={locale}
+              />
             </div>
           </section>
         )}
