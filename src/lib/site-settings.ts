@@ -6,6 +6,7 @@
  */
 import "server-only";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
@@ -50,6 +51,32 @@ async function seedValue(): Promise<SiteSettings> {
   }
 }
 
+const SETTINGS_TAG = "site-settings";
+
+/** Workers 上の D1 読取（キャッシュ無し・実体）。 */
+async function readSettingsFromD1(): Promise<SiteSettings> {
+  const db = await getD1();
+  if (!db) return seedValue();
+  const fromD1 = await d1GetSettings(db);
+  if (fromD1) return fromD1;
+  // D1 未初期化 → 旧本番/seed を非破壊で投入して返す。
+  const seed = await seedValue();
+  await d1PutSettings(db, seed);
+  return seed;
+}
+
+/**
+ * D1 読取を 60 秒だけデータキャッシュする。
+ * 無料期間の「開始/終了」は設定値(freePeriod の時刻窓)とリクエスト毎の現在時刻の
+ * 比較で判定される（isFreePeriodActive）。時刻窓自体はキャッシュされても、現在時刻は
+ * 毎回新しいので境界での自動切替は即時のまま。遅延し得るのは「管理者が設定を変更した」
+ * 場合のみで、最大 60 秒で反映される（許容済みのトレードオフ）。
+ */
+const getSettingsCached = unstable_cache(readSettingsFromD1, ["site-settings-read"], {
+  revalidate: 60,
+  tags: [SETTINGS_TAG],
+});
+
 export const getSettings = cache(async (): Promise<SiteSettings> => {
   if (canAccessLocalFs()) {
     try {
@@ -59,14 +86,12 @@ export const getSettings = cache(async (): Promise<SiteSettings> => {
       return DEFAULT_SETTINGS;
     }
   }
-  const db = await getD1();
-  if (!db) return seedValue();
-  const fromD1 = await d1GetSettings(db);
-  if (fromD1) return fromD1;
-  // D1 未初期化 → 旧本番/seed を非破壊で投入して返す。
-  const seed = await seedValue();
-  await d1PutSettings(db, seed);
-  return seed;
+  // データキャッシュ層が不調でも設定は必ず返す（直接読みにフォールバック）。
+  try {
+    return await getSettingsCached();
+  } catch {
+    return readSettingsFromD1();
+  }
 });
 
 export async function saveSettings(s: SiteSettings): Promise<SiteSettings> {
@@ -78,5 +103,6 @@ export async function saveSettings(s: SiteSettings): Promise<SiteSettings> {
   const db = await getD1();
   if (!db) throw new Error("D1 が利用できません");
   await d1PutSettings(db, validated);
+  // 変更は getSettings 側の 60 秒キャッシュ失効で反映される（最大 60 秒）。
   return validated;
 }
