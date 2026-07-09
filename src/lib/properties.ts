@@ -2,7 +2,6 @@ import { cache } from "react";
 import { repo } from "./store";
 import { getCurrentUser } from "./dal";
 import { canViewConfidential } from "./account-schema";
-import { haversineKm } from "./distance";
 import type { Property, PropertyCategory } from "./schemas";
 
 export type {
@@ -103,36 +102,32 @@ export const getPublishedProperty = cache(async (
 });
 
 /**
- * 「類似スタジオ」の関連度スコア。カテゴリ一致を最重視し、エリア・スタジオ
- * 種類・タグの共有・座標の近さ・時間料金の近さで加点する。単に「他の公開
- * 物件を先頭からN件」だとカテゴリも場所も無関係なものが並んでしまうため、
- * 実際に関連が薄いものはスコア0のまま除外する（0点フォールバックはしない）。
+ * 「類似スタジオ」の関連度スコア。距離・エリア等の地理的近さは見ず、
+ * タグの共有とスタジオとしての性質（カテゴリ・スタジオ種類・料金形態・
+ * 設備の有無）の類似性だけで判定する。単に「他の公開物件を先頭からN件」
+ * だと性質の異なるものが並んでしまうため、無関係なものはスコア0のまま
+ * 除外する（0点フォールバックはしない）。
  */
 function relatedScore(base: Property, candidate: Property): number {
   let score = 0;
-  if (candidate.category === base.category) score += 40;
-  if (base.area && candidate.area === base.area) score += 20;
-  if (base.studioType && candidate.studioType === base.studioType) score += 15;
-  if (base.prefecture && candidate.prefecture === base.prefecture) score += 8;
-  if (base.city && candidate.city === base.city) score += 8;
+  if (candidate.category === base.category) score += 30;
+  if (base.studioType && candidate.studioType === base.studioType) score += 20;
+  // 料金形態（時間貸し/撮影許可/無料）はレンタルスタジオか許可制ロケ地かという
+  // スタジオ性質そのものの違いを表す。
+  if (base.priceType === candidate.priceType) score += 10;
 
+  // タグの共有をもっとも重視する（最大5個・1個+8点）。
   const baseTags = new Set(base.tags);
   const sharedTags = candidate.tags.filter((t) => baseTags.has(t)).length;
-  score += Math.min(sharedTags, 4) * 5;
+  score += Math.min(sharedTags, 5) * 8;
 
-  // 座標が近いほど加点（渋谷横丁・北谷公園・スクランブル交差点のように
-  // 同エリアの別ロケーションを「近くの候補」として拾える）。
-  if (base.coords && candidate.coords) {
-    const km = haversineKm(base.coords, candidate.coords);
-    if (km < 3) score += 25;
-    else if (km < 15) score += 15;
-    else if (km < 50) score += 5;
-  }
-
-  if (base.hourlyPrice > 0 && candidate.hourlyPrice > 0) {
-    const ratio = candidate.hourlyPrice / base.hourlyPrice;
-    if (ratio >= 0.5 && ratio <= 2) score += 10;
-  }
+  // 設備の性質が両方とも「ある」場合のみ加点（両方「なし」の一致は
+  // スタジオとしての特徴一致とは言えないため対象外）。
+  if (base.hasNaturalLight && candidate.hasNaturalLight) score += 4;
+  if (base.parking && candidate.parking) score += 4;
+  if (base.loadingDock && candidate.loadingDock) score += 4;
+  if (base.soundproofing && candidate.soundproofing) score += 4;
+  if (base.hasInternet && candidate.hasInternet) score += 4;
 
   return score;
 }
