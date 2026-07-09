@@ -116,9 +116,18 @@ function relatedScore(base: Property, candidate: Property): number {
   // スタジオ性質そのものの違いを表す。
   if (base.priceType === candidate.priceType) score += 10;
 
-  // タグの共有をもっとも重視する（最大5個・1個+8点）。
-  const baseTags = new Set(base.tags);
-  const sharedTags = candidate.tags.filter((t) => baseTags.has(t)).length;
+  // タグの共有をもっとも重視する（最大5個・1個+8点）。ただし都道府県名・
+  // エリア名がそのままタグに紛れているケース（例:「東京都」）は場所の情報で
+  // あってスタジオ性質ではないため、共有判定から除外する。
+  const locationNoise = new Set(
+    [base.prefecture, candidate.prefecture, base.area, candidate.area].filter(
+      Boolean,
+    ),
+  );
+  const baseTags = new Set(base.tags.filter((t) => !locationNoise.has(t)));
+  const sharedTags = candidate.tags.filter(
+    (t) => !locationNoise.has(t) && baseTags.has(t),
+  ).length;
   score += Math.min(sharedTags, 5) * 8;
 
   // 設備の性質が両方とも「ある」場合のみ加点（両方「なし」の一致は
