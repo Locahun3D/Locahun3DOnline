@@ -175,3 +175,72 @@ export async function setBookmarkTagsAction(
   revalidatePath(BOOKMARKS_PATH);
   return { ok: true, tags: cleaned };
 }
+
+/**
+ * Pinterest 風の保存ポップオーバー用: この物件の保存状態と、ユーザーの
+ * フォルダ一覧をまとめて返す（ポップオーバーを開いた時に遅延取得する）。
+ */
+export async function getBookmarkContextAction(propertyId: string): Promise<{
+  signedIn: boolean;
+  bookmarked: boolean;
+  folderId: string | null;
+  folders: { id: string; name: string }[];
+}> {
+  const user = await getCurrentUser();
+  if (!user) return { signedIn: false, bookmarked: false, folderId: null, folders: [] };
+  const u = await userRepo.get(user.id);
+  if (!u) return { signedIn: true, bookmarked: false, folderId: null, folders: [] };
+  return {
+    signedIn: true,
+    bookmarked: (u.bookmarks ?? []).includes(propertyId),
+    folderId: (u.bookmarkFolderAssignments ?? {})[propertyId] ?? null,
+    folders: u.bookmarkFolders ?? [],
+  };
+}
+
+/**
+ * Pinterest 風の保存: 物件をブックマーク（未保存なら追加）しつつ、指定フォルダへ
+ * 割り当てる（folderId=null で未整理）。新規フォルダ名を渡した場合は先に作成する。
+ * ブックマーク追加とフォルダ割り当てを1アクションにまとめ、ポップオーバーから
+ * 1クリックで「このボードに保存」を実現する。
+ */
+export async function saveBookmarkToFolderAction(
+  propertyId: string,
+  folderId: string | null,
+  opts?: { newFolderName?: string; revalidate?: string },
+): Promise<{ ok: boolean; folderId: string | null; folder?: { id: string; name: string } }> {
+  const user = await getCurrentUser();
+  if (!user || !propertyId) return { ok: false, folderId: null };
+  const u = await userRepo.get(user.id);
+  if (!u) return { ok: false, folderId: null };
+
+  let createdFolder: { id: string; name: string } | undefined;
+  let folders = u.bookmarkFolders ?? [];
+  let targetFolder = folderId;
+
+  const newName = opts?.newFolderName?.trim().slice(0, 60);
+  if (newName) {
+    createdFolder = { id: nanoid(10), name: newName };
+    folders = [...folders, createdFolder];
+    targetFolder = createdFolder.id;
+  }
+
+  const bookmarks = new Set(u.bookmarks ?? []);
+  bookmarks.add(propertyId);
+
+  const assignments = { ...(u.bookmarkFolderAssignments ?? {}) };
+  if (targetFolder) assignments[propertyId] = targetFolder;
+  else delete assignments[propertyId];
+
+  await userRepo.upsert({
+    ...u,
+    bookmarks: [...bookmarks],
+    bookmarkFolders: folders,
+    bookmarkFolderAssignments: assignments,
+  });
+
+  revalidatePath(BOOKMARKS_PATH);
+  revalidatePath("/account");
+  if (opts?.revalidate) revalidatePath(opts.revalidate);
+  return { ok: true, folderId: targetFolder ?? null, folder: createdFolder };
+}
