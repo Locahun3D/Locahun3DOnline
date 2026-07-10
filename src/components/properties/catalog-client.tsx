@@ -608,8 +608,8 @@ function FiltersPanel(p: FiltersProps) {
         </div>
 
         <Row label={en ? "Reference / distance" : "参照地点 / 距離"}>
-          <div className="flex flex-col sm:flex-row sm:items-start gap-2">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="flex-1 min-w-[220px]">
               <ReferencePicker
                 value={p.reference}
                 onChange={p.setReference}
@@ -1012,7 +1012,7 @@ function ReferencePicker({
             else if (e.key === "Escape") setOpen(false);
           }}
           placeholder={en ? "Shibuya Sta. / Osaka Sta. / 35.66, 139.70 / ..." : "渋谷駅 / 大阪駅 / 35.66, 139.70 / ..."}
-          className={`${inputCls} flex-1`}
+          className={`${inputCls} flex-1 min-w-0`}
         />
         <button
           type="button"
