@@ -7,6 +7,7 @@ import {
   deleteCommentAction,
   reportCommentAction,
   unhideCommentAction,
+  toggleCommentLikeAction,
 } from "@/lib/comment-actions";
 
 export interface CommentItem {
@@ -18,7 +19,13 @@ export interface CommentItem {
   parentId: string;
   reports?: { userId: string; at: string }[];
   hiddenByReports?: boolean;
+  likedBy?: string[];
 }
+
+/** デフォルトで表示するルートスレッド数（超過分は「すべて表示」で展開）。 */
+const ROOT_PAGE_SIZE = 3;
+/** スレッド内でデフォルト表示する返信数（超過分は「他N件を表示」で展開）。 */
+const REPLY_PAGE_SIZE = 2;
 
 const AVATAR_COLORS = ["#4a6d8c", "#1ea0c4", "#8c6d4a", "#5e8c4a", "#8c4a6d", "#6d4a8c"];
 function avatarColor(userId: string): string {
@@ -87,7 +94,24 @@ function groupIntoThreads(comments: CommentItem[]): ThreadGroup[] {
     group.replies.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
-  return order.map((key) => groups.get(key)!);
+  // 表示順 = ルートのいいね数 降順 → 同数なら新しい順。
+  // トゥームストーン（root が null）はいいね 0 扱いで、返信の最新日時をタイブレークに使う。
+  function likeCount(group: ThreadGroup): number {
+    return group.root?.likedBy?.length ?? 0;
+  }
+  function tieBreakDate(group: ThreadGroup): string {
+    if (group.root) return group.root.createdAt;
+    const last = group.replies[group.replies.length - 1];
+    return last?.createdAt ?? "";
+  }
+
+  return order
+    .map((key) => groups.get(key)!)
+    .sort((a, b) => {
+      const diff = likeCount(b) - likeCount(a);
+      if (diff !== 0) return diff;
+      return tieBreakDate(b).localeCompare(tieBreakDate(a));
+    });
 }
 
 /**
@@ -120,6 +144,9 @@ export default function PropertyComments({
   const [replyOpenId, setReplyOpenId] = useState<string | null>(null);
   const [replyError, setReplyError] = useState<string | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
+  const [likePending, setLikePending] = useState<Set<string>>(new Set());
+  const [showAllThreads, setShowAllThreads] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLFormElement>(null);
   const replyFormRef = useRef<HTMLFormElement>(null);
   const revalidate = `/properties/${propertyId}`;
@@ -212,6 +239,36 @@ export default function PropertyComments({
         setComments((c) => c.filter((x) => x.id !== id));
       }
       setRemovingId(null);
+    });
+  };
+
+  const onToggleLike = (id: string) => {
+    if (!currentUserId || likePending.has(id)) return;
+    const uid = currentUserId;
+    // 楽観更新: 即座に自分の userId を追加/削除してからサーバーに反映。失敗時は戻す。
+    const before = comments;
+    setComments((c) =>
+      c.map((x) => {
+        if (x.id !== id) return x;
+        const likedBy = x.likedBy ?? [];
+        const liked = likedBy.includes(uid);
+        return { ...x, likedBy: liked ? likedBy.filter((u) => u !== uid) : [...likedBy, uid] };
+      }),
+    );
+    setLikePending((s) => new Set(s).add(id));
+    startTransition(async () => {
+      const res = await toggleCommentLikeAction(id);
+      if (res.ok && res.likedBy) {
+        const likedBy = res.likedBy;
+        setComments((c) => c.map((x) => (x.id === id ? { ...x, likedBy } : x)));
+      } else {
+        setComments(before);
+      }
+      setLikePending((s) => {
+        const next = new Set(s);
+        next.delete(id);
+        return next;
+      });
     });
   };
 
@@ -317,6 +374,25 @@ export default function PropertyComments({
           <div className="flex items-center gap-3 mt-2">
             <button
               type="button"
+              onClick={() => onToggleLike(c.id)}
+              disabled={likePending.has(c.id)}
+              aria-pressed={(c.likedBy ?? []).includes(currentUserId ?? "")}
+              aria-label={en ? "Like" : "いいね"}
+              className="flex items-center gap-1 mono text-[10px] tracking-[0.1em] text-muted hover:text-accent transition disabled:opacity-50"
+            >
+              {(c.likedBy ?? []).includes(currentUserId ?? "") ? (
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" className="text-accent" aria-hidden="true">
+                  <path d="M12 21s-6.7-4.35-9.3-8.3C1.1 10.4 1.6 7.3 4 5.7c2-1.3 4.4-.8 5.9.9L12 8.6l2.1-2c1.5-1.7 3.9-2.2 5.9-.9 2.4 1.6 2.9 4.7 1.3 7-2.6 3.95-9.3 8.3-9.3 8.3z" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 21s-6.7-4.35-9.3-8.3C1.1 10.4 1.6 7.3 4 5.7c2-1.3 4.4-.8 5.9.9L12 8.6l2.1-2c1.5-1.7 3.9-2.2 5.9-.9 2.4 1.6 2.9 4.7 1.3 7-2.6 3.95-9.3 8.3-9.3 8.3z" />
+                </svg>
+              )}
+              {(c.likedBy ?? []).length > 0 && <span className={(c.likedBy ?? []).includes(currentUserId ?? "") ? "text-accent" : ""}>{(c.likedBy ?? []).length}</span>}
+            </button>
+            <button
+              type="button"
               onClick={() => setReplyOpenId((id) => (id === c.id ? null : c.id))}
               className="mono text-[10px] tracking-[0.1em] uppercase text-muted hover:text-accent transition"
             >
@@ -405,6 +481,8 @@ export default function PropertyComments({
     );
   };
 
+  const visibleThreads = showAllThreads ? threads : threads.slice(0, ROOT_PAGE_SIZE);
+
   return (
     <div>
       {threads.length === 0 ? (
@@ -413,9 +491,15 @@ export default function PropertyComments({
         </p>
       ) : (
         <div className="flex flex-col gap-3 mb-4">
-          {threads.map((group) => {
+          {visibleThreads.map((group) => {
             const rootIsHiddenForNonAdmin = !!group.root?.hiddenByReports && !isAdmin;
             if (rootIsHiddenForNonAdmin && group.replies.length === 0) return null;
+
+            const repliesExpanded = expandedReplies.has(group.rootKey);
+            const visibleReplies = repliesExpanded
+              ? group.replies
+              : group.replies.slice(0, REPLY_PAGE_SIZE);
+            const hiddenReplyCount = group.replies.length - visibleReplies.length;
 
             return (
               <div key={group.rootKey} className="flex flex-col gap-3">
@@ -428,7 +512,7 @@ export default function PropertyComments({
                 )}
                 {group.replies.length > 0 && (
                   <div className="ml-10 pl-4 border-l-2 border-line flex flex-col gap-3">
-                    {group.replies.map((r) => {
+                    {visibleReplies.map((r) => {
                       const directParent = r.parentId ? byId.get(r.parentId) : null;
                       // 直接の親がルートそのものなら "返信への返信" チップは出さない。
                       const isReplyToRoot = group.root ? r.parentId === group.root.id : false;
@@ -439,11 +523,42 @@ export default function PropertyComments({
                           : null;
                       return renderCard(r, { small: true, replyToName });
                     })}
+                    {hiddenReplyCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedReplies((s) => new Set(s).add(group.rootKey))
+                        }
+                        className="self-start mono text-[10px] tracking-[0.1em] text-accent hover:underline"
+                      >
+                        {en
+                          ? `Show ${hiddenReplyCount} more repl${hiddenReplyCount === 1 ? "y" : "ies"}`
+                          : `他${hiddenReplyCount}件の返信を表示`}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {threads.length > ROOT_PAGE_SIZE && (
+        <div className="flex justify-center mb-5">
+          <button
+            type="button"
+            onClick={() => setShowAllThreads((v) => !v)}
+            className="mono text-[10px] tracking-[0.18em] uppercase border border-line text-muted px-4 py-2 hover:border-ink/40 hover:text-ink transition"
+          >
+            {showAllThreads
+              ? en
+                ? "Collapse"
+                : "折りたたむ"
+              : en
+                ? `Show all comments (${threads.length})`
+                : `すべてのコメントを表示（全${threads.length}件）`}
+          </button>
         </div>
       )}
 

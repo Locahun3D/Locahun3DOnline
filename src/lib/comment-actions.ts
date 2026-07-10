@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./dal";
+import { publicDisplayName } from "./account-schema";
 import { commentRepo } from "./comments";
 import { validateCommentBody } from "./comment-guard";
 
@@ -82,12 +83,13 @@ export async function postCommentAction(
     id: randomUUID(),
     propertyId,
     userId: user.id,
-    userName: user.name || "匿名ユーザー",
+    userName: publicDisplayName(user) || "匿名ユーザー",
     body,
     createdAt: new Date().toISOString(),
     parentId,
     reports: [],
     hiddenByReports: false,
+    likedBy: [],
   });
 
   if (revalidate) revalidatePath(revalidate);
@@ -154,6 +156,30 @@ export async function reportCommentAction(
   await commentRepo.upsert({ ...comment, reports, hiddenByReports });
   if (revalidate) revalidatePath(revalidate);
   return { ok: true, hidden: hiddenByReports };
+}
+
+/**
+ * コメントへの いいね トグル。サインイン必須。自分のコメントにもいいね可。
+ * likedBy に自分の userId が無ければ追加、あれば削除する（冪等なトグル）。
+ * IDOR対策で判定はサーバー側のみ、レスポンスは最新の likedBy を返す。
+ */
+export async function toggleCommentLikeAction(
+  commentId: string,
+): Promise<{ ok: boolean; likedBy?: string[]; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "いいねにはサインインが必要です。" };
+
+  const comment = await commentRepo.get(commentId);
+  if (!comment) return { ok: false, error: "コメントが見つかりませんでした。" };
+
+  const current = comment.likedBy ?? [];
+  const alreadyLiked = current.includes(user.id);
+  const likedBy = alreadyLiked
+    ? current.filter((id) => id !== user.id)
+    : [...current, user.id];
+
+  const updated = await commentRepo.upsert({ ...comment, likedBy });
+  return { ok: true, likedBy: updated.likedBy };
 }
 
 /**

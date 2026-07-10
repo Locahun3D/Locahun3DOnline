@@ -33,6 +33,9 @@ export const commentSchema = z.object({
     .default([]),
   /** 通報が閾値に達し非admin閲覧から自動的に隠された状態。 */
   hiddenByReports: z.boolean().default(false),
+  /** いいね済みユーザーIDの一覧（toggleCommentLikeAction で追加/削除）。
+   * 既存データには存在しないため default([]) で後方互換を保つ。 */
+  likedBy: z.array(z.string()).default([]),
 });
 export type Comment = z.infer<typeof commentSchema>;
 
