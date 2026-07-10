@@ -132,6 +132,12 @@ export default function PropertyDetailView({
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
+  // 問い合わせ先（電話/メール/HP）が1つも無い物件は問い合わせを受け付けられない
+  const hasContact = !!(
+    property.contactPhone ||
+    property.contactEmail ||
+    property.contactWebsite
+  );
 
   // フィルタ後も「元の splatItems 内 index」を保持する。トークン課金・アンロック
   // 判定はサーバ側の元 index を基準にするため、表示側もそれに合わせる必要がある。
@@ -943,21 +949,25 @@ export default function PropertyDetailView({
                     </a>
                   </div>
                 )}
-                {!property.contactPhone && !property.contactEmail && !property.contactWebsite && (
+                {!hasContact && (
                   <p className="text-ink/50 text-[13px] py-3">
                     {en
-                      ? "Use the inquiry form to get in touch."
-                      : "フォームからお問い合わせください。"}
+                      ? "This property is not accepting inquiries at the moment."
+                      : "この物件は現在お問い合わせを受け付けていません。"}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2.5">
-                <InquiryPanel
-                  propertyId={property.id}
-                  propertyTitle={property.title}
-                  locale={locale}
-                />
+                {/* 問い合わせ先が1つも登録されていない物件では、転送先が無く
+                    回答もできないためフォーム自体を出さない（ブックマークのみ）。 */}
+                {hasContact && (
+                  <InquiryPanel
+                    propertyId={property.id}
+                    propertyTitle={property.title}
+                    locale={locale}
+                  />
+                )}
                 <div className="[&>button]:w-full [&>button]:justify-center">
                   <BookmarkButton
                     propertyId={property.id}
@@ -966,9 +976,11 @@ export default function PropertyDetailView({
                     revalidate={`/properties/${property.id}`}
                   />
                 </div>
-                <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
-                  {en ? "RESPONSE WITHIN 1 BUSINESS DAY" : "RESPONSE WITHIN 1 BUSINESS DAY"}
-                </p>
+                {hasContact && (
+                  <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
+                    RESPONSE WITHIN 1 BUSINESS DAY
+                  </p>
+                )}
               </div>
             </div>
           </div>
