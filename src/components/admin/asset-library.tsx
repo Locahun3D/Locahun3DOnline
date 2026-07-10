@@ -89,6 +89,19 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
     });
   }, [assets, kindFilter, onlyUnused, tagFilter, q, usage]);
 
+  // 形式（画像/3DGS/ZIP/書類）ごとにセクション分けして表示する。
+  // フィルタ適用後の集合を分配するので、検索・タグ・未使用の絞り込みと共存する。
+  const KIND_ORDER: AssetKind[] = ["image", "splat", "zip", "document"];
+  const grouped = useMemo(
+    () =>
+      KIND_ORDER.map((kind) => ({
+        kind,
+        items: filtered.filter((a) => a.kind === kind),
+      })).filter((g) => g.items.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered],
+  );
+
   async function handleFiles(list: FileList | File[]) {
     setError(null);
     for (const file of Array.from(list)) {
@@ -212,8 +225,19 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
       ))}
 
       {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {filtered.map((a) => {
+      {/* 形式（画像/3DGS/ZIP/書類）ごとのセクション */}
+      <div className="space-y-9">
+        {grouped.map(({ kind, items }) => (
+          <section key={kind}>
+            <div className="flex items-baseline gap-2 mb-3 border-b border-line pb-1.5">
+              <span className="text-[13px] opacity-60">{kindIcons[kind]}</span>
+              <h2 className="mono text-[11px] tracking-[0.22em] uppercase">
+                {kindLabels[kind]}
+              </h2>
+              <span className="mono text-[10px] text-muted">{items.length} 件</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {items.map((a) => {
           const used = usage[a.url]?.length ?? 0;
           const hasThumbnail = a.kind === "image" ? !!a.url : !!(a.thumbnailUrl);
           const thumbSrc = a.kind === "image" ? a.url : a.thumbnailUrl;
@@ -338,6 +362,9 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
             </div>
           );
         })}
+            </div>
+          </section>
+        ))}
       </div>
       {filtered.length === 0 && (
         <div className="text-muted text-[13px] py-10 text-center">アセットがありません。</div>
