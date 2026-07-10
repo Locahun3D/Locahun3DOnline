@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { commentRepo } from "@/lib/comments";
+import { reviewRepo } from "@/lib/reviews";
 import {
   canViewBackyard,
   canViewNdaOnly,
@@ -103,6 +104,28 @@ export default async function PropertyDetailPage({
         (c) => isAdminUser || !c.hiddenByReports,
       )
     : [];
+  // レビュー投稿権限の判定用。「有効期限内のアンロックが1件以上あるか」を
+  // free-period/admin の早期スキップに関係なく必ず判定する（上の unlockedItemIds
+  // は表示用の別目的なので流用しない）。
+  let hasWatched3dgs = false;
+  if (user) {
+    if (user.role === "admin") {
+      hasWatched3dgs = true;
+    } else {
+      try {
+        const unlocks = await viewUnlockRepo.list({ userId: user.id, propertyId: property.id });
+        const now = new Date().toISOString();
+        hasWatched3dgs = unlocks.some((u) => u.expiresAt > now);
+      } catch {
+        hasWatched3dgs = false;
+      }
+    }
+  }
+  const reviews = signedIn
+    ? (await reviewRepo.list(property.id).catch(() => [])).filter(
+        (r) => isAdminUser || !r.hiddenByReports,
+      )
+    : [];
   if (user) {
     try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
@@ -150,10 +173,12 @@ export default async function PropertyDetailPage({
         bookmarked={bookmarked}
         locale={locale}
         comments={comments}
+        reviews={reviews}
         currentUserId={user?.id ?? null}
         currentUserName={user ? publicDisplayName(user) : null}
         isAdminUser={isAdminUser}
         canPostBoard={canPostToBoard(user)}
+        canReview={hasWatched3dgs}
       />
     </>
   );

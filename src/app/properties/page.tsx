@@ -1,5 +1,6 @@
 import { getPublishedProperties } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
+import { reviewStatsForProperties } from "@/lib/reviews";
 import CatalogClient from "@/components/properties/catalog-client";
 
 export const metadata = {
@@ -25,6 +26,11 @@ export default async function PropertiesPage() {
     // ビルド時など認証コンテキストなし
   }
 
+  // カード上の★平均表示用。1クエリ(D1)/1回のlist(JSON)で全物件分まとめて取得する。
+  const reviewStats = await reviewStatsForProperties(items.map((p) => p.id)).catch(
+    () => ({}) as Record<string, { average: number; count: number }>,
+  );
+
   return (
     <div className="theme-online">
       <CatalogClient
@@ -33,6 +39,7 @@ export default async function PropertiesPage() {
         studioTypes={studioTypes}
         bookmarkedIds={bookmarkedIds}
         signedIn={signedIn}
+        reviewStats={reviewStats}
       />
     </div>
   );

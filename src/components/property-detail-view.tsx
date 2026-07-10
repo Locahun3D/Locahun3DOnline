@@ -14,6 +14,7 @@ import InquiryPanel from "@/components/inquiry-panel";
 import ZoomableImage from "@/components/zoomable-image";
 import PropertyMap from "@/components/property-map";
 import PropertyComments, { type CommentItem } from "@/components/property-comments";
+import PropertyReviews, { type ReviewItem } from "@/components/property-reviews";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
@@ -103,10 +104,12 @@ export default function PropertyDetailView({
   locale = "ja",
   previewControls = null,
   comments = [],
+  reviews = [],
   currentUserId = null,
   currentUserName = null,
   isAdminUser = false,
   canPostBoard = false,
+  canReview = false,
 }: {
   property: Property;
   others: Property[];
@@ -126,11 +129,15 @@ export default function PropertyDetailView({
   previewControls?: React.ReactNode;
   /** 会員限定掲示板の初期コメント一覧。 */
   comments?: CommentItem[];
+  /** レビュー・評価の初期一覧。 */
+  reviews?: ReviewItem[];
   currentUserId?: string | null;
   currentUserName?: string | null;
   isAdminUser?: boolean;
   /** 掲示板への書き込み権限（Studio / Team / admin）。閲覧は会員全員。 */
   canPostBoard?: boolean;
+  /** レビュー投稿権限（3DGS視聴済み or admin）。 */
+  canReview?: boolean;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -333,6 +340,25 @@ export default function PropertyDetailView({
               <p className="text-[13px] text-white/55">
                 {property.prefecture} {property.city}
               </p>
+              {(() => {
+                const visibleReviews = reviews.filter((r) => !r.hiddenByReports);
+                if (visibleReviews.length === 0) return null;
+                const avg =
+                  Math.round(
+                    (visibleReviews.reduce((acc, r) => acc + r.rating, 0) / visibleReviews.length) * 10,
+                  ) / 10;
+                return (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-accent">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2.5l2.95 6.32 6.8.72-5.05 4.75 1.4 6.86L12 17.6l-6.1 3.55 1.4-6.86L2.25 9.54l6.8-.72L12 2.5z" />
+                    </svg>
+                    <span className="text-[12.5px] font-bold">{avg.toFixed(1)}</span>
+                    <span className="mono text-[10.5px] text-white/50">
+                      ({visibleReviews.length})
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="flex flex-wrap gap-1.5 mt-4">
                 {isNewProperty(property) && (
@@ -875,6 +901,27 @@ export default function PropertyDetailView({
                   )}
                 </section>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════
+         *  Reviews — ★1〜5 + 任意本文のレビュー・評価
+         * ══════════════════════════════════════════════════ */}
+        {!preview && (
+          <section className="mb-14">
+            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
+              <Eyebrow en="REVIEWS" jp={en ? "Reviews" : "レビュー・評価"} />
+              <PropertyReviews
+                propertyId={property.id}
+                reviews={reviews}
+                currentUserId={currentUserId}
+                currentUserName={currentUserName}
+                isAdmin={isAdminUser}
+                signedIn={signedIn}
+                canReview={canReview}
+                locale={locale}
+              />
             </div>
           </section>
         )}

@@ -38,12 +38,15 @@ const PRICE_DAY_OPTS = [30000, 50000, 100000, 200000, 300000, 500000, 1000000];
 const CEILING_OPTS   = [2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0];
 const DISTANCE_OPTS  = [5, 10, 30, 50, 100, 200, 500];
 
+interface ReviewStat { average: number; count: number }
+
 interface Props {
   items: Property[];
   areas: string[];
   studioTypes: string[];
   bookmarkedIds?: string[];
   signedIn?: boolean;
+  reviewStats?: Record<string, ReviewStat>;
 }
 
 type SortKey =
@@ -205,7 +208,9 @@ function useRecentFilters() {
   return { recent, record, remove, clear };
 }
 
-export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds = [], signedIn = false }: Props) {
+export default function CatalogClient({
+  items, areas, studioTypes, bookmarkedIds = [], signedIn = false, reviewStats = {},
+}: Props) {
   const bookmarkedSet = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
   const router = useRouter();
   const en = useLocale() === "en";
@@ -477,6 +482,7 @@ export default function CatalogClient({ items, areas, studioTypes, bookmarkedIds
                   highlighted={hoveredId === p.id}
                   bookmarked={bookmarkedSet.has(p.id)}
                   signedIn={signedIn}
+                  reviewStat={reviewStats[p.id]}
                 />
               </li>
             ))}
@@ -1144,11 +1150,12 @@ function SortBar({
 // ──────────────────────────────────────────────────────────────────────────
 
 function PropertyCardLite({
-  property, distanceKm, referenceLabel, highlighted, bookmarked = false, signedIn = false,
+  property, distanceKm, referenceLabel, highlighted, bookmarked = false, signedIn = false, reviewStat,
 }: {
   property: Property; distanceKm: number | null;
   referenceLabel: string; highlighted: boolean;
   bookmarked?: boolean; signedIn?: boolean;
+  reviewStat?: { average: number; count: number };
 }) {
   const en = useLocale() === "en";
   const lc = en ? "en" : "ja";
@@ -1218,6 +1225,15 @@ function PropertyCardLite({
         <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2 min-h-[3.05rem]">
           {property.title}
         </h3>
+        {reviewStat && reviewStat.count > 0 && (
+          <div className="flex items-center gap-1 -mt-1.5 text-accent">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true">
+              <path d="M12 2.5l2.95 6.32 6.8.72-5.05 4.75 1.4 6.86L12 17.6l-6.1 3.55 1.4-6.86L2.25 9.54l6.8-.72L12 2.5z" />
+            </svg>
+            <span className="mono text-[11px] font-bold">{reviewStat.average.toFixed(1)}</span>
+            <span className="mono text-[10px] text-muted">({reviewStat.count})</span>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">
           <Stat label={en ? "Ceiling" : "天井"} value={property.category === "outdoor" ? (en ? "Outdoor" : "屋外") : property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
           <Stat label={en ? "Park" : "駐車"} value={property.parking ? (en ? "Yes" : "可") : "—"} accent={property.parking} />
