@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
 
 /**
@@ -74,12 +72,13 @@ export default function FreeDemoFunnel({
           aria-label={en ? "Walk the demo — no sign-up" : "デモを歩く — 登録不要"}
         >
           {demoCover && (
-            <Image
+            // next/image は本構成（Workers + /api/r2 相対パス）で最適化404になるため
+            // 他コンポーネント同様プレーン <img> を使う
+            <img
               src={demoCover.src}
               alt={demoCover.alt}
-              fill
-              sizes="(min-width: 768px) 50vw, 100vw"
-              className="object-cover opacity-90 group-hover:opacity-100 transition"
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition"
             />
           )}
           <div className="absolute inset-0 grid place-items-center">
