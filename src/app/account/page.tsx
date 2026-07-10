@@ -3,12 +3,14 @@ import { requireOnboarded } from "@/lib/dal";
 import { acceptNdaAction } from "@/lib/auth-actions";
 import { roleLabel, accountStatusLabel, totalTokens } from "@/lib/account-schema";
 import RedeemGift from "@/components/account/redeem-gift";
+import AccountDashboard from "@/components/account/account-dashboard";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { getPublishedProperties } from "@/lib/properties";
+import { repo as propertyRepo } from "@/lib/store";
 
 export const metadata = { title: "プロフィール" };
 
@@ -24,9 +26,22 @@ export default async function AccountPage({
   const lc = en ? "en" : "ja";
   const lh = (href: string) => localizedHref(href, locale);
   const nowIso = new Date().toISOString();
-  const unlockedCount = (
-    await viewUnlockRepo.list({ userId: user.id })
-  ).filter((u) => u.expiresAt > nowIso).length;
+  const allUnlocks = await viewUnlockRepo.list({ userId: user.id });
+  const unlockedCount = allUnlocks.filter((u) => u.expiresAt > nowIso).length;
+
+  // ── 閲覧履歴タイル用: 直近の「まだ有効な（無償再視聴期間内の）」アンロック1件 ──
+  // viewUnlockRepo.list は unlockedAt 降順で返るので先頭が最新。
+  const lastValidUnlock = allUnlocks.find((u) => u.expiresAt > nowIso) ?? null;
+  const lastUnlockProperty = lastValidUnlock
+    ? await propertyRepo.get(lastValidUnlock.propertyId)
+    : null;
+  const lastUnlockSceneLabel = (() => {
+    if (!lastValidUnlock || !lastUnlockProperty) return "";
+    const item = lastValidUnlock.splatItemId
+      ? lastUnlockProperty.splatItems.find((it) => it.id === lastValidUnlock.splatItemId)
+      : lastUnlockProperty.splatItems[lastValidUnlock.splatItemIndex];
+    return item?.label || `#${lastValidUnlock.splatItemIndex + 1}`;
+  })();
 
   // ── 保存ボード（ブックマークフォルダ）タイルをマイページに表示 ──
   const bookmarkIds = user.bookmarks ?? [];
@@ -120,21 +135,30 @@ export default async function AccountPage({
         </div>
       )}
 
-      <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
-          {user.name}
-        </h1>
-        <p className="text-[13px] text-muted mt-2 flex items-center gap-2">
-          <span className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-1.5 py-0.5">
-            {roleLabel(user.role, lc)}
+      <AccountDashboard
+        user={user}
+        locale={locale}
+        boardTiles={boardTiles}
+        totalBoardCount={folders.length}
+        lastUnlock={lastValidUnlock}
+        lastUnlockProperty={lastUnlockProperty}
+        lastUnlockSceneLabel={lastUnlockSceneLabel}
+        nowIso={nowIso}
+      />
+
+      {user.status !== "active" && (
+        <div className="mb-6 -mt-4">
+          <span className="mono text-[10px] tracking-[0.2em] uppercase border border-amber-400/40 text-amber-400 px-1.5 py-0.5">
+            {accountStatusLabel(user.status, lc)}
           </span>
-          {user.status !== "active" && (
-            <span className="mono text-[10px] tracking-[0.2em] uppercase border border-amber-400/40 text-amber-400 px-1.5 py-0.5">
-              {accountStatusLabel(user.status, lc)}
-            </span>
-          )}
-        </p>
-      </header>
+        </div>
+      )}
+
+      <div className="chapter-rule">
+        <span className="opacity-60">DETAILS</span>
+        <span>{en ? "Full account details" : "アカウント詳細"}</span>
+        <span className="flex-1 h-px bg-current opacity-25" />
+      </div>
 
       <div className="grid md:grid-cols-3 gap-6">
         <section className="md:col-span-2 border border-line p-6 space-y-5">
