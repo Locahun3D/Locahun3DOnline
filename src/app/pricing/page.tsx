@@ -1,6 +1,9 @@
 import Link from "next/link";
 import PlanCards from "@/components/pricing/plan-cards";
+import FreeDemoFunnel from "@/components/pricing/free-demo-funnel";
+import RoiCalculator from "@/components/pricing/roi-calculator";
 import { getCurrentUser } from "@/lib/dal";
+import { getPublishedProperties } from "@/lib/properties";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
@@ -44,6 +47,11 @@ export default async function PricingPage({
   const { checkout } = await searchParams;
   const lh = (href: string) => localizedHref(href, locale);
   const canApplyForProduction = !!user && user.role !== "production" && user.role !== "admin";
+
+  const published = await getPublishedProperties();
+  const demoCover = published[0]
+    ? { src: published[0].cover.src, alt: published[0].cover.alt }
+    : null;
 
   return (
     <div className="theme-online frame pt-12 pb-32">
@@ -106,6 +114,9 @@ export default async function PricingPage({
         </p>
       </header>
 
+      {/* Free demo funnel — walk a real scanned property, no sign-up required */}
+      <FreeDemoFunnel signUpHref={lh("/sign-up")} demoCover={demoCover} en={en} />
+
       {/* 4 plans + billing mode toggle */}
       <PlanCards signedIn={!!user} currentPlan={user?.plan} currentRole={user?.role} />
       <p className="text-center text-[11px] text-muted mt-5 leading-[1.7]">
@@ -131,6 +142,9 @@ export default async function PricingPage({
             : "※ 決済連携は準備中です。現在はプラン変更が即時反映されます。"}
         </p>
       )}
+
+      {/* ROI calculator — how much a subscription saves vs. on-site scouting */}
+      <RoiCalculator en={en} />
 
       {/* Comparison table */}
       <section className="mt-16">
