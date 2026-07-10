@@ -10,7 +10,12 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { commentRepo } from "@/lib/comments";
-import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
+import {
+  canViewBackyard,
+  canViewNdaOnly,
+  canPostToBoard,
+  publicDisplayName,
+} from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
 import PurchaseToast from "@/components/purchase-toast";
@@ -146,8 +151,9 @@ export default async function PropertyDetailPage({
         locale={locale}
         comments={comments}
         currentUserId={user?.id ?? null}
-        currentUserName={user?.name ?? null}
+        currentUserName={user ? publicDisplayName(user) : null}
         isAdminUser={isAdminUser}
+        canPostBoard={canPostToBoard(user)}
       />
     </>
   );

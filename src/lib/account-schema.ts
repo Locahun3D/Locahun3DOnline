@@ -215,6 +215,16 @@ export function canViewNdaOnly(u: PublicUser | null): boolean {
   return u.role === "production" && u.plan === "team" && !!u.ndaAcceptedAt;
 }
 
+/**
+ * 物件掲示板への書き込み（投稿・返信）権限。
+ * 閲覧・いいねはサインイン会員全員、書き込みは Studio / Team プラン限定（admin は常に可）。
+ */
+export function canPostToBoard(u: PublicUser | null): boolean {
+  if (!u) return false;
+  if (u.role === "admin") return true;
+  return u.status === "active" && (u.plan === "studio" || u.plan === "team");
+}
+
 /** Captured on the /onboarding step after Clerk sign-up. */
 export const onboardingSchema = z.object({
   role: z.enum(SELF_SIGNUP_ROLES),

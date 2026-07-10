@@ -65,6 +65,7 @@ const PLANS: Plan[] = [
       "plan.studio.f2",
       "plan.studio.f3",
       "plan.studio.f4",
+      "plan.studio.f5b",
       "plan.studio.f5",
     ],
     cta: "Subscribe",

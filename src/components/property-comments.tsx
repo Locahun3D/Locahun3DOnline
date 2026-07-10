@@ -126,6 +126,7 @@ export default function PropertyComments({
   currentUserName,
   isAdmin,
   signedIn,
+  canPost = false,
   locale = "ja",
 }: {
   propertyId: string;
@@ -134,6 +135,8 @@ export default function PropertyComments({
   currentUserName?: string | null;
   isAdmin: boolean;
   signedIn: boolean;
+  /** 書き込み（投稿・返信）権限。Studio / Team / admin のみ true。閲覧・いいねは会員全員。 */
+  canPost?: boolean;
   locale?: "ja" | "en";
 }) {
   const en = locale === "en";
@@ -156,8 +159,8 @@ export default function PropertyComments({
       <div className="border border-dashed border-line py-10 px-6 text-center bg-white">
         <p className="text-[13px] text-ink/60 mb-4">
           {en
-            ? "Sign in to view and post in this location's board."
-            : "サインインすると、この物件の掲示板を閲覧・投稿できます。"}
+            ? "Sign in to view this location's board (posting is available on Studio / Team plans)."
+            : "サインインすると、この物件の掲示板を閲覧できます（書き込みは Studio / Team プラン）。"}
         </p>
         <Link
           href={`/sign-in?redirect_url=${encodeURIComponent(revalidate)}`}
@@ -391,13 +394,15 @@ export default function PropertyComments({
               )}
               {(c.likedBy ?? []).length > 0 && <span className={(c.likedBy ?? []).includes(currentUserId ?? "") ? "text-accent" : ""}>{(c.likedBy ?? []).length}</span>}
             </button>
-            <button
-              type="button"
-              onClick={() => setReplyOpenId((id) => (id === c.id ? null : c.id))}
-              className="mono text-[10px] tracking-[0.1em] uppercase text-muted hover:text-accent transition"
-            >
-              {en ? "Reply" : "返信"}
-            </button>
+            {canPost && (
+              <button
+                type="button"
+                onClick={() => setReplyOpenId((id) => (id === c.id ? null : c.id))}
+                className="mono text-[10px] tracking-[0.1em] uppercase text-muted hover:text-accent transition"
+              >
+                {en ? "Reply" : "返信"}
+              </button>
+            )}
             {!isMine && (
               <button
                 type="button"
@@ -562,6 +567,23 @@ export default function PropertyComments({
         </div>
       )}
 
+      {!canPost && (
+        <div className="border border-dashed border-line bg-bg px-5 py-5 text-center">
+          <p className="text-[12.5px] text-ink/60 mb-3">
+            {en
+              ? "Posting to the board is available on the Studio / Team plans. Viewing and likes are open to all members."
+              : "掲示板への書き込みは Studio / Team プランでご利用いただけます（閲覧・いいねは全会員可）。"}
+          </p>
+          <Link
+            href={en ? "/en/pricing" : "/pricing"}
+            className="inline-block mono text-[10.5px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
+          >
+            {en ? "View plans →" : "プランを見る →"}
+          </Link>
+        </div>
+      )}
+
+      {canPost && (
       <form ref={formRef} onSubmit={onSubmit} className="flex gap-3 items-start border border-dashed border-line bg-bg px-4 py-3.5">
         <input type="hidden" name="propertyId" value={propertyId} />
         <input type="hidden" name="revalidate" value={revalidate} />
@@ -590,6 +612,7 @@ export default function PropertyComments({
           {en ? "Post" : "投稿"}
         </button>
       </form>
+      )}
     </div>
   );
 }

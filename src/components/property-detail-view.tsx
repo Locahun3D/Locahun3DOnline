@@ -106,6 +106,7 @@ export default function PropertyDetailView({
   currentUserId = null,
   currentUserName = null,
   isAdminUser = false,
+  canPostBoard = false,
 }: {
   property: Property;
   others: Property[];
@@ -128,6 +129,8 @@ export default function PropertyDetailView({
   currentUserId?: string | null;
   currentUserName?: string | null;
   isAdminUser?: boolean;
+  /** 掲示板への書き込み権限（Studio / Team / admin）。閲覧は会員全員。 */
+  canPostBoard?: boolean;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -882,7 +885,14 @@ export default function PropertyDetailView({
         {!preview && (
           <section className="mb-14">
             <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
-              <Eyebrow en="BOARD" jp={en ? "Board (members only)" : "掲示板（会員限定）"} />
+              <Eyebrow
+                en="BOARD"
+                jp={
+                  en
+                    ? "Board (viewing: members / posting: Studio & Team)"
+                    : "掲示板（閲覧: 会員 / 書き込み: Studio・Team）"
+                }
+              />
               <PropertyComments
                 propertyId={property.id}
                 comments={comments}
@@ -890,6 +900,7 @@ export default function PropertyDetailView({
                 currentUserName={currentUserName}
                 isAdmin={isAdminUser}
                 signedIn={signedIn}
+                canPost={canPostBoard}
                 locale={locale}
               />
             </div>

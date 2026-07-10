@@ -115,6 +115,7 @@ const ja = {
   "plan.studio.f2": "3DGS ウォークスルー 月 24 トークン",
   "plan.studio.f3": "5 端末まで同時ログイン",
   "plan.studio.f4": "チーム履歴の共有",
+  "plan.studio.f5b": "物件掲示板への書き込み（投稿・返信）",
   "plan.studio.f5": "請求書を毎月自動送付 (電子帳簿対応)",
   "plan.team.desc": "プロダクション向け。月 60 トークン + 20 端末 + 請求書対応。",
   "plan.team.f1": "Studio の全機能",
@@ -213,6 +214,7 @@ const en: Record<keyof typeof ja, string> = {
   "plan.studio.f2": "3DGS walkthrough — 24 tokens / month",
   "plan.studio.f3": "Up to 5 devices signed in",
   "plan.studio.f4": "Shared team history",
+  "plan.studio.f5b": "Post & reply on location boards",
   "plan.studio.f5": "Monthly invoice auto-sent (e-bookkeeping ready)",
   "plan.team.desc":
     "For production companies. 60 tokens/month + 20 devices + invoice billing.",

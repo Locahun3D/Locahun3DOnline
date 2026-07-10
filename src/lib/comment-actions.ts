@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./dal";
-import { publicDisplayName } from "./account-schema";
+import { publicDisplayName, canPostToBoard } from "./account-schema";
 import { commentRepo } from "./comments";
 import { validateCommentBody } from "./comment-guard";
 
@@ -38,6 +38,14 @@ export async function postCommentAction(
   // 備えてここでも明示的に弾く（admin は免除、pending=承認待ちはブロックしない）。
   if (user.status === "suspended" && user.role !== "admin") {
     return { ok: false, error: "アカウントが停止されているため投稿できません。" };
+  }
+  // 書き込みは Studio / Team プラン限定（閲覧・いいねは会員全員）。UI 側でも
+  // 入力欄を出し分けるが、権限判定は必ずサーバー側を正とする。
+  if (!canPostToBoard(user)) {
+    return {
+      ok: false,
+      error: "掲示板への書き込みは Studio / Team プランでご利用いただけます。",
+    };
   }
 
   const propertyId = String(formData.get("propertyId") ?? "").trim();
