@@ -6,7 +6,16 @@ import { getCurrentUser } from "./dal";
 import { commentRepo } from "./comments";
 
 export type PostCommentState =
-  | { ok: true }
+  | {
+      ok: true;
+      comment: {
+        id: string;
+        userId: string;
+        userName: string;
+        body: string;
+        createdAt: string;
+      };
+    }
   | { ok: false; error: string }
   | undefined;
 
@@ -32,7 +41,7 @@ export async function postCommentAction(
     return { ok: false, error: "コメントは1000文字以内で入力してください。" };
   }
 
-  await commentRepo.upsert({
+  const validated = await commentRepo.upsert({
     id: randomUUID(),
     propertyId,
     userId: user.id,
@@ -42,7 +51,16 @@ export async function postCommentAction(
   });
 
   if (revalidate) revalidatePath(revalidate);
-  return { ok: true };
+  return {
+    ok: true,
+    comment: {
+      id: validated.id,
+      userId: validated.userId,
+      userName: validated.userName,
+      body: validated.body,
+      createdAt: validated.createdAt,
+    },
+  };
 }
 
 /**

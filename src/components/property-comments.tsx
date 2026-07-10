@@ -74,7 +74,9 @@ export default function PropertyComments({
     formRef.current?.reset();
     startTransition(async () => {
       const res = await postCommentAction(undefined, formData);
-      if (!res?.ok) {
+      if (res?.ok) {
+        setComments((c) => c.map((x) => (x.id === optimistic.id ? res.comment : x)));
+      } else {
         setComments((c) => c.filter((x) => x.id !== optimistic.id));
         setError(res?.error ?? (en ? "Failed to post." : "投稿に失敗しました。"));
       }
