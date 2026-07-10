@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PublicUser } from "@/lib/account-schema";
-import { totalTokens } from "@/lib/account-schema";
+import { totalTokens, publicDisplayName } from "@/lib/account-schema";
+import DisplayNameEditor from "@/components/account/display-name-editor";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
 import type { Property } from "@/lib/schemas";
 import type { ViewUnlock } from "@/lib/view-unlocks";
@@ -26,6 +27,7 @@ export default function AccountDashboard({
   lastUnlock,
   lastUnlockProperty,
   lastUnlockSceneLabel,
+  billing = null,
   nowIso,
 }: {
   user: PublicUser;
@@ -35,6 +37,9 @@ export default function AccountDashboard({
   lastUnlock: ViewUnlock | null;
   lastUnlockProperty: Property | null;
   lastUnlockSceneLabel: string;
+  /** Stripe から取得した実際の請求間隔と次回更新日。未契約・未設定・取得失敗は null
+   *  （その場合は tokenRefillAt を次回更新の近似として表示する）。 */
+  billing?: { interval: "monthly" | "annual"; periodEnd: string | null } | null;
   /** サーバー側で確定した「現在時刻」(ISO)。相対時刻・残日数計算に使う
    *  (レンダー中に Date.now() を直接呼ばないため、Server Component でも
    *  純粋関数のルールに沿わせる)。 */
@@ -44,7 +49,8 @@ export default function AccountDashboard({
   const lh = (href: string) => localizedHref(href, locale);
   const now = new Date(nowIso).getTime();
 
-  const initials = (user.name || "?").trim().slice(0, 2).toUpperCase();
+  const shownName = publicDisplayName(user);
+  const initials = (shownName || "?").trim().slice(0, 2).toUpperCase();
   const isAdmin = user.role === "admin";
   const ndaAccepted = !!user.ndaAcceptedAt;
   const joinedDate = (user.createdAt ?? "").slice(0, 10) || "—";
@@ -87,9 +93,7 @@ export default function AccountDashboard({
           {initials}
         </div>
         <div className="min-w-0">
-          <h1 className="text-[clamp(1.4rem,2.6vw,2rem)] font-bold leading-tight truncate">
-            {user.name}
-          </h1>
+          <DisplayNameEditor initialName={shownName} en={en} />
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             {isAdmin && (
               <span className="mono text-[10px] tracking-[0.14em] uppercase border border-[#e2e7ec] px-1.5 py-0.5">
@@ -132,7 +136,17 @@ export default function AccountDashboard({
             {planName}
             {!planFree && (
               <span className="text-[12px] font-normal text-[#7b8794] ml-2">
-                {en ? "(subscription)" : "（月払い）"}
+                {billing
+                  ? billing.interval === "annual"
+                    ? en
+                      ? "(annual)"
+                      : "（年払い）"
+                    : en
+                      ? "(monthly)"
+                      : "（月払い）"
+                  : en
+                    ? "(subscription)"
+                    : ""}
               </span>
             )}
           </div>
@@ -141,10 +155,10 @@ export default function AccountDashboard({
               ? en
                 ? `Sign up bonus only — upgrade for ${planBudget || 16}+ tokens/mo`
                 : "登録時ボーナスのみ・有料プランで毎月トークン付与"
-              : user.tokenRefillAt
+              : (billing?.periodEnd ?? user.tokenRefillAt)
                 ? en
-                  ? `Next renewal ${user.tokenRefillAt.slice(0, 10)}`
-                  : `次回更新 ${user.tokenRefillAt.slice(0, 10)}`
+                  ? `Next renewal ${(billing?.periodEnd ?? user.tokenRefillAt)!.slice(0, 10)}`
+                  : `次回更新 ${(billing?.periodEnd ?? user.tokenRefillAt)!.slice(0, 10)}`
                 : en
                   ? "Active subscription"
                   : "契約中"}

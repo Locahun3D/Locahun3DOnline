@@ -60,6 +60,7 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     id: userId,
     email: email || `${userId}@clerk.local`,
     name,
+    displayName: "",
     role,
     status: "active",
     onboarded: isAdmin || isGuest, // admins and invited guests skip onboarding

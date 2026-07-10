@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import {
   onboardingSchema,
@@ -50,6 +51,42 @@ export async function onboardingAction(
   });
 
   redirect(status === "pending" ? "/account?welcome=pending" : "/account?welcome=1");
+}
+
+/** 制御文字（改行等含む）と、なりすまし・視認妨害に使われるゼロ幅系文字。 */
+const DISPLAY_NAME_STRIP_RE =
+  // eslint-disable-next-line no-control-regex
+  /[\u0000-\u001f\u007f\u200b-\u200f\u2060\u00ad\u180e\ufeff]/g;
+
+export type DisplayNameState =
+  | { ok: true; displayName: string }
+  | { ok: false; error: string }
+  | undefined;
+
+/**
+ * 掲示板に表示する公開表示名の変更（マイページのインライン編集から呼ぶ）。
+ * 保存先はユーザーレコード（ndaAcceptedAt 等と同じ D1 users.data）。
+ * 過去のコメントは投稿時スナップショットのまま変わらず、今後の投稿から反映される。
+ */
+export async function updateDisplayNameAction(
+  _prev: DisplayNameState,
+  formData: FormData,
+): Promise<DisplayNameState> {
+  const current = await getCurrentUser();
+  if (!current) return { ok: false, error: "サインインが必要です。" };
+
+  const raw = String(formData.get("displayName") ?? "");
+  const cleaned = raw.replace(DISPLAY_NAME_STRIP_RE, "").trim();
+  const len = [...cleaned].length; // コードポイント数（絵文字等の見かけ1文字を尊重）
+  if (len < 1 || len > 30) {
+    return { ok: false, error: "表示名は1〜30文字で入力してください。" };
+  }
+
+  const u = await userRepo.get(current.id);
+  if (!u) return { ok: false, error: "アカウントが見つかりませんでした。" };
+  await userRepo.upsert({ ...u, displayName: cleaned });
+  revalidatePath("/account");
+  return { ok: true, displayName: cleaned };
 }
 
 /** Record NDA acceptance for the current production account (form action). */

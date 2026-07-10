@@ -11,6 +11,7 @@ import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { getPublishedProperties } from "@/lib/properties";
 import { repo as propertyRepo } from "@/lib/store";
+import { getSubscriptionBilling } from "@/lib/stripe";
 
 export const metadata = { title: "プロフィール" };
 
@@ -26,6 +27,12 @@ export default async function AccountPage({
   const lc = en ? "en" : "ja";
   const lh = (href: string) => localizedHref(href, locale);
   const nowIso = new Date().toISOString();
+  // PLAN カード用: Stripe 上の実際の請求間隔（月/年）と次回更新日。
+  // 未契約・Stripe未設定・APIエラーはすべて null（表示は tokenRefillAt で代替）。
+  const billing =
+    user.plan !== "free"
+      ? await getSubscriptionBilling(user.stripeCustomerId)
+      : null;
   const allUnlocks = await viewUnlockRepo.list({ userId: user.id });
   const unlockedCount = allUnlocks.filter((u) => u.expiresAt > nowIso).length;
 
@@ -143,6 +150,7 @@ export default async function AccountPage({
         lastUnlock={lastValidUnlock}
         lastUnlockProperty={lastUnlockProperty}
         lastUnlockSceneLabel={lastUnlockSceneLabel}
+        billing={billing}
         nowIso={nowIso}
       />
 

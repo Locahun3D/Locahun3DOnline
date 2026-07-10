@@ -106,6 +106,12 @@ export const userSchema = z.object({
   id: z.string().min(1),
   email: z.email(),
   name: z.string().min(1).max(80),
+  /**
+   * 掲示板等に表示する公開表示名（ユーザーが任意設定）。空文字 = 未設定で、
+   * その場合は従来どおり name（Clerk 由来の氏名）を表示に使う。
+   * 過去の投稿は投稿時スナップショット（comments.userName）のままで変わらない。
+   */
+  displayName: z.string().max(30).default(""),
   role: z.enum(ACCOUNT_ROLES).default("individual"),
   status: z.enum(ACCOUNT_STATUSES).default("active"),
   /** Has the user completed the role/NDA onboarding step? */
@@ -160,6 +166,11 @@ export function toPublicUser(u: User): PublicUser {
 /** Spendable token total = monthly balance + non-expiring contribution tokens. */
 export function totalTokens(u: Pick<User, "tokenBalance" | "bonusTokens">): number {
   return u.tokenBalance + (u.bonusTokens ?? 0);
+}
+
+/** 画面表示・新規投稿の投稿者名に使う公開表示名。displayName 優先、未設定は氏名。 */
+export function publicDisplayName(u: Pick<User, "name" | "displayName">): string {
+  return (u.displayName ?? "").trim() || u.name;
 }
 
 /** 付与トークンの標準失効期間 = 付与から1年。 */

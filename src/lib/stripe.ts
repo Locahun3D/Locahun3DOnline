@@ -60,6 +60,35 @@ export function planForPriceId(priceId: string): AccountPlan | null {
   return null;
 }
 
+/**
+ * 顧客のアクティブなサブスクの請求間隔（月払い/年払い）と次回更新日。
+ * マイページの PLAN カード表示用。Stripe 未設定・未契約・API エラー時は
+ * null を返し、呼び出し側は表示を省略する（ページを落とさない）。
+ */
+export async function getSubscriptionBilling(
+  customerId: string | null | undefined,
+): Promise<{ interval: BillingInterval; periodEnd: string | null } | null> {
+  if (!customerId || !stripeEnabled()) return null;
+  try {
+    const subs = await getStripe().subscriptions.list({
+      customer: customerId,
+      status: "active",
+      limit: 1,
+    });
+    const item = subs.data[0]?.items.data[0];
+    const iv = item?.price?.recurring?.interval;
+    if (iv !== "month" && iv !== "year") return null;
+    return {
+      interval: iv === "year" ? "annual" : "monthly",
+      periodEnd: item?.current_period_end
+        ? new Date(item.current_period_end * 1000).toISOString()
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** App origin for Checkout success/cancel redirects. */
 export function appUrl(path = ""): string {
   const base =
