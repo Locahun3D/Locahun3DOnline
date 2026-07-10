@@ -104,6 +104,7 @@ export default function PropertyDetailView({
   previewControls = null,
   comments = [],
   currentUserId = null,
+  currentUserName = null,
   isAdminUser = false,
 }: {
   property: Property;
@@ -125,6 +126,7 @@ export default function PropertyDetailView({
   /** 会員限定掲示板の初期コメント一覧。 */
   comments?: CommentItem[];
   currentUserId?: string | null;
+  currentUserName?: string | null;
   isAdminUser?: boolean;
 }) {
   const en = locale === "en";
@@ -879,6 +881,7 @@ export default function PropertyDetailView({
                 propertyId={property.id}
                 comments={comments}
                 currentUserId={currentUserId}
+                currentUserName={currentUserName}
                 isAdmin={isAdminUser}
                 signedIn={signedIn}
                 locale={locale}

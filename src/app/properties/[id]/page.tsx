@@ -141,6 +141,7 @@ export default async function PropertyDetailPage({
         locale={locale}
         comments={comments}
         currentUserId={user?.id ?? null}
+        currentUserName={user?.name ?? null}
         isAdminUser={user?.role === "admin"}
       />
     </>
