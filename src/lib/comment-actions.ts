@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./dal";
 import { commentRepo } from "./comments";
+import { validateCommentBody } from "./comment-guard";
 
 export type PostCommentState =
   | {
@@ -14,6 +15,7 @@ export type PostCommentState =
         userName: string;
         body: string;
         createdAt: string;
+        parentId: string;
       };
     }
   | { ok: false; error: string }
@@ -31,14 +33,49 @@ export async function postCommentAction(
   if (!user) {
     return { ok: false, error: "投稿にはサインインが必要です。" };
   }
+  // getCurrentUser は停止中アカウントに既に null を返すが、将来的な変更に
+  // 備えてここでも明示的に弾く（admin は免除、pending=承認待ちはブロックしない）。
+  if (user.status === "suspended" && user.role !== "admin") {
+    return { ok: false, error: "アカウントが停止されているため投稿できません。" };
+  }
 
   const propertyId = String(formData.get("propertyId") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  const rawBody = String(formData.get("body") ?? "").trim();
   const revalidate = String(formData.get("revalidate") ?? "").trim();
+  const parentIdInput = String(formData.get("parentId") ?? "").trim();
   if (!propertyId) return { ok: false, error: "対象の物件が見つかりませんでした。" };
-  if (!body) return { ok: false, error: "コメントを入力してください。" };
-  if (body.length > 1000) {
-    return { ok: false, error: "コメントは1000文字以内で入力してください。" };
+
+  let parentId = "";
+  if (parentIdInput) {
+    const parent = await commentRepo.get(parentIdInput);
+    if (!parent || parent.propertyId !== propertyId) {
+      return { ok: false, error: "返信先のコメントが見つかりませんでした。" };
+    }
+    parentId = parentIdInput;
+  }
+
+  const guard = validateCommentBody(rawBody);
+  if (!guard.ok) return { ok: false, error: guard.error };
+  const body = guard.cleaned;
+
+  if (user.role !== "admin") {
+    const now = new Date();
+    const oneMinuteAgo = new Date(now.getTime() - 60_000).toISOString();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60_000).toISOString();
+
+    const recentMinute = await commentRepo.countRecentByUser(user.id, oneMinuteAgo);
+    if (recentMinute >= 3) {
+      return { ok: false, error: "投稿間隔が短すぎます。少し待ってから投稿してください。" };
+    }
+    const recentDay = await commentRepo.countRecentByUser(user.id, oneDayAgo);
+    if (recentDay >= 50) {
+      return { ok: false, error: "本日の投稿上限に達しました。" };
+    }
+    const isDuplicate = await commentRepo.findRecentDuplicate(user.id, body, tenMinutesAgo);
+    if (isDuplicate) {
+      return { ok: false, error: "同じ内容の投稿が連続しています。" };
+    }
   }
 
   const validated = await commentRepo.upsert({
@@ -48,6 +85,9 @@ export async function postCommentAction(
     userName: user.name || "匿名ユーザー",
     body,
     createdAt: new Date().toISOString(),
+    parentId,
+    reports: [],
+    hiddenByReports: false,
   });
 
   if (revalidate) revalidatePath(revalidate);
@@ -59,6 +99,7 @@ export async function postCommentAction(
       userName: validated.userName,
       body: validated.body,
       createdAt: validated.createdAt,
+      parentId: validated.parentId,
     },
   };
 }
@@ -81,6 +122,54 @@ export async function deleteCommentAction(
   }
 
   await commentRepo.remove(commentId);
+  if (revalidate) revalidatePath(revalidate);
+  return { ok: true };
+}
+
+/**
+ * コメント通報。サインイン必須、自分のコメントは通報不可。1ユーザー1回まで
+ * （既に通報済みなら冪等に ok:true を返し二重加算しない）。3件で自動非表示。
+ */
+export async function reportCommentAction(
+  commentId: string,
+  revalidate: string,
+): Promise<{ ok: boolean; hidden?: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "通報にはサインインが必要です。" };
+
+  const comment = await commentRepo.get(commentId);
+  if (!comment) return { ok: false, error: "コメントが見つかりませんでした。" };
+
+  if (comment.userId === user.id) {
+    return { ok: false, error: "自分のコメントは通報できません。" };
+  }
+
+  if (comment.reports.some((r) => r.userId === user.id)) {
+    return { ok: true, hidden: comment.hiddenByReports };
+  }
+
+  const reports = [...comment.reports, { userId: user.id, at: new Date().toISOString() }];
+  const hiddenByReports = reports.length >= 3 ? true : comment.hiddenByReports;
+
+  await commentRepo.upsert({ ...comment, reports, hiddenByReports });
+  if (revalidate) revalidatePath(revalidate);
+  return { ok: true, hidden: hiddenByReports };
+}
+
+/**
+ * 通報による自動非表示を解除。admin専用。
+ */
+export async function unhideCommentAction(
+  commentId: string,
+  revalidate: string,
+): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") return { ok: false };
+
+  const comment = await commentRepo.get(commentId);
+  if (!comment) return { ok: true };
+
+  await commentRepo.upsert({ ...comment, reports: [], hiddenByReports: false });
   if (revalidate) revalidatePath(revalidate);
   return { ok: true };
 }

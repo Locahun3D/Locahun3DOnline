@@ -25,6 +25,14 @@ export const commentSchema = z.object({
   userName: z.string().max(80).default("匿名ユーザー"),
   body: z.string().min(1).max(1000),
   createdAt: z.string().default(() => new Date().toISOString()),
+  /** 返信先コメントID。空文字 = ルート投稿（スレッドの起点）。 */
+  parentId: z.string().default(""),
+  /** 荒らし通報の履歴（1ユーザー1回、reportCommentAction で追記）。 */
+  reports: z
+    .array(z.object({ userId: z.string(), at: z.string() }))
+    .default([]),
+  /** 通報が閾値に達し非admin閲覧から自動的に隠された状態。 */
+  hiddenByReports: z.boolean().default(false),
 });
 export type Comment = z.infer<typeof commentSchema>;
 
@@ -122,5 +130,39 @@ export const commentRepo = {
     }
     const db = await getD1();
     if (db) await d1Delete(db, TABLE, "id", id);
+  },
+
+  /** 直近 sinceIso 以降にこのユーザーが投稿した件数（レート制限用）。 */
+  async countRecentByUser(userId: string, sinceIso: string): Promise<number> {
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      return all.filter((c) => c.userId === userId && c.createdAt > sinceIso).length;
+    }
+    const db = await getD1();
+    if (!db) return 0;
+    await ensureSeeded(db);
+    const row = await db
+      .prepare(`SELECT COUNT(*) as n FROM ${TABLE} WHERE user_id = ? AND created_at > ?`)
+      .bind(userId, sinceIso)
+      .first();
+    return Number((row as { n?: number } | null)?.n ?? 0);
+  },
+
+  /** 直近 sinceIso 以降に同一ユーザーが同一本文を投稿していないか（連投ブロック用）。 */
+  async findRecentDuplicate(userId: string, body: string, sinceIso: string): Promise<boolean> {
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      return all.some(
+        (c) => c.userId === userId && c.createdAt > sinceIso && c.body === body,
+      );
+    }
+    const db = await getD1();
+    if (!db) return false;
+    await ensureSeeded(db);
+    const all = await d1ListData<Comment>(db, TABLE, {
+      sql: "user_id = ? AND created_at > ?",
+      binds: [userId, sinceIso],
+    });
+    return all.some((c) => c.body === body);
   },
 };

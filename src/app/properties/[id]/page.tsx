@@ -90,8 +90,13 @@ export default async function PropertyDetailPage({
   // 旧レコード（splatItemId 未設定）は記録時の index から現在の id を逆引きする。
   const unlockedItemIds: string[] = [];
   // 会員限定掲示板: 未サインインには本文を一切渡さない（サーバーHTMLにも含めない）。
+  // 通報により非表示になったコメントも、admin 以外にはサーバー側で除外し
+  // HTML にも一切含めない（クライアント側フィルタだけでは不十分）。
+  const isAdminUser = user?.role === "admin";
   const comments = signedIn
-    ? await commentRepo.list(property.id).catch(() => [])
+    ? (await commentRepo.list(property.id).catch(() => [])).filter(
+        (c) => isAdminUser || !c.hiddenByReports,
+      )
     : [];
   if (user) {
     try {
@@ -142,7 +147,7 @@ export default async function PropertyDetailPage({
         comments={comments}
         currentUserId={user?.id ?? null}
         currentUserName={user?.name ?? null}
-        isAdminUser={user?.role === "admin"}
+        isAdminUser={isAdminUser}
       />
     </>
   );
