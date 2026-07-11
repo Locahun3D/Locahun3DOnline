@@ -108,6 +108,7 @@ function StarPicker({
 export default function PropertyReviews({
   propertyId,
   reviews: initialReviews,
+  stats,
   currentUserId,
   currentUserName,
   isAdmin,
@@ -117,6 +118,12 @@ export default function PropertyReviews({
 }: {
   propertyId: string;
   reviews: ReviewItem[];
+  /**
+   * 平均★と件数（カタログと同じ集計値、未サインインでも公開）。
+   * 未サインインは reviews が空配列で渡ってくるため、無ければローカルの
+   * reviews から計算した値にフォールバックする。
+   */
+  stats?: { average: number; count: number };
   currentUserId: string | null;
   currentUserName?: string | null;
   isAdmin: boolean;
@@ -141,12 +148,15 @@ export default function PropertyReviews({
   const revalidate = `/properties/${propertyId}`;
 
   const visible = reviews.filter((r) => !r.hiddenByReports || isAdmin);
-  const { average, count } = (() => {
+  const localStats = (() => {
     const v = reviews.filter((r) => !r.hiddenByReports);
     if (v.length === 0) return { average: 0, count: 0 };
     const sum = v.reduce((acc, r) => acc + r.rating, 0);
     return { average: Math.round((sum / v.length) * 10) / 10, count: v.length };
   })();
+  // reviews が実際に読み込まれていれば（サインイン後 or 投稿/編集直後）その場の
+  // 集計を優先し、未サインインで reviews=[] の間だけ公開用の stats を使う。
+  const { average, count } = reviews.length > 0 ? localStats : (stats ?? localStats);
 
   const startEdit = () => {
     setFormRating(myReview?.rating ?? 0);

@@ -105,6 +105,7 @@ export default function PropertyDetailView({
   previewControls = null,
   comments = [],
   reviews = [],
+  reviewStats,
   currentUserId = null,
   currentUserName = null,
   isAdminUser = false,
@@ -129,8 +130,10 @@ export default function PropertyDetailView({
   previewControls?: React.ReactNode;
   /** 会員限定掲示板の初期コメント一覧。 */
   comments?: CommentItem[];
-  /** レビュー・評価の初期一覧。 */
+  /** レビュー・評価の初期一覧。未サインインでは空配列（本文は非公開）。 */
   reviews?: ReviewItem[];
+  /** 平均★と件数。カタログと同じく未サインインでも公開する集計値。 */
+  reviewStats?: { average: number; count: number };
   currentUserId?: string | null;
   currentUserName?: string | null;
   isAdminUser?: boolean;
@@ -972,6 +975,7 @@ export default function PropertyDetailView({
                 <PropertyReviews
                   propertyId={property.id}
                   reviews={reviews}
+                  stats={reviewStats}
                   currentUserId={currentUserId}
                   currentUserName={currentUserName}
                   isAdmin={isAdminUser}

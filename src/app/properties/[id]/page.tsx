@@ -10,7 +10,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { commentRepo } from "@/lib/comments";
-import { reviewRepo } from "@/lib/reviews";
+import { reviewRepo, reviewStats } from "@/lib/reviews";
 import { withLiveDisplayNames } from "@/lib/live-names";
 import {
   canViewBackyard,
@@ -131,6 +131,14 @@ export default async function PropertyDetailPage({
         ),
       )
     : [];
+  // 平均★とレビュー件数はカタログと同じく未サインインでも公開（個々のレビュー
+  // 本文はサインイン後のみ）。カタログ側は reviewStatsForProperties で常時
+  // 計算しているのに、物件ページ側は signedIn の時しか reviews を取得しない
+  // ため同じ物件でも数字が食い違う不具合があった。
+  const propertyReviewStats = await reviewStats(property.id).catch(() => ({
+    average: 0,
+    count: 0,
+  }));
   if (user) {
     try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
@@ -179,6 +187,7 @@ export default async function PropertyDetailPage({
         locale={locale}
         comments={comments}
         reviews={reviews}
+        reviewStats={propertyReviewStats}
         currentUserId={user?.id ?? null}
         currentUserName={user ? publicDisplayName(user) : null}
         isAdminUser={isAdminUser}
