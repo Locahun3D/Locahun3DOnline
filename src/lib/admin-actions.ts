@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
@@ -78,6 +79,17 @@ export async function deleteAccountAction(formData: FormData): Promise<void> {
   if (id === admin.id) return;
   await userRepo.remove(id);
   revalidatePath("/admin/accounts");
+}
+
+/** 管理者が特定ユーザーの特定セッション（端末）を強制失効させる。 */
+export async function revokeUserSessionAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!userId || !sessionId) return;
+  const client = await clerkClient();
+  await client.sessions.revokeSession(sessionId).catch(() => {});
+  revalidatePath(`/admin/accounts/${userId}/sessions`);
 }
 
 /** 一括: 選択アカウントの status をまとめて変更。 */

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
   ACCOUNT_ROLES,
@@ -296,6 +297,13 @@ export default function AccountsAdmin({
                     <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">紐付</button>
                   </form>
                 )}
+
+                <Link
+                  href={`/admin/accounts/${u.id}/sessions`}
+                  className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition"
+                >
+                  端末
+                </Link>
 
                 {u.id !== adminId && (
                   <form action={deleteAccountAction}>

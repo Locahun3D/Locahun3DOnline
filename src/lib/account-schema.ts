@@ -168,6 +168,12 @@ export const userSchema = z.object({
    * ランダム文字列であることが安全性の根拠 — userId 由来の決定的な値にしない）。
    */
   unsubscribeToken: z.string().default(""),
+  /**
+   * ログイン端末数上限チェックを最後に行った時刻(ISO)。毎リクエストでは
+   * Clerk Backend API を叩かず、一定時間おき(device-limit.ts)にだけ再チェック
+   * するためのスロットル用。null = 未チェック。
+   */
+  deviceLimitCheckedAt: z.string().nullable().default(null),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });

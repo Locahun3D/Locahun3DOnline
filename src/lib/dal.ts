@@ -15,6 +15,10 @@ import {
   type AccountRole,
 } from "./account-schema";
 import { SIGNUP_BONUS_TOKENS } from "./schemas";
+import { deviceLimitForPlan, enforceDeviceLimit } from "./device-limit";
+
+/** 端末数上限の再チェック間隔。毎リクエストでClerk APIを叩かないためのスロットル。 */
+const DEVICE_LIMIT_RECHECK_MS = 10 * 60 * 1000;
 
 export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
   const { userId } = await auth();
@@ -37,6 +41,27 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
       });
     }
     if (existing.status === "suspended") return null;
+
+    // ログイン端末数の上限強制。free プランは対象外(deviceLimitForPlanがnull)
+    // なので即スキップし、有料プランのみスロットル付きで Clerk のアクティブ
+    // セッション数を確認・超過分を失効させる。毎リクエストでは呼ばない。
+    if (deviceLimitForPlan(existing.plan) !== null) {
+      const lastChecked = existing.deviceLimitCheckedAt
+        ? new Date(existing.deviceLimitCheckedAt).getTime()
+        : 0;
+      if (Date.now() - lastChecked > DEVICE_LIMIT_RECHECK_MS) {
+        try {
+          await enforceDeviceLimit(existing.id, existing.plan);
+        } catch {
+          // Clerk API 障害でログイン自体をブロックしない。
+        }
+        return userRepo.upsert({
+          ...existing,
+          deviceLimitCheckedAt: new Date().toISOString(),
+        });
+      }
+    }
+
     return existing;
   }
 
@@ -84,6 +109,7 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     marketingConsent: false,
     marketingConsentAt: null,
     unsubscribeToken: "",
+    deviceLimitCheckedAt: null,
     createdAt: now,
     updatedAt: now,
   });
