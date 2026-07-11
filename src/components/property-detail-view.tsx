@@ -906,117 +906,95 @@ export default function PropertyDetailView({
         )}
 
         {/* ══════════════════════════════════════════════════
-         *  Community — アクション常設バー ＋ 下2カラム（レビュー｜掲示板）
-         *  旧: 3独立セクションが縦に直列し0件時の空白が大きかった／
-         *  さらに前段でタブ統合も試したが一覧性が犠牲になっていた。
-         *  「保存・お問い合わせ」という行動そのものを最上段の常設バーに
-         *  固定し、閲覧系（レビュー・掲示板）は2カラムで両方常時見せる。
+         *  Community — CONTACT（常設）＋ 下2カラム（レビュー｜掲示板）
+         *  常設の黒アクションバー（保存・問い合わせボタンだけの帯）は不要と
+         *  判断され撤去。CONTACTカードは元通り常時表示に戻し、問い合わせ先が
+         *  無い物件はカード内に「受け付けていません」の文言＋★保存だけ出す。
          * ══════════════════════════════════════════════════ */}
         {!preview && (
           <section id="inquiry" className="mb-14">
-            {/* 常設アクションバー */}
-            <div className="bg-ink px-6 py-5 sm:px-8 flex flex-wrap items-center gap-4 mb-4">
-              <div className="flex-1 min-w-[200px]">
-                <p className="mono text-[9.5px] tracking-[0.22em] uppercase text-white/40 mb-1">
-                  {en ? "Actions" : "アクション"}
-                </p>
-                <p className="text-white text-[13px] font-bold">
-                  {hasContact
-                    ? en
-                      ? "Save this location, or send an inquiry"
-                      : "気になったら保存・お問い合わせを"
-                    : en
-                      ? "This property is not accepting inquiries yet"
-                      : "この物件は現在お問い合わせを受け付けていません"}
-                </p>
-              </div>
-              <div className="flex items-center gap-2.5">
-                {hasContact && (
-                  <a
-                    href="#contact-form"
-                    className="mono text-[11px] tracking-[0.18em] uppercase border border-white/30 text-white px-4 py-2.5 hover:bg-white hover:text-ink transition whitespace-nowrap"
-                  >
-                    ✉ {en ? "Contact" : "お問い合わせ"}
-                  </a>
-                )}
-                <BookmarkButton
-                  propertyId={property.id}
-                  initialBookmarked={bookmarked}
-                  signedIn={signedIn}
-                  revalidate={`/properties/${property.id}`}
-                  variant="hero"
-                />
-              </div>
-            </div>
+            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9 mb-4">
+              <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
+              <div className="grid lg:grid-cols-2 gap-8 items-start">
+                <div className="text-[14px]">
+                  {property.contactPhone && (
+                    <div className="flex gap-5 py-3 border-b border-line">
+                      <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                        TEL
+                      </span>
+                      <a
+                        href={`tel:${property.contactPhone}`}
+                        className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition"
+                      >
+                        {property.contactPhone}
+                      </a>
+                    </div>
+                  )}
+                  {property.contactEmail && (
+                    <div className="flex gap-5 py-3 border-b border-line">
+                      <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                        MAIL
+                      </span>
+                      <a
+                        href={`mailto:${property.contactEmail}`}
+                        className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                      >
+                        {property.contactEmail}
+                      </a>
+                    </div>
+                  )}
+                  {property.contactWebsite && (
+                    <div className="flex gap-5 py-3 border-b border-line last:border-0">
+                      <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                        HP
+                      </span>
+                      <a
+                        href={
+                          /^https?:\/\//.test(property.contactWebsite)
+                            ? property.contactWebsite
+                            : `https://${property.contactWebsite}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                      >
+                        {property.contactWebsite}
+                      </a>
+                    </div>
+                  )}
+                  {!hasContact && (
+                    <p className="text-ink/50 text-[13px] py-3">
+                      {en
+                        ? "This property is not accepting inquiries at the moment."
+                        : "この物件は現在お問い合わせを受け付けていません。"}
+                    </p>
+                  )}
+                </div>
 
-            {/* 問い合わせ先が無ければカードごと出さない（受付不可の旨は常設バーで既に伝わる） */}
-            {hasContact && (
-              <div
-                id="contact-form"
-                className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9 mb-4"
-              >
-                <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
-                <div className="grid lg:grid-cols-2 gap-8 items-start">
-                  <div className="text-[14px]">
-                    {property.contactPhone && (
-                      <div className="flex gap-5 py-3 border-b border-line">
-                        <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
-                          TEL
-                        </span>
-                        <a
-                          href={`tel:${property.contactPhone}`}
-                          className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition"
-                        >
-                          {property.contactPhone}
-                        </a>
-                      </div>
-                    )}
-                    {property.contactEmail && (
-                      <div className="flex gap-5 py-3 border-b border-line">
-                        <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
-                          MAIL
-                        </span>
-                        <a
-                          href={`mailto:${property.contactEmail}`}
-                          className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
-                        >
-                          {property.contactEmail}
-                        </a>
-                      </div>
-                    )}
-                    {property.contactWebsite && (
-                      <div className="flex gap-5 py-3 border-b border-line last:border-0">
-                        <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
-                          HP
-                        </span>
-                        <a
-                          href={
-                            /^https?:\/\//.test(property.contactWebsite)
-                              ? property.contactWebsite
-                              : `https://${property.contactWebsite}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
-                        >
-                          {property.contactWebsite}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2.5">
+                <div className="space-y-2.5">
+                  {hasContact && (
                     <InquiryPanel
                       propertyId={property.id}
                       propertyTitle={property.title}
                       locale={locale}
                     />
+                  )}
+                  <div className="[&>button]:w-full [&>button]:justify-center">
+                    <BookmarkButton
+                      propertyId={property.id}
+                      initialBookmarked={bookmarked}
+                      signedIn={signedIn}
+                      revalidate={`/properties/${property.id}`}
+                    />
+                  </div>
+                  {hasContact && (
                     <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
                       RESPONSE WITHIN 1 BUSINESS DAY
                     </p>
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
             {/* レビュー｜掲示板 — 常時2カラムで両方表示（タブに畳まない） */}
             <div className="grid lg:grid-cols-2 gap-4">
