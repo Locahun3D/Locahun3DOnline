@@ -15,7 +15,13 @@ export default async function SiteFooter() {
             ? `© ${year} Locahun 3D — Kawaii World Industries Inc.`
             : `© ${year} ロケハン3D — Kawaii World Industries株式会社`}
         </div>
-        <nav className="flex gap-4 mono text-[10px] tracking-[0.18em] uppercase text-muted">
+        <nav className="flex flex-wrap gap-4 mono text-[10px] tracking-[0.18em] uppercase text-muted">
+          <Link href={lh("/terms/service")} className="hover:text-foreground transition">
+            {en ? "Terms of Service" : "利用規約"}
+          </Link>
+          <Link href={lh("/privacy")} className="hover:text-foreground transition">
+            {en ? "Privacy Policy" : "プライバシーポリシー"}
+          </Link>
           <Link href={lh("/terms/tokushoho")} className="hover:text-foreground transition">
             {en ? "Commercial Disclosure" : "特定商取引法"}
           </Link>
