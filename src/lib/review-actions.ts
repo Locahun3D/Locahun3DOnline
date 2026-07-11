@@ -70,6 +70,24 @@ export async function postOrUpdateReviewAction(
   if (!guard.ok) return { ok: false, error: guard.error };
 
   const existing = await reviewRepo.getByUser(trimmedPropertyId, user.id);
+
+  // レート制限は「新規投稿」のみ対象（1物件1件の編集は連投スパムになり得ない
+  // ので対象外）。多数の異なる物件へ短時間に大量投稿するパターンを防ぐ。
+  if (!existing && user.role !== "admin") {
+    const nowDate = new Date();
+    const oneMinuteAgo = new Date(nowDate.getTime() - 60_000).toISOString();
+    const oneDayAgo = new Date(nowDate.getTime() - 24 * 60 * 60_000).toISOString();
+
+    const recentMinute = await reviewRepo.countRecentByUser(user.id, oneMinuteAgo);
+    if (recentMinute >= 3) {
+      return { ok: false, error: "投稿間隔が短すぎます。少し待ってから投稿してください。" };
+    }
+    const recentDay = await reviewRepo.countRecentByUser(user.id, oneDayAgo);
+    if (recentDay >= 50) {
+      return { ok: false, error: "本日の投稿上限に達しました。" };
+    }
+  }
+
   const now = new Date().toISOString();
 
   const validated = await reviewRepo.upsert({

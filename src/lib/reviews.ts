@@ -161,6 +161,22 @@ export const reviewRepo = {
     const db = await getD1();
     if (db) await d1Delete(db, TABLE, "id", id);
   },
+
+  /** 直近 sinceIso 以降にこのユーザーが新規投稿した件数（レート制限用）。 */
+  async countRecentByUser(userId: string, sinceIso: string): Promise<number> {
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      return all.filter((r) => r.userId === userId && r.createdAt > sinceIso).length;
+    }
+    const db = await getD1();
+    if (!db) return 0;
+    await ensureSeeded(db);
+    const row = await db
+      .prepare(`SELECT COUNT(*) as n FROM ${TABLE} WHERE user_id = ? AND created_at > ?`)
+      .bind(userId, sinceIso)
+      .first();
+    return Number((row as { n?: number } | null)?.n ?? 0);
+  },
 };
 
 export interface ReviewStats {
