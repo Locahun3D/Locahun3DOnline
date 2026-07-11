@@ -130,6 +130,16 @@ export default function InquiryForm({
         </label>
       </div>
 
+      <label className="block">
+        <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">{en ? "Available time" : "利用可能時間"}</span>
+        <input
+          name="preferredTime"
+          type="text"
+          placeholder={en ? "e.g. 10:00–14:00 / All day" : "例: 10:00〜14:00 / 終日 など"}
+          className={inputClass}
+        />
+      </label>
+
       {/* Message */}
       <label className="block">
         <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">

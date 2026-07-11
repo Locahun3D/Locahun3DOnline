@@ -209,6 +209,7 @@ export async function notifyInquiry(opts: {
   phone?: string;
   purpose?: string;
   preferredDate?: string;
+  preferredTime?: string;
   message: string;
 }): Promise<boolean> {
   if (!emailEnabled()) return false;
@@ -226,6 +227,7 @@ export async function notifyInquiry(opts: {
       ${row("電話", opts.phone)}
       ${row("利用目的", opts.purpose)}
       ${row("利用希望日", opts.preferredDate)}
+      ${row("利用可能時間", opts.preferredTime)}
     </table>
     <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.message)}</div>
   `;
@@ -235,6 +237,28 @@ export async function notifyInquiry(opts: {
     replyTo: opts.fromEmail,
     subject: `【お問い合わせ】${opts.propertyTitle} — ${opts.name} 様`,
     html: shell("スタジオへのお問い合わせ", body),
+  });
+}
+
+/** 運営から問い合わせ者への返信メール（アプリ内の返信フォームから送信）。 */
+export async function notifyInquiryReply(opts: {
+  to: string;
+  propertyTitle: string;
+  originalMessage: string;
+  reply: string;
+}): Promise<boolean> {
+  if (!emailEnabled() || !opts.to) return false;
+  const body = `
+    <p style="font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.reply)}</p>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee;">
+      <div style="font-size:11px;color:#999;margin-bottom:6px;">元のお問い合わせ内容</div>
+      <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:#666;">${esc(opts.originalMessage)}</div>
+    </div>
+  `;
+  return sendEmail({
+    to: opts.to,
+    subject: `Re: ${opts.propertyTitle} のお問い合わせ`,
+    html: shell(`「${opts.propertyTitle}」についてのご返信`, body),
   });
 }
 

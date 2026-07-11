@@ -23,6 +23,7 @@ const inputSchema = z.object({
   phone: z.string().trim().max(40).optional().default(""),
   purpose: z.string().trim().max(60).optional().default(""),
   preferredDate: z.string().trim().max(20).optional().default(""),
+  preferredTime: z.string().trim().max(40).optional().default(""),
   message: z.string().trim().min(1, "お問い合わせ内容を入力してください").max(4000),
 });
 
@@ -68,6 +69,7 @@ export async function submitInquiryAction(
     phone: formData.get("phone"),
     purpose: formData.get("purpose"),
     preferredDate: formData.get("preferredDate"),
+    preferredTime: formData.get("preferredTime"),
     message: formData.get("message"),
   });
   if (!parsed.success) {
@@ -83,11 +85,15 @@ export async function submitInquiryAction(
 
   // (3) 送信元レート制限: 同一 IP（サインイン済なら userId 優先）× 同一物件で
   //     直近の件数を上限に抑える。Worker インスタンス内メモリの TTL カウンタ。
+  // サインイン済みなら userId を記録内容にも残す（返信をアカウント通知でも
+  // 気づけるようにするため。匿名送信は null のまま = メールのみが通知経路）。
   let source = "";
+  let signedInUserId: string | null = null;
   try {
     const { userId } = await auth();
     if (userId) {
       source = `u:${userId}`;
+      signedInUserId = userId;
     } else {
       const h = await headers();
       source =
@@ -115,6 +121,7 @@ export async function submitInquiryAction(
     phone: d.phone,
     purpose: d.purpose,
     preferredDate: d.preferredDate,
+    preferredTime: d.preferredTime,
     message: d.message,
   });
 
@@ -124,16 +131,20 @@ export async function submitInquiryAction(
       id: randomUUID(),
       propertyId: property.id,
       propertyTitle: property.title,
+      userId: signedInUserId,
       name: d.name,
       company: d.company,
       email: d.email,
       phone: d.phone,
       purpose: d.purpose,
       preferredDate: d.preferredDate,
+      preferredTime: d.preferredTime,
       message: d.message,
       forwardedTo: property.contactEmail,
       emailed,
       status: "new",
+      reply: "",
+      repliedAt: null,
       createdAt: new Date().toISOString(),
     });
   } catch {

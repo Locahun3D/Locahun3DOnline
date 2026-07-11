@@ -7,6 +7,7 @@ import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { getPublishedProperties } from "@/lib/properties";
 import { repo as propertyRepo } from "@/lib/store";
 import { getSubscriptionBilling } from "@/lib/stripe";
+import { listNotifications } from "@/lib/notifications";
 
 export const metadata = { title: "プロフィール" };
 
@@ -29,6 +30,7 @@ export default async function AccountPage({
       : null;
   const allUnlocks = await viewUnlockRepo.list({ userId: user.id });
   const unlockedCount = allUnlocks.filter((u) => u.expiresAt > nowIso).length;
+  const notifications = await listNotifications(user.id);
 
   // ── 閲覧履歴タイル用: 直近の「まだ有効な（無償再視聴期間内の）」アンロック1件 ──
   // viewUnlockRepo.list は unlockedAt 降順で返るので先頭が最新。
@@ -145,6 +147,7 @@ export default async function AccountPage({
         lastUnlockProperty={lastUnlockProperty}
         lastUnlockSceneLabel={lastUnlockSceneLabel}
         unlockedCount={unlockedCount}
+        notifications={notifications}
         billing={billing}
         nowIso={nowIso}
       />

@@ -9,7 +9,9 @@ import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import RedeemGift from "@/components/account/redeem-gift";
 import NdaConsentModal from "@/components/account/nda-consent-modal";
 import MarketingConsentToggle from "@/components/account/marketing-consent-toggle";
+import NotificationList from "@/components/account/notification-list";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
+import type { Notification } from "@/lib/notifications";
 
 type BoardTile = { name: string; count: number; cover?: string };
 
@@ -31,6 +33,7 @@ export default function AccountDashboard({
   lastUnlockProperty,
   lastUnlockSceneLabel,
   unlockedCount,
+  notifications = [],
   billing = null,
   nowIso,
 }: {
@@ -43,6 +46,8 @@ export default function AccountDashboard({
   lastUnlockSceneLabel: string;
   /** 有効期限内（無償再視聴期間内）のアンロック総数。「閲覧履歴」カードの一覧導線に表示。 */
   unlockedCount: number;
+  /** 問い合わせ返信等のアプリ内通知（新しい順）。 */
+  notifications?: Notification[];
   /** Stripe から取得した実際の請求間隔と次回更新日。未契約・未設定・取得失敗は null
    *  （その場合は tokenRefillAt を次回更新の近似として表示する）。 */
   billing?: { interval: "monthly" | "annual"; periodEnd: string | null } | null;
@@ -121,6 +126,8 @@ export default function AccountDashboard({
           </div>
         </div>
       </div>
+
+      <NotificationList notifications={notifications} en={en} lh={lh} />
 
       {/* ── 上段: ステータス3枚 ── */}
       <div className="grid md:grid-cols-3 gap-4">

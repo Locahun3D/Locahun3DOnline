@@ -24,18 +24,26 @@ export const inquirySchema = z.object({
   id: z.string(),
   propertyId: z.string(),
   propertyTitle: z.string().default(""),
+  /** 送信時にサインインしていた場合のみ設定。匿名送信は null（アカウント通知に使う）。 */
+  userId: z.string().nullable().default(null),
   name: z.string().max(80).default(""),
   company: z.string().max(120).default(""),
   email: z.string().max(120).default(""),
   phone: z.string().max(40).default(""),
   purpose: z.string().max(60).default(""),
   preferredDate: z.string().max(20).default(""),
+  /** 利用希望時間帯（自由記述、例: 10:00〜14:00 / 終日 など）。 */
+  preferredTime: z.string().max(40).default(""),
   message: z.string().max(4000).default(""),
   /** 転送先（送信時点の先方メール）。空＝先方メール未設定（運営のみ受領）。 */
   forwardedTo: z.string().max(120).default(""),
   /** メール転送に成功したか（Resend キー未設定なら false でも記録は残る）。 */
   emailed: z.boolean().default(false),
   status: inquiryStatusSchema.default("new"),
+  /** 運営からの返信本文。空 = 未返信。 */
+  reply: z.string().max(4000).default(""),
+  /** 返信日時（ISO）。null = 未返信。 */
+  repliedAt: z.string().nullable().default(null),
   createdAt: z.string().default(() => new Date().toISOString()),
 });
 

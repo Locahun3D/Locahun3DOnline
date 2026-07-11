@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { inquiryRepo } from "@/lib/inquiries";
 import { setInquiryStatusAction, deleteInquiryAction } from "@/lib/admin-actions";
+import InquiryReplyForm from "@/components/admin/inquiry-reply-form";
 
 export const metadata = { title: "問い合わせ" };
 
@@ -18,9 +19,16 @@ function fmtDate(iso: string) {
   }
 }
 
-export default async function AdminInquiriesPage() {
-  const inquiries = await inquiryRepo.list();
-  const newCount = inquiries.filter((i) => i.status === "new").length;
+export default async function AdminInquiriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ purpose?: string }>;
+}) {
+  const { purpose: purposeFilter } = await searchParams;
+  const all = await inquiryRepo.list();
+  const newCount = all.filter((i) => i.status === "new").length;
+  const purposes = [...new Set(all.map((i) => i.purpose).filter(Boolean))].sort();
+  const inquiries = purposeFilter ? all.filter((i) => i.purpose === purposeFilter) : all;
 
   return (
     <div className="theme-online p-8">
@@ -42,6 +50,35 @@ export default async function AdminInquiriesPage() {
           メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。
         </p>
       </div>
+
+      {purposes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.18em] uppercase">
+          <span className="text-muted mr-1">種別</span>
+          <Link
+            href="/admin/inquiries"
+            className={`px-3 py-1.5 border rounded-sm transition ${
+              !purposeFilter
+                ? "border-accent text-accent"
+                : "border-line text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            全て（{all.length}）
+          </Link>
+          {purposes.map((p) => (
+            <Link
+              key={p}
+              href={`/admin/inquiries?purpose=${encodeURIComponent(p)}`}
+              className={`px-3 py-1.5 border rounded-sm transition ${
+                purposeFilter === p
+                  ? "border-accent text-accent"
+                  : "border-line text-muted hover:border-ink hover:text-ink"
+              }`}
+            >
+              {p}（{all.filter((i) => i.purpose === p).length}）
+            </Link>
+          ))}
+        </div>
+      )}
 
       {inquiries.length === 0 ? (
         <div className="border border-line rounded-md p-10 text-center text-muted text-[14px]">
@@ -119,19 +156,29 @@ export default async function AdminInquiriesPage() {
                     {i.preferredDate}
                   </div>
                 )}
+                {i.preferredTime && (
+                  <div>
+                    <span className="text-muted mr-2">利用可能時間</span>
+                    {i.preferredTime}
+                  </div>
+                )}
               </div>
 
               <div className="bg-[#0f0f0f] border border-line rounded-md p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap mb-3">
-                {i.message}
+                {i.message || <span className="text-muted italic">（本文なし）</span>}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={`mailto:${i.email}?subject=${encodeURIComponent(`Re: ${i.propertyTitle} のお問い合わせ`)}`}
-                  className="text-[12px] border border-accent text-accent px-3 py-1.5 rounded-sm hover:bg-accent hover:text-bg transition"
-                >
-                  返信する
-                </a>
+              {i.reply && (
+                <div className="bg-[#0a1f14] border border-green-900/40 rounded-md p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap mb-3">
+                  <div className="mono text-[10px] tracking-[0.16em] uppercase text-green-500 mb-1.5">
+                    返信済み{i.repliedAt ? `（${fmtDate(i.repliedAt)}）` : ""}
+                  </div>
+                  {i.reply}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-start gap-2">
+                <InquiryReplyForm inquiryId={i.id} toEmail={i.email} />
                 {i.status !== "read" && (
                   <form action={setInquiryStatusAction}>
                     <input type="hidden" name="id" value={i.id} />

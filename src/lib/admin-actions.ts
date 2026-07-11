@@ -8,7 +8,8 @@ import { repo as propertyRepo } from "./store";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
-import { notifyRefund } from "./email";
+import { notifyRefund, notifyInquiryReply } from "./email";
+import { createNotification } from "./notifications";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
@@ -157,6 +158,64 @@ export async function deleteInquiryAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   await inquiryRepo.remove(id);
   revalidatePath("/admin/inquiries");
+}
+
+export type ReplyInquiryState =
+  | { ok: true }
+  | { ok: false; error: string }
+  | undefined;
+
+/**
+ * 問い合わせにアプリ内から返信する。メールが主経路（匿名送信もあるため）。
+ * 送信時にサインインしていたユーザーには、加えてアプリ内通知も作成する。
+ */
+export async function replyToInquiryAction(
+  _prev: ReplyInquiryState,
+  formData: FormData,
+): Promise<ReplyInquiryState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const reply = String(formData.get("reply") ?? "").trim();
+  if (!reply) return { ok: false, error: "返信内容を入力してください。" };
+  if (reply.length > 4000) return { ok: false, error: "返信内容が長すぎます。" };
+
+  const i = await inquiryRepo.get(id);
+  if (!i) return { ok: false, error: "対象の問い合わせが見つかりませんでした。" };
+
+  const emailed = await notifyInquiryReply({
+    to: i.email,
+    propertyTitle: i.propertyTitle,
+    originalMessage: i.message,
+    reply,
+  });
+
+  await inquiryRepo.upsert({
+    ...i,
+    reply,
+    repliedAt: new Date().toISOString(),
+    status: i.status === "new" ? "read" : i.status,
+  });
+
+  if (i.userId) {
+    await createNotification({
+      userId: i.userId,
+      type: "inquiry_reply",
+      title: `「${i.propertyTitle}」への問い合わせに返信がありました`,
+      body: reply,
+      link: `/properties/${i.propertyId}`,
+    }).catch(() => {});
+  }
+
+  if (!emailed && !i.userId) {
+    // メールも通知も届かない場合だけ警告する（少なくとも片方は届く想定）。
+    return {
+      ok: false,
+      error: "返信を保存しましたが、メール送信に失敗しました（RESEND未設定の可能性）。相手には届いていません。",
+    };
+  }
+
+  revalidatePath("/admin/inquiries");
+  return { ok: true };
 }
 
 /** 購入を返金処理する。 */
