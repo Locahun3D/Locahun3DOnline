@@ -81,6 +81,9 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     bookmarkFolders: [],
     bookmarkFolderAssignments: {},
     bookmarkTags: {},
+    marketingConsent: false,
+    marketingConsentAt: null,
+    unsubscribeToken: "",
     createdAt: now,
     updatedAt: now,
   });

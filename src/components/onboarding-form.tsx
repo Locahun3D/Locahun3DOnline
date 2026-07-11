@@ -101,6 +101,15 @@ export default function OnboardingForm() {
         <p className="text-[11px] text-red-400">{state.errors.nda.join(" / ")}</p>
       )}
 
+      <label className="flex gap-3 items-start border border-line p-3 text-[12px] leading-[1.7] cursor-pointer">
+        <input type="checkbox" name="marketingConsent" className="mt-0.5 accent-[#5ec8e8]" />
+        <span className="text-muted">
+          {en
+            ? "I'd like to receive occasional emails about new locations and offers (optional). I can unsubscribe anytime."
+            : "新着ロケ地やお得な情報のメールを受け取る（任意）。いつでも配信停止できます。"}
+        </span>
+      </label>
+
       {requiresApproval(role) && (
         <p className="text-[11px] text-muted leading-[1.7] border-l-2 border-line pl-3">
           {en

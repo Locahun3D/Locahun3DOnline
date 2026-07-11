@@ -33,6 +33,8 @@ export async function onboardingAction(
   if (requiresNda(d.role) && !d.nda) {
     return { errors: { nda: ["NDA への同意が必要です"] } };
   }
+  const marketingConsent =
+    formData.get("marketingConsent") === "on" || formData.get("marketingConsent") === "true";
 
   // Ensure the app record exists (getCurrentUser creates it on first visit).
   await getCurrentUser();
@@ -48,6 +50,9 @@ export async function onboardingAction(
     status,
     onboarded: true,
     ndaAcceptedAt: d.nda ? new Date().toISOString() : u.ndaAcceptedAt,
+    marketingConsent,
+    marketingConsentAt: marketingConsent ? new Date().toISOString() : null,
+    unsubscribeToken: marketingConsent && !u.unsubscribeToken ? crypto.randomUUID() : u.unsubscribeToken,
   });
 
   redirect(status === "pending" ? "/account?welcome=pending" : "/account?welcome=1");

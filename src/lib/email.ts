@@ -90,6 +90,38 @@ function shell(title: string, bodyHtml: string): string {
 </body></html>`;
 }
 
+/**
+ * 広告メール用のシェル。通常の shell() との違い:
+ *  - 配信停止リンクを本文末尾に明記（特定電子メール法は必須要件）。
+ *  - 送信者の氏名・所在地・問い合わせ先を tokushoho ページと同じ内容でフル表示
+ *    （取引メールの簡易フッターより厳格な表示義務があるため）。
+ */
+export function marketingShell(title: string, bodyHtml: string, unsubscribeUrl: string): string {
+  return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"></head>
+<body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f4f4f2;margin:0;padding:24px;color:#111;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;">
+    <div style="background:#111;color:#fff;padding:20px 28px;font-weight:700;letter-spacing:.06em;">
+      ロケハン3D <span style="opacity:.5;font-size:11px;font-weight:400;">locahun3d.com</span>
+    </div>
+    <div style="padding:28px;">
+      <h1 style="font-size:18px;margin:0 0 16px;">${title}</h1>
+      ${bodyHtml}
+    </div>
+    <div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;line-height:1.8;">
+      配信停止をご希望の場合は<a href="${unsubscribeUrl}" style="color:#5ec8e8;">こちら</a>から手続きできます。<br />
+      ロケハン3D（運営：Kawaii World Industries株式会社）<br />
+      〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F<br />
+      お問い合わせ: contact@locahun3d.com
+    </div>
+  </div>
+</body></html>`;
+}
+
+/** マイページ/オンボーディングで発行する配信停止トークンからURLを組み立てる。 */
+export function unsubscribeUrl(userId: string, token: string): string {
+  return appUrl(`/unsubscribe?u=${encodeURIComponent(userId)}&t=${encodeURIComponent(token)}`);
+}
+
 /** 購入完了メール（領収書を内包）を購入者の登録メールへ送信。 */
 export async function notifyPurchase(p: Purchase): Promise<void> {
   if (!emailEnabled() || !p.userEmail) return;

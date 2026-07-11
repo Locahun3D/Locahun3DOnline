@@ -3,6 +3,7 @@ import { requireOnboarded } from "@/lib/dal";
 import { acceptNdaAction } from "@/lib/auth-actions";
 import { roleLabel, accountStatusLabel, totalTokens } from "@/lib/account-schema";
 import RedeemGift from "@/components/account/redeem-gift";
+import MarketingConsentToggle from "@/components/account/marketing-consent-toggle";
 import AccountDashboard from "@/components/account/account-dashboard";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
 import { getLocale } from "@/lib/i18n/server";
@@ -401,6 +402,8 @@ export default async function AccountPage({
               {en ? "View saved list →" : "保存一覧を見る →"}
             </div>
           </Link>
+
+          <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
         </aside>
       </div>
     </div>

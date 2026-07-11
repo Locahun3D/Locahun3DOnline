@@ -90,6 +90,13 @@ export default async function AdminLayout({
                 問い合わせ
               </Link>
               <Link
+                href="/admin/marketing"
+                prefetch={false}
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                マーケティング
+              </Link>
+              <Link
                 href="/admin/reports"
                 prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"

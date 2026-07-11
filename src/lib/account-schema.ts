@@ -151,6 +151,21 @@ export const userSchema = z.object({
    * タグ自体のマスタ一覧は持たず、使用中のタグは表示時に一覧から動的に集計する。
    */
   bookmarkTags: z.record(z.string(), z.array(z.string().max(30)).max(10)).default({}),
+  /**
+   * 広告メール配信への同意（特定電子メール法対応）。原則オプトインなので
+   * 既定値は必ず false — サインアップ時のチェックボックス、またはマイページの
+   * 設定変更でのみ true になる。
+   */
+  marketingConsent: z.boolean().default(false),
+  /** 同意した日時（ISO）。null = 未同意、または同意後に取り消し済み。 */
+  marketingConsentAt: z.string().nullable().default(null),
+  /**
+   * 配信停止リンク用のランダムトークン。ログイン不要でワンクリック配信停止
+   * できるようにするため（メール内リンクはサインイン画面を経由させない）。
+   * 同意した時に一度だけ発行し、以後は同じ値を使い続ける（推測不可な
+   * ランダム文字列であることが安全性の根拠 — userId 由来の決定的な値にしない）。
+   */
+  unsubscribeToken: z.string().default(""),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
