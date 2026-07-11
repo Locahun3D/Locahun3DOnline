@@ -68,6 +68,11 @@ next-env.d.ts
 # Site settings (local) — 限定無料期間 などの運用設定。Migrates to D1.
 /data/site-settings.json
 
+# Inquiry / notification / general-contact stores (local dev fallback). Migrate to D1.
+/data/inquiries.json
+/data/notifications.json
+/data/contact-requests.json
+
 # Build / deploy logs
 build-*.log
 deploy-*.log

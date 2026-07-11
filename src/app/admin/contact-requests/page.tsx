@@ -115,14 +115,18 @@ export default async function AdminContactRequestsPage({
               <div className="grid md:grid-cols-2 gap-x-8 gap-y-1.5 text-[14px] mb-3">
                 <div>
                   <span className="text-muted mr-2">{c.type === "listing" ? "ご担当者名" : "お名前"}</span>
-                  {c.name}
+                  {c.name || <span className="text-muted italic">（匿名）</span>}
                   {c.company && <span className="text-muted">（{c.company}）</span>}
                 </div>
                 <div>
                   <span className="text-muted mr-2">メール</span>
-                  <a href={`mailto:${c.email}`} className="text-accent hover:underline">
-                    {c.email}
-                  </a>
+                  {c.email ? (
+                    <a href={`mailto:${c.email}`} className="text-accent hover:underline">
+                      {c.email}
+                    </a>
+                  ) : (
+                    <span className="text-muted italic">（未記入）</span>
+                  )}
                 </div>
                 {c.phone && (
                   <div>

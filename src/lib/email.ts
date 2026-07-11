@@ -278,7 +278,7 @@ export async function notifyGeneralContact(opts: {
   return sendEmail({
     to: operatorAddress(),
     replyTo: opts.email,
-    subject: `【${opts.typeLabel}】サイトお問い合わせ — ${opts.name} 様`,
+    subject: `【${opts.typeLabel}】サイトお問い合わせ — ${opts.name || "匿名"} 様`,
     html: shell("一般お問い合わせ", body),
   });
 }

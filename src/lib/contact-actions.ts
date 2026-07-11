@@ -16,8 +16,19 @@ import {
 
 const inputSchema = z.object({
   type: z.enum(CONTACT_TYPES),
-  name: z.string().trim().min(1, "お名前を入力してください").max(80),
-  email: z.string().trim().email("メールアドレスの形式が正しくありません").max(120),
+  // 匿名送信を許可するため、どちらも任意（未入力可）。email は入力された
+  // 場合のみ形式チェックする — 空文字は z.string().email() 単体では弾けない
+  // ため、空文字を許可した上で非空時だけ正規表現で検証する。
+  name: z.string().trim().max(80).optional().default(""),
+  email: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .default("")
+    .refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+      message: "メールアドレスの形式が正しくありません",
+    }),
   company: z.string().trim().max(120).optional().default(""),
   phone: z.string().trim().max(40).optional().default(""),
   url: z.string().trim().max(300).optional().default(""),
@@ -56,18 +67,22 @@ export async function submitContactRequestAction(
     };
   }
 
+  // type ごとにフォームへ出していないフィールドは要素自体がDOMに無いため、
+  // formData.get() が null を返す（未入力の空文字とは別扱い）。z.string() は
+  // null を受け付けないので、ここで空文字に正規化してから渡す。
+  const str = (key: string) => formData.get(key)?.toString() ?? "";
   const parsed = inputSchema.safeParse({
-    type: formData.get("type"),
-    name: formData.get("name"),
-    email: formData.get("email"),
-    company: formData.get("company"),
-    phone: formData.get("phone"),
-    url: formData.get("url"),
-    environment: formData.get("environment"),
-    area: formData.get("area"),
-    propertyName: formData.get("propertyName"),
-    address: formData.get("address"),
-    message: formData.get("message"),
+    type: str("type"),
+    name: str("name"),
+    email: str("email"),
+    company: str("company"),
+    phone: str("phone"),
+    url: str("url"),
+    environment: str("environment"),
+    area: str("area"),
+    propertyName: str("propertyName"),
+    address: str("address"),
+    message: str("message"),
   });
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message ?? "入力内容をご確認ください。";

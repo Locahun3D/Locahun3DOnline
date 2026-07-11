@@ -20,19 +20,34 @@ export default function ContactForm({ type }: { type: ContactType }) {
     undefined,
   );
   const renderedAtRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (renderedAtRef.current) renderedAtRef.current.value = String(Date.now());
   }, []);
 
   if (state?.ok) {
+    // フォームは匿名送信を許可しているため、メール未入力なら「返信を待つ」
+    // 案内は出さない（送信済みDOMノードは検出後も値を保持しているため、
+    // アンマウント後もref経由で参照できる）。
+    const hasEmail = !!emailRef.current?.value.trim();
     return (
       <div className="bg-white border border-line px-8 py-11 text-center">
         <div className="text-accent text-3xl mb-3">✓</div>
         <h3 className="text-[16px] font-bold text-ink mb-2">お問い合わせを送信しました</h3>
         <p className="text-[12.5px] text-muted leading-relaxed">
-          担当者より折り返しご連絡いたします。
-          <br />
-          ご記入のメールアドレス宛の返信をお待ちください。
+          {hasEmail ? (
+            <>
+              担当者より折り返しご連絡いたします。
+              <br />
+              ご記入のメールアドレス宛の返信をお待ちください。
+            </>
+          ) : (
+            <>
+              内容を確認いたします。
+              <br />
+              連絡先が未記入のため、返信が必要な場合はメールアドレスもご記入ください。
+            </>
+          )}
         </p>
       </div>
     );
@@ -131,11 +146,11 @@ export default function ContactForm({ type }: { type: ContactType }) {
 
         <div className="border-t border-line pt-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label={type === "listing" ? "ご担当者名" : "お名前"} required>
-              <input name="name" type="text" placeholder="山田 太郎" required className={inputClass} />
+            <Field label={type === "listing" ? "ご担当者名" : "お名前"} optional>
+              <input name="name" type="text" placeholder="山田 太郎" className={inputClass} />
             </Field>
-            <Field label="メールアドレス" required>
-              <input name="email" type="email" placeholder="info@example.com" required className={inputClass} />
+            <Field label="メールアドレス" optional>
+              <input name="email" type="email" placeholder="info@example.com" ref={emailRef} className={inputClass} />
             </Field>
           </div>
 
