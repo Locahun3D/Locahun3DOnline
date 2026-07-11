@@ -748,38 +748,6 @@ export default function PropertyDetailView({
       )}
 
       {/* ══════════════════════════════════════════════════
-       *  Track record & features
-       * ══════════════════════════════════════════════════ */}
-      {(property.shootingHistory ||
-        property.availableScenes ||
-        property.interiorNotes ||
-        property.lightDirection ||
-        property.surroundings) && (
-        <section className="frame pt-12">
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-            <Eyebrow en="HIGHLIGHTS" jp={en ? "Track record & features" : "実績・特徴"} />
-            <div className="max-w-[46em]">
-              {property.shootingHistory && (
-                <KeyVal k={en ? "Past shoots" : "撮影実績"}>{property.shootingHistory}</KeyVal>
-              )}
-              {property.availableScenes && (
-                <KeyVal k={en ? "Scenes" : "撮影シーン"}>{property.availableScenes}</KeyVal>
-              )}
-              {property.interiorNotes && (
-                <KeyVal k={en ? "Interior" : "内装・素材"}>{property.interiorNotes}</KeyVal>
-              )}
-              {property.lightDirection && (
-                <KeyVal k={en ? "Natural light" : "自然光"}>{property.lightDirection}</KeyVal>
-              )}
-              {property.surroundings && (
-                <KeyVal k={en ? "Surroundings" : "周辺環境"}>{property.surroundings}</KeyVal>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════
        *  Gallery — "contact sheet" band, white print frames
        * ══════════════════════════════════════════════════ */}
       {galleryPhotos.length > 0 && (
