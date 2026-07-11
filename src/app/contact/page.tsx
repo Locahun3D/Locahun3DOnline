@@ -1,0 +1,98 @@
+import Link from "next/link";
+import { getLocale } from "@/lib/i18n/server";
+import { localizedHref } from "@/lib/i18n/dictionaries";
+import { CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
+
+export const metadata = { title: "お問い合わせ｜ロケハン3D" };
+
+const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; goEn: string }[] = [
+  {
+    type: "bug",
+    desc: "サイトやビューアーの不具合をお知らせください。再現手順があると助かります。",
+    descEn: "Let us know about a bug on the site or 3D viewer. Reproduction steps help a lot.",
+    go: "報告フォームへ",
+    goEn: "Go to bug report",
+  },
+  {
+    type: "request",
+    desc: "「このエリア・この種類の物件を3Dで見たい」というリクエストを受け付けています。",
+    descEn: "Tell us a location or area you'd like to see scanned in 3D.",
+    go: "リクエストフォームへ",
+    goEn: "Go to request form",
+  },
+  {
+    type: "listing",
+    desc: "スタジオ・ロケ地のオーナー様。物件を3Dスキャンして掲載しませんか。",
+    descEn: "Studio and location owners — list your space with a 3D scan.",
+    go: "掲載のご案内へ",
+    goEn: "Go to listing inquiry",
+  },
+  {
+    type: "general",
+    desc: "料金・法人契約・提携のご相談など、分類に迷ったらこちらへ。",
+    descEn: "Pricing, corporate plans, partnerships — anything else.",
+    go: "相談フォームへ",
+    goEn: "Go to consultation form",
+  },
+];
+
+export default async function ContactHubPage() {
+  const locale = await getLocale();
+  const en = locale === "en";
+  const lh = (href: string) => localizedHref(href, locale);
+
+  return (
+    <div className="theme-online frame pt-12 pb-32">
+      <div className="chapter-rule">
+        <span className="opacity-60">CONTACT</span>
+        <span>0.4</span>
+        <span className="flex-1 h-px bg-current opacity-25" />
+      </div>
+
+      <header className="text-center max-w-[60ch] mx-auto mb-14">
+        <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mb-3">
+          LOCAHUN 3D / ONLINE
+        </div>
+        <h1 className="serif text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.3] mb-4">
+          {en ? "Contact" : "お問い合わせ"}
+        </h1>
+        <p className="text-[14px] text-muted leading-[1.95]">
+          {en ? "Please choose the topic that fits your request." : "ご用件をお選びください。"}
+        </p>
+      </header>
+
+      <div className="grid sm:grid-cols-2 gap-4 max-w-[760px] mx-auto">
+        {CONTACT_TYPES.map((type) => {
+          const card = HUB_CARDS.find((c) => c.type === type)!;
+          return (
+            <Link
+              key={type}
+              href={lh(`/contact/${type}`)}
+              className="block bg-white border border-line px-6 py-6 hover:border-accent transition"
+            >
+              <div className="mono text-[10px] tracking-[0.3em] uppercase text-accent mb-3">
+                /contact/{type}
+              </div>
+              <div className="text-[16px] font-bold mb-2">
+                {en ? CONTACT_TYPE_LABEL_EN[type] : CONTACT_TYPE_LABEL[type]}
+              </div>
+              <p className="text-[12px] text-muted leading-[1.8] mb-3">
+                {en ? card.descEn : card.desc}
+              </p>
+              <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
+                {(en ? card.goEn : card.go)} →
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const CONTACT_TYPE_LABEL_EN: Record<ContactType, string> = {
+  bug: "Bug report",
+  request: "Request a location",
+  listing: "List your space",
+  general: "General inquiry",
+};

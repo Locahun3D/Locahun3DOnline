@@ -6,6 +6,7 @@ import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
 import { repo as propertyRepo } from "./store";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
+import { contactRequestRepo, type ContactStatus } from "./contact-requests";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
 import { notifyRefund, notifyInquiryReply } from "./email";
@@ -216,6 +217,26 @@ export async function replyToInquiryAction(
 
   revalidatePath("/admin/inquiries");
   return { ok: true };
+}
+
+/** 一般お問い合わせ(/contact)の状態を変更（new / read / archived）。 */
+export async function setContactRequestStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as ContactStatus;
+  if (!["new", "read", "archived"].includes(status)) return;
+  const c = await contactRequestRepo.get(id);
+  if (!c) return;
+  await contactRequestRepo.upsert({ ...c, status });
+  revalidatePath("/admin/contact-requests");
+}
+
+/** 一般お問い合わせ(/contact)を削除。 */
+export async function deleteContactRequestAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  await contactRequestRepo.remove(id);
+  revalidatePath("/admin/contact-requests");
 }
 
 /** 購入を返金処理する。 */

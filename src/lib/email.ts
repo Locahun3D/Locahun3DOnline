@@ -240,6 +240,49 @@ export async function notifyInquiry(opts: {
   });
 }
 
+/** 一般お問い合わせ（/contact）を運営へ通知。物件に紐付かないため常に operatorAddress 宛。 */
+export async function notifyGeneralContact(opts: {
+  typeLabel: string;
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  url?: string;
+  environment?: string;
+  area?: string;
+  propertyName?: string;
+  address?: string;
+  message: string;
+}): Promise<boolean> {
+  if (!emailEnabled()) return false;
+  const row = (label: string, value?: string) =>
+    value
+      ? `<tr><td style="padding:6px 12px 6px 0;color:#666;white-space:nowrap;vertical-align:top;">${label}</td><td style="padding:6px 0;">${esc(value)}</td></tr>`
+      : "";
+  const body = `
+    <p style="font-size:14px;line-height:1.8;">サイトの一般お問い合わせフォームから新着です。</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+      ${row("種別", opts.typeLabel)}
+      ${row("お名前", opts.name)}
+      ${row("会社名・オーナー名", opts.company)}
+      ${row("メール", opts.email)}
+      ${row("電話", opts.phone)}
+      ${row("発生ページURL", opts.url)}
+      ${row("ご利用環境", opts.environment)}
+      ${row("希望エリア", opts.area)}
+      ${row("物件名", opts.propertyName)}
+      ${row("所在地", opts.address)}
+    </table>
+    <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.message)}</div>
+  `;
+  return sendEmail({
+    to: operatorAddress(),
+    replyTo: opts.email,
+    subject: `【${opts.typeLabel}】サイトお問い合わせ — ${opts.name} 様`,
+    html: shell("一般お問い合わせ", body),
+  });
+}
+
 /** 運営から問い合わせ者への返信メール（アプリ内の返信フォームから送信）。 */
 export async function notifyInquiryReply(opts: {
   to: string;

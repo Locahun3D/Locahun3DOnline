@@ -13,6 +13,7 @@ const NAV: { href: string; key: DictKey; code: string }[] = [
   { href: "/properties", key: "nav.properties", code: "0.1" },
   { href: "/pricing", key: "nav.pricing", code: "0.2" },
   { href: "/about", key: "nav.about", code: "0.3" },
+  { href: "/contact", key: "nav.contact", code: "0.4" },
 ];
 
 export default async function SiteHeader() {

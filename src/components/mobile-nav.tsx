@@ -11,6 +11,7 @@ const ITEMS: { href: string; key: DictKey; external?: boolean }[] = [
   { href: "/properties", key: "nav.properties" },
   { href: "/pricing", key: "nav.pricing" },
   { href: "/about", key: "nav.about" },
+  { href: "/contact", key: "nav.contact" },
 ];
 
 const LINK =
