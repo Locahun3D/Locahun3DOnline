@@ -2494,7 +2494,10 @@ function Checklist({ data }: { data: Property }) {
   );
 }
 
-const SALE_PRICE_PRESETS = [50000, 100000, 150000] as const;
+// /admin/pricing の「推奨価格」(DATA_SALE_PRICE: 10万/25万/30万/50万) と揃えて
+// おかないと、推奨価格を適用したデータをエディタで開くたびに一致するプリセットが
+// 無く「カスタム金額」に化けてしまう（実際に起きていた不整合）。
+const SALE_PRICE_PRESETS = [50000, 100000, 150000, 200000, 250000, 300000, 500000] as const;
 
 function SalePriceInput({
   value,
