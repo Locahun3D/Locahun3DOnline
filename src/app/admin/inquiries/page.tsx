@@ -169,8 +169,8 @@ export default async function AdminInquiriesPage({
               </div>
 
               {i.reply && (
-                <div className="bg-[#0a1f14] border border-green-900/40 rounded-md p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap mb-3">
-                  <div className="mono text-[10px] tracking-[0.16em] uppercase text-green-500 mb-1.5">
+                <div className="bg-[#0a1a0a] border border-green-900/40 rounded-md p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap mb-3">
+                  <div className="mono text-[10px] tracking-[0.16em] uppercase text-green-600 mb-1.5">
                     返信済み{i.repliedAt ? `（${fmtDate(i.repliedAt)}）` : ""}
                   </div>
                   {i.reply}
