@@ -161,12 +161,11 @@ export async function findSimilarProperties(
   // suggest-summary.ts と同じ多段フォールバック: web_fetch(+web_search) が
   // 400（アカウント未対応等）なら次のツールセットへ、最後はツール無しで再試行。
   // ここで諦めずに段階を踏まないと、1回の400だけで即ヒューリスティックへ
-  // 落ちてしまい、AIによる本文照合が実質使われなくなる（実機で確認済みの不具合）。
+  // 落ちてしまい、AIによる本文照合が実質使われなくなる。
   const TOOL_SETS = [
     [{ type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 }],
     [],
   ];
-  const debugErrors: string[] = [];
 
   for (const tools of TOOL_SETS) {
     try {
@@ -199,10 +198,7 @@ export async function findSimilarProperties(
         if (data.stop_reason !== "pause_turn") break;
         messages = [...messages, { role: "assistant", content: data.content }];
       }
-      if (badRequest) {
-        debugErrors.push(`tools=${JSON.stringify(tools)} -> 400`);
-        continue;
-      }
+      if (badRequest) continue;
 
       const raw = data ? parseMatches(data) : [];
       const matches: SimilarMatch[] = raw
@@ -219,16 +215,9 @@ export async function findSimilarProperties(
       }
       // 空配列（該当なし）もAI成功の正当な結果として扱う。
       if (data) return { ok: true, matches: [], source: "ai" };
-      debugErrors.push(`tools=${JSON.stringify(tools)} -> no data (loop exhausted?)`);
-    } catch (e) {
-      debugErrors.push(`tools=${JSON.stringify(tools)} -> ${e instanceof Error ? e.message : String(e)}`);
+    } catch {
+      /* 次のツールセット、または heuristic へ */
     }
   }
-  return {
-    ok: true,
-    matches: heuristicMatch(url, rows),
-    source: "heuristic",
-    // TEMP DEBUG — remove after diagnosing why the AI path isn't triggering in prod.
-    debugErrors,
-  } as { ok: true; matches: SimilarMatch[]; source: "heuristic"; debugErrors: string[] };
+  return { ok: true, matches: heuristicMatch(url, rows), source: "heuristic" };
 }
