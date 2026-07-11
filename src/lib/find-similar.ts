@@ -166,6 +166,7 @@ export async function findSimilarProperties(
     [{ type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 }],
     [],
   ];
+  const debugErrors: string[] = [];
 
   for (const tools of TOOL_SETS) {
     try {
@@ -198,7 +199,10 @@ export async function findSimilarProperties(
         if (data.stop_reason !== "pause_turn") break;
         messages = [...messages, { role: "assistant", content: data.content }];
       }
-      if (badRequest) continue;
+      if (badRequest) {
+        debugErrors.push(`tools=${JSON.stringify(tools)} -> 400`);
+        continue;
+      }
 
       const raw = data ? parseMatches(data) : [];
       const matches: SimilarMatch[] = raw
@@ -215,9 +219,16 @@ export async function findSimilarProperties(
       }
       // 空配列（該当なし）もAI成功の正当な結果として扱う。
       if (data) return { ok: true, matches: [], source: "ai" };
-    } catch {
-      /* 次のツールセット、または heuristic へ */
+      debugErrors.push(`tools=${JSON.stringify(tools)} -> no data (loop exhausted?)`);
+    } catch (e) {
+      debugErrors.push(`tools=${JSON.stringify(tools)} -> ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  return { ok: true, matches: heuristicMatch(url, rows), source: "heuristic" };
+  return {
+    ok: true,
+    matches: heuristicMatch(url, rows),
+    source: "heuristic",
+    // TEMP DEBUG — remove after diagnosing why the AI path isn't triggering in prod.
+    debugErrors,
+  } as { ok: true; matches: SimilarMatch[]; source: "heuristic"; debugErrors: string[] };
 }
