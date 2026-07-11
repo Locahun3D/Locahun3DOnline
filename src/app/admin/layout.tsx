@@ -90,6 +90,13 @@ export default async function AdminLayout({
                 問い合わせ
               </Link>
               <Link
+                href="/admin/reports"
+                prefetch={false}
+                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
+              >
+                通報管理
+              </Link>
+              <Link
                 href="/admin/purchases"
                 prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"

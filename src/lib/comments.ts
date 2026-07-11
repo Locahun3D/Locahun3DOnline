@@ -96,6 +96,17 @@ export const commentRepo = {
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   },
 
+  /** 全物件の全コメントを1回で取得（通報一元管理画面用。propertyId 絞り込み無し）。 */
+  async listAll(): Promise<Comment[]> {
+    if (canAccessLocalFs()) {
+      return fileReadAll();
+    }
+    const db = await getD1();
+    if (!db) return [];
+    await ensureSeeded(db);
+    return d1ListData<Comment>(db, TABLE);
+  },
+
   async get(id: string): Promise<Comment | null> {
     if (canAccessLocalFs()) {
       const all = await fileReadAll();
