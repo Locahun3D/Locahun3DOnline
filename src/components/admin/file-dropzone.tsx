@@ -2,14 +2,11 @@
 
 import { useCallback, useRef, useState } from "react";
 import { uploadAsset } from "./upload-client";
-import { detectPointCount } from "@/lib/point-count";
 
 export interface UploadedFile {
   url: string;
   size: number;
   contentType: string;
-  /** kind==="splat" のとき、ファイルから自動検出できた場合のみ設定（.ply/.splat のみ対応）。 */
-  pointCount?: number;
 }
 
 interface Props {
@@ -62,24 +59,15 @@ export default function FileDropzone({
         ...prev,
         { id: localId, name: file.name, size: file.size, progress: 0 },
       ]);
-      // 点群数の検出はブラウザ内で File を読むだけ（アップロードとは独立）なので並行して走らせる。
-      const pointCountPromise =
-        kind === "splat" ? detectPointCount(file).catch(() => null) : Promise.resolve(null);
       uploadAsset(file, kind, {
         onProgress: (pct) =>
           setInFlight((prev) =>
             prev.map((f) => (f.id === localId ? { ...f, progress: pct } : f)),
           ),
       })
-        .then(async (asset) => {
-          const pointCount = await pointCountPromise;
+        .then((asset) => {
           onUploaded(
-            {
-              url: asset.url,
-              size: asset.size,
-              contentType: asset.contentType,
-              ...(pointCount ? { pointCount } : {}),
-            },
+            { url: asset.url, size: asset.size, contentType: asset.contentType },
             file.name,
           );
           setInFlight((prev) => prev.filter((f) => f.id !== localId));

@@ -361,8 +361,8 @@ export const propertySchema = z.object({
       url: urlOrPath(),
       sizeMb: z.number().min(0).max(99999).default(0),
     })).max(10).default([]),
-    // 商品スペック（TurboSquid風）
-    pointCount: z.number().min(0).max(99999999999).default(0),
+    // 商品スペック（TurboSquid風）。データ容量(sizeMb)は既存フィールドを使い回す
+    // （旧 pointCount＝点群数は「あっても参考にならない」との判断で撤去済み）。
     captureDevice: z.string().max(80).default(""),
     // 販売ライセンス区分
     license: z.enum(DATA_LICENSES).default("standard"),

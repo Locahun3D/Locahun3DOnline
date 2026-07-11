@@ -29,7 +29,6 @@ interface DataSalePanelProps {
   tokenCost: 1 | 2 | 3 | 5;
   downloadFileFormat?: string;
   downloadFileSizeMb?: number;
-  pointCount?: number;
   captureDevice?: string;
   license?: DataLicense;
   alreadyPurchased?: boolean;
@@ -43,9 +42,9 @@ export default function DataSalePanel({
   price,
   description,
   scannedAt,
+  splatSizeMb,
   downloadFileFormat,
   downloadFileSizeMb,
-  pointCount,
   captureDevice,
   license = "standard",
   alreadyPurchased = false,
@@ -104,11 +103,15 @@ export default function DataSalePanel({
   const yen = price.toLocaleString(en ? "en-US" : "ja-JP");
   const dlFormat = downloadFileFormat || "PLY / RAD / OBJ";
   const dlSize = downloadFileSizeMb ?? 0;
+  // 点群数（旧仕様）は「あっても参考にならない」との判断で撤去。実際の容量が
+  // 分かる方が買い手にとって意味があるため、DL用ファイルと3DGS本体それぞれの
+  // 容量を出す（両者が同じ/近い値でも「ダウンロードされる実体」がどちらか
+  // 分かるよう区別して表示する）。
   const meta = [
     scannedAt && `${scannedAt}`,
     `${dlFormat}`,
-    dlSize > 0 && `${dlSize} MB`,
-    pointCount && pointCount > 0 && `${pointCount.toLocaleString(en ? "en-US" : "ja-JP")} ${en ? "pts" : "点"}`,
+    dlSize > 0 && `DL ${dlSize} MB`,
+    splatSizeMb > 0 && `3DGS ${splatSizeMb} MB`,
     captureDevice || "",
   ].filter(Boolean).join(" / ");
 
