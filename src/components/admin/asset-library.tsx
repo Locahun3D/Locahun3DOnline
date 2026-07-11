@@ -234,7 +234,18 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
               <h2 className="mono text-[11px] tracking-[0.22em] uppercase">
                 {kindLabels[kind]}
               </h2>
-              <span className="mono text-[10px] text-muted">{items.length} 件</span>
+              <span className="mono text-[10px] text-muted">
+                {items.length} 件
+                {(() => {
+                  const usedCount = items.filter((a) => (usage[a.url]?.length ?? 0) > 0).length;
+                  const unusedCount = items.length - usedCount;
+                  return (
+                    <span className="ml-1.5 opacity-70">
+                      （使用中 {usedCount} ・ 未使用 {unusedCount}）
+                    </span>
+                  );
+                })()}
+              </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {items.map((a) => {
@@ -243,7 +254,12 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
           const thumbSrc = a.kind === "image" ? a.url : a.thumbnailUrl;
           const isEditing = editingTags === a.id;
           return (
-            <div key={a.id} className="border border-line bg-[#1d1d1d] group hover:border-accent/40 transition-colors">
+            <div
+              key={a.id}
+              className={`border bg-[#1d1d1d] group hover:border-accent/40 transition-colors ${
+                used > 0 ? "border-green-800/60" : "border-amber-800/50"
+              }`}
+            >
               {/* Preview */}
               <div className="aspect-video bg-[#111] flex items-center justify-center overflow-hidden relative">
                 {hasThumbnail && thumbSrc ? (
@@ -265,9 +281,13 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
                     アップロード中
                   </span>
                 )}
-                {used > 0 && (
+                {used > 0 ? (
                   <span className="absolute bottom-1.5 right-1.5 bg-green-700/80 text-[9px] mono px-1.5 py-0.5">
                     使用 {used}
+                  </span>
+                ) : (
+                  <span className="absolute bottom-1.5 right-1.5 bg-amber-700/70 text-[9px] mono px-1.5 py-0.5">
+                    未使用
                   </span>
                 )}
               </div>
