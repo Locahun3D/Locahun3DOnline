@@ -158,7 +158,7 @@ export default async function AdminInquiriesPage({
                 )}
                 {i.preferredTime && (
                   <div>
-                    <span className="text-muted mr-2">利用可能時間</span>
+                    <span className="text-muted mr-2">希望時間帯</span>
                     {i.preferredTime}
                   </div>
                 )}

@@ -227,7 +227,7 @@ export async function notifyInquiry(opts: {
       ${row("電話", opts.phone)}
       ${row("利用目的", opts.purpose)}
       ${row("利用希望日", opts.preferredDate)}
-      ${row("利用可能時間", opts.preferredTime)}
+      ${row("希望時間帯", opts.preferredTime)}
     </table>
     <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.message)}</div>
   `;

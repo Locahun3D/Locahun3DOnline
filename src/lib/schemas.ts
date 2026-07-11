@@ -12,6 +12,27 @@ export const PROPERTY_CATEGORIES = [
 
 export const PROPERTY_STATUSES = ["draft", "published", "archived"] as const;
 
+/** 利用可能な時間帯（検索フィルタ用のタグ）。availableHours(自由記述)とは別に持つ
+ *  ——自由記述だけでは横断的な絞り込みができないため。 */
+export const TIME_SLOTS = ["early", "day", "evening", "night", "late", "24h"] as const;
+export type TimeSlot = (typeof TIME_SLOTS)[number];
+export const TIME_SLOT_LABEL: Record<TimeSlot, string> = {
+  early: "早朝（5-9時）",
+  day: "日中（9-17時）",
+  evening: "夕方（17-20時）",
+  night: "夜間（20-24時）",
+  late: "深夜（0-5時）",
+  "24h": "24時間可",
+};
+export const TIME_SLOT_LABEL_EN: Record<TimeSlot, string> = {
+  early: "Early (5–9)",
+  day: "Daytime (9–17)",
+  evening: "Evening (17–20)",
+  night: "Night (20–24)",
+  late: "Late night (0–5)",
+  "24h": "24 hours",
+};
+
 /**
  * Listing visibility:
  *   public        — anyone can see it in the catalog and open the detail page.
@@ -260,8 +281,10 @@ export const propertySchema = z.object({
   nearestStation: z.string().max(80).default(""),
 
   // ── 利用条件・アクセス ──
-  /** 利用可能時間（例: 24時間可（要相談））。 */
+  /** 利用可能時間（例: 24時間可（要相談））。自由記述の補足情報。 */
   availableHours: z.string().max(120).default(""),
+  /** 利用可能な時間帯タグ（検索で絞り込むための構造化データ）。 */
+  availableTimeSlots: z.array(z.enum(TIME_SLOTS)).max(6).default([]),
   /** 撮影可能日（例: 平日／土日祝（要相談））。 */
   availableDays: z.string().max(120).default(""),
   /** 申込期限・リードタイム（例: 1週間前）。 */
