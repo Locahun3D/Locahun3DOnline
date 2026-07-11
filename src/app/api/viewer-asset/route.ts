@@ -101,12 +101,18 @@ export async function GET(req: Request) {
      * 視聴をアンロックする（フリープランも含む — 月次付与分等で保有していれば
      * 視聴可）。一度アンロックしたシーンは 2 年間無償で再視聴できる。
      *
-     * バイパス（無条件で通す）:
-     *   - 管理者 (role === "admin")
-     *   - 限定無料期間中 (freeAccess)
+     * 管理者は無条件で視聴でき課金もされないが、「何を見たか」の記録
+     * (tokensSpent: 0) は他ユーザーと同じ経路で残す。以前は isAdmin が
+     * このブロック自体を丸ごとスキップしていたため、運営が自分の管理者
+     * アカウントで動作確認しても /dashboard/unlocked が常に空になり、
+     * 「閲覧履歴が正しく動いていない」ように見えていた（実際は記録自体が
+     * 一度も作られていなかった）。
+     *
+     * 限定無料期間中 (freeAccess) は従来どおり記録もしない（キャンペーン中は
+     * 全員無条件で無制限視聴のため、履歴に残す意味が薄い）。
      */
     const isAdmin = user.role === "admin";
-    if (!isAdmin && !freeAccess) {
+    if (!freeAccess) {
       const propertyId = matchedProperty.id;
       const splatItemIndex = matchedIndex;
       const splatItemId = matchedItem.id;
@@ -124,18 +130,21 @@ export async function GET(req: Request) {
       if (!alreadyUnlocked) {
         // 残高は「stale な user」ではなく直前に取り直す（gift-actions.ts と同様、
         // 二度クリック等の並行リクエストによる二重消費/lost-update を避ける）。
-        const fresh = (await userRepo.get(user.id)) ?? user;
-        const spendable = totalTokens(fresh); // tokenBalance + bonusTokens
-        if (spendable < tokenCost) {
-          return NextResponse.json(
-            {
-              error: "insufficient_tokens",
-              tokenBalance: fresh.tokenBalance,
-              bonusTokens: fresh.bonusTokens ?? 0,
-              tokenCost,
-            },
-            { status: 402 },
-          );
+        // 管理者は残高チェック・減算の対象外（下の if (!isAdmin) 参照）。
+        const fresh = isAdmin ? user : ((await userRepo.get(user.id)) ?? user);
+        if (!isAdmin) {
+          const spendable = totalTokens(fresh); // tokenBalance + bonusTokens
+          if (spendable < tokenCost) {
+            return NextResponse.json(
+              {
+                error: "insufficient_tokens",
+                tokenBalance: fresh.tokenBalance,
+                bonusTokens: fresh.bonusTokens ?? 0,
+                tokenCost,
+              },
+              { status: 402 },
+            );
+          }
         }
 
         const now = new Date().toISOString();
@@ -150,25 +159,27 @@ export async function GET(req: Request) {
           propertyId,
           splatItemId,
           splatItemIndex,
-          tokensSpent: tokenCost,
+          tokensSpent: isAdmin ? 0 : tokenCost,
           unlockedAt: now,
           expiresAt: oneYearFrom(now),
         });
 
-        // サブスク付与分 (tokenBalance) を優先消費し、不足分のみ貢献特別枠
-        // (bonusTokens) から引く。ユーザー要件は「サブスクのプールから消費」なので
-        // tokenBalance を先に減らす。ゲスト等の bonusTokens も使えるようにして
-        // 有効残高が枯渇しない限りは視聴を止めない。
-        let remaining = tokenCost;
-        const fromBalance = Math.min(fresh.tokenBalance, remaining);
-        remaining -= fromBalance;
-        const fromBonus = Math.min(fresh.bonusTokens ?? 0, remaining);
-        remaining -= fromBonus;
-        await userRepo.upsert({
-          ...fresh,
-          tokenBalance: fresh.tokenBalance - fromBalance,
-          bonusTokens: (fresh.bonusTokens ?? 0) - fromBonus,
-        });
+        if (!isAdmin) {
+          // サブスク付与分 (tokenBalance) を優先消費し、不足分のみ貢献特別枠
+          // (bonusTokens) から引く。ユーザー要件は「サブスクのプールから消費」なので
+          // tokenBalance を先に減らす。ゲスト等の bonusTokens も使えるようにして
+          // 有効残高が枯渇しない限りは視聴を止めない。
+          let remaining = tokenCost;
+          const fromBalance = Math.min(fresh.tokenBalance, remaining);
+          remaining -= fromBalance;
+          const fromBonus = Math.min(fresh.bonusTokens ?? 0, remaining);
+          remaining -= fromBonus;
+          await userRepo.upsert({
+            ...fresh,
+            tokenBalance: fresh.tokenBalance - fromBalance,
+            bonusTokens: (fresh.bonusTokens ?? 0) - fromBonus,
+          });
+        }
       }
     }
 
