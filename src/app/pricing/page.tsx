@@ -9,7 +9,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 export const metadata = {
   title: "料金プラン",
   description:
-    "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -15%。",
+    "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -20%。",
 };
 
 // 各セル = [日本語, 英語]。表示時に locale で添字を選ぶ。
@@ -22,17 +22,13 @@ const COMPARE_ROWS: Array<{
   team: Cell;
 }> = [
   { label: ["物件カタログ閲覧", "Location catalog"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
-  { label: ["写真ギャラリー", "Photo gallery"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
-  { label: ["地図 + 距離検索", "Map + distance search"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
-  { label: ["図面ダウンロード", "Floor-plan downloads"], free: ["無制限", "Unlimited"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
   { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
   { label: ["物件掲示板", "Location board"], free: ["閲覧のみ", "View only"], individual: ["閲覧のみ", "View only"], studio: ["書き込み可", "Post & reply"], team: ["書き込み可", "Post & reply"] },
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["登録時 6 トークン", "6 tokens at signup"], individual: ["月 16 トークン", "16 tokens / mo"], studio: ["月 24 トークン", "24 tokens / mo"], team: ["月 60 トークン", "60 tokens / mo"] },
   { label: ["制限あり / NDA 限定シーンの閲覧", "Restricted / NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
-  { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["制限なし", "No limit"], studio: ["5 端末", "5 devices"], team: ["20 端末", "20 devices"] },
-  { label: ["見積もり依頼", "Quote requests"], free: ["月 1 件", "1 / mo"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
+  { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["3 端末", "3 devices"], studio: ["10 端末", "10 devices"], team: ["30 端末", "30 devices"] },
   { label: ["請求書 自動送付 / 電子帳簿対応", "Invoice auto-send / e-bookkeeping"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓ 一括", "✓ batch"] },
-  { label: ["年払 -15% 適用", "Annual −15%"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
+  { label: ["年払 -20% 適用", "Annual −20%"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
 ];
 
 export default async function PricingPage({
@@ -103,14 +99,14 @@ export default async function PricingPage({
               3DGS walkthroughs run on{" "}
               <em className="not-italic text-accent">tokens</em>. Token cost scales
               with studio size, and you can view as many as you like within your
-              monthly budget. Annual billing saves 15% — Studio is the best-balanced
+              monthly budget. Annual billing saves 20% — Studio is the best-balanced
               choice.
             </>
           ) : (
             <>
               3DGS ウォークスルーは <em className="not-italic text-accent">トークン制</em>。
               スタジオの規模に応じてトークン消費が変わり、月の予算内で何件でも見られます。
-              年払いで -15%、Studio が最もバランス良い選択肢です。
+              年払いで -20%、Studio が最もバランス良い選択肢です。
             </>
           )}
         </p>

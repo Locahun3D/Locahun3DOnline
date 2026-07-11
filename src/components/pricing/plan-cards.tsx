@@ -22,7 +22,7 @@ export interface Plan {
   badge?: string;
 }
 
-const ANNUAL_DISCOUNT = 0.15;
+const ANNUAL_DISCOUNT = 0.2;
 
 export const PLANS: Plan[] = [
   {
@@ -128,7 +128,7 @@ export default function PlanCards({
               mode === "annual" ? "bg-accent text-bg" : "text-muted hover:text-ink"
             }`}
           >
-            {t("plan.billing.annual")} <span className="ml-1 opacity-80">-15%</span>
+            {t("plan.billing.annual")} <span className="ml-1 opacity-80">-20%</span>
           </button>
         </div>
       </div>
@@ -194,7 +194,7 @@ export default function PlanCards({
                 )}
                 {price > 0 && mode === "monthly" && (
                   <div className="mono text-[10px] text-muted mt-1">
-                    {locale === "en" ? "−15% with annual billing" : "年払いで -15%"}
+                    {locale === "en" ? "−20% with annual billing" : "年払いで -20%"}
                   </div>
                 )}
                 <p className="text-[12px] text-muted mt-3 leading-[1.65]">

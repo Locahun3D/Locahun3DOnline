@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { PLANS } from "./plan-cards";
 
-const LABOR = 10000; // 半日拘束の人件費（概算） ¥/人・回
+const LABOR = 5000; // 半日拘束の人件費（概算） ¥/人・回
+const REFERENCE_PLAN_CODE = "STUDIO"; // 比較の基準プラン（固定表示）
 
 function yen(n: number, en: boolean): string {
   const abs = Math.round(Math.abs(n));
@@ -13,27 +14,24 @@ function yen(n: number, en: boolean): string {
 /**
  * 料金ページ プランカード群の直下 / 比較表の上に置く ROI 計算機。
  * デザインは gen_pricing_v2.py の `.roi-card` を Tailwind + React state に翻訳したもの。
- * 比較対象プランは4択（Free/Individual/Studio/Team）で選べる。価格は
- * plan-cards.tsx の PLANS が単一ソース — ここでは二重管理しない。
- * 年払い/月払いの切り替えは PlanCards 側と状態を共有していないため、
- * ここでは常に monthly 価格で比較する（現状の単純化を維持）。
+ * 比較先はStudio固定（4プラン選択式のUIは「わかりずらい」とのフィードバックで撤去）。
+ * 価格自体は plan-cards.tsx の PLANS が単一ソース — ここでは二重管理しない。
  */
 export default function RoiCalculator({ en }: { en: boolean }) {
   const [people, setPeople] = useState(4);
   const [trips, setTrips] = useState(2);
   const [fare, setFare] = useState(3000);
-  const [planCode, setPlanCode] = useState("STUDIO");
 
-  const selectedPlan = PLANS.find((p) => p.code === planCode) ?? PLANS[0];
+  const referencePlan = PLANS.find((p) => p.code === REFERENCE_PLAN_CODE) ?? PLANS[0];
 
   const { legacy, save, hours } = useMemo(() => {
     const legacy = people * trips * (fare + LABOR);
     return {
       legacy,
-      save: legacy - selectedPlan.monthly,
+      save: legacy - referencePlan.monthly,
       hours: people * trips * 2,
     };
-  }, [people, trips, fare, selectedPlan.monthly]);
+  }, [people, trips, fare, referencePlan.monthly]);
 
   return (
     <section className="mt-16">
@@ -115,28 +113,6 @@ export default function RoiCalculator({ en }: { en: boolean }) {
 
         {/* 右: 結果 */}
         <div className="p-8 sm:p-9 flex flex-col justify-center gap-4">
-          <div>
-            <div className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted mb-2">
-              {en ? "Compare against" : "比較するプラン"}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {PLANS.map((p) => (
-                <button
-                  key={p.code}
-                  type="button"
-                  onClick={() => setPlanCode(p.code)}
-                  className={`px-3 py-1.5 mono text-[10px] tracking-[0.14em] uppercase border transition ${
-                    p.code === planCode
-                      ? "bg-accent text-white border-accent"
-                      : "border-line text-muted hover:border-ink hover:text-ink"
-                  }`}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="flex justify-between items-baseline text-[12.5px]">
             <span>{en ? "Traditional on-site scouting" : "従来の現地下見"}</span>
             <span className="mono text-[17px] font-bold text-muted line-through decoration-1 tabular-nums">
@@ -147,10 +123,10 @@ export default function RoiCalculator({ en }: { en: boolean }) {
           <div className="flex justify-between items-baseline text-[12.5px]">
             <span>
               {en ? "Locahun 3D " : "ロケハン3D "}
-              <span className="mono text-[10px] text-accent">{selectedPlan.code}</span>
+              <span className="mono text-[10px] text-accent">{referencePlan.code}</span>
             </span>
             <span className="mono text-[17px] font-bold tabular-nums">
-              {yen(selectedPlan.monthly, en)}
+              {yen(referencePlan.monthly, en)}
               <small className="text-[11px] font-normal text-muted ml-1">
                 {en ? "/mo" : "/月"}
               </small>
@@ -183,8 +159,8 @@ export default function RoiCalculator({ en }: { en: boolean }) {
 
           <p className="text-[10px] text-muted leading-[1.9] mt-2">
             {en
-              ? "※ Traditional cost estimated as people × trips × (fare + ¥10,000 half-day labor cost)."
-              : "※ 従来コスト = 人数 × 回数 ×（交通費 + 半日拘束の人件費 ¥10,000）で概算。"}
+              ? "※ Traditional cost estimated as people × trips × (fare + ¥5,000 half-day labor cost)."
+              : "※ 従来コスト = 人数 × 回数 ×（交通費 + 半日拘束の人件費 ¥5,000）で概算。"}
           </p>
         </div>
       </div>
