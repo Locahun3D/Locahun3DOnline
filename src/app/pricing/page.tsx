@@ -3,7 +3,6 @@ import PlanCards from "@/components/pricing/plan-cards";
 import FreeDemoFunnel from "@/components/pricing/free-demo-funnel";
 import RoiCalculator from "@/components/pricing/roi-calculator";
 import { getCurrentUser } from "@/lib/dal";
-import { getPublishedProperties } from "@/lib/properties";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
@@ -49,10 +48,12 @@ export default async function PricingPage({
   const lh = (href: string) => localizedHref(href, locale);
   const canApplyForProduction = !!user && user.role !== "production" && user.role !== "admin";
 
-  const published = await getPublishedProperties();
-  const demoCover = published[0]
-    ? { src: published[0].cover.src, alt: published[0].cover.alt }
-    : null;
+  const demoCover = {
+    src: "/demo-pcloud.webp",
+    alt: en
+      ? "Photo blended with raw 3DGS point cloud data on a real street"
+      : "実写に3DGSの生ポイントクラウドを重ねた比較画像",
+  };
 
   return (
     <div className="theme-online frame pt-12 pb-32">
