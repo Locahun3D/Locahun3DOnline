@@ -8,16 +8,19 @@ import type { ViewUnlock } from "@/lib/view-unlocks";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import RedeemGift from "@/components/account/redeem-gift";
 import NdaConsentModal from "@/components/account/nda-consent-modal";
+import MarketingConsentToggle from "@/components/account/marketing-consent-toggle";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
 
 type BoardTile = { name: string; count: number; cover?: string };
 
 /**
- * 新マイページ・上部ダッシュボード（承認済みデザイン）。
- * 既存の詳細セクション（保存ボード全体管理・購入履歴・閲覧履歴一覧・NDA同意
- * アクション・ギフト引換）は全て既存のまま下に残し、ここは「概要カード群」
- * として既存データ取得ロジックの上に薄く乗せる。新しいデータ取得は行わず、
- * account/page.tsx が既に集めた値を props で受け取るだけ。
+ * マイページ本体。以前は「概要カード群（このコンポーネント）」＋
+ * account/page.tsx 側の「DETAILS 詳細セクション」が同じ情報をほぼ丸ごと
+ * 二重表示していた（トークン残・プラン・購入履歴・保存物件・NDA・ギフト
+ * 引換が両方に存在）。実機フィードバック「重複内容が多く整理が終わって
+ * いない」「閲覧履歴、一覧できない」を受けて統合: DETAILS 側は撤去し、
+ * そちらにしか無かった情報（メール/所属の表示、閲覧履歴の全件一覧への
+ * 導線、配信設定）をこちらに寄せた。
  */
 export default function AccountDashboard({
   user,
@@ -27,6 +30,7 @@ export default function AccountDashboard({
   lastUnlock,
   lastUnlockProperty,
   lastUnlockSceneLabel,
+  unlockedCount,
   billing = null,
   nowIso,
 }: {
@@ -37,6 +41,8 @@ export default function AccountDashboard({
   lastUnlock: ViewUnlock | null;
   lastUnlockProperty: Property | null;
   lastUnlockSceneLabel: string;
+  /** 有効期限内（無償再視聴期間内）のアンロック総数。「閲覧履歴」カードの一覧導線に表示。 */
+  unlockedCount: number;
   /** Stripe から取得した実際の請求間隔と次回更新日。未契約・未設定・取得失敗は null
    *  （その場合は tokenRefillAt を次回更新の近似として表示する）。 */
   billing?: { interval: "monthly" | "annual"; periodEnd: string | null } | null;
@@ -108,6 +114,10 @@ export default function AccountDashboard({
             <span className="mono text-[10px] tracking-[0.14em] uppercase border border-[#e2e7ec] text-[#7b8794] px-1.5 py-0.5">
               {en ? `Joined ${joinedDate}` : `登録日 ${joinedDate}`}
             </span>
+          </div>
+          <div className="mono text-[11px] text-[#7b8794] mt-1.5">
+            {user.email}
+            {user.company && <span className="ml-2">・{user.company}</span>}
           </div>
         </div>
       </div>
@@ -267,8 +277,19 @@ export default function AccountDashboard({
 
         {/* 閲覧履歴 */}
         <div className="bg-white border border-[#e2e7ec] p-5 flex flex-col">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
-            {en ? "Browsing history" : "閲覧履歴"}
+          <div className="flex items-center justify-between mb-3">
+            <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794]">
+              {en ? "Browsing history" : "閲覧履歴"}
+            </div>
+            {/* 直近1件のプレビューだけでは全件一覧に辿り着けなかった
+                （実機フィードバック「閲覧履歴、一覧できない」）ため、状態に
+                関わらず常に /dashboard/unlocked への導線を出す。 */}
+            <Link
+              href={lh("/dashboard/unlocked")}
+              className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline shrink-0"
+            >
+              {en ? `All (${unlockedCount}) →` : `全${unlockedCount}件 →`}
+            </Link>
           </div>
           {lastUnlock && lastUnlockProperty ? (
             <>
@@ -386,6 +407,8 @@ export default function AccountDashboard({
         {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード） */}
         <RedeemGift />
       </div>
+
+      <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
 
       {user.stripeCustomerId && (
         <div className="text-right">

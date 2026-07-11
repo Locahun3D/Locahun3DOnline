@@ -26,8 +26,8 @@ export default function MarketingConsentToggle({
   };
 
   return (
-    <div className="border border-line p-5">
-      <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+    <div className="bg-white border border-[#e2e7ec] p-5">
+      <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
         {en ? "Email updates" : "お知らせメール"}
       </div>
       <label className="flex items-start gap-3 cursor-pointer">
@@ -36,9 +36,9 @@ export default function MarketingConsentToggle({
           checked={consent}
           onChange={toggle}
           disabled={pending}
-          className="mt-0.5 w-4 h-4 accent-accent"
+          className="mt-0.5 w-4 h-4 accent-[#1ea0c4]"
         />
-        <span className="text-[12px] text-muted leading-[1.7]">
+        <span className="text-[12px] text-[#7b8794] leading-[1.7]">
           {en
             ? "Receive occasional emails about new locations and offers. You can unsubscribe anytime from a link in every email."
             : "新着ロケ地やお得な情報のメールを受け取ります。メール内のリンクからいつでも配信停止できます。"}
