@@ -36,6 +36,7 @@ export default async function UnlockedScenesPage() {
       unlock: u,
       propertyTitle: property?.title || u.propertyId,
       propertyExists: !!property,
+      cover: property?.cover?.src || "",
       sceneLabel: item?.label || `#${u.splatItemIndex + 1}`,
       valid,
     };
@@ -76,9 +77,10 @@ export default async function UnlockedScenesPage() {
         </div>
       ) : (
         <div className="border border-line overflow-x-auto">
-          <table className="w-full min-w-[560px] text-[13px]">
+          <table className="w-full min-w-[620px] text-[13px]">
             <thead>
               <tr className="bg-[#222] border-b border-line">
+                <th className="px-4 py-3 w-[76px]" />
                 <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.2em] uppercase opacity-60 font-normal">
                   {en ? "Location / scene" : "物件 / シーン"}
                 </th>
@@ -92,11 +94,23 @@ export default async function UnlockedScenesPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ unlock, propertyTitle, propertyExists, sceneLabel, valid }, i) => (
+              {rows.map(({ unlock, propertyTitle, propertyExists, cover, sceneLabel, valid }, i) => (
                 <tr
                   key={unlock.id}
                   className={`border-b border-line ${i % 2 === 1 ? "bg-[#1c1c1c]" : ""}`}
                 >
+                  <td className="px-4 py-3">
+                    <div className="w-14 h-10 shrink-0 bg-[#222] overflow-hidden">
+                      {cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={cover} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center mono text-[8px] opacity-30">
+                          {en ? "N/A" : "画像なし"}
+                        </div>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="text-ink/90">{propertyTitle}</div>
                     <div className="mono text-[10px] tracking-[0.14em] uppercase opacity-50 mt-0.5">
