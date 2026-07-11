@@ -41,6 +41,10 @@ export async function createGiftCodeAction(
   const expiresAt = expiresRaw
     ? new Date(`${expiresRaw}T23:59:59.999Z`).toISOString()
     : null;
+  // アカウント作成期間での絞り込み（例: 今月中に登録した人限定キャンペーン）。
+  // 空欄なら制限なし。日付文字列(YYYY-MM-DD)のまま保存し、判定側で境界を解釈する。
+  const accountCreatedFrom = String(formData.get("accountCreatedFrom") ?? "").trim() || null;
+  const accountCreatedTo = String(formData.get("accountCreatedTo") ?? "").trim() || null;
 
   // Ensure a unique code (retry a few times on the astronomically rare clash).
   let code = generateGiftCode();
@@ -56,6 +60,8 @@ export async function createGiftCodeAction(
     uses: 0,
     note,
     expiresAt,
+    accountCreatedFrom,
+    accountCreatedTo,
     status: "active",
     createdBy: admin.email,
     redemptions: [],
@@ -107,6 +113,7 @@ export async function redeemGiftCodeAction(
     userId: user.id,
     email: user.email,
     at: now,
+    accountCreatedAt: user.createdAt ?? null,
   });
   if (!claim.ok) {
     return { ok: false, error: REDEEM_ERROR_MESSAGE[claim.error] };

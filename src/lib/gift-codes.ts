@@ -52,7 +52,7 @@ export interface GiftCodeRepo {
   /** 原子的に引換を確定（uses+1 と redemption 追記）。CAS 失敗時はエラー列挙を返す。 */
   claim(
     codeInput: string,
-    redemption: { userId: string; email: string; at: string },
+    redemption: { userId: string; email: string; at: string; accountCreatedAt?: string | null },
   ): Promise<ClaimResult>;
 }
 
@@ -140,7 +140,7 @@ class GiftCodeRepoImpl implements GiftCodeRepo {
 
   async claim(
     codeInput: string,
-    redemption: { userId: string; email: string; at: string },
+    redemption: { userId: string; email: string; at: string; accountCreatedAt?: string | null },
   ): Promise<ClaimResult> {
     const target = normalizeCode(codeInput);
     const db = canAccessLocalFs() ? null : await getD1();
@@ -148,7 +148,7 @@ class GiftCodeRepoImpl implements GiftCodeRepo {
     // dev / D1未接続: read-modify-write（単一プロセス前提で十分）
     if (!db) {
       const c = await this.get(codeInput);
-      const err = redeemableFor(c, redemption.userId, redemption.at);
+      const err = redeemableFor(c, redemption.userId, redemption.at, redemption.accountCreatedAt);
       if (err || !c) return { ok: false, error: err ?? "not_found" };
       const updated = await this.upsert({
         ...c,
@@ -170,7 +170,7 @@ class GiftCodeRepoImpl implements GiftCodeRepo {
 async function claimOnD1(
   db: D1,
   target: string,
-  redemption: { userId: string; email: string; at: string },
+  redemption: { userId: string; email: string; at: string; accountCreatedAt?: string | null },
 ): Promise<ClaimResult> {
   for (let attempt = 0; attempt < 6; attempt++) {
     const row = await db
@@ -185,7 +185,7 @@ async function claimOnD1(
     } catch {
       return { ok: false, error: "not_found" };
     }
-    const err = redeemableFor(current, redemption.userId, redemption.at);
+    const err = redeemableFor(current, redemption.userId, redemption.at, redemption.accountCreatedAt);
     if (err) return { ok: false, error: err };
 
     const oldUses = (row as { uses: number }).uses;

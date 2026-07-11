@@ -39,6 +39,13 @@ export const giftCodeSchema = z.object({
   expiresAt: z.string().nullable().default(null),
   status: z.enum(GIFT_STATUSES).default("active"),
   createdBy: z.string().default(""),
+  /**
+   * アカウント作成日での対象者絞り込み（例: 「今月中に登録した人限定」の
+   * キャンペーンコード）。どちらもnull=制限なし。日付文字列(YYYY-MM-DD)の
+   * 境界はそれぞれ「その日の開始」「その日の終わり」として扱う。
+   */
+  accountCreatedFrom: z.string().nullable().default(null),
+  accountCreatedTo: z.string().nullable().default(null),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   redemptions: z.array(giftRedemptionSchema).default([]),
@@ -55,7 +62,8 @@ export type RedeemError =
   | "disabled"
   | "expired"
   | "exhausted"
-  | "already";
+  | "already"
+  | "not_eligible_period";
 
 export const REDEEM_ERROR_MESSAGE: Record<RedeemError, string> = {
   not_found: "コードが見つかりません。入力を確認してください。",
@@ -63,18 +71,33 @@ export const REDEEM_ERROR_MESSAGE: Record<RedeemError, string> = {
   expired: "このコードは有効期限が切れています。",
   exhausted: "このコードは使用上限に達しています。",
   already: "このコードはすでに引き換え済みです。",
+  not_eligible_period: "このコードは対象期間内に登録したアカウント限定です。",
 };
 
-/** Returns null if redeemable for this user now, else the reason. */
+/**
+ * Returns null if redeemable for this user now, else the reason.
+ * accountCreatedAt はコードにアカウント作成期間の制限がある場合のみ必要
+ * （ユーザーの user.createdAt をそのまま渡す）。
+ */
 export function redeemableFor(
   code: GiftCode | null,
   userId: string,
   nowIso: string,
+  accountCreatedAt?: string | null,
 ): RedeemError | null {
   if (!code) return "not_found";
   if (code.status !== "active") return "disabled";
   if (code.expiresAt && code.expiresAt < nowIso) return "expired";
   if (code.uses >= code.maxUses) return "exhausted";
   if (code.redemptions.some((r) => r.userId === userId)) return "already";
+  if (code.accountCreatedFrom || code.accountCreatedTo) {
+    if (!accountCreatedAt) return "not_eligible_period";
+    if (code.accountCreatedFrom && accountCreatedAt < `${code.accountCreatedFrom}T00:00:00.000Z`) {
+      return "not_eligible_period";
+    }
+    if (code.accountCreatedTo && accountCreatedAt > `${code.accountCreatedTo}T23:59:59.999Z`) {
+      return "not_eligible_period";
+    }
+  }
   return null;
 }

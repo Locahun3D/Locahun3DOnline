@@ -99,6 +99,25 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
             <input name="expiresAt" type="date" className={inputCls} />
           </label>
 
+          <label className="flex flex-col gap-1">
+            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+              対象: アカウント作成日（以降・任意）
+            </span>
+            <input name="accountCreatedFrom" type="date" className={inputCls} />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+              対象: アカウント作成日（まで・任意）
+            </span>
+            <input name="accountCreatedTo" type="date" className={inputCls} />
+          </label>
+
+          <p className="text-[10.5px] text-muted sm:col-span-2 lg:col-span-4 -mt-1.5">
+            両方または片方を指定すると、その期間にアカウントを作成したユーザーだけが引き換えられるコードになります（例:
+            今月中に登録した人限定キャンペーン）。空欄なら誰でも引き換え可能です。
+          </p>
+
           <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
             <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
               メモ（任意・用途など）
@@ -187,6 +206,12 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
                   <div className="mono text-[11px] text-muted">
                     {c.expiresAt ? `〜${c.expiresAt.slice(0, 10)}` : "無期限"}
                   </div>
+
+                  {(c.accountCreatedFrom || c.accountCreatedTo) && (
+                    <div className="mono text-[10px] text-accent border border-accent/30 px-1.5 py-0.5">
+                      登録 {c.accountCreatedFrom ?? "…"} 〜 {c.accountCreatedTo ?? "…"} 限定
+                    </div>
+                  )}
 
                   <div>
                     {!live ? (
