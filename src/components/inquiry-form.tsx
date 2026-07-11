@@ -149,7 +149,7 @@ export default function InquiryForm({
           name="message"
           rows={4}
           required
-          placeholder={en ? "Tell us your timing, party size, any equipment to bring in, etc." : "ご利用時間、人数、搬入物の有無など詳細をお聞かせください"}
+          placeholder={en ? "Tell us party size, any equipment to bring in, etc." : "人数、搬入物の有無など詳細をお聞かせください"}
           className={`${inputClass} leading-relaxed resize-y`}
         />
       </label>
