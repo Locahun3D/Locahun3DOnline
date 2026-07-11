@@ -39,12 +39,12 @@ export async function postCommentAction(
   if (user.status === "suspended" && user.role !== "admin") {
     return { ok: false, error: "アカウントが停止されているため投稿できません。" };
   }
-  // 書き込みは Studio / Team プラン限定（閲覧・いいねは会員全員）。UI 側でも
-  // 入力欄を出し分けるが、権限判定は必ずサーバー側を正とする。
+  // 書き込みは有料プラン限定（Individual / Studio / Team、閲覧・いいねは会員全員）。
+  // UI 側でも入力欄を出し分けるが、権限判定は必ずサーバー側を正とする。
   if (!canPostToBoard(user)) {
     return {
       ok: false,
-      error: "掲示板への書き込みは Studio / Team プランでご利用いただけます。",
+      error: "掲示板への書き込みは有料プラン（Individual / Studio / Team）でご利用いただけます。",
     };
   }
 

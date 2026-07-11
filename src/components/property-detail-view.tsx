@@ -134,7 +134,7 @@ export default function PropertyDetailView({
   currentUserId?: string | null;
   currentUserName?: string | null;
   isAdminUser?: boolean;
-  /** 掲示板への書き込み権限（Studio / Team / admin）。閲覧は会員全員。 */
+  /** 掲示板への書き込み権限（有料プラン: Individual / Studio / Team / admin）。閲覧は会員全員。 */
   canPostBoard?: boolean;
   /** レビュー投稿権限（3DGS視聴済み or admin）。 */
   canReview?: boolean;
@@ -984,8 +984,8 @@ export default function PropertyDetailView({
                   en="BOARD"
                   jp={
                     en
-                      ? "Board (viewing: members / posting: Studio & Team)"
-                      : "掲示板（閲覧: 会員 / 書き込み: Studio・Team）"
+                      ? "Board (viewing: members / posting: paid plans)"
+                      : "掲示板（閲覧: 会員 / 書き込み: 有料プラン）"
                   }
                 />
                 <PropertyComments

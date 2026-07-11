@@ -217,12 +217,14 @@ export function canViewNdaOnly(u: PublicUser | null): boolean {
 
 /**
  * 物件掲示板への書き込み（投稿・返信）権限。
- * 閲覧・いいねはサインイン会員全員、書き込みは Studio / Team プラン限定（admin は常に可）。
+ * 閲覧・いいねはサインイン会員全員、書き込みは有料プラン（Individual / Studio / Team）限定（admin は常に可）。
  */
 export function canPostToBoard(u: PublicUser | null): boolean {
   if (!u) return false;
   if (u.role === "admin") return true;
-  return u.status === "active" && (u.plan === "studio" || u.plan === "team");
+  // 「課金ユーザーなら書き込み可」— 当初は Studio/Team 限定だったが、
+  // Individual も含む有料プラン全体に拡大（Free のみ閲覧限定のまま）。
+  return u.status === "active" && u.plan !== "free";
 }
 
 /** Captured on the /onboarding step after Clerk sign-up. */

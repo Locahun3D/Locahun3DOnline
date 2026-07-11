@@ -135,7 +135,7 @@ export default function PropertyComments({
   currentUserName?: string | null;
   isAdmin: boolean;
   signedIn: boolean;
-  /** 書き込み（投稿・返信）権限。Studio / Team / admin のみ true。閲覧・いいねは会員全員。 */
+  /** 書き込み（投稿・返信）権限。有料プラン（Individual / Studio / Team）/ admin のみ true。閲覧・いいねは会員全員。 */
   canPost?: boolean;
   locale?: "ja" | "en";
 }) {
@@ -159,8 +159,8 @@ export default function PropertyComments({
       <div className="border border-dashed border-line py-10 px-6 text-center bg-white">
         <p className="text-[13px] text-ink/60 mb-4">
           {en
-            ? "Sign in to view this location's board (posting is available on Studio / Team plans)."
-            : "サインインすると、この物件の掲示板を閲覧できます（書き込みは Studio / Team プラン）。"}
+            ? "Sign in to view this location's board (posting is available on paid plans)."
+            : "サインインすると、この物件の掲示板を閲覧できます（書き込みは有料プランの方のみ）。"}
         </p>
         <Link
           href={`/sign-in?redirect_url=${encodeURIComponent(revalidate)}`}
@@ -571,8 +571,8 @@ export default function PropertyComments({
         <div className="border border-dashed border-line bg-bg px-5 py-5 text-center">
           <p className="text-[12.5px] text-ink/60 mb-3">
             {en
-              ? "Posting to the board is available on the Studio / Team plans. Viewing and likes are open to all members."
-              : "掲示板への書き込みは Studio / Team プランでご利用いただけます（閲覧・いいねは全会員可）。"}
+              ? "Posting to the board is available on any paid plan (Individual / Studio / Team). Viewing and likes are open to all members."
+              : "掲示板への書き込みは有料プラン（Individual / Studio / Team）でご利用いただけます（閲覧・いいねは全会員可）。"}
           </p>
           <Link
             href={en ? "/en/pricing" : "/pricing"}
