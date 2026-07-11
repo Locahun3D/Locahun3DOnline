@@ -1008,8 +1008,8 @@ export default function PropertyDetailView({
                   en="BOARD"
                   jp={
                     en
-                      ? "Board (viewing: members / posting: paid plans)"
-                      : "掲示板（閲覧: 会員 / 書き込み: 有料プラン）"
+                      ? "Board (viewing: everyone / posting: paid plans)"
+                      : "掲示板（閲覧: 全員 / 書き込み: 有料プラン）"
                   }
                 />
                 <PropertyComments

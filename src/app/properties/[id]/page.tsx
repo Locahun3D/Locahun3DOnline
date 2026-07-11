@@ -99,17 +99,15 @@ export default async function PropertyDetailPage({
   // splatItem.id で判定する（index だと並び替え/3DGS差し替えで対応がズレる）。
   // 旧レコード（splatItemId 未設定）は記録時の index から現在の id を逆引きする。
   const unlockedItemIds: string[] = [];
-  // 会員限定掲示板: 未サインインには本文を一切渡さない（サーバーHTMLにも含めない）。
-  // 通報により非表示になったコメントも、admin 以外にはサーバー側で除外し
-  // HTML にも一切含めない（クライアント側フィルタだけでは不十分）。
+  // 掲示板は閲覧: 全員（書き込みのみ有料プラン限定）。通報により非表示になった
+  // コメントは、admin 以外にはサーバー側で除外し HTML にも一切含めない
+  // （クライアント側フィルタだけでは不十分）。
   const isAdminUser = user?.role === "admin";
-  const comments = signedIn
-    ? await withLiveDisplayNames(
-        (await commentRepo.list(property.id).catch(() => [])).filter(
-          (c) => isAdminUser || !c.hiddenByReports,
-        ),
-      )
-    : [];
+  const comments = await withLiveDisplayNames(
+    (await commentRepo.list(property.id).catch(() => [])).filter(
+      (c) => isAdminUser || !c.hiddenByReports,
+    ),
+  );
   // レビュー投稿権限の判定用。「有効期限内のアンロックが1件以上あるか」を
   // free-period/admin の早期スキップに関係なく必ず判定する（上の unlockedItemIds
   // は表示用の別目的なので流用しない）。

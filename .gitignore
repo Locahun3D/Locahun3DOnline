@@ -68,12 +68,13 @@ next-env.d.ts
 # Site settings (local) — 限定無料期間 などの運用設定。Migrates to D1.
 /data/site-settings.json
 
-# Inquiry / notification / general-contact / bookmark-share / review stores (local dev fallback). Migrate to D1.
+# Inquiry / notification / general-contact / bookmark-share / review / comment stores (local dev fallback). Migrate to D1.
 /data/inquiries.json
 /data/notifications.json
 /data/contact-requests.json
 /data/reviews.json
 /data/bookmark-shares.json
+/data/comments.json
 
 # Build / deploy logs
 build-*.log

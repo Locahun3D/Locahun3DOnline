@@ -154,24 +154,6 @@ export default function PropertyComments({
   const replyFormRef = useRef<HTMLFormElement>(null);
   const revalidate = `/properties/${propertyId}`;
 
-  if (!signedIn) {
-    return (
-      <div className="border border-dashed border-line py-10 px-6 text-center bg-white">
-        <p className="text-[13px] text-ink/60 mb-4">
-          {en
-            ? "Sign in to view this location's board (posting is available on paid plans)."
-            : "サインインすると、この物件の掲示板を閲覧できます（書き込みは有料プランの方のみ）。"}
-        </p>
-        <Link
-          href={`/sign-in?redirect_url=${encodeURIComponent(revalidate)}`}
-          className="inline-block mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
-        >
-          {en ? "Sign in →" : "サインイン →"}
-        </Link>
-      </div>
-    );
-  }
-
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -246,6 +228,10 @@ export default function PropertyComments({
   };
 
   const onToggleLike = (id: string) => {
+    if (!signedIn) {
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(revalidate)}`;
+      return;
+    }
     if (!currentUserId || likePending.has(id)) return;
     const uid = currentUserId;
     // 楽観更新: 即座に自分の userId を追加/削除してからサーバーに反映。失敗時は戻す。
@@ -276,6 +262,10 @@ export default function PropertyComments({
   };
 
   const onReport = (id: string) => {
+    if (!signedIn) {
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent(revalidate)}`;
+      return;
+    }
     if (!confirm(en ? "Report this comment to the operator?" : "このコメントを運営に通報しますか？")) return;
     startTransition(async () => {
       const res = await reportCommentAction(id, revalidate);
@@ -571,8 +561,8 @@ export default function PropertyComments({
         <div className="border border-dashed border-line bg-bg px-5 py-5 text-center">
           <p className="text-[12.5px] text-ink/60 mb-3">
             {en
-              ? "Posting to the board is available on any paid plan (Individual / Studio / Team). Viewing and likes are open to all members."
-              : "掲示板への書き込みは有料プラン（Individual / Studio / Team）でご利用いただけます（閲覧・いいねは全会員可）。"}
+              ? "Posting to the board is available on any paid plan (Individual / Studio / Team). Viewing is open to everyone; liking requires a free account."
+              : "掲示板への書き込みは有料プラン（Individual / Studio / Team）でご利用いただけます（閲覧はどなたでも、いいねは会員のみ）。"}
           </p>
           <Link
             href={en ? "/en/pricing" : "/pricing"}
