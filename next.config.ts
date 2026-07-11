@@ -17,7 +17,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       ...(r2Host ? [{ protocol: "https" as const, hostname: r2Host }] : []),
-      { protocol: "https" as const, hostname: "picsum.photos" },
     ],
   },
   async rewrites() {

@@ -40,16 +40,16 @@
       "blueprints": [
         {
           "label": "1F 平面図",
-          "url": "https://picsum.photos/seed/blueprint-1/1200/800"
+          "url": "/og-cover.jpg"
         },
         {
           "label": "断面図",
-          "url": "https://picsum.photos/seed/blueprint-2/1200/800"
+          "url": "/og-cover.jpg"
         }
       ],
       "description": "京浜運河沿いに建つ大型倉庫。築 50 年以上の経年が生むテクスチャは、CG では再現が難しい質感を持ちます。\n3DGS スキャン済のため、レンズ選択・ライティング設計を撮影前にブラウザで完結できます。",
       "cover": {
-        "src": "https://picsum.photos/seed/locahun3d-2/1600/1000",
+        "src": "/og-cover.jpg",
         "alt": "Yokohama 倉庫外観",
         "width": 1600,
         "height": 1000,
@@ -57,21 +57,21 @@
       },
       "gallery": [
         {
-          "src": "https://picsum.photos/seed/locahun3d-21/1600/1000",
+          "src": "/og-cover.jpg",
           "alt": "倉庫内部俯瞰",
           "width": 1600,
           "height": 1000,
           "focus": "center"
         },
         {
-          "src": "https://picsum.photos/seed/locahun3d-22/1600/1000",
+          "src": "/og-cover.jpg",
           "alt": "鉄骨梁",
           "width": 1600,
           "height": 1000,
           "focus": "center"
         },
         {
-          "src": "https://picsum.photos/seed/locahun3d-23/1600/1000",
+          "src": "/og-cover.jpg",
           "alt": "シャッター開口",
           "width": 1600,
           "height": 1000,
