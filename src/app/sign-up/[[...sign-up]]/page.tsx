@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import InAppBrowserWarning from "@/components/in-app-browser-warning";
 
 export const metadata = { title: "新規登録" };
 
@@ -18,6 +19,7 @@ export default async function SignUpPage() {
 
   return (
     <div className="frame min-h-[80vh] flex flex-col items-center justify-center gap-4 py-16">
+      <InAppBrowserWarning locale={locale} />
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
       <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" />
       {/* 明示的な同意チェックボックスは Clerk ウィジェット内には差し込めないため、

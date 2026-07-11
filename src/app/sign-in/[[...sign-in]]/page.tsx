@@ -1,6 +1,8 @@
 import { SignIn } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
+import { getLocale } from "@/lib/i18n/server";
+import InAppBrowserWarning from "@/components/in-app-browser-warning";
 
 export const metadata = { title: "ログイン" };
 
@@ -27,8 +29,11 @@ export default async function SignInPage({
     redirect(internalPath(redirect_url));
   }
 
+  const locale = await getLocale();
+
   return (
-    <div className="frame min-h-[80vh] flex items-center justify-center py-16">
+    <div className="frame min-h-[80vh] flex flex-col items-center justify-center py-16">
+      <InAppBrowserWarning locale={locale} />
       <SignIn signUpUrl="/sign-up" />
     </div>
   );
