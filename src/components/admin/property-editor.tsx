@@ -1419,7 +1419,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], pointCount: 0, captureDevice: "", license: "standard" as const })}
+                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], pointCount: 0, captureDevice: "Portalcam", license: "standard" as const })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1545,6 +1545,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                               Math.max(1, Math.round(f.size / 1024 / 1024)),
                               { shouldDirty: true },
                             );
+                            // .ply/.splat のみファイルから自動検出できる（他形式は手動入力のまま）。
+                            if (f.pointCount) {
+                              setValue(`splatItems.${idx}.pointCount`, f.pointCount, { shouldDirty: true });
+                            }
                             if (!watch("scannedAt")) {
                               setValue("scannedAt", today, { shouldDirty: true });
                             }
@@ -1718,7 +1722,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
                             {/* ── 商品スペック ── */}
                             <div className="grid sm:grid-cols-2 gap-3">
-                              <Field label="点群数（スペック表示）" hint="例: 12000000">
+                              <Field label="点群数（スペック表示）" hint=".ply / .splat はアップロード時に自動検出。他形式は手動入力。 例: 12000000">
                                 <input
                                   type="number"
                                   {...register(`splatItems.${idx}.pointCount`, { valueAsNumber: true })}

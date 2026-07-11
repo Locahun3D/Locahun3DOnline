@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { track, parseDevice } from "@/lib/analytics";
+import { logEvent } from "@/lib/analytics-events";
 import { repo } from "@/lib/store";
+import { getCurrentUser } from "@/lib/dal";
 
 /**
  * Public beacon endpoint. Client components POST a view / viewer-open event
- * here; we validate the property exists, then record it. No auth (anonymous
- * traffic is the point), but unknown property ids are rejected.
+ * here; we validate the property exists, then record it. No auth required to
+ * call this (anonymous traffic is the point) — but we still resolve the
+ * caller's session server-side (not from the request body, which the client
+ * could spoof) so that "誰が見たか" can attribute events to signed-in users
+ * without ever trusting client-supplied identity.
  */
 export async function POST(req: Request) {
   try {
@@ -26,7 +31,18 @@ export async function POST(req: Request) {
     }
     const day = new Date().toISOString().slice(0, 10);
     const device = parseDevice(req.headers.get("user-agent") ?? "");
+    const user = await getCurrentUser().catch(() => null);
     await track(propertyId, type, referrer, day, device);
+    // 個別イベントログは集計カウンタとは別経路 — 失敗しても計測自体は止めない。
+    await logEvent({
+      propertyId,
+      type,
+      userId: user?.id ?? null,
+      userEmail: user?.email ?? null,
+      referrer,
+      device,
+      createdAt: new Date().toISOString(),
+    }).catch(() => {});
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });

@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { repo } from "@/lib/store";
-import { getAllStats, DEVICE_LABEL, type DeviceKind } from "@/lib/analytics";
+import { getAllStats, DEVICE_LABEL, classifyReferrer, type DeviceKind } from "@/lib/analytics";
+import { listRecentEvents } from "@/lib/analytics-events";
 import { purchaseRepo } from "@/lib/purchases";
 import { CATEGORY_LABEL } from "@/lib/schemas";
+
+const EVENT_TYPE_LABEL: Record<string, string> = {
+  view: "閲覧",
+  viewer_open: "3DGS起動",
+};
 
 export const metadata = { title: "アナリティクス" };
 
@@ -35,10 +41,11 @@ export default async function AdminAnalyticsPage({
   const query = (sp.q ?? "").trim().toLowerCase();
   const studioFilter = sp.studio ?? "";
 
-  const [props, stats, allPurchases] = await Promise.all([
+  const [props, stats, allPurchases, recentEvents] = await Promise.all([
     repo.list(),
     getAllStats(),
     purchaseRepo.list(),
+    listRecentEvents({ propertyId: studioFilter || undefined, limit: 100 }),
   ]);
   const titleOf = new Map(props.map((p) => [p.id, p]));
   const window = lastNDays(days);
@@ -386,6 +393,58 @@ export default async function AdminAnalyticsPage({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* 最近の閲覧者（個別イベントログ・サインイン済みのみ本人特定） */}
+          <div className="mt-10">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
+              ● 最近の閲覧者{studioFilter ? "（絞込中）" : ""}（直近{recentEvents.length}件）
+            </div>
+            <div className="border border-line overflow-x-auto">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                    <th className="text-left px-3 py-2.5 font-normal min-w-[130px]">日時</th>
+                    <th className="text-left px-3 py-2.5 font-normal min-w-[160px]">物件</th>
+                    <th className="text-left px-3 py-2.5 font-normal">種別</th>
+                    <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">誰が</th>
+                    <th className="text-left px-3 py-2.5 font-normal">端末</th>
+                    <th className="text-left px-3 py-2.5 font-normal">流入元</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentEvents.length === 0 ? (
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-muted">まだイベントがありません。</td></tr>
+                  ) : (
+                    recentEvents.map((e, i) => (
+                      <tr key={e.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
+                        <td className="px-3 py-2.5 mono text-[11px] text-muted">
+                          {e.createdAt.slice(0, 16).replace("T", " ")}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Link href={`/admin/analytics?days=${days}&studio=${e.propertyId}`} className="hover:text-accent transition">
+                            {titleOf.get(e.propertyId)?.title || e.propertyId}
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2.5 text-muted">{EVENT_TYPE_LABEL[e.type] ?? e.type}</td>
+                        <td className="px-3 py-2.5">
+                          {e.userEmail ? (
+                            <span className="text-ink">{e.userEmail}</span>
+                          ) : (
+                            <span className="text-muted">匿名（未サインイン）</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-muted">{DEVICE_LABEL[e.device as DeviceKind] ?? e.device}</td>
+                        <td className="px-3 py-2.5 text-muted">{classifyReferrer(e.referrer)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="mono text-[9px] text-muted mt-2">
+              サインイン済みユーザーのみメールアドレスが表示されます。未サインインの閲覧は「匿名」表示のまま個人を特定しません。
+            </p>
           </div>
         </>
       )}
