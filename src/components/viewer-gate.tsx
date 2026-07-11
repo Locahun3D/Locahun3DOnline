@@ -71,6 +71,12 @@ export default function ViewerGate({
     { tokenBalance: number; bonusTokens: number; tokenCost: number } | null
   >(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  // 500MB超のシーンをタッチ端末（スマホ/タブレット）で開こうとした時の事前警告。
+  // 幅ではなく pointer:coarse で判定する（PCのウィンドウを狭くしただけの誤爆を防ぐ）。
+  // 「続行する」を押した後の再クリックは popup-blocker 回避のため必要
+  // （window.open は必ずユーザー操作イベントの同期内で呼ぶ必要がある）。
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
+  const LARGE_SCENE_MB = 500;
   const devBypass = process.env.NODE_ENV !== "production";
   const effectiveSubscription = hasSubscription || devBypass || freeAccess;
 
@@ -243,8 +249,13 @@ export default function ViewerGate({
    * 視聴を開く。署名URLが使える場合は R2 直取得URL でビューアーを開き、
    * Worker CPU を消費しない。署名未設定/失敗時は従来の Worker 経由にフォールバック。
    * ポップアップブロック回避のため、クリック同期で空タブを開いてから URL を流し込む。
+   *
+   * サイズ警告のチェックはここでは行わない（呼び出し側で判定）。「続行する」
+   * ボタンから直接この関数を呼ぶ経路があり、setState 直後に同期で呼ぶと
+   * sizeWarningAcked がまだ古い値のクロージャを見てしまい、警告が無限に
+   * 再表示される（stale closure）。判定は openViewer 呼び出し前の一箇所に集約する。
    */
-  const openViewer = async (e: React.MouseEvent) => {
+  const doOpenViewer = async (e: React.MouseEvent) => {
     e.preventDefault();
     setTokenError(null);
     trackOpen();
@@ -301,6 +312,20 @@ export default function ViewerGate({
     }
   };
 
+  /** 通常のクリック経路。大容量シーン×タッチ端末なら先に警告を出して止める。 */
+  const openViewer = (e: React.MouseEvent) => {
+    if (
+      sizeMb >= LARGE_SCENE_MB &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(pointer: coarse)").matches
+    ) {
+      e.preventDefault();
+      setShowSizeWarning(true);
+      return;
+    }
+    doOpenViewer(e);
+  };
+
   /* --- Always open in new tab --- */
   return (
     <div className="relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
@@ -351,6 +376,39 @@ export default function ViewerGate({
           >
             {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
           </a>
+
+          {/* スマホ/タブレットで大容量シーンを開こうとした時の事前警告。 */}
+          {showSizeWarning && (
+            <div className="mt-1 w-full max-w-[46ch] rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-left">
+              <div className="text-[12px] font-bold text-amber-800 mb-1">
+                {en ? "This scene is large" : "データ容量が大きいシーンです"}
+              </div>
+              <p className="text-[12px] text-amber-900/90 leading-[1.7]">
+                {en
+                  ? `About ${sizeMb.toLocaleString()} MB. On phones and tablets this may load slowly, fail to render, or use a lot of mobile data. Viewing on a PC is recommended.`
+                  : `約 ${sizeMb.toLocaleString()} MB あります。スマートフォン・タブレットでは読み込みが遅い／描画できない／通信量を大きく消費する場合があります。PCでの閲覧を推奨します。`}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                <button
+                  type="button"
+                  onClick={(ev) => {
+                    setShowSizeWarning(false);
+                    doOpenViewer(ev);
+                  }}
+                  className="px-3.5 py-1.5 text-[11px] font-bold rounded-sm bg-amber-600 text-white hover:bg-amber-700 transition"
+                >
+                  {en ? "Continue anyway" : "それでも開く"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSizeWarning(false)}
+                  className="px-3.5 py-1.5 text-[11px] font-semibold rounded-sm border border-amber-300 text-amber-800 hover:bg-amber-100 transition"
+                >
+                  {en ? "Cancel" : "閉じる"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* トークン不足（サーバ 402）。フォールバックさせずここで明示する。 */}
           {tokenError && (

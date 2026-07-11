@@ -444,21 +444,10 @@ export const publishablePropertySchema = propertySchema.extend({
     alt: z.string().min(1, "カバー画像の代替テキストを入力してください"),
   }),
 }).superRefine((data, ctx) => {
-  // 3DGS は「レガシーの splatUrl」または「splatItems のいずれか」にあれば公開可。
-  // （現行エディタは splatItems[] に登録するため、トップレベル splatUrl 必須の
-  //   旧チェックだと、3DGS が登録済みでも誤って公開をブロックしていた。）
-  const validUrl = (s: string | undefined | null) =>
-    !!s && (/^https?:\/\//.test(s) || s.startsWith("/"));
-  const hasSplat =
-    validUrl(data.splatUrl) ||
-    (data.splatItems ?? []).some((it) => validUrl(it.splatUrl));
-  if (!hasSplat) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["splatUrl"],
-      message: "公開には 3DGS データが必須です（STEP 05 でアップロード）",
-    });
-  }
+  // 3DGS データは公開の必須条件ではない（都のロケーションボックス等の写真のみ
+  // カタログと同様、スキャン前でも掲載できるようにする）。3DGS が無い物件は
+  // 詳細ページ側で「3DGSデータは準備中です」の空表示にフォールバックする
+  // （property-detail-view.tsx）。
 
   // スクランブル交差点など「施設所有者への通常の問い合わせ先が存在せず、撮影に
   // 道路使用許可等の別手続きが必要な場所」(permitRequired) はレンタル料金という
