@@ -15,6 +15,7 @@ import ZoomableImage from "@/components/zoomable-image";
 import PropertyMap from "@/components/property-map";
 import PropertyComments, { type CommentItem } from "@/components/property-comments";
 import PropertyReviews, { type ReviewItem } from "@/components/property-reviews";
+import PropertyCommunity from "@/components/property-community";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
@@ -906,143 +907,131 @@ export default function PropertyDetailView({
         )}
 
         {/* ══════════════════════════════════════════════════
-         *  Reviews — ★1〜5 + 任意本文のレビュー・評価
+         *  Community — レビュー・掲示板・問い合わせを1枚にタブ統合
+         *  旧: 3独立セクション（各カード＋見出し＋空状態）で縦に長く、
+         *  0件時の空白が大きかった。問い合わせ不可の物件ではタブ自体を
+         *  出さず、★保存はタブ行の右端に常設する。
          * ══════════════════════════════════════════════════ */}
         {!preview && (
-          <section className="mb-14">
-            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
-              <Eyebrow en="REVIEWS" jp={en ? "Reviews" : "レビュー・評価"} />
-              <PropertyReviews
-                propertyId={property.id}
-                reviews={reviews}
-                currentUserId={currentUserId}
-                currentUserName={currentUserName}
-                isAdmin={isAdminUser}
-                signedIn={signedIn}
-                canReview={canReview}
-                locale={locale}
-              />
-            </div>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════
-         *  Board — 会員限定の物件別掲示板
-         * ══════════════════════════════════════════════════ */}
-        {!preview && (
-          <section className="mb-14">
+          <section id="inquiry" className="mb-14">
             <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
               <Eyebrow
-                en="BOARD"
-                jp={
-                  en
-                    ? "Board (viewing: members / posting: Studio & Team)"
-                    : "掲示板（閲覧: 会員 / 書き込み: Studio・Team）"
-                }
+                en="COMMUNITY"
+                jp={en ? "Reviews / Board / Contact" : "レビュー・掲示板・問い合わせ"}
               />
-              <PropertyComments
-                propertyId={property.id}
-                comments={comments}
-                currentUserId={currentUserId}
-                currentUserName={currentUserName}
-                isAdmin={isAdminUser}
-                signedIn={signedIn}
-                canPost={canPostBoard}
+              <PropertyCommunity
                 locale={locale}
-              />
-            </div>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════
-         *  Contact — white card, mono-keyed rows + stacked CTAs
-         * ══════════════════════════════════════════════════ */}
-        <section id="inquiry" className="mb-14">
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
-            <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
-            <div className="grid lg:grid-cols-2 gap-10 items-start">
-              <div className="text-[14px]">
-                {property.contactPhone && (
-                  <div className="flex gap-5 py-3.5 border-b border-line">
-                    <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
-                      TEL
-                    </span>
-                    <a
-                      href={`tel:${property.contactPhone}`}
-                      className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition"
-                    >
-                      {property.contactPhone}
-                    </a>
-                  </div>
-                )}
-                {property.contactEmail && (
-                  <div className="flex gap-5 py-3.5 border-b border-line">
-                    <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
-                      MAIL
-                    </span>
-                    <a
-                      href={`mailto:${property.contactEmail}`}
-                      className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
-                    >
-                      {property.contactEmail}
-                    </a>
-                  </div>
-                )}
-                {property.contactWebsite && (
-                  <div className="flex gap-5 py-3.5 border-b border-line last:border-0">
-                    <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
-                      HP
-                    </span>
-                    <a
-                      href={
-                        /^https?:\/\//.test(property.contactWebsite)
-                          ? property.contactWebsite
-                          : `https://${property.contactWebsite}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
-                    >
-                      {property.contactWebsite}
-                    </a>
-                  </div>
-                )}
-                {!hasContact && (
-                  <p className="text-ink/50 text-[13px] py-3">
-                    {en
-                      ? "This property is not accepting inquiries at the moment."
-                      : "この物件は現在お問い合わせを受け付けていません。"}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2.5">
-                {/* 問い合わせ先が1つも登録されていない物件では、転送先が無く
-                    回答もできないためフォーム自体を出さない（ブックマークのみ）。 */}
-                {hasContact && (
-                  <InquiryPanel
-                    propertyId={property.id}
-                    propertyTitle={property.title}
-                    locale={locale}
-                  />
-                )}
-                <div className="[&>button]:w-full [&>button]:justify-center">
+                reviewCount={reviews.length}
+                commentCount={comments.length}
+                hasContact={hasContact}
+                bookmarkSlot={
                   <BookmarkButton
                     propertyId={property.id}
                     initialBookmarked={bookmarked}
                     signedIn={signedIn}
                     revalidate={`/properties/${property.id}`}
                   />
-                </div>
-                {hasContact && (
-                  <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
-                    RESPONSE WITHIN 1 BUSINESS DAY
-                  </p>
-                )}
-              </div>
+                }
+                reviewsSlot={
+                  <PropertyReviews
+                    propertyId={property.id}
+                    reviews={reviews}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
+                    isAdmin={isAdminUser}
+                    signedIn={signedIn}
+                    canReview={canReview}
+                    locale={locale}
+                  />
+                }
+                boardSlot={
+                  <div>
+                    <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted mb-4">
+                      {en
+                        ? "Viewing: members / Posting: Studio & Team"
+                        : "閲覧: 会員 ／ 書き込み: Studio・Team"}
+                    </p>
+                    <PropertyComments
+                      propertyId={property.id}
+                      comments={comments}
+                      currentUserId={currentUserId}
+                      currentUserName={currentUserName}
+                      isAdmin={isAdminUser}
+                      signedIn={signedIn}
+                      canPost={canPostBoard}
+                      locale={locale}
+                    />
+                  </div>
+                }
+                contactSlot={
+                  <div className="grid lg:grid-cols-2 gap-8 items-start">
+                    <div className="text-[14px]">
+                      {property.contactPhone && (
+                        <div className="flex gap-5 py-3 border-b border-line">
+                          <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                            TEL
+                          </span>
+                          <a
+                            href={`tel:${property.contactPhone}`}
+                            className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition"
+                          >
+                            {property.contactPhone}
+                          </a>
+                        </div>
+                      )}
+                      {property.contactEmail && (
+                        <div className="flex gap-5 py-3 border-b border-line">
+                          <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                            MAIL
+                          </span>
+                          <a
+                            href={`mailto:${property.contactEmail}`}
+                            className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                          >
+                            {property.contactEmail}
+                          </a>
+                        </div>
+                      )}
+                      {property.contactWebsite && (
+                        <div className="flex gap-5 py-3 border-b border-line last:border-0">
+                          <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
+                            HP
+                          </span>
+                          <a
+                            href={
+                              /^https?:\/\//.test(property.contactWebsite)
+                                ? property.contactWebsite
+                                : `https://${property.contactWebsite}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                          >
+                            {property.contactWebsite}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2.5">
+                      <InquiryPanel
+                        propertyId={property.id}
+                        propertyTitle={property.title}
+                        locale={locale}
+                      />
+                      <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
+                        RESPONSE WITHIN 1 BUSINESS DAY
+                      </p>
+                    </div>
+                  </div>
+                }
+              />
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+
+        {/* 管理プレビュー時はコミュニティ（レビュー/掲示板/問い合わせタブ）を
+            出さない（実データ・実操作を伴うため）。ブックマークだけの旧CONTACT
+            カードも省略し、プレビューは物件情報の確認に専念させる。 */}
 
         {/* ══════════════════════════════════════════════════
          *  Related studios
