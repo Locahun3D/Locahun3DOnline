@@ -24,7 +24,7 @@ const COMPARE_ROWS: Array<{
   { label: ["物件カタログ閲覧", "Location catalog"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
   { label: ["写真ギャラリー", "Photo gallery"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
   { label: ["地図 + 距離検索", "Map + distance search"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
-  { label: ["図面ダウンロード", "Floor-plan downloads"], free: ["—", "—"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
+  { label: ["図面ダウンロード", "Floor-plan downloads"], free: ["無制限", "Unlimited"], individual: ["無制限", "Unlimited"], studio: ["無制限", "Unlimited"], team: ["無制限", "Unlimited"] },
   { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
   { label: ["物件掲示板", "Location board"], free: ["閲覧のみ", "View only"], individual: ["閲覧のみ", "View only"], studio: ["書き込み可", "Post & reply"], team: ["書き込み可", "Post & reply"] },
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["登録時 6 トークン", "6 tokens at signup"], individual: ["月 16 トークン", "16 tokens / mo"], studio: ["月 24 トークン", "24 tokens / mo"], team: ["月 60 トークン", "60 tokens / mo"] },

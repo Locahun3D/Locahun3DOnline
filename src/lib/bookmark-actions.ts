@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { nanoid } from "nanoid";
 import { getCurrentUser } from "./dal";
 import { userRepo } from "./users";
+import { bookmarkShareRepo } from "./bookmark-shares";
 
 /**
  * 物件ブックマークのトグル。サインイン必須。
@@ -243,4 +244,56 @@ export async function saveBookmarkToFolderAction(
   revalidatePath("/account");
   if (opts?.revalidate) revalidatePath(opts.revalidate);
   return { ok: true, folderId: targetFolder ?? null, folder: createdFolder };
+}
+
+const SHARE_ELIGIBLE_PLANS = new Set(["studio", "team"]);
+
+/**
+ * ブックマーク・フォルダの共有URLを発行する（Studio/Team プラン限定）。
+ * 注意: u.plan（free/individual/studio/team、料金プラン）と u.role
+ * （individual/studio/production/guest/admin、アカウント種別）は別物。
+ * ここで見るのは必ず u.plan。"studio" が両方に出てくるので混同注意。
+ * 既に共有済みなら同じURLを返す（冪等）。
+ */
+export async function shareBookmarkFolderAction(
+  folderId: string,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "サインインが必要です" };
+  if (!folderId) return { ok: false, error: "フォルダが指定されていません" };
+
+  const u = await userRepo.get(user.id);
+  if (!u) return { ok: false, error: "サインインが必要です" };
+  if (!SHARE_ELIGIBLE_PLANS.has(u.plan)) {
+    return { ok: false, error: "Studio以上のプランで共有できます" };
+  }
+  if (!(u.bookmarkFolders ?? []).some((f) => f.id === folderId)) {
+    return { ok: false, error: "対象のフォルダが見つかりませんでした" };
+  }
+
+  const existing = await bookmarkShareRepo.findByUserAndFolder(u.id, folderId);
+  const share = existing ?? (await bookmarkShareRepo.create({ userId: u.id, folderId }));
+
+  revalidatePath(BOOKMARKS_PATH);
+  return { ok: true, url: `/s/${share.token}` };
+}
+
+/** フォルダの現在の共有状態（既存トークンがあればURLも）を取得する。読み取り専用。 */
+export async function getBookmarkFolderShareAction(
+  folderId: string,
+): Promise<{ shared: boolean; url?: string }> {
+  const user = await getCurrentUser();
+  if (!user || !folderId) return { shared: false };
+  const existing = await bookmarkShareRepo.findByUserAndFolder(user.id, folderId);
+  return existing ? { shared: true, url: `/s/${existing.token}` } : { shared: false };
+}
+
+/** フォルダの共有を解除する。共有していなくてもエラーにはしない（冪等）。 */
+export async function unshareBookmarkFolderAction(folderId: string): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser();
+  if (!user || !folderId) return { ok: false };
+
+  await bookmarkShareRepo.removeByFolder(user.id, folderId);
+  revalidatePath(BOOKMARKS_PATH);
+  return { ok: true };
 }

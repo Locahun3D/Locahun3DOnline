@@ -64,6 +64,7 @@ export default async function BookmarksPage() {
           initialAssignments={user.bookmarkFolderAssignments ?? {}}
           initialTags={user.bookmarkTags ?? {}}
           locale={locale}
+          userPlan={user.plan}
         />
       )}
 

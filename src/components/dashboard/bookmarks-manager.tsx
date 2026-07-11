@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import type { Property } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
@@ -11,6 +11,9 @@ import {
   deleteBookmarkFolderAction,
   assignBookmarkFolderAction,
   setBookmarkTagsAction,
+  shareBookmarkFolderAction,
+  unshareBookmarkFolderAction,
+  getBookmarkFolderShareAction,
 } from "@/lib/bookmark-actions";
 
 type Folder = { id: string; name: string };
@@ -31,12 +34,15 @@ export default function BookmarksManager({
   initialAssignments,
   initialTags,
   locale,
+  userPlan = "free",
 }: {
   properties: Property[];
   initialFolders: Folder[];
   initialAssignments: Record<string, string>;
   initialTags: Record<string, string[]>;
   locale: Locale;
+  /** 共有ボタンの活性判定（Studio/Team のみ発行可）。 */
+  userPlan?: string;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -407,9 +413,12 @@ export default function BookmarksManager({
         <span className="mono text-[11px] text-muted">{shown.length}</span>
         <span className="flex-1" />
         {activeFolder && (
-          <span className="mono text-[10px] tracking-[0.1em] text-muted/70 hidden sm:inline">
-            {en ? "Rename: double-click the tab · Delete: 🗑 on the board" : "名称変更=タブをダブルクリック／削除=ボードの🗑"}
-          </span>
+          <>
+            <span className="mono text-[10px] tracking-[0.1em] text-muted/70 hidden sm:inline">
+              {en ? "Rename: double-click the tab · Delete: 🗑 on the board" : "名称変更=タブをダブルクリック／削除=ボードの🗑"}
+            </span>
+            <ShareFolderButton folderId={activeFolder.id} userPlan={userPlan} en={en} />
+          </>
         )}
       </div>
 
@@ -492,5 +501,111 @@ export default function BookmarksManager({
         </Link>
       </div>
     </div>
+  );
+}
+
+const SHARE_ELIGIBLE_PLANS = new Set(["studio", "team"]);
+
+/**
+ * ボード（フォルダ）単位の共有URL発行ボタン。Studio/Team プラン限定。
+ * マウント時に現在の共有状態を読みに行き、既に共有済みならURL＋解除ボタンを出す。
+ */
+function ShareFolderButton({
+  folderId,
+  userPlan,
+  en,
+}: {
+  folderId: string;
+  userPlan: string;
+  en: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
+  const eligible = SHARE_ELIGIBLE_PLANS.has(userPlan);
+
+  useEffect(() => {
+    setUrl(null);
+    setError(null);
+    setChecked(false);
+    if (!eligible) return;
+    let cancelled = false;
+    getBookmarkFolderShareAction(folderId).then((res) => {
+      if (cancelled) return;
+      setUrl(res.shared ? (res.url ?? null) : null);
+      setChecked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folderId, eligible]);
+
+  if (!eligible) {
+    return (
+      <Link
+        href="/pricing"
+        className="mono text-[10px] tracking-[0.14em] uppercase text-muted hover:text-accent transition"
+      >
+        {en ? "Share requires Studio+ →" : "共有はStudio以上のプランで →"}
+      </Link>
+    );
+  }
+
+  const fullUrl = url && typeof window !== "undefined" ? `${window.location.origin}${url}` : url;
+
+  if (!checked) return null;
+
+  if (url) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          readOnly
+          value={fullUrl ?? ""}
+          onFocus={(e) => e.currentTarget.select()}
+          className="mono text-[10.5px] border border-line px-2 py-1 w-[180px] sm:w-[240px] bg-bg"
+        />
+        <button
+          type="button"
+          onClick={() => fullUrl && navigator.clipboard?.writeText(fullUrl)}
+          className="mono text-[10px] tracking-[0.12em] uppercase border border-line px-2.5 py-1 hover:border-accent hover:text-accent transition"
+        >
+          {en ? "Copy" : "コピー"}
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            startTransition(async () => {
+              await unshareBookmarkFolderAction(folderId);
+              setUrl(null);
+            });
+          }}
+          className="mono text-[10px] tracking-[0.12em] uppercase text-muted hover:text-red-600 transition disabled:opacity-50"
+        >
+          {en ? "Unshare" : "共有を解除"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => {
+        setError(null);
+        startTransition(async () => {
+          const res = await shareBookmarkFolderAction(folderId);
+          if (res.ok && res.url) setUrl(res.url);
+          else setError(res.error ?? (en ? "Failed to share" : "共有に失敗しました"));
+        });
+      }}
+      className="mono text-[10px] tracking-[0.14em] uppercase border border-line px-2.5 py-1 hover:border-accent hover:text-accent transition disabled:opacity-50"
+    >
+      {pending ? (en ? "Sharing…" : "共有中…") : en ? "Share this board" : "このボードを共有"}
+      {error && <span className="block text-red-600 normal-case tracking-normal mt-0.5">{error}</span>}
+    </button>
   );
 }

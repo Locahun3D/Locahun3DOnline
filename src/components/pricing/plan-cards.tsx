@@ -9,7 +9,7 @@ import type { DictKey } from "@/lib/i18n/dictionaries";
 
 type BillingMode = "monthly" | "annual";
 
-interface Plan {
+export interface Plan {
   code: string;
   name: string;
   monthly: number;
@@ -24,7 +24,7 @@ interface Plan {
 
 const ANNUAL_DISCOUNT = 0.15;
 
-const PLANS: Plan[] = [
+export const PLANS: Plan[] = [
   {
     code: "FREE",
     name: "Free",

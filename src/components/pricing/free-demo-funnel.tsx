@@ -116,10 +116,19 @@ export default function FreeDemoFunnel({
             </span>
           </div>
           <div className="absolute inset-x-0 bottom-0 pt-7 pb-3 px-4 text-center bg-gradient-to-t from-black/60 to-transparent">
-            <span className="mono text-[10px] tracking-[0.2em] text-white">
+            {/* PC(pointer:fine)は「WASD / ドラッグ」、タッチ端末(pointer:coarse)は
+                キーボード操作を含まない文言に出し分ける。JS判定はhydration
+                ミスマッチのリスクがあるため使わず、両方サーバーレンダリングして
+                CSSのみで切り替える。 */}
+            <span className="mono text-[10px] tracking-[0.2em] text-white [@media(pointer:coarse)]:hidden">
               {en
                 ? "WASD / drag to move — real scan data"
                 : "WASD / ドラッグで移動 — 実データそのまま"}
+            </span>
+            <span className="hidden [@media(pointer:coarse)]:inline mono text-[10px] tracking-[0.2em] text-white">
+              {en
+                ? "Drag to move — real scan data"
+                : "ドラッグで移動 — 実データそのまま"}
             </span>
           </div>
         </a>
