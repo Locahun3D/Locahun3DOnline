@@ -22,7 +22,7 @@ import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
 import PurchaseToast from "@/components/purchase-toast";
 import { getSettings } from "@/lib/site-settings";
-import { isFreePeriodActive } from "@/lib/settings-schema";
+import { isFreePeriodActive, isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { getLocale } from "@/lib/i18n/server";
 
 // 限定無料期間 (getSettings) と現在時刻を毎リクエストで読むため動的レンダリング。
@@ -75,7 +75,10 @@ export default async function PropertyDetailPage({
   ]);
 
   const others = findRelatedProperties(property, allPublished, 3);
-  const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
+  const nowIso = new Date().toISOString();
+  const freeAccess = isFreePeriodActive(settings.freePeriod, nowIso);
+  const dataSaleFree = isDataSaleFree(settings.dataSaleFreePeriod, nowIso);
+  const dataSaleDisabled = isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso);
 
   const canViewRestrictedItems = canViewBackyard(user);
   const canViewNdaOnlyItems = canViewNdaOnly(user);
@@ -177,6 +180,8 @@ export default async function PropertyDetailPage({
         property={property}
         others={others}
         freeAccess={freeAccess}
+        dataSaleFree={dataSaleFree}
+        dataSaleDisabled={dataSaleDisabled}
         canViewRestricted={canViewRestrictedItems}
         canViewNdaOnly={canViewNdaOnlyItems}
         purchasedItemIds={purchasedItemIds}

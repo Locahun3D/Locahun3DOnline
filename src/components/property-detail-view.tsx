@@ -94,6 +94,8 @@ export default function PropertyDetailView({
   others,
   preview = false,
   freeAccess = false,
+  dataSaleFree = false,
+  dataSaleDisabled = false,
   canViewRestricted = false,
   canViewNdaOnly = false,
   purchasedItemIds = [],
@@ -116,6 +118,10 @@ export default function PropertyDetailView({
   others: Property[];
   preview?: boolean;
   freeAccess?: boolean;
+  /** 3Dデータ販売の限定無料期間中: 販売中データの購入価格を¥0にする。 */
+  dataSaleFree?: boolean;
+  /** 無料期間終了後「販売停止」設定の場合: 3Dデータ購入パネル自体を出さない。 */
+  dataSaleDisabled?: boolean;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
   /** 購入済みシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
@@ -850,14 +856,15 @@ export default function PropertyDetailView({
                   {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
                       出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。
                       salePrice===0 は「無料配布」として許可する（api/purchase 側で
-                      Stripe を経由せず即時完了する）。 */}
-                  {item.forSale && resolveDownloadFiles(item).length > 0 && (
+                      Stripe を経由せず即時完了する）。dataSaleDisabled は限定無料期間
+                      終了後に「販売停止」を選んだ場合、パネル自体を出さない。 */}
+                  {item.forSale && !dataSaleDisabled && resolveDownloadFiles(item).length > 0 && (
                     <DataSalePanel
                       propertyId={property.id}
                       propertyTitle={property.title}
                       splatItemIndex={origIndex}
                       itemLabel={item.label}
-                      price={item.salePrice}
+                      price={dataSaleFree ? 0 : item.salePrice}
                       description={item.saleDescription}
                       scannedAt={property.scannedAt}
                       splatSizeMb={item.sizeMb}

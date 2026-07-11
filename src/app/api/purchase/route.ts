@@ -6,6 +6,8 @@ import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { getSettings } from "@/lib/site-settings";
+import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -34,6 +36,16 @@ export async function POST(req: Request) {
   if (!item || !item.forSale) {
     return NextResponse.json({ error: "このデータは販売されていません" }, { status: 404 });
   }
+
+  // 3Dデータ販売の限定無料期間: クライアントは price を送ってこない（サーバの
+  // item.salePrice をそのまま信用しない設計）ため、ここで同じ設定を見て
+  // 「無料期間終了後は販売停止」を選んでいる場合は購入自体を拒否する。
+  const settings = await getSettings();
+  const nowIso = new Date().toISOString();
+  if (isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso)) {
+    return NextResponse.json({ error: "このデータは現在販売を停止しています" }, { status: 404 });
+  }
+
   // 管理画面(価格管理)は「⚠DLファイル未設定」を警告表示するだけで販売自体は
   // 止めない。ここでブロックしないと、配布物ゼロのまま決済だけ成立し、購入者が
   // ダウンロード時に404を踏む（＝代金を払って何も手に入らない）事故になる。
@@ -50,7 +62,7 @@ export async function POST(req: Request) {
   }
 
   const purchaseId = randomUUID();
-  const price = item.salePrice;
+  const price = isDataSaleFree(settings.dataSaleFreePeriod, nowIso) ? 0 : item.salePrice;
 
   // ¥0（無料配布）は Stripe を経由せず常に即時完了させる（Stripe は¥0決済に
   // 対応していない上、課金の必要がそもそも無い）。ログイン必須はこのルート
