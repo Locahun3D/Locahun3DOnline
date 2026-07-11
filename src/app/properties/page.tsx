@@ -2,6 +2,7 @@ import { getPublishedProperties } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";
 import { reviewStatsForProperties } from "@/lib/reviews";
 import CatalogClient from "@/components/properties/catalog-client";
+import SimilarPropertySearch from "@/components/properties/similar-property-search";
 
 export const metadata = {
   title: "物件を探す",
@@ -33,6 +34,9 @@ export default async function PropertiesPage() {
 
   return (
     <div className="theme-online">
+      <div className="frame-wide pt-5">
+        <SimilarPropertySearch />
+      </div>
       <CatalogClient
         items={items}
         areas={areas}
