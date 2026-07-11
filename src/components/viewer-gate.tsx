@@ -121,55 +121,101 @@ export default function ViewerGate({
           </div>
         </button>
 
+        {/* 登録モーダル — 「Free でできること比較型」。
+            旧実装は暗色前提（bg-[#1a1a1a]＋text-white）のままライトテーマ化され、
+            白地に白文字で本文が不可視になっていた（実機スクショで発覚）。
+            ライトテーマのトークンで作り直し、左=Free プランのままできること、
+            右=CTA の2カラムで「登録=課金が始まる」という警戒を解く。 */}
         {showAuthModal && (
           <div
             className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
             onClick={() => setShowAuthModal(false)}
           >
             <div
-              className="bg-[#1a1a1a] border border-accent/60 max-w-sm w-full p-7 text-center"
+              className="relative bg-white border border-line shadow-2xl max-w-[560px] w-full grid sm:grid-cols-[1.2fr_1fr] text-left"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-end -mt-2 -mr-2 mb-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAuthModal(false)}
-                  className="text-muted hover:text-ink text-lg leading-none p-2"
-                  aria-label={en ? "Close" : "閉じる"}
-                >
-                  ✕
-                </button>
+              <button
+                type="button"
+                onClick={() => setShowAuthModal(false)}
+                className="absolute top-1.5 right-2.5 text-muted hover:text-ink text-lg leading-none p-2 z-10"
+                aria-label={en ? "Close" : "閉じる"}
+              >
+                ✕
+              </button>
+
+              {/* 左: Free プランのままできること */}
+              <div className="px-7 py-6 sm:border-r border-b sm:border-b-0 border-line">
+                <div className="mono text-[9.5px] tracking-[0.24em] uppercase text-accent mb-3">
+                  {en ? "What the Free plan includes" : "FREE プランのままできること"}
+                </div>
+                <ul className="space-y-1.5 text-[13px] leading-[1.8] text-ink">
+                  <li className="flex gap-2.5">
+                    <span className="text-accent font-bold shrink-0">✓</span>
+                    {en
+                      ? "3DGS walkthroughs (6 tokens on signup)"
+                      : "3DGS ウォークスルー視聴（6トークン付与）"}
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="text-accent font-bold shrink-0">✓</span>
+                    {en
+                      ? "Full catalog, photos & map search"
+                      : "全物件のカタログ・写真・地図検索"}
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="text-accent font-bold shrink-0">✓</span>
+                    {en ? "Reviews & location boards" : "レビュー・掲示板の閲覧"}
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="text-accent font-bold shrink-0">✓</span>
+                    {en ? "Bookmarks (organized in boards)" : "ブックマーク保存（ボード整理）"}
+                  </li>
+                </ul>
+                <p className="text-[10.5px] text-muted leading-[1.9] mt-4">
+                  {en ? (
+                    <>
+                      No expiry. No credit card required.
+                      <br />
+                      Never auto-upgrades to a paid plan.
+                    </>
+                  ) : (
+                    <>
+                      期限なし・クレジットカード登録なし。
+                      <br />
+                      有料プランへの自動移行はありません。
+                    </>
+                  )}
+                </p>
               </div>
-              <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-3">
-                {en ? "ACCOUNT REGISTRATION" : "アカウント登録"}
-              </div>
-              <h3 className="serif text-xl font-bold mb-3 text-white">
-                {en ? "A free account is required" : "無料アカウント登録が必要です"}
-              </h3>
-              <p className="text-[13px] text-white/70 leading-[1.85] mb-6">
-                {en ? (
-                  <>
-                    Sign up free and get tokens instantly — even the Free plan can unlock and
-                    walk this space in 3D.
-                  </>
-                ) : (
-                  <>
-                    無料登録するとトークンがすぐに付与され、Free プランでもこの空間を 3D で歩き回れます。
-                  </>
-                )}
-              </p>
-              <div className="flex flex-col gap-2.5">
+
+              {/* 右: CTA */}
+              <div className="px-6 py-7 flex flex-col justify-center text-center bg-[#fbfcfd]">
+                <h3 className="text-[16px] font-bold leading-[1.6] mb-4 text-ink">
+                  {en ? (
+                    <>
+                      Sign up free to
+                      <br />
+                      keep walking
+                    </>
+                  ) : (
+                    <>
+                      無料登録して
+                      <br />
+                      続きを歩く
+                    </>
+                  )}
+                </h3>
                 <Link
                   href={lh("/sign-up")}
-                  className="px-6 py-3 text-[14px] font-bold rounded-md bg-accent text-white hover:bg-accent/85 transition"
+                  className="px-6 py-3 text-[14px] font-bold bg-accent text-white hover:brightness-105 transition"
                 >
                   {en ? "Create free account" : "無料で登録する"}
                 </Link>
                 <Link
                   href={lh(`/sign-in?redirect=/properties/${propertyId}`)}
-                  className="px-6 py-2.5 text-[13px] font-semibold text-white/70 hover:text-white transition"
+                  className="mt-3 text-[12.5px] text-muted hover:text-ink transition"
                 >
-                  {en ? "Already a member? Sign in" : "すでに会員の方はサインイン"}
+                  {en ? "Already a member? Sign in" : "サインインはこちら"}
                 </Link>
               </div>
             </div>
