@@ -2497,7 +2497,8 @@ function Checklist({ data }: { data: Property }) {
 // /admin/pricing の「推奨価格」(DATA_SALE_PRICE: 10万/25万/30万/50万) と揃えて
 // おかないと、推奨価格を適用したデータをエディタで開くたびに一致するプリセットが
 // 無く「カスタム金額」に化けてしまう（実際に起きていた不整合）。
-const SALE_PRICE_PRESETS = [50000, 100000, 150000, 200000, 250000, 300000, 500000] as const;
+// 0 = 無料配布（会員登録さえすればダウンロード可、Stripe を経由せず即時完了）。
+const SALE_PRICE_PRESETS = [0, 50000, 100000, 150000, 200000, 250000, 300000, 500000] as const;
 
 function SalePriceInput({
   value,
@@ -2526,7 +2527,7 @@ function SalePriceInput({
         <option value="">-- 選択 --</option>
         {SALE_PRICE_PRESETS.map((p) => (
           <option key={p} value={p}>
-            ¥{p.toLocaleString()}
+            {p === 0 ? "無料（¥0・要ログイン）" : `¥${p.toLocaleString()}`}
           </option>
         ))}
         <option value="__custom__">カスタム金額</option>

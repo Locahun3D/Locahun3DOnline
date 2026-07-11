@@ -29,7 +29,9 @@ export async function POST(req: Request) {
   }
 
   const item = property.splatItems[splatItemIndex];
-  if (!item || !item.forSale || item.salePrice <= 0) {
+  // salePrice === 0 は「無料配布」として許可する（forSale=true が販売対象である
+  // ことの唯一の判定条件。以前は price<=0 も弾いていたため¥0を設定できなかった）。
+  if (!item || !item.forSale) {
     return NextResponse.json({ error: "このデータは販売されていません" }, { status: 404 });
   }
   // 管理画面(価格管理)は「⚠DLファイル未設定」を警告表示するだけで販売自体は
@@ -50,7 +52,10 @@ export async function POST(req: Request) {
   const purchaseId = randomUUID();
   const price = item.salePrice;
 
-  if (!stripeEnabled()) {
+  // ¥0（無料配布）は Stripe を経由せず常に即時完了させる（Stripe は¥0決済に
+  // 対応していない上、課金の必要がそもそも無い）。ログイン必須はこのルート
+  // 冒頭の getCurrentUser() 401 チェックで既に担保されている。
+  if (!stripeEnabled() || price === 0) {
     const now = new Date();
     const completed = await purchaseRepo.upsert({
       id: purchaseId,

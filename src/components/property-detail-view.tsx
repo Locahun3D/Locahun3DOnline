@@ -845,8 +845,10 @@ export default function PropertyDetailView({
                     alreadyUnlocked={unlockedItemIds.includes(item.id)}
                   />
                   {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
-                      出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。 */}
-                  {item.forSale && item.salePrice > 0 && resolveDownloadFiles(item).length > 0 && (
+                      出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。
+                      salePrice===0 は「無料配布」として許可する（api/purchase 側で
+                      Stripe を経由せず即時完了する）。 */}
+                  {item.forSale && resolveDownloadFiles(item).length > 0 && (
                     <DataSalePanel
                       propertyId={property.id}
                       propertyTitle={property.title}

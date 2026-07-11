@@ -148,8 +148,14 @@ export default function DataSalePanel({
       ) : (
         <>
           <div className="text-right shrink-0">
-            <span className="serif text-lg text-accent">¥{yen}</span>
-            <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax incl." : "税込"}</span>
+            {price === 0 ? (
+              <span className="serif text-lg text-accent">{en ? "Free" : "無料"}</span>
+            ) : (
+              <>
+                <span className="serif text-lg text-accent">¥{yen}</span>
+                <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax incl." : "税込"}</span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
@@ -185,7 +191,11 @@ export default function DataSalePanel({
               disabled={loading || !agreedTerms}
               className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
             >
-              {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy" : "購入する"}
+              {loading
+                ? en ? "Processing..." : "処理中..."
+                : price === 0
+                  ? en ? "Free download" : "無料でダウンロード"
+                  : en ? "Buy" : "購入する"}
             </button>
           </div>
         </>
