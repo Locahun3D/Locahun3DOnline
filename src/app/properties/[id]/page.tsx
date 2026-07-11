@@ -11,6 +11,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { commentRepo } from "@/lib/comments";
 import { reviewRepo } from "@/lib/reviews";
+import { withLiveDisplayNames } from "@/lib/live-names";
 import {
   canViewBackyard,
   canViewNdaOnly,
@@ -100,8 +101,10 @@ export default async function PropertyDetailPage({
   // HTML にも一切含めない（クライアント側フィルタだけでは不十分）。
   const isAdminUser = user?.role === "admin";
   const comments = signedIn
-    ? (await commentRepo.list(property.id).catch(() => [])).filter(
-        (c) => isAdminUser || !c.hiddenByReports,
+    ? await withLiveDisplayNames(
+        (await commentRepo.list(property.id).catch(() => [])).filter(
+          (c) => isAdminUser || !c.hiddenByReports,
+        ),
       )
     : [];
   // レビュー投稿権限の判定用。「有効期限内のアンロックが1件以上あるか」を
@@ -122,8 +125,10 @@ export default async function PropertyDetailPage({
     }
   }
   const reviews = signedIn
-    ? (await reviewRepo.list(property.id).catch(() => [])).filter(
-        (r) => isAdminUser || !r.hiddenByReports,
+    ? await withLiveDisplayNames(
+        (await reviewRepo.list(property.id).catch(() => [])).filter(
+          (r) => isAdminUser || !r.hiddenByReports,
+        ),
       )
     : [];
   if (user) {

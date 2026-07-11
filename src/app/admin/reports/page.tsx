@@ -5,6 +5,7 @@ import { reviewRepo, type Review } from "@/lib/reviews";
 import { repo } from "@/lib/store";
 import { unhideCommentAction, deleteCommentAction } from "@/lib/comment-actions";
 import { unhideReviewAction, deleteReviewAction } from "@/lib/review-actions";
+import { withLiveDisplayNames } from "@/lib/live-names";
 
 export const metadata = { title: "通報管理" };
 
@@ -67,7 +68,7 @@ export default async function AdminReportsPage() {
 
   const titleOf = new Map(properties.map((p) => [p.id, p.title || p.id]));
 
-  const items: ReportedItem[] = [
+  const items: ReportedItem[] = await withLiveDisplayNames([
     ...comments
       .filter((c: Comment) => c.reports.length > 0)
       .map((c: Comment): ReportedItem => ({
@@ -95,7 +96,8 @@ export default async function AdminReportsPage() {
         reportCount: r.reports.length,
         hiddenByReports: r.hiddenByReports,
       })),
-  ].sort((a, b) => {
+  ]);
+  items.sort((a, b) => {
     // 非表示中のものを先頭に、その中では通報数が多い順
     if (a.hiddenByReports !== b.hiddenByReports) return a.hiddenByReports ? -1 : 1;
     return b.reportCount - a.reportCount;
