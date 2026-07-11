@@ -158,44 +158,66 @@ export async function findSimilarProperties(
   const byId = new Map(rows.map((r) => [r.id, r]));
   const prompt = buildPrompt(url, catalogDigest(rows));
 
-  try {
-    const base: Record<string, unknown> = {
-      model: "claude-opus-4-8",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
-      tools: [{ type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 }],
-    };
+  // suggest-summary.ts と同じ多段フォールバック: web_fetch(+web_search) が
+  // 400（アカウント未対応等）なら次のツールセットへ、最後はツール無しで再試行。
+  // ここで諦めずに段階を踏まないと、1回の400だけで即ヒューリスティックへ
+  // 落ちてしまい、AIによる本文照合が実質使われなくなる（実機で確認済みの不具合）。
+  const TOOL_SETS = [
+    [{ type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 }],
+    [],
+  ];
 
-    let data: AnthropicResponse | null = null;
-    let messages = base.messages as Array<{ role: string; content: unknown }>;
-    for (let i = 0; i < 4; i++) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({ ...base, messages }),
-      });
-      if (!res.ok) throw new Error(`anthropic ${res.status}`);
-      data = (await res.json()) as AnthropicResponse;
-      if (data.stop_reason !== "pause_turn") break;
-      messages = [...messages, { role: "assistant", content: data.content }];
+  for (const tools of TOOL_SETS) {
+    try {
+      const base: Record<string, unknown> = {
+        model: "claude-opus-4-8",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      };
+      if (tools.length) base.tools = tools;
+
+      let data: AnthropicResponse | null = null;
+      let messages = base.messages as Array<{ role: string; content: unknown }>;
+      let badRequest = false;
+      for (let i = 0; i < 4; i++) {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({ ...base, messages }),
+        });
+        if (res.status === 400) {
+          badRequest = true;
+          break;
+        }
+        if (!res.ok) throw new Error(`anthropic ${res.status}`);
+        data = (await res.json()) as AnthropicResponse;
+        if (data.stop_reason !== "pause_turn") break;
+        messages = [...messages, { role: "assistant", content: data.content }];
+      }
+      if (badRequest) continue;
+
+      const raw = data ? parseMatches(data) : [];
+      const matches: SimilarMatch[] = raw
+        .map((m) => {
+          const row = byId.get(m.id);
+          if (!row) return null;
+          return { id: row.id, title: row.title, reason: m.reason || "似た雰囲気の物件です" };
+        })
+        .filter((m): m is SimilarMatch => !!m)
+        .slice(0, 5);
+
+      if (raw.length > 0 || matches.length > 0) {
+        return { ok: true, matches, source: "ai" };
+      }
+      // 空配列（該当なし）もAI成功の正当な結果として扱う。
+      if (data) return { ok: true, matches: [], source: "ai" };
+    } catch {
+      /* 次のツールセット、または heuristic へ */
     }
-
-    const raw = data ? parseMatches(data) : [];
-    const matches: SimilarMatch[] = raw
-      .map((m) => {
-        const row = byId.get(m.id);
-        if (!row) return null;
-        return { id: row.id, title: row.title, reason: m.reason || "似た雰囲気の物件です" };
-      })
-      .filter((m): m is SimilarMatch => !!m)
-      .slice(0, 5);
-
-    return { ok: true, matches, source: "ai" };
-  } catch {
-    return { ok: true, matches: heuristicMatch(url, rows), source: "heuristic" };
   }
+  return { ok: true, matches: heuristicMatch(url, rows), source: "heuristic" };
 }
