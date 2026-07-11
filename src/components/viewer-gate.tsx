@@ -344,7 +344,13 @@ export default function ViewerGate({
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 text-center px-6"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)" }}
       >
-        <div className="flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
+        {/* w-full が必須: 親(.absolute...justify-end)は align-items:center で
+            stretchしないため、このdivは本来コンテンツ幅にshrink-to-fitする。
+            中の警告ボックス/トークン不足ボックスが `w-full max-w-[46ch]` を
+            使っているが、幅未指定の親を基準に解決されてこのカードより広く
+            描画され、祖先の overflow-hidden で角が切れる（見切れる）バグの
+            原因だった。w-full を明示してその基準を確定させる。 */}
+        <div className="w-full flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
           <div
             className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
               freeAccess || alreadyUnlocked ? "text-green-600" : "text-accent"

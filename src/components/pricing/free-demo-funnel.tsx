@@ -7,12 +7,16 @@ const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
  */
 export default function FreeDemoFunnel({
   signUpHref,
+  accountHref,
   demoCover,
   en,
+  signedIn = false,
 }: {
   signUpHref: string;
+  accountHref: string;
   demoCover: { src: string; alt: string } | null;
   en: boolean;
+  signedIn?: boolean;
 }) {
   return (
     <section className="mb-16">
@@ -47,19 +51,37 @@ export default function FreeDemoFunnel({
             >
               {en ? "▶ Walk the demo — no sign-up" : "▶ デモを歩く — 登録不要"}
             </a>
-            <a
-              href={signUpHref}
-              className="block text-center px-4 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-ink hover:border-ink/60 transition"
-            >
-              {en
-                ? "Sign up free — get 6 tokens"
-                : "無料登録して 6 トークンを受け取る"}
-            </a>
-            <span className="text-center text-[10.5px] text-muted">
-              {en
-                ? "Free plan never expires — no card required"
-                : "Free プランは期限なし・カード登録なし"}
-            </span>
+            {signedIn ? (
+              <>
+                <a
+                  href={accountHref}
+                  className="block text-center px-4 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-ink hover:border-ink/60 transition"
+                >
+                  {en ? "Check your token balance →" : "マイページでトークン残高を確認 →"}
+                </a>
+                <span className="text-center text-[10.5px] text-muted">
+                  {en
+                    ? "You're already signed in"
+                    : "既にログイン済みです"}
+                </span>
+              </>
+            ) : (
+              <>
+                <a
+                  href={signUpHref}
+                  className="block text-center px-4 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-ink hover:border-ink/60 transition"
+                >
+                  {en
+                    ? "Sign up free — get 6 tokens"
+                    : "無料登録して 6 トークンを受け取る"}
+                </a>
+                <span className="text-center text-[10.5px] text-muted">
+                  {en
+                    ? "Free plan never expires — no card required"
+                    : "Free プランは期限なし・カード登録なし"}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
