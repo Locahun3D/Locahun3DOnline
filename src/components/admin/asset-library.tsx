@@ -160,6 +160,40 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
     assetApi({ action: "thumbnail", id: a.id, thumbnailUrl: url });
   }
 
+  // 現在の検索/種類/タグ絞り込みは維持しつつ、対象は常に「未使用」に限定する
+  // 二重ガード（onlyUnused チェックのON/OFFに関係なく、削除実行はこの計算結果のみ
+  // を使う。誤って使用中アセットを一括削除に巻き込まないための安全策）。
+  const unusedInFiltered = useMemo(
+    () => filtered.filter((a) => (usage[a.url]?.length ?? 0) === 0),
+    [filtered, usage],
+  );
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  async function onBulkDeleteUnused() {
+    const targets = unusedInFiltered;
+    if (targets.length === 0) return;
+    const totalBytes = targets.reduce((sum, a) => sum + (a.size || 0), 0);
+    const ok = confirm(
+      `未使用アセット ${targets.length} 件（合計 ${fmtBytes(totalBytes)}）を削除します。\n` +
+        `R2上の実体ファイルも完全に削除され、元に戻せません。よろしいですか？`,
+    );
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      const ids = new Set(targets.map((a) => a.id));
+      const results = await Promise.all(
+        targets.map((a) => assetApi({ action: "delete", id: a.id }).then((success) => ({ id: a.id, success }))),
+      );
+      const failedIds = new Set(results.filter((r) => !r.success).map((r) => r.id));
+      setAssets((prev) => prev.filter((x) => !ids.has(x.id) || failedIds.has(x.id)));
+      if (failedIds.size > 0) {
+        setError(`${failedIds.size} 件の削除に失敗しました。再度お試しください。`);
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
   return (
     <div>
       {/* Toolbar */}
@@ -212,6 +246,18 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
           <input type="checkbox" checked={onlyUnused} onChange={(e) => setOnlyUnused(e.target.checked)} />
           未使用のみ
         </label>
+        {unusedInFiltered.length > 0 && (
+          <button
+            onClick={onBulkDeleteUnused}
+            disabled={bulkDeleting}
+            className="text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-2.5 py-1 transition-colors disabled:opacity-40"
+            title="現在の検索・絞り込み条件に一致する未使用アセットのみを削除します（使用中のアセットは対象外）"
+          >
+            {bulkDeleting
+              ? "削除中…"
+              : `未使用を一括削除（${unusedInFiltered.length}件・${fmtBytes(unusedInFiltered.reduce((s, a) => s + (a.size || 0), 0))}）`}
+          </button>
+        )}
         <span className="text-[11px] text-muted ml-auto mono">
           {filtered.length} / {assets.length} 件
         </span>
