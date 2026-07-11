@@ -70,25 +70,6 @@ const ja = {
   "home.cta.scanBtn": "スキャンを相談",
   "home.cta.onlineBtn": "オンラインに登録",
 
-  // --- About (/about) ---
-  "about.h1": "サービスについて",
-  "about.intro":
-    "ロケハン3D オンラインは、撮影前ロケハンをブラウザだけで完結するオンライン・プラットフォームです。スタジオ・倉庫・住宅・屋外ロケ地を 3D で検索・下見し、現場に行かず構図・レンズ・光・動線を検証できます。",
-  "about.f1.h": "探す",
-  "about.f1.p":
-    "全国のスタジオ・倉庫・住宅・屋外ロケ地を、地図とフィルタで横断検索。料金・天井高・搬入・距離の条件で絞り込めます。",
-  "about.f2.h": "下見する",
-  "about.f2.p":
-    "3D Gaussian Splatting の実寸空間をブラウザで歩き、レンズ画角・光・天井・人の動線を現地に行かず検証できます。",
-  "about.f3.h": "決める",
-  "about.f3.p":
-    "チーム全員が同じ 3D を見て意思決定。そのまま見積もり・問い合わせへ。撮影前の往復をブラウザの中へ。",
-  "about.plans":
-    "3DGS ウォークスルーはトークン制。Free / Individual / Studio / Team の月額プランから、利用規模に合わせて選べます。年払いで割引も。",
-  "about.cta.browse": "物件を探す",
-  "about.cta.pricing": "料金プラン",
-  "about.audience":
-    "個人クリエイター・制作プロダクション・スタジオ運営者のためのサービスです。撮影監督・カメラマン・美術が同じ 3D 空間で打合せできます。",
 
   // --- Plan cards (/pricing) ---
   "plan.billing.monthly": "月払い",
@@ -167,25 +148,6 @@ const en: Record<keyof typeof ja, string> = {
   "home.cta.scanBtn": "Talk to us about Scan",
   "home.cta.onlineBtn": "Sign up for Online",
 
-  // --- About (/about) ---
-  "about.h1": "About",
-  "about.intro":
-    "Locahun 3D Online is a platform that completes pre-shoot location scouting entirely in the browser. Search and preview studios, warehouses, homes and outdoor locations in 3D, and check framing, lenses, light and movement without visiting the site.",
-  "about.f1.h": "Search",
-  "about.f1.p":
-    "Search studios, warehouses, homes and outdoor locations nationwide on a map with filters — narrow by price, ceiling height, loading access and distance.",
-  "about.f2.h": "Preview",
-  "about.f2.p":
-    "Walk full-scale 3D Gaussian Splatting spaces in your browser and check lens angles, light, ceilings and people-flow without going on site.",
-  "about.f3.h": "Decide",
-  "about.f3.p":
-    "The whole team decides while looking at the same 3D — then move straight to a quote or inquiry. The pre-shoot back-and-forth, inside the browser.",
-  "about.plans":
-    "3DGS walkthroughs run on tokens. Choose from Free / Individual / Studio / Team monthly plans to match your usage — with a discount for annual billing.",
-  "about.cta.browse": "Browse Locations",
-  "about.cta.pricing": "Pricing",
-  "about.audience":
-    "Built for individual creators, production companies and studio operators. Directors, camera and art teams can all meet in the same 3D space.",
 
   // --- Plan cards (/pricing) ---
   "plan.billing.monthly": "Monthly",
