@@ -7,6 +7,11 @@ import { useLocale } from "@/components/locale-provider";
  * EN / JA 言語トグル。現在のパスを保ったまま `/en` prefix を付け外しする。
  * 言語切替は middleware を確実に再実行させたいので通常リンク（ハードナビ）。
  * （useSearchParams はヘッダ全体を動的化するため使わない）
+ *
+ * 以前は JA/EN 2セルの枠付きグループ表示だったが、狭い画面でヘッダー内の
+ * 他要素（カート・ログイン等）と詰まって見切れる実害があった。切替先の
+ * 言語だけを表示する単一リンクにして幅を半減させる（マーケサイトの
+ * ヘッダーとも表示ロジックを統一）。
  */
 export default function LangToggle({ className = "" }: { className?: string }) {
   const locale = useLocale();
@@ -15,36 +20,16 @@ export default function LangToggle({ className = "" }: { className?: string }) {
 
   const jaHref = base;
   const enHref = base === "/" ? "/en" : `/en${base}`;
-
-  const item = (active: boolean) =>
-    `px-1.5 py-0.5 text-[11px] mono tracking-[0.12em] transition ${
-      active
-        ? "text-ink"
-        : "text-muted/60 hover:text-accent"
-    }`;
+  const isJa = locale === "ja";
 
   return (
-    <div
-      className={`flex items-center border border-line rounded-[2px] overflow-hidden ${className}`}
-      role="group"
+    <a
+      href={isJa ? enHref : jaHref}
+      className={`px-2 py-1 text-[11px] mono tracking-[0.12em] border border-line text-muted hover:text-accent hover:border-accent transition ${className}`}
       aria-label="Language"
     >
-      <a
-        href={jaHref}
-        aria-current={locale === "ja" ? "true" : undefined}
-        className={`${item(locale === "ja")} ${locale === "ja" ? "bg-line/40" : ""}`}
-      >
-        JA
-      </a>
-      <span className="w-px self-stretch bg-line" aria-hidden />
-      <a
-        href={enHref}
-        aria-current={locale === "en" ? "true" : undefined}
-        className={`${item(locale === "en")} ${locale === "en" ? "bg-line/40" : ""}`}
-      >
-        EN
-      </a>
-    </div>
+      {isJa ? "EN" : "JA"}
+    </a>
   );
 }
 

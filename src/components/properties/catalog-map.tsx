@@ -11,6 +11,7 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Property } from "@/lib/schemas";
+import { mapTileConfig } from "@/lib/map-tiles";
 
 /**
  * Default Leaflet marker images fail to load with bundlers because of broken
@@ -70,6 +71,7 @@ export default function CatalogMap({
 }: Props) {
   const withCoords = useMemo(() => items.filter((p) => p.coords), [items]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tile = useMemo(() => mapTileConfig(), []);
 
   return (
     <div
@@ -103,11 +105,7 @@ export default function CatalogMap({
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         worldCopyJump
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          subdomains={["a", "b", "c", "d"]}
-        />
+        <TileLayer attribution={tile.attribution} url={tile.url} detectRetina />
 
         <ViewportFitter reference={reference} />
 

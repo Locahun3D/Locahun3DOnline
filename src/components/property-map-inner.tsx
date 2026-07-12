@@ -2,6 +2,7 @@
 
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { mapTileConfig } from "@/lib/map-tiles";
 
 /**
  * 単一物件の位置を示すミニ地図（詳細ページ ACCESS 用）。
@@ -18,6 +19,7 @@ export default function PropertyMapInner({
   lng: number;
   label?: string;
 }) {
+  const tile = mapTileConfig();
   return (
     <div className="relative isolate w-full h-full border border-line bg-[#e9edf1] [&_.leaflet-container]:bg-[#e9edf1] [&_.leaflet-control-attribution]:text-[9px] [&_.leaflet-control-attribution]:bg-white/70 [&_.leaflet-control-attribution]:text-muted [&_.leaflet-control-attribution_a]:text-muted">
       <MapContainer
@@ -26,11 +28,7 @@ export default function PropertyMapInner({
         scrollWheelZoom={false}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          subdomains={["a", "b", "c", "d"]}
-        />
+        <TileLayer attribution={tile.attribution} url={tile.url} detectRetina />
         <CircleMarker
           center={[lat, lng]}
           radius={9}

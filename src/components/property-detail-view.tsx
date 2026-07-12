@@ -229,16 +229,23 @@ export default function PropertyDetailView({
   const specRows: [string, string][] = [];
   if (property.address) specRows.push(["ADDRESS ／ 住所", property.address]);
   if (property.nearestStation) specRows.push(["STATION ／ 最寄り駅", property.nearestStation]);
-  if (property.availableTimeSlots && property.availableTimeSlots.length > 0) {
-    const slotLabels = property.availableTimeSlots
+  const customHoursLabel =
+    property.customHoursStart && property.customHoursEnd
+      ? `${property.customHoursStart}〜${property.customHoursEnd}`
+      : "";
+  {
+    const slotLabels = (property.availableTimeSlots ?? [])
       .map((s) => (en ? TIME_SLOT_LABEL_EN[s] : TIME_SLOT_LABEL[s]))
+      .concat(customHoursLabel ? [customHoursLabel] : [])
       .join(" / ");
-    specRows.push([
-      en ? "TIME SLOTS ／ Available hours" : "TIME SLOTS ／ 利用可能な時間帯",
-      property.availableHours ? `${slotLabels}（${property.availableHours}）` : slotLabels,
-    ]);
-  } else if (property.availableHours) {
-    specRows.push(["HOURS ／ 利用可能時間", property.availableHours]);
+    if (slotLabels) {
+      specRows.push([
+        en ? "TIME SLOTS ／ Available hours" : "TIME SLOTS ／ 利用可能な時間帯",
+        property.availableHours ? `${slotLabels}（${property.availableHours}）` : slotLabels,
+      ]);
+    } else if (property.availableHours) {
+      specRows.push(["HOURS ／ 利用可能時間", property.availableHours]);
+    }
   }
   if (property.availableDays) specRows.push(["DAYS ／ 撮影可能日", property.availableDays]);
   if (property.bookingDeadline) specRows.push(["LEAD TIME ／ 申込期限", property.bookingDeadline]);

@@ -15,14 +15,12 @@ const ITEMS: { href: string; key: DictKey; external?: boolean }[] = [
 ];
 
 const LINK =
-  "serif text-2xl py-3.5 border-b border-line hover:text-accent transition flex items-center gap-2";
+  "brand text-2xl py-3.5 border-b border-line hover:text-accent transition flex items-center gap-2";
 
 export default function MobileNav({
   loggedIn,
-  isAdmin,
 }: {
   loggedIn: boolean;
-  isAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -83,16 +81,11 @@ export default function MobileNav({
             )}
 
             {loggedIn ? (
-              <>
-                <Link href={lh("/account")} onClick={close} className={LINK}>
-                  {t("auth.mypage")}
-                </Link>
-                {isAdmin && (
-                  <Link href={lh("/admin")} onClick={close} className={LINK}>
-                    {t("auth.adminShort")}
-                  </Link>
-                )}
-              </>
+              // 管理者リンクはモバイルでは出さない（PC専用機能のため。
+              // デスクトップ版は site-header.tsx 側で hidden lg:inline-block）。
+              <Link href={lh("/account")} onClick={close} className={LINK}>
+                {t("auth.mypage")}
+              </Link>
             ) : (
               <>
                 <Link href={lh("/sign-in")} onClick={close} className={LINK}>

@@ -27,7 +27,7 @@ export default async function SiteHeader() {
       <div className="frame flex items-center h-16 gap-3">
         {/* Left zone — hamburger (< lg) + nav (lg+) */}
         <div className="flex items-center gap-7 flex-1 min-w-0">
-          <MobileNav loggedIn={!!user} isAdmin={user?.role === "admin"} />
+          <MobileNav loggedIn={!!user} />
           <nav className="hidden lg:flex items-center gap-7">
             {NAV.map((n) => (
               <Link

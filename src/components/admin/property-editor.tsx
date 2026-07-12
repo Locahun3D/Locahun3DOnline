@@ -933,6 +933,35 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       );
                     })}
                   </div>
+                  <div className="flex items-center gap-2.5 mt-3 pt-3 border-t border-line">
+                    <span className="text-[12.5px] text-ink/70">カスタム時間帯</span>
+                    <input
+                      type="time"
+                      {...register("customHoursStart")}
+                      className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
+                    />
+                    <span className="text-[12.5px] text-ink/50">〜</span>
+                    <input
+                      type="time"
+                      {...register("customHoursEnd")}
+                      className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
+                    />
+                    {(watch("customHoursStart") || watch("customHoursEnd")) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue("customHoursStart", "", { shouldDirty: true });
+                          setValue("customHoursEnd", "", { shouldDirty: true });
+                        }}
+                        className="text-[11px] text-muted hover:text-ink underline"
+                      >
+                        クリア
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted mt-1">
+                    プリセットの時間帯に当てはまらない場合に、開始〜終了を直接指定できます（例: 10:30〜19:00）。物件ページに時間帯タグと併記されます。
+                  </p>
                 </Field>
               </div>
 

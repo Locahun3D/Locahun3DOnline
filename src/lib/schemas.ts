@@ -285,6 +285,19 @@ export const propertySchema = z.object({
   availableHours: z.string().max(120).default(""),
   /** 利用可能な時間帯タグ（検索で絞り込むための構造化データ）。 */
   availableTimeSlots: z.array(z.enum(TIME_SLOTS)).max(6).default([]),
+  /** プリセット外のカスタム時間帯（例: 10:30〜19:00）。"HH:mm" 24時間表記、
+   *  どちらか片方でも空なら未設定扱い。検索フィルタのタグ横断絞り込みには
+   *  乗らない自由な範囲のため availableTimeSlots とは別枠で保持する。 */
+  customHoursStart: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .or(z.literal(""))
+    .default(""),
+  customHoursEnd: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .or(z.literal(""))
+    .default(""),
   /** 撮影可能日（例: 平日／土日祝（要相談））。 */
   availableDays: z.string().max(120).default(""),
   /** 申込期限・リードタイム（例: 1週間前）。 */
