@@ -4,21 +4,26 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { markNotificationsReadAction } from "@/lib/notification-actions";
 import type { Notification } from "@/lib/notifications";
+import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 
 /**
  * マイページ上部の通知一覧（問い合わせ返信など）。通知が0件なら何も描画しない
  * （常設カードにすると空でも場所を取り、他のカード群より優先度が低いのに
  * 目立ってしまうため）。
+ * ⚠ Client Component に関数 props（lh 等）は渡せない（Server→Client の
+ * シリアライズで即例外＝/account 全体が 500）。locale を受け取り内部で
+ * localizedHref を呼ぶこと（実害発生済み・本番 /account が終日 500）。
  */
 export default function NotificationList({
   notifications,
   en,
-  lh,
+  locale,
 }: {
   notifications: Notification[];
   en: boolean;
-  lh: (href: string) => string;
+  locale: Locale;
 }) {
+  const lh = (href: string) => localizedHref(href, locale);
   const [pending, startTransition] = useTransition();
   if (notifications.length === 0) return null;
 

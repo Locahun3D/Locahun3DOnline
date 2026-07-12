@@ -127,7 +127,7 @@ export default function AccountDashboard({
         </div>
       </div>
 
-      <NotificationList notifications={notifications} en={en} lh={lh} />
+      <NotificationList notifications={notifications} en={en} locale={locale} />
 
       {/* ── 上段: ステータス3枚 ── */}
       <div className="grid md:grid-cols-3 gap-4">
