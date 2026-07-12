@@ -201,8 +201,8 @@ export default async function AboutPage() {
       no: "05",
       label: ["購入データ形式", "Purchase formats"],
       desc: [
-        "PLY / RAD / OBJ の実寸データ。Unreal Engine などのプリビズ・VFX パイプラインへ取り込み、カメラ設計や絵コンテの背景にそのまま使えます。",
-        "True-to-scale PLY / RAD / OBJ. Import into previz / VFX pipelines like Unreal Engine for camera planning and storyboard backgrounds.",
+        "PLY / OBJ の実寸データ。Unreal Engine などのプリビズ・VFX パイプラインへ取り込み、カメラ設計や絵コンテの背景にそのまま使えます。",
+        "True-to-scale PLY / OBJ. Import into previz / VFX pipelines like Unreal Engine for camera planning and storyboard backgrounds.",
       ],
       img: {
         src: "/about/ue-pipeline.webp",

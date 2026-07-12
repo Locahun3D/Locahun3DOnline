@@ -77,7 +77,7 @@ export default async function ContactHubPage() {
             {en ? CONTACT_TYPE_LABEL_EN.listing : CONTACT_TYPE_LABEL.listing}
           </div>
           <span className="mono text-[9.5px] tracking-[0.16em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
-            {en ? "Free during our launch campaign" : "現在、掲載無料キャンペーン中"}
+            {en ? "Listing & scan measurement free during our launch campaign" : "現在、掲載＆スキャン計測無料キャンペーン中"}
           </span>
         </div>
         <p className="text-[12.5px] text-muted leading-[1.85] mb-3 max-w-[56ch]">

@@ -80,7 +80,7 @@ export default async function ContactTypePage({
         </h1>
         {t === "listing" && (
           <div className="inline-block mono text-[10px] tracking-[0.2em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-3 py-1 mb-4">
-            {en ? "Free during our launch campaign" : "現在、掲載無料キャンペーン中"}
+            {en ? "Listing & scan measurement free during our launch campaign" : "現在、掲載＆スキャン計測無料キャンペーン中"}
           </div>
         )}
         <p className="text-[13.5px] text-muted leading-[1.9] mb-8">
