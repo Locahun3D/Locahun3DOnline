@@ -58,6 +58,7 @@ jobs:
           echo "NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up" >> .env.production.local
           echo "NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard" >> .env.production.local
           echo "NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard" >> .env.production.local
+          echo "NEXT_PUBLIC_MAPBOX_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}" >> .env.production.local
 
       # ここが本番デプロイの実ゲート: 型エラー/ビルド失敗ならデプロイしない。
       - name: Build (OpenNext for Cloudflare)
