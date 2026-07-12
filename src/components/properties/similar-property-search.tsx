@@ -45,30 +45,26 @@ export default function SimilarPropertySearch() {
   };
 
   return (
-    <div className="border border-line bg-white px-5 py-5 mb-6">
-      <form onSubmit={onSubmit} className="flex flex-col sm:flex-row gap-2.5">
-        <div className="flex-1">
-          <label className="mono text-[10px] tracking-[0.2em] uppercase text-accent block mb-1.5">
-            {en ? "Find similar locations from a URL" : "似た物件をURLから探す"}
-          </label>
-          <input
-            name="url"
-            type="url"
-            required
-            placeholder={
-              en
-                ? "https://... (a reference page showing the look you want)"
-                : "https://…（イメージに近いページのURLを貼り付け）"
-            }
-            className="w-full border border-line rounded-md px-3.5 py-2.5 text-[13px] focus:outline-none focus:border-accent transition"
-          />
-        </div>
+    <div className="border border-line bg-white px-4 py-3 mb-6">
+      <form onSubmit={onSubmit} className="flex items-center gap-2">
+        <input
+          name="url"
+          type="url"
+          required
+          aria-label={en ? "Find similar locations from a URL" : "似た物件をURLから探す"}
+          placeholder={
+            en
+              ? "Find similar locations — paste a reference URL…"
+              : "似た物件を探す — イメージに近いページのURLを貼り付け…"
+          }
+          className="flex-1 min-w-0 border border-line rounded-md px-3 py-2 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition"
+        />
         <button
           type="submit"
           disabled={pending}
-          className="shrink-0 self-end px-5 py-2.5 mono text-[11px] tracking-[0.2em] uppercase bg-accent text-white hover:opacity-90 transition disabled:opacity-50"
+          className="shrink-0 px-3 sm:px-5 py-2 mono text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.2em] uppercase bg-accent text-white hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
         >
-          {pending ? (en ? "Searching…" : "検索中…") : en ? "Find similar →" : "似た物件を探す →"}
+          {pending ? "…" : en ? "Find →" : "探す →"}
         </button>
       </form>
 
