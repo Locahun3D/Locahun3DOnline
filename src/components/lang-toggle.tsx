@@ -13,7 +13,14 @@ import { useLocale } from "@/components/locale-provider";
  * 言語だけを表示する単一リンクにして幅を半減させる（マーケサイトの
  * ヘッダーとも表示ロジックを統一）。
  */
-export default function LangToggle({ className = "" }: { className?: string }) {
+export default function LangToggle({
+  className = "",
+  compact = false,
+}: {
+  className?: string;
+  /** 最小幅モバイル用の縮小サイズ（要素構成は同じ、サイズのみ縮小）。 */
+  compact?: boolean;
+}) {
   const locale = useLocale();
   const pathname = usePathname() || "/";
   const base = stripLocale(pathname); // /en/x も /x も → /x（冪等）
@@ -22,10 +29,14 @@ export default function LangToggle({ className = "" }: { className?: string }) {
   const enHref = base === "/" ? "/en" : `/en${base}`;
   const isJa = locale === "ja";
 
+  const size = compact
+    ? "px-1 py-0.5 text-[9px] tracking-[0.04em]"
+    : "px-2 py-1 text-[11px] tracking-[0.12em]";
+
   return (
     <a
       href={isJa ? enHref : jaHref}
-      className={`px-2 py-1 text-[11px] mono tracking-[0.12em] border border-line text-muted hover:text-accent hover:border-accent transition ${className}`}
+      className={`${size} mono border border-line text-muted hover:text-accent hover:border-accent transition ${className}`}
       aria-label="Language"
     >
       {isJa ? "EN" : "JA"}
