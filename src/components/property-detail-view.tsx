@@ -2,8 +2,6 @@ import Link from "next/link";
 import {
   categoryLabel,
   isNewProperty,
-  TIME_SLOT_LABEL,
-  TIME_SLOT_LABEL_EN,
   type Property,
 } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
@@ -233,19 +231,13 @@ export default function PropertyDetailView({
     property.customHoursStart && property.customHoursEnd
       ? `${property.customHoursStart}〜${property.customHoursEnd}`
       : "";
-  {
-    const slotLabels = (property.availableTimeSlots ?? [])
-      .map((s) => (en ? TIME_SLOT_LABEL_EN[s] : TIME_SLOT_LABEL[s]))
-      .concat(customHoursLabel ? [customHoursLabel] : [])
-      .join(" / ");
-    if (slotLabels) {
-      specRows.push([
-        en ? "TIME SLOTS ／ Available hours" : "TIME SLOTS ／ 利用可能な時間帯",
-        property.availableHours ? `${slotLabels}（${property.availableHours}）` : slotLabels,
-      ]);
-    } else if (property.availableHours) {
-      specRows.push(["HOURS ／ 利用可能時間", property.availableHours]);
-    }
+  if (customHoursLabel) {
+    specRows.push([
+      en ? "TIME SLOTS ／ Available hours" : "TIME SLOTS ／ 利用可能な時間帯",
+      property.availableHours ? `${customHoursLabel}（${property.availableHours}）` : customHoursLabel,
+    ]);
+  } else if (property.availableHours) {
+    specRows.push(["HOURS ／ 利用可能時間", property.availableHours]);
   }
   if (property.availableDays) specRows.push(["DAYS ／ 撮影可能日", property.availableDays]);
   if (property.bookingDeadline) specRows.push(["LEAD TIME ／ 申込期限", property.bookingDeadline]);

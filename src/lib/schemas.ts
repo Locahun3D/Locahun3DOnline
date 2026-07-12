@@ -12,26 +12,6 @@ export const PROPERTY_CATEGORIES = [
 
 export const PROPERTY_STATUSES = ["draft", "published", "archived"] as const;
 
-/** 利用可能な時間帯（検索フィルタ用のタグ）。availableHours(自由記述)とは別に持つ
- *  ——自由記述だけでは横断的な絞り込みができないため。 */
-export const TIME_SLOTS = ["early", "day", "evening", "night", "late", "24h"] as const;
-export type TimeSlot = (typeof TIME_SLOTS)[number];
-export const TIME_SLOT_LABEL: Record<TimeSlot, string> = {
-  early: "早朝（5-9時）",
-  day: "日中（9-17時）",
-  evening: "夕方（17-20時）",
-  night: "夜間（20-24時）",
-  late: "深夜（0-5時）",
-  "24h": "24時間可",
-};
-export const TIME_SLOT_LABEL_EN: Record<TimeSlot, string> = {
-  early: "Early (5–9)",
-  day: "Daytime (9–17)",
-  evening: "Evening (17–20)",
-  night: "Night (20–24)",
-  late: "Late night (0–5)",
-  "24h": "24 hours",
-};
 
 /**
  * Listing visibility:
@@ -283,11 +263,7 @@ export const propertySchema = z.object({
   // ── 利用条件・アクセス ──
   /** 利用可能時間（例: 24時間可（要相談））。自由記述の補足情報。 */
   availableHours: z.string().max(120).default(""),
-  /** 利用可能な時間帯タグ（検索で絞り込むための構造化データ）。 */
-  availableTimeSlots: z.array(z.enum(TIME_SLOTS)).max(6).default([]),
-  /** プリセット外のカスタム時間帯（例: 10:30〜19:00）。"HH:mm" 24時間表記、
-   *  どちらか片方でも空なら未設定扱い。検索フィルタのタグ横断絞り込みには
-   *  乗らない自由な範囲のため availableTimeSlots とは別枠で保持する。 */
+  /** 利用可能な時間帯（開始〜終了）。"HH:mm" 24時間表記、どちらか片方でも空なら未設定扱い。 */
   customHoursStart: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/)

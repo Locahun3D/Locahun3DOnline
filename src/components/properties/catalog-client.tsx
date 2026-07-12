@@ -11,12 +11,8 @@ import {
   tokenCostLabel,
   isNewProperty,
   presetLabel,
-  TIME_SLOTS,
-  TIME_SLOT_LABEL,
-  TIME_SLOT_LABEL_EN,
   type Property,
   type PropertyCategory,
-  type TimeSlot,
 } from "@/lib/schemas";
 import { formatKm, haversineKm } from "@/lib/distance";
 import BookmarkButton from "@/components/bookmark-button";
@@ -115,7 +111,6 @@ type FilterSnapshot = {
   maxKmFromRef: number | "";
   requiresDaily: boolean; requiresParking: boolean; requires200V: boolean;
   facilities: string[];
-  timeSlots: TimeSlot[];
   reference: Reference;
   sort: SortKey;
 };
@@ -154,9 +149,6 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
     const tag = FACILITY_TAGS.find((t) => t.ja === f);
     parts.push(en && tag ? tag.en : f);
   }
-  for (const slot of s.timeSlots ?? []) {
-    parts.push(en ? TIME_SLOT_LABEL_EN[slot] : TIME_SLOT_LABEL[slot]);
-  }
   return parts.join(" / ");
 }
 
@@ -168,7 +160,6 @@ function snapshotKey(s: FilterSnapshot): string {
     s.minCeiling, s.maxCeiling,
     s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V,
     [...(s.facilities ?? [])].sort(),
-    [...(s.timeSlots ?? [])].sort(),
     typeof s.maxKmFromRef === "number" ? s.reference.id : null,
   ]);
 }
@@ -246,7 +237,6 @@ export default function CatalogClient({
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
   const [facilities, setFacilities] = useState<string[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
   // Sort
   const [sort, setSort] = useState<SortKey>("newest");
@@ -260,7 +250,6 @@ export default function CatalogClient({
     setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
     setFacilities([]);
-    setTimeSlots([]);
     setSort("newest");
   }, []);
 
@@ -273,7 +262,6 @@ export default function CatalogClient({
     minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
     facilities,
-    timeSlots,
     reference, sort,
   }), [
     q, category, area, studioType,
@@ -281,7 +269,6 @@ export default function CatalogClient({
     minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
     facilities,
-    timeSlots,
     reference, sort,
   ]);
 
@@ -300,7 +287,6 @@ export default function CatalogClient({
     setMaxKmFromRef(s.maxKmFromRef);
     setRequiresDaily(s.requiresDaily); setRequiresParking(s.requiresParking); setRequires200V(s.requires200V);
     setFacilities(s.facilities ?? []);
-    setTimeSlots(s.timeSlots ?? []);
     setReference(s.reference);
     setSort(s.sort);
   }, []);
@@ -352,12 +338,6 @@ export default function CatalogClient({
         const hay = `${p.title} ${p.summary} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!facilities.every((f) => hay.includes(f.toLowerCase()))) return false;
       }
-      // 時間帯は「いずれか一致」— 例えば夕方・夜間の両方を選べば、
-      // どちらかに対応していれば表示する (facilities の AND とは意図が異なる)。
-      if (timeSlots.length) {
-        const slots = p.availableTimeSlots ?? [];
-        if (!timeSlots.some((slot) => slots.includes(slot))) return false;
-      }
       if (q.trim()) {
         const h = `${p.title} ${p.summary} ${p.city} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!h.includes(q.trim().toLowerCase())) return false;
@@ -394,7 +374,6 @@ export default function CatalogClient({
     maxKmFromRef,
     requiresDaily, requiresParking, requires200V,
     facilities,
-    timeSlots,
     q, sort,
   ]);
 
@@ -453,7 +432,6 @@ export default function CatalogClient({
             requiresParking={requiresParking} setRequiresParking={setRequiresParking}
             requires200V={requires200V} setRequires200V={setRequires200V}
             facilities={facilities} setFacilities={setFacilities}
-            timeSlots={timeSlots} setTimeSlots={setTimeSlots}
             reset={reset}
             recent={recent} applyRecent={applySnapshot} removeRecent={removeRecent}
             resultCount={computed.length} totalCount={items.length}
@@ -536,7 +514,6 @@ interface FiltersProps {
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
   facilities: string[]; setFacilities: (v: string[]) => void;
-  timeSlots: TimeSlot[]; setTimeSlots: (v: TimeSlot[]) => void;
   reset: () => void;
   recent: FilterSnapshot[];
   applyRecent: (s: FilterSnapshot) => void;
@@ -769,25 +746,6 @@ function FiltersPanel(p: FiltersProps) {
               />
             ))}
           </div>
-        </div>
-      </Row>
-
-      <Row label={en ? "Available time" : "利用時間帯"}>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {TIME_SLOTS.map((slot) => (
-            <FacilityChip
-              key={slot}
-              label={en ? TIME_SLOT_LABEL_EN[slot] : TIME_SLOT_LABEL[slot]}
-              active={p.timeSlots.includes(slot)}
-              onClick={() =>
-                p.setTimeSlots(
-                  p.timeSlots.includes(slot)
-                    ? p.timeSlots.filter((x) => x !== slot)
-                    : [...p.timeSlots, slot],
-                )
-              }
-            />
-          ))}
         </div>
       </Row>
       </div>

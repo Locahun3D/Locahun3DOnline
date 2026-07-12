@@ -25,8 +25,6 @@ import {
   DATA_LICENSES,
   DATA_LICENSE_LABEL,
   DATA_LICENSE_DESC,
-  TIME_SLOTS,
-  TIME_SLOT_LABEL,
   type Property,
   type Asset,
 } from "@/lib/schemas";
@@ -908,33 +906,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 
               <div className="grid md:grid-cols-3 gap-5">
                 <Field
-                  label="利用可能な時間帯（検索フィルタ用）"
-                  hint="該当するものにチェック。上の「利用可能時間（補足）」の自由記述とは別に、検索での絞り込みに使われます。"
+                  label="利用可能な時間帯"
+                  hint="開始〜終了を指定（例: 10:30〜19:00）。上の「利用可能時間（補足）」の自由記述とは別に、検索での絞り込みに使われます。"
                 >
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
-                    {TIME_SLOTS.map((slot) => {
-                      const current = watch("availableTimeSlots") ?? [];
-                      const checked = current.includes(slot);
-                      return (
-                        <label key={slot} className="flex items-center gap-1.5 text-[13px] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              const next = checked
-                                ? current.filter((s) => s !== slot)
-                                : [...current, slot];
-                              setValue("availableTimeSlots", next, { shouldDirty: true });
-                            }}
-                            className="w-3.5 h-3.5"
-                          />
-                          {TIME_SLOT_LABEL[slot]}
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center gap-2.5 mt-3 pt-3 border-t border-line">
-                    <span className="text-[12.5px] text-ink/70">カスタム時間帯</span>
+                  <div className="flex items-center gap-2.5 pt-1">
                     <input
                       type="time"
                       {...register("customHoursStart")}
@@ -959,9 +934,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                       </button>
                     )}
                   </div>
-                  <p className="text-[11px] text-muted mt-1">
-                    プリセットの時間帯に当てはまらない場合に、開始〜終了を直接指定できます（例: 10:30〜19:00）。物件ページに時間帯タグと併記されます。
-                  </p>
                 </Field>
               </div>
 
