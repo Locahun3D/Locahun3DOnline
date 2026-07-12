@@ -13,6 +13,11 @@ const r2Host = (() => {
 const nextConfig: NextConfig = {
   experimental: {
     proxyClientMaxBodySize: '2gb',
+    serverActions: {
+      // バグ報告の画像添付（最大3枚×8MB）を Server Action で受けるため、
+      // 既定1MBから引き上げる。
+      bodySizeLimit: "30mb",
+    },
   },
   images: {
     remotePatterns: [

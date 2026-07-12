@@ -31,11 +31,12 @@ export const contactRequestSchema = z.object({
   company: z.string().max(120).default(""), // listing: 会社名・オーナー名
   phone: z.string().max(40).default(""), // listing: 電話番号（任意）
   url: z.string().max(300).default(""), // bug: 発生ページURL
-  environment: z.string().max(120).default(""), // bug: ご利用環境（任意）
+  environment: z.string().max(200).default(""), // bug: ご利用環境（自動入力・任意）
   area: z.string().max(120).default(""), // request: 希望エリア
   propertyName: z.string().max(120).default(""), // listing: 物件名
   address: z.string().max(200).default(""), // listing: 所在地
   message: z.string().max(4000).default(""), // 全type共通の本文
+  attachments: z.array(z.string().max(300)).max(3).default([]), // bug: 添付画像URL
   forwardedTo: z.string().max(120).default(""),
   emailed: z.boolean().default(false),
   status: contactStatusSchema.default("new"),

@@ -172,6 +172,26 @@ export default async function AdminContactRequestsPage({
                 {c.message || <span className="text-muted italic">（本文なし）</span>}
               </div>
 
+              {c.attachments.length > 0 && (
+                <div className="mb-3">
+                  <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
+                    添付画像（{c.attachments.length}枚）
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {c.attachments.map((u) => (
+                      <a key={u} href={u} target="_blank" className="block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={u}
+                          alt="添付画像"
+                          className="h-28 w-auto border border-line rounded-sm hover:border-accent transition"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-start gap-2">
                 {c.status !== "read" && (
                   <form action={setContactRequestStatusAction}>

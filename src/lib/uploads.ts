@@ -221,3 +221,51 @@ export async function deleteR2Object(r2Key: string): Promise<void> {
 export async function r2PublicUrlFor(r2Key: string): Promise<string> {
   return buildPublicUrl(r2Key, (await r2Env()).publicBase);
 }
+
+/**
+ * 問い合わせフォーム（バグ報告）の画像添付を保存する。
+ * 匿名ユーザーからの直接アップロードなので presign は使わず、サーバー側で
+ * 検証済みのバイト列だけを書き込む（サイズ/種別チェックは呼び出し側で実施）。
+ *  - local: public/uploads/contact-<id>/ へ保存
+ *  - r2   : contact/<id>/ キーへ保存（Workers binding 優先、dev は S3 PUT）
+ * 返り値の url は /api/r2/... または /uploads/...（admin 画面・通知メールで使用）。
+ */
+export async function saveContactAttachment(
+  contactId: string,
+  file: File,
+): Promise<{ url: string }> {
+  if ((await getUploadMode()) !== "r2") {
+    const saved = await saveLocalUpload(`contact-${contactId}`, file);
+    return { url: saved.url };
+  }
+
+  const ext = path.extname(file.name).toLowerCase();
+  const stem = path.basename(file.name, path.extname(file.name));
+  const key = `contact/${safeName(contactId)}/${nanoid(6)}-${safeName(stem)}${ext}`;
+  const buf = await file.arrayBuffer();
+  const contentType = file.type || "application/octet-stream";
+
+  // 1) Workers binding（本番経路）
+  try {
+    const { env } = await getCloudflareContext();
+    const bucket = (env as Record<string, unknown>).R2_ASSETS as
+      | { put(key: string, body: ArrayBuffer, opts?: { httpMetadata?: { contentType?: string } }): Promise<unknown> }
+      | undefined;
+    if (bucket) {
+      await bucket.put(key, buf, { httpMetadata: { contentType } });
+      return { url: buildPublicUrl(key) };
+    }
+  } catch {
+    /* not on Workers */
+  }
+
+  // 2) S3 PUT（dev で UPLOAD_MODE=r2 のとき）
+  const { client, endpoint, bucket } = await r2Client();
+  const res = await client.fetch(r2ObjectUrl(endpoint, bucket, key), {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: buf,
+  });
+  if (!res.ok) throw new Error(`R2 attachment PUT failed (${res.status})`);
+  return { url: buildPublicUrl(key) };
+}

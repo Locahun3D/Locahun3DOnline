@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 import { contactRequestRepo, CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "./contact-requests";
+import { saveContactAttachment } from "./uploads";
 import { notifyGeneralContact } from "./email";
 import {
   HONEYPOT_FIELD,
@@ -13,6 +14,11 @@ import {
   checkTiming,
   allowByRate,
 } from "./inquiry-guard";
+
+// バグ報告の画像添付の上限（クライアント側 contact-form.tsx と揃えること）
+const MAX_ATTACHMENTS = 3;
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8 MB
+const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 const inputSchema = z.object({
   type: z.enum(CONTACT_TYPES),
@@ -32,7 +38,7 @@ const inputSchema = z.object({
   company: z.string().trim().max(120).optional().default(""),
   phone: z.string().trim().max(40).optional().default(""),
   url: z.string().trim().max(300).optional().default(""),
-  environment: z.string().trim().max(120).optional().default(""),
+  environment: z.string().trim().max(200).optional().default(""),
   area: z.string().trim().max(120).optional().default(""),
   propertyName: z.string().trim().max(120).optional().default(""),
   address: z.string().trim().max(200).optional().default(""),
@@ -130,6 +136,38 @@ export async function submitContactRequestAction(
   }
 
   const typeLabel = CONTACT_TYPE_LABEL[d.type as ContactType];
+  const id = randomUUID();
+
+  // バグ報告のみ画像添付を受け付ける（匿名フォームなので上限を厳格に）。
+  // 個々の保存失敗で報告全体を落とさない — 保存できた分だけ添付する。
+  const attachments: string[] = [];
+  if (d.type === "bug") {
+    const files = formData
+      .getAll("attachments")
+      .filter((f): f is File => f instanceof File && f.size > 0);
+    if (files.length > MAX_ATTACHMENTS) {
+      return { ok: false, error: `画像の添付は最大 ${MAX_ATTACHMENTS} 枚までです。` };
+    }
+    for (const file of files) {
+      if (!ATTACHMENT_TYPES.includes(file.type)) {
+        return { ok: false, error: "添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。" };
+      }
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        return {
+          ok: false,
+          error: `画像1枚あたりのサイズ上限は ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB です。`,
+        };
+      }
+    }
+    for (const file of files) {
+      try {
+        const saved = await saveContactAttachment(id, file);
+        attachments.push(saved.url);
+      } catch (e) {
+        console.warn("[contact] attachment save failed (non-fatal):", e);
+      }
+    }
+  }
 
   const emailed = await notifyGeneralContact({
     typeLabel,
@@ -143,11 +181,12 @@ export async function submitContactRequestAction(
     propertyName: d.propertyName,
     address: d.address,
     message: d.message,
+    attachments,
   });
 
   try {
     await contactRequestRepo.upsert({
-      id: randomUUID(),
+      id,
       type: d.type,
       name: d.name,
       email: d.email,
@@ -159,6 +198,7 @@ export async function submitContactRequestAction(
       propertyName: d.propertyName,
       address: d.address,
       message: d.message,
+      attachments,
       forwardedTo: emailed ? "operator" : "",
       emailed,
       status: "new",

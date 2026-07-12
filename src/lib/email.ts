@@ -253,12 +253,25 @@ export async function notifyGeneralContact(opts: {
   propertyName?: string;
   address?: string;
   message: string;
+  /** バグ報告の添付画像（/api/r2/... 等の相対URL）。 */
+  attachments?: string[];
 }): Promise<boolean> {
   if (!emailEnabled()) return false;
   const row = (label: string, value?: string) =>
     value
       ? `<tr><td style="padding:6px 12px 6px 0;color:#666;white-space:nowrap;vertical-align:top;">${label}</td><td style="padding:6px 0;">${esc(value)}</td></tr>`
       : "";
+  const attachmentsHtml = opts.attachments?.length
+    ? `<div style="margin-top:14px;">
+        <div style="font-size:12px;color:#999;margin-bottom:6px;">添付画像（${opts.attachments.length}枚）</div>
+        ${opts.attachments
+          .map((u) => {
+            const abs = /^https?:\/\//.test(u) ? u : appUrl(u);
+            return `<div style="margin-bottom:10px;"><a href="${esc(abs)}" target="_blank"><img src="${esc(abs)}" alt="添付画像" style="max-width:100%;max-height:280px;border:1px solid #eee;border-radius:6px;" /></a><br/><a href="${esc(abs)}" style="font-size:11px;color:#888;word-break:break-all;">${esc(abs)}</a></div>`;
+          })
+          .join("")}
+      </div>`
+    : "";
   const body = `
     <p style="font-size:14px;line-height:1.8;">サイトの一般お問い合わせフォームから新着です。</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
@@ -274,6 +287,7 @@ export async function notifyGeneralContact(opts: {
       ${row("所在地", opts.address)}
     </table>
     <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.message)}</div>
+    ${attachmentsHtml}
   `;
   return sendEmail({
     to: operatorAddress(),
