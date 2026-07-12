@@ -5,18 +5,29 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 export const metadata = {
   title: "サービスについて",
   description:
-    "ロケハン3D は、実在のロケ地を 3DGS でスキャンし、ブラウザで歩いて下見できるサービスです。できること・仕組み・対象をまとめています。",
+    "ロケハン3D は、実在のロケ地を 3DGS でスキャンし、ブラウザで歩いて下見できるサービスです。できること・仕組み・機能の詳細・対象・よくある疑問をまとめています。",
 };
 
 const SCAN_URL = "https://web.locahun3d.com/";
 const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
+
+/* ──────────────────────────────────────────────
+ * ページ構成（承認済みの組み合わせ・この順で表示）
+ *   1. FEATURES  — 機能グリッド（できること概要）
+ *   2. HOW IT WORKS — 工程帯（サムネイル付き3ステップ）
+ *   3. DETAILS   — 一列の明細リスト（機能の詳細、画像があるものはサムネ添付）
+ *   4. FOR       — 対象ファースト（3系統の読者別）
+ *   5. Q&A       — よくある疑問への直答
+ *   6. PLANS     — 料金への導線
+ * サムネイルはスキャンサービス側のデモ画像 (public/about/*.webp) を使用。
+ * ────────────────────────────────────────────── */
 
 export default async function AboutPage() {
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
 
-  // できること（事実ベースの機能一覧）。コピーは機能の説明のみ、キャッチコピーは書かない。
+  // 1. できること（概要グリッド）
   const FEATURES: Array<{
     no: string;
     label: [string, string];
@@ -82,9 +93,19 @@ export default async function AboutPage() {
     },
   ];
 
-  const STEPS: Array<{ no: string; title: [string, string]; desc: [string, string] }> = [
+  // 2. 仕組み（サムネイル付き工程）
+  const STEPS: Array<{
+    no: string;
+    img: { src: string; alt: [string, string] };
+    title: [string, string];
+    desc: [string, string];
+  }> = [
     {
       no: "STEP 01",
+      img: {
+        src: "/about/portalcam.webp",
+        alt: ["3Dスキャン機材 PortalCam", "PortalCam 3D scanning rig"],
+      },
       title: ["歩行スキャン", "Walking scan"],
       desc: [
         "専用機材 PortalCam で現場を歩いて撮影します。所要時間は 1 件あたり約 20 分。",
@@ -93,6 +114,10 @@ export default async function AboutPage() {
     },
     {
       no: "STEP 02",
+      img: {
+        src: "/demo-pcloud.webp",
+        alt: ["実写に3DGSの生ポイントクラウドを重ねた比較画像", "Photo blended with raw 3DGS point cloud data"],
+      },
       title: ["3DGS 化", "3DGS reconstruction"],
       desc: [
         "撮影データを 3D Gaussian Splatting として再構成。CG モデリングではなく、実寸・実際の質感・照明をそのまま記録します。",
@@ -101,10 +126,110 @@ export default async function AboutPage() {
     },
     {
       no: "STEP 03",
+      img: {
+        src: "/about/walkthrough.webp",
+        alt: ["公開された3DGSデータをビューアで歩いている画面", "Walking a published 3DGS capture in the viewer"],
+      },
       title: ["カタログ公開", "Published to the catalog"],
       desc: [
         "完成データをカタログに掲載。以降はいつでもブラウザで視聴・購入できます。",
         "The finished capture is listed on the catalog, viewable and purchasable from a browser at any time.",
+      ],
+    },
+  ];
+
+  // 3. 機能の詳細（一列の明細リスト。画像がある行はサムネ添付）
+  const DETAILS: Array<{
+    no: string;
+    label: [string, string];
+    desc: [string, string];
+    img?: { src: string; alt: [string, string] };
+    link?: { href: string; text: [string, string]; external?: boolean };
+  }> = [
+    {
+      no: "01",
+      label: ["検索フィルタ", "Search filters"],
+      desc: [
+        "エリア・カテゴリ・スタジオ種類・料金・天井高・面積・収容人数・電源（200V）・駐車場・利用時間帯。駅や現在地からの距離順ソートに対応。",
+        "Area, category, studio type, price, ceiling height, floor area, capacity, power (200V), parking, time slots. Distance sort from any station or your location.",
+      ],
+      link: { href: "/properties", text: ["物件一覧 →", "Catalog →"] },
+    },
+    {
+      no: "02",
+      label: ["ウォークスルー操作", "Walkthrough controls"],
+      desc: [
+        "ドラッグで見回し、WASD／タッチで移動。アプリのインストールは不要で、ブラウザだけで動きます。ビューア内では 2 点間の距離測定もできます。",
+        "Drag to look around, WASD / touch to move. No app install — it runs in the browser. The viewer also measures point-to-point distances.",
+      ],
+      img: {
+        src: "/about/measure.webp",
+        alt: ["ビューアの距離測定機能で道路幅7mを計測している画面", "Measuring a 7 m road width in the viewer"],
+      },
+    },
+    {
+      no: "03",
+      label: ["カメラツール", "Camera tools"],
+      desc: [
+        "焦点距離（14〜200mm）・アスペクト比・セーフフレーム・構図グリッドを設定して、実際の画角で構図を検討できます。ショット情報付きの JPEG 書き出しにも対応。",
+        "Set focal length (14–200mm), aspect ratio, safe frames and composition grids to explore framing at real focal lengths. Exports JPEGs with shot metadata.",
+      ],
+      img: {
+        src: "/about/camtools.webp",
+        alt: ["ビューアのカメラツールでレンズ・アスペクト・セーフフレームを設定している画面", "Configuring lens, aspect and safe frames with the viewer's camera tools"],
+      },
+    },
+    {
+      no: "04",
+      label: ["視聴トークン", "Viewing tokens"],
+      desc: [
+        "Free 登録で 6 トークン、有料プランは月 16〜60 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
+        "6 tokens at Free signup; paid plans grant 16–60 per month. Unlocking a scene costs tokens once — revisits are free for 1 year.",
+      ],
+      link: { href: "/pricing", text: ["料金プラン →", "Pricing →"] },
+    },
+    {
+      no: "05",
+      label: ["購入データ形式", "Purchase formats"],
+      desc: [
+        "PLY / RAD / OBJ の実寸データ。Unreal Engine などのプリビズ・VFX パイプラインへ取り込み、カメラ設計や絵コンテの背景にそのまま使えます。",
+        "True-to-scale PLY / RAD / OBJ. Import into previz / VFX pipelines like Unreal Engine for camera planning and storyboard backgrounds.",
+      ],
+      img: {
+        src: "/about/ue-pipeline.webp",
+        alt: ["購入した3DGSデータをUnreal Engineに取り込んでカメラワークを組んでいる画面", "Purchased 3DGS data imported into Unreal Engine for camera work"],
+      },
+    },
+    {
+      no: "06",
+      label: ["レビュー", "Reviews"],
+      desc: [
+        "投稿できるのは実際にウォークスルーを視聴した会員のみ。★ 平均はカタログ・物件ページで誰でも閲覧できます。",
+        "Only members who actually viewed a walkthrough can post. Star averages are visible to everyone.",
+      ],
+    },
+    {
+      no: "07",
+      label: ["ブックマーク共有", "Board sharing"],
+      desc: [
+        "候補物件を名前付きボードに整理。Studio / Team プランはボード単位の読み取り専用共有 URL を発行できます。",
+        "Organize candidates into named boards. Studio / Team plans can publish read-only share links per board.",
+      ],
+    },
+    {
+      no: "08",
+      label: ["掲示板・問い合わせ", "Board & inquiries"],
+      desc: [
+        "物件掲示板の閲覧は全員可、書き込みは有料プラン。問い合わせフォームの内容は掲載スタジオへ直接届きます。",
+        "Property boards are readable by everyone; posting requires a paid plan. Inquiry form messages reach the listing studio directly.",
+      ],
+    },
+    {
+      no: "09",
+      label: ["請求書", "Invoices"],
+      desc: [
+        "有料プランは毎月の請求書を自動送付（電子帳簿保存法・インボイス制度対応）。登録番号（T番号）は申込時に入力でき、請求書へ自動反映されます。",
+        "Paid plans auto-send monthly invoices (compliant with Japan's e-bookkeeping and invoice systems). Your registration (T) number is applied automatically.",
       ],
     },
   ];
@@ -151,7 +276,7 @@ export default async function AboutPage() {
         </p>
       </header>
 
-      {/* できること — 事実ベースの機能一覧 */}
+      {/* 1. できること — 機能グリッド */}
       <section>
         <div className="chapter-rule">
           <span className="opacity-60">FEATURES</span>
@@ -191,7 +316,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* 仕組み — スキャンから公開まで */}
+      {/* 2. 仕組み — サムネイル付き工程 */}
       <section className="mt-16">
         <div className="chapter-rule">
           <span className="opacity-60">HOW IT WORKS</span>
@@ -199,13 +324,25 @@ export default async function AboutPage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
         <div className="grid sm:grid-cols-3 gap-px bg-line border border-line">
-          {STEPS.map((s) => (
-            <div key={s.no} className="bg-white p-6">
-              <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
-                {s.no}
+          {STEPS.map((s, i) => (
+            <div key={s.no} className="bg-white flex flex-col">
+              <div className="relative aspect-[16/9] bg-[#eef2f5] overflow-hidden">
+                {/* next/image は本構成で最適化404になるため、他コンポーネント同様プレーン <img> */}
+                <img
+                  src={s.img.src}
+                  alt={s.img.alt[en ? 1 : 0]}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               </div>
-              <h3 className="text-[14px] font-bold mb-2">{s.title[en ? 1 : 0]}</h3>
-              <p className="text-[12.5px] text-muted leading-[1.85]">{s.desc[en ? 1 : 0]}</p>
+              <div className="p-6">
+                <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
+                  {s.no}
+                  {i < STEPS.length - 1 && <span className="ml-2 opacity-50">→</span>}
+                </div>
+                <h3 className="text-[14px] font-bold mb-2">{s.title[en ? 1 : 0]}</h3>
+                <p className="text-[12.5px] text-muted leading-[1.85]">{s.desc[en ? 1 : 0]}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -230,58 +367,106 @@ export default async function AboutPage() {
         </p>
       </section>
 
-      {/* 対象別 — 誰が何に使うか */}
+      {/* 3. 機能の詳細 — 一列の明細リスト（画像がある行はサムネ添付） */}
+      <section className="mt-16">
+        <div className="chapter-rule">
+          <span className="opacity-60">DETAILS</span>
+          <span>{en ? "Feature details" : "機能の詳細"}</span>
+          <span className="flex-1 h-px bg-current opacity-25" />
+        </div>
+        <div className="border border-line bg-white">
+          {DETAILS.map((d, i) => (
+            <div
+              key={d.no}
+              className={`grid md:grid-cols-[190px_1fr_auto] gap-x-6 gap-y-3 items-center px-5 sm:px-6 py-4 ${
+                i > 0 ? "border-t border-line" : ""
+              }`}
+            >
+              <div>
+                <span className="mono text-[10px] tracking-[0.24em] uppercase text-accent">{d.no}</span>
+                <span className="ml-2.5 text-[13.5px] font-bold">{d.label[en ? 1 : 0]}</span>
+              </div>
+              <div>
+                <p className="text-[12.5px] text-muted leading-[1.85]">{d.desc[en ? 1 : 0]}</p>
+                {d.link && (
+                  <Link
+                    href={lh(d.link.href)}
+                    className="inline-block mt-1.5 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
+                  >
+                    {d.link.text[en ? 1 : 0]}
+                  </Link>
+                )}
+              </div>
+              {d.img && (
+                <div className="w-full md:w-[190px] aspect-[16/9] bg-[#eef2f5] border border-line rounded-sm overflow-hidden relative">
+                  <img
+                    src={d.img.src}
+                    alt={d.img.alt[en ? 1 : 0]}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. 対象 — 読者別のご案内 */}
       <section className="mt-16">
         <div className="chapter-rule">
           <span className="opacity-60">FOR</span>
           <span>{en ? "Who uses it" : "対象"}</span>
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
-        <div className="grid md:grid-cols-3 gap-6 text-[12px] text-muted">
-          <div className="border-t border-line pt-5">
-            <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+        <div className="grid sm:grid-cols-3 gap-px bg-line border border-line">
+          <div className="bg-white p-6">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-3">
               {en ? "Production / creators" : "制作会社・クリエイター"}
             </div>
-            <p>
-              {en
-                ? "Narrow down candidates in the browser and visit only the finalists. Reviews and true-to-scale walkthroughs replace most site visits."
-                : "候補をブラウザで絞り込み、現地確認は本命だけに。実寸のウォークスルーとレビューで、下見の往復を減らせます。"}
-            </p>
+            <ul className="text-[12.5px] text-muted leading-[2.1] list-none">
+              <li>{en ? "Search the catalog & map" : "カタログ・地図で候補を検索"}</li>
+              <li>{en ? "Walk through in the browser" : "ブラウザで歩いて下見"}</li>
+              <li>{en ? "Check reviews from members" : "レビューで判断材料を追加"}</li>
+              <li>{en ? "Visit only the finalists" : "現地確認は本命だけ"}</li>
+            </ul>
             <Link
               href={lh("/properties")}
-              className="inline-block mt-3 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
+              className="inline-block mt-4 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
             >
               {en ? "Browse the catalog →" : "物件を探す →"}
             </Link>
           </div>
-          <div className="border-t border-line pt-5">
-            <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+          <div className="bg-white p-6">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-3">
               {en ? "Studio / location owners" : "スタジオ・ロケ地オーナー"}
             </div>
-            <p>
-              {en
-                ? "One ~20-minute scan lists your space on the catalog. Fewer walk-in viewings; inquiries reach you directly. Listing uses a separate pricing scheme with revenue share on data sales."
-                : "約 20 分のスキャン 1 回でカタログに掲載できます。内覧対応が減り、問い合わせは直接届きます。掲載側は別料金体系で、データ販売の収益シェアもあります。"}
-            </p>
+            <ul className="text-[12.5px] text-muted leading-[2.1] list-none">
+              <li>{en ? "One ~20-min scan to get listed" : "約 20 分のスキャン 1 回で掲載"}</li>
+              <li>{en ? "Fewer walk-in viewings" : "内覧対応を削減"}</li>
+              <li>{en ? "Inquiries reach you directly" : "問い合わせが直接届く"}</li>
+              <li>{en ? "Revenue share on data sales" : "データ販売の収益シェア"}</li>
+            </ul>
             <Link
               href={lh("/contact/listing")}
-              className="inline-block mt-3 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
+              className="inline-block mt-4 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
             >
               {en ? "Request a listing →" : "掲載を依頼する →"}
             </Link>
           </div>
-          <div className="border-t border-line pt-5">
-            <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
+          <div className="bg-white p-6">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-3">
               {en ? "Previz / VFX teams" : "プリビズ・VFX チーム"}
             </div>
-            <p>
-              {en
-                ? "Buy the raw capture in PLY / RAD / OBJ and bring the true-to-scale space into your camera planning, storyboards or VFX pipeline. Purchase from each property page."
-                : "PLY / RAD / OBJ 形式の実寸データを購入して、カメラ設計・絵コンテ・VFX のパイプラインに取り込めます。購入は各物件ページから。"}
-            </p>
+            <ul className="text-[12.5px] text-muted leading-[2.1] list-none">
+              <li>{en ? "Buy PLY / RAD / OBJ data" : "PLY / RAD / OBJ を購入"}</li>
+              <li>{en ? "True-to-scale camera planning" : "実寸データでカメラ設計"}</li>
+              <li>{en ? "Real backgrounds for boards" : "絵コンテに実背景を使用"}</li>
+              <li>{en ? "Purchase from property pages" : "購入は各物件ページから"}</li>
+            </ul>
             <Link
               href={lh("/properties")}
-              className="inline-block mt-3 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
+              className="inline-block mt-4 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
             >
               {en ? "Find a location →" : "物件を見る →"}
             </Link>
@@ -289,7 +474,118 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* 料金への導線 */}
+      {/* 5. Q&A — よくある疑問 */}
+      <section className="mt-16">
+        <div className="chapter-rule">
+          <span className="opacity-60">Q&amp;A</span>
+          <span>{en ? "Common questions" : "よくある疑問"}</span>
+          <span className="flex-1 h-px bg-current opacity-25" />
+        </div>
+        <div className="max-w-[760px]">
+          {[
+            {
+              q: ["現地に行かなくても、本当に分かりますか？", "Can I really judge a location without visiting?"],
+              a: [
+                <>
+                  3DGS は写真の貼り合わせではなく実寸の空間記録です。広さ・天井高・光の入り方を、
+                  ブラウザ内を歩いて確認できます。まずは{" "}
+                  <a href={DEMO_URL} target="_blank" rel="noopener" className="text-accent hover:underline">
+                    登録不要のデモ
+                  </a>
+                  でお確かめください。
+                </>,
+                <>
+                  3DGS is a true-to-scale spatial capture, not stitched photos. You can walk
+                  the space in your browser to check size, ceiling height and lighting. Try
+                  the{" "}
+                  <a href={DEMO_URL} target="_blank" rel="noopener" className="text-accent hover:underline">
+                    no-sign-up demo
+                  </a>{" "}
+                  first.
+                </>,
+              ],
+            },
+            {
+              q: ["費用はいくらかかりますか？", "How much does it cost?"],
+              a: [
+                <>
+                  プランは Free / Individual / Studio / Team の 4 段階。視聴はトークン制で、
+                  年払いは -20% です。詳細は{" "}
+                  <Link href={lh("/pricing")} className="text-accent hover:underline">
+                    料金ページ
+                  </Link>
+                  をご覧ください。
+                </>,
+                <>
+                  Four plans: Free / Individual / Studio / Team. Viewing is token-based and
+                  annual billing saves 20%. See the{" "}
+                  <Link href={lh("/pricing")} className="text-accent hover:underline">
+                    pricing page
+                  </Link>
+                  .
+                </>,
+              ],
+            },
+            {
+              q: ["どうやって 3D にしているのですか？", "How are locations turned into 3D?"],
+              a: [
+                <>
+                  専用機材 PortalCam で現場を約 20 分歩いて撮影し、3D Gaussian Splatting
+                  として再構成しています。CG モデリングではなく、実物の寸法・質感・照明の記録です。
+                </>,
+                <>
+                  We walk the space for about 20 minutes with PortalCam, then reconstruct the
+                  capture as 3D Gaussian Splatting — a record of the real dimensions, textures
+                  and lighting, not CG modeling.
+                </>,
+              ],
+            },
+            {
+              q: ["自分の物件も掲載できますか？", "Can I list my own space?"],
+              a: [
+                <>
+                  できます。約 20 分のスキャン 1 回で掲載でき、現在はキャンペーンにより掲載費は無料です。
+                  <Link href={lh("/contact/listing")} className="text-accent hover:underline">
+                    掲載依頼フォーム
+                  </Link>
+                  からお申し込みください。
+                </>,
+                <>
+                  Yes. One ~20-minute scan gets you listed, and listing is currently free
+                  during our launch campaign. Apply via the{" "}
+                  <Link href={lh("/contact/listing")} className="text-accent hover:underline">
+                    listing request form
+                  </Link>
+                  .
+                </>,
+              ],
+            },
+            {
+              q: ["購入したデータは何に使えますか？", "What can I use the purchased data for?"],
+              a: [
+                <>
+                  PLY / RAD / OBJ 形式の実寸データを、プリビズ・絵コンテ・カメラ設計・VFX
+                  の背景検討に使えます。Unreal Engine などへの取り込みにも対応しています。
+                </>,
+                <>
+                  The true-to-scale PLY / RAD / OBJ data works for previz, storyboards, camera
+                  planning and VFX background studies, including import into Unreal Engine.
+                </>,
+              ],
+            },
+          ].map((item, i) => (
+            <div key={i} className={`py-5 ${i > 0 ? "border-t border-line" : ""}`}>
+              <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-1.5">
+                Q.{String(i + 1).padStart(2, "0")}
+              </div>
+              <h3 className="text-[15px] font-bold mb-2">{item.q[en ? 1 : 0]}</h3>
+              <p className="text-[12.5px] text-muted leading-[1.9]">{item.a[en ? 1 : 0]}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 6. 料金への導線 */}
       <section className="mt-16">
         <div className="chapter-rule">
           <span className="opacity-60">PLANS</span>
