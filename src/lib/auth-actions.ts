@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import {
   onboardingSchema,
   requiresApproval,
@@ -11,6 +11,7 @@ import {
 } from "./account-schema";
 import { userRepo } from "./users";
 import { getCurrentUser } from "./dal";
+import { listActiveSessions } from "./device-limit";
 
 /** Capture role / company / NDA after Clerk sign-up. */
 export async function onboardingAction(
@@ -93,6 +94,28 @@ export async function updateDisplayNameAction(
   await userRepo.upsert({ ...u, displayName: cleaned });
   revalidatePath("/account");
   return { ok: true, displayName: cleaned };
+}
+
+/**
+ * マイページから、ログイン中の自分の端末（セッション）を1つログアウトさせる。
+ * 所有権チェック必須: revoke するのは「そのセッションが本人のアクティブセッション
+ * 一覧に実在する」場合のみ。sessionId は他人のものを送られても listActiveSessions
+ * が本人のものしか返さないため、ここに無ければ何もしない（他人のセッションを
+ * 失効させられない）。現在使用中の端末は UI 側でボタンを出さない運用だが、万一
+ * 送られても Clerk 側で普通にサインアウトされるだけで害はない。
+ */
+export async function revokeMySessionAction(formData: FormData): Promise<void> {
+  const current = await getCurrentUser();
+  if (!current) return;
+  const sessionId = String(formData.get("sessionId") ?? "");
+  if (!sessionId) return;
+
+  const mine = await listActiveSessions(current.id).catch(() => []);
+  if (!mine.some((s) => s.id === sessionId)) return; // 自分のセッションでなければ拒否
+
+  const client = await clerkClient();
+  await client.sessions.revokeSession(sessionId).catch(() => {});
+  revalidatePath("/account");
 }
 
 /** Record NDA acceptance for the current production account (form action). */

@@ -1,6 +1,9 @@
+import { auth } from "@clerk/nextjs/server";
 import { requireOnboarded } from "@/lib/dal";
 import { roleLabel, accountStatusLabel } from "@/lib/account-schema";
 import AccountDashboard from "@/components/account/account-dashboard";
+import LoginDevices from "@/components/account/login-devices";
+import { listActiveSessions, deviceLimitForPlan } from "@/lib/device-limit";
 import { getLocale } from "@/lib/i18n/server";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
@@ -31,6 +34,12 @@ export default async function AccountPage({
   const allUnlocks = await viewUnlockRepo.list({ userId: user.id });
   const unlockedCount = allUnlocks.filter((u) => u.expiresAt > nowIso).length;
   const notifications = await listNotifications(user.id);
+
+  // ── ログイン端末（Clerkのアクティブセッション）— マイページから自己管理 ──
+  // Clerk API 障害でマイページ全体を落とさないよう空配列にフォールバック。
+  const { sessionId: currentSessionId } = await auth();
+  const loginSessions = await listActiveSessions(user.id).catch(() => []);
+  const deviceLimit = deviceLimitForPlan(user.plan);
 
   // ── 閲覧履歴タイル用: 直近の「まだ有効な（無償再視聴期間内の）」アンロック1件 ──
   // viewUnlockRepo.list は unlockedAt 降順で返るので先頭が最新。
@@ -151,6 +160,15 @@ export default async function AccountPage({
         billing={billing}
         nowIso={nowIso}
       />
+
+      <div className="mt-6">
+        <LoginDevices
+          sessions={loginSessions}
+          currentSessionId={currentSessionId ?? null}
+          limit={deviceLimit}
+          locale={locale}
+        />
+      </div>
 
       {user.status !== "active" && (
         <div className="mb-6 -mt-4">
