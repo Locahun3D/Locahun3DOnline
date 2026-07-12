@@ -25,17 +25,23 @@ export default async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
       <div className="frame flex items-center h-16 gap-3">
-        {/* Left zone — hamburger (< lg) + nav (lg+) */}
-        <div className="flex items-center gap-7 flex-1 min-w-0">
+        {/* Left zone — hamburger (< lg) + nav (lg+)
+            lg帯(1024-1279px)は幅が足りず、ナビが中央ブランドに重なる実害が
+            UI監査で検出された。lg帯は番号コードを隠し gap も詰めて収める
+            （番号コード・広い gap は xl 以上のみ）。 */}
+        <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
           <MobileNav loggedIn={!!user} />
-          <nav className="hidden lg:flex items-center gap-7">
+          <nav className="hidden lg:flex items-center gap-4 min-[1440px]:gap-6">
             {NAV.map((n) => (
               <Link
                 key={n.href}
                 href={lh(n.href)}
-                className="group flex items-center gap-2 text-[13px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
+                className="group flex items-center gap-1.5 text-[13px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
               >
-                <span className="mono text-[10px] tracking-[0.2em] opacity-50 group-hover:text-accent group-hover:opacity-100 transition">
+                {/* 番号コードは1440px以上のみ。左右ゾーンは flex-1(basis:0) で常に
+                    同幅になるため、右側を削っても左の割当幅は増えない — 左ナビの
+                    実コンテンツ幅そのものを縮めないと 1280 帯でブランドに重なる。 */}
+                <span className="hidden min-[1440px]:inline mono text-[10px] tracking-[0.2em] opacity-50 group-hover:text-accent group-hover:opacity-100 transition">
                   {n.code}
                 </span>
                 {t(n.key)}
@@ -56,7 +62,10 @@ export default async function SiteHeader() {
               ロケハン3D
             </span>
           </Link>
-          <div className="hidden lg:flex items-stretch ml-1 brand text-[11px] tracking-[0.06em]">
+          {/* トグルとENチップは xl(1280px)以上のみ。lg帯(1024-1279px)では左ナビと
+              このクラスタが物理的に収まらず、ナビがブランドに重なる実害が
+              UI監査で検出された（lg帯はブランドのみ表示に落とす）。 */}
+          <div className="hidden xl:flex items-stretch ml-1 brand text-[11px] tracking-[0.06em]">
             <a
               href={locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/"}
               className="px-3 py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition"
@@ -71,14 +80,15 @@ export default async function SiteHeader() {
             </a>
           </div>
           {/* スキャンサイトはEN切替をスキャン/オンライントグルの直後（中央ゾーン）
-              に置いている。PC幅ではレイアウトを揃え、モバイルは従来どおり右ゾーンで
-              表示する（下の LangToggle は lg:hidden）。 */}
-          <LangToggle className="hidden lg:inline-block" />
+              に置いている。2xl(1536px)以上でのみレイアウトを揃え、それ未満は
+              右ゾーンで表示（xl帯は左ナビとの幅衝突がUI監査で検出されたため、
+              中央クラスタを最小限にする）。 */}
+          <LangToggle className="hidden 2xl:inline-block" />
         </div>
 
         {/* Right zone — language + auth */}
         <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-          <LangToggle className="lg:hidden" />
+          <LangToggle className="2xl:hidden" />
           <CartLink />
           <Show when="signed-out">
             {/* Modal mode: signing in does NOT push a /sign-in history entry,
@@ -100,7 +110,7 @@ export default async function SiteHeader() {
             {user && (
               <Link
                 href={lh("/account")}
-                className="hidden lg:flex items-center gap-2 text-[12px] mono tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
+                className="hidden xl:flex items-center gap-2 text-[12px] mono tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
               >
                 <span className="border border-line px-1.5 py-0.5 text-[9px]">
                   {ROLE_LABEL[user.role]}
@@ -111,7 +121,7 @@ export default async function SiteHeader() {
             {user?.role === "admin" && (
               <Link
                 href={lh("/admin")}
-                className="hidden lg:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line pl-3 hover:text-accent transition whitespace-nowrap"
+                className="hidden xl:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line pl-3 hover:text-accent transition whitespace-nowrap"
               >
                 ⚙ {t("auth.admin")}
               </Link>
