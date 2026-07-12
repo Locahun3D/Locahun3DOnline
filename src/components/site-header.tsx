@@ -70,11 +70,15 @@ export default async function SiteHeader() {
               {t("header.online")}
             </a>
           </div>
+          {/* スキャンサイトはEN切替をスキャン/オンライントグルの直後（中央ゾーン）
+              に置いている。PC幅ではレイアウトを揃え、モバイルは従来どおり右ゾーンで
+              表示する（下の LangToggle は lg:hidden）。 */}
+          <LangToggle className="hidden lg:inline-block" />
         </div>
 
         {/* Right zone — language + auth */}
         <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-          <LangToggle />
+          <LangToggle className="lg:hidden" />
           <CartLink />
           <Show when="signed-out">
             {/* Modal mode: signing in does NOT push a /sign-in history entry,
