@@ -18,8 +18,8 @@ const SCAN = LOCAL
   ? "http://127.0.0.1:8830/locahun3d_manifesto.html"
   : "https://web.locahun3d.com/locahun3d_manifesto.html";
 
-// [width, height, tier] — tier: "mobile" は2段ヘッダー帯(<1024px)、"desktop" は1行帯(≥1024px)。
-// 両サイトとも 1024px で切替（オンライン=Tailwind lg / スキャン=@media 1023px）。
+// [width, height, tier] — tier: "mobile" は2段ヘッダー帯(<1200px)、"desktop" は1行帯(≥1200px)。
+// 両サイトとも 1200px で切替（オンライン=min-[1200px] / スキャン=@media 1199px）。
 const VIEWPORTS = [
   [320, 700, "mobile"],
   [360, 740, "mobile"],
@@ -27,8 +27,9 @@ const VIEWPORTS = [
   [414, 896, "mobile"],
   [768, 1024, "mobile"],
   [820, 1180, "mobile"],
-  [1024, 768, "desktop"],
-  [1194, 834, "desktop"],
+  [1024, 768, "mobile"],
+  [1194, 834, "mobile"],
+  [1280, 800, "desktop"],
   [1440, 900, "desktop"],
 ];
 
@@ -53,7 +54,7 @@ const PICK = `(sel, root) => {
 // tier ごとの要素セレクタ。[label, onlineSelector, scanSelector, 比較プロパティ(省略時PROPS)]
 function pairsFor(tier) {
   if (tier === "mobile") {
-    const m = 'header div.lg\\:hidden'; // オンライン版モバイルブロック
+    const m = 'header div.min-\\[1200px\\]\\:hidden'; // オンライン版モバイルブロック
     return [
       ["brand", `${m} span.brand`, ".site-header .sh-brand-text"],
       // 非アクティブセル同士（オンライン=スキャンセル、スキャン=オンラインセル）
@@ -66,7 +67,7 @@ function pairsFor(tier) {
         ["fontFamily", "fontSize", "fontWeight", "color"]],
     ];
   }
-  const d = "header div.hidden.lg\\:flex"; // オンライン版デスクトップブロック
+  const d = "header div.hidden.min-\\[1200px\\]\\:flex"; // オンライン版デスクトップブロック
   return [
     ["brand", `${d} span.brand`, ".site-header .sh-brand-text"],
     ["toggle-inactive", `${d} a[href*="web.locahun3d"]`, '.site-header .sh-toggle:not(.sh-lang) a'],

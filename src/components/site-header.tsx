@@ -23,8 +23,9 @@ export default async function SiteHeader() {
   const scanUrl = locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/";
 
   /**
-   * PC(lg+)の1行ヘッダーと構成要素は完全に同一 — ハンバーガーに畳まず、
-   * モバイル(lg未満)は同じ要素を2段に折り返して縮小表示する。
+   * PC(1200px+)の1行ヘッダーと構成要素は完全に同一 — ハンバーガーに畳まず、
+   * モバイル(1200px未満)は同じ要素を2段に折り返して縮小表示する。切替幅も
+   * スキャンサイトと同一の1200px（Tailwind lgの1024pxではない点に注意）。
    * 「PC/モバイルで見える要素を変えない、サイズ調整のみで揃える」という
    * 明示の指示に基づく（実測: 全要素を1行9pxに詰めても600px超で320-390px
    * 幅には物理的に収まらないため、2段構成で妥協）。
@@ -35,12 +36,12 @@ export default async function SiteHeader() {
           so the browser Back button never gets trapped bouncing through
           an already-authenticated /sign-in page. */}
       <SignInButton mode="modal">
-        <button className="px-1 lg:px-4 py-0.5 lg:py-1.5 text-[7px] min-[360px]:text-[8px] lg:text-[12px] mono tracking-[0.02em] lg:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
+        <button className="px-1 min-[1200px]:px-4 py-0.5 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[1200px]:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
           {t("auth.login")}
         </button>
       </SignInButton>
       <SignUpButton mode="modal">
-        <button className="px-1 lg:px-4 py-0.5 lg:py-1.5 text-[7px] min-[360px]:text-[8px] lg:text-[12px] mono tracking-[0.02em] lg:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
+        <button className="px-1 min-[1200px]:px-4 py-0.5 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[1200px]:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
           {t("auth.signup")}
         </button>
       </SignUpButton>
@@ -52,9 +53,9 @@ export default async function SiteHeader() {
       {user && (
         <Link
           href={lh("/account")}
-          className="flex items-center gap-1 lg:gap-2 text-[9px] lg:text-[12px] mono tracking-[0.05em] lg:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
+          className="flex items-center gap-1 min-[1200px]:gap-2 text-[9px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
-          <span className="hidden sm:inline border border-line px-1 lg:px-1.5 py-0.5 text-[8px] lg:text-[9px]">
+          <span className="hidden sm:inline border border-line px-1 min-[1200px]:px-1.5 py-0.5 text-[8px] min-[1200px]:text-[9px]">
             {ROLE_LABEL[user.role]}
           </span>
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
@@ -64,12 +65,12 @@ export default async function SiteHeader() {
       {user?.role === "admin" && (
         <Link
           href={lh("/admin")}
-          className="hidden lg:inline-block px-2 lg:px-3 py-1 lg:py-1.5 text-[9px] lg:text-[10px] mono tracking-[0.14em] lg:tracking-[0.22em] uppercase text-muted border-l border-line pl-2 lg:pl-3 hover:text-accent transition whitespace-nowrap"
+          className="hidden min-[1200px]:inline-block px-2 min-[1200px]:px-3 py-1 min-[1200px]:py-1.5 text-[9px] min-[1200px]:text-[10px] mono tracking-[0.14em] min-[1200px]:tracking-[0.22em] uppercase text-muted border-l border-line pl-2 min-[1200px]:pl-3 hover:text-accent transition whitespace-nowrap"
         >
           ⚙ {t("auth.admin")}
         </Link>
       )}
-      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 lg:w-7 lg:h-7" } }} />
+      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[1200px]:w-7 min-[1200px]:h-7" } }} />
     </Show>
   );
 
@@ -77,16 +78,16 @@ export default async function SiteHeader() {
   // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
   // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
   const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] lg:text-[11px] tracking-[0.02em] lg:tracking-[0.06em]">
+    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[1200px]:text-[11px] tracking-[0.02em] min-[1200px]:tracking-[0.06em]">
       <a
         href={scanUrl}
-        className="px-[3px] min-[360px]:px-1 lg:px-3 py-0.5 lg:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[1200px]:px-3 py-0.5 min-[1200px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.scan")}
       </a>
       <a
         href={lh("/properties")}
-        className="px-[3px] min-[360px]:px-1 lg:px-3 py-0.5 lg:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[1200px]:px-3 py-0.5 min-[1200px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.online")}
       </a>
@@ -95,8 +96,8 @@ export default async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
-      {/* ══ PC(lg+) — 1行 ══ */}
-      <div className="hidden lg:flex frame items-center h-16 gap-3">
+      {/* ══ PC(1200px+) — 1行 ══ */}
+      <div className="hidden min-[1200px]:flex frame items-center h-16 gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
           <nav className="flex items-center gap-4 min-[1440px]:gap-6">
             {NAV.map((n) => (
@@ -131,9 +132,9 @@ export default async function SiteHeader() {
         </div>
       </div>
 
-      {/* ══ モバイル/タブレット(lg未満) — 2段。PCと同じ要素をサイズ調整して
+      {/* ══ モバイル/タブレット(1200px未満) — 2段。PCと同じ要素をサイズ調整して
           全て表示する（要素の非表示・ハンバーガー化はしない）。 ══ */}
-      <div className="lg:hidden frame">
+      <div className="min-[1200px]:hidden frame">
         {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証 */}
         <div className="flex items-center h-12 gap-0.5 min-[360px]:gap-1">
           <Link href={lh("/")} aria-label="ロケハン3D" className="flex items-center gap-1 shrink-0">
