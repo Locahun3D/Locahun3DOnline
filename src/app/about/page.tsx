@@ -468,7 +468,7 @@ export default async function AboutPage() {
               <li>{en ? "One ~20-min scan to get listed" : "約 20 分のスキャン 1 回で掲載"}</li>
               <li>{en ? "Fewer walk-in viewings" : "内覧対応を削減"}</li>
               <li>{en ? "Inquiries reach you directly" : "問い合わせが直接届く"}</li>
-              <li>{en ? "Revenue share on data sales" : "データ販売の収益シェア"}</li>
+              <li>{en ? "Currently free during our launch campaign" : "現在キャンペーンで掲載無料"}</li>
             </ul>
             <Link
               href={lh("/contact/listing")}

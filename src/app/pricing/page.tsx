@@ -233,8 +233,7 @@ export default async function PricingPage({
                 <a href="https://web.locahun3d.com/locahun3d_contact.html" className="text-accent hover:underline">
                   get in touch
                 </a>
-                . Listing uses a separate pricing scheme, with revenue share on data
-                sales.
+                . Listing is currently free during our launch campaign.
               </>
             ) : (
               <>
@@ -242,7 +241,7 @@ export default async function PricingPage({
                 <a href="https://web.locahun3d.com/locahun3d_contact.html" className="text-accent hover:underline">
                   お問い合わせ
                 </a>{" "}
-                から。掲載側は別料金体系、データ販売の収益シェアも発生します。
+                から。現在はキャンペーンにより掲載無料です。
               </>
             )}
           </p>
