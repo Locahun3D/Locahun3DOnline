@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import LightboxImage from "@/components/about/lightbox-image";
 
 export const metadata = {
   title: "サービスについて",
@@ -153,6 +154,10 @@ export default async function AboutPage() {
         "エリア・カテゴリ・スタジオ種類・料金・天井高・面積・収容人数・電源（200V）・駐車場・利用時間帯。駅や現在地からの距離順ソートに対応。",
         "Area, category, studio type, price, ceiling height, floor area, capacity, power (200V), parking, time slots. Distance sort from any station or your location.",
       ],
+      img: {
+        src: "/about/search-filters.webp",
+        alt: ["カタログの検索フィルタ画面", "The catalog's search filters"],
+      },
       link: { href: "/properties", text: ["物件一覧 →", "Catalog →"] },
     },
     {
@@ -186,6 +191,10 @@ export default async function AboutPage() {
         "Free 登録で 6 トークン、有料プランは月 16〜60 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
         "6 tokens at Free signup; paid plans grant 16–60 per month. Unlocking a scene costs tokens once — revisits are free for 1 year.",
       ],
+      img: {
+        src: "/about/tokens.webp",
+        alt: ["マイページのトークン残高表示", "Token balance on the account page"],
+      },
       link: { href: "/pricing", text: ["料金プラン →", "Pricing →"] },
     },
     {
@@ -207,6 +216,10 @@ export default async function AboutPage() {
         "投稿できるのは実際にウォークスルーを視聴した会員のみ。★ 平均はカタログ・物件ページで誰でも閲覧できます。",
         "Only members who actually viewed a walkthrough can post. Star averages are visible to everyone.",
       ],
+      img: {
+        src: "/about/reviews.webp",
+        alt: ["物件ページのレビュー投稿欄", "The review form on a property page"],
+      },
     },
     {
       no: "07",
@@ -215,6 +228,10 @@ export default async function AboutPage() {
         "候補物件を名前付きボードに整理。Studio / Team プランはボード単位の読み取り専用共有 URL を発行できます。",
         "Organize candidates into named boards. Studio / Team plans can publish read-only share links per board.",
       ],
+      img: {
+        src: "/about/board-share.webp",
+        alt: ["保存ボードと共有URL発行の画面", "Boards with a read-only share link"],
+      },
     },
     {
       no: "08",
@@ -223,6 +240,10 @@ export default async function AboutPage() {
         "物件掲示板の閲覧は全員可、書き込みは有料プラン。問い合わせフォームの内容は掲載スタジオへ直接届きます。",
         "Property boards are readable by everyone; posting requires a paid plan. Inquiry form messages reach the listing studio directly.",
       ],
+      img: {
+        src: "/about/board.webp",
+        alt: ["物件ページの掲示板", "The property board"],
+      },
     },
     {
       no: "09",
@@ -231,6 +252,10 @@ export default async function AboutPage() {
         "有料プランは毎月の請求書を自動送付（電子帳簿保存法・インボイス制度対応）。登録番号（T番号）は申込時に入力でき、請求書へ自動反映されます。",
         "Paid plans auto-send monthly invoices (compliant with Japan's e-bookkeeping and invoice systems). Your registration (T) number is applied automatically.",
       ],
+      img: {
+        src: "/about/invoice.webp",
+        alt: ["自動送付される領収書・請求書の書式", "The auto-sent receipt / invoice format"],
+      },
     },
   ];
 
@@ -327,11 +352,10 @@ export default async function AboutPage() {
           {STEPS.map((s, i) => (
             <div key={s.no} className="bg-white flex flex-col">
               <div className="relative aspect-[16/9] bg-[#eef2f5] overflow-hidden">
-                {/* next/image は本構成で最適化404になるため、他コンポーネント同様プレーン <img> */}
-                <img
+                {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
+                <LightboxImage
                   src={s.img.src}
                   alt={s.img.alt[en ? 1 : 0]}
-                  loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               </div>
@@ -399,10 +423,9 @@ export default async function AboutPage() {
               </div>
               {d.img && (
                 <div className="w-full md:w-[190px] aspect-[16/9] bg-[#eef2f5] border border-line rounded-sm overflow-hidden relative">
-                  <img
+                  <LightboxImage
                     src={d.img.src}
                     alt={d.img.alt[en ? 1 : 0]}
-                    loading="lazy"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </div>
