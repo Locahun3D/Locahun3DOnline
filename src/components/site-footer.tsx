@@ -8,7 +8,7 @@ export default async function SiteFooter() {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
   return (
-    <footer className="relative mt-32 border-t border-line">
+    <footer className="relative mt-14 sm:mt-32 border-t border-line">
       <div className="frame pt-8 pb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted">
           {en
