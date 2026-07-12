@@ -11,7 +11,7 @@ export default async function TermsServicePage() {
   const en = locale === "en";
   if (en) return <TermsServiceEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">TERMS</span>
         <span>Terms of Service</span>
@@ -142,7 +142,7 @@ export default async function TermsServicePage() {
 
 function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">TERMS</span>
         <span>Terms of Service</span>

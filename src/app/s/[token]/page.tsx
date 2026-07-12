@@ -42,7 +42,7 @@ export default async function SharedBookmarkFolderPage({
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="theme-online frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">SHARED</span>
         <span>{folder.name}</span>

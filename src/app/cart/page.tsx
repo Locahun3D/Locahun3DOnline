@@ -6,7 +6,7 @@ export const metadata = { title: "カート" };
 export default async function CartPage() {
   const en = (await getLocale()) === "en";
   return (
-    <div className="theme-online frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">CART</span>
         <span>Shopping Cart</span>

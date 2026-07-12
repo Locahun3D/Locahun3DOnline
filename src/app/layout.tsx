@@ -91,7 +91,10 @@ export default async function RootLayout({
         <LocaleProvider locale={locale}>
           <ClerkProvider localization={locale === "en" ? enUS : jaJPFixed}>
             <SiteHeader />
-            <main className="flex-1">{children}</main>
+            {/* [&>*]:flex-1 — 短いページでライト背景(theme-online)がフッター手前で
+                途切れ、黒い埋め草が「黒帯」に見える実害があったため、
+                ページ直下のラッパーを常に main いっぱいまで伸ばす。 */}
+            <main className="flex-1 flex flex-col [&>*]:flex-1">{children}</main>
             <SiteFooter />
           </ClerkProvider>
         </LocaleProvider>

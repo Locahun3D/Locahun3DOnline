@@ -260,7 +260,7 @@ export default async function AboutPage() {
   ];
 
   return (
-    <div className="theme-online frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">ABOUT</span>
         <span>Service</span>

@@ -52,7 +52,7 @@ export default async function PricingPage({
   };
 
   return (
-    <div className="theme-online frame pt-12 pb-32">
+    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">PRICING</span>
         <span>Plans</span>
