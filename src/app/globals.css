@@ -39,6 +39,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  /* 横スクロール禁止（実機iOS Safariで何か1要素がはみ出すと横スクロール＝
+     右側に黒帯が出て「UIが壊れる」実害があった）。clip は scroll container を
+     作らないので sticky ヘッダーを壊さない（hidden だと壊れる）。マーケサイトと
+     同じ防御。Safari<16 は clip 未対応で visible にフォールバック（従来動作）。 */
+  overflow-x: clip;
 }
 
 /* PC-intent line breaks: faithful on desktop, reflow on mobile so phrases
