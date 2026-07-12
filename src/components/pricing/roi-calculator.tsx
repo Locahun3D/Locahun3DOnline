@@ -39,7 +39,7 @@ export default function RoiCalculator({ en }: { en: boolean }) {
         {/* 左: スライダー */}
         <div className="p-8 sm:p-9 border-b md:border-b-0 md:border-r border-line">
           <h2 className="text-[19px] font-bold mb-1.5">
-            {en ? "See what you'd save — 30 seconds." : "おいくら浮くか、30秒で。"}
+            {en ? "See what you'd save — 30 seconds." : "浮く予算を、30秒で。"}
           </h2>
           <p className="text-[12px] text-muted mb-6">
             {en
