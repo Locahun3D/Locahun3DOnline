@@ -11,7 +11,31 @@ import { listNotifications } from "@/lib/notifications";
 
 export const metadata = { title: "プロフィール" };
 
-export default async function AccountPage({
+// ★一時デバッグ: 本番 /account が digest のみの 500 を返すため、実例外を
+// ページ内に可視化する（原因特定後すぐ除去する）。redirect/notFound の
+// 制御フロー例外は再スローして通常動作を保つ。
+export default async function AccountPage(props: {
+  searchParams: Promise<{ welcome?: string; nda?: string; plan?: string }>;
+}) {
+  try {
+    return await AccountPageInner(props);
+  } catch (e) {
+    const digest = (e as { digest?: string })?.digest;
+    if (typeof digest === "string" && digest.startsWith("NEXT_")) throw e;
+    const err = e as Error;
+    console.error("[account] render failed:", err);
+    return (
+      <pre style={{ padding: 40, whiteSpace: "pre-wrap", fontSize: 12 }}>
+        ACCOUNT DEBUG{"\n"}
+        {String(err?.message)}
+        {"\n\n"}
+        {String(err?.stack).slice(0, 1800)}
+      </pre>
+    );
+  }
+}
+
+async function AccountPageInner({
   searchParams,
 }: {
   searchParams: Promise<{ welcome?: string; nda?: string; plan?: string }>;
