@@ -147,7 +147,7 @@ export default function PropertyDetailView({
   isAdminUser?: boolean;
   /** 掲示板への書き込み権限（有料プラン: Individual / Studio / Team / admin）。閲覧は会員全員。 */
   canPostBoard?: boolean;
-  /** レビュー投稿権限（3DGS視聴済み or admin）。 */
+  /** レビュー投稿権限（有料プラン or admin）。 */
   canReview?: boolean;
 }) {
   const en = locale === "en";

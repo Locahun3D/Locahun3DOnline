@@ -3,10 +3,9 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./dal";
-import { publicDisplayName } from "./account-schema";
+import { publicDisplayName, canPostToBoard } from "./account-schema";
 import { reviewRepo } from "./reviews";
 import { validateReviewBody, validateRating } from "./review-guard";
-import { viewUnlockRepo } from "./view-unlocks";
 
 export type PostReviewState =
   | {
@@ -25,19 +24,10 @@ export type PostReviewState =
   | undefined;
 
 /**
- * このユーザーが対象物件の3DGSを視聴済み（有効期限内のアンロックが1件以上ある）か。
- * postOrUpdateReviewAction の投稿権限判定に使う。
- */
-async function hasWatchedProperty(userId: string, propertyId: string): Promise<boolean> {
-  const unlocks = await viewUnlockRepo.list({ userId, propertyId });
-  const now = new Date().toISOString();
-  return unlocks.some((u) => u.expiresAt > now);
-}
-
-/**
- * レビュー投稿・更新。サインイン必須、かつ対象物件の3DGSを視聴（アンロック）済み
- * であることが条件。既存レビュー（1ユーザー1物件につき1件）があれば更新、
- * 無ければ新規作成する。
+ * レビュー投稿・更新。サインイン必須、かつ有料プラン（Individual / Studio / Team）
+ * であることが条件（掲示板の書き込みと同じ canPostToBoard 判定）。以前は「3DGS
+ * 視聴済み」が条件だったが、有料会員であれば投稿可に変更。既存レビュー
+ * （1ユーザー1物件につき1件）があれば更新、無ければ新規作成する。
  */
 export async function postOrUpdateReviewAction(
   propertyId: string,
@@ -55,12 +45,9 @@ export async function postOrUpdateReviewAction(
   const trimmedPropertyId = String(propertyId ?? "").trim();
   if (!trimmedPropertyId) return { ok: false, error: "対象の物件が見つかりませんでした。" };
 
-  // admin は視聴判定を免除（運営が動作確認できるように）。それ以外は視聴済み必須。
-  if (user.role !== "admin") {
-    const watched = await hasWatchedProperty(user.id, trimmedPropertyId);
-    if (!watched) {
-      return { ok: false, error: "3DGSを視聴すると評価を投稿できます" };
-    }
+  // 投稿は有料プラン限定（admin は常に可）。canPostToBoard が判定を持つ。
+  if (!canPostToBoard(user)) {
+    return { ok: false, error: "レビューの投稿は有料プランでご利用いただけます。" };
   }
 
   const ratingCheck = validateRating(rating);

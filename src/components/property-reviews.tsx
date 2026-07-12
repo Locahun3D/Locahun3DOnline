@@ -102,8 +102,8 @@ function StarPicker({
 }
 
 /**
- * 物件ごとのレビュー・評価。3DGSを視聴（アンロック）済みのユーザーのみ投稿できる
- * （未視聴は案内のみ、未サインインはサインイン導線のみ表示）。
+ * 物件ごとのレビュー・評価。投稿できるのは有料プラン（Individual / Studio / Team）
+ * の会員のみ（Free会員は案内のみ、未サインインはサインイン導線のみ表示）。閲覧は全員可。
  */
 export default function PropertyReviews({
   propertyId,
@@ -128,7 +128,7 @@ export default function PropertyReviews({
   currentUserName?: string | null;
   isAdmin: boolean;
   signedIn: boolean;
-  /** 投稿権限（3DGS視聴済み or admin）。未視聴の会員は false。 */
+  /** 投稿権限（有料プラン or admin）。Free会員は false。 */
   canReview?: boolean;
   locale?: "ja" | "en";
 }) {
@@ -422,9 +422,15 @@ export default function PropertyReviews({
             <div className="border border-dashed border-line bg-bg px-5 py-5 text-center mb-6">
               <p className="text-[12.5px] text-ink/60">
                 {en
-                  ? "Watch the 3DGS walkthrough above to post a review."
-                  : "3DGSウォークスルーをご覧いただくと評価を投稿できます。"}
+                  ? "Reviews can be posted on a paid plan (Individual / Studio / Team)."
+                  : "レビューの投稿は有料プラン（Individual / Studio / Team）でご利用いただけます。"}
               </p>
+              <Link
+                href="/pricing"
+                className="inline-block mt-3 mono text-[10px] tracking-[0.2em] uppercase text-accent hover:underline"
+              >
+                {en ? "See plans →" : "プランを見る →"}
+              </Link>
             </div>
           )}
         </>

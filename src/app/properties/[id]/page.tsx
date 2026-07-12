@@ -108,23 +108,9 @@ export default async function PropertyDetailPage({
       (c) => isAdminUser || !c.hiddenByReports,
     ),
   );
-  // レビュー投稿権限の判定用。「有効期限内のアンロックが1件以上あるか」を
-  // free-period/admin の早期スキップに関係なく必ず判定する（上の unlockedItemIds
-  // は表示用の別目的なので流用しない）。
-  let hasWatched3dgs = false;
-  if (user) {
-    if (user.role === "admin") {
-      hasWatched3dgs = true;
-    } else {
-      try {
-        const unlocks = await viewUnlockRepo.list({ userId: user.id, propertyId: property.id });
-        const now = new Date().toISOString();
-        hasWatched3dgs = unlocks.some((u) => u.expiresAt > now);
-      } catch {
-        hasWatched3dgs = false;
-      }
-    }
-  }
+  // レビュー投稿権限。掲示板の書き込みと同じ「有料プラン限定」判定に統一
+  // （以前は3DGS視聴済みが条件だった）。
+  const canReview = canPostToBoard(user);
   const reviews = signedIn
     ? await withLiveDisplayNames(
         (await reviewRepo.list(property.id).catch(() => [])).filter(
@@ -195,7 +181,7 @@ export default async function PropertyDetailPage({
         currentUserName={user ? publicDisplayName(user) : null}
         isAdminUser={isAdminUser}
         canPostBoard={canPostToBoard(user)}
-        canReview={hasWatched3dgs}
+        canReview={canReview}
       />
     </>
   );

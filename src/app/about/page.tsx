@@ -70,8 +70,8 @@ export default async function AboutPage() {
       label: ["評価", "Reviews"],
       title: ["レビューを見る・書く", "Read & write reviews"],
       desc: [
-        "実際にウォークスルーを視聴した会員が ★ 評価とコメントを投稿できます。平均評価はカタログと物件ページで誰でも見られます。",
-        "Members who actually viewed a walkthrough can post star ratings and comments. Averages are visible to everyone on the catalog and property pages.",
+        "★ 評価とコメントの投稿は有料プランの会員が対象です。平均評価はカタログと物件ページで誰でも見られます。",
+        "Posting star ratings and comments is available on a paid plan. Averages are visible to everyone on the catalog and property pages.",
       ],
     },
     {
@@ -213,8 +213,8 @@ export default async function AboutPage() {
       no: "06",
       label: ["レビュー", "Reviews"],
       desc: [
-        "投稿できるのは実際にウォークスルーを視聴した会員のみ。★ 平均はカタログ・物件ページで誰でも閲覧できます。",
-        "Only members who actually viewed a walkthrough can post. Star averages are visible to everyone.",
+        "投稿は有料プランの会員が対象。★ 平均はカタログ・物件ページで誰でも閲覧できます。",
+        "Posting is available on a paid plan. Star averages are visible to everyone.",
       ],
       img: {
         src: "/about/reviews.webp",
