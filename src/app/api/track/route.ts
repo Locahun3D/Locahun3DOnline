@@ -32,6 +32,15 @@ export async function POST(req: Request) {
     const day = new Date().toISOString().slice(0, 10);
     const device = parseDevice(req.headers.get("user-agent") ?? "");
     const user = await getCurrentUser().catch(() => null);
+
+    // 管理者アカウント自身の閲覧はアナリティクスに含めない（ユーザー要望）。
+    // 運営の動作確認アクセスが「誰が/どこから見たか」の集計カウンタと
+    // 個別イベントログ双方を汚染しないよう、集計・記録の前でスキップする。
+    // view_unlocks（本人の視聴履歴）は別経路なので影響しない。
+    if (user?.role === "admin") {
+      return NextResponse.json({ ok: true, skipped: "admin" });
+    }
+
     await track(propertyId, type, referrer, day, device);
     // 個別イベントログは集計カウンタとは別経路 — 失敗しても計測自体は止めない。
     await logEvent({
