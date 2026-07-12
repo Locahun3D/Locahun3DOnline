@@ -84,7 +84,7 @@ function shell(title: string, bodyHtml: string): string {
       ${bodyHtml}
     </div>
     <div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;">
-      発行者: ロケハン3D（Kawaii World Industries株式会社） / お問い合わせ: info@locahun3d.com
+      発行者: ロケハン3D（KWI株式会社） / お問い合わせ: info@locahun3d.com
     </div>
   </div>
 </body></html>`;
@@ -109,7 +109,7 @@ export function marketingShell(title: string, bodyHtml: string, unsubscribeUrl: 
     </div>
     <div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;line-height:1.8;">
       配信停止をご希望の場合は<a href="${unsubscribeUrl}" style="color:#5ec8e8;">こちら</a>から手続きできます。<br />
-      ロケハン3D（運営：Kawaii World Industries株式会社）<br />
+      ロケハン3D（運営：KWI株式会社）<br />
       〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F<br />
       お問い合わせ: contact@locahun3d.com
     </div>

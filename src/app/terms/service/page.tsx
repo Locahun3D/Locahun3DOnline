@@ -23,7 +23,7 @@ export default async function TermsServicePage() {
           利用規約
         </h1>
         <p className="text-[14px] text-muted mt-3">
-          本規約は、Kawaii World Industries株式会社（以下「当社」）が提供する「ロケハン3D オンライン」（以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することにより本規約に同意したものとみなします。3Dデータの購入に関する条件は別途<Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">3Dデータ購入規約</Link>に定めます。
+          本規約は、KWI株式会社（以下「当社」）が提供する「ロケハン3D オンライン」（以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することにより本規約に同意したものとみなします。3Dデータの購入に関する条件は別途<Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">3Dデータ購入規約</Link>に定めます。
         </p>
       </header>
 
@@ -123,7 +123,7 @@ export default async function TermsServicePage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月11日<br />
-            ロケハン3D（運営：Kawaii World Industries株式会社）
+            ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
       </div>
@@ -159,7 +159,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </p>
         <p className="text-[14px] text-muted mt-3">
           These Terms of Service (&quot;Terms&quot;) set out the conditions for using &quot;Locahun 3D
-          Online&quot; (the &quot;Service&quot;) provided by Kawaii World Industries Inc. (&quot;we&quot;, &quot;us&quot;). By
+          Online&quot; (the &quot;Service&quot;) provided by KWI Inc. (&quot;we&quot;, &quot;us&quot;). By
           using the Service, you are deemed to have agreed to these Terms. Terms specific
           to purchasing 3D data are set out separately in the{" "}
           <Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">
@@ -264,7 +264,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: July 11, 2026<br />
-            Locahun 3D (operated by Kawaii World Industries Inc.)
+            Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
       </div>

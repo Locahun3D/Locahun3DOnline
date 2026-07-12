@@ -45,7 +45,7 @@ export default function MarketingComposer({ disabled }: { disabled: boolean }) {
       </div>
 
       <p className="text-[11px] text-muted leading-[1.7]">
-        配信停止リンク・送信者情報（Kawaii World Industries株式会社の名称・住所・連絡先）は
+        配信停止リンク・送信者情報（KWI株式会社の名称・住所・連絡先）は
         自動で本文末尾に追加されます。
       </p>
 

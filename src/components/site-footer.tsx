@@ -14,8 +14,8 @@ export default async function SiteFooter() {
       <div className="frame pt-8 pb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted">
           {en
-            ? `© ${year} Locahun 3D — Kawaii World Industries Inc.`
-            : `© ${year} ロケハン3D — Kawaii World Industries株式会社`}
+            ? `© ${year} Locahun 3D — KWI Inc.`
+            : `© ${year} ロケハン3D — KWI株式会社`}
         </div>
         <nav className="flex flex-wrap gap-4 mono text-[10px] tracking-[0.18em] uppercase text-muted">
           <Link href={lh("/terms/service")} className="hover:text-foreground transition">

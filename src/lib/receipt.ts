@@ -114,7 +114,7 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
   </div>
 
   <footer>
-    <div>発行者: ロケハン3D（Kawaii World Industries株式会社）</div>
+    <div>発行者: ロケハン3D（KWI株式会社）</div>
     <div>URL: https://locahun3d.com</div>
     <div>お問い合わせ: info@locahun3d.com</div>
   </footer>

@@ -25,7 +25,7 @@ export default async function TokushohoPage() {
       </header>
 
       <div className="prose-terms space-y-8 text-[14px] leading-[1.85]">
-        <Row label="販売業者" value="Kawaii World Industries株式会社" />
+        <Row label="販売業者" value="KWI株式会社" />
         <Row label="資本金" value="60万円" />
         <Row label="運営統括責任者" value="中村 航" />
         <Row label="所在地" value="〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F" />
@@ -64,7 +64,7 @@ export default async function TokushohoPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月1日<br />
-            ロケハン3D（運営：Kawaii World Industries株式会社）
+            ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
       </div>
@@ -101,7 +101,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
       </header>
 
       <div className="prose-terms space-y-8 text-[14px] leading-[1.85]">
-        <Row label="Seller" value="Kawaii World Industries Inc." />
+        <Row label="Seller" value="KWI Inc." />
         <Row label="Capital" value="¥600,000" />
         <Row label="Operations Manager" value="Ko Nakamura" />
         <Row label="Address" value="THE GATE Shinjuku Gyoen 1F, 1-24-12 Shinjuku, Shinjuku-ku, Tokyo 160-0022, Japan" />
@@ -140,7 +140,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: July 1, 2026<br />
-            Locahun 3D (operated by Kawaii World Industries Inc.)
+            Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
       </div>

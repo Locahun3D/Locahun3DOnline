@@ -23,7 +23,7 @@ export default async function PrivacyPage() {
           プライバシーポリシー
         </h1>
         <p className="text-[14px] text-muted mt-3">
-          Kawaii World Industries株式会社（以下「当社」）は、当社が提供する「ロケハン3D オンライン」（以下「本サービス」）における利用者の個人情報の取扱いについて、以下のとおりプライバシーポリシー（以下「本ポリシー」）を定めます。
+          KWI株式会社（以下「当社」）は、当社が提供する「ロケハン3D オンライン」（以下「本サービス」）における利用者の個人情報の取扱いについて、以下のとおりプライバシーポリシー（以下「本ポリシー」）を定めます。
         </p>
       </header>
 
@@ -95,7 +95,7 @@ export default async function PrivacyPage() {
             本ポリシーに関するお問い合わせは、以下までご連絡ください。
           </p>
           <div className="mt-4 border-t border-line/30 pt-4 space-y-2 opacity-80">
-            <p>Kawaii World Industries株式会社</p>
+            <p>KWI株式会社</p>
             <p>〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F</p>
             <p>
               メールアドレス:{" "}
@@ -109,7 +109,7 @@ export default async function PrivacyPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月11日<br />
-            ロケハン3D（運営：Kawaii World Industries株式会社）
+            ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
       </div>
@@ -144,7 +144,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
           legally binding document and prevails in case of any discrepancy.
         </p>
         <p className="text-[14px] text-muted mt-3">
-          Kawaii World Industries Inc. (&quot;we&quot;, &quot;us&quot;) sets out this Privacy Policy regarding
+          KWI Inc. (&quot;we&quot;, &quot;us&quot;) sets out this Privacy Policy regarding
           the handling of users&apos; personal information in &quot;Locahun 3D Online&quot; (the &quot;Service&quot;).
         </p>
       </header>
@@ -212,7 +212,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="serif text-lg mb-4">Article 7 (Contact)</h2>
           <div className="mt-4 border-t border-line/30 pt-4 space-y-2 opacity-80">
-            <p>Kawaii World Industries Inc.</p>
+            <p>KWI Inc.</p>
             <p>THE GATE Shinjuku Gyoen 1F, 1-24-12 Shinjuku, Shinjuku-ku, Tokyo 160-0022, Japan</p>
             <p>
               Email:{" "}
@@ -226,7 +226,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: July 11, 2026<br />
-            Locahun 3D (operated by Kawaii World Industries Inc.)
+            Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
       </div>
