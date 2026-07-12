@@ -568,6 +568,8 @@ export default async function AboutPage() {
               a: [
                 <>
                   できます。約 20 分のスキャン 1 回で掲載でき、現在はキャンペーンにより掲載費は無料です。
+                  <br />
+                  ロケハン3Dでは、今後もスキャン以降の掲載費は無料です。
                   <Link href={lh("/contact/listing")} className="text-accent hover:underline">
                     掲載依頼フォーム
                   </Link>
@@ -575,7 +577,10 @@ export default async function AboutPage() {
                 </>,
                 <>
                   Yes. One ~20-minute scan gets you listed, and listing is currently free
-                  during our launch campaign. Apply via the{" "}
+                  during our launch campaign.
+                  <br />
+                  At Locahun 3D, listing stays free going forward once you&apos;ve completed a
+                  scan. Apply via the{" "}
                   <Link href={lh("/contact/listing")} className="text-accent hover:underline">
                     listing request form
                   </Link>
