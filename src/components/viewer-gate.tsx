@@ -383,9 +383,14 @@ export default function ViewerGate({
             {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
           </a>
 
-          {/* スマホ/タブレットで大容量シーンを開こうとした時の事前警告。 */}
+          {/* スマホ/タブレットで大容量シーンを開こうとした時の事前警告。
+              max-width は使わない（ch 単位は Noto Sans JP のグリフ幅がラテン
+              文字と大きく異なり不安定、px 固定でもタブレット幅の広いカードでは
+              ボックスが親パネルより明確に狭くなり、左右に背景が見えて「見切れ
+              ている」ように見える実害があった）。w-full のみで親パネル＝カード
+              幅に常に一致させる。 */}
           {showSizeWarning && (
-            <div className="mt-1 w-full max-w-[46ch] rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-left">
+            <div className="mt-1 w-full rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-left">
               <div className="text-[12px] font-bold text-amber-800 mb-1">
                 {en ? "This scene is large" : "データ容量が大きいシーンです"}
               </div>
@@ -418,7 +423,7 @@ export default function ViewerGate({
 
           {/* トークン不足（サーバ 402）。フォールバックさせずここで明示する。 */}
           {tokenError && (
-            <div className="mt-1 w-full max-w-[46ch] rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left">
+            <div className="mt-1 w-full rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left">
               <div className="text-[12px] font-bold text-red-700 mb-1">
                 {en ? "Not enough tokens" : "トークンが足りません"}
               </div>
