@@ -35,12 +35,12 @@ export default async function SiteHeader() {
           so the browser Back button never gets trapped bouncing through
           an already-authenticated /sign-in page. */}
       <SignInButton mode="modal">
-        <button className="px-1 lg:px-4 py-0.5 lg:py-1.5 text-[7px] lg:text-[12px] mono tracking-[0em] lg:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
+        <button className="px-1 lg:px-4 py-0.5 lg:py-1.5 text-[7px] min-[360px]:text-[8px] lg:text-[12px] mono tracking-[0.02em] lg:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
           {t("auth.login")}
         </button>
       </SignInButton>
       <SignUpButton mode="modal">
-        <button className="px-1 lg:px-4 py-0.5 lg:py-1.5 text-[7px] lg:text-[12px] mono tracking-[0em] lg:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
+        <button className="px-1 lg:px-4 py-0.5 lg:py-1.5 text-[7px] min-[360px]:text-[8px] lg:text-[12px] mono tracking-[0.02em] lg:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
           {t("auth.signup")}
         </button>
       </SignUpButton>
@@ -73,17 +73,20 @@ export default async function SiteHeader() {
     </Show>
   );
 
+  // トグルの状態規則（スキャンサイトと共通）:
+  // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
+  // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
   const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[7px] lg:text-[11px] tracking-[0em] lg:tracking-[0.06em]">
+    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] lg:text-[11px] tracking-[0.02em] lg:tracking-[0.06em]">
       <a
         href={scanUrl}
-        className="px-1 lg:px-3 py-0.5 lg:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 lg:px-3 py-0.5 lg:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.scan")}
       </a>
       <a
         href={lh("/properties")}
-        className="px-1 lg:px-3 py-0.5 lg:py-1 border border-l-0 border-[#5ec8e8]/50 text-ink bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 lg:px-3 py-0.5 lg:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.online")}
       </a>
@@ -132,10 +135,10 @@ export default async function SiteHeader() {
           全て表示する（要素の非表示・ハンバーガー化はしない）。 ══ */}
       <div className="lg:hidden frame">
         {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証 */}
-        <div className="flex items-center h-12 sm:h-14 gap-0.5 sm:gap-1.5">
+        <div className="flex items-center h-12 gap-0.5 min-[360px]:gap-1">
           <Link href={lh("/")} aria-label="ロケハン3D" className="flex items-center gap-1 shrink-0">
             <HeaderMark size={18} />
-            <span className="brand text-[10px] min-[360px]:text-[12px] sm:text-sm tracking-[0.01em] whitespace-nowrap">
+            <span className="brand text-[11px] min-[360px]:text-[13px] tracking-[0.01em] whitespace-nowrap">
               ロケハン3D
             </span>
           </Link>
@@ -150,18 +153,15 @@ export default async function SiteHeader() {
             {authSignedIn}
           </div>
         </div>
-        {/* 2段目: 主要ナビ4項目。番号コードはPC同様「余裕がある幅でのみ」表示
-            （PC側も 1440px 未満では同じコードを隠している=既存の慣習を踏襲）。 */}
-        <nav className="flex items-center justify-between gap-0.5 sm:gap-1 pb-2">
+        {/* 2段目: 主要ナビ。番号コードはモバイル非表示・中央寄せ
+            （スキャンサイトのモバイルnavと書体/サイズ/整列を1:1で共通化）。 */}
+        <nav className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pb-2">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={lh(n.href)}
-              className="flex items-center gap-1 text-[10px] sm:text-[11px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
+              className="text-[11px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
             >
-              <span className="hidden min-[360px]:inline mono text-[8px] tracking-[0.1em] opacity-50">
-                {n.code}
-              </span>
               {t(n.key)}
             </Link>
           ))}
