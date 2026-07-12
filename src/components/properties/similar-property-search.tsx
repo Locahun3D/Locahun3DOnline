@@ -47,6 +47,30 @@ export default function SimilarPropertySearch() {
   return (
     <div className="border border-line bg-white px-4 py-3 mb-6">
       <form onSubmit={onSubmit} className="flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-1 text-accent">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="shrink-0"
+          >
+            <path d="M9 17H7a5 5 0 0 1 0-10h2" />
+            <path d="M15 7h2a5 5 0 0 1 0 10h-2" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <span className="hidden min-[420px]:inline mono text-[10px] sm:text-[11px] tracking-[0.06em] sm:tracking-[0.14em] uppercase whitespace-nowrap">
+            {en ? "Search by URL" : "URLから探す"}
+          </span>
+          <span className="min-[420px]:hidden mono text-[10px] tracking-[0.06em] uppercase whitespace-nowrap">
+            {en ? "URL" : "URL検索"}
+          </span>
+        </div>
         <input
           name="url"
           type="url"
@@ -54,8 +78,8 @@ export default function SimilarPropertySearch() {
           aria-label={en ? "Find similar locations from a URL" : "似た物件をURLから探す"}
           placeholder={
             en
-              ? "Find similar locations — paste a reference URL…"
-              : "似た物件を探す — イメージに近いページのURLを貼り付け…"
+              ? "Paste a reference page URL…"
+              : "イメージに近いページのURLを貼り付け…"
           }
           className="flex-1 min-w-0 border border-line rounded-md px-3 py-2 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition"
         />

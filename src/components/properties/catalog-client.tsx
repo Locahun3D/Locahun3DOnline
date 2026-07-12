@@ -38,6 +38,43 @@ const PRICE_DAY_OPTS = [30000, 50000, 100000, 200000, 300000, 500000, 1000000];
 const CEILING_OPTS   = [2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0];
 const DISTANCE_OPTS  = [5, 10, 30, 50, 100, 200, 500];
 
+// ── 利用時間フィルタ ─────────────────────────────────────────────────────
+// "HH:mm" → 0-1439 の分。不正/空文字は null。
+function parseHHMM(s: string): number | null {
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(s);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+/**
+ * 物件の利用可能窓 [propStart, propEnd) が要求範囲を包含するかを判定する純関数。
+ * propEnd <= propStart は深夜跨ぎ(翌日へのラップ)として扱う。reqStart/reqEnd の
+ * どちらかが null の場合は「その時刻を窓が含むか」の点判定になる (両方 null は
+ * 呼び出し禁止 — 呼び出し側でフィルタ未適用として扱うこと)。
+ */
+function timeWindowMatches(
+  propStart: number,
+  propEnd: number,
+  reqStart: number | null,
+  reqEnd: number | null,
+): boolean {
+  const DAY = 1440;
+  // start === end は「一日中」として扱う (深夜跨ぎ0分ぶんの窓は意味を持たないため)。
+  const propLen = ((propEnd - propStart) % DAY + DAY) % DAY || DAY;
+  const shift = (t: number) => ((t - propStart) % DAY + DAY) % DAY;
+
+  if (reqStart !== null && reqEnd !== null) {
+    const rs = shift(reqStart);
+    const re = shift(reqEnd);
+    if (rs <= re) return re <= propLen;
+    // シフト後もラップする = 深夜0時をまたいで prop の外へ出る要求 → prop が
+    // 終日(24h)でない限り包含され得ない。
+    return propLen >= DAY;
+  }
+  const point = reqStart !== null ? reqStart : (reqEnd as number);
+  return shift(point) <= propLen;
+}
+
 interface ReviewStat { average: number; count: number }
 
 interface Props {
@@ -111,6 +148,7 @@ type FilterSnapshot = {
   maxKmFromRef: number | "";
   requiresDaily: boolean; requiresParking: boolean; requires200V: boolean;
   facilities: string[];
+  hoursFrom: string; hoursTo: string;
   reference: Reference;
   sort: SortKey;
 };
@@ -149,6 +187,12 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
     const tag = FACILITY_TAGS.find((t) => t.ja === f);
     parts.push(en && tag ? tag.en : f);
   }
+  if (s.hoursFrom || s.hoursTo) {
+    const label = en ? "Hours" : "利用";
+    if (s.hoursFrom && s.hoursTo) parts.push(`${label} ${s.hoursFrom}〜${s.hoursTo}`);
+    else if (s.hoursFrom) parts.push(`${label} ${s.hoursFrom}〜`);
+    else parts.push(`${label} 〜${s.hoursTo}`);
+  }
   return parts.join(" / ");
 }
 
@@ -160,6 +204,7 @@ function snapshotKey(s: FilterSnapshot): string {
     s.minCeiling, s.maxCeiling,
     s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V,
     [...(s.facilities ?? [])].sort(),
+    s.hoursFrom, s.hoursTo,
     typeof s.maxKmFromRef === "number" ? s.reference.id : null,
   ]);
 }
@@ -237,6 +282,8 @@ export default function CatalogClient({
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
   const [facilities, setFacilities] = useState<string[]>([]);
+  const [hoursFrom, setHoursFrom] = useState("");
+  const [hoursTo, setHoursTo] = useState("");
 
   // Sort
   const [sort, setSort] = useState<SortKey>("newest");
@@ -250,6 +297,7 @@ export default function CatalogClient({
     setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
     setFacilities([]);
+    setHoursFrom(""); setHoursTo("");
     setSort("newest");
   }, []);
 
@@ -262,6 +310,7 @@ export default function CatalogClient({
     minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
     facilities,
+    hoursFrom, hoursTo,
     reference, sort,
   }), [
     q, category, area, studioType,
@@ -269,6 +318,7 @@ export default function CatalogClient({
     minCeiling, maxCeiling,
     maxKmFromRef, requiresDaily, requiresParking, requires200V,
     facilities,
+    hoursFrom, hoursTo,
     reference, sort,
   ]);
 
@@ -287,6 +337,7 @@ export default function CatalogClient({
     setMaxKmFromRef(s.maxKmFromRef);
     setRequiresDaily(s.requiresDaily); setRequiresParking(s.requiresParking); setRequires200V(s.requires200V);
     setFacilities(s.facilities ?? []);
+    setHoursFrom(s.hoursFrom ?? ""); setHoursTo(s.hoursTo ?? "");
     setReference(s.reference);
     setSort(s.sort);
   }, []);
@@ -338,6 +389,14 @@ export default function CatalogClient({
         const hay = `${p.title} ${p.summary} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!facilities.every((f) => hay.includes(f.toLowerCase()))) return false;
       }
+      if (hoursFrom || hoursTo) {
+        const propStart = parseHHMM(p.customHoursStart);
+        const propEnd = parseHHMM(p.customHoursEnd);
+        if (propStart === null || propEnd === null) return false; // 利用時間未設定の物件は除外
+        const reqStart = parseHHMM(hoursFrom);
+        const reqEnd = parseHHMM(hoursTo);
+        if (!timeWindowMatches(propStart, propEnd, reqStart, reqEnd)) return false;
+      }
       if (q.trim()) {
         const h = `${p.title} ${p.summary} ${p.city} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!h.includes(q.trim().toLowerCase())) return false;
@@ -374,6 +433,7 @@ export default function CatalogClient({
     maxKmFromRef,
     requiresDaily, requiresParking, requires200V,
     facilities,
+    hoursFrom, hoursTo,
     q, sort,
   ]);
 
@@ -432,6 +492,8 @@ export default function CatalogClient({
             requiresParking={requiresParking} setRequiresParking={setRequiresParking}
             requires200V={requires200V} setRequires200V={setRequires200V}
             facilities={facilities} setFacilities={setFacilities}
+            hoursFrom={hoursFrom} setHoursFrom={setHoursFrom}
+            hoursTo={hoursTo} setHoursTo={setHoursTo}
             reset={reset}
             recent={recent} applyRecent={applySnapshot} removeRecent={removeRecent}
             resultCount={computed.length} totalCount={items.length}
@@ -514,6 +576,8 @@ interface FiltersProps {
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
   facilities: string[]; setFacilities: (v: string[]) => void;
+  hoursFrom: string; setHoursFrom: (v: string) => void;
+  hoursTo: string; setHoursTo: (v: string) => void;
   reset: () => void;
   recent: FilterSnapshot[];
   applyRecent: (s: FilterSnapshot) => void;
@@ -701,6 +765,35 @@ function FiltersPanel(p: FiltersProps) {
             setMin={p.setMinCeiling} setMax={p.setMaxCeiling}
             options={CEILING_OPTS} format={(v) => `${v}m`}
           />
+          <Row label={en ? "Hours" : "利用時間"}>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={p.hoursFrom}
+                onChange={(e) => p.setHoursFrom(e.target.value)}
+                aria-label={en ? "From" : "開始時刻"}
+                className={`${inputCls} w-[108px]`}
+              />
+              <span className="mono text-[12px] opacity-50">{en ? "–" : "〜"}</span>
+              <input
+                type="time"
+                value={p.hoursTo}
+                onChange={(e) => p.setHoursTo(e.target.value)}
+                aria-label={en ? "To" : "終了時刻"}
+                className={`${inputCls} w-[108px]`}
+              />
+              {(p.hoursFrom || p.hoursTo) && (
+                <button
+                  type="button"
+                  onClick={() => { p.setHoursFrom(""); p.setHoursTo(""); }}
+                  aria-label={en ? "Clear hours filter" : "利用時間の条件をクリア"}
+                  className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-2 py-1.5 hover:border-ink transition shrink-0"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </Row>
         </div>
       </div>
 
