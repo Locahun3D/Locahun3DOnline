@@ -146,11 +146,28 @@ export default function ContactForm({ type }: { type: ContactType }) {
 
         <div className="border-t border-line pt-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label={type === "listing" ? "ご担当者名" : "お名前"} optional>
-              <input name="name" type="text" placeholder="山田 太郎" className={inputClass} />
+            <Field
+              label={type === "listing" ? "ご担当者名" : "お名前"}
+              required={type === "listing"}
+              optional={type !== "listing"}
+            >
+              <input
+                name="name"
+                type="text"
+                placeholder="山田 太郎"
+                required={type === "listing"}
+                className={inputClass}
+              />
             </Field>
-            <Field label="メールアドレス" optional>
-              <input name="email" type="email" placeholder="info@example.com" ref={emailRef} className={inputClass} />
+            <Field label="メールアドレス" required={type === "listing"} optional={type !== "listing"}>
+              <input
+                name="email"
+                type="email"
+                placeholder="info@example.com"
+                required={type === "listing"}
+                ref={emailRef}
+                className={inputClass}
+              />
             </Field>
           </div>
 

@@ -39,6 +39,21 @@ const inputSchema = z.object({
   message: z.string().trim().min(1, "お問い合わせ内容を入力してください").max(4000),
 });
 
+// 掲載依頼(listing)は担当者へ連絡が取れないと案内を進められないため、
+// ご担当者名・メールアドレスを必須にする（他 type は匿名送信を維持）。
+const listingContactSchema = inputSchema
+  .extend({
+    name: z.string().trim().min(1, "ご担当者名を入力してください").max(80),
+    email: z
+      .string()
+      .trim()
+      .min(1, "メールアドレスを入力してください")
+      .max(120)
+      .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+        message: "メールアドレスの形式が正しくありません",
+      }),
+  });
+
 export type ContactState =
   | { ok: true }
   | { ok: false; error: string }
@@ -71,7 +86,7 @@ export async function submitContactRequestAction(
   // formData.get() が null を返す（未入力の空文字とは別扱い）。z.string() は
   // null を受け付けないので、ここで空文字に正規化してから渡す。
   const str = (key: string) => formData.get(key)?.toString() ?? "";
-  const parsed = inputSchema.safeParse({
+  const raw = {
     type: str("type"),
     name: str("name"),
     email: str("email"),
@@ -83,7 +98,9 @@ export async function submitContactRequestAction(
     propertyName: str("propertyName"),
     address: str("address"),
     message: str("message"),
-  });
+  };
+  const parsed =
+    raw.type === "listing" ? listingContactSchema.safeParse(raw) : inputSchema.safeParse(raw);
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message ?? "入力内容をご確認ください。";
     return { ok: false, error: first };

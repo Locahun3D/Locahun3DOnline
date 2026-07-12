@@ -21,8 +21,8 @@ const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; 
   listing: {
     title: "掲載依頼",
     titleEn: "List your space",
-    lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。",
-    ledeEn: "We'll review your space and walk you through listing it (3D scan, shoot, publish).",
+    lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。現在、キャンペーンにより掲載費は無料です。",
+    ledeEn: "We'll review your space and walk you through listing it (3D scan, shoot, publish). Listing is currently free during our launch campaign.",
   },
   general: {
     title: "ご相談",
@@ -78,6 +78,11 @@ export default async function ContactTypePage({
         <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-3">
           {en ? copy.titleEn : copy.title}
         </h1>
+        {t === "listing" && (
+          <div className="inline-block mono text-[10px] tracking-[0.2em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-3 py-1 mb-4">
+            {en ? "Free during our launch campaign" : "現在、掲載無料キャンペーン中"}
+          </div>
+        )}
         <p className="text-[13.5px] text-muted leading-[1.9] mb-8">
           {en ? copy.ledeEn : copy.lede}
         </p>

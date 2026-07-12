@@ -61,8 +61,35 @@ export default async function ContactHubPage() {
         </p>
       </header>
 
-      <div className="grid sm:grid-cols-2 gap-4 max-w-[760px] mx-auto">
-        {CONTACT_TYPES.map((type) => {
+      {/* ピックアップ — 掲載依頼（無料キャンペーン中）を優先訴求 */}
+      <Link
+        href={lh("/contact/listing")}
+        className="block max-w-[760px] mx-auto mb-6 bg-white border-2 border-accent px-7 py-7 hover:bg-accent/[0.04] transition relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 mono text-[9.5px] tracking-[0.2em] uppercase bg-accent text-white px-3 py-1">
+          {en ? "Pick up" : "ピックアップ"}
+        </div>
+        <div className="mono text-[10px] tracking-[0.3em] uppercase text-accent mb-3">
+          /contact/listing
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5 mb-2">
+          <div className="text-[18px] font-bold">
+            {en ? CONTACT_TYPE_LABEL_EN.listing : CONTACT_TYPE_LABEL.listing}
+          </div>
+          <span className="mono text-[9.5px] tracking-[0.16em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
+            {en ? "Free during our launch campaign" : "現在、掲載無料キャンペーン中"}
+          </span>
+        </div>
+        <p className="text-[12.5px] text-muted leading-[1.85] mb-3 max-w-[56ch]">
+          {en ? HUB_CARDS.find((c) => c.type === "listing")!.descEn : HUB_CARDS.find((c) => c.type === "listing")!.desc}
+        </p>
+        <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
+          {(en ? HUB_CARDS.find((c) => c.type === "listing")!.goEn : HUB_CARDS.find((c) => c.type === "listing")!.go)} →
+        </div>
+      </Link>
+
+      <div className="grid sm:grid-cols-3 gap-4 max-w-[760px] mx-auto">
+        {CONTACT_TYPES.filter((type) => type !== "listing").map((type) => {
           const card = HUB_CARDS.find((c) => c.type === type)!;
           return (
             <Link
