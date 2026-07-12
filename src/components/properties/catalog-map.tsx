@@ -35,30 +35,72 @@ interface Props {
 }
 
 /**
- * Centers the map on the reference point with a ~50 km radius default view.
+ * Fits the view to a ~50 km radius box around the reference point.
  *
  * 1° latitude ≈ 111 km. 1° longitude ≈ 111 × cos(lat) km.
  * So a 50 km half-box around `reference` ≈ ±0.45° lat × ±(50 / 111·cosφ)° lng.
  * Markers outside this box are still rendered — the user can pan / zoom out.
- *
+ */
+function fitToReference(map: L.Map, reference: NonNullable<Props["reference"]>) {
+  const RADIUS_KM = 50;
+  const latDelta = RADIUS_KM / 111;
+  const lngDelta =
+    RADIUS_KM / (111 * Math.cos((reference.lat * Math.PI) / 180));
+  const bounds = L.latLngBounds(
+    [reference.lat - latDelta, reference.lng - lngDelta],
+    [reference.lat + latDelta, reference.lng + lngDelta],
+  );
+  map.fitBounds(bounds, { padding: [20, 20], animate: true });
+}
+
+/**
  * Re-runs whenever the reference changes (preset click, geolocation, typed search),
- * which intentionally snaps the view back. If you want to add a manual "fit all
- * markers" button later, call map.fitBounds(items + reference) from a control.
+ * which intentionally snaps the view back.
  */
 function ViewportFitter({ reference }: { reference: Props["reference"] }) {
   const map = useMap();
   useEffect(() => {
-    if (!reference) return;
-    const RADIUS_KM = 50;
-    const latDelta = RADIUS_KM / 111;
-    const lngDelta =
-      RADIUS_KM / (111 * Math.cos((reference.lat * Math.PI) / 180));
-    const bounds = L.latLngBounds(
-      [reference.lat - latDelta, reference.lng - lngDelta],
-      [reference.lat + latDelta, reference.lng + lngDelta],
-    );
-    map.fitBounds(bounds, { padding: [20, 20], animate: true });
+    if (reference) fitToReference(map, reference);
   }, [reference, map]);
+  return null;
+}
+
+/**
+ * ズーム(+/−)コントロールの直下に置く「最初の表示に戻る」ボタン。
+ * パン/ズームで迷子になっても、参照地点±50kmの初期ビューへワンタップで復帰。
+ * Leaflet純正の leaflet-bar スタイルに乗せて +/− と見た目を揃える。
+ */
+function ResetViewControl({ reference }: { reference: Props["reference"] }) {
+  const map = useMap();
+  // クリック時点の最新 reference を参照する（コントロールDOMは初回のみ生成）。
+  const refLatest = useRef(reference);
+  refLatest.current = reference;
+
+  useEffect(() => {
+    const control = new L.Control({ position: "topleft" });
+    control.onAdd = () => {
+      const div = L.DomUtil.create("div", "leaflet-bar");
+      const a = L.DomUtil.create("a", "", div);
+      a.href = "#";
+      a.title = "最初の表示に戻る / Reset view";
+      a.setAttribute("role", "button");
+      a.setAttribute("aria-label", "最初の表示に戻る");
+      a.textContent = "⊕";
+      a.style.fontSize = "15px";
+      L.DomEvent.on(a, "click", (e) => {
+        L.DomEvent.preventDefault(e);
+        L.DomEvent.stopPropagation(e);
+        const r = refLatest.current;
+        if (r) fitToReference(map, r);
+      });
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    control.addTo(map);
+    return () => {
+      control.remove();
+    };
+  }, [map]);
   return null;
 }
 
@@ -108,6 +150,7 @@ export default function CatalogMap({
         <TileLayer attribution={tile.attribution} url={tile.url} detectRetina />
 
         <ViewportFitter reference={reference} />
+        <ResetViewControl reference={reference} />
 
         {/* Reference marker */}
         {reference && (
