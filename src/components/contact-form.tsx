@@ -10,6 +10,30 @@ const RENDERED_AT_FIELD = "_rt";
 const inputClass =
   "w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition";
 
+/** バグ報告の「ご利用環境」欄を自動入力するための簡易 UA 解析。 */
+function detectEnvironment(ua: string): string {
+  let os = "";
+  if (/Windows/i.test(ua)) os = "Windows";
+  else if (/iPhone|iPad|iPod/i.test(ua)) os = "iOS";
+  else if (/Mac OS X/i.test(ua)) os = "macOS";
+  else if (/Android/i.test(ua)) os = "Android";
+  else if (/Linux/i.test(ua)) os = "Linux";
+
+  let browser = "";
+  const edge = ua.match(/Edg\/([\d.]+)/);
+  const chrome = ua.match(/Chrome\/([\d.]+)/);
+  const firefox = ua.match(/Firefox\/([\d.]+)/);
+  if (edge) browser = `Edge ${edge[1].split(".")[0]}`;
+  else if (chrome) browser = `Chrome ${chrome[1].split(".")[0]}`;
+  else if (firefox) browser = `Firefox ${firefox[1].split(".")[0]}`;
+  else if (/Safari\//.test(ua)) {
+    const v = ua.match(/Version\/([\d.]+)/);
+    browser = `Safari${v ? " " + v[1].split(".")[0] : ""}`;
+  }
+
+  return [os, browser].filter(Boolean).join(" / ");
+}
+
 /**
  * /contact/[type] の各専用ページで使う共通フォーム。type ごとに項目を出し分ける
  * （デザイン案 Pattern 7 の承認済みフィールド構成をそのまま実装）。
@@ -21,9 +45,13 @@ export default function ContactForm({ type }: { type: ContactType }) {
   );
   const renderedAtRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const environmentRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (renderedAtRef.current) renderedAtRef.current.value = String(Date.now());
-  }, []);
+    if (type === "bug" && environmentRef.current && !environmentRef.current.value) {
+      environmentRef.current.value = detectEnvironment(navigator.userAgent);
+    }
+  }, [type]);
 
   if (state?.ok) {
     // フォームは匿名送信を許可しているため、メール未入力なら「返信を待つ」
@@ -79,16 +107,22 @@ export default function ContactForm({ type }: { type: ContactType }) {
                 className={`${inputClass} leading-relaxed resize-y`}
               />
             </Field>
-            <Field label="ご利用環境" optional>
-              <input name="environment" type="text" placeholder="例: Windows 11 / Chrome 138" className={inputClass} />
+            <Field label="ご利用環境" optional note="自動入力・修正可">
+              <input
+                name="environment"
+                type="text"
+                placeholder="例: Windows 11 / Chrome 138"
+                ref={environmentRef}
+                className={inputClass}
+              />
             </Field>
           </>
         )}
 
         {type === "request" && (
           <>
-            <Field label="希望エリア" required>
-              <input name="area" type="text" placeholder="例: 東京都 世田谷区 周辺" className={inputClass} />
+            <Field label="希望エリアや物件" required>
+              <input name="area" type="text" placeholder="例: 東京都 世田谷区 周辺 / 倉庫・古民家など" className={inputClass} />
             </Field>
             <Field label="撮影の用途・ほしい条件" required>
               <textarea
@@ -120,12 +154,12 @@ export default function ContactForm({ type }: { type: ContactType }) {
                 <input name="phone" type="tel" placeholder="03-0000-0000" className={inputClass} />
               </Field>
             </div>
-            <Field label="物件の概要" required>
+            <Field label="掲載・スキャン希望日について" required>
               <textarea
                 name="message"
                 rows={4}
                 required
-                placeholder="広さ・天井高・電源・駐車場・撮影受け入れ実績など"
+                placeholder="例: できるだけ早く掲載したい。スキャンは○月○日以降の平日午前が対応しやすいです。"
                 className={`${inputClass} leading-relaxed resize-y`}
               />
             </Field>
@@ -200,11 +234,13 @@ function Field({
   label,
   required,
   optional,
+  note,
   children,
 }: {
   label: string;
   required?: boolean;
   optional?: boolean;
+  note?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -213,6 +249,7 @@ function Field({
         {label}
         {required && <span className="text-red-500 text-[11px] ml-1">必須</span>}
         {optional && <span className="text-muted text-[11px] ml-1">任意</span>}
+        {note && <span className="text-muted text-[11px] ml-1.5">（{note}）</span>}
       </span>
       {children}
     </label>
