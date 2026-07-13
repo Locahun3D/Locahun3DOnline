@@ -182,9 +182,11 @@ export default function CatalogMap({
               radius={active ? 11 : 6}
               pathOptions={{
                 color: "#5ec8e8",
-                weight: active ? 3 : 1,
-                fillColor: active ? "#5ec8e8" : "#1a1a1a",
-                fillOpacity: active ? 0.95 : 0.9,
+                weight: active ? 3 : 2,
+                // 非アクティブは白地＋青枠（白青〇）。以前は暗色 #1a1a1a で
+                // 地図上で黒丸に見えてしまっていた。
+                fillColor: active ? "#5ec8e8" : "#ffffff",
+                fillOpacity: active ? 0.95 : 1,
               }}
               eventHandlers={{
                 click: () => onMarkerClick?.(p.id),
