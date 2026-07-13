@@ -17,8 +17,8 @@ interface UseCaptureResult {
   capturedUrl: string | null;
   capturedIdx: number | null;
   queueLength: number;
-  startCapture: (splatUrl: string, propertyId: string, itemIdx: number) => void;
-  queueCaptures: (items: QueueItem[]) => void;
+  startCapture: (splatUrl: string, propertyId: string, itemIdx: number, warmupExtraMs?: number) => void;
+  queueCaptures: (items: QueueItem[], warmupExtraMs?: number) => void;
   cancel: () => void;
   clearResult: () => void;
 }
@@ -175,6 +175,9 @@ export function usePreviewCapture(): UseCaptureResult {
   const abortRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const busyRef = useRef(false);
+  // このバッチ（単発 or キュー全体）に適用する録画前ウォームアップの追加ms。
+  // startCapture/queueCaptures 開始時にセットし、runOne が毎回読む。
+  const warmupRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -288,7 +291,7 @@ export function usePreviewCapture(): UseCaptureResult {
         }
       }
       const fileName = splatUrl.split("/").pop()?.split("?")[0] || "";
-      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 10 });
+      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 10, warmupExtraMs: warmupRef.current });
       // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
       // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
       if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;
@@ -418,7 +421,8 @@ export function usePreviewCapture(): UseCaptureResult {
   }
 
   const startCapture = useCallback(
-    (splatUrl: string, propertyId: string, itemIdx: number) => {
+    (splatUrl: string, propertyId: string, itemIdx: number, warmupExtraMs = 0) => {
+      warmupRef.current = Math.max(0, warmupExtraMs);
       if (busyRef.current) {
         queueRef.current.push({ splatUrl, propertyId, itemIdx });
         setQueueLength(queueRef.current.length);
@@ -430,8 +434,9 @@ export function usePreviewCapture(): UseCaptureResult {
   );
 
   const queueCaptures = useCallback(
-    (items: QueueItem[]) => {
+    (items: QueueItem[], warmupExtraMs = 0) => {
       if (!items.length) return;
+      warmupRef.current = Math.max(0, warmupExtraMs);
       const [first, ...rest] = items;
       if (!busyRef.current) {
         queueRef.current.push(...rest);

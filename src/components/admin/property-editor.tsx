@@ -80,6 +80,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const capture = usePreviewCapture();
+  // プレビュー動画生成の録画前ウォームアップを +3秒 する（重いシーンで画質が
+  // 乗り切る前に録画が始まりボケるのを防ぐ）。既定OFF。
+  const [warmupPlus3, setWarmupPlus3] = useState(false);
+  const captureWarmupMs = warmupPlus3 ? 3000 : 0;
 
   const form = useForm<Property>({
     // zod's input type (fields with .default() are optional) differs from the
@@ -1448,9 +1452,22 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             >
               {/* ── 3DGS アイテム (複数・ラベル付き) ── */}
               <div className="mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-                    3DGS データ（フロア・区画別）
+                <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+                      3DGS データ（フロア・区画別）
+                    </div>
+                    {/* 動画生成のウォームアップ+3秒トグル。重いシーンでプレビュー
+                        動画がボケる時にON（録画前に画質を乗り切らせる）。 */}
+                    <label className="flex items-center gap-1.5 text-[11px] text-ink/70 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={warmupPlus3}
+                        onChange={(e) => setWarmupPlus3(e.target.checked)}
+                        className="accent-accent"
+                      />
+                      ウォームアップ +3秒（重いシーンのボケ対策）
+                    </label>
                   </div>
                   <button
                     type="button"
@@ -1539,7 +1556,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             ) && (
                             <button
                               type="button"
-                              onClick={() => capture.startCapture(watch(`splatItems.${idx}.splatUrl`), initial.id, idx)}
+                              onClick={() => capture.startCapture(watch(`splatItems.${idx}.splatUrl`), initial.id, idx, captureWarmupMs)}
                               className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                             >
                               {watch(`splatItems.${idx}.previewVideoUrl`) ? "再撮影" : "動画生成"}
@@ -1585,7 +1602,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             }
                             setValue("splatDataUpdatedAt", now.toISOString(), { shouldDirty: true });
                             triggerAutoSave();
-                            capture.startCapture(uploadedUrl, initial.id, idx);
+                            capture.startCapture(uploadedUrl, initial.id, idx, captureWarmupMs);
                           }}
                         />
                       )}

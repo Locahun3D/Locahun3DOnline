@@ -21,6 +21,11 @@ interface ViewerUrlOptions {
   headless?: boolean;
   /** 360° オービット1周の秒数（capture/orbit 用）。 */
   orbitSec?: number;
+  /**
+   * 録画前ウォームアップの追加時間(ms)。既定2秒に加算される。重いシーンで
+   * 画質が乗り切る前に録画が始まりボケるのを防ぐ用途（capture 時のみ有効）。
+   */
+  warmupExtraMs?: number;
 }
 
 export function buildViewerUrl(
@@ -36,6 +41,9 @@ export function buildViewerUrl(
   // （headless）でないと解像度安定化ループが hidden タブで永久停止する。
   if (options?.capture || options?.headless) params.set("headless", "1");
   if (options?.orbitSec) params.set("orbitSec", String(options.orbitSec));
+  if (options?.warmupExtraMs && options.warmupExtraMs > 0) {
+    params.set("warmupExtra", String(Math.round(options.warmupExtraMs)));
+  }
   if (options?.protected) params.set("protected", "1");
   return `${VIEWER_PATH}?${params}`;
 }
