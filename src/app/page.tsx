@@ -33,29 +33,29 @@ export default async function HomePage() {
         {/* Left — SCAN → 製品サイト (同タブ) */}
         <a
           href={scanUrl}
-          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 pt-16 sm:pt-48 pb-10 sm:pb-28 border-b md:border-b-0 md:border-r border-line overflow-hidden"
+          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 py-4 sm:pt-48 sm:pb-28 min-h-[43vh] md:min-h-0 border-b md:border-b-0 md:border-r border-line overflow-hidden"
         >
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
             style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(255,180,84,.08) 0%, transparent 70%)" }} />
-          <span className="leader text-[30vw] sm:text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">1</span>
+          <span className="leader text-[20vw] sm:text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">1</span>
           <div className="relative z-10 flex flex-col items-center transition-transform duration-500 ease-out group-hover:-translate-y-2">
-            <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
+            <div className="hidden sm:block mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
               L · O · C · A · H · U · N&nbsp;&nbsp;&nbsp;3&nbsp;D
             </div>
-            <ScanMark size={42} className="mb-6 transition-transform duration-500 group-hover:scale-110" />
-            <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-5">
+            <ScanMark size={42} className="mb-3 sm:mb-6 transition-transform duration-500 group-hover:scale-110" />
+            <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-2 sm:mb-5">
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
               ロケハン3D
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
-            <h2 className="brand text-[clamp(2.6rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
+            <h2 className="brand text-[clamp(2rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
               {t("home.scan.h2")}
             </h2>
-            <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] transition-opacity duration-500 group-hover:opacity-100">
+            <p className="mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100">
               <J k="home.scan.desc" />
             </p>
-            <span className="mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-accent transition-all duration-300">
+            <span className="mt-4 sm:mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-accent transition-all duration-300">
               {t("home.scan.cta")}
               <span className="group-hover:translate-x-2 transition-transform duration-300">↗</span>
             </span>
@@ -65,29 +65,29 @@ export default async function HomePage() {
         {/* Right — ONLINE */}
         <Link
           href={lh("/properties")}
-          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 pt-16 sm:pt-48 pb-10 sm:pb-28 overflow-hidden"
+          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 py-4 sm:pt-48 sm:pb-28 min-h-[43vh] md:min-h-0 overflow-hidden"
         >
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
             style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(94,200,232,.08) 0%, transparent 70%)" }} />
-          <span className="leader text-[30vw] sm:text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">2</span>
+          <span className="leader text-[20vw] sm:text-[42vw] md:text-[22vw] serif transition-all duration-700 group-hover:scale-110 group-hover:opacity-[0.06]">2</span>
           <div className="relative z-10 flex flex-col items-center transition-transform duration-500 ease-out group-hover:-translate-y-2">
-            <div className="mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
+            <div className="hidden sm:block mono text-[10px] tracking-[0.45em] text-muted opacity-50 mb-5 whitespace-nowrap">
               L · O · C · A · H · U · N&nbsp;&nbsp;&nbsp;3&nbsp;D
             </div>
-            <ScanMark size={42} reticle="#5ec8e8" className="mb-6 transition-transform duration-500 group-hover:scale-110" />
-            <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-5">
+            <ScanMark size={42} reticle="#5ec8e8" className="mb-3 sm:mb-6 transition-transform duration-500 group-hover:scale-110" />
+            <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-2 sm:mb-5">
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
               ロケハン3D
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
-            <h2 className="brand text-[clamp(2.6rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">
+            <h2 className="brand text-[clamp(2rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">
               {t("home.online.h2")}
             </h2>
-            <p className="mt-7 max-w-[30ch] text-[13px] text-muted leading-[2] transition-opacity duration-500 group-hover:opacity-100">
+            <p className="mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100">
               <J k="home.online.desc" />
             </p>
-            <span className="mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-[#5ec8e8] transition-all duration-300">
+            <span className="mt-4 sm:mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-[#5ec8e8] transition-all duration-300">
               {t("home.online.cta")}
               <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
             </span>
