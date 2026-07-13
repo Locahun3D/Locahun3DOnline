@@ -93,6 +93,9 @@ export default function PropertyDetailView({
   property,
   others,
   preview = false,
+  sharePreview = false,
+  previewToken,
+  previewExpiresAt,
   freeAccess = false,
   dataSaleFree = false,
   dataSaleDisabled = false,
@@ -117,6 +120,13 @@ export default function PropertyDetailView({
   property: Property;
   others: Property[];
   preview?: boolean;
+  /** 先方スタジオ共有用の限定プレビュー(ログイン不要)。掲示板/レビュー/購入/関連を抑制し、
+   *  3DGS は previewToken 経由で課金ゲートを外して閲覧可能にする。 */
+  sharePreview?: boolean;
+  /** 共有プレビュー時のアクセストークン。ViewerGate → /api/viewer-asset に渡す。 */
+  previewToken?: string;
+  /** 共有プレビューの有効期限(バナー表示用)。 */
+  previewExpiresAt?: string;
   freeAccess?: boolean;
   /** 3Dデータ販売の限定無料期間中: 販売中データの購入価格を¥0にする。 */
   dataSaleFree?: boolean;
@@ -281,7 +291,25 @@ export default function PropertyDetailView({
 
   return (
     <article className="theme-online">
-      {preview && (
+      {preview && sharePreview && (
+        <div className="frame mb-0 sticky top-16 z-40 border border-[#5ec8e8]/40 bg-[#0c1b22] backdrop-blur-sm px-4 py-3 text-[13px] mono tracking-[0.08em] text-[#8fdcf0] flex flex-wrap items-center justify-between gap-3">
+          <span>
+            ● 限定プレビュー（共有用・非公開）—
+            公開前の物件を確認いただいています。
+          </span>
+          {previewExpiresAt && (
+            <span className="text-[#8fdcf0]/70 normal-case tracking-normal">
+              有効期限:{" "}
+              {new Date(previewExpiresAt).toLocaleDateString("ja-JP", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
+          )}
+        </div>
+      )}
+      {preview && !sharePreview && (
         <div className="frame mb-0 sticky top-16 z-40 border border-amber-400/50 bg-amber-950 backdrop-blur-sm px-4 py-3 text-[13px] mono tracking-[0.08em] text-amber-300 flex flex-wrap items-center justify-between gap-3">
           <span>
             ● 管理プレビュー — ステータス:{" "}
@@ -817,6 +845,7 @@ export default function PropertyDetailView({
               canViewNdaOnly={canViewNdaOnly}
               hasViewerAccess={hasViewerAccess}
               signedIn={signedIn}
+              previewToken={previewToken}
               unlockedItemIds={unlockedItemIds}
             />
           </section>
@@ -862,6 +891,7 @@ export default function PropertyDetailView({
                     freeAccess={freeAccess}
                     hasSubscription={hasViewerAccess}
                     signedIn={signedIn}
+                    previewToken={previewToken}
                     alreadyUnlocked={unlockedItemIds.includes(item.id)}
                   />
                   {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
@@ -1031,8 +1061,9 @@ export default function PropertyDetailView({
             確認に専念させる。 */}
 
         {/* ══════════════════════════════════════════════════
-         *  Related studios
+         *  Related studios（共有プレビューでは非表示 — 確認対象の物件に専念）
          * ══════════════════════════════════════════════════ */}
+        {!sharePreview && (
         <section className="mb-20">
           <Eyebrow en="RELATED" jp={en ? "Similar studios" : "類似スタジオ"} />
           {others.length > 0 ? (
@@ -1089,6 +1120,7 @@ export default function PropertyDetailView({
             </div>
           )}
         </section>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════

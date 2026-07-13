@@ -74,6 +74,7 @@ next-env.d.ts
 /data/contact-requests.json
 /data/reviews.json
 /data/bookmark-shares.json
+/data/property-previews.json
 /data/comments.json
 
 # Build / deploy logs

@@ -17,6 +17,7 @@ export default function StudioPageBlocks({
   canViewNdaOnly = false,
   hasViewerAccess = false,
   signedIn = false,
+  previewToken,
   unlockedItemIds = [],
 }: {
   blocks: PageBlock[];
@@ -26,12 +27,13 @@ export default function StudioPageBlocks({
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
   signedIn?: boolean;
+  previewToken?: string;
   unlockedItemIds?: string[];
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} unlockedItemIds={unlockedItemIds} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} previewToken={previewToken} unlockedItemIds={unlockedItemIds} />
       ))}
     </div>
   );
@@ -45,6 +47,7 @@ function BlockView({
   canViewNdaOnly = false,
   hasViewerAccess = false,
   signedIn = false,
+  previewToken,
   unlockedItemIds = [],
 }: {
   block: PageBlock;
@@ -54,6 +57,7 @@ function BlockView({
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
   signedIn?: boolean;
+  previewToken?: string;
   unlockedItemIds?: string[];
 }) {
   switch (block.kind) {
@@ -128,6 +132,7 @@ function BlockView({
                 freeAccess={freeAccess}
                 hasSubscription={hasViewerAccess}
                 signedIn={signedIn}
+                previewToken={previewToken}
                 alreadyUnlocked={unlockedItemIds.includes(item.id)}
               />
             ))}

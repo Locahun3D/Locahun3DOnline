@@ -49,6 +49,9 @@ interface Props {
   hasSubscription?: boolean;
   freeAccess?: boolean;
   signedIn?: boolean;
+  /** 先方スタジオ共有用の限定プレビュートークン。あればログイン/課金なしで視聴可
+   *  （/api/viewer-asset にトークンを渡し、サーバ側で検証して署名URLを発行）。 */
+  previewToken?: string;
   /** 既にこのシーンをアンロック済み（1年以内）なら無償再視聴。 */
   alreadyUnlocked?: boolean;
 }
@@ -63,6 +66,7 @@ export default function ViewerGate({
   hasSubscription = false,
   freeAccess = false,
   signedIn = false,
+  previewToken,
   alreadyUnlocked = false,
 }: Props) {
   const en = useLocale() === "en";
@@ -78,7 +82,9 @@ export default function ViewerGate({
   const [showSizeWarning, setShowSizeWarning] = useState(false);
   const LARGE_SCENE_MB = 500;
   const devBypass = process.env.NODE_ENV !== "production";
-  const effectiveSubscription = hasSubscription || devBypass || freeAccess;
+  // 共有プレビュートークンがあれば課金ゲートを外す（サーバ側で検証）。
+  const effectiveSubscription =
+    hasSubscription || devBypass || freeAccess || !!previewToken;
 
   const proxied = proxySplatUrl(splatUrl);
   const fullViewerUrl = buildViewerUrl(proxied, { protected: true });
@@ -258,7 +264,8 @@ export default function ViewerGate({
   const doOpenViewer = async (e: React.MouseEvent) => {
     e.preventDefault();
     setTokenError(null);
-    trackOpen();
+    // 共有プレビューは匿名アクセスなので閲覧計測は行わない（分析を汚さない）。
+    if (!previewToken) trackOpen();
     const win = window.open("", "_blank");
     const closeWin = () => {
       // トークン不足で開かない場合、先に開いた空タブは閉じる。
@@ -274,8 +281,11 @@ export default function ViewerGate({
       return;
     }
     try {
+      const previewQs = previewToken
+        ? `&preview=${encodeURIComponent(previewToken)}`
+        : "";
       const res = await fetch(
-        `/api/viewer-asset?key=${encodeURIComponent(splatUrl)}`,
+        `/api/viewer-asset?key=${encodeURIComponent(splatUrl)}${previewQs}`,
         { cache: "no-store" },
       );
       // 402 = トークン不足。ここで fallback すると /api/viewer-stream 経由で
@@ -353,16 +363,20 @@ export default function ViewerGate({
         <div className="w-full flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
           <div
             className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
-              freeAccess || alreadyUnlocked ? "text-green-600" : "text-accent"
+              previewToken || freeAccess || alreadyUnlocked
+                ? "text-green-600"
+                : "text-accent"
             }`}
           >
-            {freeAccess
-              ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
-              : alreadyUnlocked
-                ? en ? "● Unlocked · free re-view" : "● 視聴済み · 無料で再視聴"
-                : en
-                  ? `● ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
-                  : `● ${tokenCost} トークン消費`}
+            {previewToken
+              ? en ? "● Shared preview · no tokens used" : "● 共有プレビュー · トークン消費なし"
+              : freeAccess
+                ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
+                : alreadyUnlocked
+                  ? en ? "● Unlocked · free re-view" : "● 視聴済み · 無料で再視聴"
+                  : en
+                    ? `● ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
+                    : `● ${tokenCost} トークン消費`}
           </div>
 
           {!alreadyUnlocked && (

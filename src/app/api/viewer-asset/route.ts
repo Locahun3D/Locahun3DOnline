@@ -12,6 +12,7 @@ import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { presignViewerAsset, presignConfigured } from "@/lib/r2-presign";
 import { allowAssetDownload } from "@/lib/asset-rate-limit";
+import { propertyPreviewRepo, isPreviewExpired } from "@/lib/property-previews";
 
 export const runtime = "nodejs";
 
@@ -57,11 +58,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "signing not configured" }, { status: 503 });
     }
 
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
-    }
-
+    // key -> 物件/シーンの照合は認証前に行う（プレビュートークン検証にも使うため）。
+    // list() は draft/archived 含む全物件を返すので、公開前物件の splat も照合できる。
     const props = await propertyRepo.list();
     let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
     let matchedProperty: (typeof props)[number] | null = null;
@@ -80,6 +78,41 @@ export async function GET(req: Request) {
     }
     if (!matchedItem || !matchedProperty) {
       return NextResponse.json({ error: "視聴対象が見つかりません" }, { status: 404 });
+    }
+
+    /* ── 限定プレビュートークン経路（ログイン不要） ───────────────────
+     * 先方スタジオへの共有URL(/preview/[token])からの視聴。トークンが有効
+     * （存在・未期限切れ・その物件を指す）なら、認証・アクセスレベル・トークン
+     * 消費ゲートをすべて外して署名URLを発行する。トークンは物件1件に紐づくため、
+     * 他物件の splat キーには使えない（propertyId 一致を必須にする）。無効な
+     * トークンは黙って通常の認証経路へフォールバック（情報を漏らさない）。 */
+    const previewTokenParam = new URL(req.url).searchParams.get("preview") || "";
+    if (previewTokenParam) {
+      const preview = await propertyPreviewRepo.get(previewTokenParam);
+      if (
+        preview &&
+        !isPreviewExpired(preview) &&
+        preview.propertyId === matchedProperty.id
+      ) {
+        // 連続発行のレート制限はトークンをキーにして適用（userId の代わり）。
+        if (!allowAssetDownload(`preview:${previewTokenParam}`, key)) {
+          return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+        }
+        const signedPreview = await presignViewerAsset(key, PRESIGN_TTL_SECONDS);
+        if (!signedPreview) {
+          return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
+        }
+        return NextResponse.json(
+          { url: signedPreview },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      // 無効なプレビュートークン → 通常の認証経路へ（下へフォールスルー）。
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
     }
 
     const settings = await getSettings();
