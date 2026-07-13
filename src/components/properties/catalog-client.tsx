@@ -850,15 +850,15 @@ function FiltersPanel(p: FiltersProps) {
 // All filter inputs/selects use a light-gray field — dark text on gray so every
 // entry point reads as "type/pick here" against the dark panel.
 const inputCls =
-  "bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition placeholder:text-black/40 truncate";
+  "bg-neutral-300 text-black border border-line px-2 py-1 sm:px-2.5 sm:py-1.5 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition placeholder:text-black/40 truncate";
 
 // Alias kept for the keyword search (identical gray style).
 const inputWhiteCls = inputCls;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid md:grid-cols-[92px_1fr] gap-2.5 items-start">
-      <div className="text-[12px] font-medium text-ink/80 pt-1.5 leading-snug">
+    <div className="grid md:grid-cols-[88px_1fr] gap-x-2.5 gap-y-1 md:gap-2.5 items-start">
+      <div className="text-[11px] sm:text-[12px] font-medium text-ink/80 pt-0.5 md:pt-1.5 leading-snug">
         {label}
       </div>
       <div className="min-w-0">{children}</div>
@@ -879,7 +879,7 @@ function ToggleChip({
     <button
       type="button"
       onClick={() => onChange(!value)}
-      className={`px-3 py-1.5 min-h-[34px] inline-flex items-center font-sans text-[11px] border transition ${
+      className={`px-2 py-1 sm:px-3 sm:py-1.5 min-h-[30px] sm:min-h-[34px] inline-flex items-center font-sans text-[10.5px] sm:text-[11px] border transition ${
         value
           ? "border-accent text-accent bg-[#0e1a20]"
           : "border-line text-muted hover:border-ink hover:text-ink"
@@ -900,7 +900,7 @@ function FacilityChip({
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-1.5 min-h-[34px] inline-flex items-center font-sans text-[11px] border transition ${
+      className={`px-2 py-1 sm:px-3 sm:py-1.5 min-h-[30px] sm:min-h-[34px] inline-flex items-center font-sans text-[10.5px] sm:text-[11px] border transition ${
         active
           ? "border-accent text-accent bg-[#0e1a20]"
           : "border-line text-muted hover:border-ink hover:text-ink"

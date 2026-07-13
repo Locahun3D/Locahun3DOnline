@@ -130,13 +130,13 @@ export default function AccountDashboard({
       <NotificationList notifications={notifications} en={en} locale={locale} />
 
       {/* ── 上段: ステータス3枚 ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
         {/* TOKENS */}
-        <div className="bg-white border border-[#e2e7ec] p-5">
+        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
             {en ? "Tokens" : "トークン"}
           </div>
-          <div className="text-3xl font-bold text-[#1ea0c4]">{tokens}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-[#1ea0c4]">{tokens}</div>
           {resetNote.length > 0 && (
             <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
               {resetNote.join(en ? " · " : "・")}
@@ -145,11 +145,11 @@ export default function AccountDashboard({
         </div>
 
         {/* PLAN */}
-        <div className="bg-white border border-[#e2e7ec] p-5 flex flex-col">
+        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
             {en ? "Plan" : "プラン"}
           </div>
-          <div className="text-2xl font-bold">
+          <div className="text-xl sm:text-2xl font-bold">
             {planName}
             {!planFree && (
               <span className="text-[12px] font-normal text-[#7b8794] ml-2">
@@ -189,7 +189,7 @@ export default function AccountDashboard({
         </div>
 
         {/* 請求書・購入履歴 */}
-        <div className="bg-white border border-[#e2e7ec] p-5 flex flex-col">
+        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
             {en ? "Invoices & purchases" : "請求書・購入履歴"}
           </div>
@@ -229,9 +229,9 @@ export default function AccountDashboard({
       </div>
 
       {/* ── 中段: 保存した物件 / 閲覧履歴 ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
         {/* 保存した物件 */}
-        <div className="bg-white border border-[#e2e7ec] p-5 flex flex-col">
+        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
             {en ? "Saved properties" : "保存した物件"}
           </div>
@@ -283,7 +283,7 @@ export default function AccountDashboard({
         </div>
 
         {/* 閲覧履歴 */}
-        <div className="bg-white border border-[#e2e7ec] p-5 flex flex-col">
+        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794]">
               {en ? "Browsing history" : "閲覧履歴"}
@@ -350,9 +350,9 @@ export default function AccountDashboard({
       </div>
 
       {/* ── 下段: NDA / ギフトコード ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
         {/* NDA */}
-        <div className="bg-white border border-[#e2e7ec] p-5">
+        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
             NDA
           </div>

@@ -41,7 +41,7 @@ export default function LoginDevices({
   const overLimit = limit !== null && sessions.length > limit;
 
   return (
-    <div className="bg-white border border-[#e2e7ec] p-5">
+    <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794]">
           {en ? "Login devices" : "ログイン端末"}

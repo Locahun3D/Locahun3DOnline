@@ -133,7 +133,8 @@ export default function PlanCards({
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-y-9 lg:gap-y-5">
+      {/* モバイルは2列で横並び比較（1列だと1画面1プランで比較しづらい実害） */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5 md:gap-y-9 lg:gap-y-5">
         {PLANS.map((p) => {
           const price = priceFor(p, mode);
           const monthlyEquivalent = price > 0 ? price : 0;
@@ -143,7 +144,7 @@ export default function PlanCards({
             <div
               key={p.code}
               className={
-                "relative border p-6 flex flex-col gap-4 " +
+                "relative border p-2.5 sm:p-6 flex flex-col gap-2.5 sm:gap-4 " +
                 (p.accent
                   ? "border-accent bg-[#0e1a20]"
                   : "border-line bg-[#222]")
@@ -164,12 +165,12 @@ export default function PlanCards({
                 >
                   {p.code}
                 </div>
-                <div className="serif text-2xl mt-1">{p.name}</div>
+                <div className="serif text-base sm:text-2xl mt-0.5 sm:mt-1">{p.name}</div>
               </div>
 
-              <div className="border-y border-line py-4 min-h-[110px]">
+              <div className="border-y border-line py-2.5 sm:py-4 min-h-[76px] sm:min-h-[110px]">
                 <div className="flex items-baseline gap-1">
-                  <span className="serif text-3xl">
+                  <span className="serif text-xl sm:text-3xl">
                     {price === 0 ? "¥0" : `¥${price.toLocaleString("ja-JP")}`}
                   </span>
                   {price > 0 && (
@@ -197,14 +198,14 @@ export default function PlanCards({
                     {locale === "en" ? "−20% with annual billing" : "年払いで -20%"}
                   </div>
                 )}
-                <p className="text-[12px] text-muted mt-3 leading-[1.65]">
+                <p className="text-[10.5px] sm:text-[12px] text-muted mt-2 sm:mt-3 leading-[1.55] sm:leading-[1.65]">
                   {t(p.desc)}
                 </p>
               </div>
 
-              <ul className="text-[12px] space-y-1.5 leading-[1.6] text-muted">
+              <ul className="text-[10.5px] sm:text-[12px] space-y-1 sm:space-y-1.5 leading-[1.5] sm:leading-[1.6] text-muted">
                 {p.features.map((f) => (
-                  <li key={f} className="flex gap-2">
+                  <li key={f} className="flex gap-1.5 sm:gap-2">
                     <span className="text-accent mt-0.5">▸</span>
                     <span>{t(f)}</span>
                   </li>
@@ -216,7 +217,7 @@ export default function PlanCards({
                   const planKey = p.code.toLowerCase();
                   const isCurrent = signedIn && currentPlan === planKey;
                   const cls =
-                    "block text-center w-full px-4 py-2.5 mono text-[11px] tracking-[0.22em] uppercase border transition " +
+                    "block text-center w-full px-2 sm:px-4 py-2 sm:py-2.5 mono text-[9px] sm:text-[11px] tracking-[0.12em] sm:tracking-[0.22em] uppercase border transition " +
                     (p.accent
                       ? "border-accent text-accent hover:bg-accent hover:text-bg"
                       : "border-line hover:border-ink");
