@@ -338,6 +338,7 @@ export default function ViewerGate({
 
   /* --- Always open in new tab --- */
   return (
+    <>
     <div className="relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
       {previewVideoUrl ? (
         <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
@@ -356,10 +357,7 @@ export default function ViewerGate({
       >
         {/* w-full が必須: 親(.absolute...justify-end)は align-items:center で
             stretchしないため、このdivは本来コンテンツ幅にshrink-to-fitする。
-            中の警告ボックス/トークン不足ボックスが `w-full max-w-[46ch]` を
-            使っているが、幅未指定の親を基準に解決されてこのカードより広く
-            描画され、祖先の overflow-hidden で角が切れる（見切れる）バグの
-            原因だった。w-full を明示してその基準を確定させる。 */}
+            w-full を明示してこのカード幅を基準に確定させる。 */}
         <div className="w-full flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
           <div
             className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
@@ -396,78 +394,92 @@ export default function ViewerGate({
           >
             {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
           </a>
-
-          {/* スマホ/タブレットで大容量シーンを開こうとした時の事前警告。
-              max-width は使わない（ch 単位は Noto Sans JP のグリフ幅がラテン
-              文字と大きく異なり不安定、px 固定でもタブレット幅の広いカードでは
-              ボックスが親パネルより明確に狭くなり、左右に背景が見えて「見切れ
-              ている」ように見える実害があった）。w-full のみで親パネル＝カード
-              幅に常に一致させる。 */}
-          {showSizeWarning && (
-            <div className="mt-1 w-full rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-left">
-              <div className="text-[12px] font-bold text-amber-800 mb-1">
-                {en ? "This scene is large" : "データ容量が大きいシーンです"}
-              </div>
-              <p className="text-[12px] text-amber-900/90 leading-[1.7]">
-                {en
-                  ? `About ${sizeMb.toLocaleString()} MB. On phones and tablets this may load slowly, fail to render, or use a lot of mobile data. Viewing on a PC is recommended.`
-                  : `約 ${sizeMb.toLocaleString()} MB あります。スマートフォン・タブレットでは読み込みが遅い／描画できない／通信量を大きく消費する場合があります。PCでの閲覧を推奨します。`}
-              </p>
-              <div className="flex flex-wrap gap-2 mt-2.5">
-                <button
-                  type="button"
-                  onClick={(ev) => {
-                    setShowSizeWarning(false);
-                    doOpenViewer(ev);
-                  }}
-                  className="px-3.5 py-1.5 text-[11px] font-bold rounded-sm bg-amber-600 text-white hover:bg-amber-700 transition"
-                >
-                  {en ? "Continue anyway" : "それでも開く"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSizeWarning(false)}
-                  className="px-3.5 py-1.5 text-[11px] font-semibold rounded-sm border border-amber-300 text-amber-800 hover:bg-amber-100 transition"
-                >
-                  {en ? "Cancel" : "閉じる"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* トークン不足（サーバ 402）。フォールバックさせずここで明示する。 */}
-          {tokenError && (
-            <div className="mt-1 w-full rounded-md border border-red-300 bg-red-50 px-4 py-3 text-left">
-              <div className="text-[12px] font-bold text-red-700 mb-1">
-                {en ? "Not enough tokens" : "トークンが足りません"}
-              </div>
-              <p className="text-[12px] text-red-800/90 leading-[1.7]">
-                {en
-                  ? `This scene needs ${tokenError.tokenCost} token${
-                      tokenError.tokenCost > 1 ? "s" : ""
-                    }, but you have ${tokenError.tokenBalance + tokenError.bonusTokens}.`
-                  : `このシーンの視聴には ${tokenError.tokenCost} トークン必要ですが、残高は ${
-                      tokenError.tokenBalance + tokenError.bonusTokens
-                    } です。`}
-              </p>
-              <div className="flex flex-wrap gap-2 mt-2.5">
-                <Link
-                  href={lh(`/pricing?from=${propertyId}`)}
-                  className="px-3.5 py-1.5 text-[11px] font-bold rounded-sm bg-accent text-white hover:bg-accent/85 transition"
-                >
-                  {en ? "See plans" : "プランを見る"}
-                </Link>
-                <Link
-                  href={lh("/account")}
-                  className="px-3.5 py-1.5 text-[11px] font-semibold rounded-sm border border-red-300 text-red-700 hover:bg-red-100 transition"
-                >
-                  {en ? "My tokens" : "トークン残高"}
-                </Link>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
+
+    {/* 大容量シーンの事前警告 / トークン不足は、カード内(aspect-video +
+        overflow-hidden で高さ固定)に置くとスマホで警告の高さがカードを超え、
+        上端が見切れる。だからカードの外の「画面中央 fixed モーダル」にして
+        クリップから完全に逃がす（何度直しても再発していた見切れの根治）。 */}
+    {showSizeWarning && (
+      <div
+        className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4"
+        onClick={() => setShowSizeWarning(false)}
+      >
+        <div
+          className="w-full max-w-[400px] rounded-md border border-amber-300 bg-amber-50 px-5 py-4 text-left shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-[13px] font-bold text-amber-800 mb-1.5">
+            {en ? "This scene is large" : "データ容量が大きいシーンです"}
+          </div>
+          <p className="text-[12.5px] text-amber-900/90 leading-[1.75]">
+            {en
+              ? `About ${sizeMb.toLocaleString()} MB. On phones and tablets this may load slowly, fail to render, or use a lot of mobile data. Viewing on a PC is recommended.`
+              : `約 ${sizeMb.toLocaleString()} MB あります。スマートフォン・タブレットでは読み込みが遅い／描画できない／通信量を大きく消費する場合があります。PCでの閲覧を推奨します。`}
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3.5">
+            <button
+              type="button"
+              onClick={(ev) => {
+                setShowSizeWarning(false);
+                doOpenViewer(ev);
+              }}
+              className="px-4 py-2 text-[12px] font-bold rounded-sm bg-amber-600 text-white hover:bg-amber-700 transition"
+            >
+              {en ? "Continue anyway" : "それでも開く"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSizeWarning(false)}
+              className="px-4 py-2 text-[12px] font-semibold rounded-sm border border-amber-300 text-amber-800 hover:bg-amber-100 transition"
+            >
+              {en ? "Cancel" : "閉じる"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {tokenError && (
+      <div
+        className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4"
+        onClick={() => setTokenError(null)}
+      >
+        <div
+          className="w-full max-w-[400px] rounded-md border border-red-300 bg-red-50 px-5 py-4 text-left shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-[13px] font-bold text-red-700 mb-1.5">
+            {en ? "Not enough tokens" : "トークンが足りません"}
+          </div>
+          <p className="text-[12.5px] text-red-800/90 leading-[1.75]">
+            {en
+              ? `This scene needs ${tokenError.tokenCost} token${
+                  tokenError.tokenCost > 1 ? "s" : ""
+                }, but you have ${tokenError.tokenBalance + tokenError.bonusTokens}.`
+              : `このシーンの視聴には ${tokenError.tokenCost} トークン必要ですが、残高は ${
+                  tokenError.tokenBalance + tokenError.bonusTokens
+                } です。`}
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3.5">
+            <Link
+              href={lh(`/pricing?from=${propertyId}`)}
+              className="px-4 py-2 text-[12px] font-bold rounded-sm bg-accent text-white hover:bg-accent/85 transition"
+            >
+              {en ? "See plans" : "プランを見る"}
+            </Link>
+            <Link
+              href={lh("/account")}
+              className="px-4 py-2 text-[12px] font-semibold rounded-sm border border-red-300 text-red-700 hover:bg-red-100 transition"
+            >
+              {en ? "My tokens" : "トークン残高"}
+            </Link>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

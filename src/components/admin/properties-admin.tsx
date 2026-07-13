@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CATEGORY_LABEL,
@@ -35,6 +36,7 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
+  const router = useRouter();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -87,18 +89,27 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
           | { count?: number; total?: number; skipped?: string[] }
           | undefined;
         setSelected(new Set());
+        // サーバーアクションの revalidatePath だけに頼らず明示的に再取得する。
+        // これが無いと環境によっては一覧(items props)が古いまま＝「ステータスが
+        // 変わらない(効かない)」ように見える（今回の不具合の主因）。
+        router.refresh();
+        // 結果は必ず表示する（skip=0でも）。「反応がない＝バグ」の誤解を防ぎ、
+        // 公開要件不足でスキップされた場合の理由も明示する。
         if (
           res &&
           typeof res.total === "number" &&
-          typeof res.count === "number" &&
-          res.count < res.total
+          typeof res.count === "number"
         ) {
           const skip = res.total - res.count;
           setNotice(
-            `${label}: ${res.count}/${res.total} 件を処理（${skip} 件は公開要件を満たさずスキップ）`,
+            skip > 0
+              ? `${label}: ${res.count}/${res.total} 件を処理（${skip} 件は公開要件を満たさずスキップ）`
+              : `${label}: ${res.count} 件を処理しました`,
           );
         } else if (res && typeof res.count === "number") {
           setNotice(`${label}: ${res.count} 件を処理しました`);
+        } else {
+          setNotice(`${label}を実行しました`);
         }
       } catch (e) {
         console.error(e);
