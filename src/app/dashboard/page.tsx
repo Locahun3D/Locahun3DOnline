@@ -46,7 +46,7 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <section className="border border-line p-6">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Plan</div>
           <div className="serif text-2xl">{planLabel}</div>

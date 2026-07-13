@@ -130,7 +130,7 @@ export default function AccountDashboard({
       <NotificationList notifications={notifications} en={en} locale={locale} />
 
       {/* ── 上段: ステータス3枚 ── */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* TOKENS */}
         <div className="bg-white border border-[#e2e7ec] p-5">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
@@ -229,7 +229,7 @@ export default function AccountDashboard({
       </div>
 
       {/* ── 中段: 保存した物件 / 閲覧履歴 ── */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 保存した物件 */}
         <div className="bg-white border border-[#e2e7ec] p-5 flex flex-col">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
@@ -350,7 +350,7 @@ export default function AccountDashboard({
       </div>
 
       {/* ── 下段: NDA / ギフトコード ── */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* NDA */}
         <div className="bg-white border border-[#e2e7ec] p-5">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
