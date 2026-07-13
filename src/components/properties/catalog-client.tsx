@@ -465,15 +465,16 @@ export default function CatalogClient({
   }, [en]);
 
   return (
-    <div className="frame-wide pt-5 pb-32">
-      <div className="chapter-rule" style={{ marginBottom: 16 }}>
+    <div className="frame-wide pt-3 sm:pt-5 pb-12 sm:pb-32">
+      <div className="chapter-rule mb-2.5 sm:mb-4">
         <span className="opacity-60">CATALOG</span>
         <span>Find a Location</span>
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
 
-      {/* Top band: search panel (left) + map (right), flush to the same height */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)] gap-6">
+      {/* Top band: search panel (left) + map (right), flush to the same height.
+          モバイルは縦積みなので gap を詰めて結果カードを早く見せる（見開き優先）。 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)] gap-3 sm:gap-5 lg:gap-6">
         <div className="min-w-0">
           <FiltersPanel
             q={q} setQ={setQ}
@@ -502,7 +503,7 @@ export default function CatalogClient({
 
         {/* Map: stretches to match the panel height (面一), no scroll-follow.
             モバイルでは高さを抑えて結果カードを早く見せる。 */}
-        <div className="h-[30vh] sm:h-[44vh] lg:h-auto">
+        <div className="h-[24vh] sm:h-[40vh] lg:h-auto">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}
@@ -516,7 +517,7 @@ export default function CatalogClient({
       <SortBar sort={sort} setSort={setSort} resultCount={computed.length} totalCount={items.length} />
 
       {/* Cards span the full width below the band → maximum card area */}
-      <div className="mt-4">
+      <div className="mt-3 sm:mt-4">
         {computed.length === 0 ? (
           <div className="border border-line p-12 text-center">
             <div className="mono text-[12px] tracking-[0.3em] uppercase opacity-60 mb-3">
@@ -597,13 +598,13 @@ function FiltersPanel(p: FiltersProps) {
         : `¥${n.toLocaleString("ja-JP")}`;
 
   return (
-    <div className="border border-line bg-[#222] p-3.5 space-y-2.5">
+    <div className="border border-line bg-[#222] p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5">
       {/* モバイル: 検索UIを既定で畳むトグル (lg未満のみ表示)。畳んでカードを早く見せる。 */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="lg:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2.5 hover:border-accent transition"
+        className="lg:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 hover:border-accent transition"
       >
         <span className="mono text-[11px] tracking-[0.2em] uppercase">🔍 {en ? "Filters" : "絞り込み検索"}</span>
         <span className="flex items-baseline gap-1.5">
@@ -1193,14 +1194,14 @@ function SortBar({
 }) {
   const en = useLocale() === "en";
   return (
-    <div className="mt-4 border border-line bg-[#222] px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] mono">
-      <div className="flex items-baseline gap-2 font-sans">
-        <span className="brand text-2xl text-accent">{resultCount.toLocaleString(en ? "en-US" : "ja-JP")}</span>
-        <span className="text-[12px] font-medium opacity-70">{en ? "results" : "件"}</span>
-        <span className="text-[12px] opacity-50">/ {totalCount} {en ? "total" : "全"}</span>
+    <div className="mt-3 sm:mt-4 border border-line bg-[#222] px-2.5 sm:px-4 py-1.5 sm:py-2.5 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 text-[11px] mono">
+      <div className="flex items-baseline gap-1.5 sm:gap-2 font-sans">
+        <span className="brand text-xl sm:text-2xl text-accent">{resultCount.toLocaleString(en ? "en-US" : "ja-JP")}</span>
+        <span className="text-[11px] sm:text-[12px] font-medium opacity-70">{en ? "results" : "件"}</span>
+        <span className="text-[11px] sm:text-[12px] opacity-50">/ {totalCount} {en ? "total" : "全"}</span>
       </div>
 
-      <div className="flex flex-wrap items-stretch gap-x-3 gap-y-1 ml-auto">
+      <div className="flex flex-wrap items-stretch gap-x-2 sm:gap-x-3 gap-y-1 ml-auto">
         {SORT_COLS.map((c) => (
           <div key={c.label} className="flex flex-col items-center">
             <div className="mono text-[9px] tracking-[0.22em] uppercase opacity-50">
