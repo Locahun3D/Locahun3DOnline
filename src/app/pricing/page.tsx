@@ -52,7 +52,7 @@ export default async function PricingPage({
   };
 
   return (
-    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">PRICING</span>
         <span>Plans</span>
@@ -78,7 +78,7 @@ export default async function PricingPage({
       )}
 
       <header className="text-center mb-12">
-        <h1 className="serif text-[clamp(2rem,4vw,3.6rem)] font-bold leading-[1.3] max-w-[26ch] mx-auto">
+        <h1 className="serif text-[clamp(1.55rem,4.5vw,3.6rem)] font-bold leading-[1.3] max-w-[26ch] mx-auto">
           {en ? (
             <>
               Every site visit,
@@ -93,7 +93,7 @@ export default async function PricingPage({
             </>
           )}
         </h1>
-        <p className="mt-6 text-[14px] text-muted max-w-[58ch] mx-auto leading-[1.85]">
+        <p className="mt-4 sm:mt-6 text-[14px] text-muted max-w-[58ch] mx-auto leading-[1.85]">
           {en ? (
             <>
               3DGS walkthroughs run on{" "}

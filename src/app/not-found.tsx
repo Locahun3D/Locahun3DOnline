@@ -11,7 +11,7 @@ export default async function NotFound() {
       <h1 className="serif text-[clamp(2.4rem,6vw,5rem)] font-bold leading-[1.2]">
         {en ? "This frame wasn't found." : "フレームが見つかりません。"}
       </h1>
-      <p className="mt-6 text-[14px] text-muted max-w-[40ch] leading-[1.85]">
+      <p className="mt-4 sm:mt-6 text-[14px] text-muted max-w-[40ch] leading-[1.85]">
         {en
           ? "The screen you're looking for has moved location, or hasn't been shot yet."
           : "探そうとしている画面は、ロケ地が変わったか、まだ撮影されていません。"}

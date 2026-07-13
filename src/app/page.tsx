@@ -21,7 +21,7 @@ export default async function HomePage() {
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
-      <section className="split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[70vh] md:min-h-[90vh] overflow-hidden bg-bg">
+      <section className="split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[60vh] md:min-h-[90vh] overflow-hidden bg-bg">
         {/* Timecode corners */}
         <span className="hidden sm:block absolute top-5 left-8 z-30 mono text-[10px] tracking-[0.28em] uppercase text-muted opacity-50 pointer-events-none">
           REEL 01 — INT.STUDIO
@@ -33,7 +33,7 @@ export default async function HomePage() {
         {/* Left — SCAN → 製品サイト (同タブ) */}
         <a
           href={scanUrl}
-          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 pt-28 sm:pt-48 pb-16 sm:pb-28 border-b md:border-b-0 md:border-r border-line overflow-hidden"
+          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 pt-16 sm:pt-48 pb-10 sm:pb-28 border-b md:border-b-0 md:border-r border-line overflow-hidden"
         >
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
@@ -65,7 +65,7 @@ export default async function HomePage() {
         {/* Right — ONLINE */}
         <Link
           href={lh("/properties")}
-          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 pt-28 sm:pt-48 pb-16 sm:pb-28 overflow-hidden"
+          className="split-panel group relative flex flex-col justify-center md:justify-start items-center text-center px-6 sm:px-8 lg:px-16 pt-16 sm:pt-48 pb-10 sm:pb-28 overflow-hidden"
         >
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"

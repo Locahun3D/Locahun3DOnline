@@ -11,7 +11,7 @@ export default async function PrivacyPage() {
   const en = locale === "en";
   if (en) return <PrivacyEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">LEGAL</span>
         <span>Privacy Policy</span>
@@ -128,7 +128,7 @@ export default async function PrivacyPage() {
 
 function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">LEGAL</span>
         <span>Privacy Policy</span>

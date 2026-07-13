@@ -51,7 +51,7 @@ export default async function UserPurchasesPage() {
   const propMap = new Map(allProps.map((p) => [p.id, p]));
 
   return (
-    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">ACCOUNT</span>
         <span>Purchase History</span>

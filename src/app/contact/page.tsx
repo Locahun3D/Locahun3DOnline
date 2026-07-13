@@ -42,7 +42,7 @@ export default async function ContactHubPage() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">CONTACT</span>
         <span>0.4</span>
@@ -53,7 +53,7 @@ export default async function ContactHubPage() {
         <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mb-3">
           LOCAHUN 3D / ONLINE
         </div>
-        <h1 className="serif text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.3] mb-4">
+        <h1 className="serif text-[clamp(1.5rem,4.5vw,3rem)] font-bold leading-[1.3] mb-4">
           {en ? "Contact" : "お問い合わせ"}
         </h1>
         <p className="text-[14px] text-muted leading-[1.95]">

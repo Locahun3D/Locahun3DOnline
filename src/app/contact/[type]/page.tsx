@@ -57,7 +57,7 @@ export default async function ContactTypePage({
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="theme-online frame pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">CONTACT</span>
         <span>{en ? copy.titleEn : copy.title}</span>

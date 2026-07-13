@@ -11,7 +11,7 @@ export default async function TokushohoPage() {
   const en = locale === "en";
   if (en) return <TokushohoEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">LEGAL</span>
         <span>Specified Commercial Transactions Act</span>
@@ -83,7 +83,7 @@ export default async function TokushohoPage() {
 
 function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">LEGAL</span>
         <span>Specified Commercial Transactions Act</span>
