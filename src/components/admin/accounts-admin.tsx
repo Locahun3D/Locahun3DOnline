@@ -20,6 +20,7 @@ import {
   bulkSetAccountStatusAction,
   bulkDeleteAccountsAction,
   bulkGrantFreeTokensAction,
+  bulkGrantTokensAction,
   linkPropertiesToUserAction,
 } from "@/lib/admin-actions";
 
@@ -44,6 +45,8 @@ export default function AccountsAdmin({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
+  const [freeGrantAmount, setFreeGrantAmount] = useState(9);
+  const [selectedGrantAmount, setSelectedGrantAmount] = useState(6);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -156,19 +159,27 @@ export default function AccountsAdmin({
         <span className="mono text-[11px] text-muted ml-auto">{filtered.length} 件</span>
       </div>
 
-      {/* フリープラン全員へのトークン救済付与（選択とは無関係・対象は plan==="free" 全員）。
+      {/* フリープラン全員へのトークン一括付与（選択とは無関係・対象は plan==="free" 全員）。
           登録ボーナスを1→6に修正した際、修正前に登録済みのフリーユーザーは
-          古い残高のまま取り残されていたため、その差分を埋める一回きりの操作。 */}
-      <div className="flex items-center gap-3 border border-line bg-ink/[0.03] px-3 py-2">
+          古い残高のまま取り残されていたため、その差分を埋める救済用に追加。
+          付与数はここで変更可（既存残高への加算・上書きではない）。 */}
+      <div className="flex flex-wrap items-center gap-3 border border-line bg-ink/[0.03] px-3 py-2">
         <span className="text-[12px] text-ink/70">
-          フリープラン {freeCount} 件に、救済トークンを一括付与（既存残高に加算）
+          フリープラン {freeCount} 件に、トークンを一括付与（既存残高に加算）
         </span>
+        <input
+          type="number"
+          min={1}
+          value={freeGrantAmount}
+          onChange={(e) => setFreeGrantAmount(Math.max(1, Math.trunc(Number(e.target.value) || 1)))}
+          className="w-16 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink"
+        />
         <BulkBtn
-          label="フリープラン全員に +9 トークン"
+          label={`フリープラン全員に +${freeGrantAmount} トークン`}
           disabled={pending || freeCount === 0}
           onClick={() => {
-            if (confirm(`フリープランの ${freeCount} 件に 9 トークンずつ付与します。よろしいですか？`)) {
-              runBulk(() => bulkGrantFreeTokensAction(9), "トークン付与");
+            if (confirm(`フリープランの ${freeCount} 件に ${freeGrantAmount} トークンずつ付与します（既存残高に加算）。よろしいですか？`)) {
+              runBulk(() => bulkGrantFreeTokensAction(freeGrantAmount), "トークン付与");
             }
           }}
         />
@@ -188,6 +199,26 @@ export default function AccountsAdmin({
           <div className="flex flex-wrap gap-1.5 ml-auto">
             <BulkBtn label="承認/有効化" disabled={pending} onClick={() => runBulk(() => bulkSetAccountStatusAction(ids, "active"), "承認/有効化")} />
             <BulkBtn label="停止" disabled={pending} onClick={() => runBulk(() => bulkSetAccountStatusAction(ids, "suspended"), "停止")} />
+            {/* 選択アカウント(プラン不問)への任意数トークン加算付与。既存残高への
+                加算であり上書きではない（1件だけ選べば特定アカウントへの加算にも使える）。 */}
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={1}
+                value={selectedGrantAmount}
+                onChange={(e) => setSelectedGrantAmount(Math.max(1, Math.trunc(Number(e.target.value) || 1)))}
+                className="w-14 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink"
+              />
+              <BulkBtn
+                label={`+${selectedGrantAmount} トークン付与`}
+                disabled={pending}
+                onClick={() => {
+                  if (confirm(`選択した ${selected.size} 件に ${selectedGrantAmount} トークンずつ付与します（既存残高に加算）。よろしいですか？`)) {
+                    runBulk(() => bulkGrantTokensAction(ids, selectedGrantAmount), "トークン付与");
+                  }
+                }}
+              />
+            </div>
             <BulkBtn
               label="削除"
               danger
@@ -300,11 +331,25 @@ export default function AccountsAdmin({
                   <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">役割</button>
                 </form>
 
-                <form action={setTokenBalanceAction} className="flex items-center gap-1">
+                {/* これは加算(付与)ではなく残高そのものを置き換える「上書き」。
+                    加算したい場合は下の選択チェック→一括バーの「+N トークン付与」を使う
+                    （1件だけ選べば特定アカウントへの加算にもなる）。 */}
+                <form
+                  action={setTokenBalanceAction}
+                  className="flex items-center gap-1"
+                  title="現在の残高を、ここで指定した数値に置き換えます（加算ではありません）"
+                >
                   <input type="hidden" name="id" value={u.id} />
                   <input type="number" name="balance" defaultValue={u.tokenBalance} min={0} className="w-16 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink" />
-                  <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">付与</button>
+                  <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">残高を上書き</button>
                 </form>
+
+                <Link
+                  href={`/admin/accounts/${u.id}/tokens`}
+                  className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition"
+                >
+                  履歴
+                </Link>
 
                 {u.role === "studio" && (
                   <form action={linkPropertiesToUserAction} className="flex items-center gap-1">
