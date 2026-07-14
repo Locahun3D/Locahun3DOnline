@@ -19,6 +19,7 @@ import {
   deleteAccountAction,
   bulkSetAccountStatusAction,
   bulkDeleteAccountsAction,
+  bulkGrantFreeTokensAction,
   linkPropertiesToUserAction,
 } from "@/lib/admin-actions";
 
@@ -58,6 +59,7 @@ export default function AccountsAdmin({
   }, [users, query, roleFilter, statusFilter]);
 
   const pendingCount = users.filter((u) => u.status === "pending").length;
+  const freeCount = users.filter((u) => u.plan === "free").length;
   const visibleIds = filtered.map((u) => u.id);
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
@@ -83,7 +85,7 @@ export default function AccountsAdmin({
       setNotice(null);
       try {
         const res = (await fn()) as
-          | { ok?: boolean; count?: number; total?: number }
+          | { ok?: boolean; count?: number; total?: number; grant?: number }
           | undefined;
         setSelected(new Set());
         if (res && res.ok === false) {
@@ -98,6 +100,8 @@ export default function AccountsAdmin({
           setNotice(
             `${label}: ${res.count}/${res.total} 件を処理（${skip} 件はスキップ）`,
           );
+        } else if (res && typeof res.count === "number" && typeof res.grant === "number") {
+          setNotice(`${label}: ${res.count} 件に ${res.grant} トークンずつ付与しました`);
         } else if (res && typeof res.count === "number") {
           setNotice(`${label}: ${res.count} 件を処理しました`);
         }
@@ -150,6 +154,24 @@ export default function AccountsAdmin({
           ))}
         </div>
         <span className="mono text-[11px] text-muted ml-auto">{filtered.length} 件</span>
+      </div>
+
+      {/* フリープラン全員へのトークン救済付与（選択とは無関係・対象は plan==="free" 全員）。
+          登録ボーナスを1→6に修正した際、修正前に登録済みのフリーユーザーは
+          古い残高のまま取り残されていたため、その差分を埋める一回きりの操作。 */}
+      <div className="flex items-center gap-3 border border-line bg-ink/[0.03] px-3 py-2">
+        <span className="text-[12px] text-ink/70">
+          フリープラン {freeCount} 件に、救済トークンを一括付与（既存残高に加算）
+        </span>
+        <BulkBtn
+          label="フリープラン全員に +9 トークン"
+          disabled={pending || freeCount === 0}
+          onClick={() => {
+            if (confirm(`フリープランの ${freeCount} 件に 9 トークンずつ付与します。よろしいですか？`)) {
+              runBulk(() => bulkGrantFreeTokensAction(9), "トークン付与");
+            }
+          }}
+        />
       </div>
 
       {notice && (

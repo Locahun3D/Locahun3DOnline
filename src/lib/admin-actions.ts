@@ -119,6 +119,32 @@ export async function bulkSetAccountStatusAction(
   return { ok: true as const, count: done, total: ids.length, skipped };
 }
 
+/**
+ * 一括: 現在 plan==="free" の全アカウントにトークンを加算付与する。
+ * SIGNUP_BONUS_TOKENS を 1→6 に修正した際、修正前に登録済みだったフリー
+ * プランユーザーは古い残高のまま取り残されていた（新規登録者のみ恩恵を受ける
+ * 状態）。その差分を埋めるための一回きりの救済付与。
+ * 「9トークン付与」＝加算（既存残高に9を足す）。0件対象でも成功として返す。
+ */
+export async function bulkGrantFreeTokensAction(amount: number) {
+  await requireAdmin();
+  const grant = Math.max(0, Math.trunc(amount));
+  if (grant <= 0) return { ok: false as const };
+  const all = await userRepo.list();
+  const targets = all.filter((u) => u.plan === "free");
+  const now = new Date().toISOString();
+  for (const u of targets) {
+    await userRepo.upsert({
+      ...u,
+      tokenBalance: u.tokenBalance + grant,
+      // 付与分の失効を1年後まで延長（既存の setTokenBalanceAction と同じ扱い）。
+      tokenExpiresAt: oneYearFrom(now),
+    });
+  }
+  revalidatePath("/admin/accounts");
+  return { ok: true as const, count: targets.length, grant };
+}
+
 /** Link a studio owner account to a set of property IDs they can manage. */
 export async function linkPropertiesToUserAction(
   formData: FormData,
