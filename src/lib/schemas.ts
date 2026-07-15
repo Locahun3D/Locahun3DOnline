@@ -37,8 +37,12 @@ export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
   nda_only: "NDA 限定（機密構造・リギング情報を含む）",
 };
 
-// 3Dデータ販売ライセンス（TurboSquid風）。
-export const DATA_LICENSES = ["standard", "editorial", "extended", "custom"] as const;
+// 3Dデータ販売ライセンス（TurboSquid風）。グレード順（利用範囲が狭い→広い順）で
+// 並べる: editorial(報道・教育・個人限定) < standard(商用可・再配布不可) <
+// extended(同梱・改変配布まで許諾) < custom(個別合意)。この配列順が
+// license-options.ts のソート・管理画面のチェックボックス/既定選択プルダウンの
+// 表示順すべてに反映される。
+export const DATA_LICENSES = ["editorial", "standard", "extended", "custom"] as const;
 export type DataLicense = (typeof DATA_LICENSES)[number];
 
 export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
