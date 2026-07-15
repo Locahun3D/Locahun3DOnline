@@ -42,7 +42,14 @@ export async function GET(req: Request) {
     propertyId =
       (session.metadata?.propertyId as string | undefined) ?? undefined;
 
-    if (session.payment_status !== "paid") return fail(propertyId);
+    // no_payment_required = Stripe 側で合計¥0と判定され決済不要で確定した状態
+    // （無料配布データの購入）。paid と同様に完了させる。
+    if (
+      session.payment_status !== "paid" &&
+      session.payment_status !== "no_payment_required"
+    ) {
+      return fail(propertyId);
+    }
 
     // 本人確認: 未認証なら何も完了させずサインインへ。
     const user = await getCurrentUser();

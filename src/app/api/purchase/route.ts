@@ -76,10 +76,14 @@ export async function POST(req: Request) {
   const purchaseId = randomUUID();
   const price = isDataSaleFree(settings.dataSaleFreePeriod, nowIso) ? 0 : item.salePrice;
 
-  // ¥0（無料配布）は Stripe を経由せず常に即時完了させる（Stripe は¥0決済に
-  // 対応していない上、課金の必要がそもそも無い）。ログイン必須はこのルート
-  // 冒頭の getCurrentUser() 401 チェックで既に担保されている。
-  if (!stripeEnabled() || price === 0) {
+  // Stripe 未配線(stub)の時だけ即時完了させる。Stripe 配線済みなら¥0でも
+  // 下の Checkout Session 経路へ進める — Stripe は合計¥0の Checkout Session
+  // を正式にサポートしており(line_items[].price_data.unit_amount は
+  // non-negative integer、合計0だと payment_status="no_payment_required"
+  // で確定する)、カード情報の入力なしに「注文を確定」の1クリックだけで
+  // 完了する。無料配布でも実際の決済記録として Stripe 側に残したいという
+  // 要件のため、以前あった「¥0はStripeを経由せず即時完了」の特別扱いを廃止した。
+  if (!stripeEnabled()) {
     const now = new Date();
     const completed = await purchaseRepo.upsert({
       id: purchaseId,

@@ -81,7 +81,11 @@ export async function POST(req: Request) {
 
         if (s.metadata?.type === "data_purchase") {
           const purchaseId = s.metadata.purchaseId;
-          if (purchaseId && s.payment_status === "paid") {
+          // no_payment_required = 合計¥0(無料配布)の確定。paid と同様に扱う。
+          if (
+            purchaseId &&
+            (s.payment_status === "paid" || s.payment_status === "no_payment_required")
+          ) {
             const p = await purchaseRepo.get(purchaseId);
             if (p && p.status === "pending") {
               const completed = await purchaseRepo.upsert({
@@ -101,7 +105,7 @@ export async function POST(req: Request) {
         // 閉じると pending のまま残る（支払済なのに未配信）。Webhook を保険として
         // セッション紐付きの pending を全て completed 化する。
         if (s.metadata?.type === "data_cart") {
-          if (s.payment_status === "paid") {
+          if (s.payment_status === "paid" || s.payment_status === "no_payment_required") {
             const all = await purchaseRepo.list();
             const matched = all.filter(
               (p) => p.stripeSessionId === s.id && p.status === "pending",
