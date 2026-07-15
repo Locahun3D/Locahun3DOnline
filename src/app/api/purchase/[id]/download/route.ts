@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo, resolvePurchasedItem } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { pickDownloadFile } from "@/lib/downloads";
+import { createPresignedGet } from "@/lib/uploads";
 
 export const runtime = "nodejs";
 
@@ -35,9 +36,22 @@ function toR2Key(url: string): string | null {
   return path || null;
 }
 
+/** ファイル名として不正な文字を除去し、長さを制限する。 */
+function sanitizeFilename(name: string): string {
+  const cleaned = name
+    .replace(/[\\/:*?"<>|\x00-\x1F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.slice(0, 120) || "locahun3d-data";
+}
+
 /**
  * 購入者本人だけが購入済み3DGSデータをダウンロードできるゲート付き配信。
- * R2バインディングから同一オリジンでストリームし、添付として強制ダウンロードさせる。
+ * Worker 経由でオブジェクト本体をストリームすると、大容量ファイル(数百MB〜
+ * 数GB)で負荷時に途中切断が実測されている（presign-get route と同じ理由）。
+ * 存在確認だけ Worker 側で行い、実データ転送は R2 直の署名付き GET URL へ
+ * 302 リダイレクトすることでこれを回避する。ファイル名も R2 の生キー（乱数
+ * 接頭辞付き）ではなく物件名ベースの分かりやすい名前を付与する。
  */
 export async function GET(
   req: Request,
@@ -96,8 +110,9 @@ export async function GET(
     return NextResponse.json({ error: "ストレージが利用できません" }, { status: 503 });
   }
 
-  const obj = await bucket.get(key);
-  if (!obj) {
+  // 本体は取得せず存在確認のみ（head）。実データは署名付きURLへ302で逃がす。
+  const head = await bucket.head(key);
+  if (!head) {
     // ユーザー向け文言は変えない（原因の詳細を外部に漏らさない）が、運営が
     // 問い合わせ対応時にログから原因(R2にオブジェクトが実在しない＝データ破損/
     // 誤削除か、一時的なR2障害か)を切り分けられるよう記録しておく。
@@ -107,18 +122,12 @@ export async function GET(
     return NextResponse.json({ error: "ファイルが見つかりません" }, { status: 404 });
   }
 
-  const filename = key.split("/").pop() || "locahun3d-data";
-  const headers = new Headers();
-  headers.set(
-    "Content-Type",
-    obj.httpMetadata?.contentType || "application/octet-stream",
-  );
-  if (obj.size) headers.set("Content-Length", String(obj.size));
-  headers.set(
-    "Content-Disposition",
-    `attachment; filename="${encodeURIComponent(filename)}"`,
-  );
-  headers.set("Cache-Control", "private, no-store");
+  const ext = (key.split(".").pop() || "zip").toLowerCase();
+  const base = [purchase.propertyTitle || property?.title, purchase.itemLabel, format]
+    .filter(Boolean)
+    .join("_");
+  const filename = `${sanitizeFilename(base || "locahun3d-data")}.${ext}`;
 
-  return new NextResponse(obj.body as ReadableStream, { headers });
+  const signedUrl = await createPresignedGet(key, { downloadFilename: filename });
+  return NextResponse.redirect(signedUrl, { status: 302, headers: { "Cache-Control": "private, no-store" } });
 }

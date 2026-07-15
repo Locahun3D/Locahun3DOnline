@@ -163,10 +163,22 @@ export async function createPresignedUpload(input: {
  * 管理画面の大容量ダウンロード（プレビューキャプチャ等）はストレージ直で読む。
  * バケット CORS は locahun3d.com からの GET/HEAD + range を許可済み。
  */
-export async function createPresignedGet(r2Key: string): Promise<string> {
+export async function createPresignedGet(
+  r2Key: string,
+  opts: { downloadFilename?: string } = {},
+): Promise<string> {
   const { client, endpoint, bucket } = await r2Client();
   const url = new URL(r2ObjectUrl(endpoint, bucket, r2Key));
   url.searchParams.set("X-Amz-Expires", "3600");
+  // response-content-disposition は S3 署名対象のクエリとして扱われ、R2 が
+  // ダウンロード時にこのファイル名で保存させる（R2 の生キー＝ランダム接頭辞
+  // 付きの内部ファイル名を購入者にそのまま見せないため）。
+  if (opts.downloadFilename) {
+    url.searchParams.set(
+      "response-content-disposition",
+      `attachment; filename="${opts.downloadFilename.replace(/["\\]/g, "")}"; filename*=UTF-8''${encodeURIComponent(opts.downloadFilename)}`,
+    );
+  }
   const signed = await client.sign(url.toString(), {
     method: "GET",
     aws: { signQuery: true },
