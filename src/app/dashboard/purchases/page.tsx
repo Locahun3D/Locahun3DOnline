@@ -155,6 +155,13 @@ export default async function UserPurchasesPage() {
                           </>
                         )}
                         <a
+                          href={`/api/purchase/${p.id}/license`}
+                          className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition whitespace-nowrap"
+                          title={en ? "Terms of use for this license tier (.txt)" : "このライセンス区分の利用規約（.txt）"}
+                        >
+                          {en ? "↓ Terms (.txt)" : "↓ 利用規約 (.txt)"}
+                        </a>
+                        <a
                           href={`/api/purchase/${p.id}/receipt`}
                           target="_blank"
                           rel="noopener noreferrer"
