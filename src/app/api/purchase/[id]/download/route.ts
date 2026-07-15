@@ -68,15 +68,25 @@ export async function GET(
     return NextResponse.json({ error: "データが見つかりません" }, { status: 404 });
   }
 
-  // 形式指定: その形式の個別ファイル。
-  // 形式なし（一括DL）: バンドルZip(downloadFileUrl)を優先、無ければ先頭形式。
+  // 形式指定: その形式の個別ファイル。存在しない形式が指定された場合は
+  // splatUrl（ビューアー用ファイル）へフォールバックせず明確に404を返す
+  // （以前はここが空文字になり下の共通フォールバックに落ちて、購入者が
+  //   指定と異なるファイルを気付かずダウンロードしてしまっていた）。
+  // 形式なし（一括DL）: バンドルZip(downloadFileUrl)を優先、無ければ先頭形式、
+  // それも無ければ splatUrl にフォールバック。
   let sourceUrl: string;
   if (format) {
     sourceUrl = pickDownloadFile(item, format)?.url || "";
+    if (!sourceUrl) {
+      return NextResponse.json(
+        { error: `指定された形式（${format}）のファイルが見つかりません` },
+        { status: 404 },
+      );
+    }
   } else {
-    sourceUrl = item.downloadFileUrl || pickDownloadFile(item, null)?.url || "";
+    sourceUrl = item.downloadFileUrl || pickDownloadFile(item, null)?.url || item.splatUrl || "";
   }
-  const key = toR2Key(sourceUrl || item.splatUrl || "");
+  const key = toR2Key(sourceUrl);
   if (!key) {
     return NextResponse.json({ error: "ダウンロードファイルが未設定です" }, { status: 404 });
   }

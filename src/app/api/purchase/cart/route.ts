@@ -6,6 +6,8 @@ import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { getSettings } from "@/lib/site-settings";
+import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 
@@ -42,6 +44,14 @@ export async function POST(req: Request) {
   }
   const termsAgreedAt = new Date().toISOString();
 
+  // 3Dデータ販売の限定無料期間/販売停止設定。単品購入 /api/purchase と同じ
+  // ロジックをカートにも適用する（以前はカート側だけこの設定を一切見ておらず、
+  // 無料期間中でも満額請求される／販売停止後でも購入できてしまっていた）。
+  const settings = await getSettings();
+  const nowIso = new Date().toISOString();
+  const salesDisabled = isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso);
+  const salesFree = isDataSaleFree(settings.dataSaleFreePeriod, nowIso);
+
   // 検証 + 重複/購入済み除外。
   const resolved: {
     propertyId: string;
@@ -62,7 +72,10 @@ export async function POST(req: Request) {
 
     const property = await propertyRepo.get(propertyId);
     const item = property?.splatItems[idx];
-    if (!property || !item || !item.forSale || item.salePrice <= 0) continue;
+    // salePrice<=0 では除外しない（単品購入と同様、¥0固定の無料配布アイテムを
+    // 正当な購入対象として扱う。forSale が販売対象であることの唯一の判定条件）。
+    if (!property || !item || !item.forSale) continue;
+    if (salesDisabled) continue;
     // DLファイル未設定の項目は代金だけ取って何も渡せない事故になるため除外。
     if (resolveDownloadFiles(item).length === 0) continue;
     if (await purchaseRepo.hasPurchased(user.id, propertyId, item.id, idx)) continue;
@@ -74,7 +87,9 @@ export async function POST(req: Request) {
       title: property.title,
       label: item.label,
       license: item.license,
-      price: item.salePrice,
+      // クライアントは価格を送ってこない（サーバの item.salePrice をそのまま
+      // 信用しない設計）。無料期間中は単品購入と同じく¥0に統一する。
+      price: salesFree ? 0 : item.salePrice,
     });
   }
 

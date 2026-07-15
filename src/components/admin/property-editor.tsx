@@ -2589,7 +2589,11 @@ function SalePriceInput({
         <input
           type="number"
           value={value ?? ""}
-          onChange={(e) => onChange(Number(e.target.value))}
+          // min={0} はHTML上のヒントに過ぎず負数の入力自体は防げない。
+          // クランプしないと保存時に propertySchema の salePrice.min(0) で
+          // 弾かれ、生のZodエラーがそのまま表示される事故になる
+          // （pricing-table.tsx の一括編集フォームと同じクランプに揃える）。
+          onChange={(e) => onChange(Math.max(0, Math.trunc(Number(e.target.value) || 0)))}
           className={inputClass + " max-w-[180px]"}
           min={0}
           placeholder="金額を入力"

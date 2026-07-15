@@ -471,6 +471,23 @@ export const publishablePropertySchema = propertySchema.extend({
       message: "料金を入力してください",
     });
   }
+
+  // forSale=true（3Dデータ販売中）なのにダウンロードファイルが1つも無い項目は
+  // 公開させない。以前は管理画面の一覧で「⚠DLファイル未設定」を警告表示する
+  // だけで公開自体は止めておらず、購入APIが購入自体を409で弾くことで実害を
+  // 防いでいたが、管理者が矛盾した状態のまま公開できてしまっていた。
+  data.splatItems.forEach((item, i) => {
+    if (!item.forSale) return;
+    const hasFile =
+      item.downloadFiles.some((f) => f.url && f.format) || !!item.downloadFileUrl;
+    if (!hasFile) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["splatItems", i, "downloadFileUrl"],
+        message: `「${item.label || `シーン#${i + 1}`}」は販売中に設定されていますが、ダウンロードファイルが未設定です`,
+      });
+    }
+  });
 });
 
 export type Property = z.infer<typeof propertySchema>;
