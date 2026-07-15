@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { repo as propertyRepo } from "@/lib/store";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { resolveLicenseOptions } from "@/lib/license-options";
 import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { getCurrentUser } from "@/lib/dal";
@@ -11,6 +12,7 @@ export const runtime = "nodejs";
 interface CartLine {
   propertyId: string;
   splatItemIndex: number;
+  license?: string;
 }
 
 /**
@@ -49,10 +51,18 @@ export async function POST(req: Request) {
         if (already) available = false;
       }
 
+      let price = 0;
+      if (available && item) {
+        const licenseOptions = resolveLicenseOptions(item);
+        const matched =
+          licenseOptions.find((o) => o.license === line.license) ?? licenseOptions[0];
+        price = salesFree ? 0 : matched.price;
+      }
+
       return {
         propertyId,
         splatItemIndex: idx,
-        price: available && item ? (salesFree ? 0 : item.salePrice) : 0,
+        price,
         available,
       };
     }),

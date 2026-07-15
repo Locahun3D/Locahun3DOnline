@@ -27,6 +27,7 @@ import {
   DATA_LICENSE_DESC,
   type Property,
   type Asset,
+  type DataLicense,
 } from "@/lib/schemas";
 import {
   saveDraftAction,
@@ -1469,7 +1470,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const })}
+                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [] })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1675,8 +1676,8 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                         {watch(`splatItems.${idx}.forSale`) && (
                           <div className="space-y-3 pl-7">
                             <Field
-                              label="販売価格 (税込・円)"
-                              hint=""
+                              label="デフォルト価格 (税込・円)"
+                              hint="下の「複数ライセンス販売」が未設定の場合に使われる価格。"
                             >
                               <SalePriceInput
                                 value={watch(`splatItems.${idx}.salePrice`)}
@@ -1807,7 +1808,10 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             </div>
 
                             {/* ── ライセンス ── */}
-                            <Field label="ライセンス区分" hint="購入者の利用範囲。商品ページ・領収書に表示されます。">
+                            <Field
+                              label="デフォルトライセンス区分"
+                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。"
+                            >
                               <select
                                 {...register(`splatItems.${idx}.license`)}
                                 className={inputClass}
@@ -1818,6 +1822,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                   </option>
                                 ))}
                               </select>
+                            </Field>
+
+                            {/* ── 複数ライセンス販売（任意・価格をライセンスごとに調整） ── */}
+                            <Field
+                              label="複数ライセンス販売（任意）"
+                              hint="1つ以上チェックすると、購入者はここから選んで購入するようになります（上のデフォルト価格/区分より優先）。ライセンスごとに価格を変えられます。"
+                            >
+                              <LicenseOptionsEditor idx={idx} watch={watch} setValue={setValue} />
                             </Field>
                           </div>
                         )}
@@ -2571,6 +2583,77 @@ function Checklist({ data }: { data: Property }) {
 // 無く「カスタム金額」に化けてしまう（実際に起きていた不整合）。
 // 0 = 無料配布（会員登録さえすればダウンロード可、Stripe を経由せず即時完了）。
 const SALE_PRICE_PRESETS = [0, 50000, 100000, 150000, 200000, 250000, 300000, 500000] as const;
+
+/**
+ * 販売ライセンスの複数選択エディタ。ライセンス区分ごとにチェックボックスで
+ * 有効/無効、有効な区分には価格入力(SalePriceInput)を表示する。
+ * downloadFiles(マルチ形式ダウンロード)と同じ「配列を直接 setValue で
+ * 追加/削除」パターン。空配列のまま保存すると、購入APIは resolveLicenseOptions()
+ * によりレガシー単一フィールド(splatItems.${idx}.license/salePrice)へ自動
+ * フォールバックするため、少なくとも内部的には壊れないが、UI上は1つ以上の
+ * 選択を促す。
+ */
+function LicenseOptionsEditor({
+  idx,
+  watch,
+  setValue,
+}: {
+  idx: number;
+  watch: UseFormWatch<Property>;
+  setValue: UseFormSetValue<Property>;
+}) {
+  const options = watch(`splatItems.${idx}.licenseOptions`) || [];
+
+  const toggle = (license: DataLicense, checked: boolean) => {
+    const next = checked
+      ? [...options, { license, price: 0 }]
+      : options.filter((o) => o.license !== license);
+    setValue(`splatItems.${idx}.licenseOptions`, next, { shouldDirty: true });
+  };
+
+  const setPrice = (license: DataLicense, price: number) => {
+    setValue(
+      `splatItems.${idx}.licenseOptions`,
+      options.map((o) => (o.license === license ? { ...o, price } : o)),
+      { shouldDirty: true },
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {DATA_LICENSES.map((license) => {
+        const opt = options.find((o) => o.license === license);
+        return (
+          <div key={license} className="flex flex-wrap items-start gap-3 border-b border-line/30 pb-2.5 last:border-0 last:pb-0">
+            <label className="flex items-start gap-2.5 min-w-[240px] cursor-pointer flex-1">
+              <input
+                type="checkbox"
+                checked={!!opt}
+                onChange={(e) => toggle(license, e.target.checked)}
+                className="w-4 h-4 accent-accent mt-0.5 shrink-0"
+              />
+              <span>
+                <span className="text-[12.5px] font-medium block">{DATA_LICENSE_LABEL[license]}</span>
+                <span className="text-[10.5px] text-muted">{DATA_LICENSE_DESC[license]}</span>
+              </span>
+            </label>
+            {opt && (
+              <SalePriceInput
+                value={opt.price}
+                onChange={(v) => setPrice(license, v)}
+              />
+            )}
+          </div>
+        );
+      })}
+      {options.length === 0 && (
+        <p className="text-[11px] text-muted">
+          未選択の場合、上の「デフォルト価格・デフォルトライセンス区分」がそのまま使われます。
+        </p>
+      )}
+    </div>
+  );
+}
 
 function SalePriceInput({
   value,

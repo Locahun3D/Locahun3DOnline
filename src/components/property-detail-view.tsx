@@ -6,6 +6,7 @@ import {
 } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { resolveLicenseOptions } from "@/lib/license-options";
 import ViewerGate from "@/components/viewer-gate";
 import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
@@ -905,7 +906,10 @@ export default function PropertyDetailView({
                       propertyTitle={property.title}
                       splatItemIndex={origIndex}
                       itemLabel={item.label}
-                      price={dataSaleFree ? 0 : item.salePrice}
+                      licenseOptions={resolveLicenseOptions(item).map((o) => ({
+                        ...o,
+                        price: dataSaleFree ? 0 : o.price,
+                      }))}
                       description={item.saleDescription}
                       scannedAt={property.scannedAt}
                       splatSizeMb={item.sizeMb}
@@ -915,7 +919,6 @@ export default function PropertyDetailView({
                       downloadFileFormat={item.downloadFileFormat}
                       downloadFileSizeMb={item.downloadFileSizeMb}
                       captureDevice={item.captureDevice}
-                      license={item.license}
                       alreadyPurchased={purchasedItemIds.includes(item.id)}
                     />
                   )}

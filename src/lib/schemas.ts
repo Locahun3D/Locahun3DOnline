@@ -37,34 +37,31 @@ export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
   nda_only: "NDA 限定（機密構造・リギング情報を含む）",
 };
 
-// 3Dデータ販売ライセンス（TurboSquid風）
-export const DATA_LICENSES = ["standard", "editorial", "extended", "custom"] as const;
+// 3Dデータ販売ライセンス（TurboSquid風）。エディトリアル（報道・教育限定）は
+// この事業では取り扱わない方針のため除外している。
+export const DATA_LICENSES = ["standard", "extended", "custom"] as const;
 export type DataLicense = (typeof DATA_LICENSES)[number];
 
 export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
   standard: "標準ライセンス",
-  editorial: "エディトリアル限定",
   extended: "拡張ライセンス",
   custom: "カスタム（要相談）",
 };
 
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   standard: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
-  editorial: "報道・教育・個人利用に限定。広告等の商用利用は不可。",
   extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
 
 export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
   standard: "Standard license",
-  editorial: "Editorial only",
   extended: "Extended license",
   custom: "Custom (by arrangement)",
 };
 
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   standard: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
-  editorial: "Limited to news, education and personal use. Commercial use such as advertising is not permitted.",
   extended: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
@@ -376,8 +373,17 @@ export const propertySchema = z.object({
     // 商品スペック（TurboSquid風）。データ容量(sizeMb)は既存フィールドを使い回す
     // （旧 pointCount＝点群数は「あっても参考にならない」との判断で撤去済み）。
     captureDevice: z.string().max(80).default(""),
-    // 販売ライセンス区分
+    // 販売ライセンス区分（レガシー単一ティア）。licenseOptions が空の場合の
+    // フォールバックとして残す（既存データとの後方互換）。
     license: z.enum(DATA_LICENSES).default("standard"),
+    // 複数ライセンス区分をそれぞれ価格を付けて販売できるようにする
+    // (downloadFiles と同じ「マルチ + レガシー単一フォールバック」パターン)。
+    // 空なら上の license/salePrice を単一ティアとしてフォールバック扱い
+    // (resolveLicenseOptions() を参照)。買い手は購入時にこの中から1つ選ぶ。
+    licenseOptions: z.array(z.object({
+      license: z.enum(DATA_LICENSES),
+      price: z.number().int().min(0).max(99999999),
+    })).max(4).default([]),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z

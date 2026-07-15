@@ -10,6 +10,7 @@ import {
   reconcileCart,
   type CartItem,
 } from "@/lib/cart";
+import { dataLicenseLabel } from "@/lib/schemas";
 import { useLocale, useHref } from "@/components/locale-provider";
 
 export default function CartClient() {
@@ -42,7 +43,11 @@ export default function CartClient() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            items: cart.map((i) => ({ propertyId: i.propertyId, splatItemIndex: i.splatItemIndex })),
+            items: cart.map((i) => ({
+              propertyId: i.propertyId,
+              splatItemIndex: i.splatItemIndex,
+              license: i.license,
+            })),
           }),
         });
         if (!res.ok) return;
@@ -78,6 +83,7 @@ export default function CartClient() {
           items: items.map((i) => ({
             propertyId: i.propertyId,
             splatItemIndex: i.splatItemIndex,
+            license: i.license,
           })),
           // サーバー側でも必須検証され、同意時刻が購入レコードに記録される。
           agreedTerms: agreed,
@@ -164,7 +170,10 @@ export default function CartClient() {
                   {i.label}
                 </span>
               )}
-              <div className="mono text-[10px] opacity-40 mt-1">{en ? "3DGS data" : "3DGS データ"}</div>
+              <div className="mono text-[10px] opacity-40 mt-1">
+                {en ? "3DGS data" : "3DGS データ"}
+                {i.license && ` ・ ${dataLicenseLabel(i.license, en ? "en" : "ja")}`}
+              </div>
             </div>
             <div className="mono text-[12px] tracking-[0.14em] whitespace-nowrap">
               ¥{i.price.toLocaleString(en ? "en-US" : "ja-JP")}

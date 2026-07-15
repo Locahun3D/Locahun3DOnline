@@ -5,6 +5,8 @@
  * TurboSquid風に複数物件/フロアのデータをまとめてカートに入れ、一括購入する。
  */
 
+import type { DataLicense } from "./schemas";
+
 const KEY = "locahun3d:cart:v1";
 const EVENT = "locahun3d-cart-change";
 
@@ -14,6 +16,9 @@ export interface CartItem {
   title: string;
   label: string;
   price: number;
+  /** 購入者がDataSalePanelで選択したライセンス区分。旧カートデータには
+   *  無いため optional（reconcileCart/購入APIがサーバー側の既定に解決する）。 */
+  license?: DataLicense;
 }
 
 export function cartKey(propertyId: string, splatItemIndex: number): string {

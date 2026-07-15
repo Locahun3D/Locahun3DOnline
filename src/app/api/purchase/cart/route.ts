@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { resolveLicenseOptions } from "@/lib/license-options";
 import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { randomUUID } from "node:crypto";
@@ -16,6 +17,7 @@ export const runtime = "nodejs";
 interface CartLine {
   propertyId: string;
   splatItemIndex: number;
+  license?: string;
 }
 
 /**
@@ -80,16 +82,23 @@ export async function POST(req: Request) {
     if (resolveDownloadFiles(item).length === 0) continue;
     if (await purchaseRepo.hasPurchased(user.id, propertyId, item.id, idx)) continue;
 
+    // ライセンス区分: クライアントが選んだ区分をサーバー側で再検証する（価格は
+    // クライアントを一切信用せず、必ずこのアイテムの現在の licenseOptions/
+    // レガシー license から解決する）。未指定 or 無効な区分なら既定(先頭)を使う。
+    const licenseOptions = resolveLicenseOptions(item);
+    const matchedOption =
+      licenseOptions.find((o) => o.license === line.license) ?? licenseOptions[0];
+
     resolved.push({
       propertyId,
       splatItemId: item.id,
       splatItemIndex: idx,
       title: property.title,
       label: item.label,
-      license: item.license,
+      license: matchedOption.license,
       // クライアントは価格を送ってこない（サーバの item.salePrice をそのまま
       // 信用しない設計）。無料期間中は単品購入と同じく¥0に統一する。
-      price: salesFree ? 0 : item.salePrice,
+      price: salesFree ? 0 : matchedOption.price,
     });
   }
 

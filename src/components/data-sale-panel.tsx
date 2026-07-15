@@ -13,6 +13,7 @@ import {
   dataLicenseDesc,
   type DataLicense,
 } from "@/lib/schemas";
+import type { LicenseOption } from "@/lib/license-options";
 import { useLocale } from "@/components/locale-provider";
 
 interface DataSalePanelProps {
@@ -20,7 +21,8 @@ interface DataSalePanelProps {
   propertyTitle: string;
   splatItemIndex: number;
   itemLabel: string;
-  price: number;
+  /** 選べるライセンス区分×価格。resolveLicenseOptions() の結果で必ず1件以上ある。 */
+  licenseOptions: LicenseOption[];
   description: string;
   scannedAt: string;
   splatSizeMb: number;
@@ -30,7 +32,6 @@ interface DataSalePanelProps {
   downloadFileFormat?: string;
   downloadFileSizeMb?: number;
   captureDevice?: string;
-  license?: DataLicense;
   alreadyPurchased?: boolean;
 }
 
@@ -39,14 +40,13 @@ export default function DataSalePanel({
   propertyTitle,
   splatItemIndex,
   itemLabel,
-  price,
+  licenseOptions,
   description,
   scannedAt,
   splatSizeMb,
   downloadFileFormat,
   downloadFileSizeMb,
   captureDevice,
-  license = "standard",
   alreadyPurchased = false,
 }: DataSalePanelProps) {
   const en = useLocale() === "en";
@@ -54,6 +54,15 @@ export default function DataSalePanel({
   const [loading, setLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [inCart, setInCart] = useState(false);
+  // 複数ライセンスがある場合、買い手がここで選ぶ。既定は先頭（管理画面で
+  // チェックした順＝最初に有効化した区分）。
+  const [selectedLicense, setSelectedLicense] = useState<DataLicense>(
+    licenseOptions[0]?.license ?? "standard",
+  );
+  const selectedOption =
+    licenseOptions.find((o) => o.license === selectedLicense) ?? licenseOptions[0];
+  const price = selectedOption?.price ?? 0;
+  const license = selectedOption?.license ?? "standard";
 
   useEffect(() => {
     const sync = () => setInCart(isInCart(propertyId, splatItemIndex));
@@ -70,6 +79,7 @@ export default function DataSalePanel({
         title: propertyTitle,
         label: itemLabel,
         price,
+        license,
       });
   };
 
@@ -84,7 +94,9 @@ export default function DataSalePanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // agreedTerms はサーバー側でも必須検証され、同意時刻が購入レコードに記録される。
-        body: JSON.stringify({ propertyId, splatItemIndex, agreedTerms }),
+        // license はサーバー側で resolveLicenseOptions() に対して再検証され、
+        // その区分の現在価格が使われる（クライアントの price は信用しない）。
+        body: JSON.stringify({ propertyId, splatItemIndex, agreedTerms, license }),
       });
       const data = await res.json();
       if (data.url) {
@@ -129,12 +141,45 @@ export default function DataSalePanel({
           <p className="text-[11px] opacity-60 mt-0.5 line-clamp-1">{description}</p>
         )}
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
-        <div className="flex items-center gap-1.5 mt-1" title={dataLicenseDesc(license, lc)}>
-          <span className="mono text-[9px] tracking-[0.18em] uppercase border border-accent/40 text-accent/80 px-1.5 py-0.5">
-            LICENSE
-          </span>
-          <span className="text-[10px] opacity-70">{dataLicenseLabel(license, lc)}</span>
-        </div>
+        {licenseOptions.length > 1 ? (
+          <div className="mt-1.5">
+            <div className="mono text-[9px] tracking-[0.18em] uppercase text-muted mb-1">
+              {en ? "Select license" : "ライセンスを選択"}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {licenseOptions.map((o) => (
+                <label
+                  key={o.license}
+                  title={dataLicenseDesc(o.license, lc)}
+                  className={`flex items-center gap-1.5 px-2 py-1 border cursor-pointer text-[10px] transition ${
+                    selectedLicense === o.license
+                      ? "border-accent text-accent bg-accent/10"
+                      : "border-line/60 text-muted hover:border-line"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`license-${propertyId}-${splatItemIndex}`}
+                    checked={selectedLicense === o.license}
+                    onChange={() => setSelectedLicense(o.license)}
+                    className="sr-only"
+                  />
+                  {dataLicenseLabel(o.license, lc)}
+                  <span className="opacity-60">
+                    （{o.price === 0 ? (en ? "Free" : "無料") : `¥${o.price.toLocaleString()}`}）
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 mt-1" title={dataLicenseDesc(license, lc)}>
+            <span className="mono text-[9px] tracking-[0.18em] uppercase border border-accent/40 text-accent/80 px-1.5 py-0.5">
+              LICENSE
+            </span>
+            <span className="text-[10px] opacity-70">{dataLicenseLabel(license, lc)}</span>
+          </div>
+        )}
       </div>
 
       {alreadyPurchased ? (

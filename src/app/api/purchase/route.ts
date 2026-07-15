@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { resolveLicenseOptions } from "@/lib/license-options";
 import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { randomUUID } from "node:crypto";
@@ -73,8 +74,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "すでに購入済みです", ok: false }, { status: 409 });
   }
 
+  // ライセンス区分: クライアントが選んだ区分をサーバー側で再検証する（価格は
+  // クライアントを一切信用せず、必ずこのアイテムの現在の licenseOptions/
+  // レガシー license から解決する）。未指定 or 無効な区分なら既定(先頭)を使う。
+  const licenseOptions = resolveLicenseOptions(item);
+  const requestedLicense = typeof body.license === "string" ? body.license : undefined;
+  const matchedOption =
+    licenseOptions.find((o) => o.license === requestedLicense) ?? licenseOptions[0];
+  if (requestedLicense && !licenseOptions.some((o) => o.license === requestedLicense)) {
+    return NextResponse.json(
+      { error: "指定されたライセンス区分は選択できません" },
+      { status: 400 },
+    );
+  }
+  const license = matchedOption.license;
+
   const purchaseId = randomUUID();
-  const price = isDataSaleFree(settings.dataSaleFreePeriod, nowIso) ? 0 : item.salePrice;
+  const price = isDataSaleFree(settings.dataSaleFreePeriod, nowIso) ? 0 : matchedOption.price;
 
   // Stripe 未配線(stub)の時だけ即時完了させる。Stripe 配線済みなら¥0でも
   // 下の Checkout Session 経路へ進める — Stripe は合計¥0の Checkout Session
@@ -94,7 +110,7 @@ export async function POST(req: Request) {
       splatItemId: item.id,
       splatItemIndex,
       itemLabel: item.label,
-      license: item.license,
+      license,
       termsAgreedAt,
       priceYen: price,
       status: "completed",
@@ -150,7 +166,7 @@ export async function POST(req: Request) {
     splatItemId: item.id,
     splatItemIndex,
     itemLabel: item.label,
-    license: item.license,
+    license,
     termsAgreedAt,
     priceYen: price,
     status: "pending",
