@@ -36,13 +36,21 @@ function toR2Key(url: string): string | null {
   return path || null;
 }
 
-/** ファイル名として不正な文字を除去し、長さを制限する。 */
-function sanitizeFilename(name: string): string {
-  const cleaned = name
-    .replace(/[\\/:*?"<>|\x00-\x1F]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  return cleaned.slice(0, 120) || "locahun3d-data";
+/**
+ * R2キーから「管理者が実際にアップロードした元のファイル名」を復元する。
+ * buildAssetKey() は `assets/{kind}/{10文字nanoid}-{元のファイル名}` という
+ * 形式でキーを作る（衝突回避のためだけの内部識別子）。買い手にはこの内部
+ * 識別子を見せず、元のファイル名をそのままダウンロード名として使う
+ * （リネームしない・元のZIP名の通りダウンロードさせる）。
+ * レガシーな /uploads/... キー（nanoid接頭辞なし）はそのまま返す。
+ */
+function originalFilenameFromKey(key: string): string {
+  const rawName = key.split("/").pop() || "locahun3d-data";
+  if (/^assets\//.test(key)) {
+    const m = /^.{10}-(.+)$/.exec(rawName);
+    if (m) return m[1];
+  }
+  return rawName;
 }
 
 /**
@@ -50,8 +58,8 @@ function sanitizeFilename(name: string): string {
  * Worker 経由でオブジェクト本体をストリームすると、大容量ファイル(数百MB〜
  * 数GB)で負荷時に途中切断が実測されている（presign-get route と同じ理由）。
  * 存在確認だけ Worker 側で行い、実データ転送は R2 直の署名付き GET URL へ
- * 302 リダイレクトすることでこれを回避する。ファイル名も R2 の生キー（乱数
- * 接頭辞付き）ではなく物件名ベースの分かりやすい名前を付与する。
+ * 302 リダイレクトすることでこれを回避する。ダウンロードファイル名は元の
+ * アップロードファイル名をそのまま使う（内部の nanoid 接頭辞だけ除去）。
  */
 export async function GET(
   req: Request,
@@ -122,11 +130,7 @@ export async function GET(
     return NextResponse.json({ error: "ファイルが見つかりません" }, { status: 404 });
   }
 
-  const ext = (key.split(".").pop() || "zip").toLowerCase();
-  const base = [purchase.propertyTitle || property?.title, purchase.itemLabel, format]
-    .filter(Boolean)
-    .join("_");
-  const filename = `${sanitizeFilename(base || "locahun3d-data")}.${ext}`;
+  const filename = originalFilenameFromKey(key);
 
   const signedUrl = await createPresignedGet(key, { downloadFilename: filename });
   return NextResponse.redirect(signedUrl, { status: 302, headers: { "Cache-Control": "private, no-store" } });
