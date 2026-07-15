@@ -2,9 +2,12 @@ import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = {
-  title: "特定商取引法に基づく表記｜ロケハン3D",
-};
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return {
+    title: locale === "en" ? "Legal Notice (Act on Specified Commercial Transactions)｜Locahun 3D" : "特定商取引法に基づく表記｜ロケハン3D",
+  };
+}
 
 export default async function TokushohoPage() {
   const locale = await getLocale();

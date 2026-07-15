@@ -2,9 +2,12 @@ import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = {
-  title: "3Dデータ購入規約｜ロケハン3D",
-};
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return {
+    title: locale === "en" ? "3D Data Purchase Agreement｜Locahun 3D" : "3Dデータ購入規約｜ロケハン3D",
+  };
+}
 
 export default async function DataDownloadTermsPage() {
   const locale = await getLocale();
@@ -40,6 +43,7 @@ export default async function DataDownloadTermsPage() {
         <section>
           <h2 className="serif text-lg mb-4">第2条（利用許諾）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>本規約に基づく本データの購入契約は、購入者が本サービス上で購入手続き（決済代行事業者を通じた決済を含む）を完了した時点で成立します。対価は日本円建てとし、購入手続き画面に表示される金額（消費税込み）とします。</li>
             <li>購入者は、本データを映像・映画・CM・ドラマ・MV等の制作における<strong>ロケーション検証・プリビズ・バーチャルプロダクション</strong>の目的で利用できます。</li>
             <li>本データの利用は、購入者の所属する制作チーム・プロジェクト内に限定されます。</li>
             <li>利用許諾は非独占的であり、同一データを他の購入者にも提供する場合があります。</li>
@@ -115,6 +119,7 @@ export default async function DataDownloadTermsPage() {
         <section>
           <h2 className="serif text-lg mb-4">第8条（知的財産権）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>本サービスは、本データの提供にあたり、スキャン対象となったスタジオの運営者等から必要な許諾を得るよう努めるものとします。</li>
             <li>本データの著作権およびその他の知的財産権は、スタジオの所有者または本サービスに帰属します。第三者権利物に関する権利の扱いは第3条によります。</li>
             <li>購入により移転する権利は、第2条に定める利用許諾のみです。</li>
           </ol>
@@ -139,7 +144,7 @@ export default async function DataDownloadTermsPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年6月23日<br />
-            改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ）<br />
+            改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ／第2条に対価・契約成立時点、第8条にスタジオ運営者からの許諾取得努力義務を追記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -194,6 +199,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="serif text-lg mb-4">Article 2 (License)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>The purchase agreement for the Data under these terms is formed when the Purchaser completes the purchase process on the Service, including payment through a payment processor. The price is denominated in Japanese yen and is the amount shown at checkout (tax included).</li>
             <li>The Purchaser may use the Data for <strong>location review, previs and virtual production</strong> in the production of video, film, commercials, drama, music videos and the like.</li>
             <li>Use of the Data is limited to the Purchaser&apos;s own production team and project.</li>
             <li>The license is non-exclusive; the same Data may be provided to other purchasers.</li>
@@ -266,6 +272,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="serif text-lg mb-4">Article 8 (Intellectual property)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>In providing the Data, the Service uses reasonable efforts to obtain the necessary permission from the operator of the scanned Studio.</li>
             <li>Copyright and other intellectual property rights in the Data belong to the Studio owner or the Service. Rights in Third-Party Material are governed by Article 3.</li>
             <li>The only right transferred by purchase is the license set out in Article 2.</li>
           </ol>
@@ -290,7 +297,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
-            Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use; renumbered subsequent articles)<br />
+            Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

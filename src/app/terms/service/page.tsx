@@ -2,9 +2,12 @@ import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = {
-  title: "利用規約｜ロケハン3D",
-};
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return {
+    title: locale === "en" ? "Terms of Service｜Locahun 3D" : "利用規約｜ロケハン3D",
+  };
+}
 
 export default async function TermsServicePage() {
   const locale = await getLocale();
