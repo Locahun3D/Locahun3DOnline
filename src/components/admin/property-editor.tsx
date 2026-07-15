@@ -23,7 +23,6 @@ import {
   AREA_SUGGESTIONS,
   TOKEN_COST_LABEL,
   DATA_LICENSES,
-  SELECTABLE_DATA_LICENSES,
   DATA_LICENSE_LABEL,
   DATA_LICENSE_DESC,
   type Property,
@@ -1821,30 +1820,18 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             {/* ── ライセンス ── */}
                             <Field
                               label="デフォルトライセンス区分"
-                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。エディトリアルは新規選択肢からは非表示（既存設定済みの物件のみ表示）。"
+                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。"
                             >
-                              {(() => {
-                                const current = watch(`splatItems.${idx}.license`);
-                                // editorial は新規選択の選択肢から外すが、既にこの区分に
-                                // 設定済みの項目では選択肢から消えて意図せず標準へ書き換わ
-                                // らないよう、現在値なら引き続き表示する。
-                                const options =
-                                  current === "editorial"
-                                    ? DATA_LICENSES
-                                    : SELECTABLE_DATA_LICENSES;
-                                return (
-                                  <select
-                                    {...register(`splatItems.${idx}.license`)}
-                                    className={inputClass}
-                                  >
-                                    {options.map((l) => (
-                                      <option key={l} value={l} className="bg-bg">
-                                        {DATA_LICENSE_LABEL[l]} — {DATA_LICENSE_DESC[l]}
-                                      </option>
-                                    ))}
-                                  </select>
-                                );
-                              })()}
+                              <select
+                                {...register(`splatItems.${idx}.license`)}
+                                className={inputClass}
+                              >
+                                {DATA_LICENSES.map((l) => (
+                                  <option key={l} value={l} className="bg-bg">
+                                    {DATA_LICENSE_LABEL[l]} — {DATA_LICENSE_DESC[l]}
+                                  </option>
+                                ))}
+                              </select>
                             </Field>
                             {watch(`splatItems.${idx}.license`) === "editorial" &&
                               (watch(`splatItems.${idx}.licenseOptions`) || []).length === 0 && (
@@ -2774,14 +2761,11 @@ function LicenseOptionsEditor({
     );
   };
 
-  // editorial は新規選択の選択肢から外すが、既にこの項目でチェック済みなら
-  // 選択肢から消えて意図せず解除されないよう引き続き表示する。
   const hasEditorial = options.some((o) => o.license === "editorial");
-  const selectable = hasEditorial ? DATA_LICENSES : SELECTABLE_DATA_LICENSES;
 
   return (
     <div className="space-y-3">
-      {selectable.map((license) => {
+      {DATA_LICENSES.map((license) => {
         const opt = options.find((o) => o.license === license);
         return (
           <div key={license} className="flex flex-wrap items-start gap-3 border-b border-line/30 pb-2.5 last:border-0 last:pb-0">

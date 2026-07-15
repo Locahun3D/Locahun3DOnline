@@ -38,20 +38,8 @@ export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
 };
 
 // 3Dデータ販売ライセンス（TurboSquid風）。
-// エディトリアル（報道・教育限定）は新規販売の選択肢としては非表示にする方針
-// だが、既存の公開物件が既にこの区分で販売中のため enum からは外せない
-// （外すと zod 検証に失敗し、store.ts の coerceProperty が該当物件を
-// 一覧から丸ごと消してしまう＝過去に実際に本番障害化した）。新規選択を
-// 抑止したい場合は SELECTABLE_DATA_LICENSES 側を編集する。
 export const DATA_LICENSES = ["standard", "editorial", "extended", "custom"] as const;
 export type DataLicense = (typeof DATA_LICENSES)[number];
-
-// 管理画面の新規選択肢（チェックボックス・デフォルト区分セレクト）に出す区分。
-// editorial は新規販売の選択肢からは外すが、既存データの表示・購入・zod検証は
-// 通常通り DATA_LICENSES 側で維持する。
-export const SELECTABLE_DATA_LICENSES = DATA_LICENSES.filter(
-  (l) => l !== "editorial",
-) as Exclude<DataLicense, "editorial">[];
 
 export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
   standard: "標準ライセンス",
