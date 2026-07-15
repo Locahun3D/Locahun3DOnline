@@ -402,6 +402,19 @@ export const propertySchema = z.object({
     // エディトリアル(報道・教育限定)ライセンスで販売する場合に必須の権利者
     // クレジット表記。公開ページ・購入時のライセンステキストに表示する。
     editorialRightsCredit: z.string().max(300).default(""),
+    // 日付別バージョン管理: 再スキャン等で更新された一括ダウンロードZIPを
+    // 日付ごとに保持する(downloadFiles と同じ「マルチ + 単一フォールバック」
+    // パターン)。空なら上の downloadFileUrl/scannedAt を単一バージョン扱い
+    // (resolveDownloadVersions() を参照)。価格差は無いため購入時の選択は
+    // 不要 — 購入後、購入履歴ページでいつでもどの日付でもダウンロード可能。
+    downloadVersions: z.array(z.object({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD で入力してください")
+        .or(z.literal("")),
+      url: urlOrPath(),
+      sizeMb: z.number().min(0).max(99999).default(0),
+    })).max(20).default([]),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z

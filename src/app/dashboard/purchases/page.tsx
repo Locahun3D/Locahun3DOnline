@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo, resolvePurchasedItem } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { resolveDownloadVersions } from "@/lib/download-versions";
 import { redirect } from "next/navigation";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
@@ -86,8 +87,9 @@ export default async function UserPurchasesPage() {
             const prop = propMap.get(p.propertyId);
             const item = prop ? resolvePurchasedItem(prop.splatItems, p) : null;
             const files = item ? resolveDownloadFiles(item) : [];
-            // 一括DL（全形式まとめZip）= バンドル downloadFileUrl、無ければ先頭形式。
-            const bundled = item?.downloadFileUrl || files[0]?.url || "";
+            const versions = item ? resolveDownloadVersions(item, prop?.scannedAt) : [];
+            // 一括DL（全形式まとめZip）= 日付別バージョンの最新、無ければバンドル downloadFileUrl、無ければ先頭形式。
+            const bundled = versions[0]?.url || item?.downloadFileUrl || files[0]?.url || "";
 
             return (
               <div key={p.id} className="border border-line hover:border-line/80 transition">
@@ -150,6 +152,23 @@ export default async function UserPurchasesPage() {
                                 title={en ? `Download ${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} separately` : `${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} を個別ダウンロード`}
                               >
                                 ↓ {f.format}
+                              </a>
+                            ))}
+                          </>
+                        )}
+                        {versions.length > 1 && (
+                          <>
+                            <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-30 mx-1">
+                              {en ? "version" : "日付"}
+                            </span>
+                            {versions.map((v, vi) => (
+                              <a
+                                key={vi}
+                                href={`/api/purchase/${p.id}/download?date=${encodeURIComponent(v.date)}`}
+                                className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/30 text-green-400/80 px-2.5 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+                                title={en ? `Download the ${v.date || "undated"} version${v.sizeMb ? ` (${v.sizeMb} MB)` : ""}` : `${v.date || "日付未設定"}時点のバージョンをダウンロード${v.sizeMb ? `（${v.sizeMb} MB）` : ""}`}
+                              >
+                                ↓ {v.date || (en ? "undated" : "日付未設定")}
                               </a>
                             ))}
                           </>

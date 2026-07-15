@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo, resolvePurchasedItem } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { pickDownloadFile } from "@/lib/downloads";
+import { pickDownloadVersion } from "@/lib/download-versions";
 import { createPresignedGet } from "@/lib/uploads";
 
 export const runtime = "nodejs";
@@ -66,7 +67,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const format = new URL(req.url).searchParams.get("format");
+  const url = new URL(req.url);
+  const format = url.searchParams.get("format");
+  const date = url.searchParams.get("date");
 
   const user = await getCurrentUser();
   if (!user) {
@@ -90,6 +93,8 @@ export async function GET(
     return NextResponse.json({ error: "データが見つかりません" }, { status: 404 });
   }
 
+  // 日付指定: 日付別バージョン管理から該当日付のファイル。価格差は無いため
+  // 購入時の検証は不要（購入済みであれば良い）。存在しない日付を明確に404。
   // 形式指定: その形式の個別ファイル。存在しない形式が指定された場合は
   // splatUrl（ビューアー用ファイル）へフォールバックせず明確に404を返す
   // （以前はここが空文字になり下の共通フォールバックに落ちて、購入者が
@@ -97,7 +102,15 @@ export async function GET(
   // 形式なし（一括DL）: バンドルZip(downloadFileUrl)を優先、無ければ先頭形式、
   // それも無ければ splatUrl にフォールバック。
   let sourceUrl: string;
-  if (format) {
+  if (date) {
+    sourceUrl = pickDownloadVersion(item, property?.scannedAt, date)?.url || "";
+    if (!sourceUrl) {
+      return NextResponse.json(
+        { error: `指定された日付（${date}）のバージョンが見つかりません` },
+        { status: 404 },
+      );
+    }
+  } else if (format) {
     sourceUrl = pickDownloadFile(item, format)?.url || "";
     if (!sourceUrl) {
       return NextResponse.json(
@@ -106,7 +119,12 @@ export async function GET(
       );
     }
   } else {
-    sourceUrl = item.downloadFileUrl || pickDownloadFile(item, null)?.url || item.splatUrl || "";
+    // 日付別バージョンがあれば最新(先頭)を既定に。無ければ従来通り。
+    sourceUrl =
+      pickDownloadVersion(item, property?.scannedAt, null)?.url ||
+      pickDownloadFile(item, null)?.url ||
+      item.splatUrl ||
+      "";
   }
   const key = toR2Key(sourceUrl);
   if (!key) {
