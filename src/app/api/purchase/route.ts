@@ -88,6 +88,7 @@ export async function POST(req: Request) {
     );
   }
   const license = matchedOption.license;
+  const editorialRightsCredit = license === "editorial" ? item.editorialRightsCredit : "";
 
   const purchaseId = randomUUID();
   const price = isDataSaleFree(settings.dataSaleFreePeriod, nowIso) ? 0 : matchedOption.price;
@@ -111,6 +112,7 @@ export async function POST(req: Request) {
       splatItemIndex,
       itemLabel: item.label,
       license,
+      editorialRightsCredit,
       termsAgreedAt,
       priceYen: price,
       status: "completed",
@@ -167,6 +169,7 @@ export async function POST(req: Request) {
     splatItemIndex,
     itemLabel: item.label,
     license,
+    editorialRightsCredit,
     termsAgreedAt,
     priceYen: price,
     status: "pending",

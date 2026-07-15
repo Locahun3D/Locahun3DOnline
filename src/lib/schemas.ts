@@ -37,31 +37,46 @@ export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
   nda_only: "NDA 限定（機密構造・リギング情報を含む）",
 };
 
-// 3Dデータ販売ライセンス（TurboSquid風）。エディトリアル（報道・教育限定）は
-// この事業では取り扱わない方針のため除外している。
-export const DATA_LICENSES = ["standard", "extended", "custom"] as const;
+// 3Dデータ販売ライセンス（TurboSquid風）。
+// エディトリアル（報道・教育限定）は新規販売の選択肢としては非表示にする方針
+// だが、既存の公開物件が既にこの区分で販売中のため enum からは外せない
+// （外すと zod 検証に失敗し、store.ts の coerceProperty が該当物件を
+// 一覧から丸ごと消してしまう＝過去に実際に本番障害化した）。新規選択を
+// 抑止したい場合は SELECTABLE_DATA_LICENSES 側を編集する。
+export const DATA_LICENSES = ["standard", "editorial", "extended", "custom"] as const;
 export type DataLicense = (typeof DATA_LICENSES)[number];
+
+// 管理画面の新規選択肢（チェックボックス・デフォルト区分セレクト）に出す区分。
+// editorial は新規販売の選択肢からは外すが、既存データの表示・購入・zod検証は
+// 通常通り DATA_LICENSES 側で維持する。
+export const SELECTABLE_DATA_LICENSES = DATA_LICENSES.filter(
+  (l) => l !== "editorial",
+) as Exclude<DataLicense, "editorial">[];
 
 export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
   standard: "標準ライセンス",
+  editorial: "エディトリアル限定",
   extended: "拡張ライセンス",
   custom: "カスタム（要相談）",
 };
 
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   standard: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
+  editorial: "報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。",
   extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
 
 export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
   standard: "Standard license",
+  editorial: "Editorial only",
   extended: "Extended license",
   custom: "Custom (by arrangement)",
 };
 
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   standard: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
+  editorial: "Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.",
   extended: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
@@ -384,6 +399,9 @@ export const propertySchema = z.object({
       license: z.enum(DATA_LICENSES),
       price: z.number().int().min(0).max(99999999),
     })).max(4).default([]),
+    // エディトリアル(報道・教育限定)ライセンスで販売する場合に必須の権利者
+    // クレジット表記。公開ページ・購入時のライセンステキストに表示する。
+    editorialRightsCredit: z.string().max(300).default(""),
   })).max(20).default([]),
   splatNotes: z.string().max(2000).default(""),
   scannedAt: z
@@ -491,6 +509,20 @@ export const publishablePropertySchema = propertySchema.extend({
         code: z.ZodIssueCode.custom,
         path: ["splatItems", i, "downloadFileUrl"],
         message: `「${item.label || `シーン#${i + 1}`}」は販売中に設定されていますが、ダウンロードファイルが未設定です`,
+      });
+    }
+
+    // エディトリアル(報道・教育限定)ライセンスで売る項目は、公開時に権利者
+    // クレジット表記が必須（ニュース・報道等での利用時に表示義務があるため）。
+    const usesEditorial =
+      item.licenseOptions.length > 0
+        ? item.licenseOptions.some((o) => o.license === "editorial")
+        : item.license === "editorial";
+    if (usesEditorial && !item.editorialRightsCredit.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["splatItems", i, "editorialRightsCredit"],
+        message: `「${item.label || `シーン#${i + 1}`}」はエディトリアルライセンスで販売されていますが、権利表記が未入力です`,
       });
     }
   });

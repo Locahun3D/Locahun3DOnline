@@ -48,6 +48,7 @@ export async function GET(
     termsAgreedAt: purchase.termsAgreedAt,
     userEmail: purchase.userEmail,
     purchaseId: purchase.id,
+    editorialRightsCredit: purchase.editorialRightsCredit,
   });
 
   return new Response(text, {

@@ -23,6 +23,7 @@ import {
   AREA_SUGGESTIONS,
   TOKEN_COST_LABEL,
   DATA_LICENSES,
+  SELECTABLE_DATA_LICENSES,
   DATA_LICENSE_LABEL,
   DATA_LICENSE_DESC,
   type Property,
@@ -1470,7 +1471,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [] })}
+                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1810,19 +1811,44 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             {/* ── ライセンス ── */}
                             <Field
                               label="デフォルトライセンス区分"
-                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。"
+                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。エディトリアルは新規選択肢からは非表示（既存設定済みの物件のみ表示）。"
                             >
-                              <select
-                                {...register(`splatItems.${idx}.license`)}
-                                className={inputClass}
-                              >
-                                {DATA_LICENSES.map((l) => (
-                                  <option key={l} value={l} className="bg-bg">
-                                    {DATA_LICENSE_LABEL[l]} — {DATA_LICENSE_DESC[l]}
-                                  </option>
-                                ))}
-                              </select>
+                              {(() => {
+                                const current = watch(`splatItems.${idx}.license`);
+                                // editorial は新規選択の選択肢から外すが、既にこの区分に
+                                // 設定済みの項目では選択肢から消えて意図せず標準へ書き換わ
+                                // らないよう、現在値なら引き続き表示する。
+                                const options =
+                                  current === "editorial"
+                                    ? DATA_LICENSES
+                                    : SELECTABLE_DATA_LICENSES;
+                                return (
+                                  <select
+                                    {...register(`splatItems.${idx}.license`)}
+                                    className={inputClass}
+                                  >
+                                    {options.map((l) => (
+                                      <option key={l} value={l} className="bg-bg">
+                                        {DATA_LICENSE_LABEL[l]} — {DATA_LICENSE_DESC[l]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                );
+                              })()}
                             </Field>
+                            {watch(`splatItems.${idx}.license`) === "editorial" &&
+                              (watch(`splatItems.${idx}.licenseOptions`) || []).length === 0 && (
+                                <Field
+                                  label="権利表記（エディトリアル利用時・公開に必須）"
+                                  hint="ニュース・報道等での利用に必要な権利者クレジット表記。例:「Photo: ロケハン3D」「© 渋谷区」等。"
+                                >
+                                  <input
+                                    {...register(`splatItems.${idx}.editorialRightsCredit`)}
+                                    className={inputClass}
+                                    placeholder="例: Photo courtesy of ロケハン3D"
+                                  />
+                                </Field>
+                              )}
 
                             {/* ── 複数ライセンス販売（任意・価格をライセンスごとに調整） ── */}
                             <Field
@@ -2619,9 +2645,14 @@ function LicenseOptionsEditor({
     );
   };
 
+  // editorial は新規選択の選択肢から外すが、既にこの項目でチェック済みなら
+  // 選択肢から消えて意図せず解除されないよう引き続き表示する。
+  const hasEditorial = options.some((o) => o.license === "editorial");
+  const selectable = hasEditorial ? DATA_LICENSES : SELECTABLE_DATA_LICENSES;
+
   return (
     <div className="space-y-3">
-      {DATA_LICENSES.map((license) => {
+      {selectable.map((license) => {
         const opt = options.find((o) => o.license === license);
         return (
           <div key={license} className="flex flex-wrap items-start gap-3 border-b border-line/30 pb-2.5 last:border-0 last:pb-0">
@@ -2646,6 +2677,21 @@ function LicenseOptionsEditor({
           </div>
         );
       })}
+      {hasEditorial && (
+        <Field
+          label="権利表記（エディトリアル利用時・公開に必須）"
+          hint="ニュース・報道等での利用に必要な権利者クレジット表記。例:「Photo: ロケハン3D」「© 渋谷区」等。"
+        >
+          <input
+            value={watch(`splatItems.${idx}.editorialRightsCredit`) || ""}
+            onChange={(e) =>
+              setValue(`splatItems.${idx}.editorialRightsCredit`, e.target.value, { shouldDirty: true })
+            }
+            className="w-full bg-white text-[#111] border border-neutral-300 px-3 py-2.5 text-[15px] font-medium focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/25 transition mono placeholder:text-[#9aa0a6] placeholder:font-normal"
+            placeholder="例: Photo courtesy of ロケハン3D"
+          />
+        </Field>
+      )}
       {options.length === 0 && (
         <p className="text-[11px] text-muted">
           未選択の場合、上の「デフォルト価格・デフォルトライセンス区分」がそのまま使われます。

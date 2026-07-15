@@ -30,6 +30,11 @@ export const purchaseSchema = z.object({
    */
   license: z.string().default("standard"),
   /**
+   * エディトリアルライセンス購入時の権利者クレジット表記スナップショット。
+   * license と同じ理由で購入時点の値を固定する。エディトリアル以外は空。
+   */
+  editorialRightsCredit: z.string().default(""),
+  /**
    * 3Dデータ利用規約(/terms/data-download)への同意日時。購入APIがサーバー側で
    * 同意フラグを検証した時刻を記録する（クライアントのチェックボックスだけに
    * 頼らない）。無償配布(¥0)でも「誰がいつ同意したか」の証跡として残す。

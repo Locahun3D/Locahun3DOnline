@@ -33,6 +33,8 @@ interface DataSalePanelProps {
   downloadFileSizeMb?: number;
   captureDevice?: string;
   alreadyPurchased?: boolean;
+  /** エディトリアルライセンス選択時に表示する権利者クレジット表記。 */
+  editorialRightsCredit?: string;
 }
 
 export default function DataSalePanel({
@@ -48,6 +50,7 @@ export default function DataSalePanel({
   downloadFileSizeMb,
   captureDevice,
   alreadyPurchased = false,
+  editorialRightsCredit,
 }: DataSalePanelProps) {
   const en = useLocale() === "en";
   const lc = en ? "en" : "ja";
@@ -179,6 +182,12 @@ export default function DataSalePanel({
             </span>
             <span className="text-[10px] opacity-70">{dataLicenseLabel(license, lc)}</span>
           </div>
+        )}
+        {license === "editorial" && editorialRightsCredit && (
+          <p className="text-[10px] text-amber-500/90 mt-1 leading-snug">
+            {en ? "Publishing requires this credit: " : "公開時は権利表記が必要です："}
+            {editorialRightsCredit}
+          </p>
         )}
       </div>
 

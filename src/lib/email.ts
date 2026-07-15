@@ -146,6 +146,11 @@ export async function notifyPurchase(p: Purchase): Promise<void> {
         <tr><td style="padding:6px 0;color:#666;">金額（税込）</td><td style="padding:6px 0;text-align:right;font-weight:700;">${yen(p.priceYen)}</td></tr>
         <tr><td style="padding:6px 0;color:#666;">ライセンス</td><td style="padding:6px 0;text-align:right;">${DATA_LICENSE_LABEL[license]}</td></tr>
       </table>
+      ${p.editorialRightsCredit ? `
+      <div style="background:#fff8ec;border:1px solid #f0d9a8;padding:12px 16px;margin:0 0 20px;font-size:12.5px;line-height:1.8;">
+        <strong>権利表記（必須）:</strong> 本データを使用した制作物を公開する際は、下記の権利表記を必ず掲載してください。<br>
+        ${esc(p.editorialRightsCredit)}
+      </div>` : ""}
       <p style="margin:20px 0;">
         <a href="${appUrl("/dashboard/purchases")}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 22px;font-size:13px;letter-spacing:.1em;">ダウンロード・領収書はこちら →</a>
       </p>

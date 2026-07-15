@@ -920,6 +920,7 @@ export default function PropertyDetailView({
                       downloadFileSizeMb={item.downloadFileSizeMb}
                       captureDevice={item.captureDevice}
                       alreadyPurchased={purchasedItemIds.includes(item.id)}
+                      editorialRightsCredit={item.editorialRightsCredit}
                     />
                   )}
                 </section>

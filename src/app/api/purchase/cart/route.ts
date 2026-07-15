@@ -62,6 +62,7 @@ export async function POST(req: Request) {
     title: string;
     label: string;
     license: string;
+    editorialRightsCredit: string;
     price: number;
   }[] = [];
   const seen = new Set<string>();
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
       title: property.title,
       label: item.label,
       license: matchedOption.license,
+      editorialRightsCredit: matchedOption.license === "editorial" ? item.editorialRightsCredit : "",
       // クライアントは価格を送ってこない（サーバの item.salePrice をそのまま
       // 信用しない設計）。無料期間中は単品購入と同じく¥0に統一する。
       price: salesFree ? 0 : matchedOption.price,
@@ -124,6 +126,7 @@ export async function POST(req: Request) {
         splatItemIndex: r.splatItemIndex,
         itemLabel: r.label,
         license: r.license,
+        editorialRightsCredit: r.editorialRightsCredit,
         termsAgreedAt,
         priceYen: r.price,
         status: "completed",
@@ -189,6 +192,7 @@ export async function POST(req: Request) {
       splatItemIndex: r.splatItemIndex,
       itemLabel: r.label,
       license: r.license,
+      editorialRightsCredit: r.editorialRightsCredit,
       termsAgreedAt,
       priceYen: r.price,
       status: "pending",
