@@ -1778,13 +1778,31 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                   )}
                                 </div>
                               </Field>
-                              <Field label="撮影機材" hint="例: iPhone 15 Pro LiDAR">
-                                <input
-                                  type="text"
-                                  {...register(`splatItems.${idx}.captureDevice`)}
-                                  className={inputClass}
-                                  placeholder="撮影機材・手法"
-                                />
+                              <Field label="撮影機材">
+                                {(() => {
+                                  const current = watch(`splatItems.${idx}.captureDevice`) || "";
+                                  // 既存データがプルダウンの2択以外の値を持っていた場合
+                                  // (例: 旧「自由入力」時代のレコード)、選択肢から消えて
+                                  // 保存時に値が意図せず書き換わらないよう、その値も
+                                  // 選択肢として保持する（プルダウン化に伴うデータ破壊防止）。
+                                  const options =
+                                    current && !CAPTURE_DEVICE_OPTIONS.includes(current as never)
+                                      ? [...CAPTURE_DEVICE_OPTIONS, current]
+                                      : CAPTURE_DEVICE_OPTIONS;
+                                  return (
+                                    <select
+                                      {...register(`splatItems.${idx}.captureDevice`)}
+                                      className={inputClass}
+                                    >
+                                      <option value="">— 選択 —</option>
+                                      {options.map((o) => (
+                                        <option key={o} value={o}>
+                                          {o}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  );
+                                })()}
                               </Field>
                             </div>
 
@@ -1967,6 +1985,9 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
 }
 
 // --- small UI helpers ------------------------------------------------------
+
+/** 撮影機材のプルダウン選択肢。自由入力は無し（固定2択）。 */
+const CAPTURE_DEVICE_OPTIONS = ["Portalcam", "A7III"] as const;
 
 const inputClass =
   "w-full bg-white text-[#111] border border-neutral-300 px-3 py-2.5 text-[15px] font-medium focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/25 transition mono placeholder:text-[#9aa0a6] placeholder:font-normal";
