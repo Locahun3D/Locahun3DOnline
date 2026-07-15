@@ -25,6 +25,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "propertyId is required" }, { status: 400 });
   }
 
+  // 利用規約(/terms/data-download)への同意をサーバー側でも必須にする。
+  // 以前はクライアントのチェックボックスだけで、API直叩きでは同意なしに
+  // 購入できてしまっていた。同意時刻は購入レコードに証跡として記録する
+  // （無償配布キャンペーンでも「誰がいつ同意したか」を残すため）。
+  if (body.agreedTerms !== true) {
+    return NextResponse.json(
+      { error: "3Dデータ利用規約への同意が必要です" },
+      { status: 400 },
+    );
+  }
+  const termsAgreedAt = new Date().toISOString();
+
   const property = await propertyRepo.get(propertyId);
   if (!property) {
     return NextResponse.json({ error: "物件が見つかりません" }, { status: 404 });
@@ -79,6 +91,7 @@ export async function POST(req: Request) {
       splatItemIndex,
       itemLabel: item.label,
       license: item.license,
+      termsAgreedAt,
       priceYen: price,
       status: "completed",
       stripeSessionId: "",
@@ -134,6 +147,7 @@ export async function POST(req: Request) {
     splatItemIndex,
     itemLabel: item.label,
     license: item.license,
+    termsAgreedAt,
     priceYen: price,
     status: "pending",
     stripeSessionId: session.id,

@@ -33,6 +33,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "カートが空です" }, { status: 400 });
   }
 
+  // 利用規約への同意をサーバー側でも必須にする（単品購入 /api/purchase と同じ）。
+  if (body?.agreedTerms !== true) {
+    return NextResponse.json(
+      { error: "3Dデータ利用規約への同意が必要です" },
+      { status: 400 },
+    );
+  }
+  const termsAgreedAt = new Date().toISOString();
+
   // 検証 + 重複/購入済み除外。
   const resolved: {
     propertyId: string;
@@ -91,6 +100,7 @@ export async function POST(req: Request) {
         splatItemIndex: r.splatItemIndex,
         itemLabel: r.label,
         license: r.license,
+        termsAgreedAt,
         priceYen: r.price,
         status: "completed",
         stripeSessionId: "",
@@ -155,6 +165,7 @@ export async function POST(req: Request) {
       splatItemIndex: r.splatItemIndex,
       itemLabel: r.label,
       license: r.license,
+      termsAgreedAt,
       priceYen: r.price,
       status: "pending",
       stripeSessionId: session.id,

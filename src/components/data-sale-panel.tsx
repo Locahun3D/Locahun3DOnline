@@ -83,7 +83,8 @@ export default function DataSalePanel({
       const res = await fetch("/api/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId, splatItemIndex }),
+        // agreedTerms はサーバー側でも必須検証され、同意時刻が購入レコードに記録される。
+        body: JSON.stringify({ propertyId, splatItemIndex, agreedTerms }),
       });
       const data = await res.json();
       if (data.url) {

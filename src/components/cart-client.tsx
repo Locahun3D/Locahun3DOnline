@@ -43,6 +43,8 @@ export default function CartClient() {
             propertyId: i.propertyId,
             splatItemIndex: i.splatItemIndex,
           })),
+          // サーバー側でも必須検証され、同意時刻が購入レコードに記録される。
+          agreedTerms: agreed,
         }),
       });
       const data = (await res.json()) as {

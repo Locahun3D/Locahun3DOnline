@@ -53,6 +53,10 @@ export default async function DataDownloadTermsPage() {
                 <li><strong>カスタム（要相談）</strong> — 利用範囲を個別に取り決め。購入前にお問い合わせください。</li>
               </ul>
             </li>
+            <li>キャンペーン等により本データを<strong>無償で提供する場合にも、本規約を準用します</strong>。この場合、本規約中の「購入者」は無償提供を受けた者と読み替えます。</li>
+            <li>
+              購入者は、本データを使用してレンダリング・撮影した<strong>静止画・映像をSNS等で公開できます</strong>。公開の際は「ロケハン3D」のクレジット表記（例: #ロケハン3D タグ、または locahun3d.com への言及）を添えてください。ただし第3条の禁止事項（機密エリアの公開等）に該当する内容は除きます。
+            </li>
           </ol>
         </section>
 
@@ -66,6 +70,7 @@ export default async function DataDownloadTermsPage() {
             <li>本データの改変物を、元のスタジオと誤認させる形で公開する行為</li>
             <li>本データをNFT・デジタルアセットとして販売する行為</li>
             <li>本データに含まれるスタジオの機密情報（バックヤード・搬入口・制御室等）をSNS等で無許可公開する行為</li>
+            <li>本データおよびその改変物を、<strong>機械学習・生成AIモデルの学習データとして利用する行為</strong>（本サービスの事前の書面による許諾がある場合を除く）</li>
           </ol>
         </section>
 
@@ -123,6 +128,7 @@ export default async function DataDownloadTermsPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年6月23日<br />
+            改定日: 2026年7月15日（無償提供への準用・SNS公開の許諾・AI学習利用の禁止を追加）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -189,6 +195,8 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
                 <li><strong>Custom (by arrangement)</strong> — Scope arranged individually. Please contact us before purchasing.</li>
               </ul>
             </li>
+            <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
+            <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the #ロケハン3D tag or a mention of locahun3d.com). Content falling under the prohibitions in Article 3 (such as confidential areas) is excluded.</li>
           </ol>
         </section>
 
@@ -201,7 +209,8 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>provide the Studio&apos;s internal structure or equipment information to competing facilities;</li>
             <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
             <li>sell the Data as an NFT or digital asset;</li>
-            <li>publish confidential Studio information contained in the Data (backyards, loading docks, control rooms, etc.) on social media or elsewhere without permission.</li>
+            <li>publish confidential Studio information contained in the Data (backyards, loading docks, control rooms, etc.) on social media or elsewhere without permission;</li>
+            <li>use the Data or derivatives thereof as <strong>training data for machine-learning or generative-AI models</strong> (except with the Service&apos;s prior written permission).</li>
           </ol>
         </section>
 
@@ -259,6 +268,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
+            Amended: July 15, 2026 (free distribution, social-media publication, AI-training prohibition)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

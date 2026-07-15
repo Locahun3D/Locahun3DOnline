@@ -29,6 +29,13 @@ export const purchaseSchema = z.object({
    * 購入時点の値のまま固定する（利用許諾は購入時点で確定した契約内容のため）。
    */
   license: z.string().default("standard"),
+  /**
+   * 3Dデータ利用規約(/terms/data-download)への同意日時。購入APIがサーバー側で
+   * 同意フラグを検証した時刻を記録する（クライアントのチェックボックスだけに
+   * 頼らない）。無償配布(¥0)でも「誰がいつ同意したか」の証跡として残す。
+   * 旧レコードは未記録のため optional。
+   */
+  termsAgreedAt: z.string().optional(),
   priceYen: z.number().int().min(0),
   status: purchaseStatusSchema.default("pending"),
   stripeSessionId: z.string().default(""),
