@@ -55,13 +55,23 @@ export default async function DataDownloadTermsPage() {
             </li>
             <li>キャンペーン等により本データを<strong>無償で提供する場合にも、本規約を準用します</strong>。この場合、本規約中の「購入者」は無償提供を受けた者と読み替えます。</li>
             <li>
-              購入者は、本データを使用してレンダリング・撮影した<strong>静止画・映像をSNS等で公開できます</strong>。公開の際は「ロケハン3D」のクレジット表記（例: #ロケハン3D タグ、または locahun3d.com への言及）を添えてください。ただし第3条の禁止事項（機密エリアの公開等）に該当する内容は除きます。
+              購入者は、本データを使用してレンダリング・撮影した<strong>静止画・映像をSNS等で公開できます</strong>。公開の際は「ロケハン3D」のクレジット表記（例: #ロケハン3D タグ、または locahun3d.com への言及）を添えてください。ただし第3条に定める第三者権利物の除去義務、および第4条の禁止事項（機密エリアの公開等）に該当する内容は除きます。
             </li>
           </ol>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第3条（禁止事項）</h2>
+          <h2 className="serif text-lg mb-4">第3条（第三者の権利物の取り扱い）</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>本データは実在の場所を撮影・スキャンしたものであり、対象空間には<strong>第三者が権利を有する広告物・看板・ポスター・企業ロゴ・商標・キャラクター等</strong>（以下「第三者権利物」）が写り込んでいる場合があります。</li>
+            <li>第三者権利物に関する著作権・商標権その他の権利は当該第三者に帰属し、本サービスおよびスタジオは、本データの提供によりこれらの権利について<strong>何らの許諾も行うものではありません</strong>。</li>
+            <li>購入者は、本データを用いた制作物を公開・納品・配布する前に、<strong>第三者権利物を削除・除去・ぼかし処理・差し替え等の方法により制作物から取り除く</strong>ものとします。</li>
+            <li>購入者が前項の措置を怠ったことに起因して第三者との間に生じた紛争・請求・損害について、本サービスは一切の責任を負わず、購入者が自己の責任と費用において解決するものとします。</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">第4条（禁止事項）</h2>
           <p className="opacity-80 mb-3">購入者は、以下の行為を行ってはなりません。</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本データの第三者への再配布・転売・貸与</li>
@@ -71,11 +81,12 @@ export default async function DataDownloadTermsPage() {
             <li>本データをNFT・デジタルアセットとして販売する行為</li>
             <li>本データに含まれるスタジオの機密情報（バックヤード・搬入口・制御室等）をSNS等で無許可公開する行為</li>
             <li>本データおよびその改変物を、<strong>機械学習・生成AIモデルの学習データとして利用する行為</strong>（本サービスの事前の書面による許諾がある場合を除く）</li>
+            <li>第3条に定める第三者権利物を除去せずに制作物を公開・納品・配布する行為</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第4条（データの品質と免責）</h2>
+          <h2 className="serif text-lg mb-4">第5条（データの品質と免責）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本データは撮影時点の空間を3Dスキャンしたものであり、現在の施設状態との差異が生じる場合があります。</li>
             <li>本データの精度・解像度は撮影条件に依存し、完全な正確性を保証するものではありません。</li>
@@ -84,7 +95,7 @@ export default async function DataDownloadTermsPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第5条（返金）</h2>
+          <h2 className="serif text-lg mb-4">第6条（返金）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>デジタルデータの性質上、ダウンロード後の返金は原則として行いません。</li>
             <li>データの破損・欠陥等、本サービスに起因する問題が確認された場合は、返金または代替データの提供を検討します。</li>
@@ -93,7 +104,7 @@ export default async function DataDownloadTermsPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第6条（機密情報の取り扱い）</h2>
+          <h2 className="serif text-lg mb-4">第7条（機密情報の取り扱い）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>バックヤード・搬入動線・制御室等の非公開エリアを含むデータは、制作会社アカウント（Teamプラン）のみに提供されます。</li>
             <li>購入者は、これらの機密情報を適切に管理し、プロジェクト関係者以外に開示しないものとします。</li>
@@ -102,15 +113,15 @@ export default async function DataDownloadTermsPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第7条（知的財産権）</h2>
+          <h2 className="serif text-lg mb-4">第8条（知的財産権）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>本データの著作権およびその他の知的財産権は、スタジオの所有者または本サービスに帰属します。</li>
+            <li>本データの著作権およびその他の知的財産権は、スタジオの所有者または本サービスに帰属します。第三者権利物に関する権利の扱いは第3条によります。</li>
             <li>購入により移転する権利は、第2条に定める利用許諾のみです。</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第8条（規約の変更）</h2>
+          <h2 className="serif text-lg mb-4">第9条（規約の変更）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本規約は予告なく変更される場合があります。</li>
             <li>変更後の規約は、本ページに掲載された時点で効力を生じるものとします。</li>
@@ -118,7 +129,7 @@ export default async function DataDownloadTermsPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第9条（準拠法・管轄）</h2>
+          <h2 className="serif text-lg mb-4">第10条（準拠法・管轄）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本規約は日本法を準拠法とします。</li>
             <li>紛争が生じた場合、東京地方裁判所を第一審の専属的合意管轄裁判所とします。</li>
@@ -128,7 +139,7 @@ export default async function DataDownloadTermsPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年6月23日<br />
-            改定日: 2026年7月15日（無償提供への準用・SNS公開の許諾・AI学習利用の禁止を追加）<br />
+            改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -196,12 +207,22 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               </ul>
             </li>
             <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
-            <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the #ロケハン3D tag or a mention of locahun3d.com). Content falling under the prohibitions in Article 3 (such as confidential areas) is excluded.</li>
+            <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the #ロケハン3D tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 3 (Prohibited acts)</h2>
+          <h2 className="serif text-lg mb-4">Article 3 (Third-party rights captured in the Data)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>The Data is a scan of a real, physical location, and the captured space may include <strong>advertisements, signage, posters, corporate logos, trademarks, characters or other material in which third parties hold rights</strong> (&quot;Third-Party Material&quot;).</li>
+            <li>Copyright, trademark and other rights in any Third-Party Material belong to the relevant third party. Neither the Service nor the Studio grants any license or permission regarding Third-Party Material by providing the Data.</li>
+            <li>Before publishing, delivering or distributing any work created using the Data, the Purchaser shall <strong>remove, obscure, blur or replace</strong> any Third-Party Material contained in that work.</li>
+            <li>The Service bears no responsibility for any dispute, claim or damages arising from a third party as a result of the Purchaser&apos;s failure to comply with the preceding paragraph; the Purchaser shall resolve any such matter at its own responsibility and expense.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 4 (Prohibited acts)</h2>
           <p className="opacity-80 mb-3">The Purchaser shall not:</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>redistribute, resell or lend the Data to third parties;</li>
@@ -210,12 +231,13 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
             <li>sell the Data as an NFT or digital asset;</li>
             <li>publish confidential Studio information contained in the Data (backyards, loading docks, control rooms, etc.) on social media or elsewhere without permission;</li>
-            <li>use the Data or derivatives thereof as <strong>training data for machine-learning or generative-AI models</strong> (except with the Service&apos;s prior written permission).</li>
+            <li>use the Data or derivatives thereof as <strong>training data for machine-learning or generative-AI models</strong> (except with the Service&apos;s prior written permission);</li>
+            <li>publish, deliver or distribute a work without removing Third-Party Material as required under Article 3.</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 4 (Data quality and disclaimer)</h2>
+          <h2 className="serif text-lg mb-4">Article 5 (Data quality and disclaimer)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>The Data is a 3D scan of the space at the time of capture and may differ from the facility&apos;s current state.</li>
             <li>The accuracy and resolution of the Data depend on capture conditions and are not guaranteed to be fully accurate.</li>
@@ -224,7 +246,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 5 (Refunds)</h2>
+          <h2 className="serif text-lg mb-4">Article 6 (Refunds)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Due to the nature of digital data, refunds are not provided after download as a general rule.</li>
             <li>If a problem attributable to the Service is confirmed (such as corrupted or defective data), we will consider a refund or replacement data.</li>
@@ -233,7 +255,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 6 (Handling of confidential information)</h2>
+          <h2 className="serif text-lg mb-4">Article 7 (Handling of confidential information)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Data including non-public areas such as backyards, loading routes and control rooms is provided only to production-company accounts (Team plan).</li>
             <li>The Purchaser shall manage such confidential information appropriately and not disclose it to anyone other than project members.</li>
@@ -242,15 +264,15 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 7 (Intellectual property)</h2>
+          <h2 className="serif text-lg mb-4">Article 8 (Intellectual property)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>Copyright and other intellectual property rights in the Data belong to the Studio owner or the Service.</li>
+            <li>Copyright and other intellectual property rights in the Data belong to the Studio owner or the Service. Rights in Third-Party Material are governed by Article 3.</li>
             <li>The only right transferred by purchase is the license set out in Article 2.</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 8 (Changes to these terms)</h2>
+          <h2 className="serif text-lg mb-4">Article 9 (Changes to these terms)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>These terms may be changed without notice.</li>
             <li>The amended terms take effect when posted on this page.</li>
@@ -258,7 +280,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 9 (Governing law and jurisdiction)</h2>
+          <h2 className="serif text-lg mb-4">Article 10 (Governing law and jurisdiction)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>These terms are governed by the laws of Japan.</li>
             <li>Any dispute shall be subject to the exclusive jurisdiction of the Tokyo District Court as the court of first instance.</li>
@@ -268,7 +290,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
-            Amended: July 15, 2026 (free distribution, social-media publication, AI-training prohibition)<br />
+            Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use; renumbered subsequent articles)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
