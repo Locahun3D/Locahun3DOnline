@@ -162,6 +162,15 @@ export default async function UserPurchasesPage() {
                           {en ? "↓ Terms (.txt)" : "↓ 利用規約 (.txt)"}
                         </a>
                         <a
+                          href={`/api/purchase/${p.id}/license?view=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 hover:opacity-100 hover:text-accent transition whitespace-nowrap underline underline-offset-2"
+                          title={en ? "View full terms in browser" : "全文をブラウザで見る"}
+                        >
+                          {en ? "View full text" : "全文を見る"}
+                        </a>
+                        <a
                           href={`/api/purchase/${p.id}/receipt`}
                           target="_blank"
                           rel="noopener noreferrer"

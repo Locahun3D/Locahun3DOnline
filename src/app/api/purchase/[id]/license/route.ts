@@ -12,9 +12,12 @@ export const runtime = "nodejs";
  * 認可パターン。ダウンロード画面でデータ本体・領収書と並べて提供する。
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // ?view=1 ならブラウザでそのまま開ける(inline)。無指定なら従来通りダウンロード。
+  const view = new URL(req.url).searchParams.get("view") === "1";
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
@@ -55,7 +58,7 @@ export async function GET(
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       // 日本語ファイル名は filename* (RFC 5987) で指定する（filename= だけだと文字化けする）。
-      "Content-Disposition": `attachment; filename="license.txt"; filename*=UTF-8''${encodeURIComponent(
+      "Content-Disposition": `${view ? "inline" : "attachment"}; filename="license.txt"; filename*=UTF-8''${encodeURIComponent(
         `ロケハン3D_利用規約_${purchase.propertyTitle || purchase.propertyId}.txt`,
       )}`,
     },
