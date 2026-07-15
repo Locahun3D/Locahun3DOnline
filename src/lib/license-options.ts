@@ -4,7 +4,7 @@
  * 「マルチ配列があればそれを、無ければレガシー単一フィールドを1件として
  * フォールバック」のパターン。
  */
-import type { DataLicense } from "./schemas";
+import { DATA_LICENSES, type DataLicense } from "./schemas";
 
 export interface LicenseOption {
   license: DataLicense;
@@ -19,7 +19,14 @@ interface LicenseSource {
 
 export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
   const multi = (item.licenseOptions ?? []).filter((o) => o.license);
-  if (multi.length > 0) return multi;
+  if (multi.length > 0) {
+    // 追加(チェックした)順ではなく、常に DATA_LICENSES のグレード順
+    // (standard → editorial → extended → custom) で並べる。管理画面の
+    // チェックボックス一覧・買い手のライセンス選択チップ双方で表示順を揃える。
+    return [...multi].sort(
+      (a, b) => DATA_LICENSES.indexOf(a.license) - DATA_LICENSES.indexOf(b.license),
+    );
+  }
   return [{ license: item.license ?? "standard", price: item.salePrice ?? 0 }];
 }
 
