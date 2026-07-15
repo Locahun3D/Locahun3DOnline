@@ -213,6 +213,56 @@ export const purchaseRepo = {
     return validated;
   },
 
+  /**
+   * status='pending' の場合のみ 'completed' へ更新する（条件付き・冪等）。
+   * Stripe の success_url 戻り（/api/purchase/return）と webhook
+   * （checkout.session.completed）はほぼ同時に届き得る両方が独立に
+   * upsert()を呼ぶ従来実装だと、双方が read-then-write の間に競合し、
+   * 「completed 化 + notifyPurchase 呼び出し」が2回走る（購入完了メール
+   * 二重送信）余地があった。D1 では `UPDATE ... WHERE status='pending'`
+   * を1SQLで実行し、実際に更新できた行数(meta.changes)で「自分がこの
+   * 購入を完了させた最初の呼び出しか」を判定する。0件なら既に他方が
+   * 完了させていたということなので null を返し、呼び出し元は通知等を
+   * スキップする。dev(JSONファイル)はシングルプロセスのため素朴な
+   * read-then-write のままで実務上問題ない。
+   */
+  async markCompletedIfPending(
+    id: string,
+    completedAt: string,
+  ): Promise<Purchase | null> {
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      const idx = all.findIndex((x) => x.id === id);
+      if (idx < 0 || all[idx].status !== "pending") return null;
+      const validated = purchaseSchema.parse({
+        ...all[idx],
+        status: "completed",
+        completedAt,
+      });
+      all[idx] = validated;
+      await fileWriteAll(all);
+      return validated;
+    }
+    const db = await getD1();
+    if (!db) throw new Error("購入データの保存先 (D1) が利用できません");
+    const existing = await d1GetData<Purchase>(db, TABLE, "id", id);
+    if (!existing || existing.status !== "pending") return null;
+    const validated = purchaseSchema.parse({
+      ...existing,
+      status: "completed",
+      completedAt,
+    });
+    const res = await db
+      .prepare(
+        `UPDATE ${TABLE} SET status = ?, data = ? WHERE id = ? AND status = 'pending'`,
+      )
+      .bind("completed", JSON.stringify(validated), id)
+      .run();
+    const changed = res?.meta?.changes ?? res?.changes ?? 0;
+    if (!changed) return null; // 他方の呼び出しが先に完了させていた
+    return validated;
+  },
+
   /** 購入記録を完全削除（テスト購入の掃除・管理者専用想定）。 */
   async remove(id: string): Promise<void> {
     if (canAccessLocalFs()) {

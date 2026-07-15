@@ -86,15 +86,16 @@ export async function POST(req: Request) {
             purchaseId &&
             (s.payment_status === "paid" || s.payment_status === "no_payment_required")
           ) {
-            const p = await purchaseRepo.get(purchaseId);
-            if (p && p.status === "pending") {
-              const completed = await purchaseRepo.upsert({
-                ...p,
-                status: "completed",
-                completedAt: new Date().toISOString(),
-              });
+            // /api/purchase/return とほぼ同時に届き得るため、条件付き更新
+            // (status='pending'の場合のみ)で完了させる。null=既に他方が
+            // 完了済み＝この呼び出しは通知をスキップ（二重送信防止）。
+            const completed = await purchaseRepo.markCompletedIfPending(
+              purchaseId,
+              new Date().toISOString(),
+            );
+            if (completed) {
               const day = new Date().toISOString().slice(0, 10);
-              await track(p.propertyId, "purchase", "", day, "desktop", p.priceYen);
+              await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
               await notifyPurchase(completed);
             }
           }
@@ -111,13 +112,12 @@ export async function POST(req: Request) {
               (p) => p.stripeSessionId === s.id && p.status === "pending",
             );
             const day = new Date().toISOString().slice(0, 10);
+            const now = new Date().toISOString();
             for (const p of matched) {
-              const completed = await purchaseRepo.upsert({
-                ...p,
-                status: "completed",
-                completedAt: new Date().toISOString(),
-              });
-              await track(p.propertyId, "purchase", "", day, "desktop", p.priceYen);
+              // 条件付き更新。/api/purchase/return と競合しても二重通知しない。
+              const completed = await purchaseRepo.markCompletedIfPending(p.id, now);
+              if (!completed) continue;
+              await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
               await notifyPurchase(completed);
             }
           }

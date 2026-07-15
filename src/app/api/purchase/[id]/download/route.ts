@@ -98,6 +98,12 @@ export async function GET(
 
   const obj = await bucket.get(key);
   if (!obj) {
+    // ユーザー向け文言は変えない（原因の詳細を外部に漏らさない）が、運営が
+    // 問い合わせ対応時にログから原因(R2にオブジェクトが実在しない＝データ破損/
+    // 誤削除か、一時的なR2障害か)を切り分けられるよう記録しておく。
+    console.error(
+      `[purchase-download] R2 object not found: key="${key}" purchaseId=${id} format=${format ?? "(none)"}`,
+    );
     return NextResponse.json({ error: "ファイルが見つかりません" }, { status: 404 });
   }
 

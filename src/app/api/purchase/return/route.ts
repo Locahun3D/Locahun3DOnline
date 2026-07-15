@@ -65,15 +65,16 @@ export async function GET(req: Request) {
     const day = now.toISOString().slice(0, 10);
     for (const purchase of matched) {
       if (user.id !== purchase.userId) continue;
-      if (purchase.status === "pending") {
-        const completed = await purchaseRepo.upsert({
-          ...purchase,
-          status: "completed",
-          completedAt: now.toISOString(),
-        });
-        await track(purchase.propertyId, "purchase", "", day, "desktop", purchase.priceYen);
-        await notifyPurchase(completed);
-      }
+      // webhook とほぼ同時に届き得るため条件付き更新(status='pending'の場合
+      // のみ)で完了させる。null=既にwebhookが完了済み＝通知をスキップ
+      // （購入完了メール二重送信の防止）。
+      const completed = await purchaseRepo.markCompletedIfPending(
+        purchase.id,
+        now.toISOString(),
+      );
+      if (!completed) continue;
+      await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
+      await notifyPurchase(completed);
     }
 
     // カート購入なら購入履歴へ、単品なら物件ページへ。

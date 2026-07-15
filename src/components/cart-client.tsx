@@ -7,6 +7,7 @@ import {
   removeFromCart,
   clearCart,
   onCartChange,
+  reconcileCart,
   type CartItem,
 } from "@/lib/cart";
 import { useLocale, useHref } from "@/components/locale-provider";
@@ -18,12 +19,47 @@ export default function CartClient() {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // 価格変更/販売終了の再検証結果（マウント時の1回だけ表示するバナー）。
+  const [notice, setNotice] = useState<{ removedCount: number; priceChangedCount: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
     const sync = () => setItems(getCart());
     sync();
     return onCartChange(sync);
+  }, []);
+
+  // マウント時に現在の価格・販売可否をサーバーへ照会し、古いスナップショット
+  // (localStorage)を最新化する。価格変更や販売終了に気付かず決済へ進む
+  // UXバグを防ぐ（決済金額自体はサーバーが再確定するため安全だが、表示が
+  // 古いままだとユーザーが混乱する）。
+  useEffect(() => {
+    const cart = getCart();
+    if (cart.length === 0) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/cart/prices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cart.map((i) => ({ propertyId: i.propertyId, splatItemIndex: i.splatItemIndex })),
+          }),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          items: { propertyId: string; splatItemIndex: number; price: number; available: boolean }[];
+        };
+        const { changed, removed, priceChanged } = reconcileCart(data.items);
+        if (changed) {
+          setItems(getCart());
+          setNotice({ removedCount: removed.length, priceChangedCount: priceChanged.length });
+        }
+      } catch {
+        // 照会失敗時は何もしない（表示中のスナップショットのまま。決済時の
+        // サーバー側再検証で最終的な安全性は担保される）。
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const total = items.reduce((n, i) => n + i.price, 0);
@@ -73,22 +109,43 @@ export default function CartClient() {
 
   if (!mounted) return null;
 
+  const noticeBanner = notice && (
+    <div className="border border-amber-400/40 bg-amber-400/5 px-4 py-3 text-[12.5px] text-amber-300 flex items-start justify-between gap-3">
+      <span>
+        {en
+          ? `Cart updated: ${notice.removedCount > 0 ? `${notice.removedCount} item(s) no longer available` : ""}${notice.removedCount > 0 && notice.priceChangedCount > 0 ? ", " : ""}${notice.priceChangedCount > 0 ? `${notice.priceChangedCount} item(s) price changed` : ""}.`
+          : `カートを最新情報に更新しました：${notice.removedCount > 0 ? `${notice.removedCount}件が購入不可（購入済み/販売終了）のため削除` : ""}${notice.removedCount > 0 && notice.priceChangedCount > 0 ? "、" : ""}${notice.priceChangedCount > 0 ? `${notice.priceChangedCount}件の価格が変更` : ""}。`}
+      </span>
+      <button
+        type="button"
+        onClick={() => setNotice(null)}
+        className="mono text-[10px] uppercase opacity-60 hover:opacity-100 shrink-0"
+      >
+        {en ? "Dismiss" : "閉じる"}
+      </button>
+    </div>
+  );
+
   if (items.length === 0) {
     return (
-      <div className="border border-line p-10 text-center">
-        <p className="text-sm opacity-50 mb-4">{en ? "Your cart is empty." : "カートは空です。"}</p>
-        <Link
-          href={lh("/properties")}
-          className="mono text-[11px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
-        >
-          {en ? "Browse locations →" : "物件を探す →"}
-        </Link>
+      <div className="space-y-4">
+        {noticeBanner}
+        <div className="border border-line p-10 text-center">
+          <p className="text-sm opacity-50 mb-4">{en ? "Your cart is empty." : "カートは空です。"}</p>
+          <Link
+            href={lh("/properties")}
+            className="mono text-[11px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
+          >
+            {en ? "Browse locations →" : "物件を探す →"}
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {noticeBanner}
       <div className="space-y-3">
         {items.map((i) => (
           <div

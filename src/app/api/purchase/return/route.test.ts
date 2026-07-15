@@ -16,10 +16,12 @@ vi.mock("@/lib/dal", () => ({
 
 const mockList = vi.fn();
 const mockUpsert = vi.fn();
+const mockMarkCompletedIfPending = vi.fn();
 vi.mock("@/lib/purchases", () => ({
   purchaseRepo: {
     list: (...args: unknown[]) => mockList(...args),
     upsert: (...args: unknown[]) => mockUpsert(...args),
+    markCompletedIfPending: (...args: unknown[]) => mockMarkCompletedIfPending(...args),
   },
 }));
 
@@ -64,7 +66,7 @@ describe("GET /api/purchase/return — auth binding", () => {
     const res = await GET(req);
 
     expect(mockList).not.toHaveBeenCalled();
-    expect(mockUpsert).not.toHaveBeenCalled();
+    expect(mockMarkCompletedIfPending).not.toHaveBeenCalled();
     expect(res.status).toBe(307);
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("/sign-in");
@@ -84,7 +86,15 @@ describe("GET /api/purchase/return — auth binding", () => {
         priceYen: 500,
       },
     ]);
-    mockUpsert.mockImplementation(async (p) => p);
+    mockMarkCompletedIfPending.mockImplementation(async (id, completedAt) => ({
+      id,
+      userId: "user_owner",
+      propertyId: "prop_1",
+      stripeSessionId: "sess_real",
+      status: "completed",
+      priceYen: 500,
+      completedAt,
+    }));
 
     const req = new Request(
       "https://locahun3d.com/api/purchase/return?session_id=sess_real",
@@ -92,8 +102,9 @@ describe("GET /api/purchase/return — auth binding", () => {
     const res = await GET(req);
 
     expect(mockList).toHaveBeenCalledWith({ userId: "user_owner" });
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "p1", status: "completed" }),
+    expect(mockMarkCompletedIfPending).toHaveBeenCalledWith(
+      "p1",
+      expect.any(String),
     );
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("purchase=success");
