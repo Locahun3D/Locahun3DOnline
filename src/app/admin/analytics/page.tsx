@@ -12,7 +12,7 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
 
 export const metadata = { title: "アナリティクス" };
 
-const PERIODS = [7, 14, 30, 90] as const;
+const PERIODS = [1, 7, 14, 30, 90] as const;
 type Period = (typeof PERIODS)[number];
 
 function lastNDays(n: number): string[] {
@@ -111,11 +111,23 @@ export default async function AdminAnalyticsPage({
   const allTimeRevenue = completedPurchases.reduce((s, p) => s + p.priceYen, 0);
   const allTimeRefunds = refundedPurchases.reduce((s, p) => s + p.priceYen, 0);
 
+  // 検索/スタジオ絞込が効いている間は、下のトレンド・端末別・流入元も同じ
+  // スタジオ集合にスコープする。以前はここだけ Object.values(stats) で常に
+  // 全スタジオを合算しており、上のサマリーカード（絞込済み合計）と食い違って
+  // 見える不整合バグがあった（例: 絞込中の合計27に対しトレンドのピークが
+  // 220＝他スタジオ分も混ざっていた）。
+  const scopedIds = query || studioFilter ? new Set(rows.map((r) => r.id)) : null;
+  const scopedStats = scopedIds
+    ? Object.entries(stats)
+        .filter(([id]) => scopedIds.has(id))
+        .map(([, s]) => s)
+    : Object.values(stats);
+
   // Daily trend over the window.
   const dailyViews = window.map((d) => {
     let v = 0;
     let p = 0;
-    for (const s of Object.values(stats)) {
+    for (const s of scopedStats) {
       v += s.daily[d]?.v ?? 0;
       p += s.daily[d]?.p ?? 0;
     }
@@ -124,9 +136,9 @@ export default async function AdminAnalyticsPage({
   const dailyMax = Math.max(1, ...dailyViews.map((x) => x.v));
   const peak = dailyViews.reduce((m, x) => (x.v > m.v ? x : m), { d: "—", v: 0, p: 0 });
 
-  // Referrers (all-time aggregate).
+  // Referrers (絞込中はスコープ内、それ以外は全期間・全スタジオ集計)。
   const refAgg: Record<string, number> = {};
-  for (const s of Object.values(stats)) {
+  for (const s of scopedStats) {
     for (const [k, v] of Object.entries(s.referrers)) {
       refAgg[k] = (refAgg[k] ?? 0) + v;
     }
@@ -134,9 +146,9 @@ export default async function AdminAnalyticsPage({
   const refRows = Object.entries(refAgg).sort((a, b) => b[1] - a[1]);
   const refMax = refRows[0]?.[1] ?? 1;
 
-  // Devices (all-time aggregate).
+  // Devices (絞込中はスコープ内、それ以外は全期間・全スタジオ集計)。
   const devAgg: Record<string, number> = {};
-  for (const s of Object.values(stats)) {
+  for (const s of scopedStats) {
     for (const [k, v] of Object.entries(s.devices ?? {})) {
       devAgg[k] = (devAgg[k] ?? 0) + v;
     }
@@ -342,7 +354,7 @@ export default async function AdminAnalyticsPage({
               {/* Devices */}
               <div>
                 <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  ● 端末別（全期間）
+                  ● 端末別（{scopedIds ? "絞込中" : "全期間"}）
                 </div>
                 <div className="border border-line p-4 space-y-3">
                   {devTotal === 0 ? (
@@ -372,7 +384,7 @@ export default async function AdminAnalyticsPage({
               {/* Referrers */}
               <div>
                 <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  ● 流入元（全期間・閲覧ベース）
+                  ● 流入元（{scopedIds ? "絞込中" : "全期間"}・閲覧ベース）
                 </div>
                 <div className="border border-line p-4 space-y-3">
                   {refRows.length === 0 ? (
