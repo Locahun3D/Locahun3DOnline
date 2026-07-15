@@ -32,7 +32,19 @@ function fmtDate(iso: string): string {
   }
 }
 
-export default function PreviewShare({ propertyId }: { propertyId: string }) {
+const DEFAULT_BUTTON_CLASS =
+  "px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition";
+
+export default function PreviewShare({
+  propertyId,
+  buttonClassName = DEFAULT_BUTTON_CLASS,
+  buttonLabel = "共有URL",
+}: {
+  propertyId: string;
+  /** 呼び出し元のパネルに合わせてボタン見た目を差し替える（既定は上部ツールバー用）。 */
+  buttonClassName?: string;
+  buttonLabel?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<PropertyPreview | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -91,9 +103,9 @@ export default function PreviewShare({ propertyId }: { propertyId: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+        className={buttonClassName}
       >
-        共有URL{preview && !expired ? " ●" : ""}
+        {buttonLabel}{preview && !expired ? " ●" : ""}
       </button>
 
       {open && (

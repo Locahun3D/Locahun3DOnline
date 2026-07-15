@@ -41,7 +41,6 @@ import FileDropzone, {
 } from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
 import SlugEditor from "./slug-editor";
-import PreviewShare from "./preview-share";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 
@@ -371,7 +370,6 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
             >
               プレビュー ↗
             </Link>
-            <PreviewShare propertyId={initial.id} />
             <button
               type="submit"
               disabled={saving || publishing}

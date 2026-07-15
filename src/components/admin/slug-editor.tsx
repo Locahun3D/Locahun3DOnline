@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { renamePropertyAction, type RenameState } from "@/app/admin/_actions";
+import PreviewShare from "./preview-share";
 
 /**
  * 物件の公開URL（スラッグ＝ID）を編集する小コントロール。
@@ -54,16 +55,25 @@ export default function SlugEditor({
               locahun3d.com/properties/
               <span className="text-accent font-bold">{id}</span>
             </code>
-            <button
-              type="button"
-              onClick={() => {
-                setValue(id);
-                setEditing(true);
-              }}
-              className="ml-auto text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
-            >
-              URLを編集
-            </button>
+            {/* 仮URL発行（限定プレビュー共有URL）。公開URLのすぐ隣に置くことで、
+                「まだ下書きだが先方に見せたい」場面で見つけやすくする。 */}
+            <div className="ml-auto flex items-center gap-2">
+              <PreviewShare
+                propertyId={id}
+                buttonLabel="仮URLを発行"
+                buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setValue(id);
+                  setEditing(true);
+                }}
+                className="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
+              >
+                URLを編集
+              </button>
+            </div>
           </>
         ) : (
           <div className="flex flex-wrap items-center gap-2 w-full">
