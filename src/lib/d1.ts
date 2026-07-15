@@ -15,10 +15,24 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type D1 = any;
 
+/**
+ * D1 の Read Replication は既定で有効な場合、書き込み直後の読み取りが
+ * レプリカのラグにより古い状態を返すことがある（管理画面で削除/更新した直後は
+ * 正しく見えるのに、ページを再読み込みすると元に戻って見えるバグの原因）。
+ * Sessions API の "first-primary" 制約で、このリクエスト内の最初のクエリを
+ * 必ずプライマリへ送り、以降はブックマークで一貫性を保つ = read-your-writes を
+ * 保証する。https://developers.cloudflare.com/d1/best-practices/read-replication/
+ * withSession が使えない環境（型不一致等）では素の binding にフォールバックする。
+ */
 export async function getD1(): Promise<D1 | null> {
   try {
     const { env } = await getCloudflareContext();
-    return (env as Record<string, unknown>).DB ?? null;
+    const db = (env as Record<string, unknown>).DB as D1 | undefined;
+    if (!db) return null;
+    if (typeof db.withSession === "function") {
+      return db.withSession("first-primary");
+    }
+    return db;
   } catch {
     return null;
   }
