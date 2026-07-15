@@ -9,7 +9,10 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { fmtDateTimeJST } from "@/lib/date-format";
 
-export const metadata = { title: "購入履歴" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Purchase History" : "購入履歴" };
+}
 
 function fmtPrice(n: number) {
   return `¥${n.toLocaleString()}`;
@@ -170,14 +173,14 @@ export default async function UserPurchasesPage() {
                           </>
                         )}
                         <a
-                          href={`/api/purchase/${p.id}/license`}
+                          href={lh(`/api/purchase/${p.id}/license`)}
                           className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition whitespace-nowrap"
                           title={en ? "Terms of use for this license tier (.txt)" : "このライセンス区分の利用規約（.txt）"}
                         >
                           {en ? "↓ Terms (.txt)" : "↓ 利用規約 (.txt)"}
                         </a>
                         <a
-                          href={`/api/purchase/${p.id}/license?view=1`}
+                          href={lh(`/api/purchase/${p.id}/license?view=1`)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 hover:opacity-100 hover:text-accent transition whitespace-nowrap underline underline-offset-2"
@@ -186,7 +189,7 @@ export default async function UserPurchasesPage() {
                           {en ? "View full text" : "全文を見る"}
                         </a>
                         <a
-                          href={`/api/purchase/${p.id}/receipt`}
+                          href={lh(`/api/purchase/${p.id}/receipt`)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition whitespace-nowrap"

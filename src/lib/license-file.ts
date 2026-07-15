@@ -9,7 +9,7 @@
  * 本文は /terms/data-download の全文と要点で内容を一致させること
  * （条文が変わったらここも更新する）。
  */
-import { fmtDateTimeJa } from "./date-format";
+import { fmtDateTimeJa, fmtDateTimeLocaleJST } from "./date-format";
 
 export interface LicenseFileInput {
   propertyTitle: string;
@@ -24,18 +24,117 @@ export interface LicenseFileInput {
   purchaseId: string;
   /** エディトリアルライセンス購入時のみ設定。公開時に必須の権利者クレジット表記。 */
   editorialRightsCredit?: string;
+  /** true なら英語版を生成する。 */
+  en?: boolean;
 }
 
-function fmtPrice(n: number): string {
-  return n === 0 ? "無償提供" : `¥${n.toLocaleString()}（税込）`;
+function fmtPrice(n: number, en: boolean): string {
+  if (n === 0) return en ? "Provided free of charge" : "無償提供";
+  return en ? `¥${n.toLocaleString()} (tax incl.)` : `¥${n.toLocaleString()}（税込）`;
 }
 
-function fmtDateTime(iso?: string): string {
-  if (!iso) return "記録なし";
-  return fmtDateTimeJa(iso);
+function fmtDateTime(iso: string | undefined, en: boolean): string {
+  if (!iso) return en ? "Not recorded" : "記録なし";
+  return en ? fmtDateTimeLocaleJST(iso, "en-US") : fmtDateTimeJa(iso);
+}
+
+function generateLicenseTextEN(p: LicenseFileInput): string {
+  const shortId = p.purchaseId.slice(0, 8).toUpperCase();
+  return `================================================================
+Locahun 3D — 3D Data License Summary (for this purchase)
+================================================================
+
+This file is a summary of the terms that apply to your download of the
+3D scan data below. The full agreement is available at:
+
+    https://locahun3d.com/en/terms/data-download
+
+This English text is a reference translation. The Japanese version at
+https://locahun3d.com/terms/data-download is the legally binding
+agreement and prevails in case of any discrepancy.
+
+----------------------------------------------------------------
+■ Purchase details
+----------------------------------------------------------------
+Reference no.   : ${shortId}
+Property        : ${p.propertyTitle}
+Scene           : ${p.itemLabel || "(not set)"}
+Price           : ${fmtPrice(p.priceYen, true)}
+Purchased at    : ${fmtDateTime(p.completedAt || p.createdAt, true)}
+Terms agreed at : ${fmtDateTime(p.termsAgreedAt, true)}
+Purchaser       : ${p.userEmail}
+
+----------------------------------------------------------------
+■ License tier: ${p.licenseLabel}
+----------------------------------------------------------------
+${p.licenseDesc}
+
+The Data may only be used within the scope of the license tier above.
+The tier in effect is the one at the time of purchase; any later change
+to this tier by Locahun 3D does not affect the scope of this purchase.
+${p.editorialRightsCredit ? `
+----------------------------------------------------------------
+■ Required rights credit
+----------------------------------------------------------------
+When publishing any work made using this Data, you must include the
+following rights credit:
+
+    ${p.editorialRightsCredit}
+` : ""}
+----------------------------------------------------------------
+■ Third-party rights captured in the Data (Article 3)
+----------------------------------------------------------------
+The Data is a scan of a real, physical location and may include
+advertisements, signage, posters, corporate logos, trademarks,
+characters or other material in which third parties hold rights
+("Third-Party Material"). These rights belong to the relevant third
+party; the Service grants no license or permission regarding them.
+
+Before publishing, delivering or distributing any work made using this
+Data, you must remove, obscure, blur or replace any Third-Party
+Material. The Service bears no responsibility for any dispute or
+damages arising from a failure to do so.
+
+----------------------------------------------------------------
+■ Prohibited acts (excerpt from Article 4)
+----------------------------------------------------------------
+- Redistributing, reselling or lending the Data to third parties
+- Reproducing or imitating the Studio facility without permission
+- Providing the Studio's internal structure/equipment info to competitors
+- Publishing a modified version in a way that could be mistaken for the
+  original Studio
+- Selling the Data as an NFT or digital asset
+- Publishing confidential Studio information (backyards, loading docks,
+  control rooms, etc.) on social media without permission
+- Using the Data or derivatives as training data for machine-learning
+  or generative-AI models (except with the Service's prior written
+  permission)
+- Publishing, delivering or distributing a work without removing
+  Third-Party Material as required above
+
+----------------------------------------------------------------
+■ Publishing on social media
+----------------------------------------------------------------
+Still images and videos rendered/captured using this Data may be
+published on social media. Please include a credit to Locahun 3D
+(e.g. the #ロケハン3D tag or a mention of locahun3d.com), except for
+content covered by the prohibited acts above.
+
+----------------------------------------------------------------
+■ If provided free of charge
+----------------------------------------------------------------
+Even where this Data is provided free of charge (e.g. through a
+campaign), these terms (full text at the URL above) still apply.
+
+================================================================
+Locahun 3D (operated by KWI Inc.)
+https://locahun3d.com
+================================================================
+`;
 }
 
 export function generateLicenseText(p: LicenseFileInput): string {
+  if (p.en) return generateLicenseTextEN(p);
   const shortId = p.purchaseId.slice(0, 8).toUpperCase();
   return `================================================================
 ロケハン3D 3Dデータ 利用規約（本購入用サマリー）
@@ -52,9 +151,9 @@ export function generateLicenseText(p: LicenseFileInput): string {
 管理番号　　　: ${shortId}
 物件　　　　　: ${p.propertyTitle}
 シーン　　　　: ${p.itemLabel || "（未設定）"}
-価格　　　　　: ${fmtPrice(p.priceYen)}
-購入日時　　　: ${fmtDateTime(p.completedAt || p.createdAt)}
-規約同意日時　: ${fmtDateTime(p.termsAgreedAt)}
+価格　　　　　: ${fmtPrice(p.priceYen, false)}
+購入日時　　　: ${fmtDateTime(p.completedAt || p.createdAt, false)}
+規約同意日時　: ${fmtDateTime(p.termsAgreedAt, false)}
 購入者　　　　: ${p.userEmail}
 
 ----------------------------------------------------------------

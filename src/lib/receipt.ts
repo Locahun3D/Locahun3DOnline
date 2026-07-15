@@ -1,7 +1,7 @@
 /**
  * 領収書HTML生成（受領書ルートとメール送信で共用）。ピュア関数。
  */
-import { fmtDateJa } from "./date-format";
+import { fmtDateJa, fmtDateLongJST } from "./date-format";
 
 export interface ReceiptInput {
   id: string;
@@ -13,27 +13,62 @@ export interface ReceiptInput {
   userEmail: string;
   licenseLabel?: string;
   licenseDesc?: string;
+  /** true なら英語版を生成する。 */
+  en?: boolean;
 }
 
 function fmtPrice(n: number) {
   return `¥${n.toLocaleString()}`;
 }
 
-function fmtDate(iso: string) {
-  return fmtDateJa(iso);
+function fmtDate(iso: string, en: boolean) {
+  return en ? fmtDateLongJST(iso, "en-US") : fmtDateJa(iso);
 }
 
 export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean }): string {
-  const date = fmtDate(p.completedAt || p.createdAt);
+  const en = p.en ?? false;
+  const date = fmtDate(p.completedAt || p.createdAt, en);
   const shortId = p.id.slice(0, 8).toUpperCase();
   const forEmail = opts?.forEmail ?? false;
 
+  const t = en
+    ? {
+        title: `Receipt ${shortId} — Locahun 3D`,
+        heading: "Receipt",
+        item: "Item",
+        detail: "Detail",
+        amount: "Amount",
+        dataItem: "3DGS data",
+        total: "Total (tax incl.)",
+        taxNote: "* The amount above includes consumption tax.",
+        license: "License",
+        purchaser: "Purchaser",
+        issuer: "Issuer: Locahun 3D (operated by KWI Inc.)",
+        contact: "Contact: info@locahun3d.com",
+        printBtn: "Print / Save as PDF",
+      }
+    : {
+        title: `領収書 ${shortId} — ロケハン3D`,
+        heading: "領収書",
+        item: "品目",
+        detail: "詳細",
+        amount: "金額",
+        dataItem: "3DGSデータ",
+        total: "合計（税込）",
+        taxNote: "※ 上記金額には消費税が含まれています。",
+        license: "ライセンス",
+        purchaser: "購入者",
+        issuer: "発行者: ロケハン3D（KWI株式会社）",
+        contact: "お問い合わせ: info@locahun3d.com",
+        printBtn: "印刷 / PDF保存",
+      };
+
   return `<!DOCTYPE html>
-<html lang="ja">
+<html lang="${en ? "en" : "ja"}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>領収書 ${shortId} — ロケハン3D</title>
+<title>${t.title}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=JetBrains+Mono:wght@400&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -71,51 +106,51 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
     </div>
   </header>
 
-  <h1>領収書</h1>
+  <h1>${t.heading}</h1>
 
   <table>
     <thead>
       <tr>
-        <th>品目</th>
-        <th>詳細</th>
-        <th class="right">金額</th>
+        <th>${t.item}</th>
+        <th>${t.detail}</th>
+        <th class="right">${t.amount}</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>3DGSデータ</td>
+        <td>${t.dataItem}</td>
         <td>
           ${p.propertyTitle}${p.itemLabel ? ` (${p.itemLabel})` : ""}
         </td>
         <td class="right mono">${fmtPrice(p.priceYen)}</td>
       </tr>
       <tr class="total-row">
-        <td colspan="2">合計（税込）</td>
+        <td colspan="2">${t.total}</td>
         <td class="right mono">${fmtPrice(p.priceYen)}</td>
       </tr>
     </tbody>
   </table>
 
-  <p class="tax-note">※ 上記金額には消費税が含まれています。</p>
+  <p class="tax-note">${t.taxNote}</p>
 
   ${p.licenseLabel ? `<div style="margin-bottom: 24px; border: 1px solid #ddd; padding: 12px 16px;">
-    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.2em; opacity:0.4; margin-bottom:4px;">ライセンス</div>
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.2em; opacity:0.4; margin-bottom:4px;">${t.license}</div>
     <div style="font-size:13px; font-weight:700;">${p.licenseLabel}</div>
     ${p.licenseDesc ? `<div style="font-size:11px; opacity:0.6; margin-top:4px;">${p.licenseDesc}</div>` : ""}
   </div>` : ""}
 
   <div style="margin-bottom: 32px;">
-    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.2em; opacity:0.4; margin-bottom:8px;">購入者</div>
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.2em; opacity:0.4; margin-bottom:8px;">${t.purchaser}</div>
     <div class="mono" style="font-size:13px;">${p.userEmail}</div>
   </div>
 
   <footer>
-    <div>発行者: ロケハン3D（KWI株式会社）</div>
+    <div>${t.issuer}</div>
     <div>URL: https://locahun3d.com</div>
-    <div>お問い合わせ: info@locahun3d.com</div>
+    <div>${t.contact}</div>
   </footer>
 ${forEmail ? "" : `
-  <button class="print-btn no-print" onclick="window.print()">印刷 / PDF保存</button>`}
+  <button class="print-btn no-print" onclick="window.print()">${t.printBtn}</button>`}
 </body>
 </html>`;
 }

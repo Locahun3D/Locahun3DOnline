@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
-import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC, type DataLicense } from "@/lib/schemas";
+import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
 import { generateLicenseText } from "@/lib/license-file";
+import { getLocale } from "@/lib/i18n/server";
 
 export const runtime = "nodejs";
 
@@ -17,22 +18,27 @@ export async function GET(
 ) {
   // ?view=1 ならブラウザでそのまま開ける(inline)。無指定なら従来通りダウンロード。
   const view = new URL(req.url).searchParams.get("view") === "1";
+  // このAPIは /en/... 経由で叩かれた時のみ x-locale=en になる（呼び出し元の
+  // リンクを localizedHref() で組む必要がある。呼び出し側 dashboard/purchases
+  // 参照）。
+  const locale = await getLocale();
+  const en = locale === "en";
 
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
+    return NextResponse.json({ error: en ? "Sign-in required" : "ログインが必要です" }, { status: 401 });
   }
 
   const { id } = await params;
   const purchase = await purchaseRepo.get(id);
   if (!purchase) {
-    return NextResponse.json({ error: "購入が見つかりません" }, { status: 404 });
+    return NextResponse.json({ error: en ? "Purchase not found" : "購入が見つかりません" }, { status: 404 });
   }
   if (purchase.userId !== user.id && user.role !== "admin") {
-    return NextResponse.json({ error: "アクセス権がありません" }, { status: 403 });
+    return NextResponse.json({ error: en ? "You do not have access" : "アクセス権がありません" }, { status: 403 });
   }
   if (purchase.status !== "completed") {
-    return NextResponse.json({ error: "未完了の購入です" }, { status: 400 });
+    return NextResponse.json({ error: en ? "This purchase is not yet completed" : "未完了の購入です" }, { status: 400 });
   }
 
   // ライセンス区分は購入時点のスナップショット(purchase.license)を使う
@@ -43,8 +49,8 @@ export async function GET(
   const text = generateLicenseText({
     propertyTitle: purchase.propertyTitle,
     itemLabel: purchase.itemLabel,
-    licenseLabel: DATA_LICENSE_LABEL[license] ?? DATA_LICENSE_LABEL.standard,
-    licenseDesc: DATA_LICENSE_DESC[license] ?? DATA_LICENSE_DESC.standard,
+    licenseLabel: dataLicenseLabel(license, locale),
+    licenseDesc: dataLicenseDesc(license, locale),
     priceYen: purchase.priceYen,
     createdAt: purchase.createdAt,
     completedAt: purchase.completedAt,
@@ -52,14 +58,19 @@ export async function GET(
     userEmail: purchase.userEmail,
     purchaseId: purchase.id,
     editorialRightsCredit: purchase.editorialRightsCredit,
+    en,
   });
+
+  const filename = en
+    ? `Locahun3D_Terms_${purchase.propertyTitle || purchase.propertyId}.txt`
+    : `ロケハン3D_利用規約_${purchase.propertyTitle || purchase.propertyId}.txt`;
 
   return new Response(text, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       // 日本語ファイル名は filename* (RFC 5987) で指定する（filename= だけだと文字化けする）。
       "Content-Disposition": `${view ? "inline" : "attachment"}; filename="license.txt"; filename*=UTF-8''${encodeURIComponent(
-        `ロケハン3D_利用規約_${purchase.propertyTitle || purchase.propertyId}.txt`,
+        filename,
       )}`,
     },
   });
