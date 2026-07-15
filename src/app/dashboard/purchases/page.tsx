@@ -7,6 +7,7 @@ import { resolveDownloadVersions } from "@/lib/download-versions";
 import { redirect } from "next/navigation";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import { fmtDateTimeJST } from "@/lib/date-format";
 
 export const metadata = { title: "購入履歴" };
 
@@ -15,12 +16,7 @@ function fmtPrice(n: number) {
 }
 
 function fmtDate(iso: string) {
-  try {
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  } catch {
-    return iso;
-  }
+  return fmtDateTimeJST(iso);
 }
 
 function statusBadge(status: string, en: boolean) {

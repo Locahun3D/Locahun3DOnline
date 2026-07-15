@@ -1,6 +1,7 @@
 /**
  * 領収書HTML生成（受領書ルートとメール送信で共用）。ピュア関数。
  */
+import { fmtDateJa } from "./date-format";
 
 export interface ReceiptInput {
   id: string;
@@ -19,12 +20,7 @@ function fmtPrice(n: number) {
 }
 
 function fmtDate(iso: string) {
-  try {
-    const d = new Date(iso);
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-  } catch {
-    return iso;
-  }
+  return fmtDateJa(iso);
 }
 
 export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean }): string {

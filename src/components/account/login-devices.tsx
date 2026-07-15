@@ -1,6 +1,7 @@
 import { revokeMySessionAction } from "@/lib/auth-actions";
 import type { ActiveDeviceSession } from "@/lib/device-limit";
 import type { Locale } from "@/lib/i18n/dictionaries";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 /**
  * マイページの「ログイン端末」セクション。会員が自分のログイン中の端末
@@ -13,17 +14,7 @@ import type { Locale } from "@/lib/i18n/dictionaries";
  * 一覧に無い sessionId は拒否）。
  */
 function fmtDate(ms: number, en: boolean): string {
-  try {
-    return new Date(ms).toLocaleString(en ? "en-US" : "ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(ms);
-  }
+  return fmtDateTimeLocaleJST(ms, en ? "en-US" : "ja-JP");
 }
 
 export default function LoginDevices({

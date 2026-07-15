@@ -9,6 +9,7 @@
  * 本文は /terms/data-download の全文と要点で内容を一致させること
  * （条文が変わったらここも更新する）。
  */
+import { fmtDateTimeJa } from "./date-format";
 
 export interface LicenseFileInput {
   propertyTitle: string;
@@ -31,12 +32,7 @@ function fmtPrice(n: number): string {
 
 function fmtDateTime(iso?: string): string {
   if (!iso) return "記録なし";
-  try {
-    const d = new Date(iso);
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  } catch {
-    return iso;
-  }
+  return fmtDateTimeJa(iso);
 }
 
 export function generateLicenseText(p: LicenseFileInput): string {

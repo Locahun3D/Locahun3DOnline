@@ -9,6 +9,7 @@ import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
 import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
+import { jstDayKey } from "@/lib/date-format";
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
   // ── stub: 即時完了 ──
   if (!stripeEnabled()) {
     const now = new Date();
-    const day = now.toISOString().slice(0, 10);
+    const day = jstDayKey(now);
     for (const r of resolved) {
       const completed = await purchaseRepo.upsert({
         id: randomUUID(),

@@ -1,21 +1,12 @@
 import Link from "next/link";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 import { setContactRequestStatusAction, deleteContactRequestAction } from "@/lib/admin-actions";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 export const metadata = { title: "お問い合わせ（サイト全体）" };
 
 function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+  return fmtDateTimeLocaleJST(iso);
 }
 
 export default async function AdminContactRequestsPage({

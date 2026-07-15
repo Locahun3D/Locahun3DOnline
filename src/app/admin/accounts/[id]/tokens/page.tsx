@@ -5,6 +5,7 @@ import { userRepo } from "@/lib/users";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { repo as propertyRepo } from "@/lib/store";
 import { totalTokens } from "@/lib/account-schema";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 
 export const metadata = { title: "トークン使用履歴" };
 
@@ -69,7 +70,7 @@ export default async function AdminAccountTokensPage({
         <div>
           <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">プラン / 登録日</div>
           <div className="text-[14px]">{user.plan.toUpperCase()}</div>
-          <div className="mono text-[11px] opacity-60">{(user.createdAt ?? "").slice(0, 10)}</div>
+          <div className="mono text-[11px] opacity-60">{user.createdAt ? fmtDateOnlyJST(user.createdAt) : ""}</div>
         </div>
         <div>
           <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">現在の残高</div>
@@ -80,7 +81,7 @@ export default async function AdminAccountTokensPage({
             )}
           </div>
           {user.tokenExpiresAt && user.tokenBalance > 0 && (
-            <div className="mono text-[11px] opacity-60">失効 {user.tokenExpiresAt.slice(0, 10)}</div>
+            <div className="mono text-[11px] opacity-60">失効 {fmtDateOnlyJST(user.tokenExpiresAt)}</div>
           )}
         </div>
         <div>
@@ -113,11 +114,11 @@ export default async function AdminAccountTokensPage({
                     </div>
                   </td>
                   <td className="px-4 py-3">{unlock.tokensSpent}</td>
-                  <td className="px-4 py-3 opacity-70">{unlock.unlockedAt.slice(0, 10)}</td>
+                  <td className="px-4 py-3 opacity-70">{fmtDateOnlyJST(unlock.unlockedAt)}</td>
                   <td className="px-4 py-3">
                     {valid ? (
                       <span className="mono text-[10px] tracking-[0.14em] uppercase text-green-500">
-                        {unlock.expiresAt.slice(0, 10)} まで無償再視聴
+                        {fmtDateOnlyJST(unlock.expiresAt)} まで無償再視聴
                       </span>
                     ) : (
                       <span className="mono text-[10px] tracking-[0.14em] uppercase opacity-50">期限切れ</span>

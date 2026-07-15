@@ -4,6 +4,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
+import { jstDayKey } from "@/lib/date-format";
 
 export const runtime = "nodejs";
 
@@ -62,7 +63,7 @@ export async function GET(req: Request) {
     if (matched.length === 0) return fail(propertyId);
 
     const now = new Date();
-    const day = now.toISOString().slice(0, 10);
+    const day = jstDayKey(now);
     for (const purchase of matched) {
       if (user.id !== purchase.userId) continue;
       // webhook とほぼ同時に届き得るため条件付き更新(status='pending'の場合

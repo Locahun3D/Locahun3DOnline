@@ -6,6 +6,7 @@ import { repo } from "@/lib/store";
 import { unhideCommentAction, deleteCommentAction } from "@/lib/comment-actions";
 import { unhideReviewAction, deleteReviewAction } from "@/lib/review-actions";
 import { withLiveDisplayNames } from "@/lib/live-names";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 export const metadata = { title: "通報管理" };
 
@@ -31,17 +32,7 @@ async function deleteReviewFormAction(id: string, revalidate: string) {
 }
 
 function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+  return fmtDateTimeLocaleJST(iso);
 }
 
 type ReportedItem = {

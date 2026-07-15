@@ -12,6 +12,7 @@ import MarketingConsentToggle from "@/components/account/marketing-consent-toggl
 import NotificationList from "@/components/account/notification-list";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
 import type { Notification } from "@/lib/notifications";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 
 type BoardTile = { name: string; count: number; cover?: string };
 
@@ -64,22 +65,24 @@ export default function AccountDashboard({
   const initials = (shownName || "?").trim().slice(0, 2).toUpperCase();
   const isAdmin = user.role === "admin";
   const ndaAccepted = !!user.ndaAcceptedAt;
-  const joinedDate = (user.createdAt ?? "").slice(0, 10) || "—";
+  const joinedDate = user.createdAt ? fmtDateOnlyJST(user.createdAt) : "—";
 
   // ── TOKENS ──
   const tokens = totalTokens(user);
   const resetNote: string[] = [];
   if (user.tokenRefillAt) {
+    const refillJST = fmtDateOnlyJST(user.tokenRefillAt);
     resetNote.push(
       en
-        ? `Resets ${user.tokenRefillAt.slice(0, 10)}`
-        : `${user.tokenRefillAt.slice(5, 7)}/${user.tokenRefillAt.slice(8, 10)} リセット`,
+        ? `Resets ${refillJST}`
+        : `${refillJST.slice(5, 7)}/${refillJST.slice(8, 10)} リセット`,
     );
   } else if (user.tokenExpiresAt && user.tokenBalance > 0) {
+    const expiresJST = fmtDateOnlyJST(user.tokenExpiresAt);
     resetNote.push(
       en
-        ? `Expires ${user.tokenExpiresAt.slice(0, 10)}`
-        : `${user.tokenExpiresAt.slice(0, 10)} 失効予定`,
+        ? `Expires ${expiresJST}`
+        : `${expiresJST} 失効予定`,
     );
   }
   if (user.bonusTokens > 0) {
@@ -174,8 +177,8 @@ export default function AccountDashboard({
                 : "登録時ボーナスのみ・有料プランで毎月トークン付与"
               : (billing?.periodEnd ?? user.tokenRefillAt)
                 ? en
-                  ? `Next renewal ${(billing?.periodEnd ?? user.tokenRefillAt)!.slice(0, 10)}`
-                  : `次回更新 ${(billing?.periodEnd ?? user.tokenRefillAt)!.slice(0, 10)}`
+                  ? `Next renewal ${fmtDateOnlyJST((billing?.periodEnd ?? user.tokenRefillAt)!)}`
+                  : `次回更新 ${fmtDateOnlyJST((billing?.periodEnd ?? user.tokenRefillAt)!)}`
                 : en
                   ? "Active subscription"
                   : "契約中"}
@@ -214,7 +217,7 @@ export default function AccountDashboard({
               {user.updatedAt && (
                 <div>
                   {en ? "Latest " : "最新 "}
-                  {(user.updatedAt ?? "").slice(0, 10)}
+                  {fmtDateOnlyJST(user.updatedAt)}
                 </div>
               )}
             </div>
@@ -374,8 +377,8 @@ export default function AccountDashboard({
                 </div>
                 <div className="mono text-[11px] text-[#7b8794] mt-1 leading-[1.7]">
                   {en
-                    ? `Signed ${(user.ndaAcceptedAt ?? "").slice(0, 10)} — you can view all confidential locations and NDA-only scenes.`
-                    : `${(user.ndaAcceptedAt ?? "").slice(0, 10)} 締結・機密ロケ地・NDA限定シーンをすべて閲覧できます。`}
+                    ? `Signed ${user.ndaAcceptedAt ? fmtDateOnlyJST(user.ndaAcceptedAt) : ""} — you can view all confidential locations and NDA-only scenes.`
+                    : `${user.ndaAcceptedAt ? fmtDateOnlyJST(user.ndaAcceptedAt) : ""} 締結・機密ロケ地・NDA限定シーンをすべて閲覧できます。`}
                 </div>
               </div>
             </div>

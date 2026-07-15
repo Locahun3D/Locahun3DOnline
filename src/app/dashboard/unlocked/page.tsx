@@ -5,6 +5,7 @@ import { repo as propertyRepo } from "@/lib/store";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 
 export const metadata = { title: "閲覧履歴・解除済みシーン" };
 
@@ -118,12 +119,12 @@ export default async function UnlockedScenesPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted">
-                    {unlock.unlockedAt.slice(0, 10)}
+                    {fmtDateOnlyJST(unlock.unlockedAt)}
                   </td>
                   <td className="px-4 py-3">
                     {valid ? (
                       <span className="mono text-[10px] tracking-[0.14em] uppercase text-green-500">
-                        {en ? `Free until ${unlock.expiresAt.slice(0, 10)}` : `${unlock.expiresAt.slice(0, 10)} まで無償`}
+                        {en ? `Free until ${fmtDateOnlyJST(unlock.expiresAt)}` : `${fmtDateOnlyJST(unlock.expiresAt)} まで無償`}
                       </span>
                     ) : (
                       <span className="mono text-[10px] tracking-[0.14em] uppercase text-muted">

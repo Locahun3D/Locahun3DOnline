@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 import {
   createGiftCodeAction,
   setGiftCodeStatusAction,
@@ -204,7 +205,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
                   </div>
 
                   <div className="mono text-[11px] text-muted">
-                    {c.expiresAt ? `〜${c.expiresAt.slice(0, 10)}` : "無期限"}
+                    {c.expiresAt ? `〜${fmtDateOnlyJST(c.expiresAt)}` : "無期限"}
                   </div>
 
                   {(c.accountCreatedFrom || c.accountCreatedTo) && (

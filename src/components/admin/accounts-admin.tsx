@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 import {
   ACCOUNT_ROLES,
   ROLE_LABEL,
@@ -292,9 +293,9 @@ export default function AccountsAdmin({
                 <div className="mono text-[10px] text-muted mt-0.5">
                   プラン {u.plan.toUpperCase()} · トークン {totalTokens(u)}
                   {u.tokenExpiresAt && u.tokenBalance > 0
-                    ? `（失効 ${u.tokenExpiresAt.slice(0, 10)}）`
+                    ? `（失効 ${fmtDateOnlyJST(u.tokenExpiresAt)}）`
                     : ""}{" "}
-                  · 登録 {(u.createdAt ?? "").slice(0, 10)}
+                  · 登録 {u.createdAt ? fmtDateOnlyJST(u.createdAt) : ""}
                   {u.role === "studio" && (u.linkedPropertyIds ?? []).length > 0 && (
                     <> · 紐付物件 {(u.linkedPropertyIds ?? []).length}件</>
                   )}

@@ -7,6 +7,7 @@ import DeletePurchaseButton from "@/components/admin/delete-purchase-button";
 import BulkDeleteTestButton from "@/components/admin/bulk-delete-test-button";
 import { stripeConfigStatus } from "@/lib/stripe";
 import StripeSetupPanel from "@/components/admin/stripe-setup-panel";
+import { fmtDateTimeJST } from "@/lib/date-format";
 
 export const metadata = { title: "データ販売" };
 
@@ -30,12 +31,7 @@ function fmtPrice(n: number) {
 }
 
 function fmtDate(iso: string) {
-  try {
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  } catch {
-    return iso;
-  }
+  return fmtDateTimeJST(iso);
 }
 
 export default async function PurchasesPage({

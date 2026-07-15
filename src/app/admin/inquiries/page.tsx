@@ -2,21 +2,12 @@ import Link from "next/link";
 import { inquiryRepo } from "@/lib/inquiries";
 import { setInquiryStatusAction, deleteInquiryAction } from "@/lib/admin-actions";
 import InquiryReplyForm from "@/components/admin/inquiry-reply-form";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 export const metadata = { title: "問い合わせ" };
 
 function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+  return fmtDateTimeLocaleJST(iso);
 }
 
 export default async function AdminInquiriesPage({

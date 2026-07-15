@@ -7,6 +7,7 @@ import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
 import { oneYearFrom, oneMonthFrom, type AccountPlan } from "@/lib/account-schema";
+import { jstDayKey } from "@/lib/date-format";
 
 export const runtime = "nodejs";
 
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
               new Date().toISOString(),
             );
             if (completed) {
-              const day = new Date().toISOString().slice(0, 10);
+              const day = jstDayKey();
               await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
               await notifyPurchase(completed);
             }
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
             const matched = all.filter(
               (p) => p.stripeSessionId === s.id && p.status === "pending",
             );
-            const day = new Date().toISOString().slice(0, 10);
+            const day = jstDayKey();
             const now = new Date().toISOString();
             for (const p of matched) {
               // 条件付き更新。/api/purchase/return と競合しても二重通知しない。

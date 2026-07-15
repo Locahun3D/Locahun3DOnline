@@ -7,6 +7,7 @@ import {
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
+import { fmtDateLongJST } from "@/lib/date-format";
 import ViewerGate from "@/components/viewer-gate";
 import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
@@ -301,11 +302,7 @@ export default function PropertyDetailView({
           {previewExpiresAt && (
             <span className="text-[#8fdcf0]/70 normal-case tracking-normal">
               有効期限:{" "}
-              {new Date(previewExpiresAt).toLocaleDateString("ja-JP", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {fmtDateLongJST(previewExpiresAt)}
             </span>
           )}
         </div>

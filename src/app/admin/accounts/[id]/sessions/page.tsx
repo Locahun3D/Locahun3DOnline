@@ -4,21 +4,12 @@ import { requireAdmin } from "@/lib/dal";
 import { userRepo } from "@/lib/users";
 import { listActiveSessions, deviceLimitForPlan } from "@/lib/device-limit";
 import { revokeUserSessionAction } from "@/lib/admin-actions";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 export const metadata = { title: "ログイン端末" };
 
 function fmtDate(ms: number) {
-  try {
-    return new Date(ms).toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(ms);
-  }
+  return fmtDateTimeLocaleJST(ms);
 }
 
 export default async function AdminUserSessionsPage({

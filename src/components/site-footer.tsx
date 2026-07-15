@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 
 export default async function SiteFooter() {
-  const year = new Date().getFullYear();
+  const year = fmtDateOnlyJST(new Date()).slice(0, 4);
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);

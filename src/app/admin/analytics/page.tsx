@@ -4,6 +4,7 @@ import { getAllStats, DEVICE_LABEL, classifyReferrer, type DeviceKind } from "@/
 import { listRecentEvents } from "@/lib/analytics-events";
 import { purchaseRepo } from "@/lib/purchases";
 import { CATEGORY_LABEL } from "@/lib/schemas";
+import { jstDayKey, fmtDateTimeJST } from "@/lib/date-format";
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
   view: "閲覧",
@@ -17,11 +18,9 @@ type Period = (typeof PERIODS)[number];
 
 function lastNDays(n: number): string[] {
   const out: string[] = [];
-  const now = new Date();
+  const now = Date.now();
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    out.push(d.toISOString().slice(0, 10));
+    out.push(jstDayKey(now - i * 24 * 3600 * 1000));
   }
   return out;
 }
@@ -431,7 +430,7 @@ export default async function AdminAnalyticsPage({
                     recentEvents.map((e, i) => (
                       <tr key={e.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
                         <td className="px-3 py-2.5 mono text-[11px] text-muted">
-                          {e.createdAt.slice(0, 16).replace("T", " ")}
+                          {fmtDateTimeJST(e.createdAt)}
                         </td>
                         <td className="px-3 py-2.5">
                           <Link href={`/admin/analytics?days=${days}&studio=${e.propertyId}`} className="hover:text-accent transition">

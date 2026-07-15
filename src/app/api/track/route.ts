@@ -3,6 +3,7 @@ import { track, parseDevice } from "@/lib/analytics";
 import { logEvent } from "@/lib/analytics-events";
 import { repo } from "@/lib/store";
 import { getCurrentUser } from "@/lib/dal";
+import { jstDayKey } from "@/lib/date-format";
 
 /**
  * Public beacon endpoint. Client components POST a view / viewer-open event
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
     if (!exists) {
       return NextResponse.json({ ok: false }, { status: 404 });
     }
-    const day = new Date().toISOString().slice(0, 10);
+    const day = jstDayKey();
     const device = parseDevice(req.headers.get("user-agent") ?? "");
     const user = await getCurrentUser().catch(() => null);
 

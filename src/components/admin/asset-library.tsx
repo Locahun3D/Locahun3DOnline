@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { Asset, AssetKind } from "@/lib/schemas";
 import { uploadAsset } from "./upload-client";
+import { fmtDateOnlyJST } from "@/lib/date-format";
 // アセットのリネーム/削除/サムネ更新を永続化する。以前は localhost 以外で
 // 早期 return しており、本番では UI 上は成功してもサーバーに保存されず
 // リロードで巻き戻る不具合があった（修正済み）。失敗は握りつぶさず log する。
@@ -36,12 +37,7 @@ function fmtBytes(n: number) {
 }
 
 function fmtDate(iso: string) {
-  try {
-    const d = new Date(iso);
-    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
-  } catch {
-    return "";
-  }
+  return fmtDateOnlyJST(iso).replace(/-/g, "/");
 }
 
 const SUGGESTED_TAGS = ["ロケ地", "スタジオ", "倉庫", "屋外", "内装", "外装", "広角", "4K", "テスト", "納品済"];

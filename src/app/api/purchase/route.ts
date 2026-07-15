@@ -9,6 +9,7 @@ import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
 import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
+import { jstDayKey } from "@/lib/date-format";
 import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
       completedAt: now.toISOString(),
       refundReason: "",
     });
-    await track(propertyId, "purchase", "", now.toISOString().slice(0, 10), "desktop", price);
+    await track(propertyId, "purchase", "", jstDayKey(), "desktop", price);
     await notifyPurchase(completed);
     return NextResponse.json({ ok: true, purchaseId });
   }

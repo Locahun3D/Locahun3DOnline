@@ -7,6 +7,7 @@ import {
   revokePropertyPreviewAction,
 } from "@/app/admin/properties/preview-actions";
 import type { PropertyPreview } from "@/lib/property-previews";
+import { fmtDateLongJST } from "@/lib/date-format";
 
 /**
  * エディターのヘッダーに置く「限定プレビュー共有URL」コントロール。
@@ -21,15 +22,7 @@ function buildUrl(token: string): string {
 }
 
 function fmtDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return iso;
-  }
+  return fmtDateLongJST(iso);
 }
 
 const DEFAULT_BUTTON_CLASS =

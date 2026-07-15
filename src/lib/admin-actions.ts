@@ -12,6 +12,7 @@ import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
 import { notifyRefund, notifyInquiryReply } from "./email";
 import { createNotification } from "./notifications";
+import { jstDayKey } from "./date-format";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
@@ -334,7 +335,7 @@ export async function refundPurchaseAction(
     refundedAt: new Date().toISOString(),
     refundReason: reason,
   });
-  const day = new Date().toISOString().slice(0, 10);
+  const day = jstDayKey();
   await track(p.propertyId, "refund", "", day, "desktop", p.priceYen);
   await notifyRefund(refunded);
   revalidatePath("/admin/purchases");
