@@ -3,8 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import type { Property } from "@/lib/schemas";
+import { categoryLabel } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import PropertyCard from "@/components/property-card";
+import BookmarkButton from "@/components/bookmark-button";
 import {
   createBookmarkFolderAction,
   renameBookmarkFolderAction,
@@ -56,6 +58,14 @@ export default function BookmarksManager({
   // ドラッグ&ドロップ（物件カードを掴んでボードのタブへ落とす → 保存先を移動）
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverBoard, setDragOverBoard] = useState<string | null>(null);
+  // 一覧⇄サムネ表示の切替（デフォルトはサムネ＝従来のメイソンリー）。
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [thumbSize, setThumbSize] = useState<"sm" | "md" | "lg">("md");
+  const MASONRY_COLS: Record<typeof thumbSize, string> = {
+    sm: "columns-3 sm:columns-4 xl:columns-5",
+    md: "columns-2 sm:columns-3 xl:columns-4",
+    lg: "columns-1 sm:columns-2 xl:columns-3",
+  };
 
   // ── フォルダ別グルーピング ──
   const byFolder = new Map<string, Property[]>();
@@ -412,6 +422,57 @@ export default function BookmarksManager({
         </h2>
         <span className="mono text-[11px] text-muted">{shown.length}</span>
         <span className="flex-1" />
+
+        {/* 表示切替: 一覧 / サムネ */}
+        <div className="flex border border-line shrink-0">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            title={en ? "List view" : "一覧表示"}
+            className={`grid place-items-center w-7 h-7 transition-colors ${
+              viewMode === "list" ? "bg-accent text-bg" : "text-muted hover:text-accent"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("grid")}
+            aria-pressed={viewMode === "grid"}
+            title={en ? "Thumbnail view" : "サムネ表示"}
+            className={`grid place-items-center w-7 h-7 border-l border-line transition-colors ${
+              viewMode === "grid" ? "bg-accent text-bg" : "text-muted hover:text-accent"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="1.5" />
+            </svg>
+          </button>
+        </div>
+
+        {/* サムネサイズ（サムネ表示時のみ意味を持つ） */}
+        {viewMode === "grid" && (
+          <div className="flex border border-line mono text-[10px] uppercase shrink-0">
+            {(["sm", "md", "lg"] as const).map((s, i) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setThumbSize(s)}
+                aria-pressed={thumbSize === s}
+                title={en ? (s === "sm" ? "Small" : s === "md" ? "Medium" : "Large") : s === "sm" ? "小" : s === "md" ? "中" : "大"}
+                className={`px-2 py-1 transition-colors ${i > 0 ? "border-l border-line" : ""} ${
+                  thumbSize === s ? "bg-accent text-bg" : "text-muted hover:text-accent"
+                }`}
+              >
+                {en ? (s === "sm" ? "S" : s === "md" ? "M" : "L") : s === "sm" ? "小" : s === "md" ? "中" : "大"}
+              </button>
+            ))}
+          </div>
+        )}
+
         {activeFolder && (
           <>
             <span className="mono text-[10px] tracking-[0.1em] text-muted/70 hidden sm:inline">
@@ -454,13 +515,66 @@ export default function BookmarksManager({
         </div>
       )}
 
-      {/* ── メイソンリー（Pinterest 風の CSS columns） ── */}
+      {/* ── 物件一覧（サムネ=メイソンリー / 一覧=横並び行） ── */}
       {shown.length === 0 ? (
         <p className="text-[13px] text-ink/40 py-8 text-center">
           {en ? "No properties here yet." : "ここにはまだ物件がありません。"}
         </p>
+      ) : viewMode === "list" ? (
+        <div className="border border-line divide-y divide-line">
+          {shown.map((p) => (
+            <div
+              key={p.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", p.id);
+                e.dataTransfer.effectAllowed = "move";
+                setDraggingId(p.id);
+              }}
+              onDragEnd={() => {
+                setDraggingId(null);
+                setDragOverBoard(null);
+              }}
+              className={`flex items-center gap-3 px-3 py-2 cursor-grab active:cursor-grabbing [&_a]:[-webkit-user-drag:none] [&_img]:[-webkit-user-drag:none] hover:bg-ink/[0.03] transition ${
+                draggingId === p.id ? "opacity-40 ring-2 ring-accent ring-offset-2 ring-offset-bg" : ""
+              }`}
+            >
+              <Link href={lh(`/properties/${p.id}`)} className="shrink-0 w-20 aspect-[16/10] overflow-hidden bg-[#141414] rounded-[2px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.cover.src} alt={p.cover.alt} className="w-full h-full object-cover" draggable={false} />
+              </Link>
+              <div className="flex-1 min-w-0">
+                <Link href={lh(`/properties/${p.id}`)} className="block truncate text-[13px] font-medium hover:text-accent transition">
+                  {p.title}
+                </Link>
+                <div className="mono text-[10px] text-muted truncate">
+                  {p.prefecture} / {p.city} ・ {categoryLabel(p.category, locale)}
+                </div>
+                <TagEditor propertyId={p.id} />
+              </div>
+              <div className="shrink-0 text-right mono text-[12px]">
+                {p.priceType === "free" ? (
+                  <span className="text-accent">{en ? "Free" : "無料"}</span>
+                ) : p.hourlyPrice > 0 ? (
+                  <span className="text-accent">¥{p.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP")}</span>
+                ) : (
+                  <span className="text-accent opacity-80">{en ? "Inquire" : "要問合せ"}</span>
+                )}
+              </div>
+              <div className="shrink-0">
+                <BookmarkButton
+                  propertyId={p.id}
+                  initialBookmarked
+                  signedIn
+                  revalidate="/dashboard/bookmarks"
+                  variant="overlay"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        <div className="columns-2 sm:columns-3 xl:columns-4 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+        <div className={`${MASONRY_COLS[thumbSize]} gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid`}>
           {shown.map((p) => (
             <div
               key={p.id}

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { Asset, AssetKind } from "@/lib/schemas";
-import { uploadAsset } from "./upload-client";
+import { uploadAsset, replaceAssetFile } from "./upload-client";
 import { fmtDateOnlyJST } from "@/lib/date-format";
 // アセットのリネーム/削除/サムネ更新を永続化する。以前は localhost 以外で
 // 早期 return しており、本番では UI 上は成功してもサーバーに保存されず
@@ -67,6 +67,16 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
   const [editingTags, setEditingTags] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const replaceRef = useRef<HTMLInputElement>(null);
+  const [replacingId, setReplacingId] = useState<string | null>(null);
+  const [replaceProgress, setReplaceProgress] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [thumbSize, setThumbSize] = useState<"sm" | "md" | "lg">("md");
+  const GRID_COLS: Record<typeof thumbSize, string> = {
+    sm: "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6",
+    md: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+    lg: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  };
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -135,6 +145,34 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
     if (!confirm(msg)) return;
     setAssets((prev) => prev.filter((x) => x.id !== a.id));
     assetApi({ action: "delete", id: a.id });
+  }
+
+  // 中身だけを差し替える（URL/ID不変）。差し替え元の孤立ファイルは発生しない
+  // 設計のため、削除処理は不要 — このURLを参照する全物件が自動で新内容を指す。
+  function onReplaceClick(a: Asset) {
+    if (!a.r2Key) {
+      alert("このアセットはローカルアップロードのため差し替えに対応していません。");
+      return;
+    }
+    setReplacingId(a.id);
+    replaceRef.current?.click();
+  }
+
+  async function onReplaceFileSelected(file: File) {
+    const a = assets.find((x) => x.id === replacingId);
+    setReplacingId(null);
+    if (!a) return;
+    setReplaceProgress(0);
+    try {
+      const updated = await replaceAssetFile(a, file, {
+        onProgress: (pct) => setReplaceProgress(pct),
+      });
+      setAssets((prev) => prev.map((x) => (x.id === a.id ? updated : x)));
+    } catch (e) {
+      setError(`${a.label || a.filename}: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setReplaceProgress(null);
+    }
   }
 
   function onAddTag(a: Asset, tag: string) {
@@ -211,6 +249,20 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
             e.target.value = "";
           }}
         />
+        {/* 差し替え専用の隠しinput（対象アセットは replacingId で識別）。 */}
+        <input
+          ref={replaceRef}
+          type="file"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) onReplaceFileSelected(file);
+          }}
+        />
+        {replaceProgress != null && (
+          <span className="mono text-[11px] text-accent">差し替え中… {replaceProgress}%</span>
+        )}
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -254,9 +306,59 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
               : `未使用を一括削除（${unusedInFiltered.length}件・${fmtBytes(unusedInFiltered.reduce((s, a) => s + (a.size || 0), 0))}）`}
           </button>
         )}
-        <span className="text-[11px] text-muted ml-auto mono">
+        <span className="mono text-[11px] text-muted ml-auto">
           {filtered.length} / {assets.length} 件
         </span>
+
+        {/* 表示切替: 一覧 / サムネ */}
+        <div className="flex border border-line">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            title="一覧表示"
+            className={`grid place-items-center w-7 h-7 transition-colors ${
+              viewMode === "list" ? "bg-accent text-black" : "text-muted hover:text-accent"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("grid")}
+            aria-pressed={viewMode === "grid"}
+            title="サムネ表示"
+            className={`grid place-items-center w-7 h-7 border-l border-line transition-colors ${
+              viewMode === "grid" ? "bg-accent text-black" : "text-muted hover:text-accent"
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="1.5" />
+            </svg>
+          </button>
+        </div>
+
+        {/* サムネサイズ（サムネ表示時のみ意味を持つ） */}
+        {viewMode === "grid" && (
+          <div className="flex border border-line mono text-[10px] uppercase">
+            {(["sm", "md", "lg"] as const).map((s, i) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setThumbSize(s)}
+                aria-pressed={thumbSize === s}
+                title={s === "sm" ? "小" : s === "md" ? "中" : "大"}
+                className={`px-2 py-1 transition-colors ${i > 0 ? "border-l border-line" : ""} ${
+                  thumbSize === s ? "bg-accent text-black" : "text-muted hover:text-accent"
+                }`}
+              >
+                {s === "sm" ? "小" : s === "md" ? "中" : "大"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && <div className="text-red-400 text-[12px] mb-3">{error}</div>}
@@ -289,7 +391,29 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
                 })()}
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {viewMode === "list" ? (
+              <div className="border border-line divide-y divide-line">
+                {items.map((a) => (
+                  <AssetRow
+                    key={a.id}
+                    asset={a}
+                    used={usage[a.url]?.length ?? 0}
+                    isEditing={editingTags === a.id}
+                    tagInput={tagInput}
+                    setTagInput={setTagInput}
+                    setEditingTags={setEditingTags}
+                    onAddTag={onAddTag}
+                    onRemoveTag={onRemoveTag}
+                    onRename={onRename}
+                    onSetThumbnail={onSetThumbnail}
+                    onReplaceClick={onReplaceClick}
+                    onDelete={onDelete}
+                    replaceDisabled={replaceProgress != null}
+                  />
+                ))}
+              </div>
+            ) : (
+            <div className={`grid ${GRID_COLS[thumbSize]} gap-3`}>
         {items.map((a) => {
           const used = usage[a.url]?.length ?? 0;
           const hasThumbnail = a.kind === "image" ? !!a.url : !!(a.thumbnailUrl);
@@ -413,11 +537,19 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-2 pt-0.5 opacity-70 group-hover:opacity-100 transition-opacity flex-wrap">
                   <button onClick={() => onRename(a)} className="text-[11px] hover:text-accent transition-colors">名前</button>
                   {a.kind !== "image" && (
                     <button onClick={() => onSetThumbnail(a)} className="text-[11px] hover:text-accent transition-colors">サムネ</button>
                   )}
+                  <button
+                    onClick={() => onReplaceClick(a)}
+                    disabled={replaceProgress != null}
+                    title="ファイルの中身だけを差し替え（URLは変わらないため、参照中の物件も自動的に新しい内容になります）"
+                    className="text-[11px] hover:text-accent transition-colors disabled:opacity-40"
+                  >
+                    差し替え
+                  </button>
                   <button onClick={() => onDelete(a)} className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors ml-auto">削除</button>
                 </div>
               </div>
@@ -425,12 +557,140 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
           );
         })}
             </div>
+            )}
           </section>
         ))}
       </div>
       {filtered.length === 0 && (
         <div className="text-muted text-[13px] py-10 text-center">アセットがありません。</div>
       )}
+    </div>
+  );
+}
+
+/** 一覧表示の1行。サムネ表示の情報密度を落とし、横並びで多数を見渡せるようにする。 */
+function AssetRow({
+  asset: a,
+  used,
+  isEditing,
+  tagInput,
+  setTagInput,
+  setEditingTags,
+  onAddTag,
+  onRemoveTag,
+  onRename,
+  onSetThumbnail,
+  onReplaceClick,
+  onDelete,
+  replaceDisabled,
+}: {
+  asset: Asset;
+  used: number;
+  isEditing: boolean;
+  tagInput: string;
+  setTagInput: (v: string) => void;
+  setEditingTags: (id: string | null) => void;
+  onAddTag: (a: Asset, tag: string) => void;
+  onRemoveTag: (a: Asset, tag: string) => void;
+  onRename: (a: Asset) => void;
+  onSetThumbnail: (a: Asset) => void;
+  onReplaceClick: (a: Asset) => void;
+  onDelete: (a: Asset) => void;
+  replaceDisabled: boolean;
+}) {
+  const hasThumbnail = a.kind === "image" ? !!a.url : !!a.thumbnailUrl;
+  const thumbSrc = a.kind === "image" ? a.url : a.thumbnailUrl;
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 hover:bg-[#1d1d1d] transition-colors group">
+      {/* Thumbnail */}
+      <div className="w-10 h-10 shrink-0 bg-[#111] border border-line grid place-items-center overflow-hidden">
+        {hasThumbnail && thumbSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumbSrc} alt={a.label} className="object-cover w-full h-full" />
+        ) : (
+          <span className="text-[14px] opacity-40">{kindIcons[a.kind]}</span>
+        )}
+      </div>
+
+      {/* Name + tags */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-[12.5px] font-medium" title={a.label || a.filename}>
+            {a.label || a.filename || "名前なし"}
+          </span>
+          {a.status === "uploading" && (
+            <span className="mono text-[9px] bg-yellow-600/80 px-1.5 py-0.5 shrink-0">アップロード中</span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-0.5">
+          {(a.tags ?? []).map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-0.5 bg-[#2a2a2a] border border-line text-[9.5px] px-1.5 py-0.5 rounded-sm"
+            >
+              {tag}
+              {isEditing && (
+                <button onClick={() => onRemoveTag(a, tag)} className="text-red-400 hover:text-red-300 ml-0.5">×</button>
+              )}
+            </span>
+          ))}
+          {isEditing ? (
+            <input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && tagInput.trim()) {
+                  e.preventDefault();
+                  onAddTag(a, tagInput);
+                  setTagInput("");
+                }
+                if (e.key === "Escape") setEditingTags(null);
+              }}
+              onBlur={() => setEditingTags(null)}
+              placeholder="タグ名…"
+              autoFocus
+              className="bg-[#111] border border-line px-1.5 py-0.5 text-[9.5px] w-20"
+            />
+          ) : (
+            <button
+              onClick={() => { setEditingTags(a.id); setTagInput(""); }}
+              className="text-[9.5px] text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              + タグ
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Kind / size / date */}
+      <div className="mono text-[10px] text-muted w-16 shrink-0 uppercase">{kindLabels[a.kind]}</div>
+      <div className="mono text-[10px] text-muted w-16 shrink-0 text-right">{fmtBytes(a.size)}</div>
+      <div className="mono text-[10px] text-muted w-20 shrink-0">{fmtDate(a.uploadedAt)}</div>
+      <div className="w-14 shrink-0">
+        {used > 0 ? (
+          <span className="mono text-[9px] bg-green-700/80 px-1.5 py-0.5">使用 {used}</span>
+        ) : (
+          <span className="mono text-[9px] bg-amber-700/70 px-1.5 py-0.5">未使用</span>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+        <button onClick={() => onRename(a)} className="text-[11px] hover:text-accent transition-colors">名前</button>
+        {a.kind !== "image" && (
+          <button onClick={() => onSetThumbnail(a)} className="text-[11px] hover:text-accent transition-colors">サムネ</button>
+        )}
+        <button
+          onClick={() => onReplaceClick(a)}
+          disabled={replaceDisabled}
+          title="ファイルの中身だけを差し替え（URLは変わらないため、参照中の物件も自動的に新しい内容になります）"
+          className="text-[11px] hover:text-accent transition-colors disabled:opacity-40"
+        >
+          差し替え
+        </button>
+        <button onClick={() => onDelete(a)} className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors">削除</button>
+      </div>
     </div>
   );
 }

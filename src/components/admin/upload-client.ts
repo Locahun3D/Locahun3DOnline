@@ -154,3 +154,45 @@ export async function uploadAsset(
   }
   return data.asset as Asset;
 }
+
+/**
+ * 既存アセットの中身だけを差し替える（url/id/r2Keyは不変）。このアセットURLを
+ * 参照する全ての物件フィールドが自動的に新しい中身を指すため、差し替え元の
+ * 孤立ファイルが残らない（掃除処理も不要）。R2アップロードモード専用。
+ */
+export async function replaceAssetFile(
+  asset: Asset,
+  file: File,
+  opts: { onProgress?: (pct: number) => void } = {},
+): Promise<Asset> {
+  const presignRes = await fetch("/api/admin/assets/replace-presign", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: asset.id, contentType: file.type || asset.contentType }),
+  });
+  if (!presignRes.ok) {
+    const e = await presignRes.json().catch(() => ({}));
+    throw new Error(e.message ?? e.error ?? `replace-presign ${presignRes.status}`);
+  }
+  const { putUrl } = (await presignRes.json()) as { putUrl: string };
+
+  const put = await xhrSend(
+    "PUT",
+    putUrl,
+    file,
+    { "content-type": file.type || "application/octet-stream" },
+    opts.onProgress,
+  );
+  if (put.status < 200 || put.status >= 300) {
+    throw new Error(`R2 PUT failed (${put.status})`);
+  }
+
+  const commitRes = await fetch("/api/admin/assets/replace-commit", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: asset.id, size: file.size, contentType: file.type || asset.contentType }),
+  });
+  const data = await commitRes.json();
+  if (!commitRes.ok) throw new Error(data.message ?? data.error ?? "replace-commit failed");
+  return data.asset as Asset;
+}
