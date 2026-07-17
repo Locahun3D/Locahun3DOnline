@@ -24,7 +24,21 @@ export default function CartLink() {
       className="relative flex items-center text-muted hover:text-accent transition whitespace-nowrap"
       title={en ? "Cart" : "カート"}
     >
-      <span className="mono text-[12px] tracking-[0.18em] uppercase">🛒</span>
+      {/* 絵文字🛒はmonoフォントのフォールバックで豆腐化する環境があるためSVGで描く。 */}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="w-4 h-4 min-[768px]:w-[18px] min-[768px]:h-[18px]"
+      >
+        <circle cx="9" cy="21" r="1" />
+        <circle cx="20" cy="21" r="1" />
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+      </svg>
       {count > 0 && (
         <span className="absolute -top-2 -right-2.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-accent text-bg mono text-[9px] font-bold">
           {count}

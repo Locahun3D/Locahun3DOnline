@@ -38,12 +38,12 @@ export default async function SiteHeader() {
           so the browser Back button never gets trapped bouncing through
           an already-authenticated /sign-in page. */}
       <SignInButton mode="modal">
-        <button className="px-1 min-[1200px]:px-4 py-0.5 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[1200px]:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
+        <button className="px-1 min-[768px]:px-3 min-[1200px]:px-4 py-0.5 min-[768px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
           {t("auth.login")}
         </button>
       </SignInButton>
       <SignUpButton mode="modal">
-        <button className="px-1 min-[1200px]:px-4 py-0.5 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[1200px]:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
+        <button className="px-1 min-[768px]:px-3 min-[1200px]:px-4 py-0.5 min-[768px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
           {t("auth.signup")}
         </button>
       </SignUpButton>
@@ -55,9 +55,9 @@ export default async function SiteHeader() {
       {user && (
         <Link
           href={lh("/account")}
-          className="flex items-center gap-1 min-[1200px]:gap-2 text-[9px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
+          className="flex items-center gap-1 min-[768px]:gap-1.5 min-[1200px]:gap-2 text-[9px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
-          <span className="hidden sm:inline border border-line px-1 min-[1200px]:px-1.5 py-0.5 text-[8px] min-[1200px]:text-[9px]">
+          <span className="hidden sm:inline border border-line px-1 min-[768px]:px-1.5 py-0.5 text-[8px] min-[768px]:text-[10px] min-[1200px]:text-[9px]">
             {roleLabel(user.role, locale)}
           </span>
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
@@ -72,7 +72,7 @@ export default async function SiteHeader() {
           ⚙ {t("auth.admin")}
         </Link>
       )}
-      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[1200px]:w-7 min-[1200px]:h-7" } }} />
+      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[768px]:w-7 min-[768px]:h-7" } }} />
     </Show>
   );
 
@@ -80,16 +80,16 @@ export default async function SiteHeader() {
   // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
   // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
   const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[1200px]:text-[11px] tracking-[0.02em] min-[1200px]:tracking-[0.06em]">
+    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[768px]:text-[10px] min-[1200px]:text-[11px] tracking-[0.02em] min-[768px]:tracking-[0.04em] min-[1200px]:tracking-[0.06em]">
       <a
         href={scanUrl}
-        className="px-[3px] min-[360px]:px-1 min-[1200px]:px-3 py-0.5 min-[1200px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[768px]:px-2 min-[1200px]:px-3 py-0.5 min-[768px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.scan")}
       </a>
       <a
         href={lh("/properties")}
-        className="px-[3px] min-[360px]:px-1 min-[1200px]:px-3 py-0.5 min-[1200px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[768px]:px-2 min-[1200px]:px-3 py-0.5 min-[768px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.online")}
       </a>
@@ -137,11 +137,13 @@ export default async function SiteHeader() {
       {/* ══ モバイル/タブレット(1200px未満) — 2段。PCと同じ要素をサイズ調整して
           全て表示する（要素の非表示・ハンバーガー化はしない）。 ══ */}
       <div className="min-[1200px]:hidden frame">
-        {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証 */}
-        <div className="flex items-center h-12 gap-0.5 min-[360px]:gap-1">
-          <Link href={lh("/")} aria-label={brandName} className="flex items-center gap-1 shrink-0">
+        {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証。
+            768px以上（タブレット帯）はスマホ極小サイズのままだと余白だらけで
+            崩れて見えるため、中間サイズへ拡大する（スキャンサイトと数値共通）。 */}
+        <div className="flex items-center h-12 min-[768px]:h-14 gap-0.5 min-[360px]:gap-1 min-[768px]:gap-2">
+          <Link href={lh("/")} aria-label={brandName} className="flex items-center gap-1 min-[768px]:gap-2 shrink-0">
             <HeaderMark size={18} />
-            <span className="brand text-[11px] min-[360px]:text-[13px] tracking-[0.01em] whitespace-nowrap">
+            <span className="brand text-[11px] min-[360px]:text-[13px] min-[768px]:text-[16px] tracking-[0.01em] whitespace-nowrap">
               {brandName}
             </span>
           </Link>
@@ -158,12 +160,12 @@ export default async function SiteHeader() {
         </div>
         {/* 2段目: 主要ナビ。番号コードはモバイル非表示・中央寄せ
             （スキャンサイトのモバイルnavと書体/サイズ/整列を1:1で共通化）。 */}
-        <nav className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pb-2">
+        <nav className="flex flex-wrap items-center justify-center gap-x-3 min-[768px]:gap-x-6 gap-y-1 pb-2 min-[768px]:pb-2.5">
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={lh(n.href)}
-              className="text-[11px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
+              className="text-[11px] min-[768px]:text-[13px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
             >
               {t(n.key)}
             </Link>
