@@ -8,10 +8,13 @@ import { getLocale } from "@/lib/i18n/server";
 // トークンの有効期限を毎リクエストで判定するため動的レンダリング。
 // noindex: 共有用の非公開リンクなので検索エンジンには載せない。
 export const dynamic = "force-dynamic";
-export const metadata = {
-  title: "限定プレビュー",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return {
+    title: locale === "en" ? "Private Preview" : "限定プレビュー",
+    robots: { index: false, follow: false },
+  };
+}
 
 /** 期限切れ／失効済みリンク用の案内画面。 */
 function ExpiredView() {

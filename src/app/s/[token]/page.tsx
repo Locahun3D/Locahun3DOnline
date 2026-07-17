@@ -4,10 +4,14 @@ import { bookmarkShareRepo } from "@/lib/bookmark-shares";
 import { userRepo } from "@/lib/users";
 import { getPublishedProperties } from "@/lib/properties";
 import PropertyCard from "@/components/property-card";
+import { localizeProperty } from "@/lib/schemas";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = { title: "共有フォルダ" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Shared Board" : "共有フォルダ" };
+}
 
 /**
  * ブックマーク・フォルダの読み取り専用公開ページ（認証不要）。
@@ -34,10 +38,11 @@ export default async function SharedBookmarkFolderPage({
       .map(([pid]) => pid),
   );
 
-  const published = await getPublishedProperties();
-  const properties = published.filter((p) => propertyIds.has(p.id));
-
   const locale = await getLocale();
+  const published = await getPublishedProperties();
+  const properties = published
+    .filter((p) => propertyIds.has(p.id))
+    .map((p) => localizeProperty(p, locale));
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
 

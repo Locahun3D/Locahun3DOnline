@@ -3,7 +3,10 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 
-export const metadata = { title: "お問い合わせ｜ロケハン3D" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Contact｜Locahun 3D" : "お問い合わせ｜ロケハン3D" };
+}
 
 const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; goEn: string }[] = [
   {

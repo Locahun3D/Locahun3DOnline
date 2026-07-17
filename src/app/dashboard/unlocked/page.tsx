@@ -6,8 +6,12 @@ import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { fmtDateOnlyJST } from "@/lib/date-format";
+import { localizeProperty } from "@/lib/schemas";
 
-export const metadata = { title: "閲覧履歴・解除済みシーン" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Viewing History & Unlocked Scenes" : "閲覧履歴・解除済みシーン" };
+}
 
 export default async function UnlockedScenesPage() {
   const user = await getCurrentUser();
@@ -26,7 +30,8 @@ export default async function UnlockedScenesPage() {
   const propertyMap = new Map(properties.filter(Boolean).map((p) => [p!.id, p!]));
 
   const rows = unlocks.map((u) => {
-    const property = propertyMap.get(u.propertyId) ?? null;
+    const raw = propertyMap.get(u.propertyId) ?? null;
+    const property = raw ? localizeProperty(raw, locale) : null;
     // 新レコードは splatItemId（永続識別子）で解決。旧レコードは記録当時の
     // index にフォールバック（並び替え後はズレ得るが表示上の劣化に留まる）。
     const item = u.splatItemId

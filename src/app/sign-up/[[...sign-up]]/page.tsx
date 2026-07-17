@@ -6,7 +6,10 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import InAppBrowserWarning from "@/components/in-app-browser-warning";
 
-export const metadata = { title: "新規登録" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Sign up" : "新規登録" };
+}
 
 export default async function SignUpPage() {
   // Already signed in (e.g. via the browser Back button)? Don't show the form —

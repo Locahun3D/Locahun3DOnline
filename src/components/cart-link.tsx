@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { cartCount, onCartChange } from "@/lib/cart";
+import { useLocale } from "@/components/locale-provider";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export default function CartLink() {
   const [count, setCount] = useState(0);
+  const locale = useLocale();
+  const en = locale === "en";
 
   useEffect(() => {
     const sync = () => setCount(cartCount());
@@ -15,10 +19,10 @@ export default function CartLink() {
 
   return (
     <Link
-      href="/cart"
-      aria-label={`カート（${count}点）`}
+      href={localizedHref("/cart", locale)}
+      aria-label={en ? `Cart (${count} item${count === 1 ? "" : "s"})` : `カート（${count}点）`}
       className="relative flex items-center text-muted hover:text-accent transition whitespace-nowrap"
-      title="カート"
+      title={en ? "Cart" : "カート"}
     >
       <span className="mono text-[12px] tracking-[0.18em] uppercase">🛒</span>
       {count > 0 && (

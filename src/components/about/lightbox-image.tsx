@@ -61,7 +61,7 @@ export default function LightboxImage({
           />
           <button
             type="button"
-            aria-label={"閉じる"}
+            aria-label="Close"
             onClick={close}
             className="absolute top-4 right-4 w-9 h-9 grid place-items-center rounded-full bg-white/15 text-white text-[18px] hover:bg-white/30 transition"
           >

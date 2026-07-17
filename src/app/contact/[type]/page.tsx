@@ -39,7 +39,11 @@ export async function generateMetadata({
 }) {
   const { type } = await params;
   const c = COPY[type as ContactType];
-  return { title: c ? `${c.title}｜お問い合わせ｜ロケハン3D` : "お問い合わせ" };
+  const en = (await getLocale()) === "en";
+  if (!c) return { title: en ? "Contact" : "お問い合わせ" };
+  return {
+    title: en ? `${c.titleEn}｜Contact｜Locahun 3D` : `${c.title}｜お問い合わせ｜ロケハン3D`,
+  };
 }
 
 export default async function ContactTypePage({

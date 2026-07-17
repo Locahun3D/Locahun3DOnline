@@ -5,7 +5,10 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import ProductionUpgradeForm from "@/components/production-upgrade-form";
 
-export const metadata = { title: "制作会社アカウントの申請" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Production Account Application" : "制作会社アカウントの申請" };
+}
 
 export default async function ProductionUpgradePage() {
   const user = await requireOnboarded();

@@ -6,7 +6,10 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
 
-export const metadata = { title: "ダッシュボード" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Dashboard" : "ダッシュボード" };
+}
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();

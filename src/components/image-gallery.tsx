@@ -43,7 +43,7 @@ export default function ImageGallery({ images }: { images: PropertyImage[] }) {
             type="button"
             onClick={() => setOpenIdx(i)}
             className="group relative aspect-[4/3] overflow-hidden border border-line bg-[#141414] focus:outline-none focus:border-accent"
-            aria-label={`画像を拡大: ${img.alt}`}
+            aria-label={`Zoom image: ${img.alt}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -74,7 +74,7 @@ export default function ImageGallery({ images }: { images: PropertyImage[] }) {
               e.stopPropagation();
               prev();
             }}
-            aria-label="前の画像"
+            aria-label="Previous image"
             className="absolute left-6 md:left-12 top-1/2 -translate-y-1/2 mono text-[10px] tracking-[0.3em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
           >
             ← Prev
@@ -85,7 +85,7 @@ export default function ImageGallery({ images }: { images: PropertyImage[] }) {
               e.stopPropagation();
               next();
             }}
-            aria-label="次の画像"
+            aria-label="Next image"
             className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 mono text-[10px] tracking-[0.3em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
           >
             Next →
@@ -93,7 +93,7 @@ export default function ImageGallery({ images }: { images: PropertyImage[] }) {
           <button
             type="button"
             onClick={close}
-            aria-label="閉じる"
+            aria-label="Close"
             className="absolute top-5 right-5 mono text-[10px] tracking-[0.3em] uppercase border border-line px-3 py-2 hover:border-accent hover:text-accent transition"
           >
             Close ✕

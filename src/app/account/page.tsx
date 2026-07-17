@@ -12,7 +12,10 @@ import { repo as propertyRepo } from "@/lib/store";
 import { getSubscriptionBilling } from "@/lib/stripe";
 import { listNotifications } from "@/lib/notifications";
 
-export const metadata = { title: "プロフィール" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Profile" : "プロフィール" };
+}
 
 export default async function AccountPage({
   searchParams,

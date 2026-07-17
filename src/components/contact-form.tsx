@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { submitContactRequestAction, type ContactState } from "@/lib/contact-actions";
 import type { ContactType } from "@/lib/contact-requests";
+import { useLocale } from "@/components/locale-provider";
 
 const HONEYPOT_FIELD = "website";
 const RENDERED_AT_FIELD = "_rt";
@@ -119,6 +120,7 @@ async function gatherEnvironment(): Promise<string> {
  * （デザイン案 Pattern 7 の承認済みフィールド構成をそのまま実装）。
  */
 export default function ContactForm({ type }: { type: ContactType }) {
+  const en = useLocale() === "en";
   const [state, formAction, pending] = useActionState<ContactState, FormData>(
     submitContactRequestAction,
     undefined,
@@ -157,15 +159,15 @@ export default function ContactForm({ type }: { type: ContactType }) {
     for (const f of picked) {
       if (merged.some((x) => x.name === f.name && x.size === f.size)) continue;
       if (!ATTACHMENT_TYPES.includes(f.type)) {
-        setAttachError("添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。");
+        setAttachError(en ? "Only images (JPEG / PNG / WebP / GIF) can be attached." : "添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。");
         continue;
       }
       if (f.size > MAX_ATTACHMENT_BYTES) {
-        setAttachError(`画像1枚あたりのサイズ上限は ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB です。`);
+        setAttachError(en ? `Each image must be under ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB.` : `画像1枚あたりのサイズ上限は ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB です。`);
         continue;
       }
       if (merged.length >= MAX_ATTACHMENTS) {
-        setAttachError(`画像の添付は最大 ${MAX_ATTACHMENTS} 枚までです。`);
+        setAttachError(en ? `You can attach up to ${MAX_ATTACHMENTS} images.` : `画像の添付は最大 ${MAX_ATTACHMENTS} 枚までです。`);
         break;
       }
       merged.push(f);
@@ -181,13 +183,29 @@ export default function ContactForm({ type }: { type: ContactType }) {
     return (
       <div className="bg-white border border-line px-8 py-11 text-center">
         <div className="text-accent text-3xl mb-3">✓</div>
-        <h3 className="text-[16px] font-bold text-ink mb-2">お問い合わせを送信しました</h3>
+        <h3 className="text-[16px] font-bold text-ink mb-2">
+          {en ? "Your message has been sent" : "お問い合わせを送信しました"}
+        </h3>
         <p className="text-[12.5px] text-muted leading-relaxed">
           {hasEmail ? (
+            en ? (
+              <>
+                We will get back to you shortly.
+                <br />
+                Please look out for a reply at the email address you provided.
+              </>
+            ) : (
+              <>
+                担当者より折り返しご連絡いたします。
+                <br />
+                ご記入のメールアドレス宛の返信をお待ちください。
+              </>
+            )
+          ) : en ? (
             <>
-              担当者より折り返しご連絡いたします。
+              We will review your message.
               <br />
-              ご記入のメールアドレス宛の返信をお待ちください。
+              No contact details were provided — if you need a reply, please include an email address.
             </>
           ) : (
             <>
@@ -215,28 +233,30 @@ export default function ContactForm({ type }: { type: ContactType }) {
       <div className="space-y-5">
         {type === "bug" && (
           <>
-            <Field label="発生したページのURL" required>
+            <Field en={en} label={en ? "URL of the affected page" : "発生したページのURL"} required>
               <input name="url" type="url" placeholder="https://locahun3d.com/properties/..." className={inputClass} />
             </Field>
-            <Field label="症状・再現手順" required>
+            <Field en={en} label={en ? "Symptoms & steps to reproduce" : "症状・再現手順"} required>
               <textarea
                 name="message"
                 rows={4}
                 required
-                placeholder={"例: 物件詳細で3Dビューアーを開くと画面が真っ暗になります。\n手順: 1. 物件一覧から〇〇を開く 2.「3Dで見る」を押す"}
+                placeholder={en
+                  ? "e.g. The 3D viewer goes black when opened from a property page.\nSteps: 1. Open a property from the catalog 2. Press \"View in 3D\""
+                  : "例: 物件詳細で3Dビューアーを開くと画面が真っ暗になります。\n手順: 1. 物件一覧から〇〇を開く 2.「3Dで見る」を押す"}
                 className={`${inputClass} leading-relaxed resize-y`}
               />
             </Field>
-            <Field label="ご利用環境" optional note="自動入力・修正可">
+            <Field en={en} label={en ? "Your environment" : "ご利用環境"} optional note={en ? "auto-filled, editable" : "自動入力・修正可"}>
               <input
                 name="environment"
                 type="text"
-                placeholder="例: Windows 11 / Chrome 138 / GPU: …"
+                placeholder={en ? "e.g. Windows 11 / Chrome 138 / GPU: …" : "例: Windows 11 / Chrome 138 / GPU: …"}
                 ref={environmentRef}
                 className={inputClass}
               />
             </Field>
-            <Field label="スクリーンショット添付" optional note={`最大${MAX_ATTACHMENTS}枚・各${MAX_ATTACHMENT_BYTES / 1024 / 1024}MBまで`}>
+            <Field en={en} label={en ? "Attach screenshots" : "スクリーンショット添付"} optional note={en ? `up to ${MAX_ATTACHMENTS} images, ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB each` : `最大${MAX_ATTACHMENTS}枚・各${MAX_ATTACHMENT_BYTES / 1024 / 1024}MBまで`}>
               <input
                 name="attachments"
                 type="file"
@@ -265,7 +285,7 @@ export default function ContactForm({ type }: { type: ContactType }) {
                       />
                       <button
                         type="button"
-                        aria-label={`${f.name} を削除`}
+                        aria-label={en ? `Remove ${f.name}` : `${f.name} を削除`}
                         onClick={() => syncAttachments(attachFiles.filter((_, j) => j !== i))}
                         className="absolute top-1 right-1 w-5 h-5 leading-none rounded-full bg-black/60 text-white text-[11px] hover:bg-black/80 transition"
                       >
@@ -281,15 +301,15 @@ export default function ContactForm({ type }: { type: ContactType }) {
 
         {type === "request" && (
           <>
-            <Field label="希望エリアや物件" required>
-              <input name="area" type="text" placeholder="例: 東京都 世田谷区 周辺 / 倉庫・古民家など" className={inputClass} />
+            <Field en={en} label={en ? "Preferred area / property type" : "希望エリアや物件"} required>
+              <input name="area" type="text" placeholder={en ? "e.g. around Setagaya, Tokyo / warehouse, traditional house" : "例: 東京都 世田谷区 周辺 / 倉庫・古民家など"} className={inputClass} />
             </Field>
-            <Field label="撮影の用途・ほしい条件" required>
+            <Field en={en} label={en ? "Intended use & requirements" : "撮影の用途・ほしい条件"} required>
               <textarea
                 name="message"
                 rows={4}
                 required
-                placeholder="例: MV撮影で使える廃工場系のロケ地を探しています。天井高4m以上・搬入経路があると理想です。"
+                placeholder={en ? "e.g. Looking for an abandoned-factory-style location for a music video. Ideally 4m+ ceilings with a load-in route." : "例: MV撮影で使える廃工場系のロケ地を探しています。天井高4m以上・搬入経路があると理想です。"}
                 className={`${inputClass} leading-relaxed resize-y`}
               />
             </Field>
@@ -299,27 +319,27 @@ export default function ContactForm({ type }: { type: ContactType }) {
         {type === "listing" && (
           <>
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="会社名・オーナー名" required>
-                <input name="company" type="text" placeholder="株式会社〇〇" className={inputClass} />
+              <Field en={en} label={en ? "Company / owner name" : "会社名・オーナー名"} required>
+                <input name="company" type="text" placeholder={en ? "Acme Inc." : "株式会社〇〇"} className={inputClass} />
               </Field>
-              <Field label="物件名" required>
-                <input name="propertyName" type="text" placeholder="例: 〇〇スタジオ" className={inputClass} />
+              <Field en={en} label={en ? "Property name" : "物件名"} required>
+                <input name="propertyName" type="text" placeholder={en ? "e.g. Studio XYZ" : "例: 〇〇スタジオ"} className={inputClass} />
               </Field>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="所在地" required>
-                <input name="address" type="text" placeholder="例: 東京都渋谷区…" className={inputClass} />
+              <Field en={en} label={en ? "Address" : "所在地"} required>
+                <input name="address" type="text" placeholder={en ? "e.g. Shibuya, Tokyo…" : "例: 東京都渋谷区…"} className={inputClass} />
               </Field>
-              <Field label="電話番号" optional>
+              <Field en={en} label={en ? "Phone" : "電話番号"} optional>
                 <input name="phone" type="tel" placeholder="03-0000-0000" className={inputClass} />
               </Field>
             </div>
-            <Field label="掲載・スキャン希望日について" required>
+            <Field en={en} label={en ? "Preferred listing / scan dates" : "掲載・スキャン希望日について"} required>
               <textarea
                 name="message"
                 rows={4}
                 required
-                placeholder="例: できるだけ早く掲載したい。スキャンは○月○日以降の平日午前が対応しやすいです。"
+                placeholder={en ? "e.g. We'd like to be listed ASAP. Weekday mornings after the 10th work best for a scan visit." : "例: できるだけ早く掲載したい。スキャンは○月○日以降の平日午前が対応しやすいです。"}
                 className={`${inputClass} leading-relaxed resize-y`}
               />
             </Field>
@@ -327,12 +347,12 @@ export default function ContactForm({ type }: { type: ContactType }) {
         )}
 
         {type === "general" && (
-          <Field label="ご相談内容" required>
+          <Field en={en} label={en ? "Your message" : "ご相談内容"} required>
             <textarea
               name="message"
               rows={5}
               required
-              placeholder="料金プラン・法人契約・提携のご相談など、なんでもどうぞ。"
+              placeholder={en ? "Pricing plans, corporate contracts, partnerships — anything is welcome." : "料金プラン・法人契約・提携のご相談など、なんでもどうぞ。"}
               className={`${inputClass} leading-relaxed resize-y`}
             />
           </Field>
@@ -341,19 +361,20 @@ export default function ContactForm({ type }: { type: ContactType }) {
         <div className="border-t border-line pt-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
             <Field
-              label={type === "listing" ? "ご担当者名" : "お名前"}
+              en={en}
+              label={type === "listing" ? (en ? "Contact person" : "ご担当者名") : en ? "Name" : "お名前"}
               required={type === "listing"}
               optional={type !== "listing"}
             >
               <input
                 name="name"
                 type="text"
-                placeholder="山田 太郎"
+                placeholder={en ? "Jane Smith" : "山田 太郎"}
                 required={type === "listing"}
                 className={inputClass}
               />
             </Field>
-            <Field label="メールアドレス" required={type === "listing"} optional={type !== "listing"}>
+            <Field en={en} label={en ? "Email" : "メールアドレス"} required={type === "listing"} optional={type !== "listing"}>
               <input
                 name="email"
                 type="email"
@@ -378,10 +399,10 @@ export default function ContactForm({ type }: { type: ContactType }) {
               className="w-full sm:w-auto bg-accent text-white text-[15px] font-bold px-8 py-3.5 rounded-md hover:bg-accent/85 transition shadow-sm disabled:opacity-50"
             >
               {pending
-                ? "送信中…"
+                ? en ? "Sending…" : "送信中…"
                 : type === "listing"
-                  ? "掲載を依頼する →"
-                  : "送信する →"}
+                  ? en ? "Request a listing →" : "掲載を依頼する →"
+                  : en ? "Send →" : "送信する →"}
             </button>
           </div>
         </div>
@@ -395,20 +416,22 @@ function Field({
   required,
   optional,
   note,
+  en,
   children,
 }: {
   label: string;
   required?: boolean;
   optional?: boolean;
   note?: string;
+  en?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
       <span className="text-[13px] font-medium text-ink/70 mb-1.5 block">
         {label}
-        {required && <span className="text-red-500 text-[11px] ml-1">必須</span>}
-        {optional && <span className="text-muted text-[11px] ml-1">任意</span>}
+        {required && <span className="text-red-500 text-[11px] ml-1">{en ? "required" : "必須"}</span>}
+        {optional && <span className="text-muted text-[11px] ml-1">{en ? "optional" : "任意"}</span>}
         {note && <span className="text-muted text-[11px] ml-1.5">（{note}）</span>}
       </span>
       {children}

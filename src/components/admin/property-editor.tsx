@@ -452,6 +452,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   placeholder="例: Setagaya Cyc Studio｜白ホリ大スパン"
                 />
               </Field>
+              <Field label="物件名（英語・EN版で表示）" error={formState.errors.titleEn?.message}>
+                <input
+                  type="text"
+                  {...register("titleEn")}
+                  className={inputClass}
+                  placeholder="e.g. Setagaya Cyc Studio — Large-span Cyclorama（空欄なら日本語名をそのまま表示）"
+                />
+              </Field>
 
               <div className="grid md:grid-cols-3 gap-5">
                 <Field label="カテゴリ" required>
@@ -616,6 +624,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   <input type="text" {...register("city")} className={inputClass} />
                 </Field>
               </div>
+              <Field label="市区町村（英語・EN版で表示）">
+                <input
+                  type="text"
+                  {...register("cityEn")}
+                  className={inputClass}
+                  placeholder="e.g. Tsurumi, Yokohama（空欄なら日本語をそのまま表示。都道府県は自動でローマ字化）"
+                />
+              </Field>
 
               <Field
                 label="座標 (lat, lng) — 地図ピンと距離計算に使用"
@@ -642,6 +658,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   {...register("summary")}
                   className={inputClass}
                   placeholder="例: 天井高 5.4m、25m スパンの白ホリ。CM・MV 撮影で実績多数。"
+                />
+              </Field>
+              <Field label="サマリー（英語・EN版で表示）" error={formState.errors.summaryEn?.message}>
+                <textarea
+                  rows={3}
+                  {...register("summaryEn")}
+                  className={inputClass}
+                  placeholder="e.g. 5.4m ceilings, 25m-span cyclorama. Proven track record for commercials & music videos.（空欄なら日本語をそのまま表示）"
                 />
                 <button
                   type="button"
@@ -1192,6 +1216,14 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   className={inputClass + " font-sans leading-[1.85]"}
                   placeholder="このスタジオの特徴、ロケーション、利用シーン、注意事項などをご記入ください。"
                 />
+              </Field>
+              <Field label="本文（英語・EN版で表示）">
+                <textarea
+                  rows={10}
+                  {...register("descriptionEn")}
+                  className={inputClass + " font-sans leading-[1.85]"}
+                  placeholder="English description shown on the /en version.（空欄なら日本語をそのまま表示）"
+                />
                 <div className="flex items-center justify-between mt-1">
                   <button
                     type="button"
@@ -1470,7 +1502,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
+                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1691,6 +1723,15 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                                 rows={2}
                                 maxLength={1000}
                                 placeholder="例: 高精細3DGSデータ。商用利用可。"
+                              />
+                            </Field>
+                            <Field label="販売説明文（英語・EN版で表示）" hint="">
+                              <textarea
+                                {...register(`splatItems.${idx}.saleDescriptionEn`)}
+                                className={inputClass}
+                                rows={2}
+                                maxLength={2000}
+                                placeholder="e.g. High-detail 3DGS data. Commercial use allowed.（空欄なら日本語をそのまま表示）"
                               />
                             </Field>
 

@@ -202,10 +202,14 @@ export const propertySchema = z.object({
 
   // 1. Basic (draft-permissive — strictness applied in publishablePropertySchema)
   title: z.string().max(120).default(""),
+  /** EN版の表示名（空なら title をそのまま使う）。summary/description も同様。 */
+  titleEn: z.string().max(160).default(""),
   category: z.enum(PROPERTY_CATEGORIES),
   area: z.string().max(40).default(""),
   prefecture: z.string().max(20).default(""),
   city: z.string().max(40).default(""),
+  /** EN版の市区町村表記（例: "Tsurumi, Yokohama"。空なら日本語のまま）。 */
+  cityEn: z.string().max(80).default(""),
   hourlyPrice: z
     .number({ message: "数値で入力してください" })
     .int()
@@ -232,6 +236,7 @@ export const propertySchema = z.object({
    */
   permitType: z.string().max(40).default(""),
   summary: z.string().max(200, "200 文字以内で入力してください").default(""),
+  summaryEn: z.string().max(400).default(""),
 
   // 1.5 — Studio kind (subdivides `category`, free-text with suggestions)
   studioType: z.string().max(40).default(""),
@@ -342,6 +347,7 @@ export const propertySchema = z.object({
 
   // 3. Description
   description: z.string().max(4000).default(""),
+  descriptionEn: z.string().max(8000).default(""),
 
   // 4. Photos
   cover: propertyImageSchema,
@@ -365,6 +371,8 @@ export const propertySchema = z.object({
     forSale: z.boolean().default(false),
     salePrice: z.number().int().min(0).max(99999999).default(0),
     saleDescription: z.string().max(1000).default(""),
+    /** EN版の販売説明文（空なら日本語のまま）。 */
+    saleDescriptionEn: z.string().max(2000).default(""),
     accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
     // 販売用ダウンロードファイル（PLY & OBJ の ZIP）— ビューアー用 splatUrl とは別
     downloadFileUrl: urlOrPath(),
@@ -564,6 +572,83 @@ export const CATEGORY_LABEL_EN: Record<PropertyCategory, string> = {
 /** locale-aware カテゴリ名。locale="en" で英語、それ以外は日本語。 */
 export function categoryLabel(cat: PropertyCategory, locale?: string): string {
   return locale === "en" ? CATEGORY_LABEL_EN[cat] : CATEGORY_LABEL[cat];
+}
+
+/** 47都道府県のローマ字表記（EN版の所在地表示用）。 */
+export const PREFECTURE_EN: Record<string, string> = {
+  北海道: "Hokkaido", 青森県: "Aomori", 岩手県: "Iwate", 宮城県: "Miyagi",
+  秋田県: "Akita", 山形県: "Yamagata", 福島県: "Fukushima", 茨城県: "Ibaraki",
+  栃木県: "Tochigi", 群馬県: "Gunma", 埼玉県: "Saitama", 千葉県: "Chiba",
+  東京都: "Tokyo", 神奈川県: "Kanagawa", 新潟県: "Niigata", 富山県: "Toyama",
+  石川県: "Ishikawa", 福井県: "Fukui", 山梨県: "Yamanashi", 長野県: "Nagano",
+  岐阜県: "Gifu", 静岡県: "Shizuoka", 愛知県: "Aichi", 三重県: "Mie",
+  滋賀県: "Shiga", 京都府: "Kyoto", 大阪府: "Osaka", 兵庫県: "Hyogo",
+  奈良県: "Nara", 和歌山県: "Wakayama", 鳥取県: "Tottori", 島根県: "Shimane",
+  岡山県: "Okayama", 広島県: "Hiroshima", 山口県: "Yamaguchi", 徳島県: "Tokushima",
+  香川県: "Kagawa", 愛媛県: "Ehime", 高知県: "Kochi", 福岡県: "Fukuoka",
+  佐賀県: "Saga", 長崎県: "Nagasaki", 熊本県: "Kumamoto", 大分県: "Oita",
+  宮崎県: "Miyazaki", 鹿児島県: "Kagoshima", 沖縄県: "Okinawa",
+};
+
+// 「神奈川エリア」のように suffix 抜きで書かれるエリア名 → romaji の逆引き。
+const PREFECTURE_EN_BY_BASE: Record<string, string> = Object.fromEntries(
+  Object.entries(PREFECTURE_EN).map(([jp, enName]) => [jp.replace(/[都道府県]$/, ""), enName]),
+);
+
+/** "神奈川エリア" → "Kanagawa Area"。未知のエリア名はそのまま返す。 */
+export function areaLabelEn(area: string): string {
+  const m = area.match(/^(.+?)エリア$/);
+  if (m && PREFECTURE_EN_BY_BASE[m[1]]) return `${PREFECTURE_EN_BY_BASE[m[1]]} Area`;
+  return area;
+}
+
+/** よく使うスタジオ種類の英訳（ベストエフォート。未知はそのまま表示）。 */
+export const STUDIO_TYPE_EN: Record<string, string> = {
+  倉庫: "Warehouse", 白ホリスタジオ: "Cyclorama studio", ハウススタジオ: "House studio",
+  スタジオ: "Studio", 古民家: "Traditional house", 廃墟: "Ruins", 工場: "Factory",
+  学校: "School", 店舗: "Shop", 屋外: "Outdoor", 会場: "Venue", ドーム: "Dome",
+  体育館: "Gymnasium", オフィス: "Office", 教会: "Church", 住宅: "House",
+};
+
+/** よく使うタグの英訳（ベストエフォート。未知タグはそのまま表示）。 */
+export const TAG_EN: Record<string, string> = {
+  倉庫: "Warehouse", コンクリート: "Concrete", 鉄骨: "Steel frame", 天井高: "High ceiling",
+  白ホリ: "Cyclorama", スタジオ: "Studio", 屋外: "Outdoor", 住宅: "House",
+  古民家: "Traditional house", 廃墟: "Ruins", 工場: "Factory", 学校: "School",
+  店舗: "Shop", 自然光: "Natural light", 駐車場: "Parking", 搬入口: "Loading dock",
+  防音: "Soundproof", 屋上: "Rooftop", 和室: "Japanese room", 洋室: "Western room",
+  会場: "Venue", ドーム: "Dome", 体育館: "Gymnasium", オフィス: "Office",
+  キッチン: "Kitchen", プール: "Pool", 教会: "Church", 森: "Forest", 海: "Sea",
+  川: "River", 公園: "Park", 夜景: "Night view",
+};
+
+/**
+ * EN版表示用に title/summary/description（英語フィールドで差し替え）と
+ * 所在地・エリア・タグ（辞書ベースの機械変換）を英語化したシャローコピーを返す。
+ * 英語フィールドが空の物件は日本語のまま = 段階的移行可。サーバーページの
+ * データ取得直後に通せば、下流の PropertyCard 等は無改修で済む。
+ * 注意: 関連物件スコアリング等のロジックには原文(raw)の方を渡すこと。
+ */
+export function localizeProperty<T extends Pick<Property, "title" | "titleEn" | "summary" | "summaryEn" | "description" | "descriptionEn" | "prefecture" | "city" | "cityEn" | "area" | "tags" | "studioType" | "splatItems">>(
+  p: T,
+  locale?: string,
+): T {
+  if (locale !== "en") return p;
+  return {
+    ...p,
+    title: p.titleEn || p.title,
+    summary: p.summaryEn || p.summary,
+    description: p.descriptionEn || p.description,
+    prefecture: PREFECTURE_EN[p.prefecture] || p.prefecture,
+    city: p.cityEn || p.city,
+    area: areaLabelEn(p.area),
+    studioType: STUDIO_TYPE_EN[p.studioType] || p.studioType,
+    tags: p.tags.map((t) => TAG_EN[t] || t),
+    splatItems: p.splatItems.map((it) => ({
+      ...it,
+      saleDescription: it.saleDescriptionEn || it.saleDescription,
+    })),
+  };
 }
 
 export type PriceType = "hourly" | "flat" | "free";

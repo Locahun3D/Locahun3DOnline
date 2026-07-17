@@ -6,11 +6,20 @@ import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = {
-  title: "料金プラン",
-  description:
-    "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -20%。",
-};
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return locale === "en"
+    ? {
+        title: "Pricing",
+        description:
+          "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus token-based 3DGS walkthroughs. Save 20% with annual billing.",
+      }
+    : {
+        title: "料金プラン",
+        description:
+          "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -20%。",
+      };
+}
 
 // 各セル = [日本語, 英語]。表示時に locale で添字を選ぶ。
 type Cell = [string, string];

@@ -3,10 +3,14 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { getPublishedProperties } from "@/lib/properties";
 import BookmarksManager from "@/components/dashboard/bookmarks-manager";
+import { localizeProperty } from "@/lib/schemas";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = { title: "保存した物件" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Saved Properties" : "保存した物件" };
+}
 
 export default async function BookmarksPage() {
   const user = await getCurrentUser();
@@ -22,7 +26,8 @@ export default async function BookmarksPage() {
   const order = new Map((user.bookmarks ?? []).map((id, i) => [id, i]));
   const saved = all
     .filter((p) => ids.has(p.id))
-    .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+    .map((p) => localizeProperty(p, locale));
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">

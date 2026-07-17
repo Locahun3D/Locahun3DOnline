@@ -19,6 +19,7 @@ export default function StudioPageBlocks({
   signedIn = false,
   previewToken,
   unlockedItemIds = [],
+  locale = "ja",
 }: {
   blocks: PageBlock[];
   property: Property;
@@ -29,11 +30,12 @@ export default function StudioPageBlocks({
   signedIn?: boolean;
   previewToken?: string;
   unlockedItemIds?: string[];
+  locale?: string;
 }) {
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} previewToken={previewToken} unlockedItemIds={unlockedItemIds} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} previewToken={previewToken} unlockedItemIds={unlockedItemIds} locale={locale} />
       ))}
     </div>
   );
@@ -49,6 +51,7 @@ function BlockView({
   signedIn = false,
   previewToken,
   unlockedItemIds = [],
+  locale = "ja",
 }: {
   block: PageBlock;
   property: Property;
@@ -59,7 +62,9 @@ function BlockView({
   signedIn?: boolean;
   previewToken?: string;
   unlockedItemIds?: string[];
+  locale?: string;
 }) {
+  const en = locale === "en";
   switch (block.kind) {
     case "heading":
       return (
@@ -149,16 +154,28 @@ function BlockView({
     case "specs":
       return (
         <dl className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 border-y border-line py-6 text-[13px]">
-          {[
-            ["面積", `${property.floorAreaSqm} ㎡`],
-            ["天井高", `${property.ceilingHeightM || "—"} m`],
-            ["収容", `${property.capacity} 名`],
-            ["自然光", property.hasNaturalLight ? "あり" : "なし"],
-            ["駐車", property.parking ? "可" : "不可"],
-            ["搬入口", property.loadingDock ? "大" : "通常"],
-            ["電源", property.powerVoltage || "—"],
-            ["スキャン", property.scannedAt || "—"],
-          ].map(([k, v]) => (
+          {(en
+            ? [
+                ["Floor area", `${property.floorAreaSqm} m²`],
+                ["Ceiling", `${property.ceilingHeightM || "—"} m`],
+                ["Capacity", `${property.capacity}`],
+                ["Natural light", property.hasNaturalLight ? "Yes" : "No"],
+                ["Parking", property.parking ? "Yes" : "No"],
+                ["Load-in", property.loadingDock ? "Large" : "Standard"],
+                ["Power", property.powerVoltage || "—"],
+                ["Scanned", property.scannedAt || "—"],
+              ]
+            : [
+                ["面積", `${property.floorAreaSqm} ㎡`],
+                ["天井高", `${property.ceilingHeightM || "—"} m`],
+                ["収容", `${property.capacity} 名`],
+                ["自然光", property.hasNaturalLight ? "あり" : "なし"],
+                ["駐車", property.parking ? "可" : "不可"],
+                ["搬入口", property.loadingDock ? "大" : "通常"],
+                ["電源", property.powerVoltage || "—"],
+                ["スキャン", property.scannedAt || "—"],
+              ]
+          ).map(([k, v]) => (
             <div key={k}>
               <dt className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 mb-1">
                 {k}
@@ -176,7 +193,7 @@ function BlockView({
             href={block.href || "/pricing"}
             className="inline-block px-8 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
           >
-            {block.label || "見積もり依頼"}
+            {block.label || (en ? "Request a quote" : "見積もり依頼")}
           </Link>
           {block.note && (
             <p className="text-[12px] text-muted mt-3 leading-[1.8]">

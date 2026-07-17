@@ -4,7 +4,10 @@ import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import InAppBrowserWarning from "@/components/in-app-browser-warning";
 
-export const metadata = { title: "ログイン" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Sign in" : "ログイン" };
+}
 
 /** Strip to a same-site path so an attacker can't redirect off-site. */
 function internalPath(raw?: string): string {

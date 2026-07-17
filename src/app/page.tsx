@@ -18,6 +18,7 @@ export default async function HomePage() {
   // EN は BudouX(<Jp>) を通さず素のテキストにする。
   const J = ({ k }: { k: DictKey }) =>
     locale === "ja" ? <Jp>{t(k)}</Jp> : <>{t(k)}</>;
+  const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
@@ -46,7 +47,7 @@ export default async function HomePage() {
             <ScanMark size={42} className="mb-3 sm:mb-6 transition-transform duration-500 group-hover:scale-110" />
             <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-2 sm:mb-5">
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
-              ロケハン3D
+              {brandName}
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
             <h2 className="brand text-[clamp(2rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
@@ -78,7 +79,7 @@ export default async function HomePage() {
             <ScanMark size={42} reticle="#5ec8e8" className="mb-3 sm:mb-6 transition-transform duration-500 group-hover:scale-110" />
             <div className="brand flex items-center justify-center gap-4 text-[clamp(0.85rem,1.2vw,1.05rem)] tracking-[0.28em] text-ink/85 mb-2 sm:mb-5">
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
-              ロケハン3D
+              {brandName}
               <span className="w-9 h-px bg-current opacity-50 transition-all duration-500 group-hover:w-14 group-hover:opacity-80" />
             </div>
             <h2 className="brand text-[clamp(2rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">

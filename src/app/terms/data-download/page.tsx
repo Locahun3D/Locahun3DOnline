@@ -218,6 +218,9 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
                 <li><strong>Custom (by arrangement)</strong> — Scope arranged individually. Please contact us before purchasing.</li>
               </ul>
             </li>
+            <li>
+              <strong>Embedding the Data into a software product — such as a game (web, PC or any other platform) or application — that is provided to third parties as part of that product</strong> (&quot;Embedded Use&quot;) requires the extended license. The standard license covers using the Data to produce works such as video and images only; it does not cover distributing the Data itself bundled inside a software product.
+            </li>
             <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
             <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the #ロケハン3D tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>
           </ol>
@@ -238,6 +241,9 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
           <p className="opacity-80 mb-3">The Purchaser shall not:</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>redistribute, resell or lend the Data to third parties;</li>
+            <li>
+              (Where Embedded Use is made under the extended license, the mere fact that users of the software product could extract the Data through technical analysis does not itself constitute a breach of the preceding item. However, separately distributing, reselling or lending the extracted Data as the Data itself does constitute such a breach.)
+            </li>
             <li>reproduce or imitate the Studio facility without permission using the Data;</li>
             <li>provide the Studio&apos;s internal structure or equipment information to competing facilities;</li>
             <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
@@ -303,7 +309,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
-            Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8)<br />
+            Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8; clarified in Articles 2 and 4 that embedding into games/software requires the extended license, with the treatment of incidental data extractability)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

@@ -1,7 +1,10 @@
 import CartClient from "@/components/cart-client";
 import { getLocale } from "@/lib/i18n/server";
 
-export const metadata = { title: "カート" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Cart" : "カート" };
+}
 
 export default async function CartPage() {
   const en = (await getLocale()) === "en";

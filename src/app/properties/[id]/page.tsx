@@ -23,6 +23,7 @@ import TrackView from "@/components/track-view";
 import PurchaseToast from "@/components/purchase-toast";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive, isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
+import { localizeProperty } from "@/lib/schemas";
 import { getLocale } from "@/lib/i18n/server";
 
 // 限定無料期間 (getSettings) と現在時刻を毎リクエストで読むため動的レンダリング。
@@ -35,8 +36,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const p = await getPublishedProperty(id);
-  if (!p) return { title: "Not found" };
+  const raw = await getPublishedProperty(id);
+  if (!raw) return { title: "Not found" };
+  const p = localizeProperty(raw, await getLocale());
   // og:image は SNS のクローラが外部から取得するため絶対URL必須。cover が
   // 相対（/api/r2/… や /uploads/…、R2非公開化後の配信経路）だと取得できないので
   // サイトオリジンを前置して絶対化する。
@@ -63,10 +65,11 @@ export default async function PropertyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const property = await getPublishedProperty(id);
-  if (!property) notFound();
+  const rawProperty = await getPublishedProperty(id);
+  if (!rawProperty) notFound();
 
   const locale = await getLocale();
+  const property = localizeProperty(rawProperty, locale);
 
   const [allPublished, settings, user] = await Promise.all([
     getPublishedProperties(),
@@ -74,7 +77,10 @@ export default async function PropertyDetailPage({
     getCurrentUser().catch(() => null),
   ]);
 
-  const others = findRelatedProperties(property, allPublished, 3);
+  // 関連判定は原文（タグ等）ベースで行い、表示直前にロケール変換する。
+  const others = findRelatedProperties(rawProperty, allPublished, 3).map((p) =>
+    localizeProperty(p, locale),
+  );
   const nowIso = new Date().toISOString();
   const freeAccess = isFreePeriodActive(settings.freePeriod, nowIso);
   const dataSaleFree = isDataSaleFree(settings.dataSaleFreePeriod, nowIso);

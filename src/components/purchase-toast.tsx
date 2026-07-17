@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useLocale } from "@/components/locale-provider";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export default function PurchaseToast() {
   const params = useSearchParams();
   const [visible, setVisible] = useState(false);
   const captured = useRef<string | null>(null);
   const raw = params.get("purchase");
+  const locale = useLocale();
+  const en = locale === "en";
 
   useEffect(() => {
     if (raw === "success" || raw === "cancel") {
@@ -36,17 +40,31 @@ export default function PurchaseToast() {
         <span className="text-lg mt-0.5">{isSuccess ? "✓" : "×"}</span>
         <div className="flex-1 space-y-1">
           <div className="font-medium text-sm">
-            {isSuccess ? "購入が完了しました" : "購入がキャンセルされました"}
+            {isSuccess
+              ? en ? "Purchase completed" : "購入が完了しました"
+              : en ? "Purchase cancelled" : "購入がキャンセルされました"}
           </div>
           <div className="text-[12px] opacity-70">
             {isSuccess ? (
-              <>
-                ダウンロードは{" "}
-                <Link href="/dashboard/purchases" className="underline hover:text-green-200">
-                  購入履歴
-                </Link>{" "}
-                から行えます。領収書もそちらで発行できます。
-              </>
+              en ? (
+                <>
+                  Download from your{" "}
+                  <Link href={localizedHref("/dashboard/purchases", locale)} className="underline hover:text-green-200">
+                    purchase history
+                  </Link>
+                  , where you can also get your receipt.
+                </>
+              ) : (
+                <>
+                  ダウンロードは{" "}
+                  <Link href="/dashboard/purchases" className="underline hover:text-green-200">
+                    購入履歴
+                  </Link>{" "}
+                  から行えます。領収書もそちらで発行できます。
+                </>
+              )
+            ) : en ? (
+              "The purchase was not completed. Please try again."
             ) : (
               "購入は完了していません。改めてお試しください。"
             )}

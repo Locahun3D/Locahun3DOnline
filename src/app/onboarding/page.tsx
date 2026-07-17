@@ -3,7 +3,10 @@ import { requireUser } from "@/lib/dal";
 import OnboardingForm from "@/components/onboarding-form";
 import { getLocale } from "@/lib/i18n/server";
 
-export const metadata = { title: "アカウント設定" };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Account Setup" : "アカウント設定" };
+}
 
 export default async function OnboardingPage() {
   const user = await requireUser();

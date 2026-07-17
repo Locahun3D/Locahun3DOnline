@@ -1277,7 +1277,10 @@ function PropertyCardLite({
           )}
           <div className="mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
             {categoryLabel(property.category, lc)}
-            {property.studioType ? ` · ${property.studioType}` : ""}
+            {/* EN変換でカテゴリと同語になる場合（Warehouse · Warehouse）は重複表示しない */}
+            {property.studioType && property.studioType.toLowerCase() !== categoryLabel(property.category, lc).toLowerCase()
+              ? ` · ${property.studioType}`
+              : ""}
           </div>
         </div>
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">

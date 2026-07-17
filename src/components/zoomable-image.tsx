@@ -58,7 +58,7 @@ export default function ZoomableImage({
       />
       <button
         type="button"
-        aria-label="閉じる"
+        aria-label="Close"
         onClick={() => setOpen(false)}
         className="absolute top-4 right-5 text-white/80 hover:text-white text-[32px] leading-none"
       >

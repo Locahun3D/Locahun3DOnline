@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
-import { ROLE_LABEL } from "@/lib/account-schema";
+import { roleLabel } from "@/lib/account-schema";
 import HeaderMark from "@/components/header-mark";
 import CartLink from "@/components/cart-link";
 import LangToggle from "@/components/lang-toggle";
@@ -21,6 +21,8 @@ export default async function SiteHeader() {
   const t = (k: DictKey) => translate(locale, k);
   const lh = (href: string) => localizedHref(href, locale);
   const scanUrl = locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/";
+  // EN版はブランド表記も英字に切り替える（マーク自体は共通）。
+  const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
 
   /**
    * PC(1200px+)の1行ヘッダーと構成要素は完全に同一 — ハンバーガーに畳まず、
@@ -56,7 +58,7 @@ export default async function SiteHeader() {
           className="flex items-center gap-1 min-[1200px]:gap-2 text-[9px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
           <span className="hidden sm:inline border border-line px-1 min-[1200px]:px-1.5 py-0.5 text-[8px] min-[1200px]:text-[9px]">
-            {ROLE_LABEL[user.role]}
+            {roleLabel(user.role, locale)}
           </span>
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
         </Link>
@@ -116,9 +118,9 @@ export default async function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          <Link href={lh("/")} aria-label="ロケハン3D" className="flex items-center gap-2.5">
+          <Link href={lh("/")} aria-label={brandName} className="flex items-center gap-2.5">
             <HeaderMark />
-            <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">ロケハン3D</span>
+            <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
           </Link>
           <div className="hidden xl:block ml-1">{scanOnlineToggle}</div>
           <LangToggle className="hidden 2xl:inline-block" />
@@ -137,10 +139,10 @@ export default async function SiteHeader() {
       <div className="min-[1200px]:hidden frame">
         {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証 */}
         <div className="flex items-center h-12 gap-0.5 min-[360px]:gap-1">
-          <Link href={lh("/")} aria-label="ロケハン3D" className="flex items-center gap-1 shrink-0">
+          <Link href={lh("/")} aria-label={brandName} className="flex items-center gap-1 shrink-0">
             <HeaderMark size={18} />
             <span className="brand text-[11px] min-[360px]:text-[13px] tracking-[0.01em] whitespace-nowrap">
-              ロケハン3D
+              {brandName}
             </span>
           </Link>
           <div className="shrink-0">{scanOnlineToggle}</div>

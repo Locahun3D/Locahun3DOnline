@@ -622,7 +622,8 @@ export default function PropertyDetailView({
                         i === 0 ? "border-t-2 border-t-ink" : ""
                       }`}
                     >
-                      {label}
+                      {/* ラベルは「POWER ／ 電源」のバイリンガル書式。EN版は英語部分のみ表示。 */}
+                      {en ? (label as string).split(" ／ ")[0] : label}
                     </th>
                     <td
                       className={`text-left py-3.5 font-bold border-b border-line ${
@@ -845,6 +846,7 @@ export default function PropertyDetailView({
               signedIn={signedIn}
               previewToken={previewToken}
               unlockedItemIds={unlockedItemIds}
+              locale={locale}
             />
           </section>
         ) : visibleSplatItems.length === 0 ? (

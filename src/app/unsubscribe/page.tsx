@@ -3,7 +3,10 @@ import { userRepo } from "@/lib/users";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
-export const metadata = { title: "配信停止", robots: { index: false, follow: false } };
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return { title: locale === "en" ? "Unsubscribe" : "配信停止", robots: { index: false, follow: false } };
+}
 
 /**
  * ログイン不要のワンクリック配信停止。メール本文のリンクから直接ここへ来る前提

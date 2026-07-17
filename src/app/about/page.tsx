@@ -3,11 +3,20 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import LightboxImage from "@/components/about/lightbox-image";
 
-export const metadata = {
-  title: "サービスについて",
-  description:
-    "ロケハン3D は、実在のロケ地を 3DGS でスキャンし、ブラウザで歩いて下見できるサービスです。できること・仕組み・機能の詳細・対象・よくある疑問をまとめています。",
-};
+export async function generateMetadata() {
+  const locale = await getLocale();
+  return locale === "en"
+    ? {
+        title: "About",
+        description:
+          "Locahun 3D scans real filming locations with 3DGS so you can walk them in a browser before the shoot. What it does, how it works, features and FAQ.",
+      }
+    : {
+        title: "サービスについて",
+        description:
+          "ロケハン3D は、実在のロケ地を 3DGS でスキャンし、ブラウザで歩いて下見できるサービスです。できること・仕組み・機能の詳細・対象・よくある疑問をまとめています。",
+      };
+}
 
 const SCAN_URL = "https://web.locahun3d.com/";
 const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
