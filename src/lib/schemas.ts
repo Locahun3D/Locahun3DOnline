@@ -608,6 +608,8 @@ export const STUDIO_TYPE_EN: Record<string, string> = {
   スタジオ: "Studio", 古民家: "Traditional house", 廃墟: "Ruins", 工場: "Factory",
   学校: "School", 店舗: "Shop", 屋外: "Outdoor", 会場: "Venue", ドーム: "Dome",
   体育館: "Gymnasium", オフィス: "Office", 教会: "Church", 住宅: "House",
+  交差点: "Intersection", 路地: "Alley", 商店街: "Shopping street", 駅: "Station",
+  橋: "Bridge", 神社: "Shrine", 寺: "Temple", 公園: "Park", 海岸: "Coast",
 };
 
 /** よく使うタグの英訳（ベストエフォート。未知タグはそのまま表示）。 */
