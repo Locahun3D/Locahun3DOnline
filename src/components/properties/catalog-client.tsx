@@ -503,7 +503,7 @@ export default function CatalogClient({
 
         {/* Map: stretches to match the panel height (面一), no scroll-follow.
             モバイルでは高さを抑えて結果カードを早く見せる。 */}
-        <div className="h-[24vh] sm:h-[40vh] lg:h-auto">
+        <div className="h-[34vh] sm:h-[57vh] lg:h-auto">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}

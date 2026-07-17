@@ -59,13 +59,26 @@ export default function BookmarkButton({
   const openPopover = () => {
     const r = btnRef.current?.getBoundingClientRect();
     if (r) {
+      // html{zoom:0.7} 環境では getBoundingClientRect はズーム適用後の座標を返す
+      // 一方、fixed要素の top/left にはズームが再適用されるため、ズーム係数で
+      // 割り戻さないとポップオーバーが左上方向へずれる（実害確認済み）。
+      const zoom =
+        (btnRef.current as (HTMLElement & { currentCSSZoom?: number }) | null)
+          ?.currentCSSZoom ??
+        (parseFloat(getComputedStyle(document.documentElement).zoom) || 1);
+      const rb = {
+        bottom: r.bottom / zoom,
+        left: r.left / zoom,
+        right: r.right / zoom,
+        width: r.width / zoom,
+      };
       const W = 256;
-      const vw = window.innerWidth;
+      const vw = window.innerWidth / zoom;
       // 右寄りのボタンは左方向へ開く（右端はみ出し防止）。
-      let left = r.left;
-      if (r.left + W > vw - 12) left = r.right - W;
+      let left = rb.left;
+      if (rb.left + W > vw - 12) left = rb.right - W;
       left = Math.max(12, Math.min(left, vw - W - 12));
-      setAnchor({ top: r.bottom + 6, left, width: r.width });
+      setAnchor({ top: rb.bottom + 6, left, width: rb.width });
     }
     setInThemeOnline(!!btnRef.current?.closest(".theme-online"));
     setOpen(true);

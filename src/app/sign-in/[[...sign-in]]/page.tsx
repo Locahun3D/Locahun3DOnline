@@ -35,7 +35,7 @@ export default async function SignInPage({
   const locale = await getLocale();
 
   return (
-    <div className="frame min-h-[80vh] flex flex-col items-center justify-center py-16">
+    <div className="frame min-h-[114vh] flex flex-col items-center justify-center py-16">
       <InAppBrowserWarning locale={locale} />
       <SignIn signUpUrl="/sign-up" />
     </div>

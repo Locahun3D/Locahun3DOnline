@@ -38,7 +38,7 @@ export default async function UnsubscribePage({
   }
 
   return (
-    <div className="theme-online frame min-h-[60vh] flex items-center justify-center py-16">
+    <div className="theme-online frame min-h-[86vh] flex items-center justify-center py-16">
       <div className="max-w-md text-center px-6">
         <h1 className="serif text-2xl font-bold mb-4">
           {en ? "Email preferences" : "配信設定"}

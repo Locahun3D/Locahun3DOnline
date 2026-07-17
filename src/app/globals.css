@@ -20,6 +20,16 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ページUI全体を70%スケールで表示（指示による全体調整）。
+   transform:scale と違い zoom はレイアウトを再計算するため余白が残らない。
+   メディアクエリは実ビューポート幅で判定されたまま、コンテンツは約1.43倍の
+   幅で組まれる（=情報密度が上がる）。vh/vw 単位は zoom の影響を受けないため、
+   フルスクリーン意図のセクションは各所で 1/0.7 補正している（例: ホームの
+   スプリットヒーロー）。 */
+html {
+  zoom: 0.7;
+}
+
 html,
 body {
   background: var(--color-bg);
