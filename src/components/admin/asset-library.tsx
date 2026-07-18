@@ -25,10 +25,20 @@ async function assetApi(body: Record<string, unknown>): Promise<boolean> {
   }
 }
 
+interface FolderProperty {
+  id: string;
+  title: string;
+  cover: string;
+}
+
 interface Props {
   initialAssets: Asset[];
   usage: Record<string, string[]>;
+  properties: FolderProperty[];
 }
+
+/** 物件に紐付いていないアセットの受け皿フォルダ（利用箇所ゼロ = usage[url]が空）。 */
+const UNASSIGNED_FOLDER = "__unassigned__";
 
 function fmtBytes(n: number) {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
@@ -56,8 +66,51 @@ const kindIcons: Record<AssetKind, string> = {
   document: "📄",
 };
 
-export default function AssetLibrary({ initialAssets, usage }: Props) {
+export default function AssetLibrary({ initialAssets, usage, properties }: Props) {
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
+  const propertyById = useMemo(
+    () => new Map(properties.map((p) => [p.id, p])),
+    [properties],
+  );
+
+  // 物件フォルダ単位でアセットをグルーピング（Dropbox風のドリルダウン用）。
+  // アセット自体に propertyId は持たせず、既存の usage（URL→参照物件ID[]）から
+  // 導出する — 複数物件から参照されているアセットは該当する全フォルダに現れる。
+  const folders = useMemo(() => {
+    const map = new Map<string, { id: string; title: string; cover: string; assets: Asset[] }>();
+    for (const a of assets) {
+      const pids = usage[a.url] ?? [];
+      const keys = pids.length > 0 ? pids : [UNASSIGNED_FOLDER];
+      for (const pid of keys) {
+        const meta =
+          pid === UNASSIGNED_FOLDER
+            ? { id: UNASSIGNED_FOLDER, title: "未整理（未使用アセット）", cover: "" }
+            : { id: pid, title: propertyById.get(pid)?.title ?? pid, cover: propertyById.get(pid)?.cover ?? "" };
+        const f = map.get(pid) ?? { ...meta, assets: [] };
+        f.assets.push(a);
+        map.set(pid, f);
+      }
+    }
+    return [...map.values()].sort((a, b) => {
+      if (a.id === UNASSIGNED_FOLDER) return 1;
+      if (b.id === UNASSIGNED_FOLDER) return -1;
+      return a.title.localeCompare(b.title, "ja");
+    });
+  }, [assets, usage, propertyById]);
+
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const currentFolder = openFolder ? folders.find((f) => f.id === openFolder) : null;
+  // 「開いていたフォルダの最後の1件を削除した」等でfoldersから消えた場合、
+  // 検索対象を空配列にフォールバックする（クラッシュせず「空です」表示になる）。
+  const folderAssets = openFolder ? (currentFolder?.assets ?? []) : assets;
+
+  const [folderQuery, setFolderQuery] = useState("");
+  const visibleFolders = useMemo(() => {
+    if (!folderQuery) return folders;
+    const needle = folderQuery.toLowerCase();
+    return folders.filter((f) => f.title.toLowerCase().includes(needle));
+  }, [folders, folderQuery]);
+
   const [q, setQ] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | AssetKind>("all");
   const [tagFilter, setTagFilter] = useState("");
@@ -80,12 +133,12 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    for (const a of assets) for (const t of a.tags ?? []) set.add(t);
+    for (const a of folderAssets) for (const t of a.tags ?? []) set.add(t);
     return [...set].sort();
-  }, [assets]);
+  }, [folderAssets]);
 
   const filtered = useMemo(() => {
-    return assets.filter((a) => {
+    return folderAssets.filter((a) => {
       if (kindFilter !== "all" && a.kind !== kindFilter) return false;
       if (onlyUnused && (usage[a.url]?.length ?? 0) > 0) return false;
       if (tagFilter && !(a.tags ?? []).includes(tagFilter)) return false;
@@ -93,7 +146,7 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
         return false;
       return true;
     });
-  }, [assets, kindFilter, onlyUnused, tagFilter, q, usage]);
+  }, [folderAssets, kindFilter, onlyUnused, tagFilter, q, usage]);
 
   // 形式（画像/3DGS/ZIP/書類）ごとにセクション分けして表示する。
   // フィルタ適用後の集合を分配するので、検索・タグ・未使用の絞り込みと共存する。
@@ -228,8 +281,124 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
     }
   }
 
+  // 隠しinput（アップロード/差し替え）はフォルダ一覧・フォルダ内どちらでも
+  // 使えるよう、フォルダ表示の分岐の外に常設する。
+  const hiddenInputs = (
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        hidden
+        multiple
+        accept="image/*,.splat,.ply,.ksplat"
+        onChange={(e) => {
+          if (e.target.files?.length) handleFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      {/* 差し替え専用の隠しinput（対象アセットは replacingId で識別）。 */}
+      <input
+        ref={replaceRef}
+        type="file"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) onReplaceFileSelected(file);
+        }}
+      />
+    </>
+  );
+
+  if (openFolder === null) {
+    return (
+      <div>
+        {hiddenInputs}
+        <div className="flex flex-wrap gap-2 items-center mb-4">
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="bg-accent text-black px-3 py-1.5 text-[13px] font-medium"
+          >
+            ＋ アップロード（未整理へ）
+          </button>
+          <input
+            value={folderQuery}
+            onChange={(e) => setFolderQuery(e.target.value)}
+            placeholder="物件フォルダを検索…"
+            className="bg-[#222] border border-line px-2 py-1 text-[13px] w-52"
+          />
+          {replaceProgress != null && (
+            <span className="mono text-[11px] text-accent">差し替え中… {replaceProgress}%</span>
+          )}
+          <span className="mono text-[11px] text-muted ml-auto">
+            {visibleFolders.length} フォルダ ・ {assets.length} 件
+          </span>
+        </div>
+
+        {error && <div className="text-red-400 text-[12px] mb-3">{error}</div>}
+        {Object.entries(progress).map(([k, pct]) => (
+          <div key={k} className="mono text-[11px] text-muted mb-1">
+            {k} … {pct}%
+          </div>
+        ))}
+
+        {visibleFolders.length === 0 ? (
+          <div className="text-muted text-[13px] py-10 text-center">
+            {folderQuery ? "一致するフォルダがありません。" : "アセットがありません。"}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {visibleFolders.map((f) => {
+              const totalBytes = f.assets.reduce((s, a) => s + (a.size || 0), 0);
+              const unusedCount = f.assets.filter((a) => (usage[a.url]?.length ?? 0) === 0).length;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setOpenFolder(f.id)}
+                  className={`border bg-[#1d1d1d] hover:border-accent/50 transition-colors text-left ${
+                    f.id === UNASSIGNED_FOLDER ? "border-amber-800/50" : "border-line"
+                  }`}
+                >
+                  <div className="aspect-video bg-[#111] flex items-center justify-center overflow-hidden">
+                    {f.cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={f.cover} alt={f.title} className="object-cover w-full h-full opacity-80" />
+                    ) : (
+                      <span className="text-[32px] opacity-30">
+                        {f.id === UNASSIGNED_FOLDER ? "⚠" : "📁"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5 text-[12px] space-y-1">
+                    <div className="truncate font-medium" title={f.title}>{f.title}</div>
+                    <div className="mono text-[10px] text-muted flex flex-wrap gap-x-2">
+                      <span>{f.assets.length} 件</span>
+                      <span>{fmtBytes(totalBytes)}</span>
+                      {unusedCount > 0 && (
+                        <span className="text-amber-400/80">未使用 {unusedCount}</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
+      {hiddenInputs}
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 mb-4 text-[13px]">
+        <button onClick={() => setOpenFolder(null)} className="text-muted hover:text-accent transition-colors">
+          📁 フォルダ一覧
+        </button>
+        <span className="text-muted opacity-50">／</span>
+        <span className="font-medium">{currentFolder?.title ?? "（削除されました）"}</span>
+      </div>
       {/* Toolbar */}
       <div className="flex flex-wrap gap-2 items-center mb-4">
         <button
@@ -238,28 +407,6 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
         >
           ＋ アップロード
         </button>
-        <input
-          ref={fileRef}
-          type="file"
-          hidden
-          multiple
-          accept="image/*,.splat,.ply,.ksplat"
-          onChange={(e) => {
-            if (e.target.files?.length) handleFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-        {/* 差し替え専用の隠しinput（対象アセットは replacingId で識別）。 */}
-        <input
-          ref={replaceRef}
-          type="file"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (file) onReplaceFileSelected(file);
-          }}
-        />
         {replaceProgress != null && (
           <span className="mono text-[11px] text-accent">差し替え中… {replaceProgress}%</span>
         )}
@@ -307,7 +454,7 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
           </button>
         )}
         <span className="mono text-[11px] text-muted ml-auto">
-          {filtered.length} / {assets.length} 件
+          {filtered.length} / {folderAssets.length} 件
         </span>
 
         {/* 表示切替: 一覧 / サムネ */}
@@ -562,7 +709,9 @@ export default function AssetLibrary({ initialAssets, usage }: Props) {
         ))}
       </div>
       {filtered.length === 0 && (
-        <div className="text-muted text-[13px] py-10 text-center">アセットがありません。</div>
+        <div className="text-muted text-[13px] py-10 text-center">
+          {folderAssets.length === 0 ? "このフォルダにアセットがありません。" : "条件に一致するアセットがありません。"}
+        </div>
       )}
     </div>
   );
