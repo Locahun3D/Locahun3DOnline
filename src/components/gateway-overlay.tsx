@@ -30,8 +30,18 @@ export default function GatewayOverlay() {
 
       e.preventDefault();
 
-      const x = me.clientX;
-      const y = me.clientY;
+      // .split-gateway 自体に zoom がかかる環境（html{zoom}、および今回追加した
+      // .home-pc110）では、fixed要素の left/top/width/height はレンダー時に
+      // ズーム係数で再度掛け合わされる。clientX/Y や innerWidth/Height は
+      // ズーム後の実画面座標なので、CSSへ渡す前にズーム係数で割り戻さないと
+      // 円が実際より小さく/ずれた位置に描画され、画面端まで届かなくなる
+      // （bookmark-button.tsx のポップオーバーと同じ不具合パターン）。
+      const zoom =
+        (section as HTMLElement & { currentCSSZoom?: number }).currentCSSZoom ??
+        (parseFloat(getComputedStyle(document.documentElement).zoom) || 1);
+
+      const x = me.clientX / zoom;
+      const y = me.clientY / zoom;
 
       const panels = section.querySelectorAll(".split-panel");
       const isLeft = panel === panels[0];
@@ -40,8 +50,8 @@ export default function GatewayOverlay() {
       const href = panel.getAttribute("href") || "/properties";
       const external = href.startsWith("http");
 
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      const vw = window.innerWidth / zoom;
+      const vh = window.innerHeight / zoom;
       const maxDx = Math.max(x, vw - x);
       const maxDy = Math.max(y, vh - y);
       const size = Math.hypot(maxDx, maxDy) * 2.2;
