@@ -1861,17 +1861,21 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                             {/* ── ライセンス ── */}
                             <Field
                               label="デフォルトライセンス区分"
-                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。"
+                              hint="下の「複数ライセンス販売」が未設定の場合に使われる区分。エディトリアル限定は新規販売不可のため選択肢から除外（既存で選択中の物件のみ表示・変更可）。"
                             >
                               <select
                                 {...register(`splatItems.${idx}.license`)}
                                 className={inputClass}
                               >
-                                {DATA_LICENSES.map((l) => (
-                                  <option key={l} value={l} className="bg-bg">
-                                    {DATA_LICENSE_LABEL[l]} — {DATA_LICENSE_DESC[l]}
-                                  </option>
-                                ))}
+                                {DATA_LICENSES
+                                  // エディトリアルは新規選択不可。ただし既存でこの物件に設定済みなら
+                                  // 選択肢として残す（保存中に無言で他の区分へ化けるのを防ぐ）。
+                                  .filter((l) => l !== "editorial" || watch(`splatItems.${idx}.license`) === "editorial")
+                                  .map((l) => (
+                                    <option key={l} value={l} className="bg-bg">
+                                      {DATA_LICENSE_LABEL[l]} — {l === "editorial" ? "販売終了（新規選択不可）" : DATA_LICENSE_DESC[l]}
+                                    </option>
+                                  ))}
                               </select>
                             </Field>
                             {watch(`splatItems.${idx}.license`) === "editorial" &&
@@ -2808,17 +2812,30 @@ function LicenseOptionsEditor({
     <div className="space-y-3">
       {DATA_LICENSES.map((license) => {
         const opt = options.find((o) => o.license === license);
+        // エディトリアル限定は新規販売不可（方針転換）。既存で選択済みの物件は
+        // 表示・チェック解除はできるが、未選択の物件で新たにチェックはできない
+        // ようにする（買い手側は resolveLicenseOptions() で二重に遮断済み）。
+        const discontinued = license === "editorial";
+        const lockedOff = discontinued && !opt;
         return (
           <div key={license} className="flex flex-wrap items-start gap-3 border-b border-line/30 pb-2.5 last:border-0 last:pb-0">
-            <label className="flex items-start gap-2.5 min-w-[240px] cursor-pointer flex-1">
+            <label className={`flex items-start gap-2.5 min-w-[240px] flex-1 ${lockedOff ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
               <input
                 type="checkbox"
                 checked={!!opt}
+                disabled={lockedOff}
                 onChange={(e) => toggle(license, e.target.checked)}
                 className="w-4 h-4 accent-accent mt-0.5 shrink-0"
               />
               <span>
-                <span className="text-[12.5px] font-medium block">{DATA_LICENSE_LABEL[license]}</span>
+                <span className="text-[12.5px] font-medium block">
+                  {DATA_LICENSE_LABEL[license]}
+                  {discontinued && (
+                    <span className="ml-1.5 text-[10px] mono uppercase tracking-[0.1em] text-red-400">
+                      販売終了（新規選択不可）
+                    </span>
+                  )}
+                </span>
                 <span className="text-[10.5px] text-muted">{DATA_LICENSE_DESC[license]}</span>
               </span>
             </label>

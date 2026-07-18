@@ -18,16 +18,22 @@ interface LicenseSource {
 }
 
 export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
-  const multi = (item.licenseOptions ?? []).filter((o) => o.license);
+  // エディトリアル限定は新規販売不可（方針転換）。過去にチェック/設定された
+  // 物件データが残っていても、買い手側には一切見せず購入もできないよう
+  // ここで一律に除外する（管理画面側の選択不可化と二重の防御）。
+  const multi = (item.licenseOptions ?? []).filter(
+    (o) => o.license && o.license !== "editorial",
+  );
   if (multi.length > 0) {
     // 追加(チェックした)順ではなく、常に DATA_LICENSES のグレード順
-    // (standard → editorial → extended → custom) で並べる。管理画面の
+    // (editorial → standard → extended → custom) で並べる。管理画面の
     // チェックボックス一覧・買い手のライセンス選択チップ双方で表示順を揃える。
     return [...multi].sort(
       (a, b) => DATA_LICENSES.indexOf(a.license) - DATA_LICENSES.indexOf(b.license),
     );
   }
-  return [{ license: item.license ?? "standard", price: item.salePrice ?? 0 }];
+  const fallback = item.license && item.license !== "editorial" ? item.license : "standard";
+  return [{ license: fallback, price: item.salePrice ?? 0 }];
 }
 
 /** 指定したライセンス区分に対応する価格を取得（見つからなければ null）。 */
