@@ -25,6 +25,8 @@ import {
   linkPropertiesToUserAction,
 } from "@/lib/admin-actions";
 
+const PAGE_SIZE = 50;
+
 const STATUS_STYLE: Record<AccountStatus, string> = {
   active: "text-green-400 border-green-400/40",
   pending: "text-amber-400 border-amber-400/40",
@@ -43,6 +45,7 @@ export default function AccountsAdmin({
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AccountRole | "all">("all");
   const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">(initialStatus);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
@@ -64,7 +67,15 @@ export default function AccountsAdmin({
 
   const pendingCount = users.filter((u) => u.status === "pending").length;
   const freeCount = users.filter((u) => u.plan === "free").length;
-  const visibleIds = filtered.map((u) => u.id);
+
+  // 50件/ページ。フィルタ変更で件数が減った場合も範囲外にならないようクランプ
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageUsers = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+
+  // 「表示中をすべて選択」は現在ページの表示分のみ対象
+  const visibleIds = pageUsers.map((u) => u.id);
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
 
@@ -126,13 +137,19 @@ export default function AccountsAdmin({
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
           placeholder="名前・メール・所属で検索…"
           className="bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-72 focus:outline-none focus:border-accent placeholder:text-black/40"
         />
         <select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as AccountRole | "all")}
+          onChange={(e) => {
+            setRoleFilter(e.target.value as AccountRole | "all");
+            setPage(1);
+          }}
           className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
         >
           <option value="all">役割すべて</option>
@@ -145,7 +162,10 @@ export default function AccountsAdmin({
             <button
               key={s}
               type="button"
-              onClick={() => setStatusFilter(s)}
+              onClick={() => {
+                setStatusFilter(s);
+                setPage(1);
+              }}
               className={`px-3 py-1.5 border transition ${
                 statusFilter === s
                   ? "border-accent text-accent"
@@ -157,7 +177,11 @@ export default function AccountsAdmin({
             </button>
           ))}
         </div>
-        <span className="mono text-[11px] text-muted ml-auto">{filtered.length} 件</span>
+        <span className="mono text-[11px] text-muted ml-auto">
+          {filtered.length === 0
+            ? "0 件"
+            : `${pageStart + 1}〜${pageStart + pageUsers.length} / 全${filtered.length}件`}
+        </span>
       </div>
 
       {/* フリープラン全員へのトークン一括付与（選択とは無関係・対象は plan==="free" 全員）。
@@ -252,7 +276,7 @@ export default function AccountsAdmin({
             表示中をすべて選択
           </label>
 
-          {filtered.map((u) => (
+          {pageUsers.map((u) => (
             <div
               key={u.id}
               className={`border p-4 grid gap-3 md:grid-cols-[20px_1fr_auto] md:items-center ${
@@ -382,9 +406,77 @@ export default function AccountsAdmin({
               </div>
             </div>
           ))}
+
+          {totalPages > 1 && (
+            <Pager
+              page={safePage}
+              totalPages={totalPages}
+              onChange={(p) => {
+                setPage(p);
+                window.scrollTo({ top: 0 });
+              }}
+            />
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function Pager({
+  page, totalPages, onChange,
+}: {
+  page: number; totalPages: number; onChange: (p: number) => void;
+}) {
+  // 現在ページ±2＋先頭末尾のみ表示（805件=17ページでも収まる窓方式）
+  const nums: (number | "…")[] = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - page) <= 2) {
+      nums.push(p);
+    } else if (nums[nums.length - 1] !== "…") {
+      nums.push("…");
+    }
+  }
+  const btn =
+    "mono text-[11px] px-2.5 py-1.5 border transition disabled:opacity-40 disabled:pointer-events-none";
+  return (
+    <nav className="flex flex-wrap items-center justify-center gap-1.5 pt-2" aria-label="ページ送り">
+      <button
+        type="button"
+        disabled={page <= 1}
+        onClick={() => onChange(page - 1)}
+        className={`${btn} border-line text-muted hover:border-ink hover:text-ink`}
+      >
+        前へ
+      </button>
+      {nums.map((n, i) =>
+        n === "…" ? (
+          <span key={`gap-${i}`} className="mono text-[11px] text-muted px-1">…</span>
+        ) : (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            aria-current={n === page ? "page" : undefined}
+            className={`${btn} ${
+              n === page
+                ? "border-accent text-accent"
+                : "border-line text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            {n}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        disabled={page >= totalPages}
+        onClick={() => onChange(page + 1)}
+        className={`${btn} border-line text-muted hover:border-ink hover:text-ink`}
+      >
+        次へ
+      </button>
+    </nav>
   );
 }
 
