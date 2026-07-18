@@ -26,7 +26,7 @@ export default function AssetPickerModal({ kind, open, onClose, onPick }: Props)
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#1a1a1a] border border-line max-w-3xl w-full max-h-[80vh] overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#1a1a1a] border border-line max-w-3xl w-full max-h-[calc(80vh/var(--z))] overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-[15px]">ライブラリから選択（{kind === "image" ? "画像" : "3DGS"}）</h2>
           <button onClick={onClose} className="text-muted hover:text-ink">✕</button>

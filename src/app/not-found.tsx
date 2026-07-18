@@ -4,7 +4,7 @@ import { getLocale } from "@/lib/i18n/server";
 export default async function NotFound() {
   const en = (await getLocale()) === "en";
   return (
-    <div className="frame min-h-[100vh] min-[1200px]:min-h-[78vh] flex flex-col items-center justify-center text-center py-20">
+    <div className="frame min-h-[calc(70vh/var(--z))] flex flex-col items-center justify-center text-center py-20">
       <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-3">
         NO SIGNAL — 404
       </div>

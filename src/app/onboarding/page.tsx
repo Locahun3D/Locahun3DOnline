@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   const en = (await getLocale()) === "en";
 
   return (
-    <div className="theme-online frame min-h-[103vh] min-[1200px]:min-h-[80vh] flex items-center justify-center py-16">
+    <div className="theme-online frame min-h-[calc(72vh/var(--z))] flex items-center justify-center py-16">
       <div className="border border-line bg-[#222] p-10 w-full max-w-md">
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
           WELCOME

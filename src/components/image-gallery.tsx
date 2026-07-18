@@ -105,14 +105,14 @@ export default function ImageGallery({ images }: { images: PropertyImage[] }) {
           </div>
 
           <figure
-            className="max-w-[92vw] max-h-[88vh] flex flex-col items-center"
+            className="max-w-[calc(92vw/var(--z))] max-h-[calc(88vh/var(--z))] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[openIdx].src}
               alt={images[openIdx].alt}
-              className="max-w-full max-h-[80vh] object-contain"
+              className="max-w-full max-h-[calc(80vh/var(--z))] object-contain"
             />
             <figcaption className="mt-3 mono text-[11px] tracking-[0.2em] opacity-70">
               {images[openIdx].alt}

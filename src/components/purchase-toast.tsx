@@ -30,7 +30,7 @@ export default function PurchaseToast() {
 
   return (
     <div
-      className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[90vw] border px-5 py-4 shadow-2xl ${
+      className={`fixed top-[calc(5rem/var(--z))] left-1/2 -translate-x-1/2 z-50 max-w-[calc(32rem/var(--z))] w-[calc(90vw/var(--z))] border px-5 py-4 shadow-2xl ${
         isSuccess
           ? "bg-[#0a1a0a] border-green-400/40 text-green-300"
           : "bg-[#1a0a0a] border-red-400/40 text-red-300"

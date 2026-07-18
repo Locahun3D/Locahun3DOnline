@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { effectiveZoom } from "@/lib/effective-zoom";
 
 interface Ripple {
   x: number;
@@ -30,15 +31,9 @@ export default function GatewayOverlay() {
 
       e.preventDefault();
 
-      // .split-gateway 自体に zoom がかかる環境（html{zoom}、および今回追加した
-      // .home-pc110）では、fixed要素の left/top/width/height はレンダー時に
-      // ズーム係数で再度掛け合わされる。clientX/Y や innerWidth/Height は
-      // ズーム後の実画面座標なので、CSSへ渡す前にズーム係数で割り戻さないと
-      // 円が実際より小さく/ずれた位置に描画され、画面端まで届かなくなる
-      // （bookmark-button.tsx のポップオーバーと同じ不具合パターン）。
-      const zoom =
-        (section as HTMLElement & { currentCSSZoom?: number }).currentCSSZoom ??
-        (parseFloat(getComputedStyle(document.documentElement).zoom) || 1);
+      // fixed 要素はズーム前座標で解釈されるため、実画面座標を実効ズームで
+      // 割り戻す（詳細は effective-zoom.ts / globals.css 冒頭のルール参照）。
+      const zoom = effectiveZoom(section);
 
       const x = me.clientX / zoom;
       const y = me.clientY / zoom;

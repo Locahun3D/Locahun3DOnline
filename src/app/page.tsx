@@ -29,12 +29,14 @@ export default async function HomePage() {
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
-      {/* min-height の注意: md: と min-[1200px]: は生成CSSの並び順で md: が後勝ち
-          するため、PC用の min-[1200px]:min-h-[...] は md:min-h-[...] と併記すると
-          一度も適用されない（実際に 129vh がPCでも効いて中身が沈む破綻が起きた）。
-          タブレット値は必ず max-[1199px] で上限を切って範囲を排他にすること。
-          PC値は .home-pc110 の zoom 1.1 補正込み: (100vh − ヘッダー59px) / 1.1。 */}
-      <section className="home-pc110 split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:max-[1199px]:min-h-[129vh] min-[1200px]:min-h-[calc(90.9vh-54px)] overflow-hidden bg-bg">
+      {/* 高さは実画面基準（globals.css の --z ルール参照）:
+          スマホ=画面の60% / タブレット=90% / PC=ヘッダー下いっぱい。
+          md: と min-[1200px]: の併用は md: が後勝ちする罠があるため、
+          タブレット帯は max-[1200px] で必ず排他にする。
+          ⚠ Tailwind v4 の max-[Npx] は `not (min-width:Npx)`（N自身を含まない）
+          に変換される。min-[1200px] と隙間なく噛み合わせるのは max-[1200px]
+          （max-[1199px] だと幅1199pxちょうどが両方に該当せず素通りする）。 */}
+      <section className="home-pc110 split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[calc(60vh/var(--z))] md:max-[1200px]:min-h-[calc(90vh/var(--z))] min-[1200px]:min-h-[calc((100vh-var(--header-h))/var(--z))] overflow-hidden bg-bg">
         {/* Timecode corners */}
         <span className="hidden sm:block absolute top-5 left-8 z-30 mono text-[10px] tracking-[0.28em] uppercase text-muted opacity-50 pointer-events-none">
           REEL 01 — INT.STUDIO
@@ -46,7 +48,7 @@ export default async function HomePage() {
         {/* Left — SCAN → 製品サイト (同タブ) */}
         <a
           href={scanUrl}
-          className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 py-4 sm:py-16 min-h-[61vh] md:min-h-0 border-b md:border-b-0 md:border-r border-line overflow-hidden"
+          className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 py-4 sm:py-16 min-h-[calc(43vh/var(--z))] md:min-h-0 border-b md:border-b-0 md:border-r border-line overflow-hidden"
         >
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
@@ -78,7 +80,7 @@ export default async function HomePage() {
         {/* Right — ONLINE */}
         <Link
           href={lh("/properties")}
-          className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 py-4 sm:py-16 min-h-[61vh] md:min-h-0 overflow-hidden"
+          className="split-panel group relative flex flex-col justify-center items-center text-center px-6 sm:px-8 lg:px-16 py-4 sm:py-16 min-h-[calc(43vh/var(--z))] md:min-h-0 overflow-hidden"
         >
           {/* Hover glow */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"

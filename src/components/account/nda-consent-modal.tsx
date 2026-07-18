@@ -40,7 +40,7 @@ export default function NdaConsentModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="nda-modal-title"
-            className="bg-white text-[#14181c] border border-[#e2e7ec] max-w-xl w-full max-h-[85vh] overflow-y-auto p-6"
+            className="bg-white text-[#14181c] border border-[#e2e7ec] max-w-xl w-full max-h-[calc(85vh/var(--z))] overflow-y-auto p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 mb-4">

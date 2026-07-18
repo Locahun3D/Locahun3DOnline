@@ -9,6 +9,7 @@ import {
   saveBookmarkToFolderAction,
 } from "@/lib/bookmark-actions";
 import { useLocale } from "@/components/locale-provider";
+import { effectiveZoom } from "@/lib/effective-zoom";
 
 type Folder = { id: string; name: string };
 
@@ -59,13 +60,9 @@ export default function BookmarkButton({
   const openPopover = () => {
     const r = btnRef.current?.getBoundingClientRect();
     if (r) {
-      // html{zoom:0.7} 環境では getBoundingClientRect はズーム適用後の座標を返す
-      // 一方、fixed要素の top/left にはズームが再適用されるため、ズーム係数で
-      // 割り戻さないとポップオーバーが左上方向へずれる（実害確認済み）。
-      const zoom =
-        (btnRef.current as (HTMLElement & { currentCSSZoom?: number }) | null)
-          ?.currentCSSZoom ??
-        (parseFloat(getComputedStyle(document.documentElement).zoom) || 1);
+      // fixed 要素はズーム前座標で解釈されるため、実画面座標を実効ズームで
+      // 割り戻す（詳細は effective-zoom.ts / globals.css 冒頭のルール参照）。
+      const zoom = effectiveZoom(btnRef.current);
       const rb = {
         bottom: r.bottom / zoom,
         left: r.left / zoom,
