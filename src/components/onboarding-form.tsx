@@ -101,12 +101,25 @@ export default function OnboardingForm() {
         <p className="text-[11px] text-red-400">{state.errors.nda.join(" / ")}</p>
       )}
 
-      <label className="flex gap-3 items-start border border-line p-3 text-[12px] leading-[1.7] cursor-pointer">
-        <input type="checkbox" name="marketingConsent" className="mt-0.5 accent-[#5ec8e8]" />
-        <span className="text-muted">
-          {en
-            ? "I'd like to receive occasional emails about new locations and offers (optional). I can unsubscribe anytime."
-            : "新着ロケ地やお得な情報のメールを受け取る（任意）。いつでも配信停止できます。"}
+      {/* 配信同意: 特定電子メール法のオプトイン原則により既定は必ずOFF。
+          文言はベネフィット先行(何が・どう止められるか)で具体化し、
+          枠をアクセント色にして視認性を上げる(同意率2%改善施策)。 */}
+      <label className="block border border-[#5ec8e8]/40 bg-[#161e22] p-3 cursor-pointer">
+        <span className="flex items-center gap-2 mb-1">
+          <span className="mono text-[10px] tracking-[0.22em] uppercase text-[#5ec8e8]">
+            {en ? "Early access news" : "新着ロケ地の先行案内"}
+          </span>
+          <span className="mono text-[9px] tracking-[0.14em] uppercase border border-[#5ec8e8]/50 text-[#5ec8e8] px-1.5 py-0.5">
+            {en ? "Recommended" : "おすすめ"}
+          </span>
+        </span>
+        <span className="flex gap-3 items-start text-[12px] leading-[1.7]">
+          <input type="checkbox" name="marketingConsent" className="mt-0.5 accent-[#5ec8e8]" />
+          <span className="text-muted">
+            {en
+              ? "Get an email when new 3DGS locations go live, plus campaign news (optional). Unsubscribe anytime with one click."
+              : "新しい3DGS物件の公開やキャンペーンをメールでお知らせします（任意）。いつでも1クリックで配信停止できます。"}
+          </span>
         </span>
       </label>
 

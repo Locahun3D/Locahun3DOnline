@@ -6,6 +6,10 @@ import { updateMarketingConsentAction } from "@/lib/marketing-actions";
 /**
  * マイページの配信設定トグル。特定電子メール法のオプトイン原則に沿って、
  * 既定はユーザーレコードの marketingConsent をそのまま表示するだけ（勝手にONにしない）。
+ *
+ * 未同意(初期OFF)の間は「おすすめ」ハイライト表示で目に留める(同意率2%改善施策)。
+ * 一度ONにした後・もともとONの人には従来どおり静かな設定カードとして出す。
+ * 表示位置も account-dashboard 側で未同意ならページ上部に置く。
  */
 export default function MarketingConsentToggle({
   initialConsent,
@@ -25,10 +29,29 @@ export default function MarketingConsentToggle({
     });
   };
 
+  const highlight = !initialConsent && !consent;
+
   return (
-    <div className="bg-white border border-[#e2e7ec] p-5">
-      <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
-        {en ? "Email updates" : "お知らせメール"}
+    <div
+      className={
+        highlight
+          ? "bg-[#eaf7fb] border border-[#1ea0c4]/50 p-5"
+          : "bg-white border border-[#e2e7ec] p-5"
+      }
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <div
+          className={`mono text-[10px] tracking-[0.24em] uppercase ${
+            highlight ? "text-[#1ea0c4]" : "text-[#7b8794]"
+          }`}
+        >
+          {en ? "Early access news" : "新着ロケ地の先行案内"}
+        </div>
+        {highlight && (
+          <span className="mono text-[9px] tracking-[0.14em] uppercase border border-[#1ea0c4]/50 text-[#1ea0c4] px-1.5 py-0.5">
+            {en ? "Recommended" : "おすすめ"}
+          </span>
+        )}
       </div>
       <label className="flex items-start gap-3 cursor-pointer">
         <input
@@ -38,10 +61,14 @@ export default function MarketingConsentToggle({
           disabled={pending}
           className="mt-0.5 w-4 h-4 accent-[#1ea0c4]"
         />
-        <span className="text-[12px] text-[#7b8794] leading-[1.7]">
+        <span
+          className={`text-[12px] leading-[1.7] ${
+            highlight ? "text-[#3d4852]" : "text-[#7b8794]"
+          }`}
+        >
           {en
-            ? "Receive occasional emails about new locations and offers. You can unsubscribe anytime from a link in every email."
-            : "新着ロケ地やお得な情報のメールを受け取ります。メール内のリンクからいつでも配信停止できます。"}
+            ? "Get an email when new 3DGS locations go live, plus campaign news. Unsubscribe anytime with one click from any email."
+            : "新しい3DGS物件の公開やキャンペーンをメールでお知らせします。メール内のリンクからいつでも1クリックで配信停止できます。"}
         </span>
       </label>
     </div>

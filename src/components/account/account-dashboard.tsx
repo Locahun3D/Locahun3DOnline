@@ -132,6 +132,13 @@ export default function AccountDashboard({
 
       <NotificationList notifications={notifications} en={en} locale={locale} />
 
+      {/* 配信同意が未のうちはトグルをページ上部に出して露出を確保する
+          (従来はページ最下部のみで目に入らず、同意率2%の一因だった)。
+          同意済みの人には従来どおり下部の設定カードとして表示。 */}
+      {!user.marketingConsent && (
+        <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
+      )}
+
       {/* ── 上段: ステータス3枚 ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
         {/* TOKENS */}
@@ -418,7 +425,9 @@ export default function AccountDashboard({
         <RedeemGift />
       </div>
 
-      <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
+      {user.marketingConsent && (
+        <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
+      )}
 
       {user.stripeCustomerId && (
         <div className="text-right">
