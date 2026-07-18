@@ -598,7 +598,11 @@ function FiltersPanel(p: FiltersProps) {
         : `¥${n.toLocaleString("ja-JP")}`;
 
   return (
-    <div className="border border-line bg-[#222] p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5">
+    // @container: このパネルは地図サイドバー分だけ画面幅より狭くなるため、
+    // 画面幅ベースの md:/xl: 等だと「実際は狭いのに2列判定」「実際は広いのに
+    // 1列のまま」というズレが起き、余白があるのに不要に縦長になる実害が
+    // あった。パネル自身の実幅で判定するコンテナクエリに切り替える。
+    <div className="@container border border-line bg-[#222] p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5">
       {/* モバイル: 検索UIを既定で畳むトグル (lg未満のみ表示)。畳んでカードを早く見せる。 */}
       <button
         type="button"
@@ -656,7 +660,7 @@ function FiltersPanel(p: FiltersProps) {
       </div>
 
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
-      <div className="grid xl:grid-cols-2 gap-x-6 gap-y-2.5">
+      <div className="grid @3xl:grid-cols-2 gap-x-6 gap-y-2.5">
         <div className="space-y-2.5">
           <Row label={en ? "Keyword" : "キーワード"}>
             <div className="flex items-center gap-2">
@@ -717,7 +721,10 @@ function FiltersPanel(p: FiltersProps) {
 
       {/* Categorical: category, studioType, area */}
       <Row label={en ? "Type / area" : "種別 / エリア"}>
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        {/* 画面幅ベースの sm:/xl: だとこのパネルの「実際の表示幅」（右に地図が
+            並ぶレイアウトでは全幅よりずっと狭い）とズレ、幅に余白があるのに
+            2段になる実害があった。auto-fit で実幅にそのまま追従させる。 */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
           <ChoiceSelect
             value={p.category}
             onChange={(v) => p.setCategory(v as PropertyCategory | "all")}
@@ -742,9 +749,8 @@ function FiltersPanel(p: FiltersProps) {
 
       <Divider />
 
-      {/* Range filters — 地図サイドバーで狭まった列だと2列はラベルが重なるため、
-          十分な幅(2xl)になってから2列化。列間の余白も広めに。 */}
-      <div className="grid 2xl:grid-cols-2 gap-x-8 gap-y-2">
+      {/* Range filters — パネル自身の実幅で2列化（@container）。 */}
+      <div className="grid @lg:grid-cols-2 gap-x-8 gap-y-2">
         <div className="space-y-2">
           <RangeRow
             label={en ? "Hourly (¥/hr)" : "時間料金 (¥/hr)"}
@@ -857,8 +863,8 @@ const inputWhiteCls = inputCls;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid md:grid-cols-[88px_1fr] gap-x-2.5 gap-y-1 md:gap-2.5 items-start">
-      <div className="text-[11px] sm:text-[12px] font-medium text-ink/80 pt-0.5 md:pt-1.5 leading-snug">
+    <div className="grid @sm:grid-cols-[88px_1fr] gap-x-2.5 gap-y-1 @sm:gap-2.5 items-start">
+      <div className="text-[11px] sm:text-[12px] font-medium text-ink/80 pt-0.5 @sm:pt-1.5 leading-snug">
         {label}
       </div>
       <div className="min-w-0">{children}</div>
