@@ -5,7 +5,6 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
-import { repo as propertyRepo } from "./store";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
 import { contactRequestRepo, type ContactStatus } from "./contact-requests";
 import { track } from "./analytics";
@@ -379,54 +378,3 @@ export async function bulkDeleteTestPurchasesAction(): Promise<void> {
   revalidatePath("/admin/purchases");
 }
 
-/**
- * 価格一括管理: データ販売の販売可否・販売価格をまとめて更新する。
- * フォームは hidden `items` に [{propertyId, idx}] の JSON を持ち、各行の
- * `sale:<propertyId>:<idx>`（チェックボックス）と `price:<propertyId>:<idx>`
- * （数値）を読む。物件ごとに 1 回だけ upsert する（R2 書込を最小化）。
- */
-export async function bulkUpdateSalePricesAction(
-  formData: FormData,
-): Promise<void> {
-  await requireAdmin();
-
-  let items: { propertyId: string; idx: number }[] = [];
-  try {
-    items = JSON.parse(String(formData.get("items") ?? "[]"));
-  } catch {
-    return;
-  }
-  if (!Array.isArray(items) || items.length === 0) return;
-
-  // 物件IDごとに対象アイテムをまとめる。
-  const byProperty = new Map<string, number[]>();
-  for (const it of items) {
-    if (!it?.propertyId || typeof it.idx !== "number") continue;
-    const list = byProperty.get(it.propertyId) ?? [];
-    list.push(it.idx);
-    byProperty.set(it.propertyId, list);
-  }
-
-  for (const [propertyId, idxs] of byProperty) {
-    const property = await propertyRepo.get(propertyId);
-    if (!property) continue;
-
-    let changed = false;
-    const splatItems = property.splatItems.map((item, i) => {
-      if (!idxs.includes(i)) return item;
-      const forSale = formData.get(`sale:${propertyId}:${i}`) != null;
-      const rawPrice = Number(formData.get(`price:${propertyId}:${i}`) ?? item.salePrice);
-      const salePrice = Math.max(0, Math.min(99_999_999, Math.trunc(Number.isFinite(rawPrice) ? rawPrice : 0)));
-      if (item.forSale === forSale && item.salePrice === salePrice) return item;
-      changed = true;
-      return { ...item, forSale, salePrice };
-    });
-
-    if (changed) {
-      await propertyRepo.upsert({ ...property, splatItems });
-    }
-  }
-
-  revalidatePath("/admin/pricing");
-  revalidatePath("/admin/purchases");
-}

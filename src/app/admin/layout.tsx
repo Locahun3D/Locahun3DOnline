@@ -62,6 +62,13 @@ export default async function AdminLayout({
                 ↳ 承認待ちのみ
               </Link>
               <Link
+                href="/admin/subscriptions"
+                prefetch={false}
+                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
+              >
+                ↳ サブスク売上
+              </Link>
+              <Link
                 href="/admin/analytics"
                 prefetch={false}
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
@@ -116,13 +123,6 @@ export default async function AdminLayout({
                 className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
               >
                 データ販売
-              </Link>
-              <Link
-                href="/admin/pricing"
-                prefetch={false}
-                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-              >
-                ↳ 価格管理
               </Link>
             </>
           )}

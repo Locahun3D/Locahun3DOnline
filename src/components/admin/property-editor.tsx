@@ -2765,9 +2765,7 @@ function Checklist({ data }: { data: Property }) {
   );
 }
 
-// /admin/pricing の「推奨価格」(DATA_SALE_PRICE: 10万/25万/30万/50万) と揃えて
-// おかないと、推奨価格を適用したデータをエディタで開くたびに一致するプリセットが
-// 無く「カスタム金額」に化けてしまう（実際に起きていた不整合）。
+// DATA_SALE_PRICE の規模別推奨価格と揃えておくプリセット一覧。
 // 0 = 無料配布（会員登録さえすればダウンロード可、Stripe を経由せず即時完了）。
 const SALE_PRICE_PRESETS = [0, 50000, 100000, 150000, 200000, 250000, 300000, 500000] as const;
 
@@ -2910,8 +2908,7 @@ function SalePriceInput({
           value={value ?? ""}
           // min={0} はHTML上のヒントに過ぎず負数の入力自体は防げない。
           // クランプしないと保存時に propertySchema の salePrice.min(0) で
-          // 弾かれ、生のZodエラーがそのまま表示される事故になる
-          // （pricing-table.tsx の一括編集フォームと同じクランプに揃える）。
+          // 弾かれ、生のZodエラーがそのまま表示される事故になる。
           onChange={(e) => onChange(Math.max(0, Math.trunc(Number(e.target.value) || 0)))}
           className={inputClass + " max-w-[180px]"}
           min={0}

@@ -747,6 +747,19 @@ export const PLAN_TOKEN_BUDGET = {
   team: 60,
 } as const;
 
+/**
+ * List price (JPY, tax included, monthly billing) per paid plan. Kept in sync
+ * with plan-cards.tsx and stripe-setup-prices/route.ts by convention — used
+ * for the admin subscription-revenue estimate (actual billed amount may
+ * differ for annual subscribers, who get the -20% discount).
+ */
+export const PLAN_LIST_PRICE_JPY = {
+  free: 0,
+  individual: 5200,
+  studio: 9800,
+  team: 29800,
+} as const;
+
 /** One-time bonus tokens granted at account creation. Currently only used by Free. */
 export const SIGNUP_BONUS_TOKENS = 6;
 
