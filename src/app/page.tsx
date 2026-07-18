@@ -29,7 +29,12 @@ export default async function HomePage() {
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
-      <section className="home-pc110 split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:min-h-[129vh] min-[1200px]:min-h-[100vh] overflow-hidden bg-bg">
+      {/* min-height の注意: md: と min-[1200px]: は生成CSSの並び順で md: が後勝ち
+          するため、PC用の min-[1200px]:min-h-[...] は md:min-h-[...] と併記すると
+          一度も適用されない（実際に 129vh がPCでも効いて中身が沈む破綻が起きた）。
+          タブレット値は必ず max-[1199px] で上限を切って範囲を排他にすること。
+          PC値は .home-pc110 の zoom 1.1 補正込み: (100vh − ヘッダー59px) / 1.1。 */}
+      <section className="home-pc110 split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:max-[1199px]:min-h-[129vh] min-[1200px]:min-h-[calc(90.9vh-54px)] overflow-hidden bg-bg">
         {/* Timecode corners */}
         <span className="hidden sm:block absolute top-5 left-8 z-30 mono text-[10px] tracking-[0.28em] uppercase text-muted opacity-50 pointer-events-none">
           REEL 01 — INT.STUDIO
