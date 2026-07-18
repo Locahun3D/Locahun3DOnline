@@ -94,3 +94,4 @@ cors.json
 # Viewer backup copies
 public/viewer/*.bak
 /.ui-audit/
+.claude/settings.local.json
