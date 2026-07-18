@@ -333,7 +333,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
       {/* Form pane */}
       <div className="min-w-0">
         {/* Sticky header（公開URL も同じ枠に統合） */}
-        <div className="sticky top-16 z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 space-y-3">
+        <div className="sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 space-y-3">
           <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-baseline gap-3 min-w-0">
             <StatusPill status={currentStatus} />
