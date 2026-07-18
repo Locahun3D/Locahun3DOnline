@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { requireAdminOrStudioOwner } from "@/lib/dal";
+import AdminNav, { type AdminNavItem } from "@/components/admin/admin-nav";
 
 export const metadata = {
   title: { default: "Admin", template: "%s｜Admin" },
@@ -14,6 +14,27 @@ export default async function AdminLayout({
   const user = await requireAdminOrStudioOwner();
   const isAdmin = user.role === "admin";
 
+  const navItems: AdminNavItem[] = [
+    { href: "/admin/properties", label: "物件" },
+    ...(isAdmin
+      ? ([
+          { href: "/admin/properties?status=draft", label: "↳ 下書きのみ", sub: true },
+          { href: "/admin/properties?status=published", label: "↳ 公開中のみ", sub: true },
+          { href: "/admin/accounts", label: "アカウント" },
+          { href: "/admin/accounts?status=pending", label: "↳ 承認待ちのみ", sub: true },
+          { href: "/admin/subscriptions", label: "↳ サブスク売上", sub: true },
+          { href: "/admin/analytics", label: "アナリティクス" },
+          { href: "/admin/assets", label: "アセット" },
+          { href: "/admin/gift-codes", label: "ギフトコード・無料期間" },
+          { href: "/admin/inquiries", label: "問い合わせ" },
+          { href: "/admin/contact-requests", label: "お問い合わせ（サイト全体）" },
+          { href: "/admin/marketing", label: "マーケティング" },
+          { href: "/admin/reports", label: "通報管理" },
+          { href: "/admin/purchases", label: "データ販売" },
+        ] as AdminNavItem[])
+      : []),
+  ];
+
   return (
     <div className="theme-online min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
       <aside className="border-r border-line p-6 bg-[#141414] sticky top-[calc(var(--header-h)/var(--z))] self-start">
@@ -23,110 +44,7 @@ export default async function AdminLayout({
         <div className="serif text-lg mb-6">
           {isAdmin ? "Admin" : "Studio"}
         </div>
-        <nav className="flex flex-col gap-1 text-sm">
-          <Link
-            href="/admin/properties"
-            prefetch={false}
-            className="px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-          >
-            物件
-          </Link>
-          {isAdmin && (
-            <>
-              <Link
-                href="/admin/properties?status=draft"
-                prefetch={false}
-                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-              >
-                ↳ 下書きのみ
-              </Link>
-              <Link
-                href="/admin/properties?status=published"
-                prefetch={false}
-                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-              >
-                ↳ 公開中のみ
-              </Link>
-              <Link
-                href="/admin/accounts"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                アカウント
-              </Link>
-              <Link
-                href="/admin/accounts?status=pending"
-                prefetch={false}
-                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-              >
-                ↳ 承認待ちのみ
-              </Link>
-              <Link
-                href="/admin/subscriptions"
-                prefetch={false}
-                className="pl-6 py-1.5 text-[12px] text-muted hover:text-ink transition"
-              >
-                ↳ サブスク売上
-              </Link>
-              <Link
-                href="/admin/analytics"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                アナリティクス
-              </Link>
-              <Link
-                href="/admin/assets"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                アセット
-              </Link>
-              <Link
-                href="/admin/gift-codes"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                ギフトコード・無料期間
-              </Link>
-              <Link
-                href="/admin/inquiries"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                問い合わせ
-              </Link>
-              <Link
-                href="/admin/contact-requests"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                お問い合わせ（サイト全体）
-              </Link>
-              <Link
-                href="/admin/marketing"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                マーケティング
-              </Link>
-              <Link
-                href="/admin/reports"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                通報管理
-              </Link>
-              <Link
-                href="/admin/purchases"
-                prefetch={false}
-                className="mt-1 px-3 py-2 hover:bg-[#262626] hover:text-accent transition rounded-sm"
-              >
-                データ販売
-              </Link>
-            </>
-          )}
-        </nav>
+        <AdminNav items={navItems} />
       </aside>
 
       <div className="min-w-0">{children}</div>
