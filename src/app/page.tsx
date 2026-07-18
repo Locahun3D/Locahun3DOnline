@@ -19,6 +19,13 @@ export default async function HomePage() {
   const J = ({ k }: { k: DictKey }) =>
     locale === "ja" ? <Jp>{t(k)}</Jp> : <>{t(k)}</>;
   const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
+  // スキャン/オンライン両パネルは各自 justify-center で中央ぞろえだが、説明文の
+  // 行数が左右で異なる（オンライン側が長い）ため、中央の重心がズレて見える
+  // （アイコン・見出しの開始位置が左右でわずかにずれる）。両パネルの説明文に
+  // 同じ最小高さを確保し、実際の行数に関わらず重心を揃える。JA/ENで文字数が
+  // 大きく異なるため、ロケールごとに個別チューニング（EN側が長め）。
+  const heroDescMinH =
+    locale === "en" ? "min-h-[154px] sm:min-h-[208px]" : "min-h-[116px] sm:min-h-[156px]";
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
@@ -53,7 +60,7 @@ export default async function HomePage() {
             <h2 className="brand text-[clamp(2rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-accent group-hover:scale-105">
               {t("home.scan.h2")}
             </h2>
-            <p className="mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100">
+            <p className={`mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100 ${heroDescMinH}`}>
               <J k="home.scan.desc" />
             </p>
             <span className="mt-4 sm:mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-accent transition-all duration-300">
@@ -85,7 +92,7 @@ export default async function HomePage() {
             <h2 className="brand text-[clamp(2rem,5.2vw,5.8rem)] leading-none tracking-[-0.01em] transition-all duration-500 group-hover:text-[#5ec8e8] group-hover:scale-105">
               {t("home.online.h2")}
             </h2>
-            <p className="mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100">
+            <p className={`mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100 ${heroDescMinH}`}>
               <J k="home.online.desc" />
             </p>
             <span className="mt-4 sm:mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-[#5ec8e8] transition-all duration-300">
