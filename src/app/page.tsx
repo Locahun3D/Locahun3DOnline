@@ -22,7 +22,7 @@ export default async function HomePage() {
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
-      <section className="split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:min-h-[129vh] overflow-hidden bg-bg">
+      <section className="split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:min-h-[129vh] min-[1200px]:min-h-[100vh] overflow-hidden bg-bg">
         {/* Timecode corners */}
         <span className="hidden sm:block absolute top-5 left-8 z-30 mono text-[10px] tracking-[0.28em] uppercase text-muted opacity-50 pointer-events-none">
           REEL 01 — INT.STUDIO

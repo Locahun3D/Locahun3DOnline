@@ -21,7 +21,7 @@ export default async function SignUpPage() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="frame min-h-[114vh] flex flex-col items-center justify-center gap-4 py-16">
+    <div className="frame min-h-[114vh] min-[1200px]:min-h-[89vh] flex flex-col items-center justify-center gap-4 py-16">
       <InAppBrowserWarning locale={locale} />
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
       <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" />
