@@ -22,7 +22,7 @@ export default async function HomePage() {
   return (
     <>
       {/* SPLIT GATEWAY — manifesto-grade hero, two product lines */}
-      <section className="split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:min-h-[129vh] min-[1200px]:min-h-[100vh] overflow-hidden bg-bg">
+      <section className="home-pc110 split-gateway relative grid md:grid-cols-2 border-b border-line min-h-[86vh] md:min-h-[129vh] min-[1200px]:min-h-[100vh] overflow-hidden bg-bg">
         {/* Timecode corners */}
         <span className="hidden sm:block absolute top-5 left-8 z-30 mono text-[10px] tracking-[0.28em] uppercase text-muted opacity-50 pointer-events-none">
           REEL 01 — INT.STUDIO
@@ -105,7 +105,7 @@ export default async function HomePage() {
       </section>
 
       {/* ABOUT — what Locahun3D is (two lines) */}
-      <section className="frame py-14 md:py-20 border-b border-line">
+      <section className="home-pc110 frame py-14 md:py-20 border-b border-line">
         <div className="chapter-rule">
           <span className="opacity-60">01</span>
           <span>{t("home.about.eyebrow")}</span>
@@ -149,7 +149,7 @@ export default async function HomePage() {
       </section>
 
       {/* CTA — monochrome (white gothic) */}
-      <section className="frame py-20 md:py-28 text-center border-t border-line">
+      <section className="home-pc110 frame py-20 md:py-28 text-center border-t border-line">
         <div className="brand text-[clamp(1.8rem,3.6vw,2.8rem)] leading-[1.5] max-w-[32ch] mx-auto">
           {t("home.cta.headline")}
         </div>
