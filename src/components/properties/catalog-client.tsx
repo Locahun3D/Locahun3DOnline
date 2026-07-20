@@ -147,6 +147,7 @@ type FilterSnapshot = {
   minCeiling: number | ""; maxCeiling: number | "";
   maxKmFromRef: number | "";
   requiresDaily: boolean; requiresParking: boolean; requires200V: boolean;
+  requires3D: boolean;
   facilities: string[];
   hoursFrom: string; hoursTo: string;
   reference: Reference;
@@ -183,6 +184,7 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
   if (s.requiresDaily) parts.push(en ? "daily" : "日貸し可");
   if (s.requiresParking) parts.push(en ? "parking" : "駐車場");
   if (s.requires200V) parts.push("200V");
+  if (s.requires3D) parts.push(en ? "3D" : "3Dあり");
   for (const f of s.facilities ?? []) {
     const tag = FACILITY_TAGS.find((t) => t.ja === f);
     parts.push(en && tag ? tag.en : f);
@@ -202,7 +204,7 @@ function snapshotKey(s: FilterSnapshot): string {
     s.q.trim(), s.category, s.area, s.studioType,
     s.minPrice, s.maxPrice, s.minDailyPrice, s.maxDailyPrice,
     s.minCeiling, s.maxCeiling,
-    s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V,
+    s.maxKmFromRef, s.requiresDaily, s.requiresParking, s.requires200V, s.requires3D,
     [...(s.facilities ?? [])].sort(),
     s.hoursFrom, s.hoursTo,
     typeof s.maxKmFromRef === "number" ? s.reference.id : null,
@@ -281,6 +283,9 @@ export default function CatalogClient({
   const [requiresDaily, setRequiresDaily] = useState(false);
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
+  // 3DGSデータがある物件だけに絞る。写真のみ掲載枠(3DGSは公開必須ではない)を
+  // 導入したため、3Dが要る利用者が明示的に絞り込めるようにする。
+  const [requires3D, setRequires3D] = useState(false);
   const [facilities, setFacilities] = useState<string[]>([]);
   const [hoursFrom, setHoursFrom] = useState("");
   const [hoursTo, setHoursTo] = useState("");
@@ -295,7 +300,7 @@ export default function CatalogClient({
     setMinDailyPrice(""); setMaxDailyPrice("");
     setMinCeiling(""); setMaxCeiling("");
     setMaxKmFromRef("");
-    setRequiresDaily(false); setRequiresParking(false); setRequires200V(false);
+    setRequiresDaily(false); setRequiresParking(false); setRequires200V(false); setRequires3D(false);
     setFacilities([]);
     setHoursFrom(""); setHoursTo("");
     setSort("newest");
@@ -308,7 +313,7 @@ export default function CatalogClient({
     q, category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
     minCeiling, maxCeiling,
-    maxKmFromRef, requiresDaily, requiresParking, requires200V,
+    maxKmFromRef, requiresDaily, requiresParking, requires200V, requires3D,
     facilities,
     hoursFrom, hoursTo,
     reference, sort,
@@ -316,7 +321,7 @@ export default function CatalogClient({
     q, category, area, studioType,
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
     minCeiling, maxCeiling,
-    maxKmFromRef, requiresDaily, requiresParking, requires200V,
+    maxKmFromRef, requiresDaily, requiresParking, requires200V, requires3D,
     facilities,
     hoursFrom, hoursTo,
     reference, sort,
@@ -336,6 +341,7 @@ export default function CatalogClient({
     setMinCeiling(s.minCeiling); setMaxCeiling(s.maxCeiling);
     setMaxKmFromRef(s.maxKmFromRef);
     setRequiresDaily(s.requiresDaily); setRequiresParking(s.requiresParking); setRequires200V(s.requires200V);
+    setRequires3D(s.requires3D ?? false);
     setFacilities(s.facilities ?? []);
     setHoursFrom(s.hoursFrom ?? ""); setHoursTo(s.hoursTo ?? "");
     setReference(s.reference);
@@ -385,6 +391,10 @@ export default function CatalogClient({
       if (requiresDaily && (!p.dailyPrice || p.dailyPrice <= 0)) return false;
       if (requiresParking && !p.parking) return false;
       if (requires200V && !/200\s*V/i.test(p.powerVoltage)) return false;
+      if (requires3D) {
+        const has = !!p.splatUrl?.trim() || (p.splatItems ?? []).some((it) => !!it.splatUrl?.trim());
+        if (!has) return false;
+      }
       if (facilities.length) {
         const hay = `${p.title} ${p.summary} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!facilities.every((f) => hay.includes(f.toLowerCase()))) return false;
@@ -431,7 +441,7 @@ export default function CatalogClient({
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
     minCeiling, maxCeiling,
     maxKmFromRef,
-    requiresDaily, requiresParking, requires200V,
+    requiresDaily, requiresParking, requires200V, requires3D,
     facilities,
     hoursFrom, hoursTo,
     q, sort,
@@ -492,6 +502,7 @@ export default function CatalogClient({
             requiresDaily={requiresDaily} setRequiresDaily={setRequiresDaily}
             requiresParking={requiresParking} setRequiresParking={setRequiresParking}
             requires200V={requires200V} setRequires200V={setRequires200V}
+            requires3D={requires3D} setRequires3D={setRequires3D}
             facilities={facilities} setFacilities={setFacilities}
             hoursFrom={hoursFrom} setHoursFrom={setHoursFrom}
             hoursTo={hoursTo} setHoursTo={setHoursTo}
@@ -576,6 +587,7 @@ interface FiltersProps {
   requiresDaily: boolean; setRequiresDaily: (v: boolean) => void;
   requiresParking: boolean; setRequiresParking: (v: boolean) => void;
   requires200V: boolean; setRequires200V: (v: boolean) => void;
+  requires3D: boolean; setRequires3D: (v: boolean) => void;
   facilities: string[]; setFacilities: (v: string[]) => void;
   hoursFrom: string; setHoursFrom: (v: string) => void;
   hoursTo: string; setHoursTo: (v: string) => void;
@@ -814,6 +826,7 @@ function FiltersPanel(p: FiltersProps) {
             <ToggleChip label={en ? "Daily rate" : "日料金あり"} value={p.requiresDaily} onChange={p.setRequiresDaily} />
             <ToggleChip label={en ? "Parking" : "駐車場あり"} value={p.requiresParking} onChange={p.setRequiresParking} />
             <ToggleChip label={en ? "200V power" : "200V 電源"} value={p.requires200V} onChange={p.setRequires200V} />
+            <ToggleChip label={en ? "3D only" : "3Dあり"} value={p.requires3D} onChange={p.setRequires3D} />
             {FACILITY_PRIMARY.map((f) => (
               <FacilityChip
                 key={f.ja}
@@ -1260,6 +1273,11 @@ function PropertyCardLite({
   const en = useLocale() === "en";
   const lc = en ? "en" : "ja";
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
+  // 3Dデータの有無（property-card.tsx と同一判定）。写真のみ掲載枠があるため、
+  // バッジは実際に3Dがある物件にだけ出す。
+  const hasSplat =
+    !!property.splatUrl?.trim() ||
+    (property.splatItems ?? []).some((s) => !!s.splatUrl?.trim());
   return (
     <Link
       href={en ? `/en/properties/${property.id}` : `/properties/${property.id}`}
@@ -1289,22 +1307,30 @@ function PropertyCardLite({
               : ""}
           </div>
         </div>
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>
-          <div
-            className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
-            title={
-              en
-                ? `${property.tokenCost} token(s) per view — ${tokenCostLabel(property.tokenCost, "en")}`
-                : `1 回視聴で ${property.tokenCost} トークン消費 — ${tokenCostLabel(property.tokenCost, "ja")}`
-            }
-          >
-            {property.tokenCost}T ·{" "}
-            {en
-              ? property.tokenCost === 1 ? "House" : property.tokenCost === 2 ? "Mid" : "Large"
-              : property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}
+        {hasSplat ? (
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+            <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>
+            <div
+              className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
+              title={
+                en
+                  ? `${property.tokenCost} token(s) per view — ${tokenCostLabel(property.tokenCost, "en")}`
+                  : `1 回視聴で ${property.tokenCost} トークン消費 — ${tokenCostLabel(property.tokenCost, "ja")}`
+              }
+            >
+              {property.tokenCost}T ·{" "}
+              {en
+                ? property.tokenCost === 1 ? "House" : property.tokenCost === 2 ? "Mid" : "Large"
+                : property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}
+            </div>
           </div>
-        </div>
+        ) : (
+          /* 写真のみ掲載。3Dを探している利用者が一覧で判別できるよう明示する
+             （バッジを単に消すと「まだ読み込み中」と誤解されるため）。 */
+          <div className="absolute top-2 right-2 mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line text-muted">
+            {en ? "Photos" : "写真のみ"}
+          </div>
+        )}
         {distanceKm !== null && (
           <div className="absolute bottom-2 right-2 mono text-[10px] tracking-[0.2em] uppercase bg-bg/80 backdrop-blur px-2 py-1 border border-line">
             {en ? `${formatKm(distanceKm)} from ${referenceLabel}` : `${referenceLabel} から ${formatKm(distanceKm)}`}

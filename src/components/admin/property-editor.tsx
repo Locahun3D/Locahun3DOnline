@@ -1964,6 +1964,21 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                     ))}
                   </select>
                 </Field>
+
+                <Field
+                  label="空間の複雑さ（社内分析用・公開されません）"
+                  hint="判定軸は「3Dが、この物件の写真＋図面に勝つか」。広さ(トークンコスト)とは別軸で、小さくても多部屋なら複雑、広くても白ホリ単室なら単純。どの空間タイプが実際に見られたかを後から集計するために記録します。"
+                >
+                  <select {...register("spatialComplexity")} className={inputClass}>
+                    <option value="unset" className="bg-bg">未分類</option>
+                    <option value="complex" className="bg-bg">
+                      複雑 — 多部屋ハウス・特殊内装・複雑構造（3Dが効く）
+                    </option>
+                    <option value="simple" className="bg-bg">
+                      単純 — 白ホリ等の単室（写真＋図面でほぼ足りる）
+                    </option>
+                  </select>
+                </Field>
               </div>
 
               {/* Data sale fields are now per-splatItem (forSale/salePrice/saleDescription) */}

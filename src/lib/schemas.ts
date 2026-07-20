@@ -433,6 +433,20 @@ export const propertySchema = z.object({
    * irrespective of cost.
    */
   tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(5)]).default(1),
+  /**
+   * 空間の複雑さ（DECISION_LOG D-008 の検証用・非公開の分析タグ）。
+   *
+   * 判定軸は「**3Dが、その物件が既に持っている写真＋図面に勝つか**」。
+   * サイズ基準の tokenCost とは独立した軸である点に注意:
+   *   complex … 多部屋ハウススタジオ・特殊内装・複雑構造（小さくても complex）
+   *   simple  … 白ホリ等の単室（広くても simple。写真1枚と平面図でほぼ伝わる）
+   *
+   * どの空間タイプが実際に閲覧・成約されたかを後から集計し、「スキャンすべき
+   * 対象」を実測で決めるために記録する。今この欄を持たせておかないと、
+   * 後から遡って分類できない（＝判断が永久に推測のままになる）。
+   * unset = 未分類（既存データの初期値。明示的な simple とは区別する）
+   */
+  spatialComplexity: z.enum(["unset", "simple", "complex"]).default("unset"),
   annotations: z.array(annotationSchema).max(200).default([]),
 
   // Data sale fields moved to splatItems[].forSale/salePrice/saleDescription

@@ -22,6 +22,11 @@ export default function PropertyCard({
 }) {
   const en = locale === "en";
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
+  // 3Dデータの有無。単一の splatUrl と複数シーン(splatItems)のどちらかがあれば
+  // 3Dありとみなす（エディターは両方の入り口を持つため片方だけのデータが実在する）。
+  const hasSplat =
+    !!property.splatUrl?.trim() ||
+    (property.splatItems ?? []).some((s) => !!s.splatUrl?.trim());
   return (
     <Link
       href={localizedHref(`/properties/${property.id}`, locale)}
@@ -47,17 +52,23 @@ export default function PropertyCard({
             {categoryLabel(property.category, locale)}
           </div>
         </div>
-        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase bg-accent text-bg px-2 py-1">
-            3DGS
+        {/* 3DGS バッジとトークン表示は、実際に3Dデータがある物件だけに出す。
+            以前は無条件表示だったため、写真のみで掲載した物件（3DGSは公開の
+            必須条件ではない — schemas.ts の publishablePropertySchema 参照）
+            でも「3DGS」と表示され、開いても3Dが無いという不整合が起きていた。 */}
+        {hasSplat && (
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase bg-accent text-bg px-2 py-1">
+              3DGS
+            </div>
+            <div
+              className="mono text-[9px] tracking-[0.22em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
+              title={en ? `${property.tokenCost} token(s) — ${tokenCostLabel(property.tokenCost, "en")}` : `${property.tokenCost} トークン消費 — ${tokenCostLabel(property.tokenCost, "ja")}`}
+            >
+              {property.tokenCost}T
+            </div>
           </div>
-          <div
-            className="mono text-[9px] tracking-[0.22em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
-            title={en ? `${property.tokenCost} token(s) — ${tokenCostLabel(property.tokenCost, "en")}` : `${property.tokenCost} トークン消費 — ${tokenCostLabel(property.tokenCost, "ja")}`}
-          >
-            {property.tokenCost}T
-          </div>
-        </div>
+        )}
         <div className="absolute bottom-3 left-3 mono text-[10px] tracking-[0.24em] opacity-80">
           {property.id.toUpperCase()}
         </div>
