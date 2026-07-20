@@ -2,6 +2,7 @@ import "@/lib/env";
 import {ClerkProvider} from "@clerk/nextjs";
 import { jaJP, enUS } from "@clerk/localizations";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/site-header";
@@ -131,23 +132,34 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
+  // 掲載者サイトへ iframe で貼られる埋め込みページ(/embed/*)では、当社の
+  // ヘッダー・フッターを出さない（掲載者のサイト内にナビが二重に現れて
+  // デザインを壊すため）。App Router の layout は自分の pathname を知れないので
+  // middleware が付ける x-embed で判定する（DECISION_LOG D-008）。
+  const isEmbed = (await headers()).get("x-embed") === "1";
   return (
     <html
       lang={locale}
       className={`${serif.variable} ${sans.variable} ${mono.variable}`}
     >
-      <body className="min-h-screen flex flex-col">
+      <body className={isEmbed ? "" : "min-h-screen flex flex-col"}>
         <LocaleProvider locale={locale}>
           <ClerkProvider
             localization={locale === "en" ? enUS : jaJPFixed}
             appearance={clerkAppearance}
           >
-            <SiteHeader />
-            {/* [&>*]:flex-1 — 短いページでライト背景(theme-online)がフッター手前で
-                途切れ、黒い埋め草が「黒帯」に見える実害があったため、
-                ページ直下のラッパーを常に main いっぱいまで伸ばす。 */}
-            <main className="flex-1 flex flex-col [&>*]:flex-1">{children}</main>
-            <SiteFooter />
+            {isEmbed ? (
+              children
+            ) : (
+              <>
+                <SiteHeader />
+                {/* [&>*]:flex-1 — 短いページでライト背景(theme-online)がフッター手前で
+                    途切れ、黒い埋め草が「黒帯」に見える実害があったため、
+                    ページ直下のラッパーを常に main いっぱいまで伸ばす。 */}
+                <main className="flex-1 flex flex-col [&>*]:flex-1">{children}</main>
+                <SiteFooter />
+              </>
+            )}
           </ClerkProvider>
         </LocaleProvider>
       </body>

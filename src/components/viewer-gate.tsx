@@ -54,6 +54,9 @@ interface Props {
   /** 先方スタジオ共有用の限定プレビュートークン。あればログイン/課金なしで視聴可
    *  （/api/viewer-asset にトークンを渡し、サーバ側で検証して署名URLを発行）。 */
   previewToken?: string;
+  /** 掲載者サイトへの埋め込み用トークン。previewToken と同じくゲートを外すが、
+   *  期限がなく掲載者が停止できる（DECISION_LOG D-008 のホスティング商品）。 */
+  embedToken?: string;
   /** 既にこのシーンをアンロック済み（1年以内）なら無償再視聴。 */
   alreadyUnlocked?: boolean;
 }
@@ -69,6 +72,7 @@ export default function ViewerGate({
   freeAccess = false,
   signedIn = false,
   previewToken,
+  embedToken,
   alreadyUnlocked = false,
 }: Props) {
   const en = useLocale() === "en";
@@ -91,7 +95,7 @@ export default function ViewerGate({
   const devBypass = process.env.NODE_ENV !== "production";
   // 共有プレビュートークンがあれば課金ゲートを外す（サーバ側で検証）。
   const effectiveSubscription =
-    hasSubscription || devBypass || freeAccess || !!previewToken;
+    hasSubscription || devBypass || freeAccess || !!previewToken || !!embedToken;
 
   const proxied = proxySplatUrl(splatUrl);
   const fullViewerUrl = buildViewerUrl(proxied, { protected: true });
@@ -290,7 +294,9 @@ export default function ViewerGate({
     try {
       const previewQs = previewToken
         ? `&preview=${encodeURIComponent(previewToken)}`
-        : "";
+        : embedToken
+          ? `&embed=${encodeURIComponent(embedToken)}`
+          : "";
       const res = await fetch(
         `/api/viewer-asset?key=${encodeURIComponent(splatUrl)}${previewQs}`,
         { cache: "no-store" },
@@ -381,6 +387,8 @@ export default function ViewerGate({
           >
             {previewToken
               ? en ? "● Shared preview · no tokens used" : "● 共有プレビュー · トークン消費なし"
+              : embedToken
+                ? en ? "● 3D tour · free to view" : "● 3Dツアー · 無料で閲覧できます"
               : freeAccess
                 ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
                 : alreadyUnlocked

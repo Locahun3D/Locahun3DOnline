@@ -25,9 +25,26 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     rewriteUrl.pathname = basePath;
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-locale", "en");
+    if (basePath.startsWith("/embed/")) requestHeaders.set("x-embed", "1");
     return NextResponse.rewrite(rewriteUrl, {
       request: { headers: requestHeaders },
     });
+  }
+
+  /* 埋め込みページ(/embed/*)であることを RSC へ渡す。App Router の layout は
+   * 自分の pathname を知る手段が無いため、ルート layout でサイトのヘッダー/
+   * フッターを外す判定に使う（iframe 内で当社のナビが二重に出ると掲載者の
+   * サイトデザインを壊す。DECISION_LOG D-008）。
+   *
+   * パス文字列そのものではなく固定値 "1" を送るのは意図的:
+   * ヘッダー値に非ASCII（日本語スラッグ等）が入ると Node が
+   * "Invalid header found" で落ちるため、値を持たせない。
+   * 埋め込み以外のリクエストでは何も返さず Clerk の応答をそのまま通す
+   * （NextResponse.next() を毎回返すと Clerk の認証ヘッダー装飾を壊しうる）。 */
+  if (basePath.startsWith("/embed/")) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-embed", "1");
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 });
 

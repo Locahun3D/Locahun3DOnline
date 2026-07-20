@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { renamePropertyAction, type RenameState } from "@/app/admin/_actions";
 import PreviewShare from "./preview-share";
+import EmbedShare from "./embed-share";
 
 /**
  * 物件の公開URL（スラッグ＝ID）を編集する小コントロール。
@@ -61,6 +62,13 @@ export default function SlugEditor({
               <PreviewShare
                 propertyId={id}
                 buttonLabel="仮URLを発行"
+                buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
+              />
+              {/* 掲載者が自社サイトへ貼る3Dツアー埋め込みコード（D-008 ホスティング商品）。
+                  公開URL・仮URLと並ぶ「この物件のURLを配る」導線としてここに置く。 */}
+              <EmbedShare
+                propertyId={id}
+                buttonLabel="埋め込みコード"
                 buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
               />
               <button

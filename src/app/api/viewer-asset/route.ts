@@ -13,6 +13,7 @@ import { isFreePeriodActive } from "@/lib/settings-schema";
 import { presignViewerAsset, presignConfigured } from "@/lib/r2-presign";
 import { allowAssetDownload } from "@/lib/asset-rate-limit";
 import { propertyPreviewRepo, isPreviewExpired } from "@/lib/property-previews";
+import { propertyEmbedRepo } from "@/lib/property-embeds";
 
 export const runtime = "nodejs";
 
@@ -108,6 +109,31 @@ export async function GET(req: Request) {
         );
       }
       // 無効なプレビュートークン → 通常の認証経路へ（下へフォールスルー）。
+    }
+
+    /* ── 埋め込みトークン経路（ログイン不要・期限なし） ────────────────
+     * 掲載者サイトに貼られた iframe (/embed/[token]) からの視聴。
+     * preview と同じくゲートを全て外すが、こちらは期限を持たない代わりに
+     * enabled フラグで掲載者が停止できる（DECISION_LOG D-008）。
+     * 訪問者に課金しないのは意図的 — この商品の課金相手は掲載者であり、
+     * 埋め込みの閲覧者ではない。propertyId 一致は preview と同様に必須。 */
+    const embedTokenParam = new URL(req.url).searchParams.get("embed") || "";
+    if (embedTokenParam) {
+      const embed = await propertyEmbedRepo.get(embedTokenParam);
+      if (embed && embed.enabled && embed.propertyId === matchedProperty.id) {
+        if (!allowAssetDownload(`embed:${embedTokenParam}`, key)) {
+          return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+        }
+        const signedEmbed = await presignViewerAsset(key, PRESIGN_TTL_SECONDS);
+        if (!signedEmbed) {
+          return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
+        }
+        return NextResponse.json(
+          { url: signedEmbed },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      // 無効・停止中の埋め込みトークン → 通常の認証経路へフォールスルー。
     }
 
     const user = await getCurrentUser();
