@@ -21,7 +21,9 @@ export default async function SignUpPage() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="frame min-h-[calc(80vh/var(--z))] flex flex-col items-center justify-center gap-4 py-16">
+    // スマホでは 80vh の縦センタリングだとカードが宙に浮いて見え、上下に
+    // 大きな死に領域ができる。狭い画面では上寄せ＋余白控えめにする。
+    <div className="frame min-h-[calc(60vh/var(--z))] sm:min-h-[calc(80vh/var(--z))] flex flex-col items-center justify-start sm:justify-center gap-4 py-8 sm:py-16">
       <InAppBrowserWarning locale={locale} />
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
       <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" />

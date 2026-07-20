@@ -35,7 +35,9 @@ export default async function SignInPage({
   const locale = await getLocale();
 
   return (
-    <div className="frame min-h-[calc(80vh/var(--z))] flex flex-col items-center justify-center py-16">
+    // サインアップ側と同じ理由でスマホは上寄せ＋余白控えめ（縦センタリングだと
+    // カードが宙に浮き、上下に大きな死に領域ができる）。
+    <div className="frame min-h-[calc(60vh/var(--z))] sm:min-h-[calc(80vh/var(--z))] flex flex-col items-center justify-start sm:justify-center py-8 sm:py-16">
       <InAppBrowserWarning locale={locale} />
       <SignIn signUpUrl="/sign-up" />
     </div>

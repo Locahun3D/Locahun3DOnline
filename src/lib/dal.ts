@@ -100,6 +100,10 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     tokenRefillAt: null,
     stripeCustomerId: null,
     bonusTokens: isGuest ? GUEST_BONUS_TOKENS : 0,
+    // 購入トークンは新規登録時は当然ゼロ。単発購入(token-pack-actions)でのみ増える。
+    purchasedTokens: 0,
+    purchasedTokensExpiresAt: null,
+    tokenPackSessions: [],
     ndaAcceptedAt: null,
     linkedPropertyIds: [],
     bookmarks: [],

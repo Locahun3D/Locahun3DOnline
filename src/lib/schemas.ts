@@ -739,12 +739,38 @@ export function tokenCostLabel(t: 1 | 2 | 3 | 5, locale?: string): string {
   return locale === "en" ? TOKEN_COST_LABEL_EN[t] : TOKEN_COST_LABEL[t];
 }
 
-/** Monthly recurring token budget per plan (resets on the 1st). */
+/**
+ * Monthly recurring token budget per plan.
+ *
+ * 単価は上位プランほど安くなること（逓減）を必ず維持する。以前は
+ * individual ¥325 / studio ¥408 / team ¥497 と逆転しており、上位プランほど
+ * トークンが割高＝アップグレードするほど損という設計になっていた。加えて
+ * studio(10端末)で24トークンは1人あたり月2.4件しか閲覧できず、チーム商品
+ * として実用に耐えなかった。端末数に見合う配分へ引き上げてある。
+ *
+ * 現行単価: individual ¥325 / studio ¥306 / team ¥248（月額 ÷ 本数）
+ */
 export const PLAN_TOKEN_BUDGET = {
   free: 0,       // free has no monthly budget — only the signup bonus below
   individual: 16,
-  studio: 24,
-  team: 60,
+  studio: 32,
+  team: 120,
+} as const;
+
+/**
+ * 従量課金（トークンパック）。サブスクに満たない利用者と、カタログが薄い
+ * 現段階での支払い意思を測るための単発購入。
+ *
+ * 単価はサブスクより高く設定する（¥600/本 > individual の ¥325/本）。
+ * これを下回るとサブスクへ移行する動機が消えるため、値下げする場合も
+ * PLAN_LIST_PRICE_JPY.individual / PLAN_TOKEN_BUDGET.individual を上回る
+ * 単価を維持すること。
+ */
+export const TOKEN_PACK = {
+  tokens: 5,
+  priceYen: 3000,
+  /** 購入トークンの有効期間（月）。サブスク付与分と同じ1年運用。 */
+  expiryMonths: 12,
 } as const;
 
 /**

@@ -125,6 +125,21 @@ export const userSchema = z.object({
   tokenBalance: z.number().int().min(0).default(0),
   /** Contribution (貢献特別枠) tokens — never expire. Granted to guests. */
   bonusTokens: z.number().int().min(0).default(0),
+  /**
+   * 単発購入（トークンパック）で得たトークン。**必ず tokenBalance とは別枠**。
+   * tokenBalance は月次補充で「プラン予算に置き換え」られる(subscription.ts の
+   * applyPlan / users.ts の applyTokenLifecycle)ため、購入分をそこへ加算すると
+   * 次の補充時に実際に支払われた分が消滅する。金銭が絡む残高なので独立させる。
+   */
+  purchasedTokens: z.number().int().min(0).default(0),
+  /** 購入トークンの失効予定日 (ISO)。購入から1年 (TOKEN_PACK.expiryMonths)。 */
+  purchasedTokensExpiresAt: z.string().nullable().default(null),
+  /**
+   * 付与済みトークンパックの Stripe Checkout Session ID（新しい順・最大50件）。
+   * 戻りルート(/api/token-pack/return)と Webhook はどちらも成功時に発火し、
+   * 順序も保証されない。ここに ID があるかで二重付与を防ぐ（自然キーによる冪等化）。
+   */
+  tokenPackSessions: z.array(z.string()).max(50).default([]),
   /** 月次/付与トークン(tokenBalance)の失効予定日 (ISO)。null = 失効予定なし。 */
   tokenExpiresAt: z.string().nullable().default(null),
   /**
@@ -186,9 +201,11 @@ export function toPublicUser(u: User): PublicUser {
   return u;
 }
 
-/** Spendable token total = monthly balance + non-expiring contribution tokens. */
-export function totalTokens(u: Pick<User, "tokenBalance" | "bonusTokens">): number {
-  return u.tokenBalance + (u.bonusTokens ?? 0);
+/** Spendable token total = monthly balance + purchased packs + contribution tokens. */
+export function totalTokens(
+  u: Pick<User, "tokenBalance" | "bonusTokens"> & { purchasedTokens?: number },
+): number {
+  return u.tokenBalance + (u.purchasedTokens ?? 0) + (u.bonusTokens ?? 0);
 }
 
 /** 画面表示・新規投稿の投稿者名に使う公開表示名。displayName 優先、未設定は氏名。 */

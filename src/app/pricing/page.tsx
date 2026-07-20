@@ -5,6 +5,8 @@ import RoiCalculator from "@/components/pricing/roi-calculator";
 import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import { PLAN_TOKEN_BUDGET, SIGNUP_BONUS_TOKENS, TOKEN_PACK } from "@/lib/schemas";
+import { buyTokenPackAction } from "@/lib/token-pack-actions";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -33,7 +35,9 @@ const COMPARE_ROWS: Array<{
   { label: ["物件カタログ閲覧", "Location catalog"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
   { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
   { label: ["物件掲示板", "Location board"], free: ["閲覧のみ", "View only"], individual: ["閲覧のみ", "View only"], studio: ["書き込み可", "Post & reply"], team: ["書き込み可", "Post & reply"] },
-  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["登録時 6 トークン", "6 tokens at signup"], individual: ["月 16 トークン", "16 tokens / mo"], studio: ["月 24 トークン", "24 tokens / mo"], team: ["月 60 トークン", "60 tokens / mo"] },
+  // 付与数は PLAN_TOKEN_BUDGET / SIGNUP_BONUS_TOKENS から導出する。以前ここは
+  // 数値べた書きで、定数側を変更しても料金表が古い数字のまま残る状態だった。
+  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} トークン`, `${SIGNUP_BONUS_TOKENS} tokens at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} トークン`, `${PLAN_TOKEN_BUDGET.individual} tokens / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} トークン`, `${PLAN_TOKEN_BUDGET.studio} tokens / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} トークン`, `${PLAN_TOKEN_BUDGET.team} tokens / mo`] },
   { label: ["制限あり / NDA 限定シーンの閲覧", "Restricted / NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
   { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["3 端末", "3 devices"], studio: ["10 端末", "10 devices"], team: ["30 端末", "30 devices"] },
   { label: ["請求書 自動送付 / 電子帳簿対応", "Invoice auto-send / e-bookkeeping"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓ 一括", "✓ batch"] },
@@ -206,6 +210,43 @@ export default async function PricingPage({
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* 単発購入（トークンパック）。月額契約に踏み切らない層と、月次枠を
+          使い切った契約者の受け皿。サブスク単価より高く設定してあるので、
+          継続利用者はプランへ移行した方が得になる（誘導は壊れない）。 */}
+      <section className="mt-16">
+        <div className="border border-line p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6">
+          <div className="flex-1">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
+              {en ? "Pay as you go" : "単発購入"}
+            </div>
+            <h3 className="text-[18px] md:text-[20px] text-ink mb-2">
+              {en
+                ? "Need just a few scenes? Buy tokens without a subscription."
+                : "数件だけ見たい場合は、契約せずトークンだけ購入できます。"}
+            </h3>
+            <p className="text-[12.5px] text-muted leading-[1.8]">
+              {en
+                ? `${TOKEN_PACK.tokens} tokens for ¥${TOKEN_PACK.priceYen.toLocaleString()} (tax incl.). Valid ${TOKEN_PACK.expiryMonths} months from purchase. For regular use, a monthly plan costs less per token.`
+                : `${TOKEN_PACK.tokens}枚 ¥${TOKEN_PACK.priceYen.toLocaleString()}（税込）。購入から${TOKEN_PACK.expiryMonths}ヶ月間有効。継続してお使いの場合は、月額プランの方がトークン単価は安くなります。`}
+            </p>
+          </div>
+          <div className="shrink-0">
+            <div className="serif text-[30px] text-accent leading-none mb-3 text-center md:text-right">
+              ¥{TOKEN_PACK.priceYen.toLocaleString()}
+              <span className="text-[12px] text-muted ml-2">
+                / {TOKEN_PACK.tokens}
+                {en ? " tokens" : "枚"}
+              </span>
+            </div>
+            <form action={buyTokenPackAction}>
+              <button className="w-full md:w-auto mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-6 py-3 hover:bg-accent hover:text-bg transition">
+                {en ? "Buy tokens →" : "トークンを購入 →"}
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 

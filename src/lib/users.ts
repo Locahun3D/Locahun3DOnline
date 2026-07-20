@@ -171,6 +171,17 @@ class UserRepoImpl implements UserRepo {
       changed = true;
     }
 
+    // 購入トークンも同じ扱いで失効させる（購入から1年）。月次補充では触らない
+    // 独立枠なので、失効判定もここで別に行う必要がある。
+    if (
+      next.purchasedTokensExpiresAt &&
+      next.purchasedTokensExpiresAt <= now &&
+      (next.purchasedTokens ?? 0) > 0
+    ) {
+      next = { ...next, purchasedTokens: 0, purchasedTokensExpiresAt: null };
+      changed = true;
+    }
+
     if (next.plan !== "free" && next.tokenRefillAt && next.tokenRefillAt <= now) {
       const budget = PLAN_TOKEN_BUDGET[next.plan];
       next = {

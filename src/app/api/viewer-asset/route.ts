@@ -166,12 +166,13 @@ export async function GET(req: Request) {
         // 管理者は残高チェック・減算の対象外（下の if (!isAdmin) 参照）。
         const fresh = isAdmin ? user : ((await userRepo.get(user.id)) ?? user);
         if (!isAdmin) {
-          const spendable = totalTokens(fresh); // tokenBalance + bonusTokens
+          const spendable = totalTokens(fresh); // 月次 + 購入 + 貢献枠
           if (spendable < tokenCost) {
             return NextResponse.json(
               {
                 error: "insufficient_tokens",
                 tokenBalance: fresh.tokenBalance,
+                purchasedTokens: fresh.purchasedTokens ?? 0,
                 bonusTokens: fresh.bonusTokens ?? 0,
                 tokenCost,
               },
@@ -198,18 +199,24 @@ export async function GET(req: Request) {
         });
 
         if (!isAdmin) {
-          // サブスク付与分 (tokenBalance) を優先消費し、不足分のみ貢献特別枠
-          // (bonusTokens) から引く。ユーザー要件は「サブスクのプールから消費」なので
-          // tokenBalance を先に減らす。ゲスト等の bonusTokens も使えるようにして
-          // 有効残高が枯渇しない限りは視聴を止めない。
+          // 消費順は「先に失効するものから」= 利用者にとって最も損の少ない順。
+          //   ①tokenBalance  サブスク付与分。毎月満タンに補充される＝使わないと
+          //                   翌月に上書きされて消えるので最優先。
+          //   ②purchasedTokens 購入分。購入から1年で失効。
+          //   ③bonusTokens   貢献特別枠。失効しないので最後。
+          // 購入分を①より先に減らすと、補充で消えるはずの無料分を残したまま
+          // 有料分から削ることになり、実質的に利用者へ不利益が出る。
           let remaining = tokenCost;
           const fromBalance = Math.min(fresh.tokenBalance, remaining);
           remaining -= fromBalance;
+          const fromPurchased = Math.min(fresh.purchasedTokens ?? 0, remaining);
+          remaining -= fromPurchased;
           const fromBonus = Math.min(fresh.bonusTokens ?? 0, remaining);
           remaining -= fromBonus;
           await userRepo.upsert({
             ...fresh,
             tokenBalance: fresh.tokenBalance - fromBalance,
+            purchasedTokens: (fresh.purchasedTokens ?? 0) - fromPurchased,
             bonusTokens: (fresh.bonusTokens ?? 0) - fromBonus,
           });
         }

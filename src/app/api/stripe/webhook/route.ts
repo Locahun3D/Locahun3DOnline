@@ -5,7 +5,8 @@ import { userRepo } from "@/lib/users";
 import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
-import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
+import { PLAN_TOKEN_BUDGET, TOKEN_PACK } from "@/lib/schemas";
+import { grantTokenPack } from "@/lib/token-pack-actions";
 import { oneYearFrom, oneMonthFrom, type AccountPlan } from "@/lib/account-schema";
 import { jstDayKey } from "@/lib/date-format";
 
@@ -79,6 +80,22 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
+
+        // トークンパック(単発購入)。主経路は /api/token-pack/return だが、
+        // ユーザーが戻る前にタブを閉じると未付与のまま残るため保険で処理する。
+        // grantTokenPack は sessionId 記録で冪等なので二重付与にはならない。
+        if (s.metadata?.type === "token_pack") {
+          const userId = s.client_reference_id || s.metadata?.userId;
+          if (
+            userId &&
+            (s.payment_status === "paid" ||
+              s.payment_status === "no_payment_required")
+          ) {
+            const tokens = Number(s.metadata?.tokens) || TOKEN_PACK.tokens;
+            await grantTokenPack(userId, s.id, tokens);
+          }
+          break;
+        }
 
         if (s.metadata?.type === "data_purchase") {
           const purchaseId = s.metadata.purchaseId;

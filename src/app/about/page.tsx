@@ -197,7 +197,7 @@ export default async function AboutPage() {
       no: "04",
       label: ["視聴トークン", "Viewing tokens"],
       desc: [
-        "Free 登録で 6 トークン、有料プランは月 16〜60 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
+        "Free 登録で 6 トークン、有料プランは月 16〜120 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
         "6 tokens at Free signup; paid plans grant 16–60 per month. Unlocking a scene costs tokens once — revisits are free for 1 year.",
       ],
       img: {

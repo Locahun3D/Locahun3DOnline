@@ -39,6 +39,55 @@ const jaJPFixed = {
   formFieldInputPlaceholder__signUpPassword: "パスワードを入力",
 };
 
+/**
+ * Clerk ウィジェットのブランド適用。
+ *
+ * 未設定だと Clerk 既定のライトテーマ（白カード・濃灰テキスト・灰ボタン）が
+ * そのまま出るため、黒基調の当サイト上で完全に浮いていた（特にスマホでは
+ * 画面の大半を占めるので影響が大きい）。加えて既定カードは幅が内容依存で、
+ * 390px 端末で実測 245px しか使わず左右が大きく余っていた。
+ *
+ * 色は globals.css の @theme と同じ値を直接指定する（Clerk は Shadow DOM 外
+ * だが独自のスタイル注入をするため、CSS 変数ではなく実値を渡すのが確実）。
+ */
+const clerkAppearance = {
+  // ⚠ 変数名は @clerk/nextjs 7 系の名前を使うこと。旧名 (colorText /
+  // colorTextSecondary / colorInputBackground / colorInputText) は型でも実行時でも
+  // 黙って無視され、既定のライトテーマの文字色が残る＝暗いカードに暗い文字で
+  // ほぼ判読不能になる（実際に踏んだ）。正しくは colorForeground /
+  // colorMutedForeground / colorInput / colorInputForeground。
+  variables: {
+    colorPrimary: "#ffb454",
+    colorPrimaryForeground: "#000000",
+    colorBackground: "#111111",
+    colorForeground: "#fafaf6",
+    colorMutedForeground: "#9b9b93",
+    // ソーシャルログインボタン等の文字色はこの neutral から α で生成される。
+    // 既定(黒)のままだと暗いカード上で「Googleで続ける」がほぼ読めない。
+    colorNeutral: "#fafaf6",
+    colorMuted: "#1c1c1c",
+    colorBorder: "#2a2a2a",
+    colorInput: "#1c1c1c",
+    colorInputForeground: "#fafaf6",
+    colorDanger: "#ff6b6b",
+    colorSuccess: "#4ade80",
+    colorModalBackdrop: "rgba(0,0,0,0.72)",
+    borderRadius: "2px",
+    fontFamily: "var(--font-sans), sans-serif",
+  },
+  // 色は variables 側で完結させる（要素クラスは Clerk 内部CSSとの詳細度争いに
+  // なり効かないことがある）。ここではレイアウトだけ補正する。
+  elements: {
+    // Clerk 内部クラスが cl-cardBox に max-width:335px を当てており、素の
+    // max-w-[420px] では詳細度で負ける（390px 端末で実測 235px しか使わず、
+    // 左右に大きな余白が出ていた）。Tailwind v4 の important 修飾子（末尾 `!`）
+    // で明示的に上書きする。
+    rootBox: "w-full",
+    cardBox: "w-full max-w-[420px]! mx-auto",
+    card: "w-full",
+  },
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const en = locale === "en";
@@ -89,7 +138,10 @@ export default async function RootLayout({
     >
       <body className="min-h-screen flex flex-col">
         <LocaleProvider locale={locale}>
-          <ClerkProvider localization={locale === "en" ? enUS : jaJPFixed}>
+          <ClerkProvider
+            localization={locale === "en" ? enUS : jaJPFixed}
+            appearance={clerkAppearance}
+          >
             <SiteHeader />
             {/* [&>*]:flex-1 — 短いページでライト背景(theme-online)がフッター手前で
                 途切れ、黒い埋め草が「黒帯」に見える実害があったため、

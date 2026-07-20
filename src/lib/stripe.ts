@@ -44,6 +44,15 @@ export function priceIdFor(
   return map[`${plan}_${interval}`];
 }
 
+/**
+ * トークンパック(単発購入)の Price ID。未設定でも購入フロー自体は動く
+ * （price_data で都度生成するため）。Stripe 側で商品を固定管理したい場合に
+ * STRIPE_PRICE_TOKEN_PACK を設定すると、そちらが優先される。
+ */
+export function tokenPackPriceId(): string | undefined {
+  return process.env.STRIPE_PRICE_TOKEN_PACK;
+}
+
 /** Reverse: a Stripe Price ID -> our plan (for the webhook). */
 export function planForPriceId(priceId: string): AccountPlan | null {
   const pairs: [string | undefined, AccountPlan][] = [
