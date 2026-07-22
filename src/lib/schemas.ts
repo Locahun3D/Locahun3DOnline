@@ -447,6 +447,14 @@ export const propertySchema = z.object({
    * unset = 未分類（既存データの初期値。明示的な simple とは区別する）
    */
   spatialComplexity: z.enum(["unset", "simple", "complex"]).default("unset"),
+  /**
+   * スタジオが公開申請した日時 (ISO)。null = 未申請。
+   * 公開時・却下時にクリアする。運営一覧の「申請中」バッジの根拠。
+   *
+   * 新しい status は増やさない: status は draft のまま、この欄の有無だけで
+   * 「申請中」を表現する（既存の status 遷移・一括操作・フィルタを壊さないため）。
+   */
+  publishRequestedAt: z.string().nullable().default(null),
   annotations: z.array(annotationSchema).max(200).default([]),
 
   // Data sale fields moved to splatItems[].forSale/salePrice/saleDescription
