@@ -16,7 +16,8 @@ import { getD1 } from "./d1";
 export interface Notification {
   id: string;
   userId: string;
-  type: "inquiry_reply";
+  /** inquiry_reply=問い合わせ返信 / publish_request=スタジオからの公開申請 */
+  type: "inquiry_reply" | "publish_request";
   title: string;
   body: string;
   /** クリック時の遷移先（相対パス）。 */
