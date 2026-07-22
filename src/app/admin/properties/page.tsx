@@ -26,6 +26,7 @@ export default async function AdminPropertiesList() {
     category: p.category,
     status: p.status,
     updatedAt: p.updatedAt,
+    publishRequestedAt: p.publishRequestedAt ?? null,
   }));
 
   const counts = {

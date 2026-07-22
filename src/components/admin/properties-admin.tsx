@@ -19,6 +19,7 @@ export type PropertyListItem = {
   category: PropertyCategory;
   status: PropertyStatus;
   updatedAt?: string;
+  publishRequestedAt?: string | null;
 };
 
 const GRID = "grid-cols-[34px_72px_1fr_96px_96px_140px_minmax(290px,320px)]";
@@ -239,7 +240,14 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
                   className="w-4 h-4 accent-[#5ec8e8]"
                 />
               </div>
-              <StatusBadge status={p.status} />
+              <div className="flex flex-col items-start gap-1">
+                <StatusBadge status={p.status} />
+                {p.publishRequestedAt && p.status !== "published" && (
+                  <span className="mono text-[9px] tracking-[0.2em] uppercase border border-accent text-accent px-1.5 py-0.5">
+                    申請中
+                  </span>
+                )}
+              </div>
               <div className="min-w-0">
                 <Link
                   href={`/admin/properties/${p.id}/edit`}
