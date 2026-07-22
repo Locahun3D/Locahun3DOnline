@@ -24,7 +24,7 @@ export default function ScanMark({
       <g
         fill="none"
         stroke="#f4f1ea"
-        strokeWidth="3.6"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
