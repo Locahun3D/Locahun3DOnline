@@ -10,7 +10,7 @@ import {
   reconcileCart,
   type CartItem,
 } from "@/lib/cart";
-import { dataLicenseLabel } from "@/lib/schemas";
+import { dataLicenseLabel, dataLicenseDesc } from "@/lib/schemas";
 import { useLocale, useHref } from "@/components/locale-provider";
 
 export default function CartClient() {
@@ -174,6 +174,14 @@ export default function CartClient() {
                 {en ? "3DGS data" : "3DGS データ"}
                 {i.license && ` ・ ${dataLicenseLabel(i.license, en ? "en" : "ja")}`}
               </div>
+              {/* 決済直前にも、そのライセンスで何ができるのかを明示する。
+                  ここまで名称だけで来ると、買った後で「使えない用途だった」に
+                  なりかねない。 */}
+              {i.license && (
+                <p className="mt-1 text-[10.5px] leading-relaxed text-muted max-w-[52ch]">
+                  {dataLicenseDesc(i.license, en ? "en" : "ja")}
+                </p>
+              )}
             </div>
             <div className="mono text-[12px] tracking-[0.14em] whitespace-nowrap">
               ¥{i.price.toLocaleString(en ? "en-US" : "ja-JP")}

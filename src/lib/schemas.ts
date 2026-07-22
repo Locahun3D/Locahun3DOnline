@@ -73,6 +73,46 @@ export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
 
+/**
+ * 購入画面でライセンスの違いを並べて見せるための可否表。
+ *
+ * ⚠ 出典は `/terms/data-download`（データ購入規約）。文言を変える時は必ず
+ * 規約と一致させること。ここは規約の要約であって、規約より強い/弱い権利を
+ * 与えるものではない。
+ *   - 標準: 「映像・画像等の制作物を作成する利用に限られ、本データ自体を
+ *     ソフトウェア製品に同梱して配布する利用は含みません」
+ *   - 拡張: 「ゲーム・アプリケーション等のソフトウェア製品に組み込み…
+ *     には拡張ライセンスが必要です」
+ *   - 再配布・転売・貸与はいずれのライセンスでも禁止事項
+ */
+export type LicenseAllowance = "yes" | "no" | "ask";
+
+export const DATA_LICENSE_MATRIX: {
+  key: string;
+  labelJa: string;
+  labelEn: string;
+  by: Record<DataLicense, LicenseAllowance>;
+}[] = [
+  {
+    key: "production",
+    labelJa: "映像・画像などの制作物に使う（商用可）",
+    labelEn: "Use in film / image productions (commercial OK)",
+    by: { standard: "yes", extended: "yes", custom: "ask", editorial: "no" },
+  },
+  {
+    key: "embedding",
+    labelJa: "ゲーム・アプリ等への組込／テンプレートへの同梱・改変配布",
+    labelEn: "Embedding in games & apps / bundling into templates",
+    by: { standard: "no", extended: "yes", custom: "ask", editorial: "no" },
+  },
+  {
+    key: "resale",
+    labelJa: "データ自体の再配布・転売・貸与",
+    labelEn: "Redistributing, reselling or lending the data itself",
+    by: { standard: "no", extended: "no", custom: "no", editorial: "no" },
+  },
+];
+
 export function dataLicenseLabel(l: DataLicense, locale?: string): string {
   return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];
 }

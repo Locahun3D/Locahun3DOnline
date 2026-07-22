@@ -14,6 +14,7 @@ import {
   type DataLicense,
 } from "@/lib/schemas";
 import type { LicenseOption } from "@/lib/license-options";
+import LicenseDifference, { LicenseDescription } from "@/components/license-difference";
 import { useLocale } from "@/components/locale-provider";
 
 interface DataSalePanelProps {
@@ -176,13 +177,15 @@ export default function DataSalePanel({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 mt-1" title={dataLicenseDesc(license, lc)}>
+          <div className="flex items-center gap-1.5 mt-1">
             <span className="mono text-[9px] tracking-[0.18em] uppercase border border-accent/40 text-accent/80 px-1.5 py-0.5">
               LICENSE
             </span>
             <span className="text-[10px] opacity-70">{dataLicenseLabel(license, lc)}</span>
           </div>
         )}
+        {/* 違いはツールチップに隠さず常時表示する（スマホではホバーできない） */}
+        <LicenseDescription selected={license} locale={lc} />
         {license === "editorial" && editorialRightsCredit && (
           <p className="text-[10px] text-amber-500/90 mt-1 leading-snug">
             {en ? "Publishing requires this credit: " : "公開時は権利表記が必要です："}
@@ -258,6 +261,9 @@ export default function DataSalePanel({
           </div>
         </>
       )}
+      {/* 比較表は basis-full で1行を占有させる。狭いテキスト列に入れると
+          横スクロールが出て右端の列が切れる（実機で確認して移動した）。 */}
+      <LicenseDifference options={licenseOptions} selected={license} locale={lc} />
     </div>
   );
 }
