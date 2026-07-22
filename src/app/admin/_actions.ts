@@ -10,6 +10,7 @@ import { inquiryRepo } from "@/lib/inquiries";
 import { deleteR2Object, getUploadMode } from "@/lib/uploads";
 import { toR2Key } from "@/lib/asset-keys";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
+import { protectStudioManagedFields } from "@/lib/studio-guard";
 import {
   propertySchema,
   publishablePropertySchema,
@@ -215,7 +216,7 @@ export async function saveDraftAction(
   opts?: { expectedUpdatedAt?: string },
 ) {
   const parsed = propertySchema.parse(input);
-  await assertPropertyAccess(parsed.id);
+  const user = await assertPropertyAccess(parsed.id);
   // 編集フォームが保持しないサーバ管理フィールドは既存値を保全する。
   // pageBlocks（スタジオページビルダー）と ownerId（所有権＝権限の根拠）は
   // エディタの入力対象外なので、autosave で default(空) に上書きさせない。
@@ -236,7 +237,10 @@ export async function saveDraftAction(
       serverUpdatedAt: existing.updatedAt,
     };
   }
-  const saved = await repo.upsert(mergeManaged(parsed, existing));
+  // studio の保存では 3DGS・status・申請日時をサーバー側で既存値へ戻す
+  // （UIの読み取り専用は改竄ペイロードを防げないため）。
+  const guarded = protectStudioManagedFields(parsed, existing ?? null, user.role);
+  const saved = await repo.upsert(mergeManaged(guarded, existing));
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   return { ok: true as const, id: parsed.id, updatedAt: saved.updatedAt };
