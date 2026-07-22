@@ -197,11 +197,14 @@ async function nextPropertyId(category: string): Promise<string> {
 }
 
 export async function createDraftAction() {
-  const admin = await requireAdmin();
+  // admin だけでなく studio も自分の物件を作れる（セルフサーブ）。
+  // studio が作った物件は ownerId=本人 になるため、以降の編集は
+  // assertPropertyAccess が自動で許可する＝運営による紐付け作業が不要になる。
+  const user = await requireAdminOrStudioOwner();
   // 既定カテゴリ(studio)で採番。エディターでカテゴリ変更後も番号は維持される。
   const id = await nextPropertyId("studio");
   const draft = newDraft(id);
-  draft.ownerId = admin.id;
+  draft.ownerId = user.id;
   await repo.upsert(draft);
   revalidatePath("/admin/properties");
   redirect(`/admin/properties/${draft.id}/edit`);
