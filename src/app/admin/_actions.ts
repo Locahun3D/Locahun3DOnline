@@ -248,9 +248,17 @@ export async function saveDraftAction(
 
 export async function publishAction(input: unknown) {
   const parsed = publishablePropertySchema.parse(input);
-  await assertPropertyAccess(parsed.id);
+  // 公開は運営の審査を通す（studio は requestPublishAction で申請のみ）。
+  // 未審査の物件が公開されるとカタログ品質＝商品価値を毀損するため。
+  await requireAdmin();
   const existing = await repo.get(parsed.id);
-  await repo.upsert(stampPublishedAt({ ...mergeManaged(parsed, existing), status: "published" }));
+  await repo.upsert(
+    stampPublishedAt({
+      ...mergeManaged(parsed, existing),
+      status: "published",
+      publishRequestedAt: null,
+    }),
+  );
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   revalidatePath("/properties");
