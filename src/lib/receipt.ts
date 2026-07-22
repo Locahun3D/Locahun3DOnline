@@ -44,7 +44,7 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
         license: "License",
         purchaser: "Purchaser",
         issuer: "Issuer: Locahun 3D (operated by KWI Inc.)",
-        contact: "Contact: info@locahun3d.com",
+        contact: "Contact: contact@locahun3d.com",
         printBtn: "Print / Save as PDF",
       }
     : {
@@ -59,7 +59,7 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
         license: "ライセンス",
         purchaser: "購入者",
         issuer: "発行者: ロケハン3D（KWI株式会社）",
-        contact: "お問い合わせ: info@locahun3d.com",
+        contact: "お問い合わせ: contact@locahun3d.com",
         printBtn: "印刷 / PDF保存",
       };
 

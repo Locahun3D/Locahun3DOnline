@@ -30,11 +30,17 @@ const SEED_USERS: User[] = [];
 
 /**
  * Emails that bootstrap as admin on first sign-in. Defaults to the operator's
- * email; override with ADMIN_BOOTSTRAP_EMAILS (comma-separated). Anyone else
+ * emails; override with ADMIN_BOOTSTRAP_EMAILS (comma-separated). Anyone else
  * can be promoted from /admin/accounts.
+ *
+ * ⚠ 個人Gmail(nakamurakou1108@)は事業用Workspaceへ移行中だが、**消さないこと**。
+ * 現在の管理者アカウントはこのアドレスで登録済みで、リストから外すと次回以降
+ * 管理者権限を再取得できず自己ロックアウトする。事業用 admin@ で実際にサインイン
+ * して管理者になれたことを確認できるまでは、両方を残す。
  */
 const ADMIN_EMAILS = (
-  process.env.ADMIN_BOOTSTRAP_EMAILS ?? "nakamurakou1108@gmail.com,l3dtools@gmail.com"
+  process.env.ADMIN_BOOTSTRAP_EMAILS ??
+  "admin@locahun3d.com,nakamurakou1108@gmail.com,l3dtools@gmail.com"
 )
   .split(",")
   .map((s) => s.trim().toLowerCase())

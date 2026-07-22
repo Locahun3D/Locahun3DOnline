@@ -32,9 +32,16 @@ function appUrl(path = ""): string {
   return `${base}${path}`;
 }
 
-/** 運営の受信箱（問い合わせの控え先）。 */
+/**
+ * 運営の受信箱（問い合わせの控え先・/contact の転送先）。
+ *
+ * 公開表示（特商法・プライバシー・フッター・広告メール）が contact@ なので、
+ * 運営コピーの宛先もそこへ統一する。以前は info@ で、顧客に案内している窓口と
+ * 実際の受信先が食い違っていた（info@ が受信できていなければ控えが消える）。
+ * 変更する場合は EMAIL_OPERATOR で上書きできる。
+ */
 function operatorAddress(): string {
-  return process.env.EMAIL_OPERATOR || "info@locahun3d.com";
+  return process.env.EMAIL_OPERATOR || "contact@locahun3d.com";
 }
 
 export async function sendEmail(opts: {
@@ -84,7 +91,7 @@ function shell(title: string, bodyHtml: string): string {
       ${bodyHtml}
     </div>
     <div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;">
-      発行者: ロケハン3D（KWI株式会社） / お問い合わせ: info@locahun3d.com
+      発行者: ロケハン3D（KWI株式会社） / お問い合わせ: contact@locahun3d.com
     </div>
   </div>
 </body></html>`;
@@ -181,7 +188,7 @@ export async function notifyRefund(p: Purchase): Promise<void> {
         <tr><td style="padding:6px 0;color:#666;">返金額</td><td style="padding:6px 0;text-align:right;font-weight:700;">${yen(p.priceYen)}</td></tr>
         ${p.refundReason ? `<tr><td style="padding:6px 0;color:#666;">理由</td><td style="padding:6px 0;text-align:right;">${p.refundReason}</td></tr>` : ""}
       </table>
-      <p style="font-size:12px;color:#999;">※ 実決済の場合、口座/カードへの返金反映には数営業日かかることがあります。ご不明点は info@locahun3d.com までご連絡ください。</p>
+      <p style="font-size:12px;color:#999;">※ 実決済の場合、口座/カードへの返金反映には数営業日かかることがあります。ご不明点は contact@locahun3d.com までご連絡ください。</p>
     `;
     await sendEmail({
       to: p.userEmail,
