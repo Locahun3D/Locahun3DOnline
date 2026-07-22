@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { repo } from "@/lib/store";
-import { assertPropertyAccess } from "@/lib/dal";
+import { assertPropertyAccess, getCurrentUser } from "@/lib/dal";
 import PropertyEditor from "@/components/admin/property-editor";
 
 export default async function EditPropertyPage({
@@ -18,6 +18,7 @@ export default async function EditPropertyPage({
   }
   const property = await repo.get(id);
   if (!property) notFound();
+  const currentUser = await getCurrentUser();
 
   return (
     <div className="p-8">
@@ -34,7 +35,10 @@ export default async function EditPropertyPage({
           ので紛らわしいだけになる。 */}
 
       {/* 公開URL（スラッグ）はエディタのヘッダー枠内に統合表示される */}
-      <PropertyEditor initial={property} />
+      <PropertyEditor
+        initial={property}
+        isAdmin={currentUser?.role === "admin"}
+      />
     </div>
   );
 }

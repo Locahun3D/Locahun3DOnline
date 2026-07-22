@@ -36,6 +36,7 @@ import {
   archiveAction,
   deleteAction,
   cleanupReplacedFileAction,
+  requestPublishAction,
 } from "@/app/admin/_actions";
 import FileDropzone, {
   type UploadedFile,
@@ -56,7 +57,14 @@ const STEPS = [
 
 type StepId = (typeof STEPS)[number]["id"];
 
-export default function PropertyEditor({ initial }: { initial: Property }) {
+export default function PropertyEditor({
+  initial,
+  isAdmin = false,
+}: {
+  initial: Property;
+  /** 運営のみ 3DGS を編集できる。studio には読み取り専用で見せる。 */
+  isAdmin?: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<StepId>("basic");
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -388,14 +396,42 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
                 公開を停止
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={onPublish}
-                disabled={publishing}
-                className="px-5 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-50"
-              >
-                {publishing ? "公開中…" : "公開する"}
-              </button>
+              <>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={onPublish}
+                    disabled={publishing}
+                    className="px-5 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                  >
+                    {publishing ? "公開中…" : "公開する"}
+                  </button>
+                )}
+                {!isAdmin && (
+                  <button
+                    type="button"
+                    disabled={publishing}
+                    onClick={() => {
+                      startPublish(async () => {
+                        const res = await requestPublishAction(initial.id);
+                        if (res.ok) {
+                          alert(
+                            "alreadyRequested" in res && res.alreadyRequested
+                              ? "すでに申請済みです。運営の確認をお待ちください。"
+                              : "公開申請を送信しました。運営が3Dデータの差し込みと確認を行います。",
+                          );
+                          router.refresh();
+                        } else {
+                          alert(res.error);
+                        }
+                      });
+                    }}
+                    className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-5 py-2.5 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                  >
+                    公開を申請
+                  </button>
+                )}
+              </>
             )}
           </div>
           </div>
@@ -1481,6 +1517,13 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               title="3DGS データ"
               desc="3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
             >
+              {!isAdmin && (
+                <div className="border border-accent/40 bg-accent/10 px-4 py-3 mb-5 text-[12.5px] leading-[1.85]">
+                  3Dデータは運営が撮影後に差し込みます。<br />
+                  この項目の入力は不要です（内容の確認のみ行えます）。
+                </div>
+              )}
+              <fieldset disabled={!isAdmin} className="contents">
               {/* ── 3DGS アイテム (複数・ラベル付き) ── */}
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
@@ -1982,6 +2025,7 @@ export default function PropertyEditor({ initial }: { initial: Property }) {
               </div>
 
               {/* Data sale fields are now per-splatItem (forSale/salePrice/saleDescription) */}
+              </fieldset>
             </StepCard>
           )}
 
