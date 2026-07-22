@@ -11,6 +11,7 @@ import { deleteR2Object, getUploadMode } from "@/lib/uploads";
 import { toR2Key } from "@/lib/asset-keys";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
 import { protectStudioManagedFields } from "@/lib/studio-guard";
+import { createNotification } from "@/lib/notifications";
 import {
   propertySchema,
   publishablePropertySchema,
@@ -281,6 +282,41 @@ export async function publishAction(input: unknown) {
   revalidatePath(`/properties/${parsed.id}`);
   revalidatePath("/");
   return { ok: true as const, id: parsed.id };
+}
+
+/**
+ * スタジオからの公開申請。status は draft のまま publishRequestedAt を立て、
+ * 運営（admin全員）へアプリ内通知を送る。運営が3DGSを差し込み審査して公開する。
+ * 既に申請済みなら何もしない（冪等）。
+ */
+export async function requestPublishAction(id: string) {
+  const user = await assertPropertyAccess(id);
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false as const, error: "物件が見つかりません" };
+  if (existing.status === "published") {
+    return { ok: false as const, error: "すでに公開されています" };
+  }
+  if (existing.publishRequestedAt) {
+    return { ok: true as const, alreadyRequested: true as const };
+  }
+
+  await repo.upsert({ ...existing, publishRequestedAt: new Date().toISOString() });
+
+  const admins = (await userRepo.list()).filter((u) => u.role === "admin");
+  for (const a of admins) {
+    await createNotification({
+      userId: a.id,
+      type: "publish_request",
+      title: "公開申請が届きました",
+      body: `${user.name} さんから「${existing.title || id}」の公開申請が届きました。3DGSデータの差し込みと審査をお願いします。`,
+      // Notification.link は必須（クリック時の遷移先・相対パス）。
+      link: `/admin/properties/${id}/edit`,
+    });
+  }
+
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return { ok: true as const };
 }
 
 /** Publish straight from the list by id — validates the stored record first. */
