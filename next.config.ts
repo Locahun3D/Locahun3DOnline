@@ -40,10 +40,18 @@ const nextConfig: NextConfig = {
         ? [{ key: "X-Frame-Options", value: "DENY" }]
         : [];
     return [
+      // ⚠ /embed/* だけは frameGuard を付けない。掲載者が自社サイトへ 3D ツアーを
+      // iframe で貼るための商品（DECISION_LOG D-008）であり、X-Frame-Options: DENY
+      // が付くと全ての埋め込みが本番でのみ無言で壊れる（dev では再現しない）。
+      // X-Frame-Options は後から緩められないヘッダなので、ここで除外するしかない。
+      // headers が空配列のルートは Next.js が起動時に弾くため、本番(frameGuard
+      // が非空)のときだけこのエントリを足す。
+      ...(frameGuard.length
+        ? [{ source: "/((?!embed/).*)", headers: frameGuard }]
+        : []),
       {
         source: "/(.*)",
         headers: [
-          ...frameGuard,
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-DNS-Prefetch-Control", value: "off" },
