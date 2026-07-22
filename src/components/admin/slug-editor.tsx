@@ -14,11 +14,20 @@ export default function SlugEditor({
   id,
   status,
   embedded = false,
+  isAdmin = false,
 }: {
   id: string;
   status: string;
   /** true = 親のパネル（エディタのヘッダー枠）内に埋め込むため、独自の枠線・背景を持たない。 */
   embedded?: boolean;
+  /**
+   * 仮URL/埋め込みパネルは admin 限定で描画する。
+   * ⚠ これを常時描画すると、パネルがマウント時に呼ぶ getPropertyPreviewAction /
+   * getPropertyEmbedAction の requireAdmin() が studio を redirect("/") で弾き、
+   * **エディタを開いた瞬間にページごとホームへ飛ぶ**（実機で再現・修正済み）。
+   * サーバーアクション内の redirect は 303 になりページ全体を持っていく。
+   */
+  isAdmin?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(id);
@@ -59,18 +68,24 @@ export default function SlugEditor({
             {/* 仮URL発行（限定プレビュー共有URL）。公開URLのすぐ隣に置くことで、
                 「まだ下書きだが先方に見せたい」場面で見つけやすくする。 */}
             <div className="ml-auto flex items-center gap-2">
-              <PreviewShare
-                propertyId={id}
-                buttonLabel="仮URLを発行"
-                buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
-              />
+              {isAdmin && (
+                <PreviewShare
+                  propertyId={id}
+                  buttonLabel="仮URLを発行"
+                  buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
+                />
+              )}
               {/* 掲載者が自社サイトへ貼る3Dツアー埋め込みコード（D-008 ホスティング商品）。
-                  公開URL・仮URLと並ぶ「この物件のURLを配る」導線としてここに置く。 */}
-              <EmbedShare
-                propertyId={id}
-                buttonLabel="埋め込みコード"
-                buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
-              />
+                  公開URL・仮URLと並ぶ「この物件のURLを配る」導線としてここに置く。
+                  発行・管理は現状 admin 運用（ホスティング商品は2026年内無料提供・
+                  当社側で発行）のため、パネルも admin のみに出す。 */}
+              {isAdmin && (
+                <EmbedShare
+                  propertyId={id}
+                  buttonLabel="埋め込みコード"
+                  buttonClassName="text-[13px] font-medium border border-neutral-300 text-neutral-700 px-3.5 py-1.5 rounded-md hover:border-accent hover:text-accent transition shrink-0"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => {
