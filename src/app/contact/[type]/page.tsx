@@ -91,6 +91,30 @@ export default async function ContactTypePage({
           {en ? copy.ledeEn : copy.lede}
         </p>
 
+        {/* 掲載依頼は「問い合わせて待つ」以外に、その場で下書きを作って
+            情報を埋め始められる道も用意する（審査は公開時に行うので、
+            下書き作成自体は待たせる必要がない）。 */}
+        {t === "listing" && (
+          <div className="mb-8 border border-line bg-card p-4">
+            <p className="text-[13px] leading-relaxed">
+              {en
+                ? "Prefer to get started right away? Create a listing draft and fill in what you know. We'll handle the 3D scan and publish it after a check."
+                : "先に進めたい場合は、いますぐ掲載ページの下書きを作れます。分かる範囲で入力しておいてください。3D撮影と公開はこちらで対応します。"}
+            </p>
+            <Link
+              href={lh("/admin/properties")}
+              className="mt-3 inline-block border border-accent/50 px-4 py-2 text-[12px] text-accent hover:bg-accent/10 transition"
+            >
+              {en ? "Create a listing draft →" : "掲載ページの下書きを作る →"}
+            </Link>
+            <p className="mt-2 mono text-[10px] text-muted">
+              {en
+                ? "Requires a studio account. Sign up first if you don't have one."
+                : "スタジオアカウントが必要です。お持ちでない場合はまず新規登録してください。"}
+            </p>
+          </div>
+        )}
+
         <ContactForm type={t} />
       </div>
     </div>

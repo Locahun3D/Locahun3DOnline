@@ -3,6 +3,7 @@ import { requireOnboarded } from "@/lib/dal";
 import { roleLabel, accountStatusLabel } from "@/lib/account-schema";
 import AccountDashboard from "@/components/account/account-dashboard";
 import LoginDevices from "@/components/account/login-devices";
+import StudioListings from "@/components/account/studio-listings";
 import { listActiveSessions, deviceLimitForPlan } from "@/lib/device-limit";
 import { getLocale } from "@/lib/i18n/server";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
@@ -163,6 +164,14 @@ export default async function AccountPage({
         billing={billing}
         nowIso={nowIso}
       />
+
+      {/* 掲載者(スタジオ)だけに出す。所有物件は ownerId で引く。 */}
+      {user.role === "studio" && (
+        <StudioListings
+          properties={(await propertyRepo.list()).filter((p) => p.ownerId === user.id)}
+          locale={locale}
+        />
+      )}
 
       <div className="mt-6">
         <LoginDevices

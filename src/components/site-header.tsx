@@ -63,6 +63,16 @@ export default async function SiteHeader() {
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
         </Link>
       )}
+      {/* スタジオ(掲載者)の入口。これが無いと、掲載ページを作る権限はあるのに
+          /admin/properties を直接URLで教えてもらう以外に辿り着けなかった。 */}
+      {user?.role === "studio" && (
+        <Link
+          href={lh("/admin/properties")}
+          className="hidden min-[1200px]:inline-block px-2 min-[1200px]:px-3 py-1 min-[1200px]:py-1.5 text-[9px] min-[1200px]:text-[10px] mono tracking-[0.14em] min-[1200px]:tracking-[0.22em] uppercase text-muted border-l border-line pl-2 min-[1200px]:pl-3 hover:text-accent transition whitespace-nowrap"
+        >
+          ⌂ {locale === "en" ? "Listings" : "掲載管理"}
+        </Link>
+      )}
       {/* 管理者リンクはPC専用（旧 mobile-nav.tsx から踏襲、モバイルは基本操作しないため非表示） */}
       {user?.role === "admin" && (
         <Link
