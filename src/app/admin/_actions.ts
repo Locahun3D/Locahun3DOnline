@@ -106,8 +106,24 @@ export async function cleanupReplacedFileAction(
   propertyId: string,
   oldUrl: string,
 ): Promise<void> {
-  await assertPropertyAccess(propertyId);
+  const user = await assertPropertyAccess(propertyId);
   if (!oldUrl) return;
+
+  /* ⚠ IDOR対策（重要）:
+   * assertPropertyAccess は「propertyId を編集してよいか」しか見ないため、
+   * oldUrl に他物件のファイルURLを渡されると、自分の物件IDを通した上で
+   * 他社の splat/zip/画像の実体を削除できてしまう（countOtherUrlUsages は
+   * 全物件横断で数えるので、参照が1件＝他社物件のみ でも通過する）。
+   *
+   * 物件アップロードのキーは `uploads/<propertyId>/…` なので、非adminには
+   * 「自分の物件配下のURL」だけを削除許可する。判定できないURL
+   * （アセットライブラリ・外部URL・デモ資産）は消さずに黙って返す
+   * ＝この関数はベストエフォートのGCであり、消さなくても実害はない。
+   * admin は従来どおり全て削除できる（横断的なアセット管理のため）。 */
+  if (user.role !== "admin" && !oldUrl.includes(`uploads/${propertyId}/`)) {
+    return;
+  }
+
   const usages = await countOtherUrlUsages(oldUrl);
   if (usages > 1) return; // 他のフィールド/物件でまだ使用中
   await deleteFileAsset(oldUrl);
