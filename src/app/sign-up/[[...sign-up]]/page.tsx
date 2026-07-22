@@ -21,10 +21,52 @@ export default async function SignUpPage() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    // スマホでは 80vh の縦センタリングだとカードが宙に浮いて見え、上下に
-    // 大きな死に領域ができる。狭い画面では上寄せ＋余白控えめにする。
-    <div className="frame min-h-[calc(60vh/var(--z))] sm:min-h-[calc(80vh/var(--z))] flex flex-col items-center justify-start sm:justify-center gap-4 py-8 sm:py-16">
+    // ログイン側と同じ2カラム。カードだけを中央に浮かせると、広い画面で
+    // 真っ黒な余白に小さなカードが1枚あるだけの画面になり、登録する理由が
+    // 何も伝わらない（実機で確認して作り直した）。
+    <div className="frame py-10 sm:py-20">
       <InAppBrowserWarning locale={locale} />
+      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 md:grid-cols-[1fr_auto] md:gap-16">
+        <div className="max-w-[34ch]">
+          <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase">Get started</p>
+          <h1 className="mt-3 text-2xl sm:text-3xl leading-snug font-bold">
+            {en ? (
+              <>
+                Scout the location
+                <br />
+                from your desk.
+              </>
+            ) : (
+              <>
+                ロケハンを、
+                <br />
+                机の上から。
+              </>
+            )}
+          </h1>
+          <ul className="mt-6 space-y-2 text-[13px] leading-relaxed text-muted">
+            {(en
+              ? [
+                  "Free account — browse the catalogue right away",
+                  "Walk, measure and check daylight in the browser",
+                  "Upgrade only when you need more scenes",
+                ]
+              : [
+                  "無料アカウントでカタログをすぐ閲覧",
+                  "ブラウザで歩く・測る・光を見る",
+                  "もっと見たくなってからのアップグレードで大丈夫",
+                ]
+            ).map((t) => (
+              <li key={t} className="flex gap-2">
+                <span aria-hidden className="text-accent">
+                  —
+                </span>
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex flex-col items-center gap-4 justify-self-center md:justify-self-end">
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
       <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" />
       {/* 明示的な同意チェックボックスは Clerk ウィジェット内には差し込めないため、
@@ -56,6 +98,8 @@ export default async function SignUpPage() {
           </>
         )}
       </p>
+        </div>
+      </div>
     </div>
   );
 }

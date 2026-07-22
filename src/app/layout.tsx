@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/site-header";
+import ClerkPopoverZoomFix from "@/components/clerk-popover-zoom-fix";
 import SiteFooter from "@/components/site-footer";
 import { LocaleProvider } from "@/components/locale-provider";
 import { getLocale } from "@/lib/i18n/server";
@@ -38,6 +39,46 @@ const mono = JetBrains_Mono({
 const jaJPFixed = {
   ...jaJP,
   formFieldInputPlaceholder__signUpPassword: "パスワードを入力",
+  // Clerk 既定の見出しは applicationName を差し込むため、ダッシュボード上の
+  // インスタンス名がそのまま出る（実機で「Locahun3d_Online にサインイン」と
+  // アンダースコア込みで表示されていた）。サービス名を固定で出す。
+  signIn: {
+    ...jaJP.signIn,
+    start: {
+      ...jaJP.signIn?.start,
+      title: "ロケハン3D オンラインにログイン",
+      subtitle: "おかえりなさい。続けるにはログインしてください。",
+    },
+  },
+  signUp: {
+    ...jaJP.signUp,
+    start: {
+      ...jaJP.signUp?.start,
+      title: "ロケハン3D オンラインに登録",
+      subtitle: "アカウントを作成して、3Dロケハンを始めましょう。",
+    },
+  },
+};
+
+/** EN 側も同じ理由で見出しだけ固定する。 */
+const enUSFixed = {
+  ...enUS,
+  signIn: {
+    ...enUS.signIn,
+    start: {
+      ...enUS.signIn?.start,
+      title: "Sign in to Locahun 3D Online",
+      subtitle: "Welcome back. Sign in to continue.",
+    },
+  },
+  signUp: {
+    ...enUS.signUp,
+    start: {
+      ...enUS.signUp?.start,
+      title: "Create your Locahun 3D Online account",
+      subtitle: "Sign up to start scouting locations in 3D.",
+    },
+  },
 };
 
 /**
@@ -79,14 +120,20 @@ const clerkAppearance = {
   // 色は variables 側で完結させる（要素クラスは Clerk 内部CSSとの詳細度争いに
   // なり効かないことがある）。ここではレイアウトだけ補正する。
   elements: {
-    // Clerk 内部クラスが cl-cardBox に max-width:335px を当てており、素の
-    // max-w-[420px] では詳細度で負ける（390px 端末で実測 235px しか使わず、
-    // 左右に大きな余白が出ていた）。Tailwind v4 の important 修飾子（末尾 `!`）
-    // で明示的に上書きする。
     rootBox: "w-full",
-    cardBox: "w-full max-w-[420px]! mx-auto",
     card: "w-full",
   },
+  // ⚠ 幅制限は「1カラムの認証カード」だけに掛けること。
+  // Clerk 内部クラスが cl-cardBox に max-width:335px を当てており、素の
+  // max-w-[420px] では詳細度で負ける（390px 端末で実測 235px しか使わず、
+  // 左右に大きな余白が出ていた）。Tailwind v4 の important 修飾子（末尾 `!`）
+  // で上書きするが、これを elements(全コンポーネント共通)に置くと
+  // **UserProfile モーダルまで 420px に潰れる**。あちらは
+  // 「左ナビ＋右詳細」の2カラムで 880px 前後を前提にしており、420px だと
+  // 右カラムにメールアドレスや連携アカウントの値が入らず「…」ボタンだけが
+  // 残り、横スクロールバーが出る（2026-07-22 に実機で発生）。
+  signIn: { elements: { cardBox: "w-full max-w-[420px]! mx-auto" } },
+  signUp: { elements: { cardBox: "w-full max-w-[420px]! mx-auto" } },
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -145,13 +192,14 @@ export default async function RootLayout({
       <body className={isEmbed ? "" : "min-h-screen flex flex-col"}>
         <LocaleProvider locale={locale}>
           <ClerkProvider
-            localization={locale === "en" ? enUS : jaJPFixed}
+            localization={locale === "en" ? enUSFixed : jaJPFixed}
             appearance={clerkAppearance}
           >
             {isEmbed ? (
               children
             ) : (
               <>
+                <ClerkPopoverZoomFix />
                 <SiteHeader />
                 {/* [&>*]:flex-1 — 短いページでライト背景(theme-online)がフッター手前で
                     途切れ、黒い埋め草が「黒帯」に見える実害があったため、
