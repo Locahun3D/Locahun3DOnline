@@ -349,11 +349,24 @@ export async function publishByIdAction(id: string) {
   return { ok: true as const };
 }
 
+/**
+ * 公開を取り下げて下書きへ戻す。**所有者(スタジオ)自身にも許可する。**
+ *
+ * 掲載者が自走できない一番の原因がこれだった。営業日程が変わった・写真を
+ * 差し替えたい・一時的に貸し出しを止めたい、といった時に自分で止められず、
+ * 当社へ連絡しないと引っ込められない状態になっていた（当社の運用負荷にもなる）。
+ *
+ * 非対称にしてあるのは意図的:
+ *   取り下げ = 所有者可（自分の情報を隠すだけなので被害が無い）
+ *   公開     = admin のみ（publishAction / publishByIdAction は requireAdmin のまま）
+ * つまり「いつでも引っ込められるが、出す時は必ず審査を通る」。
+ */
 export async function unpublishAction(id: string) {
-  await requireAdmin();
+  await assertPropertyAccess(id);
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
-  await repo.upsert({ ...existing, status: "draft" });
+  // 取り下げたら過去の公開申請は無効。残すと再公開時に審査済みに見えてしまう。
+  await repo.upsert({ ...existing, status: "draft", publishRequestedAt: null });
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${id}/edit`);
   revalidatePath("/properties");
