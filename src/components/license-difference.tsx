@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
   DATA_LICENSE_MATRIX,
+  DATA_LICENSE_MATRIX_NOTE_JA,
+  DATA_LICENSE_MATRIX_NOTE_EN,
   dataLicenseLabel,
   dataLicenseDesc,
   type DataLicense,
@@ -99,7 +101,10 @@ export default function LicenseDifference({
               </tbody>
             </table>
           </div>
-          <p className="mt-1.5 text-[10px] text-muted">
+          <p className="mt-1.5 text-[10px] leading-relaxed text-amber-500/90">
+            {en ? DATA_LICENSE_MATRIX_NOTE_EN : DATA_LICENSE_MATRIX_NOTE_JA}
+          </p>
+          <p className="mt-1 text-[10px] text-muted">
             {en ? "Summary only — see the " : "上記は要約です。詳細は"}
             <Link
               href={en ? "/en/terms/data-download" : "/terms/data-download"}

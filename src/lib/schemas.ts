@@ -111,7 +111,22 @@ export const DATA_LICENSE_MATRIX: {
     labelEn: "Redistributing, reselling or lending the data itself",
     by: { standard: "no", extended: "no", custom: "no", editorial: "no" },
   },
+  {
+    // 規約 第4条:「機械学習・生成AIモデルの学習データとして利用する行為
+    // （本サービスの事前の書面による許諾がある場合を除く）」= 全ライセンス禁止。
+    // 書面許諾で可能になり得るので custom は「個別」。
+    key: "aiTraining",
+    labelJa: "機械学習・生成AIの学習データとして使う",
+    labelEn: "Using as training data for machine learning / generative AI",
+    by: { standard: "no", extended: "no", custom: "ask", editorial: "no" },
+  },
 ];
+
+/** 可否表の下に出す補足。ライセンスを問わず効く条件を明示する。 */
+export const DATA_LICENSE_MATRIX_NOTE_JA =
+  "AI学習利用はライセンスを問わず禁止です（当社の事前の書面による許諾がある場合を除く）。";
+export const DATA_LICENSE_MATRIX_NOTE_EN =
+  "Use as AI training data is prohibited under every license, except with our prior written permission.";
 
 export function dataLicenseLabel(l: DataLicense, locale?: string): string {
   return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];
