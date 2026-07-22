@@ -17,9 +17,11 @@ const BTN =
 export default function PropertyRowActions({
   id,
   status,
+  isAdmin = false,
 }: {
   id: string;
   status: PropertyStatus;
+  isAdmin?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +81,10 @@ export default function PropertyRowActions({
         >
           編集
         </Link>
+        {/* 「非公開」は unpublishAction＝assertPropertyAccess(所有スタジオも可)なので
+            isAdmin に関わらず表示してよい。「公開」「アーカイブ」「削除」は
+            requireAdmin のサーバーアクションで、studio が押すと redirect("/") で
+            ページごと追い出されるため isAdmin のときだけ表示する。 */}
         {status === "published" ? (
           <button
             type="button"
@@ -89,16 +95,18 @@ export default function PropertyRowActions({
             非公開
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={publish}
-            disabled={pending}
-            className={`${BTN} border-accent text-accent hover:bg-accent hover:text-bg`}
-          >
-            公開
-          </button>
+          isAdmin && (
+            <button
+              type="button"
+              onClick={publish}
+              disabled={pending}
+              className={`${BTN} border-accent text-accent hover:bg-accent hover:text-bg`}
+            >
+              公開
+            </button>
+          )
         )}
-        {status !== "archived" && (
+        {isAdmin && status !== "archived" && (
           <button
             type="button"
             onClick={archive}
@@ -108,14 +116,16 @@ export default function PropertyRowActions({
             アーカイブ
           </button>
         )}
-        <button
-          type="button"
-          onClick={remove}
-          disabled={pending}
-          className={`${BTN} border-red-500/40 text-red-400 hover:bg-red-500 hover:text-bg`}
-        >
-          削除
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={remove}
+            disabled={pending}
+            className={`${BTN} border-red-500/40 text-red-400 hover:bg-red-500 hover:text-bg`}
+          >
+            削除
+          </button>
+        )}
       </div>
       {error && (
         <div className="mono text-[9px] text-red-400 max-w-[240px] text-right leading-tight">

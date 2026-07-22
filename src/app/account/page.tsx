@@ -151,6 +151,15 @@ export default async function AccountPage({
         </div>
       )}
 
+      {/* 掲載者(スタジオ)だけに出す。所有物件は ownerId で引く。
+          スタジオの主業務は掲載管理なので、買い手向けカード群より先に出す。 */}
+      {user.role === "studio" && (
+        <StudioListings
+          properties={(await propertyRepo.list()).filter((p) => p.ownerId === user.id)}
+          locale={locale}
+        />
+      )}
+
       <AccountDashboard
         user={user}
         locale={locale}
@@ -164,14 +173,6 @@ export default async function AccountPage({
         billing={billing}
         nowIso={nowIso}
       />
-
-      {/* 掲載者(スタジオ)だけに出す。所有物件は ownerId で引く。 */}
-      {user.role === "studio" && (
-        <StudioListings
-          properties={(await propertyRepo.list()).filter((p) => p.ownerId === user.id)}
-          locale={locale}
-        />
-      )}
 
       <div className="mt-6">
         <LoginDevices

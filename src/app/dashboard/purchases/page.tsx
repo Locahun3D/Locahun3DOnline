@@ -69,6 +69,30 @@ export default async function UserPurchasesPage() {
         </p>
       </header>
 
+      {/* ライセンス範囲外利用（特に機械学習・生成AIの学習データ利用）の抑止表記。
+          購入者が誤って規約違反しないよう、ダウンロード操作の手前に明示しておく。 */}
+      <p className="text-[11px] text-muted mb-4">
+        {en ? (
+          <>
+            Please use purchased data within the scope of its license. Using it
+            as training data for machine learning or generative AI is
+            prohibited regardless of license tier (see the{" "}
+            <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
+              data purchase terms
+            </Link>
+            ).
+          </>
+        ) : (
+          <>
+            購入データはライセンスの範囲内でご利用ください。機械学習・生成AIの学習データとしての利用は、ライセンスを問わず禁止です（詳細は{" "}
+            <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
+              データ購入規約
+            </Link>
+            ）。
+          </>
+        )}
+      </p>
+
       {/* Purchase list */}
       {purchases.length === 0 ? (
         <div className="border border-line p-10 text-center">

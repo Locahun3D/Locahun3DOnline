@@ -96,6 +96,12 @@ export default async function EmbedPage({
           Powered by ロケハン3D
         </a>
       </div>
+      {/* 埋め込みは外部サイトに露出するため、スクレイピング/AI学習への
+          抑止表記を常設する。ビューアーの邪魔をしないよう右下に固定表示。 */}
+      {/* ビューアー(暗)とゲート(明)のどちらの背景でも読めるよう、白文字+影にする */}
+      <div className="pointer-events-none fixed bottom-2 right-3 z-50 mono text-[9px] tracking-[0.12em] text-white/60 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+        © ロケハン3D — 無断転載・AI学習利用禁止
+      </div>
     </div>
   );
 }

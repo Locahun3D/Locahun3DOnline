@@ -59,7 +59,7 @@ export default async function AdminPropertiesList() {
         </form>
       </div>
 
-      <PropertiesAdmin items={items} />
+      <PropertiesAdmin items={items} isAdmin={isAdmin} />
     </div>
   );
 }

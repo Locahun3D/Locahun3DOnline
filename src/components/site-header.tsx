@@ -180,6 +180,16 @@ export default async function SiteHeader() {
               {t(n.key)}
             </Link>
           ))}
+          {/* PC同様、studio(掲載者)にだけ掲載管理への入口をモバイルにも出す。
+              admin向けリンクは既存方針どおりモバイル非表示のまま。 */}
+          {user?.role === "studio" && (
+            <Link
+              href={lh("/admin/properties")}
+              className="text-[11px] min-[768px]:text-[13px] font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
+            >
+              {locale === "en" ? "Listings" : "掲載管理"}
+            </Link>
+          )}
         </nav>
       </div>
     </header>

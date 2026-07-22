@@ -31,7 +31,13 @@ const STATUS_TABS: { key: PropertyStatus | "all"; label: string }[] = [
   { key: "archived", label: "アーカイブ" },
 ];
 
-export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }) {
+export default function PropertiesAdmin({
+  items,
+  isAdmin = false,
+}: {
+  items: PropertyListItem[];
+  isAdmin?: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PropertyStatus | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -170,7 +176,9 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
       )}
 
       {/* Bulk action bar */}
-      {selected.size > 0 && (
+      {/* 一括公開/削除は requireAdmin のサーバーアクションで、studio が押すと
+          redirect("/") でページごと追い出されるため、見せない。 */}
+      {isAdmin && selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 border border-accent/40 bg-accent/10 px-3 py-2">
           <span className="mono text-[11px] text-accent">
             {selected.size} 件選択中
@@ -203,13 +211,16 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
       <div className="border border-line overflow-x-auto">
         <div className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60 min-w-[860px]`}>
           <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={allVisibleSelected}
-              onChange={toggleAll}
-              aria-label="表示中をすべて選択"
-              className="w-4 h-4 accent-[#5ec8e8]"
-            />
+            {/* 全選択チェックボックスは一括操作(admin専用)のためのUI。studioには出さない。 */}
+            {isAdmin && (
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={toggleAll}
+                aria-label="表示中をすべて選択"
+                className="w-4 h-4 accent-[#5ec8e8]"
+              />
+            )}
           </div>
           <div>Status</div>
           <div>Title</div>
@@ -232,13 +243,16 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
               }`}
             >
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selected.has(p.id)}
-                  onChange={() => toggle(p.id)}
-                  aria-label={`${p.title} を選択`}
-                  className="w-4 h-4 accent-[#5ec8e8]"
-                />
+                {/* 行選択チェックボックスも一括操作(admin専用)のためのUI。studioには出さない。 */}
+                {isAdmin && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(p.id)}
+                    onChange={() => toggle(p.id)}
+                    aria-label={`${p.title} を選択`}
+                    className="w-4 h-4 accent-[#5ec8e8]"
+                  />
+                )}
               </div>
               <div className="flex flex-col items-start gap-1">
                 <StatusBadge status={p.status} />
@@ -264,7 +278,7 @@ export default function PropertiesAdmin({ items }: { items: PropertyListItem[] }
               <div className="mono text-[11px] text-muted">
                 {p.updatedAt ? p.updatedAt.slice(0, 16).replace("T", " ") : "—"}
               </div>
-              <PropertyRowActions id={p.id} status={p.status} />
+              <PropertyRowActions id={p.id} status={p.status} isAdmin={isAdmin} />
             </div>
           ))
         )}
