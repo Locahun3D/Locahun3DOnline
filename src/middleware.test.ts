@@ -30,7 +30,9 @@ function makeRequest(pathname: string, cookies?: Record<string, string>) {
 // to mock it at the module level.  We re-import the middleware after mocking.
 // ---------------------------------------------------------------------------
 
-const mockClerkHandler = vi.fn<[NextRequest, unknown], Promise<NextResponse>>();
+// Vitest 4 の vi.fn は「引数タプル + 戻り値」ではなく関数型を1つ取る。
+const mockClerkHandler =
+  vi.fn<(req: NextRequest, ev: unknown) => Promise<NextResponse>>();
 
 vi.mock("@clerk/nextjs/server", () => ({
   clerkMiddleware: () => mockClerkHandler,
@@ -39,6 +41,14 @@ vi.mock("@clerk/nextjs/server", () => ({
 // Import AFTER mocking so the module picks up our stub.
 // Dynamic import ensures each test group can reset the mock.
 const { default: middleware } = await import("./middleware");
+
+// middleware の戻り値型は null/undefined(=素通り)を含むが、このファイルの
+// テストは全て「レスポンスを返す」ケースなので、ここで潰して以降を非nullで扱う。
+async function run(req: NextRequest) {
+  const res = await middleware(req, {} as never);
+  if (res == null) throw new Error("middleware returned no response");
+  return res;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -54,7 +64,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
     mockClerkHandler.mockResolvedValue(expected);
 
     const req = makeRequest("/");
-    const res = await middleware(req, {} as never);
+    const res = await run(req);
 
     expect(res).toBe(expected);
     expect(mockClerkHandler).toHaveBeenCalledOnce();
@@ -69,7 +79,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
       __session: "garbage.invalid.token",
       __client_uat: "1",
     });
-    const res = await middleware(req, {} as never);
+    const res = await run(req);
 
     // Must be a 200 (next), not 500.
     expect(res.status).toBe(200);
@@ -96,7 +106,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
       "/terms/privacy",
     ]) {
       const req = makeRequest(path, { __session: "garbage.bad.token" });
-      const res = await middleware(req, {} as never);
+      const res = await run(req);
       expect(res.status, `path ${path} should return 200`).toBe(200);
       expect(
         res.headers.get("x-middleware-request-x-clerk-auth-status"),
@@ -138,7 +148,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
     const req = makeRequest("/en/properties", {
       __session: "garbage.bad.token",
     });
-    const res = await middleware(req, {} as never);
+    const res = await run(req);
     expect(res.status).toBe(200);
     expect(
       res.headers.get("x-middleware-request-x-clerk-auth-status"),
@@ -152,7 +162,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
       __session: "garbage.bad.token",
       __client_uat: "1",
     });
-    const res = await middleware(req, {} as never);
+    const res = await run(req);
 
     const setCookies = res.headers.getSetCookie();
     const joined = setCookies.join("\n");
@@ -183,7 +193,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
       __client_uat_MgkJwgE_: "1",
       clerk_active_context: "some-org-id",
     });
-    const res = await middleware(req, {} as never);
+    const res = await run(req);
 
     const joined = res.headers.getSetCookie().join("\n");
     for (const name of [
@@ -201,7 +211,7 @@ describe("middleware graceful degradation for invalid Clerk session cookies", ()
     mockClerkHandler.mockRejectedValue(new SyntaxError("some other error"));
 
     const req = makeRequest("/"); // no cookies at all
-    const res = await middleware(req, {} as never);
+    const res = await run(req);
 
     expect(res.status).toBe(200);
     expect(res.headers.getSetCookie()).toHaveLength(0);

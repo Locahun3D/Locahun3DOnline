@@ -21,6 +21,9 @@ const sample: Asset = {
   size: 1234,
   contentType: "image/jpeg",
   uploadedAt: "2026-06-18T00:00:00.000Z",
+  // zod の .default() は入力では省略可だが z.infer(出力型)では必須になる。
+  thumbnailUrl: "",
+  tags: [],
 };
 
 beforeEach(async () => {

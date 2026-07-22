@@ -159,6 +159,12 @@ function mergeManaged<T extends Property>(incoming: T, existing: Property | null
     ownerId: existing.ownerId || incoming.ownerId,
     // 初回公開時刻はサーバ管理（"New" バッジの基準）。フォーム値で消さない。
     publishedAt: existing.publishedAt || incoming.publishedAt,
+    // 公開申請フラグもサーバ管理（requestPublishAction が立て、publishAction が消す）。
+    // エディタの入力項目ではないため、古いタブを開いたままの管理者が保存すると
+    // stale な null で「申請中」を無言で消してしまう事故が起きる。
+    // ※ publishAction は mergeManaged の展開後に publishRequestedAt: null を
+    //   明示指定しているので、公開時のクリアはこの保全より優先される。
+    publishRequestedAt: existing.publishRequestedAt ?? incoming.publishRequestedAt,
   };
 }
 
@@ -331,7 +337,11 @@ export async function publishByIdAction(id: string) {
       error: "公開に必要な項目が未入力です。エディタで入力してください。",
     };
   }
-  await repo.upsert(stampPublishedAt({ ...parsed.data, status: "published" }));
+  // 公開したら申請フラグを消す（publishAction と同じ扱い）。残したままだと
+  // 後で下書きに戻した時に、新たな申請が無いのに「申請中」が復活してしまう。
+  await repo.upsert(
+    stampPublishedAt({ ...parsed.data, status: "published", publishRequestedAt: null }),
+  );
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   revalidatePath(`/properties/${id}`);
@@ -391,7 +401,10 @@ export async function bulkSetStatusAction(
         skipped.push(id); // 公開要件を満たさないものはスキップ
         continue;
       }
-      await repo.upsert(stampPublishedAt({ ...parsed.data, status: "published" }));
+      // 公開時は申請フラグを消す（publishAction / publishByIdAction と同じ扱い）。
+      await repo.upsert(
+        stampPublishedAt({ ...parsed.data, status: "published", publishRequestedAt: null }),
+      );
     } else {
       await repo.upsert({ ...existing, status });
     }
