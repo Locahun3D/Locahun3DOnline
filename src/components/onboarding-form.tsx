@@ -78,27 +78,37 @@ export default function OnboardingForm() {
       </div>
 
       {requiresNda(role) && (
-        <label className="flex gap-3 items-start border border-accent/40 bg-[#1e1e1e] p-3 text-[12px] leading-[1.7]">
-          <input type="checkbox" name="nda" className="mt-0.5 accent-[#5ec8e8]" />
-          <span className="text-muted">
-            {en ? (
-              <>
-                Viewing confidential locations (backyards, private studios, etc.) requires
-                agreement to a <strong className="text-ink">non-disclosure agreement (NDA)</strong>.
-                I have read and agree to it.
-              </>
-            ) : (
-              <>
-                機密ロケ地（倉庫裏・非公開スタジオ等）の閲覧には
-                <strong className="text-ink">秘密保持契約（NDA）</strong>
-                への同意が必要です。内容を確認し同意します。
-              </>
-            )}
-          </span>
-        </label>
+        <>
+          <p className="text-[11px] text-amber-300 leading-[1.7] border-l-2 border-amber-400/50 pl-3">
+            {en
+              ? "Production (NDA) accounts require a company email address. Gmail, Outlook, Yahoo Mail and other personal addresses can't be used."
+              : "制作会社（NDA）アカウントの登録には会社のメールアドレスが必要です。Gmail・Outlook・Yahooメール等の個人向けメールアドレスは使用できません。"}
+          </p>
+          <label className="flex gap-3 items-start border border-accent/40 bg-[#1e1e1e] p-3 text-[12px] leading-[1.7]">
+            <input type="checkbox" name="nda" className="mt-0.5 accent-[#5ec8e8]" />
+            <span className="text-muted">
+              {en ? (
+                <>
+                  Viewing confidential locations (backyards, private studios, etc.) requires
+                  agreement to a <strong className="text-ink">non-disclosure agreement (NDA)</strong>.
+                  I have read and agree to it.
+                </>
+              ) : (
+                <>
+                  機密ロケ地（倉庫裏・非公開スタジオ等）の閲覧には
+                  <strong className="text-ink">秘密保持契約（NDA）</strong>
+                  への同意が必要です。内容を確認し同意します。
+                </>
+              )}
+            </span>
+          </label>
+        </>
       )}
       {state?.errors?.nda && (
         <p className="text-[11px] text-red-400">{state.errors.nda.join(" / ")}</p>
+      )}
+      {state?.errors?.email && (
+        <p className="text-[11px] text-red-400">{state.errors.email.join(" / ")}</p>
       )}
 
       {/* 配信同意: 特定電子メール法のオプトイン原則により既定は必ずOFF。

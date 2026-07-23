@@ -66,6 +66,10 @@ export default function ProductionUpgradeForm() {
           : "送信するとアカウント種別が「制作会社」に切り替わり、運営の承認待ちになります。承認までもサインインは可能ですが、Team限定機能は承認後に解放されます。"}
       </p>
 
+      {state?.errors?.email && (
+        <p className="text-[11px] text-red-400">{state.errors.email.join(" / ")}</p>
+      )}
+
       {state?.message && (
         <p className="text-[12px] text-red-400 border border-red-400/40 bg-red-400/10 px-3 py-2">
           {state.message}

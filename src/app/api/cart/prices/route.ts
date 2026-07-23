@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { repo as propertyRepo } from "@/lib/store";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
-import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
@@ -29,10 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ items: [] });
   }
 
-  const settings = await getSettings();
   const nowIso = new Date().toISOString();
-  const salesDisabled = isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso);
-  const salesFree = isDataSaleFree(settings.dataSaleFreePeriod, nowIso);
   const user = await getCurrentUser().catch(() => null);
 
   const results = await Promise.all(
@@ -42,8 +38,10 @@ export async function POST(req: Request) {
       const property = propertyId ? await propertyRepo.get(propertyId) : null;
       const item = property?.splatItems[idx];
 
+      // 限定無料期間/販売停止はアイテム単位(item.freePeriod)で判定する。
       let available =
-        !!property && !!item && item.forSale && !salesDisabled &&
+        !!property && !!item && item.forSale &&
+        !isDataSaleDisabled(item.freePeriod, nowIso) &&
         resolveDownloadFiles(item).length > 0;
 
       if (available && user && item) {
@@ -56,7 +54,7 @@ export async function POST(req: Request) {
         const licenseOptions = resolveLicenseOptions(item);
         const matched =
           licenseOptions.find((o) => o.license === line.license) ?? licenseOptions[0];
-        price = salesFree ? 0 : matched.price;
+        price = isDataSaleFree(item.freePeriod, nowIso) ? 0 : matched.price;
       }
 
       return {

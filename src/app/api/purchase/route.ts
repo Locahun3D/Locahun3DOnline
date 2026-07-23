@@ -8,7 +8,6 @@ import { notifyPurchase } from "@/lib/email";
 import { recordPayoutAccruals } from "@/lib/payouts";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
-import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
 import { randomUUID } from "node:crypto";
@@ -52,12 +51,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "このデータは販売されていません" }, { status: 404 });
   }
 
-  // 3Dデータ販売の限定無料期間: クライアントは price を送ってこない（サーバの
-  // item.salePrice をそのまま信用しない設計）ため、ここで同じ設定を見て
-  // 「無料期間終了後は販売停止」を選んでいる場合は購入自体を拒否する。
-  const settings = await getSettings();
+  // 3Dデータ販売の限定無料期間はアイテム単位(item.freePeriod)。クライアントは
+  // price を送ってこない（サーバの item.salePrice をそのまま信用しない設計）
+  // ため、ここで同じ設定を見て「無料期間終了後は販売停止」を選んでいる場合は
+  // 購入自体を拒否する。
   const nowIso = new Date().toISOString();
-  if (isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso)) {
+  if (isDataSaleDisabled(item.freePeriod, nowIso)) {
     return NextResponse.json({ error: "このデータは現在販売を停止しています" }, { status: 404 });
   }
 
@@ -93,7 +92,7 @@ export async function POST(req: Request) {
   const editorialRightsCredit = license === "editorial" ? item.editorialRightsCredit : "";
 
   const purchaseId = randomUUID();
-  const price = isDataSaleFree(settings.dataSaleFreePeriod, nowIso) ? 0 : matchedOption.price;
+  const price = isDataSaleFree(item.freePeriod, nowIso) ? 0 : matchedOption.price;
 
   // Stripe 未配線(stub)の時だけ即時完了させる。Stripe 配線済みなら¥0でも
   // 下の Checkout Session 経路へ進める — Stripe は合計¥0の Checkout Session

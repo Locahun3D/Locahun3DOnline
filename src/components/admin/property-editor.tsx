@@ -30,6 +30,12 @@ import {
   type DataLicense,
 } from "@/lib/schemas";
 import {
+  AFTER_FREE_PERIOD_ACTIONS,
+  AFTER_FREE_PERIOD_LABEL,
+  dataSalePeriodStatus,
+  type DataSaleFreePeriod,
+} from "@/lib/settings-schema";
+import {
   saveDraftAction,
   publishAction,
   unpublishAction,
@@ -1554,7 +1560,7 @@ export default function PropertyEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
+                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1786,6 +1792,11 @@ export default function PropertyEditor({
                                 placeholder="e.g. High-detail 3DGS data. Commercial use allowed.（空欄なら日本語をそのまま表示）"
                               />
                             </Field>
+
+                            <FreePeriodItemEditor
+                              value={watch(`splatItems.${idx}.freePeriod`)}
+                              onChange={(v) => setValue(`splatItems.${idx}.freePeriod`, v, { shouldDirty: true })}
+                            />
 
                             {/* ── ダウンロード用ファイル (PLY & OBJ ZIP) ── */}
                             <div className="border border-dashed border-accent/30 p-3 space-y-2">
@@ -2987,6 +2998,124 @@ function SalePriceInput({
           min={0}
           placeholder="金額を入力"
         />
+      )}
+    </div>
+  );
+}
+
+/** ISO → "YYYY-MM-DD"（JST日付）。無料期間の日付入力プリフィル用。 */
+function toDateInputValue(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const jst = new Date(d.getTime() + 9 * 3600 * 1000);
+  return jst.toISOString().slice(0, 10);
+}
+
+const FREE_PERIOD_STATUS_LABEL: Record<"off" | "pending" | "active" | "concluded", string> = {
+  off: "無効",
+  pending: "開始待ち",
+  active: "実施中（¥0）",
+  concluded: "終了済み",
+};
+
+/**
+ * 3Dデータ販売の限定無料期間 — 物件単位ではなく**3DGSアイテム単位**の設定
+ * （旧: admin/gift-codes の全物件共通トグル。同一物件内でもデータごとに
+ * キャンペーン時期が違うケースに対応するため、アイテムごとに持つ設計へ変更）。
+ * チェックを入れると設定パネルが開く。日付は JST の日付として解釈し、
+ * settings-actions.ts の旧実装と同じ T00:00:00+09:00 / T23:59:59+09:00 の
+ * アンカリングで ISO に変換する。
+ */
+function FreePeriodItemEditor({
+  value,
+  onChange,
+}: {
+  value: DataSaleFreePeriod;
+  onChange: (v: DataSaleFreePeriod) => void;
+}) {
+  // ここも hydration mismatch 回避のため、現在時刻ベースの状態表示は
+  // マウント後のみ描画する（fmtLocalDateTime 等と同じ理由・上のコメント参照）。
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const v = value ?? { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const };
+  const status = mounted ? dataSalePeriodStatus(v, new Date().toISOString()) : null;
+
+  return (
+    <div className="border-t border-line/40 pt-3 mt-3">
+      <label className="flex items-center gap-3 cursor-pointer mb-3">
+        <input
+          type="checkbox"
+          checked={v.enabled}
+          onChange={(e) => onChange({ ...v, enabled: e.target.checked })}
+          className="w-4 h-4 accent-accent"
+        />
+        <span className="text-[11px] mono tracking-[0.14em] uppercase opacity-70">
+          このデータの限定無料期間を有効にする
+        </span>
+        {mounted && v.enabled && status && (
+          <span
+            className={`mono text-[9px] tracking-[0.14em] uppercase border px-1.5 py-0.5 ${
+              status === "active"
+                ? "border-green-400/40 text-green-400"
+                : status === "concluded"
+                  ? "border-amber-400/40 text-amber-400"
+                  : "border-line text-muted"
+            }`}
+          >
+            {FREE_PERIOD_STATUS_LABEL[status]}
+          </span>
+        )}
+      </label>
+
+      {v.enabled && (
+        <div className="space-y-3 pl-7">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="開始日（任意・空＝即時）" hint="">
+              <input
+                type="date"
+                value={toDateInputValue(v.startAt)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  onChange({ ...v, startAt: raw ? new Date(`${raw}T00:00:00+09:00`).toISOString() : null });
+                }}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="終了日（任意・空＝無期限）" hint="">
+              <input
+                type="date"
+                value={toDateInputValue(v.endAt)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  onChange({ ...v, endAt: raw ? new Date(`${raw}T23:59:59+09:00`).toISOString() : null });
+                }}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+          <Field label="終了日を過ぎたらどうする？" hint="終了日を設定していない場合はこの項目は使われません（無期限に無料のまま）。">
+            <select
+              value={v.afterEnd}
+              onChange={(e) => onChange({ ...v, afterEnd: e.target.value as DataSaleFreePeriod["afterEnd"] })}
+              className={inputClass}
+            >
+              {AFTER_FREE_PERIOD_ACTIONS.map((a) => (
+                <option key={a} value={a}>{AFTER_FREE_PERIOD_LABEL[a]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="メモ（任意・キャンペーン名など）" hint="">
+            <input
+              type="text"
+              value={v.note}
+              maxLength={200}
+              onChange={(e) => onChange({ ...v, note: e.target.value })}
+              className={inputClass}
+              placeholder="例: ローンチ記念 このデータのみ無料"
+            />
+          </Field>
+        </div>
       )}
     </div>
   );

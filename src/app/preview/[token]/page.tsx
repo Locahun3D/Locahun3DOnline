@@ -74,7 +74,6 @@ export default async function PreviewPage({
       locale={locale}
       signedIn={false}
       hasViewerAccess
-      dataSaleDisabled
     />
   );
 }

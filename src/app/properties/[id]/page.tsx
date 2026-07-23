@@ -22,7 +22,7 @@ import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
 import PurchaseToast from "@/components/purchase-toast";
 import { getSettings } from "@/lib/site-settings";
-import { isFreePeriodActive, isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
+import { isFreePeriodActive } from "@/lib/settings-schema";
 import { localizeProperty } from "@/lib/schemas";
 import { getLocale } from "@/lib/i18n/server";
 
@@ -83,8 +83,8 @@ export default async function PropertyDetailPage({
   );
   const nowIso = new Date().toISOString();
   const freeAccess = isFreePeriodActive(settings.freePeriod, nowIso);
-  const dataSaleFree = isDataSaleFree(settings.dataSaleFreePeriod, nowIso);
-  const dataSaleDisabled = isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso);
+  // 3Dデータ販売の限定無料期間はアイテム単位(item.freePeriod)で判定するため、
+  // ここでは判定不要 — nowIso を PropertyDetailView に渡すのみ。
 
   const canViewRestrictedItems = canViewBackyard(user);
   const canViewNdaOnlyItems = canViewNdaOnly(user);
@@ -170,8 +170,7 @@ export default async function PropertyDetailPage({
         property={property}
         others={others}
         freeAccess={freeAccess}
-        dataSaleFree={dataSaleFree}
-        dataSaleDisabled={dataSaleDisabled}
+        nowIso={nowIso}
         canViewRestricted={canViewRestrictedItems}
         canViewNdaOnly={canViewNdaOnlyItems}
         purchasedItemIds={purchasedItemIds}

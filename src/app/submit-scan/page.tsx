@@ -29,6 +29,18 @@ const STEPS_EN = [
   "If it succeeds, we list and sell it, and share the revenue. If not, everything we hold is deleted.",
 ];
 
+const REVENUE_SHARE_JA = [
+  "販売が成立した場合、当社が売主として販売し、代金の一部を撮影者へ使用料として分配します（後払い・四半期精算）。",
+  "分配率は成立時に個別に合意します。施設側の許諾取得をご自身で進めていただけた場合、分配率を大幅に引き上げます。",
+  "未精算額が¥10,000未満の場合は次回精算へ繰り越します。個人への支払いは源泉徴収の対象となる場合があります。",
+];
+
+const REVENUE_SHARE_EN = [
+  "If a sale is concluded, we sell the data as the seller of record and pay a share of the price to you as a usage royalty (paid in arrears, settled quarterly).",
+  "The exact share is agreed individually when the deal closes. If you help secure the facility's permission yourself, we substantially increase your share.",
+  "Unsettled balances under ¥10,000 roll over to the next settlement. Payments to individuals may be subject to Japanese withholding tax.",
+];
+
 export default async function SubmitScanPage() {
   const locale = await getLocale();
   const en = locale === "en";
@@ -56,7 +68,7 @@ export default async function SubmitScanPage() {
             ? "This program lets you bring in a scan you captured yourself, and lets Locahun 3D negotiate rights with the facility before selling it."
             : "あなたが撮影したスキャンデータを、ロケハン3Dが施設と権利調整のうえ販売する持ち込みプログラムです。"}
         </p>
-        <ol className="space-y-2 text-[13px] text-ink leading-[1.85]">
+        <ol className="space-y-2 text-[13px] text-ink leading-[1.85] mb-6">
           {(en ? STEPS_EN : STEPS_JA).map((s, i) => (
             <li key={s} className="flex gap-2.5">
               <span className="mono text-[11px] text-accent shrink-0">{i + 1}.</span>
@@ -64,6 +76,22 @@ export default async function SubmitScanPage() {
             </li>
           ))}
         </ol>
+
+        {/* 分配の仕組み — 「どう販売され、いくら受け取れるか」を申請前に理解して
+            もらうための説明。施設同意を自分で取れると分配が上がるインセンティブも明記。 */}
+        <div className="bg-white border border-line rounded-md px-5 py-4">
+          <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2.5">
+            {en ? "How revenue sharing works" : "分配の仕組み"}
+          </div>
+          <ul className="space-y-1.5 text-[12.5px] text-muted leading-relaxed">
+            {(en ? REVENUE_SHARE_EN : REVENUE_SHARE_JA).map((t) => (
+              <li key={t} className="flex gap-2">
+                <span aria-hidden className="text-accent shrink-0">・</span>
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </header>
 
       <div className="max-w-[620px] mx-auto">

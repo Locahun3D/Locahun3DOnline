@@ -101,6 +101,16 @@ export default async function AboutPage() {
         "Each property has a board anyone can read (posting requires a paid plan). The inquiry form reaches the studio directly.",
       ],
     },
+    {
+      no: "07",
+      label: ["活用", "Use cases"],
+      title: ["AI・産業向けにも活用できます", "Also usable for AI & industrial applications"],
+      desc: [
+        "プリビズ・VFXだけでなく、工場や商業施設のデジタルツイン、研修・防災シミュレーションなどの産業用途にも活用できます。AIモデルの学習データとしての利用は標準ライセンスでは対象外ですが、当社との個別契約（カスタムライセンス）でご相談いただけます。",
+        "Beyond previz and VFX, the data works for industrial use cases like digital twins of factories and commercial facilities, and training or disaster-prevention simulations. Using it as AI training data isn't covered by the standard license, but can be arranged individually with us via a custom license.",
+      ],
+      link: { href: "/contact/general", text: ["活用について相談する →", "Ask about use cases →"] },
+    },
   ];
 
   // 2. 仕組み（サムネイル付き工程）
@@ -265,6 +275,15 @@ export default async function AboutPage() {
         src: "/about/invoice.webp",
         alt: ["自動送付される領収書・請求書の書式", "The auto-sent receipt / invoice format"],
       },
+    },
+    {
+      no: "10",
+      label: ["AI・産業活用", "AI & industrial use"],
+      desc: [
+        "AIモデルの学習データ、工場・商業施設のデジタルツイン、防災・研修シミュレーションなど、プリビズ以外の産業活用にもご利用いただけます。AI学習目的の利用は全ライセンスで原則禁止としており、当社の事前の書面許諾（カスタムライセンス）が必要です。",
+        "The data also supports uses beyond previz — AI model training sets, digital twins for factories and commercial facilities, and disaster-prevention or training simulations. AI-training use is prohibited under every standard license and requires our prior written permission (a custom license).",
+      ],
+      link: { href: "/contact/general", text: ["活用について相談する →", "Ask about use cases →"] },
     },
   ];
 
@@ -477,7 +496,7 @@ export default async function AboutPage() {
               <li>{en ? "One ~20-min scan to get listed" : "約 20 分のスキャン 1 回で掲載"}</li>
               <li>{en ? "Fewer walk-in viewings" : "内覧対応を削減"}</li>
               <li>{en ? "Inquiries reach you directly" : "問い合わせが直接届く"}</li>
-              <li>{en ? "Currently free during our launch campaign" : "現在キャンペーンで掲載無料"}</li>
+              <li>{en ? "Free during our launch campaign (through Dec 31, 2026)" : "現在キャンペーンで掲載無料（2026年12月31日まで）"}</li>
             </ul>
             <Link
               href={lh("/contact/listing")}
@@ -576,7 +595,8 @@ export default async function AboutPage() {
               q: ["自分の物件も掲載できますか？", "Can I list my own space?"],
               a: [
                 <>
-                  できます。約 20 分のスキャン 1 回で掲載でき、現在はキャンペーンにより掲載費は無料です。
+                  できます。約 20 分のスキャン 1 回で掲載でき、現在はキャンペーンにより掲載費は無料です
+                  （2026年12月31日まで）。
                   <br />
                   ロケハン3Dでは、今後もスキャン以降の掲載費は無料です。
                   <Link href={lh("/contact/listing")} className="text-accent hover:underline">
@@ -586,7 +606,7 @@ export default async function AboutPage() {
                 </>,
                 <>
                   Yes. One ~20-minute scan gets you listed, and listing is currently free
-                  during our launch campaign.
+                  during our launch campaign (through Dec 31, 2026).
                   <br />
                   At Locahun 3D, listing stays free going forward once you&apos;ve completed a
                   scan. Apply via the{" "}

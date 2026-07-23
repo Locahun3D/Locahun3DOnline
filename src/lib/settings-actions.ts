@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "./dal";
 import { getSettings, saveSettings } from "./site-settings";
-import { AFTER_FREE_PERIOD_ACTIONS, type AfterFreePeriodAction } from "./settings-schema";
 
 export type FreePeriodState =
   | { ok: true; message: string }
@@ -34,42 +33,6 @@ export async function saveFreePeriodAction(
   await saveSettings({ ...cur, freePeriod: { enabled, startAt, endAt, note } });
 
   // Free access is read on property pages; refresh broadly.
-  revalidatePath("/admin/gift-codes");
-  revalidatePath("/properties", "layout");
-  return { ok: true, message: "保存しました。" };
-}
-
-/** Save the 3Dデータ販売 限定無料期間 settings. Dates are interpreted in JST (UTC+9). */
-export async function saveDataSaleFreePeriodAction(
-  _prev: FreePeriodState,
-  formData: FormData,
-): Promise<FreePeriodState> {
-  await requireAdmin();
-
-  const enabled = formData.get("enabled") === "on";
-  const startRaw = String(formData.get("startAt") ?? "").trim();
-  const endRaw = String(formData.get("endAt") ?? "").trim();
-  const note = String(formData.get("note") ?? "").slice(0, 200);
-  const afterEndRaw = String(formData.get("afterEnd") ?? "revert_to_price");
-  const afterEnd: AfterFreePeriodAction = (
-    AFTER_FREE_PERIOD_ACTIONS as readonly string[]
-  ).includes(afterEndRaw)
-    ? (afterEndRaw as AfterFreePeriodAction)
-    : "revert_to_price";
-
-  const startAt = startRaw ? new Date(`${startRaw}T00:00:00+09:00`).toISOString() : null;
-  const endAt = endRaw ? new Date(`${endRaw}T23:59:59+09:00`).toISOString() : null;
-
-  if (startAt && endAt && startAt > endAt) {
-    return { ok: false, error: "開始日が終了日より後になっています。" };
-  }
-
-  const cur = await getSettings();
-  await saveSettings({
-    ...cur,
-    dataSaleFreePeriod: { enabled, startAt, endAt, note, afterEnd },
-  });
-
   revalidatePath("/admin/gift-codes");
   revalidatePath("/properties", "layout");
   return { ok: true, message: "保存しました。" };

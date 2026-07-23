@@ -7,6 +7,7 @@ import {
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
+import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { fmtDateLongJST } from "@/lib/date-format";
 import ViewerGate from "@/components/viewer-gate";
 import DataSalePanel from "@/components/data-sale-panel";
@@ -99,8 +100,7 @@ export default function PropertyDetailView({
   previewToken,
   previewExpiresAt,
   freeAccess = false,
-  dataSaleFree = false,
-  dataSaleDisabled = false,
+  nowIso = new Date().toISOString(),
   canViewRestricted = false,
   canViewNdaOnly = false,
   purchasedItemIds = [],
@@ -130,10 +130,11 @@ export default function PropertyDetailView({
   /** 共有プレビューの有効期限(バナー表示用)。 */
   previewExpiresAt?: string;
   freeAccess?: boolean;
-  /** 3Dデータ販売の限定無料期間中: 販売中データの購入価格を¥0にする。 */
-  dataSaleFree?: boolean;
-  /** 無料期間終了後「販売停止」設定の場合: 3Dデータ購入パネル自体を出さない。 */
-  dataSaleDisabled?: boolean;
+  /**
+   * 3Dデータ販売の限定無料期間はアイテム単位(item.freePeriod)で判定するため、
+   * ここでは判定の基準時刻だけを受け取る（省略時はレンダリング時刻）。
+   */
+  nowIso?: string;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
   /** 購入済みシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
@@ -869,7 +870,12 @@ export default function PropertyDetailView({
                   : "space-y-10"
               }
             >
-              {visibleSplatItems.map(({ it: item, origIndex }, i) => (
+              {visibleSplatItems.map(({ it: item, origIndex }, i) => {
+                // 限定無料期間はアイテム単位(item.freePeriod)。sharePreview(先方
+                // 共有プレビュー)は購入導線自体を出さない仕様のためここで force。
+                const itemDataSaleFree = isDataSaleFree(item.freePeriod, nowIso);
+                const itemDataSaleDisabled = sharePreview || isDataSaleDisabled(item.freePeriod, nowIso);
+                return (
                 <section key={origIndex}>
                   <div className="flex items-baseline gap-3 mb-4 mono text-[11px] tracking-[0.16em] uppercase">
                     <span className="text-accent font-medium">
@@ -897,9 +903,10 @@ export default function PropertyDetailView({
                   {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
                       出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。
                       salePrice===0 は「無料配布」として許可する（api/purchase 側で
-                      Stripe を経由せず即時完了する）。dataSaleDisabled は限定無料期間
-                      終了後に「販売停止」を選んだ場合、パネル自体を出さない。 */}
-                  {item.forSale && !dataSaleDisabled && resolveDownloadFiles(item).length > 0 && (
+                      Stripe を経由せず即時完了する）。itemDataSaleDisabled は
+                      このアイテムの限定無料期間終了後に「販売停止」を選んだ場合、
+                      またはsharePreview時に、パネル自体を出さない。 */}
+                  {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length > 0 && (
                     <DataSalePanel
                       propertyId={property.id}
                       propertyTitle={property.title}
@@ -907,7 +914,7 @@ export default function PropertyDetailView({
                       itemLabel={item.label}
                       licenseOptions={resolveLicenseOptions(item).map((o) => ({
                         ...o,
-                        price: dataSaleFree ? 0 : o.price,
+                        price: itemDataSaleFree ? 0 : o.price,
                       }))}
                       description={item.saleDescription}
                       scannedAt={property.scannedAt}
@@ -923,7 +930,8 @@ export default function PropertyDetailView({
                     />
                   )}
                 </section>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

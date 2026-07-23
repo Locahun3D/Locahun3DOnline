@@ -43,6 +43,11 @@ export const dataSaleFreePeriodSchema = z.object({
 });
 export type DataSaleFreePeriod = z.infer<typeof dataSaleFreePeriodSchema>;
 
+// ⚠ dataSaleFreePeriod はサイト全体共通の設定として存在したが、物件・データ
+// ごとに時期が異なるケースに対応するため splatItem 単位(schemas.ts の
+// splatItems[].freePeriod)へ移行し、ここからは削除した（2026-07-23）。
+// dataSaleFreePeriodSchema 自体・関連の判定関数はアイテム単位の型として
+// 引き続き使うため残す。
 export const siteSettingsSchema = z.object({
   version: z.literal(1).default(1),
   freePeriod: freePeriodSchema.default({
@@ -51,26 +56,12 @@ export const siteSettingsSchema = z.object({
     endAt: null,
     note: "",
   }),
-  dataSaleFreePeriod: dataSaleFreePeriodSchema.default({
-    enabled: false,
-    startAt: null,
-    endAt: null,
-    note: "",
-    afterEnd: "revert_to_price",
-  }),
 });
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export const DEFAULT_SETTINGS: SiteSettings = {
   version: 1,
   freePeriod: { enabled: false, startAt: null, endAt: null, note: "" },
-  dataSaleFreePeriod: {
-    enabled: false,
-    startAt: null,
-    endAt: null,
-    note: "",
-    afterEnd: "revert_to_price",
-  },
 };
 
 /** Is the free period active at `nowIso`? */

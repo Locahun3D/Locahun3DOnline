@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dataSaleFreePeriodSchema } from "./settings-schema";
 
 export const PROPERTY_CATEGORIES = [
   "studio",
@@ -425,6 +426,20 @@ export const propertySchema = z.object({
     notes: z.string().max(500).default(""),
     forSale: z.boolean().default(false),
     salePrice: z.number().int().min(0).max(99999999).default(0),
+    /**
+     * このデータ単体の限定無料期間（¥0で購入可能にする）。旧実装は
+     * 全物件共通のサイト設定(dataSaleFreePeriod)だったが、同じ物件内でも
+     * データごとにキャンペーン時期が異なるケースに対応するためアイテム
+     * 単位に変更（2026-07-23）。判定ロジックは settings-schema.ts の
+     * dataSalePeriodStatus/isDataSaleFree/isDataSaleDisabled をそのまま再利用。
+     */
+    freePeriod: dataSaleFreePeriodSchema.default({
+      enabled: false,
+      startAt: null,
+      endAt: null,
+      note: "",
+      afterEnd: "revert_to_price",
+    }),
     saleDescription: z.string().max(1000).default(""),
     /** EN版の販売説明文（空なら日本語のまま）。 */
     saleDescriptionEn: z.string().max(2000).default(""),

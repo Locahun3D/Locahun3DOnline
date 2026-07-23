@@ -34,6 +34,34 @@ export async function approveAccountAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/accounts");
 }
 
+/**
+ * 制作会社（production）アカウントの申請を却下する。
+ * 却下＝ role を individual に戻して即 active 化する（宙ぶらりんの
+ * 「保留中」のまま放置しない）。NDA同意は申請時に自己申告で記録されて
+ * いるため、却下時にクリアする。申請者にはアプリ内通知で結果を伝える
+ * （通知失敗で却下処理自体は失敗させない）。
+ */
+export async function rejectAccountAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const u = await userRepo.get(id);
+  if (!u || u.status !== "pending") return;
+  await userRepo.upsert({
+    ...u,
+    role: "individual",
+    status: "active",
+    ndaAcceptedAt: null,
+  });
+  await createNotification({
+    userId: u.id,
+    type: "production_status",
+    title: "制作会社アカウントの申請結果について",
+    body: "制作会社（NDA）アカウントへの切り替え申請は、今回は見送りとなりました。個人アカウントとして引き続きご利用いただけます。ご不明点はお問い合わせください。",
+    link: "/account/upgrade",
+  }).catch(() => {});
+  revalidatePath("/admin/accounts");
+}
+
 /** Set an account's status (active / pending / suspended). */
 export async function setAccountStatusAction(formData: FormData): Promise<void> {
   const admin = await requireAdmin();

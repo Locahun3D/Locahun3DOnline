@@ -224,9 +224,10 @@ export default async function PurchasesPage({
               defaultValue={filterStatus}
               className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
             >
+              {/* 「処理中」はStripe決済リダイレクト待ちの一瞬の状態で、絞り込んでも
+                  操作できることが無いため選択肢から除外（該当行自体は「すべて」に混在表示）。 */}
               <option value="">状態すべて</option>
               <option value="completed">完了</option>
-              <option value="pending">処理中</option>
               <option value="refunded">返金済</option>
               <option value="cancelled">キャンセル</option>
             </select>

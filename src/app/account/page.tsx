@@ -123,12 +123,20 @@ export default async function AccountPage({
           )}
         </div>
       )}
-      {nda && (
-        <div className="mb-6 border border-green-400/40 bg-green-400/10 px-4 py-3 text-[13px]">
+      {nda === "blocked" ? (
+        <div className="mb-6 border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px]">
           {en
-            ? "Your NDA agreement has been recorded. You can now view confidential locations."
-            : "NDA への同意を記録しました。機密ロケ地の閲覧が可能になりました。"}
+            ? "NDA agreement requires a company email address. Personal addresses such as Gmail, Outlook or Yahoo Mail can't be used — please update your account's primary email and try again."
+            : "NDAの締結には会社のメールアドレスが必要です。Gmail・Outlook・Yahooメール等の個人向けメールアドレスでは締結できません。メインのメールアドレスを変更のうえ、再度お試しください。"}
         </div>
+      ) : (
+        nda && (
+          <div className="mb-6 border border-green-400/40 bg-green-400/10 px-4 py-3 text-[13px]">
+            {en
+              ? "Your NDA agreement has been recorded. You can now view confidential locations."
+              : "NDA への同意を記録しました。機密ロケ地の閲覧が可能になりました。"}
+          </div>
+        )
       )}
       {plan && (
         <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">

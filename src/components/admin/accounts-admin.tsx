@@ -14,6 +14,7 @@ import {
 } from "@/lib/account-schema";
 import {
   approveAccountAction,
+  rejectAccountAction,
   setAccountStatusAction,
   setAccountRoleAction,
   setTokenBalanceAction,
@@ -24,6 +25,7 @@ import {
   bulkGrantTokensAction,
   linkPropertiesToUserAction,
 } from "@/lib/admin-actions";
+import { isFreeEmailDomain } from "@/lib/free-email-domains";
 
 const PAGE_SIZE = 50;
 
@@ -308,6 +310,14 @@ export default function AccountsAdmin({
                       NDA: {u.ndaAcceptedAt ? "✓ 締結済" : "未締結"}
                     </span>
                   )}
+                  {u.role === "production" && isFreeEmailDomain(u.email) && (
+                    <span
+                      className="mono text-[9px] text-amber-400 border border-amber-400/40 px-1"
+                      title="会社メール必須ルールの追加前に登録された、または手動でproductionへ変更された個人メールアカウントです。"
+                    >
+                      ⚠ 個人メール
+                    </span>
+                  )}
                 </div>
                 <div className="mono text-[11px] text-muted mt-1 truncate">
                   {u.email}
@@ -328,12 +338,27 @@ export default function AccountsAdmin({
 
               <div className="flex flex-wrap items-center gap-2 md:justify-end">
                 {u.status === "pending" && (
-                  <form action={approveAccountAction}>
-                    <input type="hidden" name="id" value={u.id} />
-                    <button className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/50 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition">
-                      承認
-                    </button>
-                  </form>
+                  <>
+                    <form action={approveAccountAction}>
+                      <input type="hidden" name="id" value={u.id} />
+                      <button className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/50 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition">
+                        承認
+                      </button>
+                    </form>
+                    <form
+                      action={rejectAccountAction}
+                      onSubmit={(e) => {
+                        if (!confirm(`${u.name} さんの制作会社アカウント申請を却下しますか？個人アカウントに戻り、本人に通知されます。`)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      <input type="hidden" name="id" value={u.id} />
+                      <button className="mono text-[10px] tracking-[0.18em] uppercase border border-red-400/50 text-red-400 px-3 py-1.5 hover:bg-red-400 hover:text-bg transition">
+                        却下
+                      </button>
+                    </form>
+                  </>
                 )}
 
                 <form action={setAccountStatusAction} className="flex items-center gap-1">

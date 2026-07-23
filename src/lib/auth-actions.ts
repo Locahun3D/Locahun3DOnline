@@ -12,6 +12,7 @@ import {
 import { userRepo } from "./users";
 import { getCurrentUser } from "./dal";
 import { listActiveSessions } from "./device-limit";
+import { isFreeEmailDomain } from "./free-email-domains";
 
 /** Capture role / company / NDA after Clerk sign-up. */
 export async function onboardingAction(
@@ -41,6 +42,19 @@ export async function onboardingAction(
   await getCurrentUser();
   const u = await userRepo.get(userId);
   if (!u) redirect("/sign-in");
+
+  // NDA(制作会社)アカウントは会社実在の裏付けとして会社メールドメインを必須化。
+  // フォーム上のロール選択時点では気づけないため、送信時にここで弾く
+  // （/onboarding のUIにも同じ注記を静的に表示済み）。
+  if (requiresNda(d.role) && isFreeEmailDomain(u.email)) {
+    return {
+      errors: {
+        email: [
+          "制作会社（NDA）アカウントの登録には会社のメールアドレスが必要です。Gmail・Outlook・Yahooメール等の個人向けメールアドレスでは登録できません。",
+        ],
+      },
+    };
+  }
 
   const status = requiresApproval(d.role) ? "pending" : "active";
   await userRepo.upsert({
@@ -126,6 +140,12 @@ export async function acceptNdaAction(): Promise<void> {
 
   const u = await userRepo.get(current.id);
   if (!u) redirect("/account");
+  // 防御的チェック: 通常はここに来る時点で申請時の会社メール判定を通過済みだが、
+  // 管理者が手動で role="production" に変更した場合はこの検証を経ていないため
+  // 二重に確認する（フリーメールでのNDA締結を防ぐ）。
+  if (isFreeEmailDomain(u.email)) {
+    redirect("/account?nda=blocked");
+  }
   await userRepo.upsert({ ...u, ndaAcceptedAt: new Date().toISOString() });
   redirect("/account?nda=1");
 }
@@ -152,6 +172,18 @@ export async function requestProductionUpgradeAction(
   }
   if (current.status === "pending") {
     redirect("/account?upgrade=pending");
+  }
+  // NDA(制作会社)アカウントは会社実在の裏付けとして会社メールドメインを必須化。
+  // /account/upgrade 側でも同じ判定でフォーム自体を隠しているが、直接POSTされた
+  // 場合に備えてここでも弾く。
+  if (isFreeEmailDomain(current.email)) {
+    return {
+      errors: {
+        email: [
+          "制作会社（NDA）アカウントの登録には会社のメールアドレスが必要です。Gmail・Outlook・Yahooメール等の個人向けメールアドレスでは申請できません。",
+        ],
+      },
+    };
   }
 
   const company = String(formData.get("company") ?? "").trim();

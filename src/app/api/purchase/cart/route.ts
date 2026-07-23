@@ -8,7 +8,6 @@ import { notifyPurchase } from "@/lib/email";
 import { recordPayoutAccruals } from "@/lib/payouts";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
-import { getSettings } from "@/lib/site-settings";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
 import { randomUUID } from "node:crypto";
@@ -48,13 +47,12 @@ export async function POST(req: Request) {
   }
   const termsAgreedAt = new Date().toISOString();
 
-  // 3Dデータ販売の限定無料期間/販売停止設定。単品購入 /api/purchase と同じ
-  // ロジックをカートにも適用する（以前はカート側だけこの設定を一切見ておらず、
-  // 無料期間中でも満額請求される／販売停止後でも購入できてしまっていた）。
-  const settings = await getSettings();
+  // 3Dデータ販売の限定無料期間/販売停止設定はアイテム単位(item.freePeriod)。
+  // 単品購入 /api/purchase と同じロジックをカートにも適用する（以前はカート側
+  // だけこの設定を一切見ておらず、無料期間中でも満額請求される／販売停止後
+  // でも購入できてしまっていた）。カートは行ごとに物件が異なり得るため、
+  // 判定はループ内でその行の item.freePeriod を見て行う。
   const nowIso = new Date().toISOString();
-  const salesDisabled = isDataSaleDisabled(settings.dataSaleFreePeriod, nowIso);
-  const salesFree = isDataSaleFree(settings.dataSaleFreePeriod, nowIso);
 
   // 検証 + 重複/購入済み除外。
   const resolved: {
@@ -80,7 +78,7 @@ export async function POST(req: Request) {
     // salePrice<=0 では除外しない（単品購入と同様、¥0固定の無料配布アイテムを
     // 正当な購入対象として扱う。forSale が販売対象であることの唯一の判定条件）。
     if (!property || !item || !item.forSale) continue;
-    if (salesDisabled) continue;
+    if (isDataSaleDisabled(item.freePeriod, nowIso)) continue;
     // DLファイル未設定の項目は代金だけ取って何も渡せない事故になるため除外。
     if (resolveDownloadFiles(item).length === 0) continue;
     if (await purchaseRepo.hasPurchased(user.id, propertyId, item.id, idx)) continue;
@@ -102,7 +100,7 @@ export async function POST(req: Request) {
       editorialRightsCredit: matchedOption.license === "editorial" ? item.editorialRightsCredit : "",
       // クライアントは価格を送ってこない（サーバの item.salePrice をそのまま
       // 信用しない設計）。無料期間中は単品購入と同じく¥0に統一する。
-      price: salesFree ? 0 : matchedOption.price,
+      price: isDataSaleFree(item.freePeriod, nowIso) ? 0 : matchedOption.price,
     });
   }
 

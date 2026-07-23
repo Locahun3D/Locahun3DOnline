@@ -1,10 +1,9 @@
 import { requireAdmin } from "@/lib/dal";
 import { giftCodeRepo } from "@/lib/gift-codes";
 import { getSettings } from "@/lib/site-settings";
-import { isFreePeriodActive, dataSalePeriodStatus } from "@/lib/settings-schema";
+import { isFreePeriodActive } from "@/lib/settings-schema";
 import GiftCodeAdmin from "@/components/admin/gift-code-admin";
 import FreePeriodForm from "@/components/admin/free-period-form";
-import DataSaleFreePeriodForm from "@/components/admin/data-sale-free-period-form";
 
 export const metadata = { title: "ギフトコード・無料期間" };
 
@@ -13,7 +12,6 @@ export default async function AdminGiftCodesPage() {
   const [codes, settings] = await Promise.all([giftCodeRepo.list(), getSettings()]);
   const now = new Date().toISOString();
   const active = isFreePeriodActive(settings.freePeriod, now);
-  const dataSaleStatus = dataSalePeriodStatus(settings.dataSaleFreePeriod, now);
 
   return (
     <div className="p-8 max-w-5xl space-y-12">
@@ -42,21 +40,20 @@ export default async function AdminGiftCodesPage() {
         <FreePeriodForm freePeriod={settings.freePeriod} active={active} />
       </section>
 
+      {/* 3Dデータ販売の限定無料期間は物件ごとに時期が異なり得るため、ここの
+          全物件共通トグルは廃止し、各データ項目（物件エディター内）の設定に
+          移行した（2026-07-23）。迷って辿り着くadmin向けの道しるべ。 */}
       <section className="border-t border-line pt-10">
-        <header className="mb-6">
-          <h2 className="serif text-2xl font-bold">3Dデータ販売 限定無料期間</h2>
+        <header>
+          <h2 className="serif text-2xl font-bold">3Dデータ販売 限定無料期間について</h2>
           <p className="text-[13px] text-muted mt-2 leading-[1.8] max-w-[60ch]">
-            設定した期間中は、「販売中」に設定した3DデータのDL購入がすべて
-            <strong className="text-ink">¥0</strong>になります。上のウォークスルー閲覧の
-            無料期間とは別に管理され、終了日を過ぎた後の挙動（通常価格に戻す／無料のまま／
-            販売停止）も選べます。
+            物件ごと・データごとに設定が変わったため、ここでは設定しません。
+            対象物件の編集画面 → 「3DGS」ステップ →
+            各データの「このデータを販売する」欄にある
+            <strong className="text-ink">「このデータの限定無料期間を有効にする」</strong>
+            から設定してください。
           </p>
         </header>
-
-        <DataSaleFreePeriodForm
-          freePeriod={settings.dataSaleFreePeriod}
-          status={dataSaleStatus}
-        />
       </section>
     </div>
   );
