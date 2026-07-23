@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
 import { roleLabel } from "@/lib/account-schema";
+import { listNotifications } from "@/lib/notifications";
 import HeaderMark from "@/components/header-mark";
 import CartLink from "@/components/cart-link";
+import NotificationBell from "@/components/notification-bell";
 import LangToggle from "@/components/lang-toggle";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
@@ -17,6 +19,9 @@ const NAV: { href: string; key: DictKey; code: string }[] = [
 
 export default async function SiteHeader() {
   const user = await getCurrentUser();
+  // 通知はこれまで /account に来ないと存在に気づけなかった。ヘッダーのベルで
+  // 未読件数を常時見えるようにする（サインイン時のみ、サーバー側で集計）。
+  const unreadCount = user ? (await listNotifications(user.id)).filter((n) => !n.read).length : 0;
   const locale = await getLocale();
   const t = (k: DictKey) => translate(locale, k);
   const lh = (href: string) => localizedHref(href, locale);
@@ -81,6 +86,9 @@ export default async function SiteHeader() {
         >
           ⚙ {t("auth.admin")}
         </Link>
+      )}
+      {user && (
+        <NotificationBell unreadCount={unreadCount} href={lh("/account#notifications")} en={locale === "en"} />
       )}
       <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[768px]:w-7 min-[768px]:h-7" } }} />
     </Show>

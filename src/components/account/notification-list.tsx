@@ -31,7 +31,7 @@ export default function NotificationList({
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="bg-white border border-[#e2e7ec] p-5">
+    <div id="notifications" className="bg-white border border-[#e2e7ec] p-5 scroll-mt-20">
       <div className="flex items-center justify-between mb-3">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794]">
           {en ? "Notifications" : "お知らせ"}
