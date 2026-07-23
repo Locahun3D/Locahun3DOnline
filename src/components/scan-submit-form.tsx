@@ -18,7 +18,7 @@ const CONSENT_ITEMS_JA = [
   "掲載・販売は当社が施設の許諾を得られた場合のみ行われ、それまで内容は非公開で取り扱われます（審査・権利調整に必要な範囲での閲覧・複製を除く）",
   "許諾が得られなかった場合、お預かりした内容（サンプル画像を含む）は削除されます",
   "売上の分配率・支払条件は成立時に個別に合意します（個人への支払いは源泉徴収の対象となる場合があります）",
-  "本データのAI学習利用に関するライセンス管理は当社に委ねます",
+  "本データのAI学習利用に関するライセンス管理は当社と施設管理者に委ねます",
 ];
 
 const CONSENT_ITEMS_EN = [
@@ -27,7 +27,7 @@ const CONSENT_ITEMS_EN = [
   "Listing and sale will only happen once we have obtained the facility's permission — until then, everything is handled privately (except viewing/copying needed for review and rights clearance).",
   "If permission cannot be obtained, everything we hold (including sample images) will be deleted.",
   "Revenue share and payment terms will be agreed individually once a deal is reached (payments to individuals may be subject to withholding tax).",
-  "Management of AI-training licensing for this data is entrusted to us.",
+  "Management of AI-training licensing for this data is entrusted to us and the facility's manager.",
 ];
 
 /**

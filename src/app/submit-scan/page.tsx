@@ -7,6 +7,7 @@ import { scanStatusLabel } from "@/lib/scan-submissions";
 import { categoryLabel } from "@/lib/schemas";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import ScanSubmitForm from "@/components/scan-submit-form";
+import RevenueSimulator from "@/components/revenue-simulator";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -92,6 +93,8 @@ export default async function SubmitScanPage() {
             ))}
           </ul>
         </div>
+
+        <RevenueSimulator />
       </header>
 
       <div className="max-w-[620px] mx-auto">
