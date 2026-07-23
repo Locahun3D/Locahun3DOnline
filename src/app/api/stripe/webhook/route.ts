@@ -5,6 +5,7 @@ import { userRepo } from "@/lib/users";
 import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
+import { recordPayoutAccruals } from "@/lib/payouts";
 import { PLAN_TOKEN_BUDGET, TOKEN_PACK } from "@/lib/schemas";
 import { grantTokenPack } from "@/lib/token-pack-actions";
 import { oneYearFrom, oneMonthFrom, type AccountPlan } from "@/lib/account-schema";
@@ -115,6 +116,7 @@ export async function POST(req: Request) {
               const day = jstDayKey();
               await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
               await notifyPurchase(completed);
+              await recordPayoutAccruals(completed);
             }
           }
           break;
@@ -137,6 +139,7 @@ export async function POST(req: Request) {
               if (!completed) continue;
               await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
               await notifyPurchase(completed);
+              await recordPayoutAccruals(completed);
             }
           }
           break;

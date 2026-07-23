@@ -31,6 +31,8 @@ export default async function AdminLayout({
           { href: "/admin/marketing", label: "マーケティング" },
           { href: "/admin/reports", label: "通報管理" },
           { href: "/admin/purchases", label: "データ販売" },
+          { href: "/admin/submissions", label: "持ち込みスキャン" },
+          { href: "/admin/payouts", label: "精算" },
         ] as AdminNavItem[])
       : []),
   ];

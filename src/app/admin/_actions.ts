@@ -12,6 +12,7 @@ import { toR2Key } from "@/lib/asset-keys";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
 import { protectStudioManagedFields } from "@/lib/studio-guard";
 import { createNotification } from "@/lib/notifications";
+import { renamePayoutRecordsForProperty } from "@/lib/payouts";
 import {
   propertySchema,
   publishablePropertySchema,
@@ -374,11 +375,23 @@ export async function unpublishAction(id: string) {
   return { ok: true as const };
 }
 
+/**
+ * 掲載終了（アーカイブ）。**所有者(スタジオ)自身にも許可する。**
+ *
+ * 公開の取り下げ(unpublishAction)は所有者に開放済み（commit 600dfc8）。掲載終了も
+ * 掲載者が自走できるべきという同じ理由で、こちらも requireAdmin から
+ * assertPropertyAccess に変更する。
+ *
+ * 非対称にしてあるのは意図的:
+ *   アーカイブ = 所有者可（掲載終了は自分の情報を引っ込めるだけで被害が無い）
+ *   公開・削除 = admin のみ（公開は審査を通す必要がある。削除は誤操作被害が大きい）
+ */
 export async function archiveAction(id: string) {
-  await requireAdmin();
+  await assertPropertyAccess(id);
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
-  await repo.upsert({ ...existing, status: "archived" });
+  // 取り下げ(unpublishAction)と同じ理由でクリアする: 残すと再公開時に審査済みに見えてしまう。
+  await repo.upsert({ ...existing, status: "archived", publishRequestedAt: null });
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   return { ok: true as const };
@@ -515,6 +528,9 @@ export async function renamePropertyAction(
   for (const i of await inquiryRepo.list({ propertyId: oldId })) {
     await inquiryRepo.upsert({ ...i, propertyId: newId });
   }
+  // 分配設定(payout_splits)と台帳(payout_ledger)も物件IDに追従させる。
+  // 忘れると分配設定が旧IDに取り残され、以後の販売が起票されなくなる。
+  await renamePayoutRecordsForProperty(oldId, newId);
 
   revalidatePath("/admin/properties");
   revalidatePath("/properties");

@@ -61,6 +61,7 @@ next-env.d.ts
 
 # View analytics store (local)
 /data/analytics.json
+/data/analytics-events.json
 
 # Gift code store (local) — redemption records tied to users. Migrates to D1.
 /data/gift-codes.json
@@ -77,6 +78,13 @@ next-env.d.ts
 /data/property-previews.json
 /data/property-embeds.json
 /data/comments.json
+
+# Payout ledger / settlements (local dev fallback) — payees.json contains bank
+# account info, never commit. Migrates to D1 (migrations/0014_payouts.sql).
+/data/payees.json
+/data/payout-splits.json
+/data/payout-ledger.json
+/data/payout-settlements.json
 
 # Build / deploy logs
 build-*.log
@@ -96,3 +104,4 @@ cors.json
 public/viewer/*.bak
 /.ui-audit/
 .claude/settings.local.json
+data/scan-submissions.json

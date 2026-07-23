@@ -5,6 +5,7 @@ import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
 import { jstDayKey } from "@/lib/date-format";
+import { recordPayoutAccruals } from "@/lib/payouts";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,7 @@ export async function GET(req: Request) {
       if (!completed) continue;
       await track(completed.propertyId, "purchase", "", day, "desktop", completed.priceYen);
       await notifyPurchase(completed);
+      await recordPayoutAccruals(completed);
     }
 
     // カート購入なら購入履歴へ、単品なら物件ページへ。

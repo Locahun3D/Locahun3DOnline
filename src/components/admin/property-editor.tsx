@@ -43,6 +43,7 @@ import FileDropzone, {
 } from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
 import SlugEditor from "./slug-editor";
+import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 
@@ -440,6 +441,14 @@ export default function PropertyEditor({
           <div className="pt-3 border-t border-line">
             <SlugEditor id={initial.id} status={currentStatus} embedded isAdmin={isAdmin} />
           </div>
+
+          {/* 物件⇄アカウントの紐付け（社内運用・admin専用）。studio側には
+              見せる情報ではないので isAdmin のときだけ描画する。 */}
+          {isAdmin && (
+            <div className="pt-3 border-t border-line">
+              <PropertyOwnerPanel propertyId={initial.id} />
+            </div>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -2084,13 +2093,18 @@ export default function PropertyEditor({
                   >
                     アーカイブ
                   </button>
-                  <button
-                    type="button"
-                    onClick={onDelete}
-                    className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
-                  >
-                    完全削除
-                  </button>
+                  {/* 完全削除は deleteAction=requireAdmin。studio に見せると押した瞬間
+                      redirect("/") でページごと追い出される（3df0885 と同じ事故クラス）
+                      うえ、そもそも削除は誤操作の被害が大きく admin 専任の方針。 */}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={onDelete}
+                      className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
+                    >
+                      完全削除
+                    </button>
+                  )}
                 </div>
               </div>
             </StepCard>

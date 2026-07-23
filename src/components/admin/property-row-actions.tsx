@@ -81,10 +81,10 @@ export default function PropertyRowActions({
         >
           編集
         </Link>
-        {/* 「非公開」は unpublishAction＝assertPropertyAccess(所有スタジオも可)なので
-            isAdmin に関わらず表示してよい。「公開」「アーカイブ」「削除」は
-            requireAdmin のサーバーアクションで、studio が押すと redirect("/") で
-            ページごと追い出されるため isAdmin のときだけ表示する。 */}
+        {/* 「非公開」「アーカイブ」は assertPropertyAccess(所有スタジオも可)なので
+            isAdmin に関わらず表示してよい。「公開」「削除」は requireAdmin の
+            サーバーアクションで、studio が押すと redirect("/") でページごと
+            追い出されるため isAdmin のときだけ表示する。 */}
         {status === "published" ? (
           <button
             type="button"
@@ -106,7 +106,7 @@ export default function PropertyRowActions({
             </button>
           )
         )}
-        {isAdmin && status !== "archived" && (
+        {status !== "archived" && (
           <button
             type="button"
             onClick={archive}

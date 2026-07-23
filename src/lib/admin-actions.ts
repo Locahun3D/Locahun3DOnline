@@ -10,6 +10,7 @@ import { contactRequestRepo, type ContactStatus } from "./contact-requests";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
 import { notifyRefund, notifyInquiryReply } from "./email";
+import { voidPayoutAccrualsForPurchase } from "./payouts";
 import { createNotification } from "./notifications";
 import { jstDayKey } from "./date-format";
 import {
@@ -337,6 +338,9 @@ export async function refundPurchaseAction(
   const day = jstDayKey();
   await track(p.propertyId, "refund", "", day, "desktop", p.priceYen);
   await notifyRefund(refunded);
+  // 返金確定 → 分配台帳の未精算(accrued)行を voided に。settled 済み(精算対象に
+  // 既に入った行)は Phase 1 では触らない（マイナス調整は Phase 2）。
+  await voidPayoutAccrualsForPurchase(refunded.id);
   revalidatePath("/admin/purchases");
 }
 

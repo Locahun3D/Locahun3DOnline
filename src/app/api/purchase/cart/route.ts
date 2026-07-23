@@ -5,6 +5,7 @@ import { purchaseRepo } from "@/lib/purchases";
 import { track } from "@/lib/analytics";
 import { stripeEnabled, getStripe } from "@/lib/stripe";
 import { notifyPurchase } from "@/lib/email";
+import { recordPayoutAccruals } from "@/lib/payouts";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
 import { getSettings } from "@/lib/site-settings";
@@ -138,6 +139,7 @@ export async function POST(req: Request) {
       });
       await track(r.propertyId, "purchase", "", day, "desktop", r.price);
       await notifyPurchase(completed);
+      await recordPayoutAccruals(completed);
     }
     return NextResponse.json({ ok: true, count: resolved.length });
   }
