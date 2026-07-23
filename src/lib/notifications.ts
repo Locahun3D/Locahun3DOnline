@@ -19,9 +19,10 @@ export interface Notification {
   /**
    * inquiry_reply=問い合わせ返信 / publish_request=スタジオからの公開申請 /
    * scan_submission=持ち込みスキャンの新規申請（運営へ） /
-   * scan_status=持ち込みスキャンの状態変更（申請者へ）
+   * scan_status=持ち込みスキャンの状態変更（申請者へ） /
+   * contact_request=サイト全体お問い合わせの新着（運営へ）
    */
-  type: "inquiry_reply" | "publish_request" | "scan_submission" | "scan_status";
+  type: "inquiry_reply" | "publish_request" | "scan_submission" | "scan_status" | "contact_request";
   title: string;
   body: string;
   /** クリック時の遷移先（相対パス）。 */

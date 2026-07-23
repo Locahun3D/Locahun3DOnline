@@ -39,6 +39,10 @@ export const contactRequestSchema = z.object({
   attachments: z.array(z.string().max(300)).max(3).default([]), // bug: 添付画像URL
   forwardedTo: z.string().max(120).default(""),
   emailed: z.boolean().default(false),
+  // 運営からの返信（inquiries と同じ単一返信モデル。再返信は上書き）
+  reply: z.string().max(4000).default(""),
+  repliedAt: z.string().nullable().default(null),
+  replyEmailed: z.boolean().default(false),
   status: contactStatusSchema.default("new"),
   createdAt: z.string().default(() => new Date().toISOString()),
 });
@@ -53,11 +57,26 @@ interface StoreShape {
   requests: ContactRequest[];
 }
 
+/**
+ * 読み出し時に必ずスキーマを通して欠損フィールドを既定値で埋める。
+ * 保存後にスキーマへ列を足すと、旧レコードには新列が無く
+ * `c.attachments.length` 等で一覧ページごと500になる（実害あり）。
+ */
+function normalize(rows: unknown[]): ContactRequest[] {
+  const out: ContactRequest[] = [];
+  for (const r of rows) {
+    const p = contactRequestSchema.safeParse(r);
+    if (p.success) out.push(p.data);
+    else console.error("[contact-requests] 不正レコードをスキップ:", p.error.issues[0]);
+  }
+  return out;
+}
+
 async function fileReadAll(): Promise<ContactRequest[]> {
   try {
     const raw = await fs.readFile(DATA_FILE, "utf8");
     const s = JSON.parse(raw) as StoreShape;
-    return s.requests ?? [];
+    return normalize(s.requests ?? []);
   } catch {
     return [];
   }
@@ -84,7 +103,7 @@ export const contactRequestRepo = {
     } else {
       const db = await getD1();
       if (!db) return [];
-      out = await d1ListData<ContactRequest>(db, TABLE);
+      out = normalize(await d1ListData<ContactRequest>(db, TABLE));
     }
     if (opts?.type) out = out.filter((c) => c.type === opts.type);
     if (opts?.status) out = out.filter((c) => c.status === opts.status);
@@ -98,7 +117,8 @@ export const contactRequestRepo = {
     }
     const db = await getD1();
     if (!db) return null;
-    return d1GetData<ContactRequest>(db, TABLE, "id", id);
+    const row = await d1GetData<ContactRequest>(db, TABLE, "id", id);
+    return row ? (normalize([row])[0] ?? null) : null;
   },
 
   async upsert(c: ContactRequest): Promise<ContactRequest> {

@@ -10,6 +10,7 @@ import {
   type PropertyStatus,
 } from "@/lib/schemas";
 import PropertyRowActions from "@/components/admin/property-row-actions";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import { bulkSetStatusAction, bulkDeleteAction } from "@/app/admin/_actions";
 
 export type PropertyListItem = {
@@ -276,7 +277,8 @@ export default function PropertiesAdmin({
               </div>
               <div className="text-[12px] text-muted truncate">{p.city || "—"}</div>
               <div className="mono text-[11px] text-muted">
-                {p.updatedAt ? p.updatedAt.slice(0, 16).replace("T", " ") : "—"}
+                {/* 生ISOのsliceはUTC表示（実害あり）。JSTで整形 */}
+                {p.updatedAt ? fmtDateTimeLocaleJST(p.updatedAt) : "—"}
               </div>
               <PropertyRowActions id={p.id} status={p.status} isAdmin={isAdmin} />
             </div>

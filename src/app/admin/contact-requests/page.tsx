@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 import { setContactRequestStatusAction, deleteContactRequestAction } from "@/lib/admin-actions";
+import ContactReplyForm from "@/components/admin/contact-reply-form";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 export const metadata = { title: "お問い合わせ（サイト全体）" };
@@ -93,9 +94,12 @@ export default async function AdminContactRequestsPage({
                 <span className="mono text-[10px] tracking-[0.16em] uppercase text-accent border border-accent/40 px-2 py-0.5 rounded-sm">
                   {CONTACT_TYPE_LABEL[c.type]}
                 </span>
+                {/* ライトテーマ画面 — ダーク用の /30 バッジは文字が潰れて読めない */}
                 <span
-                  className={`text-[11px] px-2 py-0.5 rounded-sm ${
-                    c.emailed ? "bg-green-900/30 text-green-400" : "bg-yellow-900/30 text-yellow-400"
+                  className={`text-[11px] px-2 py-0.5 rounded-sm border ${
+                    c.emailed
+                      ? "bg-green-50 text-green-700 border-green-300"
+                      : "bg-amber-50 text-amber-700 border-amber-300"
                   }`}
                   title={c.forwardedTo || "転送先未設定"}
                 >
@@ -183,7 +187,34 @@ export default async function AdminContactRequestsPage({
                 </div>
               )}
 
+              {c.reply && (
+                <div className="mb-3">
+                  <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
+                    返信済み{c.repliedAt ? `（${fmtDate(c.repliedAt)}）` : ""}
+                    {!c.replyEmailed && (
+                      <span className="ml-2 text-amber-600 normal-case tracking-normal">
+                        ⚠ メール未送達（RESEND未設定時に保存のみ）
+                      </span>
+                    )}
+                  </div>
+                  {/* このadmin画面はライトテーマ（白カード）。ダーク用配色だと文字が見えない */}
+                  <div className="bg-green-50 border border-green-300 rounded-md p-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap">
+                    {c.reply}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-start gap-2">
+                {c.email ? (
+                  <ContactReplyForm requestId={c.id} toEmail={c.email} />
+                ) : (
+                  <span
+                    className="text-[12px] border border-line text-muted/70 px-3 py-1.5 rounded-sm cursor-not-allowed"
+                    title="メールアドレスが未記入のため返信できません"
+                  >
+                    返信不可（メール未記入）
+                  </span>
+                )}
                 {c.status !== "read" && (
                   <form action={setContactRequestStatusAction}>
                     <input type="hidden" name="id" value={c.id} />

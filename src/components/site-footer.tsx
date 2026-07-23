@@ -31,6 +31,9 @@ export default async function SiteFooter() {
           <Link href={lh("/terms/data-download")} className="hover:text-foreground transition">
             {en ? "Purchase Terms" : "データ購入規約"}
           </Link>
+          <Link href={lh("/submit-scan")} className="hover:text-foreground transition">
+            {en ? "Bring your own scan" : "持ち込みスキャン"}
+          </Link>
         </nav>
       </div>
 

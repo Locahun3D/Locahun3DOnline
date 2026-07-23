@@ -27,6 +27,15 @@ function fromAddress(): string {
   return process.env.EMAIL_FROM || "ロケハン3D <noreply@locahun3d.com>";
 }
 
+/**
+ * 運営からの「返信」メールの差出人。noreply@ だと相手がそのまま返信できず
+ * 会話が途切れるため、返信系は contact@（受信可能な窓口）から送る。
+ * ドメインは noreply@ と同じ locahun3d.com なので Resend の検証は共通。
+ */
+function replyFromAddress(): string {
+  return process.env.EMAIL_REPLY_FROM || "ロケハン3D <contact@locahun3d.com>";
+}
+
 function appUrl(path = ""): string {
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://locahun3d.com";
   return `${base}${path}`;
@@ -48,6 +57,8 @@ export async function sendEmail(opts: {
   to: string;
   subject: string;
   html: string;
+  /** 差出人の上書き（省略時は noreply@ の fromAddress()）。 */
+  from?: string;
   /** 返信先（問い合わせ転送で、送信者＝問い合わせ者に返信できるように）。 */
   replyTo?: string;
   /** 控え用の BCC（先方には見えない運営コピー）。 */
@@ -63,7 +74,7 @@ export async function sendEmail(opts: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: fromAddress(),
+        from: opts.from || fromAddress(),
         to: [opts.to],
         ...(opts.bcc ? { bcc: [opts.bcc] } : {}),
         ...(opts.replyTo ? { reply_to: [opts.replyTo] } : {}),
@@ -326,8 +337,33 @@ export async function notifyInquiryReply(opts: {
   `;
   return sendEmail({
     to: opts.to,
+    from: replyFromAddress(),
     subject: `Re: ${opts.propertyTitle} のお問い合わせ`,
     html: shell(`「${opts.propertyTitle}」についてのご返信`, body),
+  });
+}
+
+/** 運営から一般お問い合わせ(/contact)への返信メール（差出人 = contact@）。 */
+export async function notifyContactReply(opts: {
+  to: string;
+  typeLabel: string;
+  originalMessage: string;
+  reply: string;
+}): Promise<boolean> {
+  if (!emailEnabled() || !opts.to) return false;
+  const body = `
+    <p style="font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(opts.reply)}</p>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee;">
+      <div style="font-size:11px;color:#999;margin-bottom:6px;">元のお問い合わせ内容（${esc(opts.typeLabel)}）</div>
+      <div style="background:#f7f7f5;border:1px solid #eee;border-radius:6px;padding:14px 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:#666;">${esc(opts.originalMessage)}</div>
+    </div>
+    <p style="font-size:12px;color:#999;margin-top:16px;">このメールにそのまま返信いただけます。</p>
+  `;
+  return sendEmail({
+    to: opts.to,
+    from: replyFromAddress(),
+    subject: `Re:【ロケハン3D】お問い合わせへのご返信（${opts.typeLabel}）`,
+    html: shell("お問い合わせへのご返信", body),
   });
 }
 

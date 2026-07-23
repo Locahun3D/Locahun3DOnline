@@ -7,6 +7,8 @@ import { auth } from "@clerk/nextjs/server";
 import { contactRequestRepo, CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "./contact-requests";
 import { saveContactAttachment } from "./uploads";
 import { notifyGeneralContact } from "./email";
+import { userRepo } from "./users";
+import { createNotification } from "./notifications";
 import {
   HONEYPOT_FIELD,
   RENDERED_AT_FIELD,
@@ -201,6 +203,9 @@ export async function submitContactRequestAction(
       attachments,
       forwardedTo: emailed ? "operator" : "",
       emailed,
+      reply: "",
+      repliedAt: null,
+      replyEmailed: false,
       status: "new",
       createdAt: new Date().toISOString(),
     });
@@ -211,6 +216,23 @@ export async function submitContactRequestAction(
         error: "送信に失敗しました。お手数ですが時間をおいて再度お試しください。",
       };
     }
+  }
+
+  // 全adminへアプリ内通知（メール転送はRESEND未設定だと届かないため、
+  // 気づける経路をもう1本置く）。通知失敗で公開フォームは落とさない。
+  try {
+    const admins = (await userRepo.list()).filter((u) => u.role === "admin");
+    for (const a of admins) {
+      await createNotification({
+        userId: a.id,
+        type: "contact_request",
+        title: `【${typeLabel}】新しいお問い合わせが届きました`,
+        body: `${d.name || "匿名"} さん: ${d.message.slice(0, 120)}`,
+        link: "/admin/contact-requests",
+      });
+    }
+  } catch (e) {
+    console.error("[contact] admin通知の作成に失敗（送信処理は継続）:", e);
   }
 
   return { ok: true };

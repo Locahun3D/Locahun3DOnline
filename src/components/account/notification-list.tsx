@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { markNotificationsReadAction } from "@/lib/notification-actions";
 import type { Notification } from "@/lib/notifications";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
 /**
  * マイページ上部の通知一覧（問い合わせ返信など）。通知が0件なら何も描画しない
@@ -66,8 +67,9 @@ export default function NotificationList({
                   <div className="text-[12px] text-[#7b8794] mt-0.5 leading-[1.6] line-clamp-2">
                     {n.body}
                   </div>
+                  {/* 生ISOのsliceはUTC表示になる（実害: 13:03のはずが04:03）。JSTで整形する */}
                   <div className="mono text-[10px] text-[#7b8794] mt-1">
-                    {n.createdAt.slice(0, 16).replace("T", " ")}
+                    {fmtDateTimeLocaleJST(n.createdAt, en ? "en-US" : "ja-JP")}
                   </div>
                 </div>
               </div>

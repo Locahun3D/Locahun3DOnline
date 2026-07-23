@@ -6,10 +6,10 @@ import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
-import { contactRequestRepo, type ContactStatus } from "./contact-requests";
+import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactStatus } from "./contact-requests";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
-import { notifyRefund, notifyInquiryReply } from "./email";
+import { notifyRefund, notifyInquiryReply, notifyContactReply } from "./email";
 import { voidPayoutAccrualsForPurchase } from "./payouts";
 import { createNotification } from "./notifications";
 import { jstDayKey } from "./date-format";
@@ -298,6 +298,53 @@ export async function deleteContactRequestAction(formData: FormData): Promise<vo
   const id = String(formData.get("id") ?? "");
   await contactRequestRepo.remove(id);
   revalidatePath("/admin/contact-requests");
+}
+
+/**
+ * 一般お問い合わせ(/contact)にアプリ内から返信する。相手の連絡先はメールのみ
+ * （userId を記録していない匿名フォーム）なので、メール送信が唯一の到達経路。
+ * 差出人は contact@（notifyContactReply 側で replyFromAddress を使用）。
+ */
+export async function replyToContactRequestAction(
+  _prev: ReplyInquiryState,
+  formData: FormData,
+): Promise<ReplyInquiryState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const reply = String(formData.get("reply") ?? "").trim();
+  if (!reply) return { ok: false, error: "返信内容を入力してください。" };
+  if (reply.length > 4000) return { ok: false, error: "返信内容が長すぎます。" };
+
+  const c = await contactRequestRepo.get(id);
+  if (!c) return { ok: false, error: "対象のお問い合わせが見つかりませんでした。" };
+  if (!c.email) {
+    return { ok: false, error: "メールアドレス未記入のお問い合わせには返信できません。" };
+  }
+
+  const emailed = await notifyContactReply({
+    to: c.email,
+    typeLabel: CONTACT_TYPE_LABEL[c.type],
+    originalMessage: c.message,
+    reply,
+  });
+
+  await contactRequestRepo.upsert({
+    ...c,
+    reply,
+    repliedAt: new Date().toISOString(),
+    replyEmailed: emailed,
+    status: c.status === "new" ? "read" : c.status,
+  });
+
+  if (!emailed) {
+    return {
+      ok: false,
+      error: "返信を保存しましたが、メール送信に失敗しました（RESEND未設定の可能性）。相手には届いていません。",
+    };
+  }
+
+  revalidatePath("/admin/contact-requests");
+  return { ok: true };
 }
 
 /** 購入を返金処理する。 */
