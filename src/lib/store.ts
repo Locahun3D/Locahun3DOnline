@@ -16,7 +16,7 @@ import {
   d1ListData,
   d1Upsert,
   d1Delete,
-  d1IsEmpty,
+  d1SeedOnce,
   type D1,
 } from "./d1";
 import {
@@ -84,22 +84,21 @@ function propertyCols(p: Property): Record<string, string | number | null> {
   };
 }
 
-// D1 が空なら「旧本番(R2 _properties/*) → 無ければ git seed」を非破壊で初回投入。
+// 「旧本番(R2 _properties/*) → 無ければ git seed」を初回1回だけ非破壊投入。
+// d1SeedOnce により、全削除後にテーブルが空になっても再シード(復活)しない。
 let _propsSeeded = false;
 async function ensurePropsSeeded(db: D1): Promise<void> {
   if (_propsSeeded) return;
-  if (!(await d1IsEmpty(db, PROP_TABLE))) {
-    _propsSeeded = true;
-    return;
-  }
-  const r2 = await r2ColList<Property>(PROP_R2_PREFIX).catch(() => [] as Property[]);
-  const src = r2.length
-    ? r2
-    : (_propsFallback as unknown as StoreShape).properties ?? [];
-  for (const raw of src) {
-    const p = coerceProperty(raw);
-    if (p) await d1Upsert(db, PROP_TABLE, "id", propertyCols(p), p);
-  }
+  await d1SeedOnce(db, PROP_TABLE, async () => {
+    const r2 = await r2ColList<Property>(PROP_R2_PREFIX).catch(() => [] as Property[]);
+    const src = r2.length
+      ? r2
+      : (_propsFallback as unknown as StoreShape).properties ?? [];
+    for (const raw of src) {
+      const p = coerceProperty(raw);
+      if (p) await d1Upsert(db, PROP_TABLE, "id", propertyCols(p), p);
+    }
+  });
   _propsSeeded = true;
 }
 
@@ -275,15 +274,13 @@ function assetCols(a: Asset): Record<string, string | number | null> {
 let _assetsSeeded = false;
 async function ensureAssetsSeeded(db: D1): Promise<void> {
   if (_assetsSeeded) return;
-  if (!(await d1IsEmpty(db, ASSET_TABLE))) {
-    _assetsSeeded = true;
-    return;
-  }
-  const r2 = await r2ColList<Asset>(ASSET_R2_PREFIX).catch(() => [] as Asset[]);
-  for (const a of r2) {
-    const v = assetSchema.safeParse(a);
-    if (v.success) await d1Upsert(db, ASSET_TABLE, "id", assetCols(v.data), v.data);
-  }
+  await d1SeedOnce(db, ASSET_TABLE, async () => {
+    const r2 = await r2ColList<Asset>(ASSET_R2_PREFIX).catch(() => [] as Asset[]);
+    for (const a of r2) {
+      const v = assetSchema.safeParse(a);
+      if (v.success) await d1Upsert(db, ASSET_TABLE, "id", assetCols(v.data), v.data);
+    }
+  });
   _assetsSeeded = true;
 }
 

@@ -9,7 +9,7 @@ import {
   d1ListData,
   d1Upsert,
   d1Delete,
-  d1IsEmpty,
+  d1SeedOnce,
   type D1,
 } from "./d1";
 import { z } from "zod";
@@ -87,15 +87,13 @@ function inquiryCols(i: Inquiry): Record<string, string | number | null> {
 let _seeded = false;
 async function ensureSeeded(db: D1): Promise<void> {
   if (_seeded) return;
-  if (!(await d1IsEmpty(db, TABLE))) {
-    _seeded = true;
-    return;
-  }
-  const r2 = await r2ColList<Inquiry>(R2_PREFIX).catch(() => [] as Inquiry[]);
-  for (const i of r2) {
-    const v = inquirySchema.safeParse(i);
-    if (v.success) await d1Upsert(db, TABLE, "id", inquiryCols(v.data), v.data);
-  }
+  await d1SeedOnce(db, TABLE, async () => {
+    const r2 = await r2ColList<Inquiry>(R2_PREFIX).catch(() => [] as Inquiry[]);
+    for (const i of r2) {
+      const v = inquirySchema.safeParse(i);
+      if (v.success) await d1Upsert(db, TABLE, "id", inquiryCols(v.data), v.data);
+    }
+  });
   _seeded = true;
 }
 

@@ -118,3 +118,47 @@ export async function d1IsEmpty(db: D1, table: string): Promise<boolean> {
   const row = await db.prepare(`SELECT 1 FROM ${table} LIMIT 1`).first();
   return !row;
 }
+
+/**
+ * 旧R2ストアからの初回シードを「テーブルごとに永久に1回だけ」実行する。
+ *
+ * ⚠️ 以前は「テーブルが空なら再シード」という判定だったため、管理画面で
+ * 全レコードを削除するとテーブルが空になり、別 Worker インスタンスの次回
+ * 読み取り時に旧R2ストアから全件が復活する不具合があった
+ * (「削除しても後でよみがえる」)。
+ *
+ * ここでは `_seed_state` という番兵テーブルに「シード済み」の記録を残し、
+ * 一度シードした後はテーブルが空になっても二度と再シードしない。
+ *
+ * 移行安全性: 既存本番はすでにシード済み(データあり)だが番兵記録は無い。
+ * その場合 seedFn は実行せず番兵だけを書き込む → 既存データはそのまま、
+ * 以後の全削除でも復活しない。真に空 かつ 番兵無し のときだけ seedFn を走らせる。
+ */
+export async function d1SeedOnce(
+  db: D1,
+  table: string,
+  seedFn: () => Promise<void>,
+): Promise<void> {
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS _seed_state (table_name TEXT PRIMARY KEY, seeded_at TEXT)`,
+    )
+    .run();
+  const mark = await db
+    .prepare(`SELECT 1 FROM _seed_state WHERE table_name = ?`)
+    .bind(table)
+    .first();
+  if (mark) return; // 過去に一度シード済み → 二度と再シードしない
+  // 番兵が無い初回のみ: 本当に空のときだけ実データをシードする
+  if (await d1IsEmpty(db, table)) {
+    await seedFn();
+  }
+  // 既存データがあった場合も含め、以後シード済みとして記録する
+  await db
+    .prepare(
+      `INSERT INTO _seed_state (table_name, seeded_at) VALUES (?, ?) ` +
+        `ON CONFLICT(table_name) DO NOTHING`,
+    )
+    .bind(table, new Date().toISOString())
+    .run();
+}

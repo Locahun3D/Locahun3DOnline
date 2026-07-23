@@ -9,7 +9,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { r2DocGet } from "./r2-store";
-import { getD1, d1IsEmpty, type D1 } from "./d1";
+import { getD1, d1SeedOnce, type D1 } from "./d1";
 
 const FILE = path.join(process.cwd(), "data", "analytics.json");
 const R2_DOC_KEY = "_analytics.json"; // 旧本番ストア（D1 への初回シード元）
@@ -86,10 +86,11 @@ async function write(s: Store): Promise<void> {
 let _seeded = false;
 async function ensureSeeded(db: D1): Promise<void> {
   if (_seeded) return;
-  if (!(await d1IsEmpty(db, "analytics_prop"))) {
-    _seeded = true;
-    return;
-  }
+  await d1SeedOnce(db, "analytics_prop", () => seedFromR2(db));
+  _seeded = true;
+}
+
+async function seedFromR2(db: D1): Promise<void> {
   const fromR2 = await r2DocGet<Store>(R2_DOC_KEY).catch(() => null);
   const store = fromR2 ? withDevices(fromR2) : fallbackStore();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,7 +136,6 @@ async function ensureSeeded(db: D1): Promise<void> {
     }
   }
   if (stmts.length) await db.batch(stmts);
-  _seeded = true;
 }
 
 /** 正規化テーブルから PropStats マップを再構成する（getAllStats 用）。 */
