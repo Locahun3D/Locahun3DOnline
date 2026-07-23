@@ -367,6 +367,32 @@ export async function notifyContactReply(opts: {
   });
 }
 
+/**
+ * 持ち込みスキャンの状態変更を申請者へメール通知（アプリ内通知の補完 —
+ * ログインしないと気づけないため）。差出人は contact@（返信可能な窓口）。
+ */
+export async function notifyScanStatus(opts: {
+  to: string;
+  locationName: string;
+  title: string;
+  body: string;
+}): Promise<boolean> {
+  if (!emailEnabled() || !opts.to) return false;
+  const html = `
+    <p style="font-size:14px;line-height:1.8;">${esc(opts.body)}</p>
+    <p style="margin:20px 0;">
+      <a href="${appUrl("/submit-scan")}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 22px;font-size:13px;letter-spacing:.1em;">申請状況を確認する →</a>
+    </p>
+    <p style="font-size:12px;color:#999;">ご不明点はこのメールにそのまま返信いただけます。</p>
+  `;
+  return sendEmail({
+    to: opts.to,
+    from: replyFromAddress(),
+    subject: `【ロケハン3D】${opts.title}`,
+    html: shell(opts.title, html),
+  });
+}
+
 /** サブスク開始（プラン申込）メール＝領収書相当を登録メールへ送信。 */
 export async function notifySubscription(opts: {
   to: string;

@@ -73,12 +73,24 @@ type AccruedSummary = {
 
 type Tab = "payees" | "splits" | "settlements" | "reconcile";
 
+/**
+ * 持ち込みスキャン詳細の「受取者として登録」リンクからのプリフィル。
+ * 銀行口座は必須スキーマのため不完全な受取者は作らず、フォームへの
+ * 事前入力で引き継ぐ（口座は admin が登録時に入力する）。
+ */
+export interface PayeePrefill {
+  name: string;
+  contactEmail: string;
+  note: string;
+}
+
 interface PayoutsAdminProps {
   payees: Payee[];
   properties: { id: string; title: string }[];
   splits: PayoutSplit[];
   accruedSummaryByPayee: Record<string, AccruedSummary>;
   settlementsByPayee: Record<string, PayoutSettlement[]>;
+  prefill?: PayeePrefill | null;
 }
 
 export default function PayoutsAdmin({
@@ -87,6 +99,7 @@ export default function PayoutsAdmin({
   splits,
   accruedSummaryByPayee,
   settlementsByPayee,
+  prefill = null,
 }: PayoutsAdminProps) {
   const [tab, setTab] = useState<Tab>("payees");
 
@@ -116,7 +129,7 @@ export default function PayoutsAdmin({
         ))}
       </div>
 
-      {tab === "payees" && <PayeesTab payees={payees} />}
+      {tab === "payees" && <PayeesTab payees={payees} prefill={prefill} />}
       {tab === "splits" && (
         <SplitsTab properties={properties} payees={payees} splits={splits} />
       )}
@@ -136,9 +149,10 @@ export default function PayoutsAdmin({
 // 受取者タブ
 // ──────────────────────────────────────────────────────────────────
 
-function PayeesTab({ payees }: { payees: Payee[] }) {
+function PayeesTab({ payees, prefill }: { payees: Payee[]; prefill: PayeePrefill | null }) {
   const [editing, setEditing] = useState<Payee | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  // プリフィルがあれば最初からフォームを開く（持ち込み詳細からの導線）
+  const [showForm, setShowForm] = useState(!!prefill);
 
   return (
     <div className="space-y-6">
@@ -213,13 +227,21 @@ function PayeesTab({ payees }: { payees: Payee[] }) {
       )}
 
       {showForm && (
-        <PayeeForm payee={editing} onDone={() => setShowForm(false)} />
+        <PayeeForm payee={editing} prefill={editing ? null : prefill} onDone={() => setShowForm(false)} />
       )}
     </div>
   );
 }
 
-function PayeeForm({ payee, onDone }: { payee: Payee | null; onDone: () => void }) {
+function PayeeForm({
+  payee,
+  prefill,
+  onDone,
+}: {
+  payee: Payee | null;
+  prefill?: PayeePrefill | null;
+  onDone: () => void;
+}) {
   const [state, formAction, pending] = useActionState<SavePayeeState, FormData>(
     savePayeeAction,
     undefined,
@@ -263,12 +285,12 @@ function PayeeForm({ payee, onDone }: { payee: Payee | null; onDone: () => void 
 
         <label className="flex flex-col gap-1">
           <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">氏名/名称</span>
-          <input name="name" defaultValue={payee?.name ?? ""} required className={inputCls} />
+          <input name="name" defaultValue={payee?.name ?? prefill?.name ?? ""} required className={inputCls} />
         </label>
 
         <label className="flex flex-col gap-1">
           <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">連絡先メール（任意）</span>
-          <input name="contactEmail" type="email" defaultValue={payee?.contactEmail ?? ""} className={inputCls} />
+          <input name="contactEmail" type="email" defaultValue={payee?.contactEmail ?? prefill?.contactEmail ?? ""} className={inputCls} />
         </label>
 
         <label className="flex flex-col gap-1">
@@ -285,7 +307,7 @@ function PayeeForm({ payee, onDone }: { payee: Payee | null; onDone: () => void 
 
         <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
           <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">メモ（任意）</span>
-          <input name="note" defaultValue={payee?.note ?? ""} maxLength={500} className={inputCls} />
+          <input name="note" defaultValue={payee?.note ?? prefill?.note ?? ""} maxLength={500} className={inputCls} />
         </label>
 
         <div className="sm:col-span-2 lg:col-span-3 border-t border-line/50 pt-4 mt-1">

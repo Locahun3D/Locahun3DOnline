@@ -12,8 +12,23 @@ import PayoutsAdmin from "@/components/admin/payouts-admin";
 
 export const metadata = { title: "精算" };
 
-export default async function AdminPayoutsPage() {
+export default async function AdminPayoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payeeName?: string; payeeEmail?: string; payeeNote?: string }>;
+}) {
   await requireAdmin();
+  const sp = await searchParams;
+  // 持ち込みスキャン詳細の「受取者として登録」からのプリフィル（銀行口座は
+  // 必須スキーマのため不完全レコードを作らず、フォーム事前入力で引き継ぐ）
+  const prefill =
+    sp.payeeName || sp.payeeEmail
+      ? {
+          name: sp.payeeName ?? "",
+          contactEmail: sp.payeeEmail ?? "",
+          note: sp.payeeNote ?? "",
+        }
+      : null;
 
   const [payees, properties, splits, accrued, settlements] = await Promise.all([
     payeeRepo.list(),
@@ -72,6 +87,7 @@ export default async function AdminPayoutsPage() {
         splits={splits}
         accruedSummaryByPayee={accruedSummaryByPayee}
         settlementsByPayee={settlementsByPayee}
+        prefill={prefill}
       />
     </div>
   );

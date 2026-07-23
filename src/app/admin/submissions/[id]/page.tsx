@@ -5,6 +5,7 @@ import { scanSubmissionRepo } from "@/lib/scan-submissions-repo";
 import { scanStatusLabel } from "@/lib/scan-submissions";
 import { categoryLabel } from "@/lib/schemas";
 import { userRepo } from "@/lib/users";
+import { payeeRepo } from "@/lib/payouts";
 import { getUploadMode } from "@/lib/uploads";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import { SubmissionStatusForm, CreateDraftButton } from "@/components/admin/submission-actions";
@@ -24,6 +25,11 @@ export default async function AdminScanSubmissionDetailPage({
 
   const applicant = await userRepo.get(submission.userId);
   const uploadMode = await getUploadMode();
+
+  // 申請者が受取者(payee)として登録済みか（連絡先メールの完全一致で判定）
+  const existingPayee = applicant?.email
+    ? (await payeeRepo.list()).find((p) => p.contactEmail === applicant.email) ?? null
+    : null;
 
   return (
     <div className="theme-online p-8 max-w-[900px]">
@@ -126,6 +132,40 @@ export default async function AdminScanSubmissionDetailPage({
               場所名・所在地・カテゴリ・説明を引き写した物件下書きを作成します。
             </p>
             <CreateDraftButton id={submission.id} />
+          </div>
+        )}
+
+        {submission.status === "cleared" && (
+          <div className="border border-line rounded-md p-4">
+            <div className="mono text-[10px] tracking-[0.18em] uppercase text-muted mb-3">
+              分配（受取者）
+            </div>
+            {existingPayee ? (
+              <p className="text-[12.5px] text-muted leading-relaxed">
+                申請者は受取者として登録済みです（{existingPayee.name}）。{" "}
+                <Link href="/admin/payouts" className="text-accent hover:underline">
+                  分配・精算画面へ →
+                </Link>
+              </p>
+            ) : applicant?.email ? (
+              <>
+                <p className="text-[12.5px] text-muted mb-3 leading-relaxed">
+                  申請者の氏名・メールを引き写して受取者登録フォームを開きます
+                  （振込口座は登録時に入力）。
+                </p>
+                <Link
+                  href={`/admin/payouts?payeeName=${encodeURIComponent(applicant.displayName || applicant.name || applicant.email)}&payeeEmail=${encodeURIComponent(applicant.email)}&payeeNote=${encodeURIComponent(`持ち込み申請 ${submission.id}（${submission.locationName}）`)}`}
+                  className="inline-block text-[12px] border border-accent text-accent px-4 py-2 rounded-sm hover:bg-accent hover:text-bg transition"
+                >
+                  受取者として登録 →
+                </Link>
+              </>
+            ) : (
+              <p className="text-[12.5px] text-muted leading-relaxed">
+                申請者のメールアドレスが取得できないため、受取者登録は
+                /admin/payouts から手動で行ってください。
+              </p>
+            )}
           </div>
         )}
       </div>

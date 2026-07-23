@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./dal";
 import { userRepo } from "./users";
 import { createNotification } from "./notifications";
+import { notifyScanStatus } from "./email";
 import { getUploadMode, saveScanSubmissionImage, deleteR2Object } from "./uploads";
 import { toR2Key } from "./asset-keys";
 import { PROPERTY_CATEGORIES, propertySchema } from "./schemas";
@@ -229,6 +230,21 @@ export async function updateScanSubmissionAction(
       body,
       link: "/submit-scan",
     });
+    // アプリ内通知だけだとログインするまで気づけないため、メールも送る
+    // （RESEND未設定/送信失敗でも状態遷移は成立させる — ベストエフォート）。
+    try {
+      const applicant = await userRepo.get(existing.userId);
+      if (applicant?.email) {
+        await notifyScanStatus({
+          to: applicant.email,
+          locationName: existing.locationName,
+          title,
+          body,
+        });
+      }
+    } catch (e) {
+      console.error("[scan-submission] 状態変更メールの送信に失敗（処理は継続）:", e);
+    }
     if (status === "rejected") {
       await deleteSampleImagesBestEffort(existing);
     }
