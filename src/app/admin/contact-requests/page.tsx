@@ -1,25 +1,38 @@
 import Link from "next/link";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 import { contactMessageRepo, groupMessagesByCounterpart } from "@/lib/contact-messages";
-import { setContactRequestStatusAction, deleteContactRequestAction } from "@/lib/admin-actions";
-import ContactReplyForm from "@/components/admin/contact-reply-form";
-import { fmtDateTimeLocaleJST } from "@/lib/date-format";
+import ContactRequestRow from "@/components/admin/contact-request-row";
 
 export const metadata = { title: "お問い合わせ（サイト全体）" };
 
-function fmtDate(iso: string) {
-  return fmtDateTimeLocaleJST(iso);
+/** box/type を保ちつつ href を組み立てる（アーカイブ絞り込み中でも種別を切替できるように）。 */
+function hrefFor(box: string | undefined, type?: string) {
+  const params = new URLSearchParams();
+  if (box === "archive") params.set("box", "archive");
+  if (type) params.set("type", type);
+  const qs = params.toString();
+  return `/admin/contact-requests${qs ? `?${qs}` : ""}`;
 }
 
 export default async function AdminContactRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; box?: string }>;
 }) {
-  const { type: typeFilter } = await searchParams;
+  const { type: typeFilter, box } = await searchParams;
+  const showArchived = box === "archive";
+
   const all = await contactRequestRepo.list();
   const newCount = all.filter((c) => c.status === "new").length;
-  const requests = typeFilter ? all.filter((c) => c.type === typeFilter) : all;
+  const archivedCount = all.filter((c) => c.status === "archived").length;
+  const inboxCount = all.length - archivedCount;
+
+  // 1段目: 受信箱(非アーカイブ) / アーカイブ。2段目: そのスコープ内での種別絞り込み
+  // （アーカイブが増えて一覧が延々スクロールする問題と、アーカイブ済みの
+  // 見返しにくさの両方に対応 — Gmailの受信トレイ/アーカイブと同じ構造）。
+  const scoped = all.filter((c) => (showArchived ? c.status === "archived" : c.status !== "archived"));
+  const requests = typeFilter ? scoped.filter((c) => c.type === typeFilter) : scoped;
+
   // メールスレッド（Email Routing受信＋管理画面返信）を相手メールで突き合わせ
   const threads = groupMessagesByCounterpart(await contactMessageRepo.list());
 
@@ -40,249 +53,64 @@ export default async function AdminContactRequestsPage({
         <p className="text-[13px] text-muted mt-2 leading-relaxed">
           サイト全体の /contact フォーム（バグ報告・ほしい物件追加・掲載依頼・ご相談）から届いた内容。運営メールへ自動転送されます。
           <br />
-          メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。
+          メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。クリックで各行の詳細・返信フォームが開きます。
         </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-3 mono text-[10px] tracking-[0.18em] uppercase">
+        <Link
+          href={hrefFor(undefined, typeFilter)}
+          className={`px-3 py-1.5 border rounded-sm transition ${
+            !showArchived ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
+          }`}
+        >
+          受信箱（{inboxCount}）
+        </Link>
+        <Link
+          href={hrefFor("archive", typeFilter)}
+          className={`px-3 py-1.5 border rounded-sm transition ${
+            showArchived ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
+          }`}
+        >
+          アーカイブ（{archivedCount}）
+        </Link>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.18em] uppercase">
         <span className="text-muted mr-1">種別</span>
         <Link
-          href="/admin/contact-requests"
+          href={hrefFor(box)}
           className={`px-3 py-1.5 border rounded-sm transition ${
             !typeFilter ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
           }`}
         >
-          全て（{all.length}）
+          全て（{scoped.length}）
         </Link>
         {(Object.keys(CONTACT_TYPE_LABEL) as ContactType[]).map((t) => (
           <Link
             key={t}
-            href={`/admin/contact-requests?type=${t}`}
+            href={hrefFor(box, t)}
             className={`px-3 py-1.5 border rounded-sm transition ${
               typeFilter === t ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
             }`}
           >
-            {CONTACT_TYPE_LABEL[t]}（{all.filter((c) => c.type === t).length}）
+            {CONTACT_TYPE_LABEL[t]}（{scoped.filter((c) => c.type === t).length}）
           </Link>
         ))}
       </div>
 
       {requests.length === 0 ? (
         <div className="border border-line rounded-md p-10 text-center text-muted text-[14px]">
-          まだお問い合わせはありません。
+          {showArchived ? "アーカイブされたお問い合わせはありません。" : "まだお問い合わせはありません。"}
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {requests.map((c) => (
-            <div
+            <ContactRequestRow
               key={c.id}
-              className={`border rounded-md p-5 ${
-                c.status === "new" ? "border-accent/60 bg-[#1a1a1a]" : "border-line"
-              }`}
-            >
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <span className="mono text-[10px] tracking-[0.16em] uppercase opacity-50">
-                  {fmtDate(c.createdAt)}
-                </span>
-                {c.status === "new" && (
-                  <span className="bg-accent text-white text-[10px] mono tracking-[0.16em] uppercase px-2 py-0.5 rounded-sm">
-                    NEW
-                  </span>
-                )}
-                {c.status === "archived" && (
-                  <span className="bg-neutral-700 text-neutral-300 text-[10px] mono tracking-[0.16em] uppercase px-2 py-0.5 rounded-sm">
-                    アーカイブ
-                  </span>
-                )}
-                <span className="mono text-[10px] tracking-[0.16em] uppercase text-accent border border-accent/40 px-2 py-0.5 rounded-sm">
-                  {CONTACT_TYPE_LABEL[c.type]}
-                </span>
-                {/* ライトテーマ画面 — ダーク用の /30 バッジは文字が潰れて読めない */}
-                <span
-                  className={`text-[11px] px-2 py-0.5 rounded-sm border ${
-                    c.emailed
-                      ? "bg-green-50 text-green-700 border-green-300"
-                      : "bg-amber-50 text-amber-700 border-amber-300"
-                  }`}
-                  title={c.forwardedTo || "転送先未設定"}
-                >
-                  {c.emailed ? `転送済 → ${c.forwardedTo}` : "メール未転送（要RESEND設定）"}
-                </span>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-x-8 gap-y-1.5 text-[14px] mb-3">
-                <div>
-                  <span className="text-muted mr-2">{c.type === "listing" ? "ご担当者名" : "お名前"}</span>
-                  {c.name || <span className="text-muted italic">（匿名）</span>}
-                  {c.company && <span className="text-muted">（{c.company}）</span>}
-                </div>
-                <div>
-                  <span className="text-muted mr-2">メール</span>
-                  {c.email ? (
-                    <a href={`mailto:${c.email}`} className="text-accent hover:underline">
-                      {c.email}
-                    </a>
-                  ) : (
-                    <span className="text-muted italic">（未記入）</span>
-                  )}
-                </div>
-                {c.phone && (
-                  <div>
-                    <span className="text-muted mr-2">電話</span>
-                    {c.phone}
-                  </div>
-                )}
-                {c.url && (
-                  <div>
-                    <span className="text-muted mr-2">対象URL</span>
-                    <a href={c.url} target="_blank" className="text-accent hover:underline break-all">
-                      {c.url}
-                    </a>
-                  </div>
-                )}
-                {c.environment && (
-                  <div>
-                    <span className="text-muted mr-2">ご利用環境</span>
-                    {c.environment}
-                  </div>
-                )}
-                {c.area && (
-                  <div>
-                    <span className="text-muted mr-2">希望エリア</span>
-                    {c.area}
-                  </div>
-                )}
-                {c.propertyName && (
-                  <div>
-                    <span className="text-muted mr-2">物件名</span>
-                    {c.propertyName}
-                  </div>
-                )}
-                {c.address && (
-                  <div>
-                    <span className="text-muted mr-2">所在地</span>
-                    {c.address}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-[#0f0f0f] border border-line rounded-md p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap mb-3">
-                {c.message || <span className="text-muted italic">（本文なし）</span>}
-              </div>
-
-              {c.attachments.length > 0 && (
-                <div className="mb-3">
-                  <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
-                    添付画像（{c.attachments.length}枚）
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {c.attachments.map((u) => (
-                      <a key={u} href={u} target="_blank" className="block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={u}
-                          alt="添付画像"
-                          className="h-28 w-auto border border-line rounded-sm hover:border-accent transition"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(() => {
-                const thread = c.email ? (threads.get(c.email.toLowerCase()) ?? []) : [];
-                if (thread.length > 0) {
-                  return (
-                    <div className="mb-3">
-                      <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
-                        メールスレッド（{thread.length}件）
-                        {!c.replyEmailed && c.reply && (
-                          <span className="ml-2 text-amber-600 normal-case tracking-normal">
-                            ⚠ 直近のUI返信はメール未送達（RESEND未設定時に保存のみ）
-                          </span>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        {thread.map((m) => (
-                          <div
-                            key={m.id}
-                            className={`rounded-md p-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap border ${
-                              m.direction === "outbound"
-                                ? "bg-green-50 border-green-300 ml-6"
-                                : "bg-white border-line mr-6"
-                            }`}
-                          >
-                            <div className="mono text-[10px] opacity-50 mb-1.5">
-                              {m.direction === "outbound" ? "運営 → 相手" : "相手 → 運営"} ・{" "}
-                              {fmtDate(m.createdAt)}
-                              {m.source === "admin-ui" && "（管理画面）"}
-                              {m.subject ? ` ・ ${m.subject}` : ""}
-                            </div>
-                            {m.bodyText || <span className="text-muted italic">（本文なし）</span>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
-                // スレッド未形成の旧データは従来の単一返信表示にフォールバック
-                if (!c.reply) return null;
-                return (
-                  <div className="mb-3">
-                    <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
-                      返信済み{c.repliedAt ? `（${fmtDate(c.repliedAt)}）` : ""}
-                      {!c.replyEmailed && (
-                        <span className="ml-2 text-amber-600 normal-case tracking-normal">
-                          ⚠ メール未送達（RESEND未設定時に保存のみ）
-                        </span>
-                      )}
-                    </div>
-                    {/* このadmin画面はライトテーマ（白カード）。ダーク用配色だと文字が見えない */}
-                    <div className="bg-green-50 border border-green-300 rounded-md p-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap">
-                      {c.reply}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div className="flex flex-wrap items-start gap-2">
-                {c.email ? (
-                  <ContactReplyForm requestId={c.id} toEmail={c.email} />
-                ) : (
-                  <span
-                    className="text-[12px] border border-line text-muted/70 px-3 py-1.5 rounded-sm cursor-not-allowed"
-                    title="メールアドレスが未記入のため返信できません"
-                  >
-                    返信不可（メール未記入）
-                  </span>
-                )}
-                {c.status !== "read" && (
-                  <form action={setContactRequestStatusAction}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <input type="hidden" name="status" value="read" />
-                    <button className="text-[12px] border border-line text-ink px-3 py-1.5 rounded-sm hover:border-accent hover:text-accent transition">
-                      既読にする
-                    </button>
-                  </form>
-                )}
-                {c.status !== "archived" && (
-                  <form action={setContactRequestStatusAction}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <input type="hidden" name="status" value="archived" />
-                    <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
-                      アーカイブ
-                    </button>
-                  </form>
-                )}
-                <form action={deleteContactRequestAction}>
-                  <input type="hidden" name="id" value={c.id} />
-                  <button className="text-[12px] border border-red-900/50 text-red-400 px-3 py-1.5 rounded-sm hover:bg-red-900/20 transition">
-                    削除
-                  </button>
-                </form>
-              </div>
-            </div>
+              request={c}
+              thread={c.email ? (threads.get(c.email.toLowerCase()) ?? []) : []}
+            />
           ))}
         </div>
       )}
