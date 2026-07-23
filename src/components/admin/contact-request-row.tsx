@@ -16,6 +16,7 @@ const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   request: "ほしい物件追加",
   listing: "掲載依頼",
   general: "ご相談",
+  license: "データ利用・提携のご相談",
 };
 
 function fmtDate(iso: string) {

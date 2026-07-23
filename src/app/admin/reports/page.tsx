@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/dal";
 import { commentRepo, type Comment } from "@/lib/comments";
-import { reviewRepo, type Review } from "@/lib/reviews";
 import { repo } from "@/lib/store";
 import { unhideCommentAction, deleteCommentAction } from "@/lib/comment-actions";
-import { unhideReviewAction, deleteReviewAction } from "@/lib/review-actions";
 import { withLiveDisplayNames } from "@/lib/live-names";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
@@ -22,27 +20,17 @@ async function deleteCommentFormAction(id: string, revalidate: string) {
   "use server";
   await deleteCommentAction(id, revalidate);
 }
-async function unhideReviewFormAction(id: string, revalidate: string) {
-  "use server";
-  await unhideReviewAction(id, revalidate);
-}
-async function deleteReviewFormAction(id: string, revalidate: string) {
-  "use server";
-  await deleteReviewAction(id, revalidate);
-}
 
 function fmtDate(iso: string) {
   return fmtDateTimeLocaleJST(iso);
 }
 
 type ReportedItem = {
-  kind: "comment" | "review";
   id: string;
   propertyId: string;
   userId: string;
   userName: string;
   body: string;
-  rating?: number;
   createdAt: string;
   reportCount: number;
   hiddenByReports: boolean;
@@ -51,19 +39,17 @@ type ReportedItem = {
 export default async function AdminReportsPage() {
   await requireAdmin();
 
-  const [comments, reviews, properties] = await Promise.all([
+  const [comments, properties] = await Promise.all([
     commentRepo.listAll(),
-    reviewRepo.listAll(),
     repo.list(),
   ]);
 
   const titleOf = new Map(properties.map((p) => [p.id, p.title || p.id]));
 
-  const items: ReportedItem[] = await withLiveDisplayNames([
-    ...comments
+  const items: ReportedItem[] = await withLiveDisplayNames(
+    comments
       .filter((c: Comment) => c.reports.length > 0)
       .map((c: Comment): ReportedItem => ({
-        kind: "comment",
         id: c.id,
         propertyId: c.propertyId,
         userId: c.userId,
@@ -73,21 +59,7 @@ export default async function AdminReportsPage() {
         reportCount: c.reports.length,
         hiddenByReports: c.hiddenByReports,
       })),
-    ...reviews
-      .filter((r: Review) => r.reports.length > 0)
-      .map((r: Review): ReportedItem => ({
-        kind: "review",
-        id: r.id,
-        propertyId: r.propertyId,
-        userId: r.userId,
-        userName: r.userName,
-        body: r.body,
-        rating: r.rating,
-        createdAt: r.createdAt,
-        reportCount: r.reports.length,
-        hiddenByReports: r.hiddenByReports,
-      })),
-  ]);
+  );
   items.sort((a, b) => {
     // 非表示中のものを先頭に、その中では通報数が多い順
     if (a.hiddenByReports !== b.hiddenByReports) return a.hiddenByReports ? -1 : 1;
@@ -111,7 +83,7 @@ export default async function AdminReportsPage() {
           )}
         </h1>
         <p className="text-[13px] text-muted mt-2 leading-relaxed">
-          掲示板・レビューへの通報を全物件横断で一覧します。1件でも通報があれば表示され、3件で自動的に非表示になります。
+          掲示板への通報を全物件横断で一覧します。1件でも通報があれば表示され、3件で自動的に非表示になります。
         </p>
       </div>
 
@@ -123,18 +95,15 @@ export default async function AdminReportsPage() {
         <div className="flex flex-col gap-4">
           {items.map((i) => (
             <div
-              key={`${i.kind}-${i.id}`}
+              key={i.id}
               className={`border rounded-md p-5 ${
                 i.hiddenByReports ? "border-red-900/50 bg-[#1a1414]" : "border-line"
               }`}
             >
               <div className="flex flex-wrap items-center gap-3 mb-3">
                 <span className="mono text-[10px] tracking-[0.16em] uppercase px-2 py-0.5 rounded-sm bg-[#262626] text-muted">
-                  {i.kind === "comment" ? "掲示板" : "レビュー"}
+                  掲示板
                 </span>
-                {i.kind === "review" && i.rating != null && (
-                  <span className="mono text-[11px] text-accent">{"★".repeat(i.rating)}{"☆".repeat(5 - i.rating)}</span>
-                )}
                 <span
                   className={`text-[11px] px-2 py-0.5 rounded-sm ${
                     i.hiddenByReports ? "bg-red-900/30 text-red-300" : "bg-yellow-900/30 text-yellow-400"
@@ -159,30 +128,18 @@ export default async function AdminReportsPage() {
               </div>
 
               <div className="bg-[#0f0f0f] border border-line rounded-md p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap mb-3">
-                {i.body || "（本文なし・星のみ）"}
+                {i.body || "（本文なし）"}
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {i.hiddenByReports && (
-                  <form
-                    action={
-                      i.kind === "comment"
-                        ? unhideCommentFormAction.bind(null, i.id, "/admin/reports")
-                        : unhideReviewFormAction.bind(null, i.id, "/admin/reports")
-                    }
-                  >
+                  <form action={unhideCommentFormAction.bind(null, i.id, "/admin/reports")}>
                     <button className="text-[12px] border border-accent text-accent px-3 py-1.5 rounded-sm hover:bg-accent hover:text-bg transition">
                       表示に戻す
                     </button>
                   </form>
                 )}
-                <form
-                  action={
-                    i.kind === "comment"
-                      ? deleteCommentFormAction.bind(null, i.id, "/admin/reports")
-                      : deleteReviewFormAction.bind(null, i.id, "/admin/reports")
-                  }
-                >
+                <form action={deleteCommentFormAction.bind(null, i.id, "/admin/reports")}>
                   <button className="text-[12px] border border-red-900/50 text-red-400 px-3 py-1.5 rounded-sm hover:bg-red-900/20 transition">
                     削除
                   </button>

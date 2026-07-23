@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { requestProductionUpgradeAction } from "@/lib/auth-actions";
+import { requestProductionUpgradeAction, type ProductionUpgradeState } from "@/lib/auth-actions";
 import { useLocale } from "@/components/locale-provider";
 
 const FIELD =
@@ -11,7 +11,38 @@ const LABEL =
 
 export default function ProductionUpgradeForm() {
   const en = useLocale() === "en";
-  const [state, action, pending] = useActionState(requestProductionUpgradeAction, undefined);
+  const [state, action, pending] = useActionState<ProductionUpgradeState, FormData>(
+    requestProductionUpgradeAction,
+    undefined,
+  );
+
+  if (state?.ok) {
+    return (
+      <div className="border border-accent/50 bg-accent/10 px-6 py-8 text-center">
+        <div className="text-accent text-3xl mb-3">✓</div>
+        <h3 className="text-[15px] font-bold text-ink mb-3">
+          {en ? "Your application has been submitted" : "申請を送信しました"}
+        </h3>
+        <ul className="text-[12.5px] text-muted leading-[1.9] text-left max-w-[38ch] mx-auto list-disc pl-5 space-y-1">
+          <li>
+            {en
+              ? "Our team will review your company details and NDA agreement."
+              : "会社情報とNDA同意の内容を運営が確認します。"}
+          </li>
+          <li>
+            {en
+              ? "You can keep signing in and using non-restricted features while it's under review."
+              : "審査中もサインインでき、機密ロケ地以外の機能は引き続きご利用いただけます。"}
+          </li>
+          <li>
+            {en
+              ? "We'll notify you in your account page once it's approved (or if it isn't)."
+              : "承認され次第（見送りとなった場合も）、マイページの通知でご連絡します。"}
+          </li>
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <form action={action} className="space-y-5">

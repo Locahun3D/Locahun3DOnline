@@ -14,6 +14,16 @@ import { getCurrentUser } from "./dal";
 import { listActiveSessions } from "./device-limit";
 import { isFreeEmailDomain } from "./free-email-domains";
 
+/**
+ * requestProductionUpgradeAction 専用の戻り値型。ActionState (redirect前提) と
+ * 違い、送信後もページ遷移せずに確認パネルを表示する（scan-submit-form.tsx と
+ * 同じパターン）ため ok:true を持つ。
+ */
+export type ProductionUpgradeState =
+  | { ok: true }
+  | { ok?: false; errors?: Record<string, string[] | undefined>; message?: string }
+  | undefined;
+
 /** Capture role / company / NDA after Clerk sign-up. */
 export async function onboardingAction(
   _prev: ActionState,
@@ -162,9 +172,9 @@ export async function acceptNdaAction(): Promise<void> {
  * 先に "production" へ切り替えても承認前に閲覧範囲が広がることはない。
  */
 export async function requestProductionUpgradeAction(
-  _prev: ActionState,
+  _prev: ProductionUpgradeState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<ProductionUpgradeState> {
   const current = await getCurrentUser();
   if (!current) redirect("/sign-in");
   if (current.role === "production" || current.role === "admin") {
@@ -207,5 +217,5 @@ export async function requestProductionUpgradeAction(
     ndaAcceptedAt: new Date().toISOString(),
   });
 
-  redirect("/account?welcome=pending");
+  return { ok: true };
 }

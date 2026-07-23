@@ -17,7 +17,6 @@ import InquiryPanel from "@/components/inquiry-panel";
 import ZoomableImage from "@/components/zoomable-image";
 import PropertyMap from "@/components/property-map";
 import PropertyComments, { type CommentItem } from "@/components/property-comments";
-import PropertyReviews, { type ReviewItem } from "@/components/property-reviews";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
@@ -111,18 +110,15 @@ export default function PropertyDetailView({
   locale = "ja",
   previewControls = null,
   comments = [],
-  reviews = [],
-  reviewStats,
   currentUserId = null,
   currentUserName = null,
   isAdminUser = false,
   canPostBoard = false,
-  canReview = false,
 }: {
   property: Property;
   others: Property[];
   preview?: boolean;
-  /** 先方スタジオ共有用の限定プレビュー(ログイン不要)。掲示板/レビュー/購入/関連を抑制し、
+  /** 先方スタジオ共有用の限定プレビュー(ログイン不要)。掲示板/購入/関連を抑制し、
    *  3DGS は previewToken 経由で課金ゲートを外して閲覧可能にする。 */
   sharePreview?: boolean;
   /** 共有プレビュー時のアクセストークン。ViewerGate → /api/viewer-asset に渡す。 */
@@ -149,17 +145,11 @@ export default function PropertyDetailView({
   previewControls?: React.ReactNode;
   /** 会員限定掲示板の初期コメント一覧。 */
   comments?: CommentItem[];
-  /** レビュー・評価の初期一覧。未サインインでは空配列（本文は非公開）。 */
-  reviews?: ReviewItem[];
-  /** 平均★と件数。カタログと同じく未サインインでも公開する集計値。 */
-  reviewStats?: { average: number; count: number };
   currentUserId?: string | null;
   currentUserName?: string | null;
   isAdminUser?: boolean;
   /** 掲示板への書き込み権限（有料プラン: Individual / Studio / Team / admin）。閲覧は会員全員。 */
   canPostBoard?: boolean;
-  /** レビュー投稿権限（有料プラン or admin）。 */
-  canReview?: boolean;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -387,26 +377,6 @@ export default function PropertyDetailView({
               <p className="text-[13px] text-white/55">
                 {property.prefecture} {property.city}
               </p>
-              {(() => {
-                const visibleReviews = reviews.filter((r) => !r.hiddenByReports);
-                if (visibleReviews.length === 0) return null;
-                const avg =
-                  Math.round(
-                    (visibleReviews.reduce((acc, r) => acc + r.rating, 0) / visibleReviews.length) * 10,
-                  ) / 10;
-                return (
-                  <div className="flex items-center gap-1.5 mt-1.5 text-accent">
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
-                      <path d="M12 2.5l2.95 6.32 6.8.72-5.05 4.75 1.4 6.86L12 17.6l-6.1 3.55 1.4-6.86L2.25 9.54l6.8-.72L12 2.5z" />
-                    </svg>
-                    <span className="text-[12.5px] font-bold">{avg.toFixed(1)}</span>
-                    <span className="mono text-[10.5px] text-white/50">
-                      ({visibleReviews.length})
-                    </span>
-                  </div>
-                );
-              })()}
-
               <div className="flex flex-wrap gap-1.5 mt-4">
                 {isNewProperty(property) && (
                   <span className="text-[11px] font-bold px-3 py-1 bg-[#e8443a] border border-[#e8443a] text-white mono tracking-[0.18em] uppercase">
@@ -937,7 +907,7 @@ export default function PropertyDetailView({
         )}
 
         {/* ══════════════════════════════════════════════════
-         *  Community — CONTACT（常設）＋ 下2カラム（レビュー｜掲示板）
+         *  Community — CONTACT（常設）＋ 掲示板
          *  常設の黒アクションバー（保存・問い合わせボタンだけの帯）は不要と
          *  判断され撤去。CONTACTカードは元通り常時表示に戻し、問い合わせ先が
          *  無い物件はカード内に「受け付けていません」の文言＋★保存だけ出す。
@@ -1027,47 +997,31 @@ export default function PropertyDetailView({
               </div>
             </div>
 
-            {/* レビュー｜掲示板 — 常時2カラムで両方表示（タブに畳まない） */}
-            <div className="grid lg:grid-cols-2 gap-4">
-              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
-                <Eyebrow en="REVIEWS" jp={en ? "Reviews" : "レビュー・評価"} />
-                <PropertyReviews
-                  propertyId={property.id}
-                  reviews={reviews}
-                  stats={reviewStats}
-                  currentUserId={currentUserId}
-                  currentUserName={currentUserName}
-                  isAdmin={isAdminUser}
-                  signedIn={signedIn}
-                  canReview={canReview}
-                  locale={locale}
-                />
-              </div>
-              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
-                <Eyebrow
-                  en="BOARD"
-                  jp={
-                    en
-                      ? "Board (viewing: everyone / posting: paid plans)"
-                      : "掲示板（閲覧: 全員 / 書き込み: 有料プラン）"
-                  }
-                />
-                <PropertyComments
-                  propertyId={property.id}
-                  comments={comments}
-                  currentUserId={currentUserId}
-                  currentUserName={currentUserName}
-                  isAdmin={isAdminUser}
-                  signedIn={signedIn}
-                  canPost={canPostBoard}
-                  locale={locale}
-                />
-              </div>
+            {/* 掲示板 */}
+            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
+              <Eyebrow
+                en="BOARD"
+                jp={
+                  en
+                    ? "Board (viewing: everyone / posting: paid plans)"
+                    : "掲示板（閲覧: 全員 / 書き込み: 有料プラン）"
+                }
+              />
+              <PropertyComments
+                propertyId={property.id}
+                comments={comments}
+                currentUserId={currentUserId}
+                currentUserName={currentUserName}
+                isAdmin={isAdminUser}
+                signedIn={signedIn}
+                canPost={canPostBoard}
+                locale={locale}
+              />
             </div>
           </section>
         )}
 
-        {/* 管理プレビュー時はコミュニティ（アクションバー/レビュー/掲示板）を
+        {/* 管理プレビュー時はコミュニティ（アクションバー/掲示板）を
             出さない（実データ・実操作を伴うため）。プレビューは物件情報の
             確認に専念させる。 */}
 

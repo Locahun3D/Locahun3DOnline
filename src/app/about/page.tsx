@@ -76,15 +76,6 @@ export default async function AboutPage() {
     },
     {
       no: "04",
-      label: ["評価", "Reviews"],
-      title: ["レビューを見る・書く", "Read & write reviews"],
-      desc: [
-        "★ 評価とコメントの投稿は有料プランの会員が対象です。平均評価はカタログと物件ページで誰でも見られます。",
-        "Posting star ratings and comments is available on a paid plan. Averages are visible to everyone on the catalog and property pages.",
-      ],
-    },
-    {
-      no: "05",
       label: ["保存・共有", "Share"],
       title: ["ブックマークして共有する", "Bookmark & share"],
       desc: [
@@ -93,7 +84,7 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "06",
+      no: "05",
       label: ["連絡", "Contact"],
       title: ["掲示板・問い合わせ", "Board & inquiries"],
       desc: [
@@ -102,14 +93,14 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "07",
+      no: "06",
       label: ["活用", "Use cases"],
       title: ["AI・産業向けにも活用できます", "Also usable for AI & industrial applications"],
       desc: [
-        "プリビズ・VFXだけでなく、工場や商業施設のデジタルツイン、研修・防災シミュレーションなどの産業用途にも活用できます。AIモデルの学習データとしての利用は標準ライセンスでは対象外ですが、当社との個別契約（カスタムライセンス）でご相談いただけます。",
-        "Beyond previz and VFX, the data works for industrial use cases like digital twins of factories and commercial facilities, and training or disaster-prevention simulations. Using it as AI training data isn't covered by the standard license, but can be arranged individually with us via a custom license.",
+        "プリビズ・VFXだけでなく、工場や商業施設のデジタルツイン、研修・防災シミュレーションなどの産業用途にも活用できます。AIモデルの学習データとしての利用にも前向きです。案件によって条件が変わるため、まずはお気軽にご相談ください。",
+        "Beyond previz and VFX, the data works for industrial use cases like digital twins of factories and commercial facilities, and training or disaster-prevention simulations. We're also open to AI-training use — terms just vary by case, so feel free to reach out and ask.",
       ],
-      link: { href: "/contact/general", text: ["活用について相談する →", "Ask about use cases →"] },
+      link: { href: "/contact/license", text: ["活用について相談する →", "Ask about use cases →"] },
     },
   ];
 
@@ -230,18 +221,6 @@ export default async function AboutPage() {
     },
     {
       no: "06",
-      label: ["レビュー", "Reviews"],
-      desc: [
-        "投稿は有料プランの会員が対象。★ 平均はカタログ・物件ページで誰でも閲覧できます。",
-        "Posting is available on a paid plan. Star averages are visible to everyone.",
-      ],
-      img: {
-        src: "/about/reviews.webp",
-        alt: ["物件ページのレビュー投稿欄", "The review form on a property page"],
-      },
-    },
-    {
-      no: "07",
       label: ["ブックマーク共有", "Board sharing"],
       desc: [
         "候補物件を名前付きボードに整理。Studio / Team プランはボード単位の読み取り専用共有 URL を発行できます。",
@@ -253,7 +232,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "08",
+      no: "07",
       label: ["掲示板・問い合わせ", "Board & inquiries"],
       desc: [
         "物件掲示板の閲覧は全員可、書き込みは有料プラン。問い合わせフォームの内容は掲載スタジオへ直接届きます。",
@@ -265,7 +244,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "09",
+      no: "08",
       label: ["請求書", "Invoices"],
       desc: [
         "有料プランは毎月の請求書を自動送付（電子帳簿保存法・インボイス制度対応）。登録番号（T番号）は申込時に入力でき、請求書へ自動反映されます。",
@@ -277,13 +256,13 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "10",
+      no: "09",
       label: ["AI・産業活用", "AI & industrial use"],
       desc: [
-        "AIモデルの学習データ、工場・商業施設のデジタルツイン、防災・研修シミュレーションなど、プリビズ以外の産業活用にもご利用いただけます。AI学習目的の利用は全ライセンスで原則禁止としており、当社の事前の書面許諾（カスタムライセンス）が必要です。",
-        "The data also supports uses beyond previz — AI model training sets, digital twins for factories and commercial facilities, and disaster-prevention or training simulations. AI-training use is prohibited under every standard license and requires our prior written permission (a custom license).",
+        "AIモデルの学習データ、工場・商業施設のデジタルツイン、防災・研修シミュレーションなど、プリビズ以外の産業活用にもご利用いただけます。AI学習目的の利用は事前のご相談・個別合意が必要ですが、当社としても前向きに取り組みたい分野です。まずはお気軽にお問い合わせください。",
+        "The data also supports uses beyond previz — AI model training sets, digital twins for factories and commercial facilities, and disaster-prevention or training simulations. AI-training use needs prior consultation and a separate agreement, but it's an area we're genuinely excited about — reach out and let's talk.",
       ],
-      link: { href: "/contact/general", text: ["活用について相談する →", "Ask about use cases →"] },
+      link: { href: "/contact/license", text: ["活用について相談する →", "Ask about use cases →"] },
     },
   ];
 
@@ -478,7 +457,7 @@ export default async function AboutPage() {
             <ul className="text-[12.5px] text-muted leading-[2.1] list-none">
               <li>{en ? "Search the catalog & map" : "カタログ・地図で候補を検索"}</li>
               <li>{en ? "Walk through in the browser" : "ブラウザで歩いて下見"}</li>
-              <li>{en ? "Check reviews from members" : "レビューで判断材料を追加"}</li>
+              <li>{en ? "Check the board for local notes" : "掲示板で現地の情報を確認"}</li>
               <li>{en ? "Visit only the finalists" : "現地確認は本命だけ"}</li>
             </ul>
             <Link
@@ -627,6 +606,45 @@ export default async function AboutPage() {
                 <>
                   The true-to-scale PLY / RAD / OBJ data works for previz, storyboards, camera
                   planning and VFX background studies, including import into Unreal Engine.
+                </>,
+              ],
+            },
+            {
+              q: [
+                "購入データをVRChat等に組み込んで公開したり、再配布・AI学習に使ったりできますか？",
+                "Can I embed the data in VRChat, redistribute it, or use it for AI training?",
+              ],
+              a: [
+                <>
+                  標準ライセンスは映像・画像などの制作物を作る利用が対象で、データ自体を
+                  ソフトウェア製品に組み込んで配布する利用（VRChatワールド等への実装・公開もここに
+                  含まれます）は対象外です。ソフトウェアへの組込・改変配布まで含めたい場合は、
+                  拡張ライセンスで対応できることが多いです。とはいえ本当に良いかは公開範囲や
+                  用途によるので、まずは軽い気持ちで
+                  <Link href={lh("/contact/license")} className="text-accent hover:underline">
+                    お問い合わせ
+                  </Link>
+                  ください。すぐに反応します。
+                  <br />
+                  AI学習データとしての利用も同様です。「禁止」ではなく個別のご相談・調整とお考え
+                  ください — 当社としてもAI学習プラットフォームとしての展開に前向きに取り組んで
+                  いきたい分野なので、ぜひお気軽にご相談ください。
+                </>,
+                <>
+                  The standard license covers creating productions like film and images — it
+                  doesn&apos;t cover embedding the data itself into a software product for
+                  distribution (which includes implementing and publishing it as a VRChat
+                  world). The extended license usually covers embedding and modified
+                  redistribution. Whether that&apos;s the right fit depends on the scope and use
+                  case, so just{" "}
+                  <Link href={lh("/contact/license")} className="text-accent hover:underline">
+                    reach out
+                  </Link>{" "}
+                  — we respond quickly.
+                  <br />
+                  The same goes for AI-training use — think of it as something we work out
+                  together, not a flat no. We&apos;re genuinely excited about growing into an
+                  AI-training data platform, so please get in touch.
                 </>,
               ],
             },

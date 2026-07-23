@@ -37,6 +37,13 @@ const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; 
     go: "相談フォームへ",
     goEn: "Go to consultation form",
   },
+  {
+    type: "license",
+    desc: "データの再配布・AI学習利用・API/データ連携のご相談はこちら。案件ごとに条件が異なるため、まずはお気軽に。",
+    descEn: "Redistribution, AI-training use, API / data partnerships — terms vary by case, so just ask.",
+    go: "相談フォームへ",
+    goEn: "Go to consultation form",
+  },
 ];
 
 export default async function ContactHubPage() {
@@ -148,4 +155,5 @@ const CONTACT_TYPE_LABEL_EN: Record<ContactType, string> = {
   request: "Request a location",
   listing: "List your space",
   general: "General inquiry",
+  license: "Data use & partnerships",
 };

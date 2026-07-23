@@ -69,26 +69,35 @@ export default async function UserPurchasesPage() {
         </p>
       </header>
 
-      {/* ライセンス範囲外利用（特に機械学習・生成AIの学習データ利用）の抑止表記。
-          購入者が誤って規約違反しないよう、ダウンロード操作の手前に明示しておく。 */}
+      {/* ライセンス範囲外利用（特に機械学習・生成AIの学習データ利用）についての案内。
+          「禁止」ではなく「要相談」であることを購入者にも伝える（2026-07-23改定）。 */}
       <p className="text-[11px] text-muted mb-4">
         {en ? (
           <>
-            Please use purchased data within the scope of its license. Using it
-            as training data for machine learning or generative AI is
-            prohibited regardless of license tier (see the{" "}
+            Please use purchased data within the scope of its license. Using it as
+            training data for machine learning or generative AI needs prior
+            consultation and a separate agreement, regardless of license tier —
+            we're happy to talk, terms just vary by case. See the{" "}
             <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
               data purchase terms
+            </Link>{" "}
+            or{" "}
+            <Link href={lh("/contact/general")} target="_blank" className="underline hover:text-accent transition">
+              contact us
             </Link>
-            ).
+            .
           </>
         ) : (
           <>
-            購入データはライセンスの範囲内でご利用ください。機械学習・生成AIの学習データとしての利用は、ライセンスを問わず禁止です（詳細は{" "}
+            購入データはライセンスの範囲内でご利用ください。機械学習・生成AIの学習データとしての利用は、ライセンスを問わず事前のご相談・個別合意が必要です（案件により条件が変わるだけで、前向きにご相談に応じます）。詳細は{" "}
             <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
               データ購入規約
             </Link>
-            ）。
+            、またはお気軽に{" "}
+            <Link href={lh("/contact/general")} target="_blank" className="underline hover:text-accent transition">
+              お問い合わせ
+            </Link>
+            ください。
           </>
         )}
       </p>

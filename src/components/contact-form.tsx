@@ -358,6 +358,30 @@ export default function ContactForm({ type }: { type: ContactType }) {
           </Field>
         )}
 
+        {type === "license" && (
+          <>
+            <Field en={en} label={en ? "Company (optional)" : "会社名・屋号（任意）"}>
+              <input name="company" type="text" placeholder={en ? "Acme Inc." : "株式会社〇〇"} className={inputClass} />
+            </Field>
+            <Field
+              en={en}
+              label={en ? "What would you like to do?" : "ご希望の内容"}
+              required
+              note={en ? "redistribution, AI training, API / data partnership, etc." : "再配布・AI学習利用・API/データ連携など"}
+            >
+              <textarea
+                name="message"
+                rows={5}
+                required
+                placeholder={en
+                  ? "e.g. We'd like to use purchased data as part of an AI training set for a VR platform. Please let us know what's possible."
+                  : "例: 購入データをVRプラットフォーム向けのAI学習データとして使いたいです。可能な範囲を教えてください。"}
+                className={`${inputClass} leading-relaxed resize-y`}
+              />
+            </Field>
+          </>
+        )}
+
         <div className="border-t border-line pt-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
             <Field

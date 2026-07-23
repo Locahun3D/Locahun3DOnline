@@ -31,6 +31,12 @@ const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; 
     lede: "料金プラン・法人契約・提携のご相談など、なんでもどうぞ。",
     ledeEn: "Pricing plans, corporate contracts, partnerships — anything at all.",
   },
+  license: {
+    title: "データ利用・提携のご相談",
+    titleEn: "Data use & partnership inquiries",
+    lede: "データの再配布・AI学習データとしての利用・APIやデータ連携のご相談など。案件ごとに条件が異なるため、まずは気軽にご相談ください。",
+    ledeEn: "Redistribution, use as AI training data, API or data-partnership ideas — terms vary by case, so just reach out and let's talk.",
+  },
 };
 
 export async function generateMetadata({

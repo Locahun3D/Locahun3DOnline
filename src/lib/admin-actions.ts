@@ -23,7 +23,11 @@ import {
   type User,
 } from "./account-schema";
 
-/** Approve a pending studio / production account. */
+/**
+ * Approve a pending studio / production account. rejectAccountAction と対称に、
+ * production の承認は申請者へアプリ内通知する（studio の承認は申請フローが
+ * 別にあり通知不要のため production のみに絞る）。
+ */
 export async function approveAccountAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
@@ -31,6 +35,15 @@ export async function approveAccountAction(formData: FormData): Promise<void> {
   // 承認は「保留中」アカウントのみ。停止中(suspended)を承認で復活させない。
   if (!u || u.status !== "pending") return;
   await userRepo.upsert({ ...u, status: "active" });
+  if (u.role === "production") {
+    await createNotification({
+      userId: u.id,
+      type: "production_status",
+      title: "制作会社アカウントが承認されました",
+      body: "制作会社（NDA）アカウントへの切り替えが承認されました。機密ロケ地の閲覧など、対象機能をご利用いただけます。",
+      link: "/account",
+    }).catch(() => {});
+  }
   revalidatePath("/admin/accounts");
 }
 

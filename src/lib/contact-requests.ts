@@ -10,7 +10,7 @@ import { z } from "zod";
  * inquiries（スタジオへの問い合わせ）とは別モデル — propertyId を持たず、
  * 運営（operatorAddress）へ転送する。
  */
-export const CONTACT_TYPES = ["bug", "request", "listing", "general"] as const;
+export const CONTACT_TYPES = ["bug", "request", "listing", "general", "license"] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
@@ -18,6 +18,10 @@ export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   request: "ほしい物件追加",
   listing: "掲載依頼",
   general: "ご相談",
+  // データの再配布・AI学習利用・API/データ連携などの個別相談窓口。禁止ではなく
+  // 「案件による」ため、既存の一般問い合わせ(general)とは分けて受け付ける
+  // （2026-07-23新設）。
+  license: "データ利用・提携のご相談",
 };
 
 export const contactStatusSchema = z.enum(["new", "read", "archived"]);

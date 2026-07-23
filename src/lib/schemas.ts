@@ -84,7 +84,12 @@ export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
  *     ソフトウェア製品に同梱して配布する利用は含みません」
  *   - 拡張: 「ゲーム・アプリケーション等のソフトウェア製品に組み込み…
  *     には拡張ライセンスが必要です」
- *   - 再配布・転売・貸与はいずれのライセンスでも禁止事項
+ *   - 再配布・転売・貸与、AI学習利用は「一律禁止」ではなく「事前の個別
+ *     合意（要相談）」で可能にする方針（2026-07-23改定）。案件により条件が
+ *     大きく変わるため、標準/拡張/エディトリアルの全ティアで "ask" とし、
+ *     購入前にお問い合わせいただく導線にする。当社としてはAI学習用途にも
+ *     前向きで、将来的にはAI学習データのプラットフォーム化も視野に入れている
+ *     （方針が「禁止」に見えると機会損失になるため、可否表の見え方を修正）。
  */
 export type LicenseAllowance = "yes" | "no" | "ask";
 
@@ -107,27 +112,29 @@ export const DATA_LICENSE_MATRIX: {
     by: { standard: "no", extended: "yes", custom: "ask", editorial: "no" },
   },
   {
+    // 規約 第4条:「本データの第三者への再配布・転売・貸与」＝原則禁止だが、
+    // 事前の書面許諾があれば可能（一律禁止ではなく要相談）。
     key: "resale",
     labelJa: "データ自体の再配布・転売・貸与",
     labelEn: "Redistributing, reselling or lending the data itself",
-    by: { standard: "no", extended: "no", custom: "no", editorial: "no" },
+    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask" },
   },
   {
     // 規約 第4条:「機械学習・生成AIモデルの学習データとして利用する行為
-    // （本サービスの事前の書面による許諾がある場合を除く）」= 全ライセンス禁止。
-    // 書面許諾で可能になり得るので custom は「個別」。
+    // （本サービスの事前の書面による許諾がある場合を除く）」＝原則禁止だが、
+    // 事前の書面許諾があれば可能（一律禁止ではなく要相談）。
     key: "aiTraining",
     labelJa: "機械学習・生成AIの学習データとして使う",
     labelEn: "Using as training data for machine learning / generative AI",
-    by: { standard: "no", extended: "no", custom: "ask", editorial: "no" },
+    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask" },
   },
 ];
 
 /** 可否表の下に出す補足。ライセンスを問わず効く条件を明示する。 */
 export const DATA_LICENSE_MATRIX_NOTE_JA =
-  "AI学習利用はライセンスを問わず禁止です（当社の事前の書面による許諾がある場合を除く）。";
+  "再配布・転売・貸与、AI学習利用は、いずれのライセンスも事前のご相談・個別合意が必要です。ご希望の場合はお気軽にお問い合わせください。";
 export const DATA_LICENSE_MATRIX_NOTE_EN =
-  "Use as AI training data is prohibited under every license, except with our prior written permission.";
+  "Redistribution/resale and AI-training use require prior consultation and a separate agreement, regardless of license. Please contact us if you're interested.";
 
 export function dataLicenseLabel(l: DataLicense, locale?: string): string {
   return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];
