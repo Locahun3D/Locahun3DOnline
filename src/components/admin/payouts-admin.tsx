@@ -318,6 +318,11 @@ function PayeeForm({ payee, onDone }: { payee: Payee | null; onDone: () => void 
               <input name="accountHolder" defaultValue={payee?.bank.accountHolder ?? ""} required className={inputCls} />
             </label>
           </div>
+          <p className="mt-3 text-[11px] leading-relaxed opacity-60">
+            ※ 口座は<strong>受取者本人（法人は当該法人）名義</strong>であることを登録前に確認すること。
+            個人への支払いは支払調書のためマイナンバーの取得が必要になる場合があるが、
+            <strong>本画面では扱わない</strong>（特定個人情報のため、成立時に書面等で別途取得・保管する）。
+          </p>
         </div>
 
         <div className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 pt-2">

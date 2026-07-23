@@ -13,16 +13,18 @@ const inputClass =
   "w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] bg-white focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition";
 
 const CONSENT_ITEMS_JA = [
-  "本データは自身が撮影したもので、第三者の権利を侵害しないことを保証します",
-  "掲載・販売は当社が施設の許諾を得られた場合のみ行われ、それまで内容は非公開で取り扱われます",
+  "私は日本国内に居住する18歳以上の個人、または日本法人です（分配の受取には本人名義の銀行口座が必要です）",
+  "本データは自身が撮影したもので、撮影禁止区域への立入等の違反なく撮影されており、第三者の権利を侵害しないことを保証します",
+  "掲載・販売は当社が施設の許諾を得られた場合のみ行われ、それまで内容は非公開で取り扱われます（審査・権利調整に必要な範囲での閲覧・複製を除く）",
   "許諾が得られなかった場合、お預かりした内容（サンプル画像を含む）は削除されます",
   "売上の分配率・支払条件は成立時に個別に合意します（個人への支払いは源泉徴収の対象となる場合があります）",
   "本データのAI学習利用に関するライセンス管理は当社に委ねます",
 ];
 
 const CONSENT_ITEMS_EN = [
-  "This data was captured by me, and does not infringe any third party's rights.",
-  "Listing and sale will only happen once we have obtained the facility's permission — until then, everything is handled privately.",
+  "I am an individual aged 18 or older residing in Japan, or a Japanese corporation (a bank account in your own name is required to receive payouts).",
+  "This data was captured by me, without entering restricted areas or violating facility rules, and does not infringe any third party's rights.",
+  "Listing and sale will only happen once we have obtained the facility's permission — until then, everything is handled privately (except viewing/copying needed for review and rights clearance).",
   "If permission cannot be obtained, everything we hold (including sample images) will be deleted.",
   "Revenue share and payment terms will be agreed individually once a deal is reached (payments to individuals may be subject to withholding tax).",
   "Management of AI-training licensing for this data is entrusted to us.",
@@ -206,8 +208,8 @@ export default function ScanSubmitForm() {
           </ul>
           <p className="text-[10.5px] text-muted/80 leading-relaxed mb-4">
             {en
-              ? "Note: formal terms of service are still being prepared. In addition to the above, the terms will apply once ready."
-              : "（注記）正式な利用規約は整備中です。上記に加え、整備後の規約が適用されます。"}
+              ? "Note: formal program terms are still being prepared. This application is governed by the items above; before any deal is finalized, we will ask for your separate agreement to the formal terms and the individual payout terms."
+              : "（注記）本プログラムの正式な規約は整備中です。申請時点では上記の項目のみが適用され、成立の前には、正式な規約および分配条件について改めて個別に同意をお願いします。"}
           </p>
           <label className="flex items-start gap-2.5 mb-5 cursor-pointer">
             <input type="checkbox" name="consent" required className="mt-0.5" />
