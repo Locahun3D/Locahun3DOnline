@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
+import { contactMessageRepo, groupMessagesByCounterpart } from "@/lib/contact-messages";
 import { setContactRequestStatusAction, deleteContactRequestAction } from "@/lib/admin-actions";
 import ContactReplyForm from "@/components/admin/contact-reply-form";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
@@ -19,6 +20,8 @@ export default async function AdminContactRequestsPage({
   const all = await contactRequestRepo.list();
   const newCount = all.filter((c) => c.status === "new").length;
   const requests = typeFilter ? all.filter((c) => c.type === typeFilter) : all;
+  // メールスレッド（Email Routing受信＋管理画面返信）を相手メールで突き合わせ
+  const threads = groupMessagesByCounterpart(await contactMessageRepo.list());
 
   return (
     <div className="theme-online p-8">
@@ -187,22 +190,61 @@ export default async function AdminContactRequestsPage({
                 </div>
               )}
 
-              {c.reply && (
-                <div className="mb-3">
-                  <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
-                    返信済み{c.repliedAt ? `（${fmtDate(c.repliedAt)}）` : ""}
-                    {!c.replyEmailed && (
-                      <span className="ml-2 text-amber-600 normal-case tracking-normal">
-                        ⚠ メール未送達（RESEND未設定時に保存のみ）
-                      </span>
-                    )}
+              {(() => {
+                const thread = c.email ? (threads.get(c.email.toLowerCase()) ?? []) : [];
+                if (thread.length > 0) {
+                  return (
+                    <div className="mb-3">
+                      <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
+                        メールスレッド（{thread.length}件）
+                        {!c.replyEmailed && c.reply && (
+                          <span className="ml-2 text-amber-600 normal-case tracking-normal">
+                            ⚠ 直近のUI返信はメール未送達（RESEND未設定時に保存のみ）
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {thread.map((m) => (
+                          <div
+                            key={m.id}
+                            className={`rounded-md p-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap border ${
+                              m.direction === "outbound"
+                                ? "bg-green-50 border-green-300 ml-6"
+                                : "bg-white border-line mr-6"
+                            }`}
+                          >
+                            <div className="mono text-[10px] opacity-50 mb-1.5">
+                              {m.direction === "outbound" ? "運営 → 相手" : "相手 → 運営"} ・{" "}
+                              {fmtDate(m.createdAt)}
+                              {m.source === "admin-ui" && "（管理画面）"}
+                              {m.subject ? ` ・ ${m.subject}` : ""}
+                            </div>
+                            {m.bodyText || <span className="text-muted italic">（本文なし）</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                // スレッド未形成の旧データは従来の単一返信表示にフォールバック
+                if (!c.reply) return null;
+                return (
+                  <div className="mb-3">
+                    <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mb-2">
+                      返信済み{c.repliedAt ? `（${fmtDate(c.repliedAt)}）` : ""}
+                      {!c.replyEmailed && (
+                        <span className="ml-2 text-amber-600 normal-case tracking-normal">
+                          ⚠ メール未送達（RESEND未設定時に保存のみ）
+                        </span>
+                      )}
+                    </div>
+                    {/* このadmin画面はライトテーマ（白カード）。ダーク用配色だと文字が見えない */}
+                    <div className="bg-green-50 border border-green-300 rounded-md p-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap">
+                      {c.reply}
+                    </div>
                   </div>
-                  {/* このadmin画面はライトテーマ（白カード）。ダーク用配色だと文字が見えない */}
-                  <div className="bg-green-50 border border-green-300 rounded-md p-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap">
-                    {c.reply}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className="flex flex-wrap items-start gap-2">
                 {c.email ? (

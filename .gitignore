@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/email-worker/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -73,6 +74,7 @@ next-env.d.ts
 /data/inquiries.json
 /data/notifications.json
 /data/contact-requests.json
+/data/contact-messages.json
 /data/reviews.json
 /data/bookmark-shares.json
 /data/property-previews.json

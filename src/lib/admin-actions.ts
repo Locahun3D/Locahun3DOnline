@@ -7,6 +7,7 @@ import { userRepo } from "./users";
 import { purchaseRepo } from "./purchases";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactStatus } from "./contact-requests";
+import { contactMessageRepo } from "./contact-messages";
 import { track } from "./analytics";
 import { stripeEnabled, getStripe } from "./stripe";
 import { notifyRefund, notifyInquiryReply, notifyContactReply } from "./email";
@@ -335,6 +336,23 @@ export async function replyToContactRequestAction(
     replyEmailed: emailed,
     status: c.status === "new" ? "read" : c.status,
   });
+
+  // メールスレッド(contact_messages)にも追記して、Email Routing経由の
+  // 受信メールと1本のスレッドとして表示できるようにする。失敗しても
+  // 返信自体（上のupsert＋メール送信）は成立させる。
+  try {
+    await contactMessageRepo.append({
+      direction: "outbound",
+      counterpart: c.email,
+      fromEmail: "contact@locahun3d.com",
+      toEmail: c.email,
+      subject: `Re:【ロケハン3D】お問い合わせへのご返信（${CONTACT_TYPE_LABEL[c.type]}）`,
+      bodyText: reply,
+      source: "admin-ui",
+    });
+  } catch (e) {
+    console.error("[contact] スレッド追記に失敗（返信処理は継続）:", e);
+  }
 
   if (!emailed) {
     return {

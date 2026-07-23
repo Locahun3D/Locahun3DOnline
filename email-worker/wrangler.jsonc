@@ -1,0 +1,22 @@
+{
+  // 問い合わせメール受信 Worker。Cloudflare Email Routing（inbox.locahun3d.com
+  // サブドメイン）の宛先 "Send to Worker" に設定して使う。
+  // ⚠ ルートドメイン locahun3d.com の MX は Google Workspace — Email Routing は
+  // サブドメインでのみ有効化すること（ルートを切り替えると Workspace 受信全滅）。
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "locahun3d-email",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "locahun3d-db",
+      "database_id": "d296a328-97ae-4700-a4f9-a5003b6c4f67"
+    }
+  ],
+  "vars": {
+    // 直接届いたメール（Gmail自動転送以外・転送設定の確認メール等）の転送先。
+    // Email Routing の Destination address として検証済みである必要がある。
+    "FORWARD_TO": "nakamurakou1108@gmail.com"
+  }
+}
