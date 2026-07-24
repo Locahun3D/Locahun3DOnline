@@ -4,6 +4,7 @@ import { createDraftAction } from "../_actions";
 import PropertiesAdmin, {
   type PropertyListItem,
 } from "@/components/admin/properties-admin";
+import TranslateMissingButton from "@/components/admin/translate-missing-button";
 
 export const metadata = { title: "物件管理" };
 
@@ -49,14 +50,17 @@ export default async function AdminPropertiesList() {
           </div>
         </div>
 
-        <form action={createDraftAction}>
-          <button
-            type="submit"
-            className="px-5 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
-          >
-            ＋ 新規物件を作成
-          </button>
-        </form>
+        <div className="flex items-center gap-3 flex-wrap">
+          {isAdmin && <TranslateMissingButton />}
+          <form action={createDraftAction}>
+            <button
+              type="submit"
+              className="px-5 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+            >
+              ＋ 新規物件を作成
+            </button>
+          </form>
+        </div>
       </div>
 
       <PropertiesAdmin items={items} isAdmin={isAdmin} />

@@ -13,6 +13,7 @@ import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/d
 import { protectStudioManagedFields } from "@/lib/studio-guard";
 import { createNotification } from "@/lib/notifications";
 import { renamePayoutRecordsForProperty } from "@/lib/payouts";
+import { fillPropertyEnglish, needsEnglish } from "@/lib/property-translate";
 import {
   propertySchema,
   publishablePropertySchema,
@@ -276,19 +277,59 @@ export async function publishAction(input: unknown) {
   // 未審査の物件が公開されるとカタログ品質＝商品価値を毀損するため。
   await requireAdmin();
   const existing = await repo.get(parsed.id);
-  await repo.upsert(
-    stampPublishedAt({
-      ...mergeManaged(parsed, existing),
-      status: "published",
-      publishRequestedAt: null,
-    }),
-  );
+  let toPublish: Property = stampPublishedAt({
+    ...mergeManaged(parsed, existing),
+    status: "published",
+    publishRequestedAt: null,
+  });
+  // 公開時に英語(EN欄)が空のフィールドを自動翻訳で埋める。
+  // 翻訳失敗・キー未設定でも公開は必ず通す（日本語表示にフォールバック）。
+  try {
+    toPublish = await fillPropertyEnglish(toPublish);
+  } catch {
+    /* 翻訳できなくても公開は継続 */
+  }
+  await repo.upsert(toPublish);
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   revalidatePath("/properties");
   revalidatePath(`/properties/${parsed.id}`);
   revalidatePath("/");
   return { ok: true as const, id: parsed.id };
+}
+
+/**
+ * 英語(EN欄)が未翻訳の物件をまとめて自動翻訳で埋める（管理者一括操作）。
+ * 既に手動/自動で埋まっている EN 欄は温存する。翻訳できなかった物件は
+ * そのまま（日本語表示のまま）スキップ。件数を返す。
+ */
+export async function translateMissingEnglishAction() {
+  await requireAdmin();
+  const all = await repo.list();
+  let translated = 0;
+  let failed = 0;
+  for (const p of all) {
+    if (!needsEnglish(p)) continue;
+    try {
+      const filled = await fillPropertyEnglish(p);
+      if (filled !== p && !needsEnglish(filled)) {
+        await repo.upsert(filled);
+        translated++;
+      } else if (filled !== p) {
+        // 一部だけ埋まった場合も保存する（完全でなくても前進）。
+        await repo.upsert(filled);
+        translated++;
+      } else {
+        failed++;
+      }
+    } catch {
+      failed++;
+    }
+  }
+  revalidatePath("/admin/properties");
+  revalidatePath("/properties");
+  revalidatePath("/");
+  return { ok: true as const, translated, failed };
 }
 
 /**

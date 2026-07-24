@@ -1560,7 +1560,7 @@ export default function PropertyEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
+                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加

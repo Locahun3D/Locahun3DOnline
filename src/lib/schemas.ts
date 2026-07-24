@@ -427,6 +427,8 @@ export const propertySchema = z.object({
     // 空文字なら store.ts の読み込み時に一度だけ自動採番して書き戻す。
     id: z.string().default(""),
     label: z.string().max(60).default(""),
+    /** EN版のシーン名（空なら label をそのまま使う）。自動翻訳で埋まる。 */
+    labelEn: z.string().max(120).default(""),
     splatUrl: urlOrPath(),
     previewVideoUrl: urlOrPath(),
     sizeMb: z.number().min(0).max(99999).default(0),
@@ -747,6 +749,7 @@ export function localizeProperty<T extends Pick<Property, "title" | "titleEn" | 
     tags: p.tags.map((t) => TAG_EN[t] || t),
     splatItems: p.splatItems.map((it) => ({
       ...it,
+      label: it.labelEn || it.label,
       saleDescription: it.saleDescriptionEn || it.saleDescription,
     })),
   };
