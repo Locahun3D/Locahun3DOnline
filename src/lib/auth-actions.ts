@@ -10,6 +10,7 @@ import {
   type ActionState,
 } from "./account-schema";
 import { userRepo } from "./users";
+import { createNotification } from "./notifications";
 import { getCurrentUser } from "./dal";
 import { listActiveSessions } from "./device-limit";
 import { isFreeEmailDomain } from "./free-email-domains";
@@ -216,6 +217,23 @@ export async function requestProductionUpgradeAction(
     phone: phone || u.phone,
     ndaAcceptedAt: new Date().toISOString(),
   });
+
+  // 全adminへアプリ内通知（ヘッダーのベルで新着申請に気づけるように）。
+  // 通知作成に失敗しても申請自体は成立させる。
+  try {
+    const admins = (await userRepo.list()).filter((a) => a.role === "admin");
+    for (const a of admins) {
+      await createNotification({
+        userId: a.id,
+        type: "production_request",
+        title: "制作会社アカウントの申請が届きました",
+        body: `${company}（${u.name || u.email}）から制作会社（NDA）アカウントの申請が届きました。承認/却下をお願いします。`,
+        link: "/admin/accounts",
+      });
+    }
+  } catch (e) {
+    console.error("[production] admin通知の作成に失敗（申請は継続）:", e);
+  }
 
   return { ok: true };
 }

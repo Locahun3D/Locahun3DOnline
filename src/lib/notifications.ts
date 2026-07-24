@@ -17,18 +17,22 @@ export interface Notification {
   id: string;
   userId: string;
   /**
-   * inquiry_reply=問い合わせ返信 / publish_request=スタジオからの公開申請 /
+   * inquiry_reply=問い合わせ返信（申請者へ） / inquiry_new=物件問い合わせの新着（運営へ） /
+   * publish_request=スタジオからの公開申請 /
    * scan_submission=持ち込みスキャンの新規申請（運営へ） /
    * scan_status=持ち込みスキャンの状態変更（申請者へ） /
    * contact_request=サイト全体お問い合わせの新着（運営へ） /
-   * production_status=制作会社(NDA)アカウント申請の却下（申請者へ）
+   * production_request=制作会社(NDA)アカウント申請の新着（運営へ） /
+   * production_status=制作会社(NDA)アカウント申請の結果（申請者へ）
    */
   type:
     | "inquiry_reply"
+    | "inquiry_new"
     | "publish_request"
     | "scan_submission"
     | "scan_status"
     | "contact_request"
+    | "production_request"
     | "production_status";
   title: string;
   body: string;

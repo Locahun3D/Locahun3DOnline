@@ -7,6 +7,8 @@ import { auth } from "@clerk/nextjs/server";
 import { repo as propertyRepo } from "./store";
 import { inquiryRepo } from "./inquiries";
 import { notifyInquiry } from "./email";
+import { userRepo } from "./users";
+import { createNotification } from "./notifications";
 import {
   HONEYPOT_FIELD,
   RENDERED_AT_FIELD,
@@ -155,6 +157,24 @@ export async function submitInquiryAction(
         error: "送信に失敗しました。お手数ですが時間をおいて再度お試しください。",
       };
     }
+  }
+
+  // 3) 全adminへアプリ内通知（ヘッダーのベルで新着に気づけるように）。
+  //    メール転送はRESEND未設定だと届かないため、気づける経路をもう1本置く。
+  //    通知作成に失敗しても公開フォームは落とさない。
+  try {
+    const admins = (await userRepo.list()).filter((u) => u.role === "admin");
+    for (const a of admins) {
+      await createNotification({
+        userId: a.id,
+        type: "inquiry_new",
+        title: "物件への問い合わせが届きました",
+        body: `${d.name || "匿名"} さん（${property.title}）: ${d.message.slice(0, 120)}`,
+        link: "/admin/inquiries",
+      });
+    }
+  } catch (e) {
+    console.error("[inquiry] admin通知の作成に失敗（送信処理は継続）:", e);
   }
 
   return { ok: true };
