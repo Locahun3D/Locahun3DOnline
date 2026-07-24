@@ -868,6 +868,18 @@ export default function PropertyEditor({
                       placeholder="例: 撮影には所轄警察署への道路使用許可申請が必要です。申請先・必要日数・当日の交通規制・保険加入の要否などを記入してください。"
                     />
                   </Field>
+                  <Field
+                    label="許可・注意事項（英語・EN版で表示）"
+                    hint="警察署名・電話番号などの実務情報はそのまま。空欄なら日本語をそのまま表示。"
+                  >
+                    <textarea
+                      {...register("permitNotesEn")}
+                      className={`${inputClass} resize-y min-h-[120px]`}
+                      rows={5}
+                      maxLength={2000}
+                      placeholder="e.g. Filming requires a road-use permit application from the local police station..."
+                    />
+                  </Field>
                 </div>
               ) : (
                 <>
@@ -964,6 +976,24 @@ export default function PropertyEditor({
                     {...register("nearestStation")}
                     className={inputClass}
                     placeholder="例: ゆりかもめ 有明駅 徒歩3分"
+                  />
+                </Field>
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="住所（英語・EN版で表示）">
+                  <input
+                    type="text"
+                    {...register("addressEn")}
+                    className={inputClass}
+                    placeholder="e.g. 2-9-2 Ariake, Koto-ku, Tokyo（空欄なら日本語をそのまま表示）"
+                  />
+                </Field>
+                <Field label="最寄り駅（英語・EN版で表示）">
+                  <input
+                    type="text"
+                    {...register("nearestStationEn")}
+                    className={inputClass}
+                    placeholder="e.g. Yurikamome Ariake Sta., 3 min walk（空欄なら日本語をそのまま表示）"
                   />
                 </Field>
               </div>
@@ -1353,6 +1383,7 @@ export default function PropertyEditor({
                     galleryArray.append({
                       src: a.url,
                       alt: a.label,
+                      altEn: "",
                       width: a.width ?? 1600,
                       height: a.height ?? 1000,
                       focus: "center",
@@ -1515,6 +1546,7 @@ export default function PropertyEditor({
                     galleryArray.append({
                       src: f.url,
                       alt: name.replace(/\.[^.]+$/, ""),
+                      altEn: "",
                       width: 1600,
                       height: 1000,
                       focus: "center",

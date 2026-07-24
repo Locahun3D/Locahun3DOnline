@@ -12,8 +12,10 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
  *
  * prefecture / area / studioType / tags は schemas.ts の辞書
  * (PREFECTURE_EN / areaLabelEn / STUDIO_TYPE_EN / TAG_EN) で機械変換されるため
- * ここでは翻訳しない。自由記述の title / summary / description / city と、
- * 各 splatItem の saleDescription（販売説明）のみを対象にする。
+ * ここでは翻訳しない。自由記述の title / summary / description / city /
+ * address / nearestStation / availableHours / permitType / permitNotes /
+ * cover.alt と、各 splatItem の saleDescription（販売説明）・各 gallery
+ * 画像の alt のみを対象にする。
  */
 
 /** 翻訳対象（空文字は「翻訳不要」= 呼び出し側で既に埋まっている等）。 */
@@ -22,10 +24,24 @@ export interface TranslateInput {
   summary: string;
   description: string;
   city: string;
+  /** 住所（番地まで）。 */
+  address: string;
+  /** 最寄り駅（路線・駅名・徒歩分など）。 */
+  nearestStation: string;
+  /** 利用可能時間の自由記述補足（例: 24時間可（要相談））。 */
+  availableHours: string;
+  /** 許可の種類（例: 道路使用許可）。 */
+  permitType: string;
+  /** 許可・注意事項（申請先・条件など）。 */
+  permitNotes: string;
+  /** カバー画像の代替テキスト。 */
+  coverAlt: string;
   /** 各3DGSシーンの表示名（順序を保持）。 */
   sceneLabels: string[];
   /** 販売中データの説明文（順序を保持）。 */
   saleDescriptions: string[];
+  /** ギャラリー画像の代替テキスト（順序を保持）。 */
+  galleryAlts: string[];
 }
 
 /** 翻訳結果。各フィールドは英語。翻訳できなかった要素は "" で返る。 */
@@ -34,8 +50,15 @@ export interface TranslateResult {
   summaryEn: string;
   descriptionEn: string;
   cityEn: string;
+  addressEn: string;
+  nearestStationEn: string;
+  availableHoursEn: string;
+  permitTypeEn: string;
+  permitNotesEn: string;
+  coverAltEn: string;
   sceneLabelsEn: string[];
   saleDescriptionsEn: string[];
+  galleryAltsEn: string[];
   source: "ai" | "none";
 }
 
@@ -59,14 +82,21 @@ async function getApiKey(): Promise<string | null> {
   return process.env.ANTHROPIC_API_KEY || null;
 }
 
-function emptyResult(labelCount: number, saleCount: number): TranslateResult {
+function emptyResult(labelCount: number, saleCount: number, galleryCount: number): TranslateResult {
   return {
     titleEn: "",
     summaryEn: "",
     descriptionEn: "",
     cityEn: "",
+    addressEn: "",
+    nearestStationEn: "",
+    availableHoursEn: "",
+    permitTypeEn: "",
+    permitNotesEn: "",
+    coverAltEn: "",
     sceneLabelsEn: Array.from({ length: labelCount }, () => ""),
     saleDescriptionsEn: Array.from({ length: saleCount }, () => ""),
+    galleryAltsEn: Array.from({ length: galleryCount }, () => ""),
     source: "none",
   };
 }
@@ -77,8 +107,15 @@ function buildPrompt(input: TranslateInput): string {
     summary: input.summary,
     description: input.description,
     city: input.city,
+    address: input.address,
+    nearestStation: input.nearestStation,
+    availableHours: input.availableHours,
+    permitType: input.permitType,
+    permitNotes: input.permitNotes,
+    coverAlt: input.coverAlt,
     sceneLabels: input.sceneLabels,
     saleDescriptions: input.saleDescriptions,
+    galleryAlts: input.galleryAlts,
   };
   return [
     "You are a professional Japanese→English translator for a location-scouting / film-set rental platform (撮影ロケ地・スタジオ).",
@@ -91,10 +128,14 @@ function buildPrompt(input: TranslateInput): string {
     "- Do NOT add facts that aren't in the source. Do NOT include marketing fluff not present in the original.",
     "- If a field is an empty string, return an empty string for it.",
     "- sceneLabels are short names of individual 3D-scanned scenes/rooms (e.g. 「1階メインホール」→「1F Main Hall」). Keep them short.",
-    "- sceneLabels and saleDescriptions are arrays; return arrays of the SAME length in the SAME order.",
+    "- address is a street address; romanize it (e.g. 東京都江東区有明2-9-2 → 2-9-2 Ariake, Koto-ku, Tokyo).",
+    "- nearestStation and availableHours are short free-text notes; keep them short and natural.",
+    "- permitNotes is a practical notice about filming permits — preserve police-station names, phone numbers and other operational details exactly as in the source; only translate the surrounding prose.",
+    "- coverAlt and galleryAlts are short image alt-text captions; keep them short and descriptive.",
+    "- sceneLabels, saleDescriptions and galleryAlts are arrays; return arrays of the SAME length in the SAME order.",
     "",
     "Return ONLY a single JSON object, no prose, with exactly these keys:",
-    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "sceneLabelsEn": string[], "saleDescriptionsEn": string[]}',
+    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": string[], "saleDescriptionsEn": string[], "galleryAltsEn": string[]}',
     "",
     "Source (JSON):",
     JSON.stringify(payload, null, 2),
@@ -105,6 +146,7 @@ function parseResult(
   resp: AnthropicResponse,
   labelCount: number,
   saleCount: number,
+  galleryCount: number,
 ): TranslateResult | null {
   const text = resp.content
     .filter((b) => b.type === "text" && b.text)
@@ -117,13 +159,21 @@ function parseResult(
     const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
     const labelArr = Array.isArray(obj.sceneLabelsEn) ? obj.sceneLabelsEn : [];
     const saleArr = Array.isArray(obj.saleDescriptionsEn) ? obj.saleDescriptionsEn : [];
+    const galleryArr = Array.isArray(obj.galleryAltsEn) ? obj.galleryAltsEn : [];
     return {
       titleEn: str(obj.titleEn),
       summaryEn: str(obj.summaryEn),
       descriptionEn: str(obj.descriptionEn),
       cityEn: str(obj.cityEn),
+      addressEn: str(obj.addressEn),
+      nearestStationEn: str(obj.nearestStationEn),
+      availableHoursEn: str(obj.availableHoursEn),
+      permitTypeEn: str(obj.permitTypeEn),
+      permitNotesEn: str(obj.permitNotesEn),
+      coverAltEn: str(obj.coverAltEn),
       sceneLabelsEn: Array.from({ length: labelCount }, (_, i) => str(labelArr[i])),
       saleDescriptionsEn: Array.from({ length: saleCount }, (_, i) => str(saleArr[i])),
+      galleryAltsEn: Array.from({ length: galleryCount }, (_, i) => str(galleryArr[i])),
       source: "ai",
     };
   } catch {
@@ -138,6 +188,7 @@ function parseResult(
 export async function translateProperty(input: TranslateInput): Promise<TranslateResult> {
   const labelCount = input.sceneLabels.length;
   const saleCount = input.saleDescriptions.length;
+  const galleryCount = input.galleryAlts.length;
 
   // 翻訳すべき自由記述が何も無いなら API を叩かない。
   const hasAnything =
@@ -145,12 +196,19 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
     !!input.summary.trim() ||
     !!input.description.trim() ||
     !!input.city.trim() ||
+    !!input.address.trim() ||
+    !!input.nearestStation.trim() ||
+    !!input.availableHours.trim() ||
+    !!input.permitType.trim() ||
+    !!input.permitNotes.trim() ||
+    !!input.coverAlt.trim() ||
     input.sceneLabels.some((s) => s.trim()) ||
-    input.saleDescriptions.some((s) => s.trim());
-  if (!hasAnything) return emptyResult(labelCount, saleCount);
+    input.saleDescriptions.some((s) => s.trim()) ||
+    input.galleryAlts.some((s) => s.trim());
+  if (!hasAnything) return emptyResult(labelCount, saleCount, galleryCount);
 
   const apiKey = await getApiKey();
-  if (!apiKey) return emptyResult(labelCount, saleCount);
+  if (!apiKey) return emptyResult(labelCount, saleCount, galleryCount);
 
   const prompt = buildPrompt(input);
   try {
@@ -167,10 +225,13 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) return emptyResult(labelCount, saleCount);
+    if (!res.ok) return emptyResult(labelCount, saleCount, galleryCount);
     const data = (await res.json()) as AnthropicResponse;
-    return parseResult(data, labelCount, saleCount) ?? emptyResult(labelCount, saleCount);
+    return (
+      parseResult(data, labelCount, saleCount, galleryCount) ??
+      emptyResult(labelCount, saleCount, galleryCount)
+    );
   } catch {
-    return emptyResult(labelCount, saleCount);
+    return emptyResult(labelCount, saleCount, galleryCount);
   }
 }

@@ -173,6 +173,8 @@ export const propertyImageSchema = z.object({
     })
     .default(""),
   alt: z.string().max(200).default(""),
+  /** EN版の代替テキスト（空なら alt をそのまま使う）。自動翻訳で埋まる。 */
+  altEn: z.string().max(400).default(""),
   width: z.number().int().positive().default(1600),
   height: z.number().int().positive().default(1000),
   // トリミングの基準位置（object-position）。多様なアスペクト比の写真を
@@ -298,6 +300,8 @@ export const propertySchema = z.object({
    * permitRequired な物件の表示文言に使う。空なら汎用の「撮影許可」。
    */
   permitType: z.string().max(40).default(""),
+  /** EN版の許可種類表記（空なら日本語のまま）。自動翻訳で埋まる。 */
+  permitTypeEn: z.string().max(80).default(""),
   summary: z.string().max(200, "200 文字以内で入力してください").default(""),
   summaryEn: z.string().max(400).default(""),
 
@@ -329,12 +333,18 @@ export const propertySchema = z.object({
   hasInternet: z.boolean().default(false),
   /** 住所（都道府県・市区町村より詳細な番地まで）。 */
   address: z.string().max(120).default(""),
+  /** EN版の住所表記（空なら日本語のまま）。自動翻訳で埋まる。 */
+  addressEn: z.string().max(240).default(""),
   /** 最寄り駅（路線・駅名・徒歩分など自由記述）。 */
   nearestStation: z.string().max(80).default(""),
+  /** EN版の最寄り駅表記（空なら日本語のまま）。自動翻訳で埋まる。 */
+  nearestStationEn: z.string().max(160).default(""),
 
   // ── 利用条件・アクセス ──
   /** 利用可能時間（例: 24時間可（要相談））。自由記述の補足情報。 */
   availableHours: z.string().max(120).default(""),
+  /** EN版の利用可能時間（空なら日本語のまま）。自動翻訳で埋まる。 */
+  availableHoursEn: z.string().max(240).default(""),
   /** 利用可能な時間帯（開始〜終了）。"HH:mm" 24時間表記、どちらか片方でも空なら未設定扱い。 */
   customHoursStart: z
     .string()
@@ -401,6 +411,9 @@ export const propertySchema = z.object({
   // 通常の問い合わせ先が存在せず、撮影に道路使用許可等の別手続きが必要な場所)
   permitRequired: z.boolean().default(false),
   permitNotes: z.string().max(1000).default(""),
+  /** EN版の許可・注意事項（空なら日本語のまま）。自動翻訳で埋まる。警察署名・
+   *  電話番号等の実務情報は原文のまま保持される想定。 */
+  permitNotesEn: z.string().max(2000).default(""),
 
   // 2.6 Blueprints / floor plans
   blueprints: z.array(z.object({
@@ -723,6 +736,7 @@ export const TAG_EN: Record<string, string> = {
   会場: "Venue", ドーム: "Dome", 体育館: "Gymnasium", オフィス: "Office",
   キッチン: "Kitchen", プール: "Pool", 教会: "Church", 森: "Forest", 海: "Sea",
   川: "River", 公園: "Park", 夜景: "Night view",
+  ロケーション: "Location", 交差点: "Intersection", 東京都: "Tokyo",
 };
 
 /**
@@ -732,10 +746,36 @@ export const TAG_EN: Record<string, string> = {
  * データ取得直後に通せば、下流の PropertyCard 等は無改修で済む。
  * 注意: 関連物件スコアリング等のロジックには原文(raw)の方を渡すこと。
  */
-export function localizeProperty<T extends Pick<Property, "title" | "titleEn" | "summary" | "summaryEn" | "description" | "descriptionEn" | "prefecture" | "city" | "cityEn" | "area" | "tags" | "studioType" | "splatItems">>(
-  p: T,
-  locale?: string,
-): T {
+export function localizeProperty<
+  T extends Pick<
+    Property,
+    | "title"
+    | "titleEn"
+    | "summary"
+    | "summaryEn"
+    | "description"
+    | "descriptionEn"
+    | "prefecture"
+    | "city"
+    | "cityEn"
+    | "area"
+    | "tags"
+    | "studioType"
+    | "splatItems"
+    | "address"
+    | "addressEn"
+    | "nearestStation"
+    | "nearestStationEn"
+    | "availableHours"
+    | "availableHoursEn"
+    | "permitType"
+    | "permitTypeEn"
+    | "permitNotes"
+    | "permitNotesEn"
+    | "cover"
+    | "gallery"
+  >,
+>(p: T, locale?: string): T {
   if (locale !== "en") return p;
   return {
     ...p,
@@ -747,6 +787,13 @@ export function localizeProperty<T extends Pick<Property, "title" | "titleEn" | 
     area: areaLabelEn(p.area),
     studioType: STUDIO_TYPE_EN[p.studioType] || p.studioType,
     tags: p.tags.map((t) => TAG_EN[t] || t),
+    address: p.addressEn || p.address,
+    nearestStation: p.nearestStationEn || p.nearestStation,
+    availableHours: p.availableHoursEn || p.availableHours,
+    permitType: p.permitTypeEn || p.permitType,
+    permitNotes: p.permitNotesEn || p.permitNotes,
+    cover: { ...p.cover, alt: p.cover.altEn || p.cover.alt },
+    gallery: p.gallery.map((g) => ({ ...g, alt: g.altEn || g.alt })),
     splatItems: p.splatItems.map((it) => ({
       ...it,
       label: it.labelEn || it.label,
