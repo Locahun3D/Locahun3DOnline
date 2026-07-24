@@ -20,8 +20,12 @@ const NAV: { href: string; key: DictKey; code: string }[] = [
 export default async function SiteHeader() {
   const user = await getCurrentUser();
   // 通知はこれまで /account に来ないと存在に気づけなかった。ヘッダーのベルで
-  // 未読件数を常時見えるようにする（サインイン時のみ、サーバー側で集計）。
-  const unreadCount = user ? (await listNotifications(user.id)).filter((n) => !n.read).length : 0;
+  // 未読件数を常時見せ、押せばその場で最近の通知一覧をドロップダウン表示する
+  // （マイページへ飛ばさずに読める）。集計・取得はサインイン時のみサーバー側。
+  const notifications = user ? await listNotifications(user.id) : [];
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  // ドロップダウンには最近分のみ渡す（全件はマイページの一覧で。payload を絞る）。
+  const recentNotifications = notifications.slice(0, 12);
   const locale = await getLocale();
   const t = (k: DictKey) => translate(locale, k);
   const lh = (href: string) => localizedHref(href, locale);
@@ -88,7 +92,7 @@ export default async function SiteHeader() {
         </Link>
       )}
       {user && (
-        <NotificationBell unreadCount={unreadCount} href={lh("/account#notifications")} en={locale === "en"} />
+        <NotificationBell notifications={recentNotifications} unreadCount={unreadCount} locale={locale} en={locale === "en"} />
       )}
       <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[768px]:w-7 min-[768px]:h-7" } }} />
     </Show>
