@@ -45,7 +45,12 @@ export default function SimilarPropertySearch() {
   };
 
   return (
-    <div className="border border-line bg-white px-3 sm:px-4 py-2 sm:py-3 mb-3 sm:mb-6">
+    // 768–1199px(iPad帯) は html の zoom が 0.8 なので PC と同じ padding だと
+    // バーが実画面で間延びして見える。帯だけ詰める。
+    // ⚠ sm: と min-[768px]: を同じプロパティで重ねると Tailwind の出力順で
+    // どちらが勝つか不定なので、必ず max-[Npx] で排他の範囲にすること
+    // （max-[Npx] は `not (min-width:Npx)` = N 自身を含まない）。
+    <div className="border border-line bg-white px-3 sm:px-4 py-2 sm:max-[768px]:py-3 min-[768px]:max-[1200px]:py-1.5 min-[1200px]:py-3 mb-3 sm:max-[768px]:mb-6 min-[768px]:max-[1200px]:mb-3 min-[1200px]:mb-6">
       <form onSubmit={onSubmit} className="flex items-center gap-2">
         <div className="shrink-0 flex items-center gap-1 text-accent">
           <svg
@@ -81,12 +86,12 @@ export default function SimilarPropertySearch() {
               ? "Paste a reference page URL…"
               : "イメージに近いページのURLを貼り付け…"
           }
-          className="flex-1 min-w-0 border border-line rounded-md px-3 py-2 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition"
+          className="flex-1 min-w-0 border border-line rounded-md px-3 py-2 min-[768px]:max-[1200px]:py-1 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition"
         />
         <button
           type="submit"
           disabled={pending}
-          className="shrink-0 px-3 sm:px-5 py-2 mono text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.2em] uppercase bg-accent text-white hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+          className="shrink-0 px-3 sm:px-5 py-2 min-[768px]:max-[1200px]:py-1 mono text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.2em] uppercase bg-accent text-white hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
         >
           {pending ? "…" : en ? "Find →" : "探す →"}
         </button>

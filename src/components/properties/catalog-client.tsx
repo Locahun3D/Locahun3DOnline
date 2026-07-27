@@ -511,7 +511,11 @@ export default function CatalogClient({
 
         {/* Map: stretches to match the panel height (面一), no scroll-follow.
             モバイルでは高さを抑えて結果カードを早く見せる。 */}
-        <div className="h-[calc(24vh/var(--z))] sm:h-[calc(40vh/var(--z))] lg:h-auto">
+        {/* 高さは実画面基準なので calc(Xvh/var(--z))。768–1023px(縦積みのiPad帯)は
+            40vh=iPad縦で約470px と地図だけで画面を占有してしまうため 30vh へ。
+            ⚠ sm: と min-[768px]: を同じプロパティで重ねると出力順で勝敗が不定に
+            なるため、4帯すべてを排他の範囲で書く。 */}
+        <div className="h-[calc(24vh/var(--z))] sm:max-[768px]:h-[calc(40vh/var(--z))] min-[768px]:max-[1024px]:h-[calc(30vh/var(--z))] lg:h-auto">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}
@@ -610,13 +614,15 @@ function FiltersPanel(p: FiltersProps) {
     // 画面幅ベースの md:/xl: 等だと「実際は狭いのに2列判定」「実際は広いのに
     // 1列のまま」というズレが起き、余白があるのに不要に縦長になる実害が
     // あった。パネル自身の実幅で判定するコンテナクエリに切り替える。
-    <div className="@container border border-line bg-[#222] p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5">
+    // 768–1199px(iPad帯)は zoom 0.8 で実効幅が広いぶん、PC と同じ padding だと
+    // 実画面では枠が間延びして見える。帯だけ詰める（範囲は max-[Npx] で排他に）。
+    <div className="@container border border-line bg-[#222] p-2.5 sm:max-[768px]:p-3.5 min-[768px]:max-[1200px]:p-2 min-[1200px]:p-3.5 space-y-2 sm:space-y-2.5">
       {/* モバイル: 検索UIを既定で畳むトグル (lg未満のみ表示)。畳んでカードを早く見せる。 */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="lg:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 hover:border-accent transition"
+        className="lg:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 min-[768px]:py-1 hover:border-accent transition"
       >
         <span className="mono text-[11px] tracking-[0.2em] uppercase">🔍 {en ? "Filters" : "絞り込み検索"}</span>
         <span className="flex items-baseline gap-1.5">
