@@ -26,8 +26,9 @@ export default async function SignUpPage() {
     // 何も伝わらない（実機で確認して作り直した）。
     <div className="frame py-10 sm:py-20">
       <InAppBrowserWarning locale={locale} />
-      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 md:grid-cols-[1fr_auto] md:gap-16">
-        <div className="max-w-[34ch]">
+      {/* 2カラムは 1200px 以上のみ（理由は /sign-in と同じ。両ページ同時に変更すること） */}
+      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
+        <div className="max-w-[34ch] min-[768px]:max-[1200px]:mx-auto">
           <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase">Get started</p>
           <h1 className="mt-3 text-2xl sm:text-3xl leading-snug font-bold">
             {en ? (
@@ -66,7 +67,7 @@ export default async function SignUpPage() {
             ))}
           </ul>
         </div>
-        <div className="flex flex-col items-center gap-4 justify-self-center md:justify-self-end">
+        <div className="flex flex-col items-center gap-4 justify-self-center min-[1200px]:justify-self-end">
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
       <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" />
       {/* 明示的な同意チェックボックスは Clerk ウィジェット内には差し込めないため、

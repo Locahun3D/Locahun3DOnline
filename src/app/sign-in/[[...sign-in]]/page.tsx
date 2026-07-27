@@ -43,8 +43,13 @@ export default async function SignInPage({
     // 見出し＋要点を左に置いた2カラムにして、カードに文脈を与える。
     <div className="frame py-10 sm:py-20">
       <InAppBrowserWarning locale={locale} />
-      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 md:grid-cols-[1fr_auto] md:gap-16">
-        <div className="max-w-[34ch]">
+      {/* 2カラムに割るのは 1200px 以上だけ。768–1199px(iPad帯)は html の zoom が
+          0.8 のため実効幅は広いが、Clerk カードは固定幅なので 2カラムにすると
+          右側にカードだけ寄って左に不自然な空きが出た（実機で確認）。
+          ⚠ md: と min-[1200px]: の併用は Tailwind の出力順で md: が後勝ちする
+          罠があるため、md: は使わず min-[1200px]: に統一する。 */}
+      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
+        <div className="max-w-[34ch] min-[768px]:max-[1200px]:mx-auto">
           <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase">Account</p>
           <h1 className="mt-3 text-2xl sm:text-3xl leading-snug font-bold">
             {en ? (
@@ -83,7 +88,7 @@ export default async function SignInPage({
             ))}
           </ul>
         </div>
-        <div className="justify-self-center md:justify-self-end">
+        <div className="justify-self-center min-[1200px]:justify-self-end">
           <SignIn signUpUrl="/sign-up" />
         </div>
       </div>
