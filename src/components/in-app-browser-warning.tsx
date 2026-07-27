@@ -48,7 +48,7 @@ export default function InAppBrowserWarning({ locale = "ja" }: { locale?: "ja" |
   };
 
   return (
-    <div className="w-full max-w-sm mb-5 border border-amber-300 bg-amber-50 rounded-md px-4 py-3.5 text-left">
+    <div className="mx-auto min-[1200px]:mx-0 w-full max-w-sm mb-5 border border-amber-300 bg-amber-50 rounded-md px-4 py-3.5 text-left">
       <div className="text-[12.5px] font-bold text-amber-900 mb-1.5">
         {en ? "⚠ Google sign-in may not work here" : "⚠ このままだとGoogleログインができない場合があります"}
       </div>

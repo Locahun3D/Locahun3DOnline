@@ -189,7 +189,12 @@ export default async function RootLayout({
       lang={locale}
       className={`${serif.variable} ${sans.variable} ${mono.variable}`}
     >
-      <body className={isEmbed ? "" : "min-h-screen flex flex-col"}>
+      {/* ⚠ min-h-screen(=100vh) は使わない。html に zoom が掛かっているため
+          100vh は「ズーム後の座標系」で解決され、実画面より短くなる。結果、
+          内容の少ないページ(/sign-in, /cart 等)でフッターが画面途中で終わり、
+          その下に黒い空白が残っていた（実測: 390px で147px、820pxで236px、
+          1440pxで75px）。実画面基準の高さは --z 規約どおり calc(100vh/var(--z))。 */}
+      <body className={isEmbed ? "" : "min-h-[calc(100vh/var(--z))] flex flex-col"}>
         <LocaleProvider locale={locale}>
           <ClerkProvider
             localization={locale === "en" ? enUSFixed : jaJPFixed}

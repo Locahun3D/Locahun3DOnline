@@ -47,9 +47,13 @@ export default async function SignInPage({
           0.8 のため実効幅は広いが、Clerk カードは固定幅なので 2カラムにすると
           右側にカードだけ寄って左に不自然な空きが出た（実機で確認）。
           ⚠ md: と min-[1200px]: の併用は Tailwind の出力順で md: が後勝ちする
-          罠があるため、md: は使わず min-[1200px]: に統一する。 */}
+          罠があるため、md: は使わず min-[1200px]: に統一する。
+          ⚠ 1カラム時は order でカードを先頭に出す。DOM順のままだと
+          警告バナー＋見出し＋要点3行が先に来て、スマホでは肝心のログイン
+          フォームが画面外に押し出されていた（X内ブラウザの実機報告）。
+          見出し・要点はカードの下に回して補足として読ませる。 */}
       <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
-        <div className="max-w-[34ch] min-[768px]:max-[1200px]:mx-auto">
+        <div className="order-2 mx-auto w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
           <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase">Account</p>
           <h1 className="mt-3 text-2xl sm:text-3xl leading-snug font-bold">
             {en ? (
@@ -88,7 +92,7 @@ export default async function SignInPage({
             ))}
           </ul>
         </div>
-        <div className="justify-self-center min-[1200px]:justify-self-end">
+        <div className="order-1 justify-self-center min-[1200px]:order-2 min-[1200px]:justify-self-end">
           <SignIn signUpUrl="/sign-up" />
         </div>
       </div>
