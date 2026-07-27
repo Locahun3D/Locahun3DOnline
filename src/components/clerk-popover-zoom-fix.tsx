@@ -30,6 +30,21 @@ import { useEffect } from "react";
  *   検証はブラウザ実機で行う（--z=0.9・scrollY 0/250/559 で横ズレ 0px を確認）。
  */
 
+/**
+ * ── モーダル（ヘッダーの「ログイン」「新規登録」）は別の壊れ方をする ──
+ * こちらはトリガー基準ではなく画面中央に置かれるため、上の座標補正では直らない。
+ * `.cl-modalBackdrop` は position:fixed で `width:100vw` を持つが、100vw は
+ * 「ズーム前の数値」で解決され、そこへ html の zoom が掛かるので実画面より縮む。
+ * 実測(2026-07-28): 1440px/--z=.9 → 暗転幅 1296px(=1440×.9) で右144pxが暗転されず、
+ * その狭い箱の中で中央寄せされるためカードが 72px(=144/2) 左へずれていた。
+ * 1024px/--z=.8 では -102px、820px/--z=.8 では -82px（いずれも余り÷2 と一致）。
+ * → 幅だけ実画面基準 calc(100vw / var(--z)) に戻せば、暗転もカード中央も同時に直る。
+ *   高さは実測で既にビューポートと一致していたので触らない。
+ * ⚠ globals.css ではなくこのコンポーネント内に閉じ込めている（Clerk 起因の補正を
+ *   1ファイルに集約する意図。ポータルにも :root の --z は継承される）。
+ */
+const MODAL_FIX_CSS = `.cl-modalBackdrop{width:calc(100vw / var(--z, 1))}`;
+
 /** ポップオーバーのクラス → それを開くトリガーのクラス */
 const PAIRS: ReadonlyArray<readonly [string, string]> = [
   [".cl-userButtonPopoverCard", ".cl-userButtonTrigger"],
@@ -125,5 +140,5 @@ export default function ClerkPopoverZoomFix() {
     };
   }, []);
 
-  return null;
+  return <style href="clerk-zoom-fix" precedence="default">{MODAL_FIX_CSS}</style>;
 }
