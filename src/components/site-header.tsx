@@ -114,16 +114,16 @@ export default async function SiteHeader() {
   // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
   // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
   const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[768px]:text-[10px] min-[1200px]:text-[11px] tracking-[0.02em] min-[768px]:tracking-[0.04em] min-[1200px]:tracking-[0.06em]">
+    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[768px]:text-[9px] min-[1200px]:text-[11px] tracking-[0.02em] min-[768px]:tracking-[0.04em] min-[1200px]:tracking-[0.06em]">
       <a
         href={scanUrl}
-        className="px-[3px] min-[360px]:px-1 min-[768px]:px-2 min-[1200px]:px-3 py-0.5 min-[768px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[768px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[768px]:py-[3px] min-[1200px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.scan")}
       </a>
       <a
         href={lh("/properties")}
-        className="px-[3px] min-[360px]:px-1 min-[768px]:px-2 min-[1200px]:px-3 py-0.5 min-[768px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[768px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[768px]:py-[3px] min-[1200px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.online")}
       </a>
@@ -133,9 +133,9 @@ export default async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
       {/* ══ PC/タブレット(768px+) — 1行 ══ */}
-      <div className="hidden min-[768px]:flex frame items-center h-16 gap-3">
+      <div className="hidden min-[768px]:flex frame items-center h-16 gap-2 min-[1200px]:gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
-          <nav className="flex items-center gap-4 min-[1440px]:gap-6">
+          <nav className="flex items-center gap-[11px] min-[1200px]:gap-4 min-[1440px]:gap-6">
             {NAV.map((n) => (
               <Link
                 key={n.href}
@@ -156,7 +156,7 @@ export default async function SiteHeader() {
             <HeaderMark />
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
           </Link>
-          <div className="hidden xl:block ml-1">{scanOnlineToggle}</div>
+          <div className="hidden min-[768px]:block ml-1">{scanOnlineToggle}</div>
           <LangToggle className="hidden 2xl:inline-block" />
         </div>
 
