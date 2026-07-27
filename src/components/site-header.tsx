@@ -34,9 +34,15 @@ export default async function SiteHeader() {
   const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
 
   /**
-   * PC(1200px+)の1行ヘッダーと構成要素は完全に同一 — ハンバーガーに畳まず、
-   * モバイル(1200px未満)は同じ要素を2段に折り返して縮小表示する。切替幅も
-   * スキャンサイトと同一の1200px（Tailwind lgの1024pxではない点に注意）。
+   * PC/タブレット(768px+)は1行、モバイル(768px未満)は同じ要素を2段に折り返して
+   * 縮小表示する（ハンバーガーには畳まない）。切替幅はスキャンサイトと同一の
+   * 768px（Tailwind lg=1024px でも md=768px でもなく min-[768px]: で書くこと。
+   * lg:/md: を混ぜると Tailwind の出力順で後勝ちし境界がズレる実害があった）。
+   * ⚠ 以前は 1200px 切替だったが、html の zoom(<1200px=0.7) でレイアウト実効幅が
+   * 820/0.7=1171px相当に広がる一方 @media は実寸で評価されるため、iPad で
+   * 「中身は広いのにヘッダーだけ2段」＝2段目が丸ごと空白、という崩れが出ていた。
+   * globals.css の 768–1199px 帯を zoom:0.8 にした上で切替も 768px へ下げてある
+   * （どちらか片方だけ変えると再発する）。
    * 「PC/モバイルで見える要素を変えない、サイズ調整のみで揃える」という
    * 明示の指示に基づく（実測: 全要素を1行9pxに詰めても600px超で320-390px
    * 幅には物理的に収まらないため、2段構成で妥協）。
@@ -66,7 +72,13 @@ export default async function SiteHeader() {
           href={lh("/account")}
           className="flex items-center gap-1 min-[768px]:gap-1.5 min-[1200px]:gap-2 text-[9px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
-          <span className="hidden sm:inline border border-line px-1 min-[768px]:px-1.5 py-0.5 text-[8px] min-[768px]:text-[10px] min-[1200px]:text-[9px]">
+          {/* 権限バッジ（例「撮影スタジオ」）は 768–1023px では出さない。
+              1行ヘッダー化したこの帯はサインイン時の右側が最も混み、実測で
+              768px のナビ→ブランド間が -9px（＝重なり）になっていた。
+              バッジを落とすと +51px の余裕が出る。1024px 以上は元どおり表示。
+              ⚠ 範囲は max-[Npx] で排他にすること（sm: と min-[768px]: を
+              同じプロパティで重ねると出力順で勝敗が不定になる）。 */}
+          <span className="hidden sm:max-[768px]:inline min-[1024px]:inline border border-line px-1 min-[768px]:px-1.5 py-0.5 text-[8px] min-[768px]:text-[10px] min-[1200px]:text-[9px]">
             {roleLabel(user.role, locale)}
           </span>
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
@@ -120,8 +132,8 @@ export default async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
-      {/* ══ PC(1200px+) — 1行 ══ */}
-      <div className="hidden min-[1200px]:flex frame items-center h-16 gap-3">
+      {/* ══ PC/タブレット(768px+) — 1行 ══ */}
+      <div className="hidden min-[768px]:flex frame items-center h-16 gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
           <nav className="flex items-center gap-4 min-[1440px]:gap-6">
             {NAV.map((n) => (
@@ -156,9 +168,9 @@ export default async function SiteHeader() {
         </div>
       </div>
 
-      {/* ══ モバイル/タブレット(1200px未満) — 2段。PCと同じ要素をサイズ調整して
+      {/* ══ モバイル(768px未満) — 2段。PCと同じ要素をサイズ調整して
           全て表示する（要素の非表示・ハンバーガー化はしない）。 ══ */}
-      <div className="min-[1200px]:hidden frame">
+      <div className="min-[768px]:hidden frame">
         {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証。
             768px以上（タブレット帯）はスマホ極小サイズのままだと余白だらけで
             崩れて見えるため、中間サイズへ拡大する（スキャンサイトと数値共通）。 */}
