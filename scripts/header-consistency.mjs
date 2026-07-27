@@ -57,9 +57,10 @@ const PROBE = () => {
       header ? Math.round(hr.height) : "NOHEADER",
       codeEl ? getComputedStyle(codeEl).display : "nocode",
       nav.length].join("~"),
-    // 重なり判定は1行ヘッダー(≥1200px)でのみ意味を持つ。
+    // 重なり判定は1行ヘッダー(≥768px)でのみ意味を持つ。
     // 2段ヘッダーではナビが下段なので左右比較は無意味（高さで判定すると誤検出する）。
-    overlap: last && cr && window.innerWidth >= 1200 ? Math.round(cr.left - last.right) : null,
+    // ⚠ 2026-07-27: 1行化の閾値を 1200px → 768px へ下げたのに合わせて拡張。
+    overlap: last && cr && window.innerWidth >= 768 ? Math.round(cr.left - last.right) : null,
     overflowX: document.documentElement.scrollWidth - window.innerWidth,
   };
 };

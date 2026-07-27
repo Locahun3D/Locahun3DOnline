@@ -18,17 +18,26 @@ const SCAN = LOCAL
   ? "http://127.0.0.1:8830/locahun3d_manifesto.html"
   : "https://web.locahun3d.com/locahun3d_manifesto.html";
 
-// [width, height, tier] — tier: "mobile" は2段ヘッダー帯(<1200px)、"desktop" は1行帯(≥1200px)。
-// 両サイトとも 1200px で切替（オンライン=min-[1200px] / スキャン=@media 1199px）。
+// [width, height, tier] — tier: "mobile" は2段ヘッダー帯(<768px)、"desktop" は1行帯(≥768px)。
+// 両サイトとも 768px で切替（オンライン=min-[768px] / スキャン=@media 767px）。
+// ⚠ 2026-07-27 に 1200px → 768px へ変更。オンライン版は html に zoom がかかる一方
+// @media は実寸で評価されるため、iPad(768–1199px)ではレイアウト実効幅が
+// 1171px相当まで広がっているのにヘッダーだけ2段になり、2段目が丸ごと空白になっていた。
+// 768–1199px は「1行ヘッダーだが寸法はタブレット用に縮めた」帯で、両サイトとも
+// brand 18px / toggle 10px・4px 8px / EN 11px・4px 8px / nav 13px / マーク18px に
+// 揃えてあるので、tier="desktop" のまま同じ期待値で比較できる（帯の除外は不要）。
+// なおスキャン側はこの帯だけブランドが右寄せ（.sh-right を隠して .sh-center を
+// margin-left:auto）だが、本スクリプトは位置ではなく書体/寸法のみを比較する。
 const VIEWPORTS = [
   [320, 700, "mobile"],
   [360, 740, "mobile"],
   [390, 844, "mobile"],
   [414, 896, "mobile"],
-  [768, 1024, "mobile"],
-  [820, 1180, "mobile"],
-  [1024, 768, "mobile"],
-  [1194, 834, "mobile"],
+  [767, 1024, "mobile"],
+  [768, 1024, "desktop"],
+  [820, 1180, "desktop"],
+  [1024, 768, "desktop"],
+  [1194, 834, "desktop"],
   [1280, 800, "desktop"],
   [1440, 900, "desktop"],
 ];
@@ -54,7 +63,7 @@ const PICK = `(sel, root) => {
 // tier ごとの要素セレクタ。[label, onlineSelector, scanSelector, 比較プロパティ(省略時PROPS)]
 function pairsFor(tier) {
   if (tier === "mobile") {
-    const m = 'header div.min-\\[1200px\\]\\:hidden'; // オンライン版モバイルブロック
+    const m = 'header div.min-\\[768px\\]\\:hidden'; // オンライン版モバイルブロック
     return [
       ["brand", `${m} span.brand`, ".site-header .sh-brand-text"],
       // 非アクティブセル同士（オンライン=スキャンセル、スキャン=オンラインセル）
@@ -67,7 +76,7 @@ function pairsFor(tier) {
         ["fontFamily", "fontSize", "fontWeight", "color"]],
     ];
   }
-  const d = "header div.hidden.min-\\[1200px\\]\\:flex"; // オンライン版デスクトップブロック
+  const d = "header div.hidden.min-\\[768px\\]\\:flex"; // オンライン版デスクトップ/タブレットブロック
   return [
     ["brand", `${d} span.brand`, ".site-header .sh-brand-text"],
     ["toggle-inactive", `${d} a[href*="web.locahun3d"]`, '.site-header .sh-toggle:not(.sh-lang) a'],
