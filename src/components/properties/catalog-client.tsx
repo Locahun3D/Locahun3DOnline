@@ -479,10 +479,20 @@ export default function CatalogClient({
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
 
+      {/* ══ タブレット縦(720–1023px)だけ「左=絞り込み+件数/ソート+カード / 右=地図sticky」
+          の2カラムにする ══
+          理由: 縦積みのままだと 1画面をほぼ地図が占有するのに情報が無く（実測
+          820x1180 で地図が y230–582、カードは y660 から＝初期表示に1件も入らない）、
+          絞り込みも折りたたみ1行で使いにくかった。
+          実装: このラッパだけを帯限定でグリッドにし、中の「上段バンド」を
+          display:contents にして filters/map を直接このグリッドの子に昇格させる
+          （DOMを二重に持たない＝<720 と ≥1024 のマークアップを一切変えないため）。
+          左57% / 右43%。地図は row-span-3 + sticky でビューポート内に収める。 */}
+      <div className="min-[720px]:max-[1024px]:grid min-[720px]:max-[1024px]:grid-cols-[57fr_43fr] min-[720px]:max-[1024px]:gap-x-4 min-[720px]:max-[1024px]:items-start">
       {/* Top band: search panel (left) + map (right), flush to the same height.
           モバイルは縦積みなので gap を詰めて結果カードを早く見せる（見開き優先）。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)] gap-3 sm:gap-5 lg:gap-6">
-        <div className="min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)] gap-3 sm:gap-5 lg:gap-6 min-[720px]:max-[1024px]:contents">
+        <div className="min-w-0 min-[720px]:max-[1024px]:col-start-1 min-[720px]:max-[1024px]:row-start-1">
           <FiltersPanel
             q={q} setQ={setQ}
             category={category} setCategory={setCategory}
@@ -511,11 +521,22 @@ export default function CatalogClient({
 
         {/* Map: stretches to match the panel height (面一), no scroll-follow.
             モバイルでは高さを抑えて結果カードを早く見せる。 */}
-        {/* 高さは実画面基準なので calc(Xvh/var(--z))。768–1023px(縦積みのiPad帯)は
-            40vh=iPad縦で約470px と地図だけで画面を占有してしまうため 30vh へ。
-            ⚠ sm: と min-[768px]: を同じプロパティで重ねると出力順で勝敗が不定に
+        {/* 高さは実画面基準なので calc(Xvh/var(--z))（100vh素置きは zoom で倍される）。
+            720–1023px は右カラムの sticky 地図。ヘッダー高を引いて「ヘッダー下から
+            画面下まで」に収める（-24px は下の余白ぶん）。
+            ⚠ sm: と min-[720px]: を同じプロパティで重ねると出力順で勝敗が不定に
             なるため、4帯すべてを排他の範囲で書く。 */}
-        <div className="h-[calc(24vh/var(--z))] sm:max-[768px]:h-[calc(40vh/var(--z))] min-[768px]:max-[1024px]:h-[calc(30vh/var(--z))] lg:h-auto">
+        {/* 720–1023px: 高さは h ではなく max-h + self-stretch。
+            h を固定すると row-span した地図自身が3行の高さを押し広げてしまい、
+            件数が少ないときにページ全体が地図の高さぶん間延びし、さらに
+            「グリッド領域 == 地図の高さ」になって sticky の可動域が 0 になる
+            （実測: 820x1180 で doc 1180→1430px・スクロールしても追従しなかった）。
+            stretch なら行の高さは左カラムだけで決まり、地図はその中で
+            画面高までに抑えられて余った分が sticky の可動域になる。 */}
+        <div className="h-[calc(24vh/var(--z))] sm:max-[720px]:h-[calc(40vh/var(--z))] lg:h-auto
+          min-[720px]:max-[1024px]:h-auto min-[720px]:max-[1024px]:max-h-[calc((100vh-var(--header-h)-24px)/var(--z))]
+          min-[720px]:max-[1024px]:col-start-2 min-[720px]:max-[1024px]:row-start-1 min-[720px]:max-[1024px]:row-span-3
+          min-[720px]:max-[1024px]:self-stretch min-[720px]:max-[1024px]:sticky min-[720px]:max-[1024px]:top-[calc(var(--header-h)/var(--z))]">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}
@@ -526,10 +547,13 @@ export default function CatalogClient({
         </div>
       </div>
 
-      <SortBar sort={sort} setSort={setSort} resultCount={computed.length} totalCount={items.length} />
+      <SortBar
+        sort={sort} setSort={setSort} resultCount={computed.length} totalCount={items.length}
+        className="min-[720px]:max-[1024px]:col-start-1 min-[720px]:max-[1024px]:row-start-2"
+      />
 
       {/* Cards span the full width below the band → maximum card area */}
-      <div className="mt-3 sm:mt-4">
+      <div className="mt-3 sm:mt-4 min-[720px]:max-[1024px]:col-start-1 min-[720px]:max-[1024px]:row-start-3">
         {computed.length === 0 ? (
           <div className="border border-line p-12 text-center">
             <div className="mono text-[12px] tracking-[0.3em] uppercase opacity-60 mb-3">
@@ -542,7 +566,11 @@ export default function CatalogClient({
             </p>
           </div>
         ) : (
-          <ul className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[2200px]:grid-cols-6 gap-5">
+          /* 列数は帯を排他の範囲で書く（sm:/md: と min-[N]: を同じプロパティで
+             重ねると出力順で勝敗が不定になる）。720–1023px は左カラム内なので1列。
+             〜639:1 / 640–719:2 / 720–1023:1 / 1024–1279:3 / 1280–1535:4 /
+             1536–2199:5 / 2200以上:6（720–1023 以外は従来と同じ列数）。 */
+          <ul className="grid grid-cols-1 sm:max-[720px]:grid-cols-2 min-[1024px]:max-[1280px]:grid-cols-3 min-[1280px]:max-[1536px]:grid-cols-4 min-[1536px]:max-[2200px]:grid-cols-5 min-[2200px]:grid-cols-6 gap-5 min-[720px]:max-[1024px]:gap-3">
             {computed.map((p) => (
               <li
                 key={p.id}
@@ -562,6 +590,7 @@ export default function CatalogClient({
             ))}
           </ul>
         )}
+      </div>
       </div>
     </div>
   );
@@ -616,13 +645,15 @@ function FiltersPanel(p: FiltersProps) {
     // あった。パネル自身の実幅で判定するコンテナクエリに切り替える。
     // 768–1199px(iPad帯)は zoom 0.8 で実効幅が広いぶん、PC と同じ padding だと
     // 実画面では枠が間延びして見える。帯だけ詰める（範囲は max-[Npx] で排他に）。
-    <div className="@container border border-line bg-[#222] p-2.5 sm:max-[768px]:p-3.5 min-[768px]:max-[1200px]:p-2 min-[1200px]:p-3.5 space-y-2 sm:space-y-2.5">
-      {/* モバイル: 検索UIを既定で畳むトグル (lg未満のみ表示)。畳んでカードを早く見せる。 */}
+    <div className="@container border border-line bg-[#222] p-2.5 sm:max-[720px]:p-3.5 min-[720px]:max-[1200px]:p-2 min-[1200px]:p-3.5 space-y-2 sm:space-y-2.5 min-[720px]:max-[1024px]:space-y-1.5">
+      {/* スマホ(<720px)のみ: 検索UIを既定で畳むトグル。畳んでカードを早く見せる。
+          720px以上は左カラム/上段バンドに常時展開する（タブレット縦で折りたたみ
+          1行のままだと絞り込みが実質使えない、という指摘への対応）。 */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="lg:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 min-[768px]:py-1 hover:border-accent transition"
+        className="min-[720px]:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 hover:border-accent transition"
       >
         <span className="mono text-[11px] tracking-[0.2em] uppercase">🔍 {en ? "Filters" : "絞り込み検索"}</span>
         <span className="flex items-baseline gap-1.5">
@@ -632,8 +663,8 @@ function FiltersPanel(p: FiltersProps) {
         </span>
       </button>
 
-      {/* 折りたたみ本体: モバイルは open のときだけ展開 / lg+ は常時展開 */}
-      <div className={`${open ? "block" : "hidden"} lg:block space-y-2.5`}>
+      {/* 折りたたみ本体: スマホ(<720px)は open のときだけ展開 / 720px以上は常時展開 */}
+      <div className={`${open ? "block" : "hidden"} min-[720px]:block space-y-2.5 min-[720px]:max-[1024px]:space-y-1.5`}>
       {/* 最近の検索条件: 常時・1行固定高さ (横スクロール) でパネル高さを安定させ、
           チップ出現/折り返しによる枠全体のサイズ変動を防ぐ。 */}
       <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap min-h-[30px]">
@@ -1208,14 +1239,17 @@ const SORT_COLS: Array<{
 ];
 
 function SortBar({
-  sort, setSort, resultCount, totalCount,
+  sort, setSort, resultCount, totalCount, className = "",
 }: {
   sort: SortKey; setSort: (v: SortKey) => void;
   resultCount: number; totalCount: number;
+  // 呼び出し側から grid の配置クラスだけを足せるようにする（ラッパ div を挟むと
+  // mt-3 のマージンが親へ抜けて余白が変わるため、根の要素に直接付ける）。
+  className?: string;
 }) {
   const en = useLocale() === "en";
   return (
-    <div className="mt-3 sm:mt-4 border border-line bg-[#222] px-2.5 sm:px-4 py-1.5 sm:py-2.5 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 text-[11px] mono">
+    <div className={`mt-3 sm:mt-4 border border-line bg-[#222] px-2.5 sm:px-4 py-1.5 sm:py-2.5 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 text-[11px] mono ${className}`}>
       <div className="flex items-baseline gap-1.5 sm:gap-2 font-sans">
         <span className="brand text-xl sm:text-2xl text-accent">{resultCount.toLocaleString(en ? "en-US" : "ja-JP")}</span>
         <span className="text-[11px] sm:text-[12px] font-medium opacity-70">{en ? "results" : "件"}</span>

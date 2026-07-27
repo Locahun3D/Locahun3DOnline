@@ -9,14 +9,31 @@ export async function generateMetadata() {
   return { title: locale === "en" ? "Sign in" : "ログイン" };
 }
 
-/** Strip to a same-site path so an attacker can't redirect off-site. */
+/** Strip to a same-site path so an attacker can't redirect off-site.
+ *  ⚠ pathname だけだとクエリが落ちる（/sign-in?redirect_url=/account?tab=x で
+ *  タブ指定が消える）。search も一緒に持って戻すこと。host は捨てるので
+ *  外部サイトへのオープンリダイレクトにはならない。 */
 function internalPath(raw?: string): string {
   if (!raw) return "/";
   try {
-    return new URL(raw, "http://x").pathname || "/";
+    const url = new URL(raw, "http://x");
+    return (url.pathname || "/") + url.search;
   } catch {
     return raw.startsWith("/") ? raw : "/";
   }
+}
+
+/** Clerk ウィジェットのマウント前に同じ大きさの箱を置いて高さを予約する。
+ *  これが無いと、読込中はコピー文だけで高さ0 →ウィジェット出現時に
+ *  ページが大きく飛ぶ（実測: 390px の /sign-in、744px の /sign-up）。 */
+function CardSkeleton({ h }: { h: number }) {
+  return (
+    <div
+      aria-hidden
+      style={{ minHeight: h }}
+      className="w-[400px] max-w-full rounded-lg border border-line bg-white/[0.03] animate-pulse"
+    />
+  );
 }
 
 export default async function SignInPage({
@@ -93,7 +110,7 @@ export default async function SignInPage({
           </ul>
         </div>
         <div className="order-1 justify-self-center min-[1200px]:order-2 min-[1200px]:justify-self-end">
-          <SignIn signUpUrl="/sign-up" />
+          <SignIn signUpUrl="/sign-up" fallback={<CardSkeleton h={488} />} />
         </div>
       </div>
     </div>

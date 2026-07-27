@@ -33,7 +33,7 @@ export default function CartLink() {
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
-        className="w-4 h-4 min-[768px]:w-[18px] min-[768px]:h-[18px]"
+        className="w-4 h-4 min-[720px]:w-[18px] min-[720px]:h-[18px]"
       >
         <circle cx="9" cy="21" r="1" />
         <circle cx="20" cy="21" r="1" />

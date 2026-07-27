@@ -118,7 +118,10 @@ for (const { url, site } of PAGES) {
     }
     // モバイル幅ではドロワー開状態も検査
     if (w <= 414) {
-      const toggle = site === "scan" ? "#mToggle" : 'header button[aria-expanded]';
+      // ⚠ :visible 必須。オンライン版のタブレット用ハンバーガー(720–1023pxのみ表示)は
+      //   スマホ幅でも DOM には存在するため、:visible が無いと非表示要素を掴んで
+      //   click() が30秒タイムアウトし、監査が1ページ2分に激遅化する（実測）。
+      const toggle = site === "scan" ? "#mToggle:visible" : "header button[aria-expanded]:visible";
       const t = page.locator(toggle).first();
       if (await t.count()) {
         await t.click().catch(() => {});

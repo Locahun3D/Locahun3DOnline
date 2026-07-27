@@ -33,7 +33,8 @@ const PAGES = [
   "/en/works/ue5-xgrids-3dgs-aerial-ai.html",
 ];
 
-const WIDTHS = [320, 360, 390, 414, 768, 820, 1024, 1200, 1280, 1440, 1560, 1920];
+// 実機の幅を網羅する。720/1024 は帯の境界、744/810/834 は iPad mini6 / 10.2 / Pro11 縦。
+const WIDTHS = [320, 360, 390, 414, 430, 719, 720, 744, 768, 810, 820, 834, 1023, 1024, 1080, 1133, 1180, 1200, 1280, 1366, 1440, 1560, 1920];
 
 // ページ内で採取する指標。言語で中身が変わる文字列は見ない（数値・書体のみ）。
 const PROBE = () => {
@@ -57,10 +58,11 @@ const PROBE = () => {
       header ? Math.round(hr.height) : "NOHEADER",
       codeEl ? getComputedStyle(codeEl).display : "nocode",
       nav.length].join("~"),
-    // 重なり判定は1行ヘッダー(≥768px)でのみ意味を持つ。
-    // 2段ヘッダーではナビが下段なので左右比較は無意味（高さで判定すると誤検出する）。
-    // ⚠ 2026-07-27: 1行化の閾値を 1200px → 768px へ下げたのに合わせて拡張。
-    overlap: last && cr && window.innerWidth >= 768 ? Math.round(cr.left - last.right) : null,
+    // 重なり判定は「ナビが1行に並ぶ帯(≥1024px)」でのみ意味を持つ。
+    // 2段ヘッダー(<720px)ではナビが下段、ハンバーガー帯(720–1023px)ではナビが
+    // ドロワー内（初期は display:none で rect が全部0）なので左右比較は無意味。
+    // ⚠ 経緯: 1200px → 768px → 1024px（帯構成の変更に追従）。
+    overlap: last && cr && window.innerWidth >= 1024 ? Math.round(cr.left - last.right) : null,
     overflowX: document.documentElement.scrollWidth - window.innerWidth,
   };
 };

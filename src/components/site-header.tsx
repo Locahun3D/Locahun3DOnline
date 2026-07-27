@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Show, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
 import { roleLabel } from "@/lib/account-schema";
 import { listNotifications } from "@/lib/notifications";
@@ -7,6 +7,8 @@ import HeaderMark from "@/components/header-mark";
 import CartLink from "@/components/cart-link";
 import NotificationBell from "@/components/notification-bell";
 import LangToggle from "@/components/lang-toggle";
+import HeaderTabletNav from "@/components/header-tablet-nav";
+import HeaderAuthButtons from "@/components/header-auth-buttons";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
@@ -34,35 +36,28 @@ export default async function SiteHeader() {
   const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
 
   /**
-   * PC/タブレット(768px+)は1行、モバイル(768px未満)は同じ要素を2段に折り返して
-   * 縮小表示する（ハンバーガーには畳まない）。切替幅はスキャンサイトと同一の
-   * 768px（Tailwind lg=1024px でも md=768px でもなく min-[768px]: で書くこと。
-   * lg:/md: を混ぜると Tailwind の出力順で後勝ちし境界がズレる実害があった）。
-   * ⚠ 以前は 1200px 切替だったが、html の zoom(<1200px=0.7) でレイアウト実効幅が
-   * 820/0.7=1171px相当に広がる一方 @media は実寸で評価されるため、iPad で
-   * 「中身は広いのにヘッダーだけ2段」＝2段目が丸ごと空白、という崩れが出ていた。
-   * globals.css の 768–1199px 帯を zoom:0.8 にした上で切替も 768px へ下げてある
-   * （どちらか片方だけ変えると再発する）。
-   * 「PC/モバイルで見える要素を変えない、サイズ調整のみで揃える」という
+   * 帯の構成（スキャンサイト assets/site-header.css と完全に同じ切り方）:
+   *   <720px      : 2段ヘッダー（スマホ。ハンバーガーには畳まない）
+   *   720–1023px  : 1行。左=ハンバーガー / 中央=ブランド＋トグル / 右=最小限
+   *   ≥1024px     : 1行フルナビ（従来どおり）
+   * 切替は min-[720px]: / max-[1024px]: で書くこと（Tailwind lg=1024 や md=768 の
+   * ショートハンドと混ぜると出力順で後勝ちし境界がズレる実害があった）。
+   * ⚠ 経緯: 1200px → 768px → 720px。
+   *   1200px の頃は html の zoom(<1200px=0.7) でレイアウト実効幅が 820/0.7=1171px
+   *   相当に広がる一方 @media は実寸評価なので「中身は広いのにヘッダーだけ2段」
+   *   ＝2段目が丸ごと空白、という崩れが出ていた。
+   *   768px にした後も iPad mini 6 縦(744px)がスマホ扱いに落ちるのが残ったため
+   *   720px へ下げた。globals.css の zoom ティア境界も同じ 720px。
+   *   （どちらか片方だけ変えると再発する）
+   * 2段側は「PC/モバイルで見える要素を変えない、サイズ調整のみで揃える」という
    * 明示の指示に基づく（実測: 全要素を1行9pxに詰めても600px超で320-390px
    * 幅には物理的に収まらないため、2段構成で妥協）。
    */
+  // modal 経路の着地先は client 側で現在パスから決める（HeaderAuthButtons）。
+  // ヘッダーは全ページ共通なので、サーバーで固定値を渡すと
+  // 「どのページで押しても同じ場所に着地」になってしまう。
   const authButtons = (
-    <Show when="signed-out">
-      {/* Modal mode: signing in does NOT push a /sign-in history entry,
-          so the browser Back button never gets trapped bouncing through
-          an already-authenticated /sign-in page. */}
-      <SignInButton mode="modal">
-        <button className="px-1 min-[768px]:px-3 min-[1200px]:px-4 py-0.5 min-[768px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
-          {t("auth.login")}
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="px-1 min-[768px]:px-3 min-[1200px]:px-4 py-0.5 min-[768px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
-          {t("auth.signup")}
-        </button>
-      </SignUpButton>
-    </Show>
+    <HeaderAuthButtons loginLabel={t("auth.login")} signupLabel={t("auth.signup")} />
   );
 
   const authSignedIn = (
@@ -70,15 +65,14 @@ export default async function SiteHeader() {
       {user && (
         <Link
           href={lh("/account")}
-          className="flex items-center gap-1 min-[768px]:gap-1.5 min-[1200px]:gap-2 text-[9px] min-[768px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[768px]:tracking-[0.12em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
+          className="flex items-center gap-1 min-[720px]:gap-1.5 min-[1200px]:gap-2 text-[9px] min-[720px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[720px]:tracking-[0.12em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
-          {/* 権限バッジ（例「撮影スタジオ」）は 768–1023px では出さない。
-              1行ヘッダー化したこの帯はサインイン時の右側が最も混み、実測で
-              768px のナビ→ブランド間が -9px（＝重なり）になっていた。
-              バッジを落とすと +51px の余裕が出る。1024px 以上は元どおり表示。
-              ⚠ 範囲は max-[Npx] で排他にすること（sm: と min-[768px]: を
+          {/* 権限バッジ（例「撮影スタジオ」）は 720–1023px では出さない。
+              ハンバーガー化したこの帯はサインイン時の右側が最も混み、バッジを
+              足すと中央のブランド／トグルに寄ってくる。1024px 以上は元どおり表示。
+              ⚠ 範囲は max-[Npx] で排他にすること（sm: と min-[720px]: を
               同じプロパティで重ねると出力順で勝敗が不定になる）。 */}
-          <span className="hidden sm:max-[768px]:inline min-[1024px]:inline border border-line px-1 min-[768px]:px-1.5 py-0.5 text-[8px] min-[768px]:text-[10px] min-[1200px]:text-[9px]">
+          <span className="hidden sm:max-[720px]:inline min-[1024px]:inline border border-line px-1 min-[720px]:px-1.5 py-0.5 text-[8px] min-[720px]:text-[10px] min-[1200px]:text-[9px]">
             {roleLabel(user.role, locale)}
           </span>
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
@@ -106,7 +100,7 @@ export default async function SiteHeader() {
       {user && (
         <NotificationBell notifications={recentNotifications} unreadCount={unreadCount} locale={locale} en={locale === "en"} />
       )}
-      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[768px]:w-7 min-[768px]:h-7" } }} />
+      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[720px]:w-7 min-[720px]:h-7" } }} />
     </Show>
   );
 
@@ -114,16 +108,16 @@ export default async function SiteHeader() {
   // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
   // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
   const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[768px]:text-[9px] min-[1200px]:text-[11px] tracking-[0.02em] min-[768px]:tracking-[0.04em] min-[1200px]:tracking-[0.06em]">
+    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[720px]:text-[9px] min-[1200px]:text-[11px] tracking-[0.02em] min-[720px]:tracking-[0.04em] min-[1200px]:tracking-[0.06em]">
       <a
         href={scanUrl}
-        className="px-[3px] min-[360px]:px-1 min-[768px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[768px]:py-[3px] min-[1200px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[720px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[720px]:py-[3px] min-[1200px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.scan")}
       </a>
       <a
         href={lh("/properties")}
-        className="px-[3px] min-[360px]:px-1 min-[768px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[768px]:py-[3px] min-[1200px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
+        className="px-[3px] min-[360px]:px-1 min-[720px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[720px]:py-[3px] min-[1200px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.online")}
       </a>
@@ -132,35 +126,80 @@ export default async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
-      {/* ══ PC/タブレット(768px+) — 1行 ══ */}
-      <div className="hidden min-[768px]:flex frame items-center h-16 gap-2 min-[1200px]:gap-3">
+      {/* ══ PC/タブレット(720px+) — 1行 ══
+          720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに
+          切り替える。1024px 以上は従来どおり 左=ナビ / 中央=ブランド / 右=操作。 */}
+      <div className="hidden min-[720px]:flex frame items-center h-16 gap-2 min-[1200px]:gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
-          <nav className="flex items-center gap-[11px] min-[1200px]:gap-4 min-[1440px]:gap-6">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={lh(n.href)}
-                className="group flex items-center gap-1.5 text-[13px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
-              >
-                <span className="hidden min-[1440px]:inline mono text-[10px] tracking-[0.2em] opacity-50 group-hover:text-accent group-hover:opacity-100 transition">
-                  {n.code}
-                </span>
-                {t(n.key)}
-              </Link>
-            ))}
-          </nav>
+          <HeaderTabletNav menuLabel={locale === "en" ? "Menu" : "メニュー"}>
+            <nav className="flex items-center gap-[11px] min-[1200px]:gap-4 min-[1440px]:gap-6 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
+              {NAV.map((n) => (
+                <Link
+                  key={n.href}
+                  href={lh(n.href)}
+                  className="group flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
+                >
+                  <span className="hidden min-[1440px]:inline mono text-[10px] tracking-[0.2em] opacity-50 group-hover:text-accent group-hover:opacity-100 transition">
+                    {n.code}
+                  </span>
+                  {t(n.key)}
+                </Link>
+              ))}
+              {/* 掲載管理 / 管理 の入口は右側に置いてあるが `hidden min-[1200px]:inline-block`
+                  なので 720–1199px では完全に消えていた（実測: 744/768/820/834/1024/1180 で
+                  リンクが存在しない）。「これが無いと掲載ページに辿り着けない」入口なので、
+                  この帯だけナビ側（720–1023はドロワー / 1024–1199は1行ナビ）に出す。
+                  ≥1200px は従来の右側リンクがあるので min-[1200px]:hidden で重複を防ぐ。 */}
+              {user?.role === "studio" && (
+                <Link
+                  href={lh("/admin/properties")}
+                  className="min-[1200px]:hidden flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
+                >
+                  ⌂ {locale === "en" ? "Listings" : "掲載管理"}
+                </Link>
+              )}
+              {user?.role === "admin" && (
+                <Link
+                  href={lh("/admin")}
+                  className="min-[1200px]:hidden flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
+                >
+                  ⚙ {t("auth.admin")}
+                </Link>
+              )}
+            </nav>
+          </HeaderTabletNav>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <Link href={lh("/")} aria-label={brandName} className="flex items-center gap-2.5">
+        {/* 720–1023px: ヘッダー全幅に重ねた 1fr auto 1fr グリッドの2列目にブランドを
+            置き、ブランドの水平中心をビューポート中心へ固定する。
+            ⚠ これがスキャンサイト(assets/site-header.css 同帯)とブランド中心X座標を
+            ±0px で一致させる仕掛け。「中央＝幅の50%」は html の zoom 倍率に
+            依存しないので、zoom 0.8 のオンライン版でも実画面座標で一致する。
+            グループ全体を中央寄せにするとトグル幅の半分だけズレる上、zoom 差で
+            そのズレ量が両サイトで揃わない（実測 約10px）ため必ずブランド単体を
+            中央列に置くこと。
+            ⚠ 中心の基準は「100vw の 50%」。inset-x-0 だけだと基準が html の
+            コンテンツ幅になり、scrollbar-gutter:stable が予約する 15px の分だけ
+            スキャンサイトより 7.5px 左へずれる（実測）。translateX で
+            (100vw/--z − 自分の幅)/2 だけ右へ戻すと、ガターの有無に関わらず
+            中心が常に 50vw になる（ガター0の環境では自動的に 0px）。
+            vw は zoom の影響を受けない実画面基準なので /var(--z) で割り戻す。 */}
+        <div className="flex items-center gap-2.5 flex-shrink-0 max-[1024px]:grid max-[1024px]:grid-cols-[1fr_auto_1fr] max-[1024px]:gap-0 max-[1024px]:absolute max-[1024px]:inset-x-0 max-[1024px]:top-0 max-[1024px]:h-16 max-[1024px]:pointer-events-none max-[1024px]:translate-x-[calc((100vw/var(--z)-100%)/2)]">
+          <Link
+            href={lh("/")}
+            aria-label={brandName}
+            className="flex items-center gap-2.5 max-[1024px]:col-start-2 max-[1024px]:row-start-1 max-[1024px]:gap-1.5 max-[1024px]:pointer-events-auto"
+          >
             <HeaderMark />
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
           </Link>
-          <div className="hidden min-[768px]:block ml-1">{scanOnlineToggle}</div>
+          <div className="hidden min-[720px]:block ml-1 max-[1024px]:col-start-3 max-[1024px]:row-start-1 max-[1024px]:justify-self-start max-[1024px]:ml-2 max-[1024px]:pointer-events-auto">
+            {scanOnlineToggle}
+          </div>
           <LangToggle className="hidden 2xl:inline-block" />
         </div>
 
-        <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+        <div className="flex items-center gap-3 max-[1024px]:gap-2 flex-1 justify-end min-w-0 max-[1024px]:relative max-[1024px]:z-[1]">
           <LangToggle className="2xl:hidden" />
           <CartLink />
           {authButtons}
@@ -168,9 +207,9 @@ export default async function SiteHeader() {
         </div>
       </div>
 
-      {/* ══ モバイル(768px未満) — 2段。PCと同じ要素をサイズ調整して
+      {/* ══ モバイル(720px未満) — 2段。PCと同じ要素をサイズ調整して
           全て表示する（要素の非表示・ハンバーガー化はしない）。 ══ */}
-      <div className="min-[768px]:hidden frame">
+      <div className="min-[720px]:hidden frame">
         {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証。
             768px以上（タブレット帯）はスマホ極小サイズのままだと余白だらけで
             崩れて見えるため、中間サイズへ拡大する（スキャンサイトと数値共通）。 */}

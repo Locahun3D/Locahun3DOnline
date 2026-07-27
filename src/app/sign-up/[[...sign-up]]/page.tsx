@@ -11,6 +11,18 @@ export async function generateMetadata() {
   return { title: locale === "en" ? "Sign up" : "新規登録" };
 }
 
+/** Clerk ウィジェットのマウント前に同じ大きさの箱を置いて高さを予約する
+ *  （/sign-in と同じ理由・同じ実装。片方だけ直さないこと）。 */
+function CardSkeleton({ h }: { h: number }) {
+  return (
+    <div
+      aria-hidden
+      style={{ minHeight: h }}
+      className="w-[400px] max-w-full rounded-lg border border-line bg-white/[0.03] animate-pulse"
+    />
+  );
+}
+
 export default async function SignUpPage() {
   // Already signed in (e.g. via the browser Back button)? Don't show the form —
   // leave via a server redirect so the history stack can't get trapped.
@@ -69,7 +81,7 @@ export default async function SignUpPage() {
         </div>
         <div className="flex flex-col items-center gap-4 justify-self-center min-[1200px]:justify-self-end">
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
-      <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" />
+      <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" fallback={<CardSkeleton h={570} />} />
       {/* 明示的な同意チェックボックスは Clerk ウィジェット内には差し込めないため、
           多くの SaaS と同じ「続行=同意」形式の告知文をウィジェット直下に表示する。 */}
       <p className="max-w-sm text-center text-[12px] text-muted leading-relaxed">

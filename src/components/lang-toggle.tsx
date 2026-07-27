@@ -29,10 +29,10 @@ export default function LangToggle({
   const enHref = base === "/" ? "/en" : `/en${base}`;
   const isJa = locale === "ja";
 
-  // compact でも 768px 以上（タブレット帯）は中間サイズへ拡大
+  // compact でも 720px 以上（タブレット帯）は中間サイズへ拡大
   // （スキャンサイト .sh-lang のタブレット帯と数値共通）。
   const size = compact
-    ? "px-1 py-0.5 text-[9px] tracking-[0.04em] min-[768px]:px-1.5 min-[768px]:py-[3px] min-[768px]:text-[10px] min-[768px]:tracking-[0.08em]"
+    ? "px-1 py-0.5 text-[9px] tracking-[0.04em] min-[720px]:px-1.5 min-[720px]:py-[3px] min-[720px]:text-[10px] min-[720px]:tracking-[0.08em]"
     : "px-2 py-1 text-[11px] tracking-[0.12em]";
 
   return (
