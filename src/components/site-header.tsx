@@ -238,7 +238,7 @@ export default async function SiteHeader() {
             （実測 375px: col1=99.3 / col3=119.3 → 中心が-10px、320pxで-37.5px）。
             0まで縮める指定にすれば左右の列は必ず同幅になり、ブランドは常に中央。
             はみ出た分は右の padding 内に収まる（実測 375pxで10px、余白16px）。 */}
-        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-14 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none translate-x-[calc((100vw_-_100%)/2)]">
+        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-14 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
           <Link
             href={lh("/")}
             aria-label={brandName}
