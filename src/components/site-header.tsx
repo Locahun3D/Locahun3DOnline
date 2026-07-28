@@ -140,7 +140,10 @@ export default async function SiteHeader() {
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに
           切り替える。1024px 以上は従来どおり 左=ナビ / 中央=ブランド / 右=操作。 */}
-      <div className="flex frame items-center h-14 gap-2 min-[1200px]:gap-3">
+      {/* ⚠ h-[55px]+border-b 1px = 56px。スキャン側 .site-header は height:56px に
+          ボーダーを含む(border-box)ため、h-14(56px) だと 1px 高くなる（実測 57 vs 56）。
+          --header-h も 56px なので、ここを変えるときは globals.css も同時に。 */}
+      <div className="flex frame items-center h-[55px] gap-2 min-[1200px]:gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
           <HeaderTabletNav menuLabel={locale === "en" ? "Menu" : "メニュー"}>
             <nav className="flex items-center gap-[11px] min-[1200px]:gap-4 min-[1440px]:gap-6 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
@@ -238,7 +241,7 @@ export default async function SiteHeader() {
             （実測 375px: col1=99.3 / col3=119.3 → 中心が-10px、320pxで-37.5px）。
             0まで縮める指定にすれば左右の列は必ず同幅になり、ブランドは常に中央。
             はみ出た分は右の padding 内に収まる（実測 375pxで10px、余白16px）。 */}
-        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-14 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
+        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-[55px] px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
           <Link
             href={lh("/")}
             aria-label={brandName}

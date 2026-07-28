@@ -15,6 +15,19 @@ const b=await chromium.launch({headless:false, channel:"chrome", args:["--hide-s
 const ctx=await b.newContext({viewport:{width:400,height:800}});
 const p=await ctx.newPage();
 await p.route('**/*', r=>r.continue({headers:{...r.request().headers(),'cache-control':'no-cache'}}));
+// 反映待ち: online の /cart で中央ズレが0になるまで待つ（both-edges 適用の指標）
+for(let i=1;i<=20;i++){
+  await p.setViewportSize({width:820,height:1180});
+  await p.goto("https://locahun3d.com/cart",{waitUntil:"domcontentloaded",timeout:40000}).catch(()=>{});
+  await p.waitForTimeout(1200);
+  const d=await p.evaluate(()=>{const hd=document.querySelector('header');
+    const b=[...hd.querySelectorAll('a[aria-label]')].find(e=>e.getBoundingClientRect().width>5).getBoundingClientRect();
+    return +(((b.left+b.right)/2)-innerWidth/2).toFixed(1);});
+  console.log(`反映待ち ${i}: ズレ${d}`);
+  if(Math.abs(d)<1) break;
+  await new Promise(r=>setTimeout(r,40000));
+}
+
 const rows=[];
 const run=async(base,paths,site)=>{
   for(const path of paths){
