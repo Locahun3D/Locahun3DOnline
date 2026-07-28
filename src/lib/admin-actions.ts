@@ -378,9 +378,9 @@ export async function replyToContactRequestAction(
     status: c.status === "new" ? "read" : c.status,
   });
 
-  // メールスレッド(contact_messages)にも追記して、Email Routing経由の
-  // 受信メールと1本のスレッドとして表示できるようにする。失敗しても
-  // 返信自体（上のupsert＋メール送信）は成立させる。
+  // メールスレッド(contact_messages)にも追記して、管理画面に返信履歴を残す。
+  // （お客様からの返信の取り込みは未実装。docs/inbound-email-decision-2026-07-28.md）
+  // 失敗しても返信自体（上のupsert＋メール送信）は成立させる。
   try {
     await contactMessageRepo.append({
       direction: "outbound",

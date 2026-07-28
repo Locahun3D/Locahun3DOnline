@@ -10,13 +10,18 @@ import { getD1, d1ListData, d1Upsert } from "./d1";
  * 問い合わせメールスレッド。/contact の contact_requests とは別テーブルで、
  * counterpart(相手メール小文字)で突き合わせて admin UI にスレッド表示する。
  *
- * 書き込み経路は2つ:
- *  1. email-worker/（Cloudflare Email Routing の受信 Worker）— 本番D1へ直接
- *     INSERT する。このファイルのスキーマと email-worker 側の列・JSON形状を
- *     一致させること（worker は Next.js のコードを import できない）。
- *  2. replyToContactRequestAction（管理画面からの返信）— appendContactMessage。
+ * 書き込み経路は現在1つだけ:
+ *   replyToContactRequestAction（管理画面からの返信）— appendContactMessage。
  *
- * ローカル開発ではメール受信が発生しないため file 側は主に検証シード用。
+ * ⚠ お客様からの返信メールの取り込みは **実装していない**。
+ *   2026-07-23 に email-worker/（Cloudflare Email Routing 受信 Worker）を用意したが、
+ *   入口となるサブドメインを作れず1件も処理しないまま 2026-07-28 に撤去した。
+ *   Email Routing は有効化するとルートドメインに MX を置く仕様で、
+ *   locahun3d.com の MX は Google Workspace のため使えない（受信が全滅する）。
+ *   回避策のサブドメイン別ゾーンは Enterprise 限定。
+ *   経緯・将来案（Resend Inbound）は docs/inbound-email-decision-2026-07-28.md。
+ *   → したがって direction:"inbound" の行は現状発生しない。復活させる場合も
+ *     このスキーマと投入側の列・JSON形状を一致させること。
  */
 
 export const contactMessageSchema = z.object({
@@ -28,7 +33,7 @@ export const contactMessageSchema = z.object({
   toEmail: z.string().default(""),
   subject: z.string().default(""),
   bodyText: z.string().default(""),
-  /** 'email'(Email Routing経由) | 'admin-ui'(管理画面の返信フォーム) */
+  /** 'admin-ui'(管理画面の返信フォーム)。'email' は受信取り込み用だが現在未使用 */
   source: z.enum(["email", "admin-ui"]).default("email"),
   createdAt: z.string().default(() => new Date().toISOString()),
 });

@@ -36,7 +36,11 @@ export default async function AdminContactRequestsPage({
   const scoped = all.filter((c) => (showArchived ? c.status === "archived" : c.status !== "archived"));
   const requests = typeFilter ? scoped.filter((c) => c.type === typeFilter) : scoped;
 
-  // メールスレッド（Email Routing受信＋管理画面返信）を相手メールで突き合わせ
+  // メールスレッド（現状は「この画面から送った返信」のみ）を相手メールで突き合わせ。
+  // ⚠ お客様からの返信の取り込みは実装していない。理由と将来案は
+  //    docs/inbound-email-decision-2026-07-28.md を読むこと
+  //    （Cloudflare Email Routing はルートにMXを置く仕様で Google Workspace の
+  //      受信を壊すため使えない。サブドメイン別ゾーンは Enterprise 限定）。
   const threads = groupMessagesByCounterpart(await contactMessageRepo.list());
 
   return (
@@ -57,6 +61,10 @@ export default async function AdminContactRequestsPage({
           サイト全体の /contact フォーム（バグ報告・ほしい物件追加・掲載依頼・ご相談）から届いた内容。運営メールへ自動転送されます。
           <br />
           メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。クリックで各行の詳細・返信フォームが開きます。
+          <br />
+          <span className="text-accent">お客様からの返信メールはこの画面には出ません。</span>
+          {" "}
+          <code className="text-accent">contact@locahun3d.com</code>（Gmail）でご確認ください。ここに出るのは、フォームからの受信と、この画面から送った返信だけです。
         </p>
       </div>
 
