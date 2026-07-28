@@ -170,13 +170,16 @@ export default async function SiteHeader() {
           </HeaderTabletNav>
         </div>
 
-        {/* 720–1199px: ヘッダー全幅に重ねた 1fr auto 1fr グリッドの2列目にブランドを
+        {/* 720px以上の全帯: ヘッダー全幅に重ねた 1fr auto 1fr グリッドの2列目にブランドを
             置き、ブランドの水平中心をビューポート中心へ固定する。
-            ⚠ 上端は max-[1200px]（=1199px まで）。以前は max-[1024px] で、
-            1024–1199px（iPad 横向きの全機種: 1024/1080/1133/1180/1194）だけが
-            この仕掛けから外れ、左右 flex-1 による「グループ中央寄せ」に落ちていた。
-            グループ中央寄せは zoom 倍率でズレ量が変わるため、スキャンサイトとは
-            実測で 320〜405px ずれ、1023→1024 の境界でも位置が飛んでいた。
+            ⚠ 幅の上限を付けないこと。2026-07-28 まで上端が max-[1200px] だったため
+            1200px以上だけがこの仕掛けから外れ、左右 flex-1 による
+            「グループ中央寄せ」に落ちていた。結果、1199→1200 の1px境界で
+            ブランドが 84px 飛び（実測 599.5→515.9）、PC帯ではスキャンサイトと
+            26.8px ずれていた（online 598.9 / scan 572.1 @1366px）。
+            それ以前は上端が max-[1024px] で、1024–1199px（iPad 横向きの全機種:
+            1024/1080/1133/1180/1194）が同じ理由で 320〜405px ずれていた。
+            同じ失敗を2度しているので、帯を区切ってよいのは寸法だけ。
             ⚠ これがスキャンサイト(assets/site-header.css 同帯)とブランド中心X座標を
             ±0px で一致させる仕掛け。「中央＝幅の50%」は html の zoom 倍率に
             依存しないので、zoom 0.8 のオンライン版でも実画面座標で一致する。
@@ -189,22 +192,28 @@ export default async function SiteHeader() {
             (100vw/--z − 自分の幅)/2 だけ右へ戻すと、ガターの有無に関わらず
             中心が常に 50vw になる（ガター0の環境では自動的に 0px）。
             vw は zoom の影響を受けない実画面基準なので /var(--z) で割り戻す。 */}
-        <div className="flex items-center gap-2.5 flex-shrink-0 max-[1200px]:grid max-[1200px]:grid-cols-[1fr_auto_1fr] max-[1200px]:gap-0 max-[1200px]:absolute max-[1200px]:inset-x-0 max-[1200px]:top-0 max-[1200px]:h-16 max-[1200px]:pointer-events-none max-[1200px]:translate-x-[calc((100vw/var(--z)-100%)/2)]">
+        {/* 左右 padding は .frame と同値。列2＝ブランドの中心は左右対称なので
+            padding では動かないが、列3の右端（EN）を本文の余白位置に揃えるために要る。 */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-0 absolute inset-x-0 top-0 h-16 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none translate-x-[calc((100vw/var(--z)-100%)/2)]">
           <Link
             href={lh("/")}
             aria-label={brandName}
-            className="flex items-center gap-2.5 max-[1200px]:col-start-2 max-[1200px]:row-start-1 max-[1200px]:gap-1.5 max-[1200px]:pointer-events-auto"
+            className="flex items-center col-start-2 row-start-1 gap-1.5 min-[1200px]:gap-2.5 pointer-events-auto"
           >
             <HeaderMark />
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
           </Link>
-          <div className="hidden min-[720px]:block ml-1 max-[1200px]:col-start-3 max-[1200px]:row-start-1 max-[1200px]:justify-self-start max-[1200px]:ml-2 max-[1200px]:pointer-events-auto">
+          {/* トグルと（≥1536pxで中央側に出る）EN は必ず1つの列3グループにまとめる。
+              別々に col-start-3 を振ると重なる。EN を justify-self-end にするのも不可で、
+              右端にはカート/認証ボタンが居るため衝突する（scan側は .sh-right が空なので
+              右端でよい、という非対称はここだけ許容する）。 */}
+          <div className="col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 min-[1200px]:ml-3 pointer-events-auto">
             {scanOnlineToggle}
+            <LangToggle className="hidden 2xl:inline-block" />
           </div>
-          <LangToggle className="hidden 2xl:inline-block" />
         </div>
 
-        <div className="flex items-center gap-3 max-[1024px]:gap-2 flex-1 justify-end min-w-0 max-[1200px]:relative max-[1200px]:z-[1]">
+        <div className="flex items-center gap-3 max-[1024px]:gap-2 flex-1 justify-end min-w-0 relative z-[1]">
           <LangToggle className="2xl:hidden" />
           <CartLink />
           {authButtons}
