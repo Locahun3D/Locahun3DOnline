@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { refundPurchaseAction, deletePurchaseAction, bulkDeleteTestPurchasesAction } from "@/lib/admin-actions";
@@ -39,6 +40,8 @@ export default async function PurchasesPage({
 }: {
   searchParams: Promise<{ q?: string; property?: string; status?: string }>;
 }) {
+  await requireAdmin();
+
   const sp = await searchParams;
   const query = (sp.q ?? "").trim().toLowerCase();
   const filterPropertyId = sp.property ?? "";

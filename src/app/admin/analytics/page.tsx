@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/dal";
 import { repo } from "@/lib/store";
 import { getAllStats, DEVICE_LABEL, classifyReferrer, type DeviceKind } from "@/lib/analytics";
 import { listRecentEvents } from "@/lib/analytics-events";
@@ -34,6 +35,8 @@ export default async function AdminAnalyticsPage({
 }: {
   searchParams: Promise<{ days?: string; q?: string; studio?: string }>;
 }) {
+  await requireAdmin();
+
   const sp = await searchParams;
   const days: Period =
     PERIODS.find((p) => String(p) === sp.days) ?? 14;

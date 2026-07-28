@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/dal";
 import { inquiryRepo } from "@/lib/inquiries";
 import { setInquiryStatusAction, deleteInquiryAction } from "@/lib/admin-actions";
 import InquiryReplyForm from "@/components/admin/inquiry-reply-form";
@@ -15,6 +16,8 @@ export default async function AdminInquiriesPage({
 }: {
   searchParams: Promise<{ purpose?: string }>;
 }) {
+  await requireAdmin();
+
   const { purpose: purposeFilter } = await searchParams;
   const all = await inquiryRepo.list();
   const newCount = all.filter((i) => i.status === "new").length;

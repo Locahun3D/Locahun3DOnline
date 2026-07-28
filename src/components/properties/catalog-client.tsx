@@ -794,8 +794,14 @@ function FiltersPanel(p: FiltersProps) {
 
       <Divider />
 
-      {/* Range filters — パネル自身の実幅で2列化（@container）。 */}
-      <div className="grid @lg:grid-cols-2 gap-x-8 gap-y-2">
+      {/* Range filters — パネル自身の実幅で2列化（@container）。
+          ⚠ 閾値は「1行が必要とする実測幅」から決める。RangeRow は
+          ラベル88px + セレクト2つ + 区切りで最低 ~330px 必要なので、
+          2列にしてよいのはコンテナが 660px 以上あるときだけ。
+          以前は @lg(512px) で2列にしており、iPad縦(コンテナ430px→1列244px)で
+          セレクトが列からはみ出し、隣の列のラベル「天井高(m)」「利用時間」が
+          セレクトの上に重なって表示されていた（本番で実機再現・スクショ確認済）。 */}
+      <div className="grid @min-[660px]:grid-cols-2 gap-x-8 gap-y-2">
         <div className="space-y-2">
           <RangeRow
             label={en ? "Hourly (¥/hr)" : "時間料金 (¥/hr)"}
@@ -991,8 +997,10 @@ function RangeRow({ label, min, max, setMin, setMax, options, format, singleMax 
               onChange={setMin}
               options={options}
               format={format}
+              // min-w-0 が無いと flex 既定の min-width:auto で
+              // 「最長の選択肢の幅」より小さくならず、列からはみ出す。
               emptyLabel={en ? "Min — any" : "下限なし"}
-              className={`flex-1 ${invalid ? "border-accent text-accent" : ""}`}
+              className={`flex-1 min-w-0 ${invalid ? "border-accent text-accent" : ""}`}
             />
             <span className="mono text-[12px] opacity-50">{en ? "–" : "〜"}</span>
           </>
@@ -1003,7 +1011,7 @@ function RangeRow({ label, min, max, setMin, setMax, options, format, singleMax 
           options={options}
           format={format}
           emptyLabel={singleMax ? (en ? "No limit" : "制限なし") : en ? "Max — any" : "上限なし"}
-          className={`flex-1 ${invalid ? "border-accent text-accent" : ""}`}
+          className={`flex-1 min-w-0 ${invalid ? "border-accent text-accent" : ""}`}
         />
       </div>
       {invalid && (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdmin } from "@/lib/dal";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 import { contactMessageRepo, groupMessagesByCounterpart } from "@/lib/contact-messages";
 import ContactRequestRow from "@/components/admin/contact-request-row";
@@ -19,6 +20,8 @@ export default async function AdminContactRequestsPage({
 }: {
   searchParams: Promise<{ type?: string; box?: string }>;
 }) {
+  await requireAdmin();
+
   const { type: typeFilter, box } = await searchParams;
   const showArchived = box === "archive";
 
