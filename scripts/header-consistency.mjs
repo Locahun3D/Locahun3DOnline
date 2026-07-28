@@ -47,7 +47,12 @@ const PROBE = () => {
   };
   const header = document.querySelector(".site-header");
   const nav = [...document.querySelectorAll(".site-header .sh-left nav a")];
-  const center = document.querySelector(".site-header .sh-center");
+  // ⚠ 重なりの相手は「中央コンテナ」ではなく **ブランド本体**。
+  // 2026-07-28 に 1024–1199px でブランドを画面中央へ固定した際、.sh-center を
+  // position:absolute; left:0; right:0 の全幅グリッドに変えたため、コンテナで
+  // 測ると left が常に 0 になり「ナビと重なっている」と誤検出した（実測: 1180px で
+  // -364 と報告されたが、実際はナビ右端364 / ブランド左端524 で +160px の余裕）。
+  const center = document.querySelector(".site-header .sh-brand");
   const hr = header ? header.getBoundingClientRect() : null;
   const last = nav.length ? nav[nav.length - 1].getBoundingClientRect() : null;
   const cr = center ? center.getBoundingClientRect() : null;

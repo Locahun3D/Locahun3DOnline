@@ -170,8 +170,13 @@ export default async function SiteHeader() {
           </HeaderTabletNav>
         </div>
 
-        {/* 720–1023px: ヘッダー全幅に重ねた 1fr auto 1fr グリッドの2列目にブランドを
+        {/* 720–1199px: ヘッダー全幅に重ねた 1fr auto 1fr グリッドの2列目にブランドを
             置き、ブランドの水平中心をビューポート中心へ固定する。
+            ⚠ 上端は max-[1200px]（=1199px まで）。以前は max-[1024px] で、
+            1024–1199px（iPad 横向きの全機種: 1024/1080/1133/1180/1194）だけが
+            この仕掛けから外れ、左右 flex-1 による「グループ中央寄せ」に落ちていた。
+            グループ中央寄せは zoom 倍率でズレ量が変わるため、スキャンサイトとは
+            実測で 320〜405px ずれ、1023→1024 の境界でも位置が飛んでいた。
             ⚠ これがスキャンサイト(assets/site-header.css 同帯)とブランド中心X座標を
             ±0px で一致させる仕掛け。「中央＝幅の50%」は html の zoom 倍率に
             依存しないので、zoom 0.8 のオンライン版でも実画面座標で一致する。
@@ -184,22 +189,22 @@ export default async function SiteHeader() {
             (100vw/--z − 自分の幅)/2 だけ右へ戻すと、ガターの有無に関わらず
             中心が常に 50vw になる（ガター0の環境では自動的に 0px）。
             vw は zoom の影響を受けない実画面基準なので /var(--z) で割り戻す。 */}
-        <div className="flex items-center gap-2.5 flex-shrink-0 max-[1024px]:grid max-[1024px]:grid-cols-[1fr_auto_1fr] max-[1024px]:gap-0 max-[1024px]:absolute max-[1024px]:inset-x-0 max-[1024px]:top-0 max-[1024px]:h-16 max-[1024px]:pointer-events-none max-[1024px]:translate-x-[calc((100vw/var(--z)-100%)/2)]">
+        <div className="flex items-center gap-2.5 flex-shrink-0 max-[1200px]:grid max-[1200px]:grid-cols-[1fr_auto_1fr] max-[1200px]:gap-0 max-[1200px]:absolute max-[1200px]:inset-x-0 max-[1200px]:top-0 max-[1200px]:h-16 max-[1200px]:pointer-events-none max-[1200px]:translate-x-[calc((100vw/var(--z)-100%)/2)]">
           <Link
             href={lh("/")}
             aria-label={brandName}
-            className="flex items-center gap-2.5 max-[1024px]:col-start-2 max-[1024px]:row-start-1 max-[1024px]:gap-1.5 max-[1024px]:pointer-events-auto"
+            className="flex items-center gap-2.5 max-[1200px]:col-start-2 max-[1200px]:row-start-1 max-[1200px]:gap-1.5 max-[1200px]:pointer-events-auto"
           >
             <HeaderMark />
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
           </Link>
-          <div className="hidden min-[720px]:block ml-1 max-[1024px]:col-start-3 max-[1024px]:row-start-1 max-[1024px]:justify-self-start max-[1024px]:ml-2 max-[1024px]:pointer-events-auto">
+          <div className="hidden min-[720px]:block ml-1 max-[1200px]:col-start-3 max-[1200px]:row-start-1 max-[1200px]:justify-self-start max-[1200px]:ml-2 max-[1200px]:pointer-events-auto">
             {scanOnlineToggle}
           </div>
           <LangToggle className="hidden 2xl:inline-block" />
         </div>
 
-        <div className="flex items-center gap-3 max-[1024px]:gap-2 flex-1 justify-end min-w-0 max-[1024px]:relative max-[1024px]:z-[1]">
+        <div className="flex items-center gap-3 max-[1024px]:gap-2 flex-1 justify-end min-w-0 max-[1200px]:relative max-[1200px]:z-[1]">
           <LangToggle className="2xl:hidden" />
           <CartLink />
           {authButtons}
