@@ -35,12 +35,12 @@ export default function HeaderAuthButtons({
   return (
     <Show when="signed-out">
       <SignInButton mode="modal" fallbackRedirectUrl={backTo}>
-        <button className="px-1 min-[720px]:px-3 min-[1200px]:px-4 py-0.5 min-[720px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[720px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[720px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
+        <button className="px-1 min-[720px]:px-3 max-[767px]:px-2 min-[1200px]:px-4 py-0.5 min-[720px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[720px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[720px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
           {loginLabel}
         </button>
       </SignInButton>
       <SignUpButton mode="modal" forceRedirectUrl="/onboarding">
-        <button className="px-1 min-[720px]:px-3 min-[1200px]:px-4 py-0.5 min-[720px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[720px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[720px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
+        <button className="px-1 min-[720px]:px-3 max-[767px]:px-2 min-[1200px]:px-4 py-0.5 min-[720px]:py-1 min-[1200px]:py-1.5 text-[7px] min-[360px]:text-[8px] min-[720px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.02em] min-[720px]:tracking-[0.12em] min-[1200px]:tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
           {signupLabel}
         </button>
       </SignUpButton>

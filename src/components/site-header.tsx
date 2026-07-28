@@ -213,7 +213,12 @@ export default async function SiteHeader() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 max-[1024px]:gap-2 flex-1 justify-end min-w-0 relative z-[1]">
+        {/* ⚠ 720–733px では中央グリッド側のトグル(列3)と、この右グループ先頭のENが
+            重なる（本番=未ログインで EN/カート/ログイン/新規登録 の4項目が並ぶ最も
+            混む状態で、実測 720px:-6px / 730px:-1px）。スキャンサイトは右側が空なので
+            起きない＝オンライン版固有。中央機構やトグル側（両サイト共通＝パリティ対象）は
+            触らず、この右グループの間隔だけを詰めて解消する。 */}
+        <div className="flex items-center gap-3 max-[1024px]:gap-2 max-[767px]:gap-1 flex-1 justify-end min-w-0 relative z-[1]">
           <LangToggle className="2xl:hidden" />
           <CartLink />
           {authButtons}
