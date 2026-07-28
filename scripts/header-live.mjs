@@ -20,8 +20,9 @@
  * 実際 720px の重なり(-6px)はローカルで再現せず本番で初めて出た。
  * → 本検査は **既定を本番** にし、右側の項目数も一緒に出す。
  *
- * ⚠ 720px未満は2段ヘッダー（ブランド=上段左 / ナビ=下段）なので中央判定はしない。
- *   上下に分かれた要素同士を左右で比べても意味がないため、重なり判定も行を跨ぐ組は除外する。
+ * ⚠ 2026-07-28 にヘッダーを全幅ハンバーガーへ統一したので、**中央判定は全幅で行う**。
+ *   以前は「720px未満は2段だから中央判定しない」と除外しており、
+ *   スマホ幅でブランドが最大37.5px左へずれていても検出できなかった。
  */
 import { chromium } from "playwright";
 
@@ -107,7 +108,7 @@ for (const pg of PAGES) {
     if (r.error) { problems.push({ w, pg: id, type: "probe", detail: r.error }); continue; }
     if (r.overflowX > 2) problems.push({ w, pg: id, type: "h-overflow", detail: r.overflowX });
     if (r.overlaps.length) problems.push({ w, pg: id, type: "header-overlap", detail: r.overlaps.join(",") });
-    if (w >= 720) {
+    {
       const off = +(r.center - r.viewportCenter).toFixed(1);
       if (Math.abs(off) > CENTER_TOLERANCE) {
         problems.push({ w, pg: id, type: "brand-not-centered", detail: `${off}px (中心${r.center}/画面中央${r.viewportCenter})` });

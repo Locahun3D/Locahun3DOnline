@@ -182,15 +182,18 @@ export default async function SiteHeader() {
               {/* バーから外した分をここへ出す。出し分けの境界は「バー側で隠す幅」と
                   必ず対にすること（片方だけ変えると消失または重複する）。
                   EN            : <1024（iPad縦でトグルと重なるため）
-                  カート/認証    : <720（スマホは縦横ともバーに入らない）*/}
+                  カート/認証    : <768（719〜730px でトグルと3〜8px重なる。実測で
+                                   744px以降は収まるが余裕を見て 768px を境界にした）
+                  ⚠ Tailwind の max-[Npx] は「N未満」。バー側 max-[768px]:hidden と
+                     ドロワー側 min-[768px]:hidden が過不足なく対になる。 */}
               <div className="hidden max-[1024px]:flex flex-col items-stretch border-t border-line/60 mt-1 pt-2 gap-2">
                 <div className="flex items-center gap-3">
                   <LangToggle />
-                  <span className="min-[720px]:hidden flex items-center">
+                  <span className="min-[768px]:hidden flex items-center">
                     <CartLink />
                   </span>
                 </div>
-                <div className="min-[720px]:hidden flex items-center gap-2 flex-wrap">
+                <div className="min-[768px]:hidden flex items-center gap-2 flex-wrap">
                   {authButtons}
                   {authSignedIn}
                 </div>
@@ -261,7 +264,7 @@ export default async function SiteHeader() {
             触らず、この右グループの間隔だけを詰めて解消する。 */}
         {/* ⚠ 480px未満はここをバーから外す。残すとブランドが中央からずれる
             （実測: 375pxで-10px、320pxで-37.5px）。中身はドロワー側に出す（R3）。 */}
-        <div className="max-[719px]:hidden flex items-center gap-2 max-[1024px]:gap-2 max-[767px]:gap-1 flex-1 justify-end min-w-0 relative z-[1]">
+        <div className="max-[768px]:hidden flex items-center gap-2 max-[1024px]:gap-2 max-[767px]:gap-1 flex-1 justify-end min-w-0 relative z-[1]">
           {/* ⚠ Tailwind v4 の max-[Npx] は「N未満」。スキャン側の
               @media(max-width:1023px)（1023を含む）と揃えるには max-[1024px]。
               1023px ちょうどで片サイトだけENが出る不一致が実際に発生した。 */}
