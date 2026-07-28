@@ -62,7 +62,10 @@ const VIEWPORTS = [
 const PROPS = ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "color", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"];
 
 const PICK = `(sel, root) => {
-  const el = (root || document).querySelector(sel);
+  // ⚠ 同じ要素がバーとドロワーの両方に存在し得る（狭い幅では退避させるため）。
+  //    必ず「表示されている方」を採る。querySelector 先頭固定だと非表示側を掴む。
+  const all = [...(root || document).querySelectorAll(sel)];
+  const el = all.find((e) => e.getBoundingClientRect().width > 3) || null;
   if (!el) return null;
   const s = getComputedStyle(el);
   const r = el.getBoundingClientRect();
@@ -76,33 +79,21 @@ const PICK = `(sel, root) => {
   };
 }`;
 
-// tier ごとの要素セレクタ。[label, onlineSelector, scanSelector, 比較プロパティ(省略時PROPS)]
-function pairsFor(tier) {
-  if (tier === "mobile") {
-    const m = 'header div.min-\\[720px\\]\\:hidden'; // オンライン版モバイルブロック
-    return [
-      ["brand", `${m} span.brand`, ".site-header .sh-brand-text"],
-      // 非アクティブセル同士（オンライン=スキャンセル、スキャン=オンラインセル）
-      ["toggle-inactive", `${m} a[href*="web.locahun3d"]`, '.site-header .sh-toggle:not(.sh-lang) a'],
-      // アクティブセル同士（色はサービス色で異なって正しいので色以外を比較）
-      ["toggle-active", `${m} div.flex.items-stretch a:nth-child(2)`, ".site-header .sh-toggle .sh-active",
-        ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]],
-      ["lang", `${m} a[aria-label="Language"]`, ".site-header .sh-lang a"],
-      ["nav-item", `${m} nav a`, ".site-header .sh-left nav a",
-        ["fontFamily", "fontSize", "fontWeight", "color"]],
-    ];
-  }
-  const d = "header div.hidden.min-\\[720px\\]\\:flex"; // オンライン版デスクトップ/タブレットブロック
-  return [
-    ["brand", `${d} span.brand`, ".site-header .sh-brand-text"],
-    ["toggle-inactive", `${d} a[href*="web.locahun3d"]`, '.site-header .sh-toggle:not(.sh-lang) a'],
-    ["toggle-active", `${d} div.flex.items-stretch a:nth-child(2)`, ".site-header .sh-toggle .sh-active",
-      ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]],
-    ["lang", `${d} a[aria-label="Language"]:not(.hidden)`, ".site-header .sh-lang a"],
-    ["nav-item", `${d} nav a`, ".site-header .sh-left nav a",
-      ["fontFamily", "fontSize", "fontWeight", "color"]],
-  ];
-}
+// 要素セレクタ。2026-07-28 にヘッダーを「全幅1ブロック」へ統一したので tier 分岐は無い。
+// 旧版は `header div.min-[720px]:hidden`（2段ブロック）を見ていたため、
+// 構造変更後は全件 "missing element" になっていた。構造を変えたらここも直すこと。
+const PAIRS = [
+  ["brand", "header a[aria-label] span.brand", ".site-header .sh-brand-text"],
+  // 非アクティブセル同士（オンライン=スキャンセル、スキャン=オンラインセル）
+  ["toggle-inactive", 'header a[href*="web.locahun3d"]', ".site-header .sh-toggle:not(.sh-lang) a"],
+  // アクティブセル同士（色はサービス色で異なって正しいので色以外を比較）
+  ["toggle-active", "header div.items-stretch a:nth-child(2)", ".site-header .sh-toggle .sh-active",
+    ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"]],
+  ["lang", 'header a[aria-label="Language"]', ".site-header .sh-lang a, .site-header .sh-drawer-lang"],
+  ["nav-item", "header nav a", ".site-header .sh-left nav a",
+    ["fontFamily", "fontSize", "fontWeight", "color"]],
+];
+function pairsFor() { return PAIRS; }
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext();
@@ -121,8 +112,11 @@ for (const [w, h, tier] of VIEWPORTS) {
   for (const [label, oSel, sSel, propList] of pairsFor(tier)) {
     const o = await pOnline.evaluate(`(${PICK})(${JSON.stringify(oSel)})`);
     const s = await pScan.evaluate(`(${PICK})(${JSON.stringify(sSel)})`);
+    // 両サイトとも非表示なら一致（ドロワーに畳まれている等）。
+    // 片方だけ出ているのは「退避の閾値が両サイトでずれている」ので不一致にする。
+    if (!o && !s) continue;
     if (!o || !s) {
-      diffs.push({ vw: w, label, issue: `missing element (online=${!!o} scan=${!!s})` });
+      diffs.push({ vw: w, label, issue: `片方だけ表示 (online=${!!o} scan=${!!s})` });
       continue;
     }
     for (const prop of propList ?? PROPS) {

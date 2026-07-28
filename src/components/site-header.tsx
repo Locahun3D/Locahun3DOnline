@@ -65,14 +65,14 @@ export default async function SiteHeader() {
       {user && (
         <Link
           href={lh("/account")}
-          className="flex items-center gap-1 min-[720px]:gap-1.5 min-[1200px]:gap-2 text-[9px] min-[720px]:text-[11px] min-[1200px]:text-[12px] mono tracking-[0.05em] min-[720px]:tracking-[0.12em] min-[1200px]:tracking-[0.18em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
+          className="flex items-center gap-1.5 text-[11px] mono tracking-[0.12em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
           {/* 権限バッジ（例「撮影スタジオ」）は 720–1023px では出さない。
               ハンバーガー化したこの帯はサインイン時の右側が最も混み、バッジを
               足すと中央のブランド／トグルに寄ってくる。1024px 以上は元どおり表示。
               ⚠ 範囲は max-[Npx] で排他にすること（sm: と min-[720px]: を
               同じプロパティで重ねると出力順で勝敗が不定になる）。 */}
-          <span className="hidden sm:max-[720px]:inline min-[1024px]:inline border border-line px-1 min-[720px]:px-1.5 py-0.5 text-[8px] min-[720px]:text-[10px] min-[1200px]:text-[9px]">
+          <span className="hidden min-[1024px]:inline border border-line px-1.5 py-0.5 text-[10px]">
             {roleLabel(user.role, locale)}
           </span>
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
@@ -83,7 +83,7 @@ export default async function SiteHeader() {
       {user?.role === "studio" && (
         <Link
           href={lh("/admin/properties")}
-          className="hidden min-[1200px]:inline-block px-2 min-[1200px]:px-3 py-1 min-[1200px]:py-1.5 text-[9px] min-[1200px]:text-[10px] mono tracking-[0.14em] min-[1200px]:tracking-[0.22em] uppercase text-muted border-l border-line pl-2 min-[1200px]:pl-3 hover:text-accent transition whitespace-nowrap"
+          className="hidden min-[1200px]:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line pl-3 hover:text-accent transition whitespace-nowrap"
         >
           ⌂ {locale === "en" ? "Listings" : "掲載管理"}
         </Link>
@@ -92,7 +92,7 @@ export default async function SiteHeader() {
       {user?.role === "admin" && (
         <Link
           href={lh("/admin")}
-          className="hidden min-[1200px]:inline-block px-2 min-[1200px]:px-3 py-1 min-[1200px]:py-1.5 text-[9px] min-[1200px]:text-[10px] mono tracking-[0.14em] min-[1200px]:tracking-[0.22em] uppercase text-muted border-l border-line pl-2 min-[1200px]:pl-3 hover:text-accent transition whitespace-nowrap"
+          className="hidden min-[1200px]:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line pl-3 hover:text-accent transition whitespace-nowrap"
         >
           ⚙ {t("auth.admin")}
         </Link>
@@ -100,24 +100,26 @@ export default async function SiteHeader() {
       {user && (
         <NotificationBell notifications={recentNotifications} unreadCount={unreadCount} locale={locale} en={locale === "en"} />
       )}
-      <UserButton appearance={{ elements: { avatarBox: "w-6 h-6 min-[720px]:w-7 min-[720px]:h-7" } }} />
+      <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
     </Show>
   );
 
   // トグルの状態規則（スキャンサイトと共通）:
   // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
   // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
+  // ⚠ 寸法は全幅固定。幅で変えると回転で見た目が変わる（docs/header-rules.md R2）。
+  //    値はスキャンサイト assets/site-header.css の .sh-toggle と 1:1。
   const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[7px] min-[360px]:text-[8px] min-[720px]:text-[9px] min-[1200px]:text-[11px] tracking-[0.02em] min-[720px]:tracking-[0.04em] min-[1200px]:tracking-[0.06em]">
+    <div className="flex items-stretch brand text-[9px] tracking-[0.04em]">
       <a
         href={scanUrl}
-        className="px-[3px] min-[360px]:px-1 min-[720px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[720px]:py-[3px] min-[1200px]:py-1 border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
+        className="px-1.5 py-[3px] border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.scan")}
       </a>
       <a
         href={lh("/properties")}
-        className="px-[3px] min-[360px]:px-1 min-[720px]:px-1.5 min-[1200px]:px-3 py-0.5 min-[720px]:py-[3px] min-[1200px]:py-1 border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
+        className="px-1.5 py-[3px] border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
       >
         {t("header.online")}
       </a>
@@ -125,11 +127,20 @@ export default async function SiteHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm">
+    // ⚠ ヘッダーだけ html の zoom を打ち消す。--z は 720/1200px で
+    //    0.7→0.8→0.9 と段階的に変わるため、CSS値を固定しても実サイズが幅で変わり、
+    //    端末を回転させるだけで見た目が変わっていた
+    //    （iPhone15 縦0.7/横0.8、iPad Pro12.9 縦0.8/横0.9）。
+    //    ズームの外に出すと CSS px = 実 px となりスキャンサイトと同一寸法になる。
+    //    詳細は docs/header-rules.md の R2。
+    <header
+      style={{ zoom: "calc(1 / var(--z))" }}
+      className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm"
+    >
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに
           切り替える。1024px 以上は従来どおり 左=ナビ / 中央=ブランド / 右=操作。 */}
-      <div className="hidden min-[720px]:flex frame items-center h-16 gap-2 min-[1200px]:gap-3">
+      <div className="flex frame items-center h-14 gap-2 min-[1200px]:gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
           <HeaderTabletNav menuLabel={locale === "en" ? "Menu" : "メニュー"}>
             <nav className="flex items-center gap-[11px] min-[1200px]:gap-4 min-[1440px]:gap-6 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
@@ -166,6 +177,24 @@ export default async function SiteHeader() {
                   ⚙ {t("auth.admin")}
                 </Link>
               )}
+              {/* 480px未満でバーから外した分をここに出す。
+                  幅を稼ぐために「消す」のではなく「移す」のがルール（R3）。 */}
+              {/* バーから外した分をここへ出す。出し分けの境界は「バー側で隠す幅」と
+                  必ず対にすること（片方だけ変えると消失または重複する）。
+                  EN            : <1024（iPad縦でトグルと重なるため）
+                  カート/認証    : <720（スマホは縦横ともバーに入らない）*/}
+              <div className="hidden max-[1024px]:flex flex-col items-stretch border-t border-line/60 mt-1 pt-2 gap-2">
+                <div className="flex items-center gap-3">
+                  <LangToggle />
+                  <span className="min-[720px]:hidden flex items-center">
+                    <CartLink />
+                  </span>
+                </div>
+                <div className="min-[720px]:hidden flex items-center gap-2 flex-wrap">
+                  {authButtons}
+                  {authSignedIn}
+                </div>
+              </div>
             </nav>
           </HeaderTabletNav>
         </div>
@@ -201,11 +230,16 @@ export default async function SiteHeader() {
             （実測: elementFromPoint が右側グループを返していた）。
             グリッド自体は pointer-events-none なので、上に乗せても右側の
             ボタンのクリックは妨げない。 */}
-        <div className="z-[2] grid grid-cols-[1fr_auto_1fr] items-center gap-0 absolute inset-x-0 top-0 h-16 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none translate-x-[calc((100vw/var(--z)-100%)/2)]">
+        {/* ⚠ 列は minmax(0,1fr) にする。素の 1fr だと col3(トグル)の最小幅が
+            col1(空)より大きくなって列が広がり、ブランドが左へ押される
+            （実測 375px: col1=99.3 / col3=119.3 → 中心が-10px、320pxで-37.5px）。
+            0まで縮める指定にすれば左右の列は必ず同幅になり、ブランドは常に中央。
+            はみ出た分は右の padding 内に収まる（実測 375pxで10px、余白16px）。 */}
+        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-14 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none translate-x-[calc((100vw_-_100%)/2)]">
           <Link
             href={lh("/")}
             aria-label={brandName}
-            className="flex items-center col-start-2 row-start-1 gap-1.5 min-[1200px]:gap-2.5 pointer-events-auto"
+            className="flex items-center col-start-2 row-start-1 gap-1.5 pointer-events-auto"
           >
             <HeaderMark />
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
@@ -214,7 +248,7 @@ export default async function SiteHeader() {
               別々に col-start-3 を振ると重なる。EN を justify-self-end にするのも不可で、
               右端にはカート/認証ボタンが居るため衝突する（scan側は .sh-right が空なので
               右端でよい、という非対称はここだけ許容する）。 */}
-          <div className="col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 min-[1200px]:ml-3 pointer-events-auto">
+          <div className="col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 pointer-events-auto">
             {scanOnlineToggle}
             <LangToggle className="hidden 2xl:inline-block" />
           </div>
@@ -225,62 +259,19 @@ export default async function SiteHeader() {
             混む状態で、実測 720px:-6px / 730px:-1px）。スキャンサイトは右側が空なので
             起きない＝オンライン版固有。中央機構やトグル側（両サイト共通＝パリティ対象）は
             触らず、この右グループの間隔だけを詰めて解消する。 */}
-        <div className="flex items-center gap-3 max-[1024px]:gap-2 max-[767px]:gap-1 flex-1 justify-end min-w-0 relative z-[1]">
-          <LangToggle className="2xl:hidden" />
+        {/* ⚠ 480px未満はここをバーから外す。残すとブランドが中央からずれる
+            （実測: 375pxで-10px、320pxで-37.5px）。中身はドロワー側に出す（R3）。 */}
+        <div className="max-[719px]:hidden flex items-center gap-2 max-[1024px]:gap-2 max-[767px]:gap-1 flex-1 justify-end min-w-0 relative z-[1]">
+          {/* ⚠ Tailwind v4 の max-[Npx] は「N未満」。スキャン側の
+              @media(max-width:1023px)（1023を含む）と揃えるには max-[1024px]。
+              1023px ちょうどで片サイトだけENが出る不一致が実際に発生した。 */}
+          <LangToggle className="2xl:hidden max-[1024px]:hidden" />
           <CartLink />
           {authButtons}
           {authSignedIn}
         </div>
       </div>
 
-      {/* ══ モバイル(720px未満) — 2段。PCと同じ要素をサイズ調整して
-          全て表示する（要素の非表示・ハンバーガー化はしない）。 ══ */}
-      <div className="min-[720px]:hidden frame">
-        {/* 1段目: ロゴ / スキャン・オンライン / EN / カート / 認証。
-            768px以上（タブレット帯）はスマホ極小サイズのままだと余白だらけで
-            崩れて見えるため、中間サイズへ拡大する（スキャンサイトと数値共通）。 */}
-        <div className="flex items-center h-12 min-[768px]:h-14 gap-0.5 min-[360px]:gap-1 min-[768px]:gap-2">
-          <Link href={lh("/")} aria-label={brandName} className="flex items-center gap-1 min-[768px]:gap-2 shrink-0">
-            <HeaderMark size={18} />
-            <span className="brand text-[11px] min-[360px]:text-[13px] min-[768px]:text-[16px] tracking-[0.01em] whitespace-nowrap">
-              {brandName}
-            </span>
-          </Link>
-          <div className="shrink-0">{scanOnlineToggle}</div>
-          <div className="flex-1" />
-          <LangToggle className="shrink-0" compact />
-          <div className="shrink-0">
-            <CartLink />
-          </div>
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            {authButtons}
-            {authSignedIn}
-          </div>
-        </div>
-        {/* 2段目: 主要ナビ。番号コードはモバイル非表示・中央寄せ
-            （スキャンサイトのモバイルnavと書体/サイズ/整列を1:1で共通化）。 */}
-        <nav className="flex flex-wrap items-center justify-center gap-x-3 min-[768px]:gap-x-6 gap-y-1 pb-2 min-[768px]:pb-2.5">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={lh(n.href)}
-              className="text-[11px] min-[768px]:text-[13px] font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
-            >
-              {t(n.key)}
-            </Link>
-          ))}
-          {/* PC同様、studio(掲載者)にだけ掲載管理への入口をモバイルにも出す。
-              admin向けリンクは既存方針どおりモバイル非表示のまま。 */}
-          {user?.role === "studio" && (
-            <Link
-              href={lh("/admin/properties")}
-              className="text-[11px] min-[768px]:text-[13px] font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
-            >
-              {locale === "en" ? "Listings" : "掲載管理"}
-            </Link>
-          )}
-        </nav>
-      </div>
     </header>
   );
 }
