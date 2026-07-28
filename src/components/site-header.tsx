@@ -194,7 +194,14 @@ export default async function SiteHeader() {
             vw は zoom の影響を受けない実画面基準なので /var(--z) で割り戻す。 */}
         {/* 左右 padding は .frame と同値。列2＝ブランドの中心は左右対称なので
             padding では動かないが、列3の右端（EN）を本文の余白位置に揃えるために要る。 */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-0 absolute inset-x-0 top-0 h-16 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none translate-x-[calc((100vw/var(--z)-100%)/2)]">
+        {/* ⚠ z-[2] は必須。右側グループ(EN/カート/認証)は flex-1 なので箱が行の
+            中央から右端まで広がり、relative z-[1] を持つ。この中央グリッドは
+            absolute だが z-index が auto だと DOM 順で後ろの右側グループに
+            負け、**中央のトグルとブランドがクリックできなくなる**
+            （実測: elementFromPoint が右側グループを返していた）。
+            グリッド自体は pointer-events-none なので、上に乗せても右側の
+            ボタンのクリックは妨げない。 */}
+        <div className="z-[2] grid grid-cols-[1fr_auto_1fr] items-center gap-0 absolute inset-x-0 top-0 h-16 px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none translate-x-[calc((100vw/var(--z)-100%)/2)]">
           <Link
             href={lh("/")}
             aria-label={brandName}
