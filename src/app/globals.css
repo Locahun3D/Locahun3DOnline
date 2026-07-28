@@ -114,7 +114,12 @@ html {
      はみ出して見える実害があった（「UIが不自然にずれる」类の报告と一致）。
      スクロールバー分の余白を常に予約し、100vw と 100% を一致させることで
      解消する。 */
-  scrollbar-gutter: stable;
+  /* ⚠ both-edges は必須。片側だけの stable だと右に15px予約されるだけなので、
+     縦スクロールしないページでは右に空帯が残り、中央寄せの要素が7.5px左に見える
+     （実Chromeの /cart で確認: innerWidth820 / scrollWidth805 / ブランド中心402.5）。
+     両端に予約すれば左右対称になり、スクロールバーの有無・ページの長短に関わらず
+     常に中央に来る。スキャンサイト assets/site-header.css と同値にすること。 */
+  scrollbar-gutter: stable both-edges;
 }
 
 html,
