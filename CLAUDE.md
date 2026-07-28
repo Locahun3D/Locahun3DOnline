@@ -16,11 +16,12 @@
 |---|---|
 | Framework | Next.js 16 (App Router, Turbopack) + TypeScript |
 | Styling | Tailwind v4 (CSS-only `@theme` config, no tailwind.config.js) |
-| Auth | **Clerk** (未配線。`.env.example` の `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` 参照) |
-| Billing | **Stripe** Subscriptions + future Connect for marketplace (未配線) |
-| DB | **Cloudflare D1** (未配線、wrangler.toml 未作成) |
-| Storage | **Cloudflare R2** バケット `locahun3d-assets`（既存） |
-| Hosting | Cloudflare Workers via `@opennextjs/cloudflare`（デプロイ未配線） |
+| Auth | **Clerk**（本番稼働。`clerk.locahun3d.com` / apex cookie で web.locahun3d.com と横断ログイン） |
+| Billing | **Stripe**（本番稼働。Checkout + Webhook 配線済み） |
+| DB | **Cloudflare D1** `locahun3d-db`（本番稼働。`wrangler.jsonc` にバインド） |
+| Storage | **Cloudflare R2** バケット `locahun3d-assets`（本番稼働） |
+| Hosting | Cloudflare Workers via `@opennextjs/cloudflare`（本番稼働・自動デプロイ） |
+| Mail | **Resend**（送信のみ。差出人 `contact@locahun3d.com`。SPF/DKIM/DMARC 設定済み。**受信の取り込みは実装していない** → `docs/inbound-email-decision-2026-07-28.md`） |
 
 ## ブランド
 
@@ -60,32 +61,34 @@
 - **未レイヤーの CSS は @layer utilities より高い詳細度**で適用される。`a { color: inherit }` のようなベースリセットを直書きすると `text-accent` 等が効かなくなる（実害発生済、Tailwind preflight に任せること）。
 - カスタムユーティリティは `@utility name { ... }` で定義。
 
-## 現在の進捗 (2026-05-23)
+## 現在の状況 (2026-07-28 更新)
 
-### 完成
-- ランディング `/`
-- 物件カタログ `/properties`（フィルタ、`status='published'` のみ表示）
-- 物件詳細 `/properties/[id]`（ギャラリー、ビューアーゲート、関連物件）
-- 料金 `/pricing`（3 プラン）
-- ダッシュボード `/dashboard`、サインイン/サインアップ、マーケットプレイス、About、404
-- **管理 `/admin/properties`** — リスト + status バッジ + 新規作成
-- **エディター `/admin/properties/[id]/edit`** — Google Forms 風 6 ステップ
-  (基本/仕様/紹介文/写真/3DGS/公開)、autosave (⌘S)、Publish チェックリスト、Draft/Publish/Archive/Delete
+> ⚠ この節は 2026-05-23 版が長く放置され、「Clerk/Stripe/D1/R2 未配線」「マーケット
+> プレイス・掲示板は完成」など**事実と逆の記述**が残っていた（実際には全部稼働済み、
+> 後者2つはルート自体が存在しない）。実装を触る前に、記述を鵜呑みにせず
+> `src/app/` の実体を見ること。
 
-### 未配線 (本配線にはアカウント情報が必要)
-- Clerk: ミドルウェア / 認証 UI / `publicMetadata.subscription` 同期
-- Stripe: Checkout Session API ルート / Webhook ハンドラ / 顧客同期
-- 3DGS ビューアー: `src/components/splat-viewer.tsx` は描画プレースホルダ。
-  Three.js + `@sparkjsdev/spark` をインストールして本実装。
-  FPS チューニングは `project_fps_investigation.md` 参照。
-- D1: `wrangler.toml`、スキーマ、`drizzle` or 生 SQL クエリ層
-- R2: 署名 URL 配信（プレビュー用）、独自ドメイン `cdn.locahun3d.com`
-- `next/image` 用 `images.remotePatterns`（picsum.photos は今モック表示で `<img>` を直書き）
+**全機能が本番稼働中。** 主要ルートは `src/app/` 直下がそのまま一覧になる:
+
+```
+/ /about /account /cart /contact /dashboard /embed /onboarding /preview
+/pricing /privacy /properties /s /sign-in /sign-up /submit-scan /terms /unsubscribe
+/admin/{accounts,analytics,assets,contact-requests,gift-codes,inquiries,
+        marketing,payouts,properties,purchases,reports,submissions,subscriptions}
+```
+
+EN版は `/en/*`（middleware の rewrite + 辞書方式）。
+
+**存在しないもの**（過去の記述にあるが未実装 / 廃止）:
+`/marketplace` `/community`（掲示板は物件配下）、レビュー・評価機能（削除済み）。
+
+**残タスク**は Obsidian の該当ノートと `docs/` を参照。
 
 ### データ層
 - 物件データの SOT は **`data/properties.json`** (git 管理)
-- `src/lib/store.ts` の `PropertyRepo` インターフェース + `JsonFilePropertyRepo`
-  実装。D1 に移行する時はこの 1 ファイルを差し替えるだけ。
+- `src/lib/store.ts` の `PropertyRepoImpl` が **ローカルはJSONファイル / 本番はD1** を
+  `canAccessLocalFs()` で自動的に切り替える（移行は完了済み。dev で書いた
+  `data/properties.json` を commit しても本番の読み先は D1）。
 - `src/lib/schemas.ts` は server / client 両方が import してよい
   pure な zod スキーマ + ラベル定数 + 参照地点プリセット。
   **`server-only` import を入れないこと**（client component が落ちる）。
@@ -140,9 +143,12 @@
 - 許可: JPEG/PNG/WebP/AVIF/GIF と `.splat`/`.ply`/`.ksplat`
 - `public/uploads/` は git ignore (`.gitkeep` 以外)。本番アセットは R2 に置く前提
 
-### モックデータの来歴
-seed 時点の 6 件は `picsum.photos/seed/...` の擬似画像、splat は既存 R2 デモ
-`locahun3d_Demo_point_cloud.splat`。本番では全件差し替え予定。
+### 画像・3DGS の配信
+実データは R2 バケット `locahun3d-assets`。配信は `/api/r2/...`（画像）と
+`/api/viewer-stream/...`（3DGS。`.rad` は Range ストリーミング）。
+**`next/image` は使わない** — Workers + 相対パスの構成で最適化が404になるため、
+プレーン `<img>` を使う（該当箇所には理由コメントと eslint 抑止を置いてある）。
+seed 当時の picsum モック画像は残っていない。
 
 ## 開発コマンド
 
@@ -152,12 +158,21 @@ npm run build    # 本番ビルド
 npm run lint     # ESLint
 ```
 
-## デプロイ予定 (未実施)
+## デプロイ
+
+`morning-restored` ブランチへの push で Cloudflare が自動ビルド・デプロイする
+（マーケサイト `digiroke3d_Web` は自動デプロイが止まっており `npx wrangler deploy` が別途必要 — 混同しないこと）。
 
 ```
-locahun3d.com (apex) → 新 Worker `locahun3d-online`
-  ↓
-@opennextjs/cloudflare adapter
+locahun3d.com (apex) → Worker `locahun3d-online`（@opennextjs/cloudflare）
+web.locahun3d.com    → Worker `locahun3dwebsite`（別リポジトリ・手動デプロイ）
 ```
 
-DNS / Worker 名 / Custom Domain の確定は `project_locahun3d_online_handoff.md` 参照。
+## 検証ハーネス（UIを触ったら必ず実行）
+
+| スクリプト | 役割 |
+|---|---|
+| `node scripts/header-live.mjs` | **本番**の両サイトでブランド中心=50vw・両サイト差0・ヘッダー内重なり0を26幅で検査 |
+| `node scripts/header-parity.mjs` | 両サイトのヘッダー共有要素の computed style 照合 |
+| `node scripts/header-consistency.mjs` | スキャン19ページ×23幅が1pxも違わないことを機械証明 |
+| `node scripts/ui-audit.mjs` | 26ページ×9幅の重なり・はみ出し検査 |

@@ -68,7 +68,7 @@ async function classifyBucket(): Promise<{
   const objects: R2ObjInfo[] = [];
   let cursor: string | undefined;
   do {
-    // eslint-disable-next-line no-await-in-loop
+     
     const listing = await bucket.list({ cursor, limit: 1000 });
     for (const o of listing.objects as {
       key: string;
@@ -228,7 +228,7 @@ export async function POST(req: Request) {
       continue;
     }
     try {
-      // eslint-disable-next-line no-await-in-loop
+       
       await deleteR2Object(key);
       deleted.push(key);
     } catch (e) {

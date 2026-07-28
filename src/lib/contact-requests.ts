@@ -2,7 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
-import { getD1, d1GetData, d1ListData, d1Upsert, d1Delete, type D1 } from "./d1";
+import { getD1, d1GetData, d1ListData, d1Upsert, d1Delete } from "./d1";
 import { z } from "zod";
 
 /**

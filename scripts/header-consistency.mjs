@@ -116,7 +116,7 @@ for (const w of WIDTHS) {
   for (const loc of ["ja", "en"]) {
     const m = seen[loc];
     if (m.size > 1) {
-      const groups = [...m.entries()].map(([sig, ps]) => `${ps.length}p: ${ps.slice(0, 3).join(",")}${ps.length > 3 ? "…" : ""}`);
+      const groups = [...m.entries()].map(([_sig, ps]) => `${ps.length}p: ${ps.slice(0, 3).join(",")}${ps.length > 3 ? "…" : ""}`);
       problems.push({ w, p: `*(${loc})`, type: "inconsistent-header", detail: `${m.size} variants → ${groups.join(" || ")}` });
     }
   }

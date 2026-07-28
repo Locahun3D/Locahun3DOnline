@@ -50,6 +50,7 @@ interface Props {
   tokenCost?: 1 | 2 | 3 | 5;
   hasSubscription?: boolean;
   freeAccess?: boolean;
+  /** 現在未使用。呼び出し側が渡しているため型は残す（外すと呼び出し側が壊れる）。 */
   signedIn?: boolean;
   /** 先方スタジオ共有用の限定プレビュートークン。あればログイン/課金なしで視聴可
    *  （/api/viewer-asset にトークンを渡し、サーバ側で検証して署名URLを発行）。 */
@@ -70,7 +71,6 @@ export default function ViewerGate({
   tokenCost = 1,
   hasSubscription = false,
   freeAccess = false,
-  signedIn = false,
   previewToken,
   embedToken,
   alreadyUnlocked = false,

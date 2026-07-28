@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/components/locale-provider";
@@ -8,25 +8,34 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export default function PurchaseToast() {
   const params = useSearchParams();
-  const [visible, setVisible] = useState(false);
-  const captured = useRef<string | null>(null);
   const raw = params.get("purchase");
   const locale = useLocale();
   const en = locale === "en";
 
+  // 初回レンダー時の ?purchase= を一度だけ確定させる。
+  // ⚠ 以前は effect の中で setVisible(true) し、種別は ref に入れてレンダー中に
+  //   読んでいた。どちらも不正で、React Compiler が
+  //   「setState を effect 内で同期呼び出し」「レンダー中に ref を読む」の
+  //   2件を検出していた。useState の初期化関数なら「一度だけ捕まえる」という
+  //   意図をそのまま表現でき、追加のレンダーも発生しない。
+  const [kind] = useState<"success" | "cancel" | null>(() =>
+    raw === "success" || raw === "cancel" ? raw : null,
+  );
+  /** ×ボタンで閉じたか。kind とは別に持つ（kind は初回の事実で不変）。 */
+  const [dismissed, setDismissed] = useState(false);
+
+  // 表示が決まった後にURLから ?purchase= を消す（リロードで再表示させない）。
+  // これは純粋な副作用なので effect が正しい置き場所。
   useEffect(() => {
-    if (raw === "success" || raw === "cancel") {
-      captured.current = raw;
-      setVisible(true);
-      const url = new URL(window.location.href);
-      url.searchParams.delete("purchase");
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, [raw]);
+    if (!kind) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("purchase");
+    window.history.replaceState({}, "", url.toString());
+  }, [kind]);
 
-  if (!visible) return null;
+  if (!kind || dismissed) return null;
 
-  const isSuccess = captured.current === "success";
+  const isSuccess = kind === "success";
 
   return (
     <div
@@ -71,7 +80,7 @@ export default function PurchaseToast() {
           </div>
         </div>
         <button
-          onClick={() => setVisible(false)}
+          onClick={() => setDismissed(true)}
           className="opacity-50 hover:opacity-100 text-sm transition"
         >
           ×

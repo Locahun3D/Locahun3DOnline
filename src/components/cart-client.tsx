@@ -23,7 +23,11 @@ export default function CartClient() {
   // 価格変更/販売終了の再検証結果（マウント時の1回だけ表示するバナー）。
   const [notice, setNotice] = useState<{ removedCount: number; priceChangedCount: number } | null>(null);
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    カートの実体は localStorage。SSR では読めないのでマウント後に同期する。
+  //    外部ストアの購読開始と初回同期であり、effect 以外に置き場所が無い。
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const sync = () => setItems(getCart());
     sync();
@@ -64,7 +68,7 @@ export default function CartClient() {
         // サーバー側再検証で最終的な安全性は担保される）。
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const total = items.reduce((n, i) => n + i.price, 0);

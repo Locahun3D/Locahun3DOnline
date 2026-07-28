@@ -96,6 +96,7 @@ export default function FreeDemoFunnel({
           {demoCover && (
             // next/image は本構成（Workers + /api/r2 相対パス）で最適化404になるため
             // 他コンポーネント同様プレーン <img> を使う
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={demoCover.src}
               alt={demoCover.alt}

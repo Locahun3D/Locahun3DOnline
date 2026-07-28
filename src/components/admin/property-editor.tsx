@@ -44,9 +44,7 @@ import {
   cleanupReplacedFileAction,
   requestPublishAction,
 } from "@/app/admin/_actions";
-import FileDropzone, {
-  type UploadedFile,
-} from "@/components/admin/file-dropzone";
+import FileDropzone from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
 import SlugEditor from "./slug-editor";
 import PropertyOwnerPanel from "./property-owner-panel";
@@ -80,7 +78,6 @@ export default function PropertyEditor({
   const [publishError, setPublishError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
-  const [pickSplat, setPickSplat] = useState(false);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
   const [aiTagsLoading, setAiTagsLoading] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
@@ -95,6 +92,11 @@ export default function PropertyEditor({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const capture = usePreviewCapture();
+  // ⚠ effect の依存にはメンバー式(capture.xxx)ではなくローカルに展開した値を使う。
+  //    メンバー式のままだと exhaustive-deps が「capture 全体」を要求し、
+  //    毎レンダー新しくなるオブジェクトを依存に入れる＝effectが毎回走る、
+  //    という悪化を招く（実際に警告が出ていた）。
+  const { capturedUrl, capturedIdx, clearResult, queueCaptures } = capture;
   // プレビュー動画生成の録画前ウォームアップを +3秒 する（重いシーンで画質が
   // 乗り切る前に録画が始まりボケるのを防ぐ）。既定OFF。
   const [warmupPlus3, setWarmupPlus3] = useState(false);
@@ -212,16 +214,16 @@ export default function PropertyEditor({
   useEffect(() => () => clearTimeout(autoSaveTimer.current), []);
 
   useEffect(() => {
-    if (capture.capturedUrl && capture.capturedIdx !== null) {
-      const prevUrl = getValues(`splatItems.${capture.capturedIdx}.previewVideoUrl`);
-      setValue(`splatItems.${capture.capturedIdx}.previewVideoUrl`, capture.capturedUrl, { shouldDirty: true });
+    if (capturedUrl && capturedIdx !== null) {
+      const prevUrl = getValues(`splatItems.${capturedIdx}.previewVideoUrl`);
+      setValue(`splatItems.${capturedIdx}.previewVideoUrl`, capturedUrl, { shouldDirty: true });
       triggerAutoSave();
-      capture.clearResult();
-      if (prevUrl && prevUrl !== capture.capturedUrl) {
+      clearResult();
+      if (prevUrl && prevUrl !== capturedUrl) {
         cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
       }
     }
-  }, [capture.capturedUrl, capture.capturedIdx, setValue, getValues, triggerAutoSave, capture.clearResult, initial.id]);
+  }, [capturedUrl, capturedIdx, setValue, getValues, triggerAutoSave, clearResult, initial.id]);
 
   // Auto-queue video capture for splatItems missing previewVideoUrl
   const autoQueuedRef = useRef(false);
@@ -233,14 +235,20 @@ export default function PropertyEditor({
       .filter((it) => it.splatUrl && !it.previewVideoUrl);
     if (missing.length > 0) {
       autoQueuedRef.current = true;
-      capture.queueCaptures(
+      queueCaptures(
         missing.map((it) => ({ splatUrl: it.splatUrl, propertyId: initial.id, itemIdx: it.idx })),
       );
     }
-  }, [initial.splatItems, initial.id, capture.queueCaptures]);
+  }, [initial.splatItems, initial.id, queueCaptures]);
 
   // Debounced auto-save: any form change triggers save after 1.5s of inactivity
+  // ⚠ react-hooks/incompatible-library はここでは想定内。react-hook-form の
+  //    watch() は購読を返す仕様で React Compiler がメモ化できないため、
+  //    このコンポーネントは最適化がスキップされる。RHF を使う設計上の
+  //    トレードオフで、バグではない（watch の戻り値をメモ化された子へ
+  //    渡していないので stale UI も起きない）。RHF をやめない限り解消しない。
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/incompatible-library
     const sub = watch(() => {
       triggerAutoSave(1500);
     });
@@ -3068,6 +3076,10 @@ function FreePeriodItemEditor({
   // ここも hydration mismatch 回避のため、現在時刻ベースの状態表示は
   // マウント後のみ描画する（fmtLocalDateTime 等と同じ理由・上のコメント参照）。
   const [mounted, setMounted] = useState(false);
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    現在時刻に依存する表示をサーバー描画と一致させられないため、
+  //    マウント後にだけ描画する。この setState は effect にしか置けない。
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   const v = value ?? { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const };
@@ -3197,7 +3209,6 @@ function generateDescriptionDraft(d: Record<string, unknown>): string {
   const title = String(d.title || "");
   const category = String(d.category || "");
   const studioType = String(d.studioType || "");
-  const area = String(d.area || "");
   const city = String(d.city || "");
   const prefecture = String(d.prefecture || "");
   const capacity = Number(d.capacity) || 0;

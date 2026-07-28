@@ -86,7 +86,7 @@ export async function onboardingAction(
 
 /** 制御文字（改行等含む）と、なりすまし・視認妨害に使われるゼロ幅系文字。 */
 const DISPLAY_NAME_STRIP_RE =
-  // eslint-disable-next-line no-control-regex
+   
   /[\u0000-\u001f\u007f\u200b-\u200f\u2060\u00ad\u180e\ufeff]/g;
 
 export type DisplayNameState =

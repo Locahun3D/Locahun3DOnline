@@ -29,8 +29,12 @@ export default function InAppBrowserWarning({ locale = "ja" }: { locale?: "ja" |
   const [isWebview, setIsWebview] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    navigator は SSR に存在しないため、初期値として同期に読めない。
+  //    レンダー中に読むとハイドレーション不一致になるので effect が唯一の正解。
   useEffect(() => {
     const ua = navigator.userAgent || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAppName(detectInAppBrowser(ua));
     setIsWebview(isGenericWebview(ua));
   }, []);

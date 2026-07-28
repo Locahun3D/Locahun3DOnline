@@ -212,11 +212,15 @@ function snapshotKey(s: FilterSnapshot): string {
 function useRecentFilters() {
   const [recent, setRecent] = useState<FilterSnapshot[]>([]);
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    localStorage は SSR に無い。useState の初期化関数で読むと
+  //    サーバー描画と食い違ってハイドレーションエラーになるため effect で読む。
   useEffect(() => {
     try {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (Array.isArray(parsed)) setRecent(parsed.slice(0, RECENT_MAX));
       }
     } catch {
@@ -1109,10 +1113,21 @@ function ReferencePicker({
   const [results, setResults] = useState<GeocodeHit[]>([]);
   const lastReq = useRef(0);
 
-  useEffect(() => { setQuery(value.label); }, [value.label]);
+  // 親が参照地点を変えたら入力欄を追従させる。
+  // ⚠ effect でやると「追従のためだけの再レンダー」が1回余分に走る。
+  //    前回値と比べてレンダー中に調整する React 公式のパターンにする。
+  const [lastLabel, setLastLabel] = useState(value.label);
+  if (value.label !== lastLabel) {
+    setLastLabel(value.label);
+    setQuery(value.label);
+  }
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    入力に対する非同期ジオコーディング。問い合わせを投げる前に前回のエラーを
+  //    消す必要があるため、この setState は本質的に同期でなければならない。
   useEffect(() => {
     const t = query.trim();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     if (t === value.label || t.length < 2 || /(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)/.test(t)) {
       setResults([]); return;
@@ -1157,7 +1172,7 @@ function ReferencePicker({
       const r = results[0];
       commit({ id: "geocoded", lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: t });
     }
-  }, [query, results, commit]);
+  }, [query, results, commit, en]);
 
   return (
     <div className="relative">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import {
   updateDisplayNameAction,
   type DisplayNameState,
@@ -24,10 +24,15 @@ export default function DisplayNameEditor({
     undefined,
   );
 
-  // 保存成功したら編集モードを閉じる（表示は state 側の値を優先）
-  useEffect(() => {
+  // 保存成功したら編集モードを閉じる（表示は state 側の値を優先）。
+  // ⚠ effect で setEditing すると「閉じるためだけの再レンダー」が1回余分に走る
+  //    （React Compiler の set-state-in-effect 指摘）。前回値と比較して
+  //    レンダー中に調整する React 公式のパターンにすると追加レンダーが起きない。
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
     if (state?.ok) setEditing(false);
-  }, [state]);
+  }
 
   const name = state?.ok ? state.displayName : initialName;
 

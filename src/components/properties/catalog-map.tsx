@@ -73,8 +73,14 @@ function ViewportFitter({ reference }: { reference: Props["reference"] }) {
 function ResetViewControl({ reference }: { reference: Props["reference"] }) {
   const map = useMap();
   // クリック時点の最新 reference を参照する（コントロールDOMは初回のみ生成）。
+  // ⚠ レンダー中に ref へ書かないこと（React はレンダーを破棄・再実行できるため
+  //   不正。React Compiler も "Cannot access refs during render" で弾く）。
+  //   代入はコミット後の effect で行う。onClick が読むのは常にコミット後なので
+  //   最新値を参照できるという性質は変わらない。
   const refLatest = useRef(reference);
-  refLatest.current = reference;
+  useEffect(() => {
+    refLatest.current = reference;
+  }, [reference]);
 
   useEffect(() => {
     const control = new L.Control({ position: "topleft" });

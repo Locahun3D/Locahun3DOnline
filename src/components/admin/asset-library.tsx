@@ -39,6 +39,9 @@ interface Props {
 
 /** 物件に紐付いていないアセットの受け皿フォルダ（利用箇所ゼロ = usage[url]が空）。 */
 const UNASSIGNED_FOLDER = "__unassigned__";
+/** 空フォルダ用の共有インスタンス。毎レンダー [] を作ると参照が変わり、
+ *  これを依存に持つ useMemo が毎回再計算されるため定数にしておく。 */
+const EMPTY_ASSETS: Asset[] = [];
 
 function fmtBytes(n: number) {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
@@ -102,7 +105,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
   const currentFolder = openFolder ? folders.find((f) => f.id === openFolder) : null;
   // 「開いていたフォルダの最後の1件を削除した」等でfoldersから消えた場合、
   // 検索対象を空配列にフォールバックする（クラッシュせず「空です」表示になる）。
-  const folderAssets = openFolder ? (currentFolder?.assets ?? []) : assets;
+  const folderAssets = openFolder ? (currentFolder?.assets ?? EMPTY_ASSETS) : assets;
 
   const [folderQuery, setFolderQuery] = useState("");
   const visibleFolders = useMemo(() => {

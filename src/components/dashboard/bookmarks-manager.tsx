@@ -639,7 +639,11 @@ function ShareFolderButton({
   const [checked, setChecked] = useState(false);
   const eligible = SHARE_ELIGIBLE_PLANS.has(userPlan);
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    フォルダ切替時に前フォルダの共有URLを残さないためのリセット＋非同期取得。
+  //    先に消さないと別フォルダのURLが一瞬見えるので同期リセットが必要。
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUrl(null);
     setError(null);
     setChecked(false);
@@ -653,7 +657,7 @@ function ShareFolderButton({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [folderId, eligible]);
 
   if (!eligible) {

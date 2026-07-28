@@ -204,30 +204,22 @@ export function usePreviewCapture(): UseCaptureResult {
     setCapturedIdx(null);
   }, []);
 
-  const runOne = useCallback(
-    (splatUrl: string, propertyId: string, itemIdx: number) => {
-      abortRef.current = false;
-      busyRef.current = true;
-      setState("loading");
-      setProgress("3DGS 読み込み中…");
-      setProgressPct(0);
-      setCapturedUrl(null);
-      setCapturedIdx(itemIdx);
+  /** startOne から runOne を呼び返すための穴。実体は下の useEffect で入る。 */
+  const runOneRef = useRef<((s: string, p: string, i: number) => void) | null>(null);
 
-      destroyCaptureFrame(frameRef.current);
-      frameRef.current = null;
-      void startOne(splatUrl, propertyId, itemIdx);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
+  // ⚠ startOne は runOne より **前** に置くこと。以前は runOne の後ろにあり、
+  //    runOne の useCallback から前方参照していた（関数宣言の巻き上げで実行時は
+  //    動くが、React Compiler が "Cannot access variable before it is declared" で
+  //    エラーにする）。startOne が閉じ込めているのは ref と setState だけなので
+  //    毎レンダー作り直されても実体は安定している。
+  // 相互再帰 startOne → processQueueOuter → runOne は ref 経由に変えた
+  //    （runOne はこの下で定義されるため直接は参照できない）。
   async function startOne(splatUrl: string, propertyId: string, itemIdx: number) {
       function processQueueOuter() {
         const next = queueRef.current.shift();
         setQueueLength(queueRef.current.length);
         if (next) {
-          setTimeout(() => runOne(next.splatUrl, next.propertyId, next.itemIdx), 500);
+          setTimeout(() => runOneRef.current?.(next.splatUrl, next.propertyId, next.itemIdx), 500);
         }
       }
 
@@ -322,7 +314,7 @@ export function usePreviewCapture(): UseCaptureResult {
         const next = queueRef.current.shift();
         setQueueLength(queueRef.current.length);
         if (next) {
-          setTimeout(() => runOne(next.splatUrl, next.propertyId, next.itemIdx), 500);
+          setTimeout(() => runOneRef.current?.(next.splatUrl, next.propertyId, next.itemIdx), 500);
         }
       }
 
@@ -419,6 +411,31 @@ export function usePreviewCapture(): UseCaptureResult {
 
       window.addEventListener("message", handler);
   }
+
+  const runOne = useCallback(
+    (splatUrl: string, propertyId: string, itemIdx: number) => {
+      abortRef.current = false;
+      busyRef.current = true;
+      setState("loading");
+      setProgress("3DGS 読み込み中…");
+      setProgressPct(0);
+      setCapturedUrl(null);
+      setCapturedIdx(itemIdx);
+
+      destroyCaptureFrame(frameRef.current);
+      frameRef.current = null;
+      void startOne(splatUrl, propertyId, itemIdx);
+    },
+     
+    [],
+  );
+
+  // startOne(→processQueueOuter) からキューの続きを再開するための後方参照。
+  // レンダー中に ref へ書かない（コミット後にだけ更新する）。
+  useEffect(() => {
+    runOneRef.current = runOne;
+  }, [runOne]);
+
 
   const startCapture = useCallback(
     (splatUrl: string, propertyId: string, itemIdx: number, warmupExtraMs = 0) => {

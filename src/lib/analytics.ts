@@ -146,9 +146,11 @@ async function assembleFromD1(db: D1): Promise<Record<string, PropStats>> {
       views: 0, opens: 0, purchases: 0, refunds: 0, revenue: 0,
       daily: {}, referrers: {}, devices: {}, lastAt: "",
     });
+  // D1 の SELECT * は列が実行時に決まるため行は緩く受ける。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = async (sql: string): Promise<any[]> =>
-    ((await db.prepare(sql).all())?.results ?? []) as any[];
+  type SqlRow = Record<string, any>;
+  const rows = async (sql: string): Promise<SqlRow[]> =>
+    ((await db.prepare(sql).all())?.results ?? []) as SqlRow[];
 
   for (const r of await rows("SELECT * FROM analytics_prop")) {
     const p = ensure(r.property_id);

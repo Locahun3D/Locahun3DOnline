@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import {
   getPublishedProperty,
   getPublishedProperties,
-  getPublishedPropertyIds,
   findRelatedProperties,
 } from "@/lib/properties";
 import { getCurrentUser } from "@/lib/dal";

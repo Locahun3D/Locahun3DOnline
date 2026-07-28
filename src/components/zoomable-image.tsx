@@ -27,7 +27,11 @@ export default function ZoomableImage({
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    SSR とクライアントで DOM を一致させるためのマウント判定。createPortal は
+  //    マウント後にしか使えないので、この setState は effect でしか書けない。
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

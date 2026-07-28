@@ -63,7 +63,11 @@ const listingContactSchema = inputSchema
   });
 
 export type ContactState =
-  | { ok: true }
+  /** hasEmail: 返信先メールが入力されていたか。完了画面の文言分岐に使う。
+   *  ⚠ クライアントで emailRef.current を読んで判定していたが、レンダー中に
+   *     ref を読むのは不正（コミット前の値を見る可能性がある）。受け取った
+   *     サーバー側が事実を返す形にした。 */
+  | { ok: true; hasEmail: boolean }
   | { ok: false; error: string }
   | undefined;
 
@@ -77,11 +81,11 @@ export async function submitContactRequestAction(
   formData: FormData,
 ): Promise<ContactState> {
   if (isHoneypotTripped(formData.get(HONEYPOT_FIELD))) {
-    return { ok: true };
+    return { ok: true, hasEmail: false };
   }
   const timing = checkTiming(formData.get(RENDERED_AT_FIELD));
   if (timing === "too-fast") {
-    return { ok: true };
+    return { ok: true, hasEmail: false };
   }
   if (timing === "stale") {
     return {
@@ -235,5 +239,5 @@ export async function submitContactRequestAction(
     console.error("[contact] admin通知の作成に失敗（送信処理は継続）:", e);
   }
 
-  return { ok: true };
+  return { ok: true, hasEmail: !!d.email?.trim() };
 }

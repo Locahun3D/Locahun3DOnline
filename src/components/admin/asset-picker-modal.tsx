@@ -14,8 +14,12 @@ export default function AssetPickerModal({ kind, open, onClose, onPick }: Props)
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
+  //    非同期取得。fetch を投げる前にローディング表示へ切り替える必要があるため、
+  //    この setState は本質的に同期でなければならない。
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/admin/assets?kind=${kind}`)
       .then((r) => r.json())

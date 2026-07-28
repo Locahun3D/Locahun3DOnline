@@ -4,7 +4,6 @@
  *  - UPLOAD_MODE=r2    : presigned PUT URLs against Cloudflare R2 (browser PUTs direct).
  */
 import "server-only";
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile } from "./fs-safe";
 import { nanoid } from "nanoid";

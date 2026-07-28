@@ -141,9 +141,9 @@ async function cleanupPropertyFiles(p: Property): Promise<void> {
   if (urls.length === 0) return;
   const assetsByUrl = new Map((await assetRepo.list()).map((a) => [a.url, a] as const));
   for (const url of urls) {
-    // eslint-disable-next-line no-await-in-loop
+     
     const usedElsewhere = await countOtherUrlUsages(url, p.id);
-    // eslint-disable-next-line no-await-in-loop
+     
     if (usedElsewhere === 0) await deleteFileAsset(url, assetsByUrl);
   }
 }
@@ -486,11 +486,11 @@ export async function bulkSetStatusAction(
 export async function bulkDeleteAction(ids: string[]) {
   await requireAdmin();
   for (const id of ids) {
-    // eslint-disable-next-line no-await-in-loop
+     
     const existing = await repo.get(id);
-    // eslint-disable-next-line no-await-in-loop
+     
     if (existing) await cleanupPropertyFiles(existing);
-    // eslint-disable-next-line no-await-in-loop
+     
     await repo.remove(id);
   }
   revalidatePath("/admin/properties");

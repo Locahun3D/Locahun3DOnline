@@ -17,7 +17,7 @@ const ALLOWED_PREFIXES = [
   'Kousaten_ForDemo_point_cloud.rad',
 ];
 
-export default {
+const handler = {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -69,3 +69,5 @@ function parseRange(header) {
   }
   return { offset };
 }
+
+export default handler;

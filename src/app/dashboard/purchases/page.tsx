@@ -77,7 +77,7 @@ export default async function UserPurchasesPage() {
             Please use purchased data within the scope of its license. Using it as
             training data for machine learning or generative AI needs prior
             consultation and a separate agreement, regardless of license tier —
-            we're happy to talk, terms just vary by case. See the{" "}
+            we&rsquo;re happy to talk, terms just vary by case. See the{" "}
             <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
               data purchase terms
             </Link>{" "}

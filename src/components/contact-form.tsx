@@ -177,9 +177,11 @@ export default function ContactForm({ type }: { type: ContactType }) {
 
   if (state?.ok) {
     // フォームは匿名送信を許可しているため、メール未入力なら「返信を待つ」
-    // 案内は出さない（送信済みDOMノードは検出後も値を保持しているため、
-    // アンマウント後もref経由で参照できる）。
-    const hasEmail = !!emailRef.current?.value.trim();
+    // 案内は出さない。
+    // ⚠ 以前は emailRef.current を読んで判定していたが、**レンダー中にrefを
+    //   読むのは不正**（コミット前の値を見る可能性がある）。実際に受け取った
+    //   サーバーアクションが hasEmail を返す形に変更した。
+    const hasEmail = state.hasEmail;
     return (
       <div className="bg-white border border-line px-8 py-11 text-center">
         <div className="text-accent text-3xl mb-3">✓</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import {
   sendMarketingCampaignAction,
   type CampaignState,
@@ -17,9 +17,12 @@ export default function MarketingComposer({ disabled }: { disabled: boolean }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // 送信完了/失敗後は確認状態をリセットする（誤って連続クリックで再送するのを防ぐ）。
-  useEffect(() => {
+  // ⚠ effect ではなくレンダー中の調整で行う（理由は display-name-editor.tsx と同じ）。
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
     if (state !== undefined) setConfirmOpen(false);
-  }, [state]);
+  }
 
   return (
     <form action={formAction} className="border border-line bg-[#1c1c1c] p-5 space-y-4">

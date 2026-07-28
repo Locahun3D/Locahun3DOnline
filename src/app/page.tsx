@@ -16,7 +16,12 @@ export default async function HomePage() {
   const scanUrl =
     locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/";
   // EN は BudouX(<Jp>) を通さず素のテキストにする。
-  const J = ({ k }: { k: DictKey }) =>
+  // ⚠ コンポーネント（<J k=... />）として定義しないこと。レンダー中に
+  //   コンポーネントを生成することになり、毎レンダーで型が変わって
+  //   React が別物として扱う（＝子のstateが破棄され再マウントされる）。
+  //   React Compiler の "Cannot create components during render" もこれ。
+  //   ただの関数呼び出し {jp("key")} なら安全。
+  const jp = (k: DictKey) =>
     locale === "ja" ? <Jp>{t(k)}</Jp> : <>{t(k)}</>;
   const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
   // スキャン/オンライン両パネルは各自 justify-center で中央ぞろえだが、説明文の
@@ -68,7 +73,7 @@ export default async function HomePage() {
               {t("home.scan.h2")}
             </h2>
             <p className={`mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100 ${heroDescMinH}`}>
-              <J k="home.scan.desc" />
+              {jp("home.scan.desc")}
             </p>
             <span className="mt-4 sm:mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-accent transition-all duration-300">
               {t("home.scan.cta")}
@@ -100,7 +105,7 @@ export default async function HomePage() {
               {t("home.online.h2")}
             </h2>
             <p className={`mt-3 sm:mt-7 max-w-[30ch] text-[12px] sm:text-[13px] text-muted leading-[1.6] sm:leading-[2] transition-opacity duration-500 group-hover:opacity-100 ${heroDescMinH}`}>
-              <J k="home.online.desc" />
+              {jp("home.online.desc")}
             </p>
             <span className="mt-4 sm:mt-8 inline-flex items-center gap-2 mono text-[11px] tracking-[0.24em] uppercase text-[#5ec8e8] transition-all duration-300">
               {t("home.online.cta")}
@@ -126,7 +131,7 @@ export default async function HomePage() {
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>
         <p className="brand text-[clamp(1.35rem,2.6vw,2rem)] leading-[1.6] max-w-[30ch] mx-auto text-center mb-14">
-          <J k="home.about.lead" />
+          {jp("home.about.lead")}
         </p>
         <div className="grid md:grid-cols-2 gap-px bg-line">
           <a
@@ -138,7 +143,7 @@ export default async function HomePage() {
             </div>
             <h3 className="brand text-xl mb-3">{t("home.about.scanTitle")}</h3>
             <p className="text-[14px] text-muted leading-[1.9] max-w-[40ch] mx-auto">
-              <J k="home.about.scanDesc" />
+              {jp("home.about.scanDesc")}
             </p>
             <span className="mt-5 inline-block mono text-[10px] tracking-[0.24em] uppercase text-muted group-hover:text-accent transition">
               {t("home.about.scanCta")} ↗
@@ -153,7 +158,7 @@ export default async function HomePage() {
             </div>
             <h3 className="brand text-xl mb-3">{t("home.about.onlineTitle")}</h3>
             <p className="text-[14px] text-muted leading-[1.9] max-w-[40ch] mx-auto">
-              <J k="home.about.onlineDesc" />
+              {jp("home.about.onlineDesc")}
             </p>
             <span className="mt-5 inline-block mono text-[10px] tracking-[0.24em] uppercase text-[#5ec8e8]">
               {t("home.about.onlineCta")} →
@@ -168,7 +173,7 @@ export default async function HomePage() {
           {t("home.cta.headline")}
         </div>
         <p className="mt-8 text-[14px] text-muted leading-[2] max-w-[40ch] mx-auto">
-          <J k="home.cta.sub" />
+          {jp("home.cta.sub")}
         </p>
         <div className="mt-10 flex justify-center gap-3 flex-wrap">
           <a

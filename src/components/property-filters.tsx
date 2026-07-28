@@ -1,6 +1,7 @@
 "use client";
 
 import { CATEGORY_LABEL, type PropertyCategory } from "@/lib/schemas";
+import Link from "next/link";
 
 interface Defaults {
   category: PropertyCategory | "all";
@@ -103,12 +104,12 @@ export default function PropertyFilters({
       </label>
 
       <div className="md:col-span-6 flex justify-end gap-3 pt-2">
-        <a
+        <Link
           href="/properties"
           className="px-4 py-2 mono text-[11px] tracking-[0.22em] uppercase border border-line text-muted hover:border-ink hover:text-ink transition"
         >
           Reset
-        </a>
+        </Link>
         <button
           type="submit"
           className="px-5 py-2 mono text-[11px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
