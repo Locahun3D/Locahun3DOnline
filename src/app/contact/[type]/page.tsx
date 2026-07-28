@@ -5,6 +5,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 import { CONTACT_TYPES, type ContactType } from "@/lib/contact-requests";
 import ContactForm from "@/components/contact-form";
 import { getCurrentUser } from "@/lib/dal";
+import { repo } from "@/lib/store";
 
 const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; ledeEn: string }> = {
   bug: {
@@ -55,10 +56,13 @@ export async function generateMetadata({
 
 export default async function ContactTypePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ type: string }>;
+  searchParams: Promise<{ property?: string }>;
 }) {
   const { type } = await params;
+  const { property: propertyParam } = await searchParams;
   if (!CONTACT_TYPES.includes(type as ContactType)) notFound();
   const t = type as ContactType;
   const copy = COPY[t];
@@ -70,6 +74,27 @@ export default async function ContactTypePage({
   // 踏むと requireAdminOrStudioOwner が redirect("/") で無言で弾くため、
   // 行き止まりリンクを見せないよう事前に振り分ける。
   const user = t === "listing" ? await getCurrentUser() : null;
+
+  // エディターの「公開を申請」から ?property=<id> 付きで来たときだけ、
+  // 物件データを読んでフォームに前もって入れる。
+  // ⚠ パラメータは信用しない。所有者（または管理者）でなければ無視する。
+  //    送信時にもサーバー側 requestPublishAction が同じ検証をする（二重防御）。
+  const canOwn = user?.role === "studio" || user?.role === "admin";
+  const target =
+    t === "listing" && propertyParam && canOwn ? await repo.get(propertyParam) : null;
+  const owns =
+    target != null &&
+    (user!.role === "admin" ||
+      target.ownerId === user!.id ||
+      (user!.linkedPropertyIds ?? []).includes(target.id));
+  const prefill = owns
+    ? {
+        propertyId: target!.id,
+        company: user!.name ?? "",
+        propertyName: target!.title ?? "",
+        address: [target!.prefecture, target!.city].filter(Boolean).join(""),
+      }
+    : undefined;
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
@@ -104,58 +129,116 @@ export default async function ContactTypePage({
           {en ? copy.ledeEn : copy.lede}
         </p>
 
-        {/* 掲載依頼は「問い合わせて待つ」以外に、その場で下書きを作って
-            情報を埋め始められる道も用意する（審査は公開時に行うので、
-            下書き作成自体は待たせる必要がない）。
-            ロールで3分岐: 未ログイン→新規登録導線／studio・admin→下書き作成／
-            individual・production→ /admin/properties は requireAdminOrStudioOwner
-            が redirect("/") で無言で弾くため、行き止まりリンクを見せない。 */}
-        {t === "listing" && (
-          <div className="mb-8 border border-line bg-card p-4">
+        {/* ══ 掲載依頼の導線 ══
+            「まずスタジオ用アカウントを作る → 物件ページを作る → 3DGS以外を書いたら
+            この依頼フォームで公開を申請する」という一本道にする。
+            以前はロールに関係なくフォームを先出ししており、個人アカウントには
+            「フォームで知らせてください」という行き止まりの注意書きしか出ていなかった。
+            ⚠ 撮影スタジオは新規登録で自己申告できる種別（SELF_SIGNUP_ROLES）なので、
+              既存の個人/制作会社アカウントは種別変更ではなく別アカウント作成に案内する
+              （運営の手作業を挟まず、待たせないため）。 */}
+        {t === "listing" && !prefill && (
+          <div className="mb-8 border border-line bg-card p-5">
             {!user ? (
               <>
-                <p className="text-[13px] leading-relaxed">
+                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
+                  {en ? "Step 1 / 3" : "ステップ 1 / 3"}
+                </div>
+                <h2 className="text-[15px] font-bold mb-2">
+                  {en ? "Create a studio account" : "まずスタジオ用アカウントを作成"}
+                </h2>
+                <p className="text-[13px] leading-relaxed text-muted">
                   {en
-                    ? "Prefer to get started right away? Create a listing draft and fill in what you know. We'll handle the 3D scan and publish it after a check."
-                    : "先に進めたい場合は、いますぐ掲載ページの下書きを作れます。分かる範囲で入力しておいてください。3D撮影と公開はこちらで対応します。"}
+                    ? "Listings are created from a studio account. Sign up (free, no review) and you can start a listing page right away — we handle the 3D scan."
+                    : "掲載ページはスタジオ用アカウントから作成します。登録は無料・審査なしで、すぐに掲載ページを作り始められます。3Dスキャンはこちらで対応します。"}
                 </p>
                 <Link
                   href={lh("/sign-up")}
-                  className="mt-3 inline-block border border-accent/50 px-4 py-2 text-[12px] text-accent hover:bg-accent/10 transition"
+                  className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
                 >
-                  {en ? "Sign up and start a draft →" : "新規登録して下書きを作る →"}
+                  {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
                 </Link>
                 <p className="mt-2 mono text-[10px] text-muted">
                   {en
-                    ? "Choose “Filming studio” as the account type when you sign up."
-                    : "登録時にアカウント種別で「撮影スタジオ」を選択してください。"}
+                    ? "Choose “Filming studio” as the account type."
+                    : "アカウント種別で「撮影スタジオ」を選択してください。"}
                 </p>
               </>
-            ) : user.role === "studio" || user.role === "admin" ? (
+            ) : canOwn ? (
               <>
-                <p className="text-[13px] leading-relaxed">
+                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
+                  {en ? "Step 2 / 3" : "ステップ 2 / 3"}
+                </div>
+                <h2 className="text-[15px] font-bold mb-2">
+                  {en ? "Create the listing page" : "物件の掲載ページを作成"}
+                </h2>
+                <p className="text-[13px] leading-relaxed text-muted">
                   {en
-                    ? "Prefer to get started right away? Create a listing draft and fill in what you know. We'll handle the 3D scan and publish it after a check."
-                    : "先に進めたい場合は、いますぐ掲載ページの下書きを作れます。分かる範囲で入力しておいてください。3D撮影と公開はこちらで対応します。"}
+                    ? "Fill in everything except the 3D scan — we shoot that. When you're done, the editor takes you here to request publication."
+                    : "3Dスキャン以外の情報を入力してください（撮影はこちらで行います）。入力が終わったら、エディターからこのページに戻って公開を申請します。"}
                 </p>
                 <Link
                   href={lh("/admin/properties")}
-                  className="mt-3 inline-block border border-accent/50 px-4 py-2 text-[12px] text-accent hover:bg-accent/10 transition"
+                  className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
                 >
-                  {en ? "Create a listing draft →" : "掲載ページの下書きを作る →"}
+                  {en ? "Go to listing pages →" : "掲載ページを作成する →"}
                 </Link>
               </>
             ) : (
-              <p className="mono text-[10px] text-muted">
-                {en
-                  ? "Your current account type cannot create listings. To switch to a studio account, let us know via the form below."
-                  : "現在のアカウント種別では掲載ページを作成できません。スタジオ用アカウントへの切り替えをご希望の場合は、下のフォームからその旨をお知らせください。"}
-              </p>
+              <>
+                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
+                  {en ? "Step 1 / 3" : "ステップ 1 / 3"}
+                </div>
+                <h2 className="text-[15px] font-bold mb-2">
+                  {en ? "A studio account is required" : "スタジオ用アカウントが必要です"}
+                </h2>
+                <p className="text-[13px] leading-relaxed text-muted">
+                  {en
+                    ? "Your current account type cannot create listings. Sign up separately as a studio — it's free and takes effect immediately."
+                    : "現在のアカウント種別では掲載ページを作成できません。スタジオ用に別途アカウントをご登録ください（無料・登録後すぐ利用可）。"}
+                </p>
+                <Link
+                  href={lh("/sign-up")}
+                  className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
+                >
+                  {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
+                </Link>
+                <p className="mt-2 mono text-[10px] text-muted">
+                  {en
+                    ? "Accounts are identified by email, so use a different address from this one."
+                    : "アカウントはメールアドレスで識別されるため、今お使いのものとは別のアドレスをご用意ください。"}
+                </p>
+              </>
             )}
           </div>
         )}
 
-        <ContactForm type={t} />
+        {/* 公開申請モード: エディターから物件を持って来た場合 */}
+        {prefill && (
+          <div className="mb-8 border border-accent/40 bg-accent/5 p-5">
+            <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
+              {en ? "Step 3 / 3" : "ステップ 3 / 3"}
+            </div>
+            <h2 className="text-[15px] font-bold mb-2">
+              {en ? `Request publication: ${prefill.propertyName}` : `公開を申請: ${prefill.propertyName}`}
+            </h2>
+            <p className="text-[13px] leading-relaxed text-muted">
+              {en
+                ? "Company, property name and address are filled in from your listing. Tell us your preferred scan dates and a contact for the day — we'll shoot the 3D data and publish after a check."
+                : "会社名・物件名・所在地は掲載ページの内容を入れてあります。スキャンの希望日と当日のご連絡先だけ記入して送信してください。3Dデータの撮影と確認のうえ公開します。"}
+            </p>
+            <p className="mt-2 mono text-[10px] text-muted">
+              {en
+                ? "The request is submitted when you send this form."
+                : "この フォームを送信した時点で公開申請となります。"}
+            </p>
+          </div>
+        )}
+
+        {/* 掲載依頼のフォームは、掲載できる人にだけ見せる。
+            未ログイン/個人/制作会社にはアカウント作成の導線だけを出す
+            （送っても掲載できないフォームを踏ませない）。 */}
+        {t !== "listing" || canOwn ? <ContactForm type={t} prefill={prefill} /> : null}
       </div>
     </div>
   );

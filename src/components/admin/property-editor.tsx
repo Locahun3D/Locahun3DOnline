@@ -42,7 +42,6 @@ import {
   archiveAction,
   deleteAction,
   cleanupReplacedFileAction,
-  requestPublishAction,
 } from "@/app/admin/_actions";
 import FileDropzone from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
@@ -423,28 +422,18 @@ export default function PropertyEditor({
                   </button>
                 )}
                 {!isAdmin && (
-                  <button
-                    type="button"
-                    disabled={publishing}
-                    onClick={() => {
-                      startPublish(async () => {
-                        const res = await requestPublishAction(initial.id);
-                        if (res.ok) {
-                          alert(
-                            "alreadyRequested" in res && res.alreadyRequested
-                              ? "すでに申請済みです。運営の確認をお待ちください。"
-                              : "公開申請を送信しました。運営が3Dデータの差し込みと確認を行います。",
-                          );
-                          router.refresh();
-                        } else {
-                          alert(res.error);
-                        }
-                      });
-                    }}
-                    className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-5 py-2.5 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                  /* ⚠ ここでは申請を確定させない。掲載依頼フォームへ送り、
+                     フォーム送信をもって申請確定とする（contact-actions.ts が
+                     propertyId を受けて requestPublishAction を呼ぶ）。
+                     理由: スキャンの希望日と当日の連絡先はこの画面に無く、
+                     ボタン1つで申請させると運営が別途メールで聞き直すことになる。
+                     また「押しただけで申請したつもり」の取りこぼしも防げる。 */
+                  <Link
+                    href={`/contact/listing?property=${encodeURIComponent(initial.id)}`}
+                    className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-5 py-2.5 hover:bg-accent hover:text-bg transition inline-block"
                   >
                     公開を申請
-                  </button>
+                  </Link>
                 )}
               </>
             )}

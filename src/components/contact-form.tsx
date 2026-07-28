@@ -119,7 +119,21 @@ async function gatherEnvironment(): Promise<string> {
  * /contact/[type] の各専用ページで使う共通フォーム。type ごとに項目を出し分ける
  * （デザイン案 Pattern 7 の承認済みフィールド構成をそのまま実装）。
  */
-export default function ContactForm({ type }: { type: ContactType }) {
+/** エディターの「公開を申請」から来たときに埋める初期値。物件データが正。 */
+export type ContactPrefill = {
+  propertyId?: string;
+  company?: string;
+  propertyName?: string;
+  address?: string;
+};
+
+export default function ContactForm({
+  type,
+  prefill,
+}: {
+  type: ContactType;
+  prefill?: ContactPrefill;
+}) {
   const en = useLocale() === "en";
   const [state, formAction, pending] = useActionState<ContactState, FormData>(
     submitContactRequestAction,
@@ -224,6 +238,10 @@ export default function ContactForm({ type }: { type: ContactType }) {
   return (
     <form action={formAction} className="bg-white border border-line px-7 py-8 sm:px-8">
       <input type="hidden" name="type" value={type} />
+      {/* 物件ひも付け。送信時にサーバー側で所有者検証のうえ公開申請を確定させる。 */}
+      {prefill?.propertyId && (
+        <input type="hidden" name="propertyId" value={prefill.propertyId} />
+      )}
       <input type="hidden" name={RENDERED_AT_FIELD} ref={renderedAtRef} defaultValue="" />
       <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
         <label>
@@ -322,15 +340,15 @@ export default function ContactForm({ type }: { type: ContactType }) {
           <>
             <div className="grid md:grid-cols-2 gap-4">
               <Field en={en} label={en ? "Company / owner name" : "会社名・オーナー名"} required>
-                <input name="company" type="text" placeholder={en ? "Acme Inc." : "株式会社〇〇"} className={inputClass} />
+                <input name="company" type="text" defaultValue={prefill?.company ?? ""} placeholder={en ? "Acme Inc." : "株式会社〇〇"} className={inputClass} />
               </Field>
               <Field en={en} label={en ? "Property name" : "物件名"} required>
-                <input name="propertyName" type="text" placeholder={en ? "e.g. Studio XYZ" : "例: 〇〇スタジオ"} className={inputClass} />
+                <input name="propertyName" type="text" defaultValue={prefill?.propertyName ?? ""} placeholder={en ? "e.g. Studio XYZ" : "例: 〇〇スタジオ"} className={inputClass} />
               </Field>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <Field en={en} label={en ? "Address" : "所在地"} required>
-                <input name="address" type="text" placeholder={en ? "e.g. Shibuya, Tokyo…" : "例: 東京都渋谷区…"} className={inputClass} />
+                <input name="address" type="text" defaultValue={prefill?.address ?? ""} placeholder={en ? "e.g. Shibuya, Tokyo…" : "例: 東京都渋谷区…"} className={inputClass} />
               </Field>
               <Field en={en} label={en ? "Phone" : "電話番号"} optional>
                 <input name="phone" type="tel" placeholder="03-0000-0000" className={inputClass} />
@@ -427,7 +445,9 @@ export default function ContactForm({ type }: { type: ContactType }) {
               {pending
                 ? en ? "Sending…" : "送信中…"
                 : type === "listing"
-                  ? en ? "Request a listing →" : "掲載を依頼する →"
+                  ? prefill?.propertyId
+                    ? en ? "Submit publication request →" : "この内容で公開を申請する →"
+                    : en ? "Request a listing →" : "掲載を依頼する →"
                   : en ? "Send →" : "送信する →"}
             </button>
           </div>

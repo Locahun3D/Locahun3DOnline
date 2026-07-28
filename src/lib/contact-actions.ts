@@ -7,6 +7,7 @@ import { auth } from "@clerk/nextjs/server";
 import { contactRequestRepo, CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "./contact-requests";
 import { saveContactAttachment } from "./uploads";
 import { notifyGeneralContact } from "./email";
+import { requestPublishAction } from "@/app/admin/_actions";
 import { userRepo } from "./users";
 import { createNotification } from "./notifications";
 import {
@@ -111,6 +112,10 @@ export async function submitContactRequestAction(
     address: str("address"),
     message: str("message"),
   };
+  // 掲載依頼を「エディターからの公開申請」として送る場合に付く物件ID。
+  // ⚠ 値は信用しない。所有者かどうかは下の requestPublishAction 側で検証する
+  //    （assertPropertyAccess が他人の物件を弾く）。
+  const propertyId = str("propertyId").trim();
   const parsed =
     raw.type === "listing" ? listingContactSchema.safeParse(raw) : inputSchema.safeParse(raw);
   if (!parsed.success) {
@@ -237,6 +242,18 @@ export async function submitContactRequestAction(
     }
   } catch (e) {
     console.error("[contact] admin通知の作成に失敗（送信処理は継続）:", e);
+  }
+
+  // エディターから「公開を申請」で来た場合は、フォーム送信をもって申請確定とする。
+  // ボタンを押しただけでは申請にならない（押して離脱した人が「申請したつもり」に
+  // なるのを防ぐ）。所有者以外の propertyId は requestPublishAction が弾く。
+  if (propertyId && d.type === "listing") {
+    try {
+      await requestPublishAction(propertyId);
+    } catch (e) {
+      // 申請に失敗しても問い合わせ自体は成立させる（運営には内容が届いている）。
+      console.error("[contact] 公開申請の連動に失敗:", e);
+    }
   }
 
   return { ok: true, hasEmail: !!d.email?.trim() };
