@@ -17,7 +17,9 @@ export default async function ProductionUpgradePage() {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
 
-  if (user.role === "production" || user.role === "admin") redirect(lh("/account"));
+  if (user.role === "production" || user.role === "admin") {
+    redirect(lh("/account?notice=already-production"));
+  }
 
   return (
     <div className="theme-online frame min-h-[calc(72vh/var(--z))] flex items-center justify-center py-16">

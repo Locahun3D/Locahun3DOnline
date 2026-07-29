@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { requireOnboarded } from "@/lib/dal";
 import { roleLabel, accountStatusLabel } from "@/lib/account-schema";
+import { isFreeEmailDomain } from "@/lib/free-email-domains";
 import AccountDashboard from "@/components/account/account-dashboard";
 import LoginDevices from "@/components/account/login-devices";
 import StudioListings from "@/components/account/studio-listings";
@@ -21,10 +22,23 @@ export async function generateMetadata() {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string; nda?: string; plan?: string }>;
+  searchParams: Promise<{
+    welcome?: string;
+    nda?: string;
+    plan?: string;
+    /**
+     * 無言で /account に戻された理由。
+     *
+     * ⚠ 以前は role や onboarded の条件に合わないと `redirect("/account")` を
+     *   投げるだけで、利用者には「何も起きずマイページに戻された」ようにしか
+     *   見えなかった（実際に問い合わせがあった）。理由を必ず渡すこと。
+     *   新しい分岐を足したら、下の NOTICE 表示にも文言を足す。
+     */
+    notice?: string;
+  }>;
 }) {
   const user = await requireOnboarded();
-  const { welcome, nda, plan } = await searchParams;
+  const { welcome, nda, plan, notice } = await searchParams;
   const locale = await getLocale();
   const en = locale === "en";
   const lc = en ? "en" : "ja";
@@ -120,6 +134,99 @@ export default async function AccountPage({
             <>Registration complete. We&apos;ve granted you <strong className="text-accent">{SIGNUP_BONUS_TOKENS} tokens</strong>.</>
           ) : (
             <>登録が完了しました。<strong className="text-accent">{SIGNUP_BONUS_TOKENS} トークン</strong>を付与しました。</>
+          )}
+        </div>
+      )}
+      {notice && (
+        <div className="mb-6 border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] leading-[1.85]">
+          {notice === "already-onboarded" ? (
+            en ? (
+              <>
+                Your account type is already set to{" "}
+                <strong className="text-accent">{roleLabel(user.role, "en")}</strong>, so the
+                setup screen was skipped. The signed-in address is{" "}
+                <strong className="text-accent">{user.email}</strong>. To change the account
+                type, contact us at contact@locahun3d.com.
+              </>
+            ) : (
+              <>
+                アカウント種別はすでに
+                <strong className="text-accent">{roleLabel(user.role, "ja")}</strong>
+                で登録済みのため、種別選択の画面は表示されません。現在サインイン中のメール
+                アドレスは <strong className="text-accent">{user.email}</strong> です。
+                種別の変更をご希望の場合は contact@locahun3d.com までご連絡ください。
+              </>
+            )
+          ) : notice === "already-production" ? (
+            en ? (
+              <>
+                You already have a{" "}
+                <strong className="text-accent">{roleLabel(user.role, "en")}</strong> account, so
+                there is nothing to apply for.
+              </>
+            ) : (
+              <>
+                すでに<strong className="text-accent">{roleLabel(user.role, "ja")}</strong>
+                アカウントのため、申請は不要です。
+              </>
+            )
+          ) : notice === "upgrade-pending" ? (
+            en ? (
+              <>
+                Your Production account application is <strong>under review</strong>. We&apos;ll
+                email <strong className="text-accent">{user.email}</strong> once it is approved.
+              </>
+            ) : (
+              <>
+                制作会社アカウントの申請は<strong>審査中</strong>です。承認され次第{" "}
+                <strong className="text-accent">{user.email}</strong> 宛にご連絡します。
+              </>
+            )
+          ) : notice === "nda-not-production" ? (
+            en ? (
+              <>
+                NDA agreement is available to Production accounts only. Your account is
+                registered as{" "}
+                <strong className="text-accent">{roleLabel(user.role, "en")}</strong> with the
+                address <strong className="text-accent">{user.email}</strong>. Apply for a
+                Production account first.
+              </>
+            ) : (
+              <>
+                NDAの締結は制作会社アカウント限定です。現在のご登録は
+                <strong className="text-accent">{roleLabel(user.role, "ja")}</strong>
+                （メールアドレス <strong className="text-accent">{user.email}</strong>）です。
+                先に制作会社アカウントの申請を行ってください。
+              </>
+            )
+          ) : en ? (
+            <>The requested screen was not available for this account, so you were returned here.</>
+          ) : (
+            <>お求めの画面はこのアカウントでは利用できないため、こちらに戻りました。</>
+          )}
+
+          {/*
+            メールアドレスの判定結果を必ず添える。
+            「なぜ通らなかったのか」が分からないという問い合わせの主因がここだった。
+          */}
+          {isFreeEmailDomain(user.email) && (
+            <p className="mt-3 border-t border-amber-400/30 pt-3 text-[12px] opacity-90">
+              {en ? (
+                <>
+                  Note: <strong className="text-accent">{user.email}</strong> is recognised as a
+                  personal email provider (Gmail, Outlook, Yahoo Mail and similar). Production
+                  (NDA) accounts require a company domain, so that application cannot be
+                  submitted with this address. Individual and Studio accounts are unaffected.
+                </>
+              ) : (
+                <>
+                  参考: <strong className="text-accent">{user.email}</strong>{" "}
+                  は個人向けメールサービス（Gmail・Outlook・Yahooメール等）として判定されています。
+                  制作会社（NDA）アカウントは会社ドメインのメールアドレスが必要なため、
+                  このアドレスでは申請できません。個人・撮影スタジオのアカウントには影響しません。
+                </>
+              )}
+            </p>
           )}
         </div>
       )}

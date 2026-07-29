@@ -10,7 +10,12 @@ export async function generateMetadata() {
 
 export default async function OnboardingPage() {
   const user = await requireUser();
-  if (user.onboarded || user.role === "admin") redirect("/account");
+  // ⚠ 以前はここで無言に /account へ戻していたため、「スタジオアカウントを
+  //   作ろうとしたのに、何も言われずマイページに戻される」という状態だった。
+  //   必ず理由を渡す（/account 側の notice で文言を出す）。
+  if (user.onboarded || user.role === "admin") {
+    redirect("/account?notice=already-onboarded");
+  }
   const en = (await getLocale()) === "en";
 
   return (

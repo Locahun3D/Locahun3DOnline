@@ -147,10 +147,10 @@ export async function revokeMySessionAction(formData: FormData): Promise<void> {
 export async function acceptNdaAction(): Promise<void> {
   const current = await getCurrentUser();
   if (!current) redirect("/sign-in");
-  if (current.role !== "production") redirect("/account");
+  if (current.role !== "production") redirect("/account?notice=nda-not-production");
 
   const u = await userRepo.get(current.id);
-  if (!u) redirect("/account");
+  if (!u) redirect("/account?notice=account-missing");
   // 防御的チェック: 通常はここに来る時点で申請時の会社メール判定を通過済みだが、
   // 管理者が手動で role="production" に変更した場合はこの検証を経ていないため
   // 二重に確認する（フリーメールでのNDA締結を防ぐ）。
@@ -179,10 +179,10 @@ export async function requestProductionUpgradeAction(
   const current = await getCurrentUser();
   if (!current) redirect("/sign-in");
   if (current.role === "production" || current.role === "admin") {
-    redirect("/account");
+    redirect("/account?notice=already-production");
   }
   if (current.status === "pending") {
-    redirect("/account?upgrade=pending");
+    redirect("/account?notice=upgrade-pending");
   }
   // NDA(制作会社)アカウントは会社実在の裏付けとして会社メールドメインを必須化。
   // /account/upgrade 側でも同じ判定でフォーム自体を隠しているが、直接POSTされた
