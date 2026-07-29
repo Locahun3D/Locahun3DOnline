@@ -1,0 +1,295 @@
+/* ============================================================
+   ⚠ 自動生成ファイル — 直接編集しないこと
+   正本: digiroke3d_Web/assets/site-header.css
+   同期: node scripts/sync-header-css.mjs --write
+   検査: node scripts/sync-header-css.mjs --check
+   ここを手で直すと、スキャンサイトとの見た目が再びズレる。
+   ============================================================ */
+/* ============================================
+   UNIFIED HEADER — スキャンサイト全ページ共通の唯一のソース
+   locahun3d.com(オンライン版) site-header.tsx と数値パリティ。
+   ⚠このファイルだけを編集すること。各HTMLへのコピーは禁止
+     (以前はページ毎にコピーされ3系統へdriftし、文字サイズ/幅がページで変わる不具合が発生した)。
+   切替幅1200pxは両サイト共通。変更時は必ずオンライン版も同時に。
+   検証: locahun3d_online/scripts/header-parity.mjs + ui-audit.mjs + scripts/sync_header.py --check
+   ============================================ */
+/* ============================================
+   UNIFIED HEADER — matches locahun3d.com
+   ============================================ */
+/* 継承の遮断: ページ本文の letter-spacing / line-height / font-family が
+   ヘッダーへ漏れると、同じCSSでもページ毎に文字幅・ヘッダー高が変わる
+   （実測: nav幅 360.0/368.2/375.4px、モバイル総高 75.7/77.3/78.4px の3〜4系統）。
+   ヘッダーは常にここで定義した値だけで描画されること。 */
+.site-header{font-family:'Noto Sans JP',ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:normal;line-height:1.5;
+  position:fixed;top:0;left:0;right:0;z-index:1050;
+  height:56px;background:rgba(0,0,0,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);display:flex;align-items:center;
+  padding:0 max(48px, calc((100vw - 1440px) / 2))}
+.site-header .sh-left{flex:1;min-width:0;display:flex;align-items:center;gap:16px}
+.site-header .sh-left nav{display:flex;align-items:center;gap:16px}
+.site-header .sh-left nav a{display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:300;color:rgba(255,255,255,.62);text-decoration:none;
+  white-space:nowrap;transition:color .2s}
+@media(hover:hover){.site-header .sh-left nav a:hover{color:#fafaf6}}
+/* 番号コードの表示可否は下部の @media(max-width:1439px) が唯一の担当。
+   ここで display を指定しない（過去、ベースで display:none にして全幅で消え、
+   オンライン版=1440px以上で表示 とのパリティが崩れた）。 */
+.site-header .sh-left nav a .code{font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.2em;opacity:.5;transition:color .2s,opacity .2s}
+@media(hover:hover){.site-header .sh-left nav a:hover .code{color:var(--accent);opacity:1}}
+.site-header .sh-center{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.site-header .sh-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.site-header .sh-brand svg{flex:none}
+.site-header .sh-brand-text{font-family:'Noto Sans JP',sans-serif;font-weight:900;
+  font-size:18px;letter-spacing:.01em;white-space:nowrap;color:var(--ink)}
+.site-header .sh-toggle{display:flex;align-items:stretch;
+  font-family:'Noto Sans JP',sans-serif;font-weight:900;font-size:9px;letter-spacing:.04em;margin-left:4px}
+/* ⚠ white-space:nowrap は必須。以前は帯側の指定にだけ書かれており、
+   帯を統合した際に落ちて「スキャ／ン」と2行に折り返した（実測）。 */
+.site-header .sh-toggle a,.site-header .sh-toggle span{padding:3px 6px;white-space:nowrap;
+  border:1px solid rgba(255,255,255,.18);text-decoration:none;transition:background .2s,color .2s}
+.site-header .sh-toggle span+a,.site-header .sh-toggle a+span{border-left:0}
+.site-header .sh-toggle .sh-active{background:rgba(255,180,84,.12);border-color:rgba(255,180,84,.5);color:#ffb454}
+.site-header .sh-toggle a:not(.sh-active){color:var(--ink)}
+/* ⚠ hover は必ず @media(hover:hover) で囲む。タッチ端末では一度触れた要素に
+   :hover が残り続け、スクロールしただけで「片方が選択されている」ように暗くなる
+   （ユーザー報告: どちらが選ばれているか分からない）。押した瞬間の反応は
+   :active が担当する。 */
+@media(hover:hover){
+  .site-header .sh-toggle a:not(.sh-active):hover{background:rgba(94,200,232,.15);color:#5ec8e8;border-color:rgba(94,200,232,.5)}
+}
+.site-header .sh-toggle a:not(.sh-active):active{background:rgba(94,200,232,.22)}
+/* ENチップの左マージン。以前は markup 側の inline style="margin-left:8px" だったが、
+   inline は @media の指定に必ず勝つためタブレット帯で右端へ寄せられなかった。
+   `.sh-toggle.sh-lang`(0,3,0) は帯側の `.sh-toggle`(0,2,0) より詳細度が高いので
+   これまでどおり全帯で 8px が効く（モバイル帯の margin-left:auto!important は維持）。 */
+.site-header .sh-toggle.sh-lang{margin-left:8px}
+/* トグル各セルは常に自サービス色ボーダー50%（オンライン版と共通の状態規則） */
+.site-header .sh-toggle:not(.sh-lang) a:not(.sh-active){border-color:rgba(94,200,232,.5)}
+/* ENチップ: オンライン版 LangToggle と同スタイル (JetBrains Mono / 薄グレー) に統一 */
+.site-header .sh-toggle.sh-lang a{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:300;letter-spacing:.12em;padding:4px 8px;color:rgba(255,255,255,.62)}
+@media(hover:hover){
+  .site-header .sh-toggle.sh-lang a:hover{color:var(--accent);border-color:var(--accent);background:none}
+}
+.site-header .sh-right{flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.site-header .sh-right a{font-family:'JetBrains Mono',monospace;font-size:12px;
+  letter-spacing:.2em;text-transform:uppercase;text-decoration:none;
+  padding:6px 16px;white-space:nowrap;transition:border-color .2s,color .2s,background .2s}
+.site-header .sh-btn-ghost{border:1px solid var(--line);color:var(--ink)}
+.site-header .sh-btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.site-header .sh-btn-accent{border:1px solid var(--accent);color:var(--accent)}
+.site-header .sh-btn-accent:hover{background:var(--accent);color:var(--bg)}
+.site-header .sh-user{display:none;align-items:center;gap:10px}
+.site-header .sh-user-avatar{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--accent);object-fit:cover;cursor:pointer}
+.site-header .sh-user-name{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink);white-space:nowrap}
+
+/* ハンバーガー（タブレット縦 720–1023px 専用）。それ以外の帯では出さない。
+   locahun3d.com(オンライン版) site-header.tsx の同帯ボタンと寸法1:1。 */
+.site-header .sh-hb{display:none;flex:none;width:40px;height:40px;margin-left:-8px;
+  align-items:center;justify-content:center;flex-direction:column;gap:4px;
+  background:none;border:0;padding:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+.site-header .sh-hb i{display:block;width:20px;height:1.5px;background:rgba(255,255,255,.62);transition:background .2s}
+@media(hover:hover){.site-header .sh-hb:hover i{background:var(--accent)}}
+.site-header .sh-hb:focus-visible i{background:var(--accent)}
+.site-header.sh-open .sh-hb i{background:var(--accent)}
+
+/* ⚠ 2段ヘッダー(旧 max-width:719px)は 2026-07-28 に廃止した。
+   スマホ縦だけ2段・横はハンバーガーになり、回転で構造ごと変わっていたため
+   （iPhone15 は縦390/横844 で 720px 境界を跨ぐ。SEは横667でも2段だった）。
+   現在は全幅ハンバーガー。設計ルールは locahun3d_online/docs/header-rules.md。
+   ⚠ 幅で文字サイズ・余白を変えないこと（R2）。回転で見た目が変わる原因になる。
+
+   狭い画面で横幅を稼ぐ手段は外周paddingだけ（要素の見た目が変わらないため）。 */
+@media(max-width:479px){
+  .site-header{padding:0 12px}
+  .site-header .sh-center{padding:0 12px}
+}
+
+/* ENはバーから外してドロワーへ（R3）。
+   ⚠ 閾値 1024px はオンライン版 site-header.tsx の LangToggle と対。
+   片方だけ変えると「片サイトだけENがある」状態になりパリティ検査が落ちる。
+   実測の必要性: 375pxでは右側に トグル105px しか置けず、ENの34pxを足すと
+   ブランドが16px左へずれる。iPad縦(820px)ではENがトグルと重なる。 */
+@media(max-width:1023px){
+  .site-header .sh-center .sh-lang{display:none}
+  .site-header .sh-left nav a.sh-drawer-lang{display:flex}}
+.site-header .sh-left nav a:focus-visible{color:#fafaf6}
+/* ドロワー内のEN。既定は非表示で、バーからENを外す狭い帯だけ出す（R3）。
+   ⚠ セレクタは `.sh-left nav a.sh-drawer-lang` まで書くこと。`.sh-drawer-lang` 単独
+   (0,2,0) だと `.site-header .sh-left nav a`(0,2,1) の display:flex に負け、
+   PCのナビ行にも EN が出てしまう（実測でパリティ検査が75件不一致になった）。 */
+.site-header .sh-left nav a.sh-drawer-lang{display:none}
+
+
+/* ══ 全幅共通: ブランドを「画面中央」に固定する ══
+   ⚠ この機構は「タブレット帯だけ」にしてはいけない。
+   2026-07-28: 720–1199 だけ中央固定にした結果、1200px以上は従来どおり
+   「ブランド＋トグル＋EN のグループ中央寄せ」のままとなり、
+   1199→1200 の1px境界でブランドが 84px 飛んだ（実測: 1199=599.5＝画面中央,
+   1200=515.9）。さらにグループ中央寄せはトグル幅に依存するため、
+   両サイトで 26.8px ずれていた（scan 572.1 / online 598.9 @1366px）。
+   → 中央の定義は全帯で「ブランド単体の水平中心 = 50vw」に統一する。
+   帯ごとに違ってよいのは寸法（高さ・余白・文字サイズ）だけ。
+
+   この帯は 720–1023(縦=ハンバーガー) と 1024–1199(横=1行フルナビ) で
+   ナビの出し方だけが違い、中央まわりの寸法と配置規則は完全に同じ。
+   以前は帯ごとに別々の寄せ方（1024–1199 は .sh-center{margin-left:auto} の
+   右寄せ）を書いており、1023→1024 の境界でブランドが 260px 飛び、
+   オンライン版とも 320〜405px ずれていた（iPad の横向きがほぼ全滅）。
+   再発防止のため「中央の作り方」は 1ブロックに集約し、帯固有の差分
+   （ドロワー or 1行ナビ）だけを下の2ブロックで足す。
+
+   ⚠ ブランドの水平中心を両サイトで一致させるのがこの帯の最重要要件。
+   そのため .sh-center をヘッダー全幅の絶対配置グリッド (1fr auto 1fr) にし、
+   ブランドを2列目＝ビューポート中央に固定する。
+   オンライン版は html に zoom(0.8) がかかるが、「中央＝幅の50%」は
+   ズーム倍率に依存しないので実画面座標でも一致する
+   （実測: ブランドリンク中心が両サイトとも 720〜1199px の全幅で vw/2、差 0.0px）。
+   ⚠ グループ全体(ブランド+トグル)を中央寄せにしてはいけない。トグル幅の半分だけ
+   ズレる上、zoom 差でそのズレ量が両サイトで揃わない（実測 約10px）。
+   ⚠ 中心の基準は「ビューポート幅(100vw)の50%」で両サイト統一する。
+   素直に left:0/right:0 で中央に置くと、基準が ICB（クラシックなスクロールバーが
+   あればその分狭い / オンライン版は scrollbar-gutter:stable で必ず15px狭い）に
+   なり、環境によって両サイトの中心が 7.5px ずれる（実測）。
+   translateX((100vw - 100%)/2) で「自分の幅」と「ビューポート幅」の差の半分だけ
+   右へ戻すと、ガターの有無に関わらず中心が常に 50vw に一致する
+   （ガター0の環境では 100vw == 100% となり自動的に 0 になる）。
+   下端を 720px にしてあるのは iPad mini 6 縦(744px)をタブレット扱いにするため
+   （globals.css の zoom ティア境界も 720px に合わせてある。片方だけ変えると
+   ヘッダーだけ帯が違う崩れが再発する）。
+   ⚠ 各要素の書体/サイズ/太さ/余白は locahun3d.com site-header.tsx の
+   同帯(max-[1200px]:)の値と1:1（brand 18px / toggle 9px・3px 6px /
+   EN 11px・4px 8px / マーク18px）。変更時は両サイト同時に。検査=header-parity.mjs */
+/* 中央機構（720px以上の全帯で共通・寸法は帯側で足す）。
+   高さは 100% にしてある（タブレット56px / デスクトップ64px の両方に追従）。
+   横 padding は列1・列3の内側端を決めるだけで、列2＝ブランドの中心は
+   左右対称である限り padding に依存しない。 */
+@media(min-width:0px){
+  .site-header .sh-center{position:absolute;left:0;right:0;top:0;height:100%;padding:0 24px;
+    display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(0,1fr);align-items:center;gap:0;
+    margin-left:0;pointer-events:none}
+/* ⚠ 中央の基準に 100vw を使わないこと。2026-07-29 に実Chromeで判明:
+   オンライン版は scrollbar-gutter:stable を敷いており、その環境では 100vw が
+   「予約分を除いた幅」(805px @820px)になる。スキャン側は auto なので 820px。
+   同じ式が両サイトで別の値になり、実測でブランド中心が 7.5px ずれていた
+   （scan 410 / online 402.5。ヘッドレスはスクロールバーが重なり型で再現しない）。
+   → 両サイトとも scrollbar-gutter:stable **both-edges** を敷き、
+   "中央 = 自分の箱の中央" に統一する。
+   ⚠ both-edges が必須。片側だけの stable だと右に15px予約されるだけなので、
+   スクロールしないページでは右に空帯が残りブランドが7.5px左に見える
+   （実Chromeの /cart で確認: innerWidth820 / scrollWidth805 / 中心402.5）。
+   両端に予約すれば左右対称になり、スクロールバーの有無に関わらず常に中央。 */
+.site-header{scrollbar-gutter:stable both-edges}
+html{scrollbar-gutter:stable both-edges}
+  .site-header .sh-brand{grid-column:2;grid-row:1;gap:6px;pointer-events:auto}
+  .site-header .sh-brand svg{width:18px;height:18px}
+  /* ⚠ 列は必ず minmax(0,1fr)。素の 1fr だと col3(トグル)の最小幅が col1(空)より
+     大きくなって列が広がり、ブランドが左へ押される（実測 375px:-16px / 390px:-8.5px。
+     トグルの white-space:nowrap を直して本来の幅に戻った途端に表面化した）。
+     0まで縮む指定なら左右の列は必ず同幅になり、ブランドは常に画面中央。
+     はみ出た分は外周padding内に収まる。オンライン版 site-header.tsx と同じ対処。 */
+  /* ⚠ ブランドとトグルは「1組」で中央に置く（列2+3を中央に、両端は同幅の1fr）。
+     2026-07-29 まではブランド単体を中央にしていたが、これは
+     「トグル幅が両サイトで違う」時代の回避策だった。ズームをヘッダーから外して
+     両サイトのトグル幅が 111.3px で完全一致したため制約が消え、
+     見た目どおり（ロゴ＋タブの重心が画面中央）に戻した。 */
+  .site-header .sh-toggle:not(.sh-lang){grid-column:3;grid-row:1;justify-self:start;
+    margin-left:8px;pointer-events:auto}
+  .site-header .sh-center .sh-lang{grid-column:4;grid-row:1;justify-self:end;
+    margin-left:0;pointer-events:auto}}
+
+@media(max-width:1199px){
+  .site-header{padding:0 24px;flex-wrap:nowrap}
+  .site-header .sh-right{display:none}
+  .site-header .sh-user-name{display:none}}
+
+/* デスクトップ帯: 中央グリッドの内側端をヘッダー本体の余白に合わせる
+   （EN は列3の右端＝この padding の位置に着く）。 */
+@media(min-width:1200px){
+  .site-header .sh-center{padding:0 max(48px, calc((100vw - 1440px) / 2))}}
+
+/* ══ タブレット縦(720–1023px) 固有: ナビをハンバーガー＋ドロワーへ ══
+   なぜ: 1行フルナビのままだと、オンライン版はサインイン時に右側（EN/カート/
+   ベル/アバター）が重くなり、実測で 768px のナビと中央ブランドが重なっていた
+   （0.4お問い合わせ × ロケハン3D が 5px 重なり）。ナビを畳めば恒久的に余裕が出る。 */
+@media(max-width:1023px){
+  .site-header .sh-hb{display:flex}
+  /* ナビ = ドロワー。ヘッダー直下に全幅で開く。 */
+  .site-header .sh-left{position:absolute;top:100%;left:0;right:0;
+    display:none;flex:none;min-width:0;gap:0;padding:4px 24px 12px;
+    background:#000;border-bottom:1px solid var(--line)}
+  .site-header.sh-open .sh-left{display:block}
+  .site-header .sh-left nav{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .site-header .sh-left nav a{font-size:14px;padding:11px 0;gap:10px}}
+
+/* ══ タブレット横(1024–1199px) 固有: ナビは1行フルナビのまま ══
+   ハンバーガー化はしない（この幅ならナビ・中央ブランド・ENが余裕で並ぶ。
+   実測の最小余白: ナビ右端→ブランド左端 = 67.8px @1024px）。
+   .sh-center は上の共通ブロックで絶対配置になっているので、.sh-left は
+   flex:1 1 auto で行いっぱいに広がってよい（ナビは左寄せのまま）。 */
+@media(min-width:1024px) and (max-width:1199px){
+  .site-header .sh-left{flex:1 1 auto;min-width:0;justify-content:flex-start;padding-bottom:0;gap:16px}
+  .site-header .sh-left nav{flex-wrap:nowrap;gap:16px}
+  .site-header .sh-left nav a{font-size:13px}}
+
+/* ナビ番号コード(0.1〜0.4)は 1560px 以上でのみ表示する。
+   実測の根拠: .site-header の padding は max(48px, calc((100vw - 1440px)/2)) なので
+   ヘッダー内容幅は「ビューポート1536px以上」で1440pxに到達して頭打ちになる。
+   コードを出すとナビが伸び、1440〜1535px では日本語4項目が中央ブランドに衝突する
+   （実測: 1440pxでナビ→ブランド間が works で −6.5px＝重なり）。
+   1560px以上なら +41〜57px の余裕があり安全に表示できる。
+   オンライン版は1440px以上で表示（英字ラベルで収まるため）。閾値だけが異なる。
+   ラベルを伸ばす時はこの閾値の再実測が必要。 */
+.site-header .sh-left nav a .code{display:none}
+@media(min-width:1560px){
+  .site-header .sh-left nav a .code{display:inline}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   オンライン版だけに出る要素（カート / 認証 / 通知ベル / アバター）。
+   スキャンサイトはこれらを持たないので、定義があっても影響しない。
+   ⚠ ここに置く理由: ヘッダーの見た目の正本を1ファイルに集約するため。
+      オンライン側で Tailwind に書くと、また2つのソースができて必ずズレる
+      （2026-07-29 に同じ構造が原因のズレが5件出た）。
+   ══════════════════════════════════════════════════════════════ */
+
+/* 右側グループ。scan では空divなので下の子要素セレクタは一致しない。 */
+.site-header .sh-right{gap:8px}
+
+/* カート（アイコン＋バッジ） */
+.site-header .sh-cart{position:relative;display:flex;align-items:center;
+  color:rgba(255,255,255,.62);transition:color .2s;white-space:nowrap}
+.site-header .sh-cart:hover{color:var(--accent)}
+.site-header .sh-cart svg{width:18px;height:18px}
+.site-header .sh-cart-badge{position:absolute;top:-8px;right:-10px;
+  min-width:16px;height:16px;padding:0 4px;display:flex;align-items:center;justify-content:center;
+  border-radius:9999px;background:var(--accent);color:var(--bg);
+  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700}
+
+/* 認証ボタン（ログイン / 新規登録）。寸法は全幅固定（R2）。 */
+.site-header .sh-auth{padding:4px 8px;border:1px solid var(--line);
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;white-space:nowrap;color:var(--ink);
+  background:none;cursor:pointer;transition:border-color .2s,color .2s,background .2s}
+.site-header .sh-auth:hover{border-color:var(--accent);color:var(--accent)}
+.site-header .sh-auth.sh-auth-primary{border-color:var(--accent);color:var(--accent)}
+.site-header .sh-auth.sh-auth-primary:hover{background:var(--accent);color:var(--bg)}
+
+/* サインイン時の「マイページ」等 */
+.site-header .sh-account{display:flex;align-items:center;gap:6px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:rgba(255,255,255,.62);text-decoration:none;
+  white-space:nowrap;transition:color .2s}
+.site-header .sh-account:hover{color:var(--accent)}
+.site-header .sh-role{border:1px solid var(--line);padding:2px 6px;font-size:10px}
+@media(max-width:1023px){.site-header .sh-role{display:none}}
+
+/* ドロワー内に退避させた要素の並び（R3 で「縮めず移す」先） */
+.site-header .sh-drawer-extra{display:none;flex-direction:column;align-items:stretch;
+  gap:8px;margin-top:4px;padding-top:8px;border-top:1px solid var(--line)}
+@media(max-width:1023px){.site-header .sh-drawer-extra{display:flex}}
+.site-header .sh-drawer-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+/* カート/認証は768px未満のみドロワー（バー側 768px以上表示と対にする） */
+.site-header .sh-drawer-auth{display:none}
+@media(max-width:767px){.site-header .sh-drawer-auth{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}

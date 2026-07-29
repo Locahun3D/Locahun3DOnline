@@ -5,6 +5,10 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+// ⚠ ヘッダーCSSの正本は digiroke3d_Web/assets/site-header.css。
+//    ここで読むのは機械コピー（scripts/sync-header-css.mjs）。直接編集しないこと。
+//    globals.css の後に読むことで、ヘッダーのスタイルが本文側の指定に負けない。
+import "./site-header.css";
 import SiteHeader from "@/components/site-header";
 import ClerkPopoverZoomFix from "@/components/clerk-popover-zoom-fix";
 import SiteFooter from "@/components/site-footer";

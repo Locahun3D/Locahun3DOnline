@@ -134,7 +134,12 @@ export default async function SiteHeader() {
     //    ズームの外に出すと CSS px = 実 px となりスキャンサイトと同一寸法になる。
     //    詳細は docs/header-rules.md の R2。
     <header
-      style={{ zoom: "calc(1 / var(--z))" }}
+      // ⚠ line-height / letter-spacing は必ずここで打ち消す。指定が無いと body の
+      //    1.8 を継承し、スキャンサイト(.site-header{line-height:1.5})より
+      //    トグルの枠が縦に2.7px、ブランド文字が1px大きくなる
+      //    （実測 390/820/1440 の全幅で再現。ユーザー報告「枠が拡大される」の正体）。
+      //    横幅は一致していたため font-size だけ見ていては気づけなかった。
+      style={{ zoom: "calc(1 / var(--z))", lineHeight: 1.5, letterSpacing: "normal" }}
       className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm"
     >
       {/* ══ PC/タブレット(720px+) — 1行 ══
@@ -241,7 +246,7 @@ export default async function SiteHeader() {
             （実測 375px: col1=99.3 / col3=119.3 → 中心が-10px、320pxで-37.5px）。
             0まで縮める指定にすれば左右の列は必ず同幅になり、ブランドは常に中央。
             はみ出た分は右の padding 内に収まる（実測 375pxで10px、余白16px）。 */}
-        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-[55px] px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
+        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-[55px] px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
           <Link
             href={lh("/")}
             aria-label={brandName}
@@ -254,10 +259,14 @@ export default async function SiteHeader() {
               別々に col-start-3 を振ると重なる。EN を justify-self-end にするのも不可で、
               右端にはカート/認証ボタンが居るため衝突する（scan側は .sh-right が空なので
               右端でよい、という非対称はここだけ許容する）。 */}
+          {/* ⚠ ブランド(列2)とトグル(列3)を「1組」で中央に置く。両端は同幅の1frなので
+              2列まとめて画面中央に来る。2026-07-29 まではブランド単体を中央にしていたが、
+              それは「トグル幅が両サイトで違う」時代の回避策。ズームをヘッダーから
+              外して両サイト 111.3px で一致したため、見た目どおりに戻した。 */}
           <div className="col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 pointer-events-auto">
             {scanOnlineToggle}
-            <LangToggle className="hidden 2xl:inline-block" />
-          </div>
+            </div>
+          <LangToggle className="hidden 2xl:inline-block col-start-4 row-start-1 justify-self-end pointer-events-auto" />
         </div>
 
         {/* ⚠ 720–733px では中央グリッド側のトグル(列3)と、この右グループ先頭のENが
