@@ -26,6 +26,7 @@ import {
   linkPropertiesToUserAction,
 } from "@/lib/admin-actions";
 import { isFreeEmailDomain } from "@/lib/free-email-domains";
+import { REJECT_REASONS, REJECT_REASON_LABEL, type RejectReason } from "@/lib/account-reject-reasons";
 
 const PAGE_SIZE = 50;
 
@@ -345,15 +346,29 @@ export default function AccountsAdmin({
                         承認
                       </button>
                     </form>
+                    {/* 却下は必ず理由を選ばせる。申請者への通知本文がこの選択で変わり、
+                        「何を直せば通るのか」が伝わる（文面は lib/account-reject-reasons.ts）。
+                        既定は会社メール以外での申請＝実際に最も多い却下理由。 */}
                     <form
                       action={rejectAccountAction}
+                      className="flex items-center gap-1"
                       onSubmit={(e) => {
-                        if (!confirm(`${u.name} さんの制作会社アカウント申請を却下しますか？個人アカウントに戻り、本人に通知されます。`)) {
+                        const reason = new FormData(e.currentTarget).get("reason");
+                        const label = REJECT_REASON_LABEL[reason as RejectReason] ?? "";
+                        if (!confirm(
+                          `${u.name} さんの制作会社アカウント申請を「${label}」で却下しますか？\n` +
+                          `個人アカウントに戻り、理由を説明する通知が本人に届きます。`,
+                        )) {
                           e.preventDefault();
                         }
                       }}
                     >
                       <input type="hidden" name="id" value={u.id} />
+                      <select name="reason" defaultValue="personal_email" className="bg-bg border border-line text-[11px] px-2 py-1.5 text-ink">
+                        {REJECT_REASONS.map((r) => (
+                          <option key={r} value={r}>{REJECT_REASON_LABEL[r]}</option>
+                        ))}
+                      </select>
                       <button className="mono text-[10px] tracking-[0.18em] uppercase border border-red-400/50 text-red-400 px-3 py-1.5 hover:bg-red-400 hover:text-bg transition">
                         却下
                       </button>

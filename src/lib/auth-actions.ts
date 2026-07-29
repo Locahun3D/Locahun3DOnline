@@ -237,3 +237,37 @@ export async function requestProductionUpgradeAction(
 
   return { ok: true };
 }
+
+/**
+ * ログイン中の個人アカウントを、その場で撮影スタジオへ切り替える。
+ *
+ * ── なぜ「申請」ではなく即時切り替えなのか ──────────────────
+ * 撮影スタジオは SELF_SIGNUP_ROLES＝新規登録時に自己申告で選べる種別で、
+ * 審査は元々ない。つまり「別アカウントを作り直して studio を選ぶ」のと
+ * 「今のアカウントを studio にする」とで審査の厳しさは変わらない。
+ * にもかかわらず掲載依頼ページは常に新規登録へ送っており、しかも
+ * ログイン済みだと Clerk がサインアップ画面を出さずマイページへ弾くため、
+ * 「スタジオアカウントを作成」を押すと何も起きないように見えていた
+ * （ユーザー報告 2026-07-29）。
+ *
+ * ⚠ 会社ドメインのメールを必須にする。フリーメールのままスタジオを名乗れると
+ *   掲載主の実在確認が一切なくなる（制作会社アカウントと同じ基準に揃えた）。
+ * ⚠ 対象は individual のみ。production は NDA 締結済みなので切り替えると
+ *   権限を失う。admin/studio は変更不要。
+ * ⚠ 表示の出し分けは listing-funnel.ts の canConvertToStudio。ここは
+ *   直接POSTされた場合の本丸なので、同じ条件を必ず再判定する。
+ */
+export async function convertToStudioAction(): Promise<void> {
+  const current = await getCurrentUser();
+  if (!current) redirect("/sign-in");
+  if (current.role !== "individual") redirect("/contact/listing");
+  if (isFreeEmailDomain(current.email)) redirect("/contact/listing?notice=company-email-required");
+
+  const u = await userRepo.get(current.id);
+  if (!u) redirect("/sign-in");
+  await userRepo.upsert({ ...u, role: "studio", status: "active" });
+
+  revalidatePath("/contact/listing");
+  revalidatePath("/account");
+  redirect("/admin/properties");
+}

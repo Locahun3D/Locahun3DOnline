@@ -6,7 +6,9 @@ import { CONTACT_TYPES, type ContactType } from "@/lib/contact-requests";
 import ContactForm from "@/components/contact-form";
 import { getCurrentUser } from "@/lib/dal";
 import { repo } from "@/lib/store";
-import { canCreateListing, resolveListingPrefill } from "@/lib/listing-funnel";
+import { canCreateListing, canConvertToStudio, resolveListingPrefill } from "@/lib/listing-funnel";
+import { isFreeEmailDomain } from "@/lib/free-email-domains";
+import { convertToStudioAction } from "@/lib/auth-actions";
 
 const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; ledeEn: string }> = {
   bug: {
@@ -83,6 +85,9 @@ export default async function ContactTypePage({
   // 判定は src/lib/listing-funnel.ts に集約（テストで固定してある）。
   // ここで所有者でなければ ?property= は無視され、初期値も出ない。
   const canOwn = canCreateListing(user?.role);
+  // 会社ドメインのメールでログイン中の個人アカウントは、別アカウントを作らせず
+  // その場でスタジオへ切り替えられる（判定と強制は listing-funnel / auth-actions）。
+  const canConvert = canConvertToStudio(user?.role, isFreeEmailDomain(user?.email ?? ""));
   const target =
     t === "listing" && propertyParam && canOwn ? await repo.get(propertyParam) : null;
   const prefill = resolveListingPrefill(user, target);
@@ -151,8 +156,8 @@ export default async function ContactTypePage({
                 </Link>
                 <p className="mt-2 mono text-[10px] text-muted">
                   {en
-                    ? "Choose “Filming studio” as the account type."
-                    : "アカウント種別で「撮影スタジオ」を選択してください。"}
+                    ? "Choose “Filming studio” as the account type, and register with your company's own email address (free webmail such as Gmail cannot be used)."
+                    : "アカウント種別で「撮影スタジオ」を選択し、会社（スタジオ）のメールアドレスでご登録ください（Gmail等のフリーメールはご利用いただけません）。"}
                 </p>
               </>
             ) : canOwn ? (
@@ -175,6 +180,33 @@ export default async function ContactTypePage({
                   {en ? "Go to listing pages →" : "掲載ページを作成する →"}
                 </Link>
               </>
+            ) : canConvert ? (
+              <>
+                {/* 会社ドメインのメールでログイン済み。新規登録に送っても Clerk が
+                    サインアップ画面を出さずマイページへ弾くうえ、撮影スタジオは
+                    元々自己申告で選べる種別なので、このまま切り替える。 */}
+                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
+                  {en ? "Step 1 / 3" : "ステップ 1 / 3"}
+                </div>
+                <h2 className="text-[15px] font-bold mb-2">
+                  {en ? "Switch this account to a studio account" : "このアカウントをスタジオアカウントにする"}
+                </h2>
+                <p className="text-[13px] leading-relaxed text-muted">
+                  {en
+                    ? `You're signed in with a company address (${user?.email}). No second account needed — switch this one to a studio account and start a listing page right away.`
+                    : `会社のメールアドレス（${user?.email}）でログイン中です。別のアカウントを作る必要はありません。このアカウントをスタジオアカウントに切り替えると、すぐに掲載ページを作り始められます。`}
+                </p>
+                <form action={convertToStudioAction}>
+                  <button className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition cursor-pointer">
+                    {en ? "Switch to a studio account →" : "スタジオアカウントに切り替える →"}
+                  </button>
+                </form>
+                <p className="mt-2 mono text-[10px] text-muted">
+                  {en
+                    ? "Free, no review. Viewing and purchases stay exactly as they are."
+                    : "無料・審査なし。閲覧や購入の履歴はそのまま引き継がれます。"}
+                </p>
+              </>
             ) : (
               <>
                 <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
@@ -188,16 +220,19 @@ export default async function ContactTypePage({
                     ? "Your current account type cannot create listings. Sign up separately as a studio — it's free and takes effect immediately."
                     : "現在のアカウント種別では掲載ページを作成できません。スタジオ用に別途アカウントをご登録ください（無料・登録後すぐ利用可）。"}
                 </p>
+                {/* ⚠ ログイン中に /sign-up へ送っても Clerk がサインアップ画面を出さず
+                    マイページへ弾く（ユーザー報告）。先にサインアウトしてから
+                    登録画面へ着地させる。 */}
                 <Link
-                  href={lh("/sign-up")}
+                  href={lh("/sign-out?redirect=/sign-up")}
                   className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
                 >
-                  {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
+                  {en ? "Sign out and create a studio account →" : "サインアウトしてスタジオアカウントを作成 →"}
                 </Link>
                 <p className="mt-2 mono text-[10px] text-muted">
                   {en
-                    ? "Accounts are identified by email, so use a different address from this one."
-                    : "アカウントはメールアドレスで識別されるため、今お使いのものとは別のアドレスをご用意ください。"}
+                    ? "Accounts are identified by email. Register with your company's own email address (free webmail such as Gmail cannot be used)."
+                    : "アカウントはメールアドレスで識別されます。会社（スタジオ）のメールアドレスでご登録ください（Gmail等のフリーメールはご利用いただけません）。"}
                 </p>
               </>
             )}

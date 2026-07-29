@@ -67,7 +67,7 @@ export async function createGiftCodeAction(
     redemptions: [],
   });
 
-  revalidatePath("/admin/gift-codes");
+  revalidatePath("/admin/marketing");
   return { ok: true, code: created };
 }
 
@@ -80,7 +80,7 @@ export async function setGiftCodeStatusAction(formData: FormData): Promise<void>
   const c = await giftCodeRepo.get(code);
   if (!c) return;
   await giftCodeRepo.upsert({ ...c, status });
-  revalidatePath("/admin/gift-codes");
+  revalidatePath("/admin/marketing");
 }
 
 // ── Admin: delete ──────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ export async function deleteGiftCodeAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const code = String(formData.get("code") ?? "");
   await giftCodeRepo.remove(code);
-  revalidatePath("/admin/gift-codes");
+  revalidatePath("/admin/marketing");
 }
 
 // ── User: redeem ───────────────────────────────────────────────────────────

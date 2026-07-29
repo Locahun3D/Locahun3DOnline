@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Show, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
-import { roleLabel } from "@/lib/account-schema";
 import { listNotifications } from "@/lib/notifications";
 import HeaderMark from "@/components/header-mark";
 import CartLink from "@/components/cart-link";
@@ -71,14 +70,9 @@ export default async function SiteHeader() {
           href={lh("/account")}
           className="flex items-center gap-1.5 text-[11px] mono tracking-[0.12em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
-          {/* 権限バッジ（例「撮影スタジオ」）は 720–1023px では出さない。
-              ハンバーガー化したこの帯はサインイン時の右側が最も混み、バッジを
-              足すと中央のブランド／トグルに寄ってくる。1024px 以上は元どおり表示。
-              ⚠ 範囲は max-[Npx] で排他にすること（sm: と min-[720px]: を
-              同じプロパティで重ねると出力順で勝敗が不定になる）。 */}
-          <span className="hidden min-[1024px]:inline border border-line px-1.5 py-0.5 text-[10px]">
-            {roleLabel(user.role, locale)}
-          </span>
+          {/* ⚠ 権限バッジ（「個人」「撮影スタジオ」等）はヘッダーから外した。
+              マイページで確認でき、毎ページ出す情報ではないため
+              （2026-07-29 ユーザー判断）。右側が軽くなる副次効果もある。 */}
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
         </Link>
       )}
@@ -101,10 +95,12 @@ export default async function SiteHeader() {
           ⚙ {t("auth.admin")}
         </Link>
       )}
+      {/* ⚠ ベルはアバター（UserButton）の右。並びは
+          … マイページ / アバター / ベル。以前はベルがアバターの左だった。 */}
+      <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
       {user && (
         <NotificationBell notifications={recentNotifications} unreadCount={unreadCount} locale={locale} en={locale === "en"} />
       )}
-      <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
     </Show>
   );
 

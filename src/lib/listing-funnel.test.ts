@@ -4,6 +4,7 @@ import {
   listingStep,
   ownsProperty,
   resolveListingPrefill,
+  canConvertToStudio,
 } from "./listing-funnel";
 
 const studio = { id: "u1", role: "studio", name: "スタジオA" };
@@ -86,5 +87,26 @@ describe("resolveListingPrefill", () => {
       propertyName: "",
       address: "",
     });
+  });
+});
+
+describe("canConvertToStudio — 今のアカウントをそのままスタジオにできるか", () => {
+  it("個人アカウント＋会社ドメインなら切り替えられる", () => {
+    expect(canConvertToStudio("individual", false)).toBe(true);
+  });
+
+  it("個人アカウントでもフリーメールなら切り替えさせない", () => {
+    expect(canConvertToStudio("individual", true)).toBe(false);
+  });
+
+  it("制作会社は対象外（NDA権限を失うため別アカウントへ案内する）", () => {
+    expect(canConvertToStudio("production", false)).toBe(false);
+  });
+
+  it("すでにスタジオ／管理者、未ログインは対象外", () => {
+    expect(canConvertToStudio("studio", false)).toBe(false);
+    expect(canConvertToStudio("admin", false)).toBe(false);
+    expect(canConvertToStudio(null, false)).toBe(false);
+    expect(canConvertToStudio(undefined, false)).toBe(false);
   });
 });

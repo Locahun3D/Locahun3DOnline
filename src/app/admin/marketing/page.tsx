@@ -1,17 +1,26 @@
 import { requireAdmin } from "@/lib/dal";
 import { userRepo } from "@/lib/users";
 import { emailEnabled } from "@/lib/email";
+import { giftCodeRepo } from "@/lib/gift-codes";
 import MarketingComposer from "@/components/admin/marketing-composer";
+import GiftCodeAdmin from "@/components/admin/gift-code-admin";
 
 export const metadata = { title: "マーケティング" };
 
+/**
+ * 集客まわりの操作を1ページに集約する。
+ * ⚠ 旧 /admin/gift-codes は廃止してここへ統合した（2026-07-29）。
+ *   同ページにあった「全物件共通の限定無料期間」UIは廃止。無料化は
+ *   3DGSデータごとに物件エディターで設定する運用へ一本化したため
+ *   （サイト全体を一括で無料にする運用は行わない）。
+ */
 export default async function AdminMarketingPage() {
   await requireAdmin();
-  const users = await userRepo.list();
+  const [users, codes] = await Promise.all([userRepo.list(), giftCodeRepo.list()]);
   const consentedCount = users.filter((u) => u.marketingConsent && u.status === "active").length;
 
   return (
-    <div className="p-8 max-w-3xl space-y-8">
+    <div className="p-8 max-w-5xl space-y-8">
       <header>
         <h1 className="serif text-3xl font-bold">マーケティング</h1>
         <p className="text-[13px] text-muted mt-2 leading-[1.8] max-w-[60ch]">
@@ -35,6 +44,18 @@ export default async function AdminMarketingPage() {
       </div>
 
       <MarketingComposer disabled={!emailEnabled()} />
+
+      <section id="gift-codes" className="border-t border-line pt-10 scroll-mt-24">
+        <header className="mb-8">
+          <h2 className="serif text-2xl font-bold">ギフトコード</h2>
+          <p className="text-[13px] text-muted mt-2 leading-[1.8] max-w-[60ch]">
+            トークン数を設定したコードを発行し、ユーザーに渡せます。受け取った人は
+            マイページの「ギフトコードを引き換え」から入力してトークンを受け取ります。
+          </p>
+        </header>
+
+        <GiftCodeAdmin codes={codes} />
+      </section>
     </div>
   );
 }

@@ -25,11 +25,14 @@ export default async function AdminLayout({
           { href: "/admin/analytics", label: "アナリティクス" },
           { href: "/admin/subscriptions", label: "↳ サブスク売上", sub: true },
           { href: "/admin/assets", label: "アセット" },
-          { href: "/admin/gift-codes", label: "ギフトコード・無料期間" },
-          { href: "/admin/inquiries", label: "問い合わせ" },
+          { href: "/admin/inquiries", label: "スタジオへのお問い合わせ" },
           { href: "/admin/contact-requests", label: "お問い合わせ（サイト全体）" },
           { href: "/admin/reports", label: "↳ 通報管理", sub: true },
           { href: "/admin/marketing", label: "マーケティング" },
+          // ギフトコードは専用ページ(/admin/gift-codes)を廃止しマーケティング配下へ統合。
+          // 全物件共通の「限定無料期間」UIも同時に廃止（無料化は3DGSデータごとに
+          // 物件エディターで設定する運用に一本化したため）。
+          { href: "/admin/marketing#gift-codes", label: "↳ ギフトコード", sub: true },
           { href: "/admin/purchases", label: "データ販売" },
           { href: "/admin/submissions", label: "持ち込みスキャン" },
           { href: "/admin/payouts", label: "精算" },

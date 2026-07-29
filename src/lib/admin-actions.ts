@@ -14,6 +14,7 @@ import { notifyRefund, notifyInquiryReply, notifyContactReply } from "./email";
 import { voidPayoutAccrualsForPurchase } from "./payouts";
 import { createNotification } from "./notifications";
 import { jstDayKey } from "./date-format";
+import { rejectNotice } from "./account-reject-reasons";
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATUSES,
@@ -53,6 +54,11 @@ export async function approveAccountAction(formData: FormData): Promise<void> {
  * 「保留中」のまま放置しない）。NDA同意は申請時に自己申告で記録されて
  * いるため、却下時にクリアする。申請者にはアプリ内通知で結果を伝える
  * （通知失敗で却下処理自体は失敗させない）。
+ *
+ * ⚠ 通知本文は運営が選んだ却下理由で切り替わる（reason フィールド）。
+ *   以前は固定文「今回は見送りとなりました」だけで、しかも遷移先が
+ *   再申請ページだったため、申請者は何を直せばよいか分からないまま
+ *   同じ内容で再申請できてしまった。文面は account-reject-reasons.ts が正本。
  */
 export async function rejectAccountAction(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -65,12 +71,13 @@ export async function rejectAccountAction(formData: FormData): Promise<void> {
     status: "active",
     ndaAcceptedAt: null,
   });
+  const notice = rejectNotice(String(formData.get("reason") ?? ""));
   await createNotification({
     userId: u.id,
     type: "production_status",
-    title: "制作会社アカウントの申請結果について",
-    body: "制作会社（NDA）アカウントへの切り替え申請は、今回は見送りとなりました。個人アカウントとして引き続きご利用いただけます。ご不明点はお問い合わせください。",
-    link: "/account/upgrade",
+    title: notice.title,
+    body: notice.body,
+    link: notice.link,
   }).catch(() => {});
   revalidatePath("/admin/accounts");
 }

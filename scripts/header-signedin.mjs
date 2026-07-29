@@ -76,22 +76,49 @@ if (!signedIn) { console.error("サインインできていません（ヘッダ
 const PROBE = () => {
   const hd = document.querySelector("header");
   if (!hd) return { e: "ヘッダーが無い" };
+
+  // ⚠ 判定は「実際に描かれている矩形」で行う。要素の getBoundingClientRect を
+  //    そのまま使うと、祖先の overflow で切り取られて**画面に出ていない部分**まで
+  //    重なりに数えてしまう。Clerk の UserButton は内部に position:absolute の
+  //    装飾要素を持ち、それが親の外（左隣のリンクの上）へ35px はみ出す。
+  //    見た目もクリックも親側でクリップされているのに、素朴な矩形判定では
+  //    「マイページ×SPAN 27px」として 97 件の偽陽性を出した（2026-07-29 実測）。
+  const visibleRect = (el) => {
+    let r = el.getBoundingClientRect();
+    for (let n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (cs.overflow === "visible" && cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+      const p = n.getBoundingClientRect();
+      r = {
+        left: Math.max(r.left, p.left), right: Math.min(r.right, p.right),
+        top: Math.max(r.top, p.top), bottom: Math.min(r.bottom, p.bottom),
+      };
+      r.width = r.right - r.left;
+      r.height = r.bottom - r.top;
+      if (r.width <= 0 || r.height <= 0) return null;
+    }
+    return r;
+  };
+
   // 表示中の「葉」要素だけを対象にする（親子は必ず重なるため）
-  const els = [...hd.querySelectorAll("a,button,span,img")].filter((e) => {
-    const r = e.getBoundingClientRect();
-    if (r.width < 4 || r.height < 4) return false;
-    if (getComputedStyle(e).visibility === "hidden") return false;
-    return ![...e.children].some((c) => c.getBoundingClientRect().width >= 4);
-  });
-  const label = (e) => ((e.textContent || e.getAttribute("aria-label") || e.tagName).trim().slice(0, 10));
+  const els = [];
+  for (const e of hd.querySelectorAll("a,button,span,img")) {
+    if (getComputedStyle(e).visibility === "hidden") continue;
+    if ([...e.children].some((c) => c.getBoundingClientRect().width >= 4)) continue;
+    const r = visibleRect(e);
+    if (!r || r.width < 4 || r.height < 4) continue;
+    els.push({ e, r });
+  }
+  const label = (x) => ((x.e.textContent || x.e.getAttribute("aria-label") || x.e.tagName).trim().slice(0, 10));
   const ov = [];
   for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
-    if (els[i].contains(els[j]) || els[j].contains(els[i])) continue;
-    const a = els[i].getBoundingClientRect(), c = els[j].getBoundingClientRect();
+    if (els[i].e.contains(els[j].e) || els[j].e.contains(els[i].e)) continue;
+    const a = els[i].r, c = els[j].r;
     const x = Math.min(a.right, c.right) - Math.max(a.left, c.left);
     const y = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top);
     if (x > 1 && y > 1) ov.push(`${label(els[i])}×${label(els[j])}(${x.toFixed(1)}px)`);
   }
+
   const hr = hd.getBoundingClientRect();
   const brand = [...hd.querySelectorAll("a[aria-label]")].find((e) => e.getBoundingClientRect().width > 5);
   if (!brand) return { e: "ブランドが見つからない" };
@@ -107,7 +134,7 @@ const PROBE = () => {
   const g = tg
     ? (br.left + tg.getBoundingClientRect().right) / 2 - (hr.left + hr.width / 2)
     : (br.left + br.right) / 2 - (hr.left + hr.width / 2);
-  return { ov, g: g === null ? null : +g.toFixed(1), h: +hr.height.toFixed(1),
+  return { ov, g: +g.toFixed(1), h: +hr.height.toFixed(1),
     of: document.documentElement.scrollWidth - document.documentElement.clientWidth };
 };
 
