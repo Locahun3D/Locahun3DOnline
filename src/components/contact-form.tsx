@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { submitContactRequestAction, type ContactState } from "@/lib/contact-actions";
 import type { ContactType } from "@/lib/contact-requests";
 import { useLocale } from "@/components/locale-provider";
@@ -8,112 +8,10 @@ import { useLocale } from "@/components/locale-provider";
 const HONEYPOT_FIELD = "website";
 const RENDERED_AT_FIELD = "_rt";
 
-// サーバー側 contact-actions.ts の上限と揃えること
-const MAX_ATTACHMENTS = 3;
-const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8 MB
-const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 const inputClass =
   "w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition";
 
-/** UA 文字列からの OS / ブラウザ推定（userAgentData が無いブラウザ向けフォールバック）。 */
-function detectFromUA(ua: string): { os: string; browser: string } {
-  let os = "";
-  const ios = ua.match(/(?:iPhone|iPad|iPod).*OS (\d+)[_.](\d+)/);
-  const android = ua.match(/Android ([\d.]+)/);
-  if (ios) os = `iOS ${ios[1]}.${ios[2]}`;
-  else if (android) os = `Android ${android[1]}`;
-  else if (/Windows/i.test(ua)) os = "Windows";
-  else if (/Mac OS X/i.test(ua)) os = "macOS";
-  else if (/Linux/i.test(ua)) os = "Linux";
-
-  let browser = "";
-  const edge = ua.match(/Edg\/([\d.]+)/);
-  const chrome = ua.match(/Chrome\/([\d.]+)/);
-  const firefox = ua.match(/Firefox\/([\d.]+)/);
-  if (edge) browser = `Edge ${edge[1]}`;
-  else if (chrome) browser = `Chrome ${chrome[1]}`;
-  else if (firefox) browser = `Firefox ${firefox[1]}`;
-  else if (/Safari\//.test(ua)) {
-    const v = ua.match(/Version\/([\d.]+)/);
-    browser = `Safari${v ? " " + v[1] : ""}`;
-  }
-  return { os, browser };
-}
-
-/** WebGL から GPU 名を取得（3DGSビューアのバグ調査で最重要の情報）。 */
-function detectGpu(): string {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl =
-      canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    if (!gl) return "";
-    const ext = gl.getExtension("WEBGL_debug_renderer_info");
-    let renderer = ext
-      ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL))
-      : String(gl.getParameter(gl.RENDERER));
-    // 例: "ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 (0x...) Direct3D11 ...)" → GPU名だけ抜く
-    const m = renderer.match(/ANGLE \([^,]+,\s*([^,(]+)/);
-    if (m) renderer = m[1].trim();
-    return renderer;
-  } catch {
-    return "";
-  }
-}
-
-/**
- * ご利用環境の自動入力。OS（Windows 11/10 判別含む）・ブラウザのフルバージョン・
- * GPU・画面解像度・CPU コア数まで収集する。取得できない項目は黙って省く。
- */
-async function gatherEnvironment(): Promise<string> {
-  const ua = navigator.userAgent || "";
-  let { os, browser } = detectFromUA(ua);
-
-  // Chromium系: userAgentData の高エントロピー値で OS 版とフルバージョンを精密化
-  try {
-    const uad = (
-      navigator as Navigator & {
-        userAgentData?: {
-          platform?: string;
-          getHighEntropyValues(hints: string[]): Promise<{
-            platformVersion?: string;
-            fullVersionList?: Array<{ brand: string; version: string }>;
-          }>;
-        };
-      }
-    ).userAgentData;
-    if (uad?.getHighEntropyValues) {
-      const hi = await uad.getHighEntropyValues(["platformVersion", "fullVersionList"]);
-      const platform = uad.platform || "";
-      const pv = hi.platformVersion || "";
-      if (platform === "Windows" && pv) {
-        // platformVersion 13以上 = Windows 11（Chromium公式の判別方法）
-        os = parseInt(pv.split(".")[0], 10) >= 13 ? "Windows 11" : "Windows 10";
-      } else if (platform && pv) {
-        os = `${platform} ${pv.split(".").slice(0, 2).join(".")}`;
-      }
-      const brands = (hi.fullVersionList ?? []).filter((b) => !/Not.?A.?Brand/i.test(b.brand));
-      const primary =
-        brands.find((b) => !/^Chromium$/i.test(b.brand)) ?? brands[0];
-      if (primary) browser = `${primary.brand.replace("Google ", "").replace("Microsoft ", "")} ${primary.version}`;
-    }
-  } catch {
-    /* userAgentData 未対応（Safari/Firefox）は UA 推定のまま */
-  }
-
-  const gpu = detectGpu();
-  const screenInfo = `${screen.width}×${screen.height}${
-    window.devicePixelRatio !== 1 ? ` @${window.devicePixelRatio}x` : ""
-  }`;
-  const cores = navigator.hardwareConcurrency
-    ? `CPU ${navigator.hardwareConcurrency}コア`
-    : "";
-
-  return [os, browser, gpu && `GPU: ${gpu}`, `画面 ${screenInfo}`, cores]
-    .filter(Boolean)
-    .join(" / ")
-    .slice(0, 200);
-}
 
 /**
  * /contact/[type] の各専用ページで使う共通フォーム。type ごとに項目を出し分ける
@@ -141,53 +39,14 @@ export default function ContactForm({
   );
   const renderedAtRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
-  const environmentRef = useRef<HTMLInputElement>(null);
-  const attachInputRef = useRef<HTMLInputElement>(null);
-  const [attachFiles, setAttachFiles] = useState<File[]>([]);
-  const [attachError, setAttachError] = useState("");
+
+  // ⚠ ボット判定用のレンダー時刻。これが無いと送信が「速すぎる」扱いで
+  //    弾かれ得るので、フォームの種別に関係なく必ず入れる。
+  //    （バグ報告専用コードを撤去した際に一度巻き添えで消した — 2026-07-29）
   useEffect(() => {
     if (renderedAtRef.current) renderedAtRef.current.value = String(Date.now());
-    if (type === "bug" && environmentRef.current && !environmentRef.current.value) {
-      const el = environmentRef.current;
-      gatherEnvironment().then((v) => {
-        // 収集中にユーザーが手入力を始めていたら上書きしない
-        if (el && !el.value) el.value = v;
-      });
-    }
   }, [type]);
 
-  /** input の FileList を state と同期させる（削除・追加は DataTransfer で再構築）。 */
-  const syncAttachments = (next: File[]) => {
-    setAttachFiles(next);
-    if (attachInputRef.current) {
-      const dt = new DataTransfer();
-      next.forEach((f) => dt.items.add(f));
-      attachInputRef.current.files = dt.files;
-    }
-  };
-
-  const onAttachChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAttachError("");
-    const picked = [...(e.target.files ?? [])];
-    const merged = [...attachFiles];
-    for (const f of picked) {
-      if (merged.some((x) => x.name === f.name && x.size === f.size)) continue;
-      if (!ATTACHMENT_TYPES.includes(f.type)) {
-        setAttachError(en ? "Only images (JPEG / PNG / WebP / GIF) can be attached." : "添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。");
-        continue;
-      }
-      if (f.size > MAX_ATTACHMENT_BYTES) {
-        setAttachError(en ? `Each image must be under ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB.` : `画像1枚あたりのサイズ上限は ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB です。`);
-        continue;
-      }
-      if (merged.length >= MAX_ATTACHMENTS) {
-        setAttachError(en ? `You can attach up to ${MAX_ATTACHMENTS} images.` : `画像の添付は最大 ${MAX_ATTACHMENTS} 枚までです。`);
-        break;
-      }
-      merged.push(f);
-    }
-    syncAttachments(merged);
-  };
 
   if (state?.ok) {
     // フォームは匿名送信を許可しているため、メール未入力なら「返信を待つ」
@@ -251,73 +110,6 @@ export default function ContactForm({
       </div>
 
       <div className="space-y-5">
-        {type === "bug" && (
-          <>
-            <Field en={en} label={en ? "URL of the affected page" : "発生したページのURL"} required>
-              <input name="url" type="url" placeholder="https://locahun3d.com/properties/..." className={inputClass} />
-            </Field>
-            <Field en={en} label={en ? "Symptoms & steps to reproduce" : "症状・再現手順"} required>
-              <textarea
-                name="message"
-                rows={4}
-                required
-                placeholder={en
-                  ? "e.g. The 3D viewer goes black when opened from a property page.\nSteps: 1. Open a property from the catalog 2. Press \"View in 3D\""
-                  : "例: 物件詳細で3Dビューアーを開くと画面が真っ暗になります。\n手順: 1. 物件一覧から〇〇を開く 2.「3Dで見る」を押す"}
-                className={`${inputClass} leading-relaxed resize-y`}
-              />
-            </Field>
-            <Field en={en} label={en ? "Your environment" : "ご利用環境"} optional note={en ? "auto-filled, editable" : "自動入力・修正可"}>
-              <input
-                name="environment"
-                type="text"
-                placeholder={en ? "e.g. Windows 11 / Chrome 138 / GPU: …" : "例: Windows 11 / Chrome 138 / GPU: …"}
-                ref={environmentRef}
-                className={inputClass}
-              />
-            </Field>
-            <Field en={en} label={en ? "Attach screenshots" : "スクリーンショット添付"} optional note={en ? `up to ${MAX_ATTACHMENTS} images, ${MAX_ATTACHMENT_BYTES / 1024 / 1024}MB each` : `最大${MAX_ATTACHMENTS}枚・各${MAX_ATTACHMENT_BYTES / 1024 / 1024}MBまで`}>
-              <input
-                name="attachments"
-                type="file"
-                accept={ATTACHMENT_TYPES.join(",")}
-                multiple
-                ref={attachInputRef}
-                onChange={onAttachChange}
-                className="block w-full text-[13px] text-muted file:mr-3 file:border file:border-line file:rounded-md file:bg-white file:px-3.5 file:py-2 file:text-[12.5px] file:text-ink file:cursor-pointer hover:file:border-accent file:transition"
-              />
-              {attachError && (
-                <p className="mt-1.5 text-[12px] text-red-600">{attachError}</p>
-              )}
-              {attachFiles.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-2">
-                  {attachFiles.map((f, i) => (
-                    <div
-                      key={`${f.name}-${f.size}`}
-                      className="relative border border-line rounded-md overflow-hidden"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={URL.createObjectURL(f)}
-                        alt={f.name}
-                        className="h-20 w-auto"
-                        onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
-                      />
-                      <button
-                        type="button"
-                        aria-label={en ? `Remove ${f.name}` : `${f.name} を削除`}
-                        onClick={() => syncAttachments(attachFiles.filter((_, j) => j !== i))}
-                        className="absolute top-1 right-1 w-5 h-5 leading-none rounded-full bg-black/60 text-white text-[11px] hover:bg-black/80 transition"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Field>
-          </>
-        )}
 
         {type === "request" && (
           <>

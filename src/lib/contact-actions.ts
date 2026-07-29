@@ -5,7 +5,6 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 import { contactRequestRepo, CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "./contact-requests";
-import { saveContactAttachment } from "./uploads";
 import { notifyGeneralContact } from "./email";
 import { requestPublishAction } from "@/app/admin/_actions";
 import { userRepo } from "./users";
@@ -17,11 +16,6 @@ import {
   checkTiming,
   allowByRate,
 } from "./inquiry-guard";
-
-// バグ報告の画像添付の上限（クライアント側 contact-form.tsx と揃えること）
-const MAX_ATTACHMENTS = 3;
-const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8 MB
-const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 const inputSchema = z.object({
   type: z.enum(CONTACT_TYPES),
@@ -149,36 +143,10 @@ export async function submitContactRequestAction(
   const typeLabel = CONTACT_TYPE_LABEL[d.type as ContactType];
   const id = randomUUID();
 
-  // バグ報告のみ画像添付を受け付ける（匿名フォームなので上限を厳格に）。
-  // 個々の保存失敗で報告全体を落とさない — 保存できた分だけ添付する。
+  // ⚠ 画像添付はバグ報告専用の入口だった。バグ報告の受付を終了したので
+  //    添付の受け取りも撤去した（2026-07-29）。保存済みレコードの
+  //    attachments はそのまま残り、管理画面では従来どおり表示される。
   const attachments: string[] = [];
-  if (d.type === "bug") {
-    const files = formData
-      .getAll("attachments")
-      .filter((f): f is File => f instanceof File && f.size > 0);
-    if (files.length > MAX_ATTACHMENTS) {
-      return { ok: false, error: `画像の添付は最大 ${MAX_ATTACHMENTS} 枚までです。` };
-    }
-    for (const file of files) {
-      if (!ATTACHMENT_TYPES.includes(file.type)) {
-        return { ok: false, error: "添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。" };
-      }
-      if (file.size > MAX_ATTACHMENT_BYTES) {
-        return {
-          ok: false,
-          error: `画像1枚あたりのサイズ上限は ${Math.floor(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB です。`,
-        };
-      }
-    }
-    for (const file of files) {
-      try {
-        const saved = await saveContactAttachment(id, file);
-        attachments.push(saved.url);
-      } catch (e) {
-        console.warn("[contact] attachment save failed (non-fatal):", e);
-      }
-    }
-  }
 
   const emailed = await notifyGeneralContact({
     typeLabel,

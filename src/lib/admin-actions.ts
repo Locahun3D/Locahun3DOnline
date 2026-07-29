@@ -234,24 +234,10 @@ export async function linkPropertiesToUserAction(
   revalidatePath("/admin/accounts");
 }
 
-/** 一括: 選択アカウントを削除 (自分自身は除外)。 */
-export async function bulkDeleteAccountsAction(ids: string[]) {
-  const admin = await requireAdmin();
-  let done = 0;
-  const skipped: string[] = [];
-  for (const id of ids) {
-    if (id === admin.id) {
-      skipped.push(id); // 自分自身は削除できない
-      continue;
-    }
-    await userRepo.remove(id);
-    done++;
-  }
-  revalidatePath("/admin/accounts");
-  return { ok: true as const, count: done, total: ids.length, skipped };
-}
-
-/** 問い合わせの状態を変更（new / read / archived）。 */
+/* ⚠ bulkDeleteAccountsAction は撤去した（2026-07-29）。取り消しが効かず、
+   チェックの付け間違いがそのまま複数アカウントの消失になるため。
+   サーバーアクションは実質POSTエンドポイントなので、UIを外すだけでなく
+   関数ごと消してある。削除は deleteAccountAction（1件ずつ）を使う。 */
 export async function setInquiryStatusAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");

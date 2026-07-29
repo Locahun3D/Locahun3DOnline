@@ -10,11 +10,20 @@ import { z } from "zod";
  * inquiries（スタジオへの問い合わせ）とは別モデル — propertyId を持たず、
  * 運営（operatorAddress）へ転送する。
  */
-export const CONTACT_TYPES = ["bug", "request", "listing", "general", "license"] as const;
-export type ContactType = (typeof CONTACT_TYPES)[number];
+/**
+ * 今受け付けている窓口。ここに無い種別は新規に選べない。
+ * ⚠ 過去に受け付けていた種別は LEGACY_CONTACT_TYPES に残すこと。
+ *   読み出しは safeParse なので、enum から外すと**保存済みの問い合わせが
+ *   管理画面から黙って消える**（履歴の消失＝復旧不能）。
+ */
+export const CONTACT_TYPES = ["request", "listing", "general", "license"] as const;
+/** 受付終了したが、保存済みレコードのために型として残す種別。 */
+export const LEGACY_CONTACT_TYPES = ["bug"] as const;
+export type ContactType = (typeof CONTACT_TYPES)[number] | (typeof LEGACY_CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
-  bug: "バグ報告",
+  // 受付終了（2026-07-29）。ラベルは過去レコードの表示に必要なので残す。
+  bug: "バグ報告（受付終了）",
   request: "ほしい物件追加",
   listing: "掲載依頼",
   general: "ご相談",
@@ -29,7 +38,8 @@ export type ContactStatus = z.infer<typeof contactStatusSchema>;
 
 export const contactRequestSchema = z.object({
   id: z.string(),
-  type: z.enum(CONTACT_TYPES),
+  // 保存済みの旧種別も読めるように、受付終了分を含めて許可する。
+  type: z.enum([...CONTACT_TYPES, ...LEGACY_CONTACT_TYPES]),
   name: z.string().max(80).default(""),
   email: z.string().max(120).default(""),
   company: z.string().max(120).default(""), // listing: 会社名・オーナー名

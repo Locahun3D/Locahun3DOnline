@@ -11,13 +11,7 @@ export async function generateMetadata() {
 }
 
 const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; goEn: string }[] = [
-  {
-    type: "bug",
-    desc: "サイトやビューアーの不具合をお知らせください。再現手順があると助かります。",
-    descEn: "Let us know about a bug on the site or 3D viewer. Reproduction steps help a lot.",
-    go: "報告フォームへ",
-    goEn: "Go to bug report",
-  },
+  // バグ報告の窓口は 2026-07-29 に廃止（不具合は「ご相談」で受ける）。
   {
     type: "request",
     desc: "「このエリア・この種類の物件を3Dで見たい」というリクエストを受け付けています。",
@@ -308,8 +302,8 @@ export default async function ContactHubPage() {
   );
 }
 
-const CONTACT_TYPE_LABEL_EN: Record<ContactType, string> = {
-  bug: "Bug report",
+/** 受付中の窓口のみ（受付終了した種別は HUB_CARDS に無いので不要）。 */
+const CONTACT_TYPE_LABEL_EN: Record<(typeof CONTACT_TYPES)[number], string> = {
   request: "Request a location",
   listing: "List your space",
   general: "General inquiry",

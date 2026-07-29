@@ -20,7 +20,6 @@ import {
   setTokenBalanceAction,
   deleteAccountAction,
   bulkSetAccountStatusAction,
-  bulkDeleteAccountsAction,
   bulkGrantFreeTokensAction,
   bulkGrantTokensAction,
   linkPropertiesToUserAction,
@@ -247,16 +246,9 @@ export default function AccountsAdmin({
                 }}
               />
             </div>
-            <BulkBtn
-              label="削除"
-              danger
-              disabled={pending}
-              onClick={() => {
-                if (confirm(`${selected.size} 件を削除しますか？（自分自身は除外されます）`)) {
-                  runBulk(() => bulkDeleteAccountsAction(ids), "削除");
-                }
-              }}
-            />
+            {/* ⚠ 一括削除は置かない。取り消しが効かず、チェックの付け間違いが
+                そのまま複数アカウントの消失になるため（2026-07-29 ユーザー判断）。
+                削除は各行の「削除」ボタンから1件ずつ行う。 */}
             <button type="button" onClick={() => setSelected(new Set())} className="mono text-[10px] tracking-[0.18em] uppercase px-2 py-1.5 text-muted hover:text-ink">
               選択解除
             </button>

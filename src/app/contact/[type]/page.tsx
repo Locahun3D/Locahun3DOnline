@@ -1,22 +1,18 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
-import { CONTACT_TYPES, type ContactType } from "@/lib/contact-requests";
+import { CONTACT_TYPES } from "@/lib/contact-requests";
 import ContactForm from "@/components/contact-form";
+import ListingValue from "@/components/listing-value";
 import { getCurrentUser } from "@/lib/dal";
 import { repo } from "@/lib/store";
 import { canCreateListing, canConvertToStudio, resolveListingPrefill } from "@/lib/listing-funnel";
 import { isFreeEmailDomain } from "@/lib/free-email-domains";
 import { convertToStudioAction } from "@/lib/auth-actions";
 
-const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; ledeEn: string }> = {
-  bug: {
-    title: "バグ報告",
-    titleEn: "Bug report",
-    lede: "不具合のご報告ありがとうございます。再現手順があると調査が早く進みます。",
-    ledeEn: "Thanks for the report — reproduction steps help us investigate faster.",
-  },
+/** 受付中の窓口だけ。CONTACT_TYPES と1:1（受付終了した種別は入れない＝URLは404）。 */
+const COPY: Record<(typeof CONTACT_TYPES)[number], { title: string; titleEn: string; lede: string; ledeEn: string }> = {
   request: {
     title: "ほしい物件追加",
     titleEn: "Request a location",
@@ -26,7 +22,7 @@ const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; 
   listing: {
     title: "掲載依頼",
     titleEn: "List your space",
-    lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。現在、キャンペーンにより掲載費は無料です（2026年12月31日まで）。",
+    lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。掲載費は期限なしで無料、3Dスキャンの計測費も2026年12月31日まで無料です。",
     ledeEn: "We'll review your space and walk you through listing it (3D scan, shoot, publish). Listing is currently free during our launch campaign (through Dec 31, 2026).",
   },
   general: {
@@ -49,7 +45,7 @@ export async function generateMetadata({
   params: Promise<{ type: string }>;
 }) {
   const { type } = await params;
-  const c = COPY[type as ContactType];
+  const c = COPY[type as (typeof CONTACT_TYPES)[number]];
   const en = (await getLocale()) === "en";
   if (!c) return { title: en ? "Contact" : "お問い合わせ" };
   return {
@@ -66,8 +62,9 @@ export default async function ContactTypePage({
 }) {
   const { type } = await params;
   const { property: propertyParam } = await searchParams;
-  if (!CONTACT_TYPES.includes(type as ContactType)) notFound();
-  const t = type as ContactType;
+  // 受付終了した種別（バグ報告など）はここで404になる。
+  if (!(CONTACT_TYPES as readonly string[]).includes(type)) notFound();
+  const t = type as (typeof CONTACT_TYPES)[number];
   const copy = COPY[t];
 
   const locale = await getLocale();
@@ -91,6 +88,16 @@ export default async function ContactTypePage({
   const target =
     t === "listing" && propertyParam && canOwn ? await repo.get(propertyParam) : null;
   const prefill = resolveListingPrefill(user, target);
+
+  // すでに撮影スタジオ（運営が権限を割り当てた場合を含む）なら、掲載依頼の
+  // 案内は用済みなので物件管理へ直行させる。掲載ページは自分で作れるし、
+  // 公開申請は ?property= 付きで来る別モードなので、ここに留める理由がない。
+  // ⚠ prefill があるとき（＝エディターの「公開を申請」から来たとき）は
+  //   このフォームが申請そのものなので絶対に飛ばさない。
+  // ⚠ admin は運営作業でこのページを見たいことがあるので対象外。
+  if (t === "listing" && !prefill && user?.role === "studio") {
+    redirect(lh("/admin/properties"));
+  }
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
@@ -117,8 +124,8 @@ export default async function ContactTypePage({
         {t === "listing" && (
           <div className="inline-block mono text-[10px] tracking-[0.2em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-3 py-1 mb-4">
             {en
-              ? "Listing & scan measurement free during our launch campaign (through Dec 31, 2026)"
-              : "現在、掲載＆スキャン計測無料キャンペーン中（2026年12月31日まで）"}
+              ? "Listing is always free — the 3D scan is free too through Dec 31, 2026"
+              : "掲載費はずっと無料／3Dスキャン計測も2026年12月31日まで無料"}
           </div>
         )}
         <p className="text-[13.5px] text-muted leading-[1.9] mb-8">
@@ -133,6 +140,9 @@ export default async function ContactTypePage({
             ⚠ 撮影スタジオは新規登録で自己申告できる種別（SELF_SIGNUP_ROLES）なので、
               既存の個人/制作会社アカウントは種別変更ではなく別アカウント作成に案内する
               （運営の手作業を挟まず、待たせないため）。 */}
+        {/* 費用とメリットの図。公開申請モード(prefill)では既に掲載を決めた人なので出さない。 */}
+        {t === "listing" && !prefill && <ListingValue en={en} />}
+
         {t === "listing" && !prefill && (
           <div className="mb-8 border border-line bg-card p-5">
             {!user ? (
