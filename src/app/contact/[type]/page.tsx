@@ -6,6 +6,7 @@ import { CONTACT_TYPES, type ContactType } from "@/lib/contact-requests";
 import ContactForm from "@/components/contact-form";
 import { getCurrentUser } from "@/lib/dal";
 import { repo } from "@/lib/store";
+import { canCreateListing, resolveListingPrefill } from "@/lib/listing-funnel";
 
 const COPY: Record<ContactType, { title: string; titleEn: string; lede: string; ledeEn: string }> = {
   bug: {
@@ -79,22 +80,12 @@ export default async function ContactTypePage({
   // 物件データを読んでフォームに前もって入れる。
   // ⚠ パラメータは信用しない。所有者（または管理者）でなければ無視する。
   //    送信時にもサーバー側 requestPublishAction が同じ検証をする（二重防御）。
-  const canOwn = user?.role === "studio" || user?.role === "admin";
+  // 判定は src/lib/listing-funnel.ts に集約（テストで固定してある）。
+  // ここで所有者でなければ ?property= は無視され、初期値も出ない。
+  const canOwn = canCreateListing(user?.role);
   const target =
     t === "listing" && propertyParam && canOwn ? await repo.get(propertyParam) : null;
-  const owns =
-    target != null &&
-    (user!.role === "admin" ||
-      target.ownerId === user!.id ||
-      (user!.linkedPropertyIds ?? []).includes(target.id));
-  const prefill = owns
-    ? {
-        propertyId: target!.id,
-        company: user!.name ?? "",
-        propertyName: target!.title ?? "",
-        address: [target!.prefecture, target!.city].filter(Boolean).join(""),
-      }
-    : undefined;
+  const prefill = resolveListingPrefill(user, target);
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">

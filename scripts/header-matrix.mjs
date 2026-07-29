@@ -21,7 +21,7 @@
  *   ブランド中心のズレ / ヘッダー高 / トグルfont-size が全計測で単一値、
  *   かつ横スクロール 0。
  */
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 const ON=["/","/properties","/pricing","/about","/contact","/contact/listing","/cart","/sign-in",
   "/dashboard","/account","/privacy","/terms/tokushoho","/submit-scan","/en","/en/properties","/en/about"];
 const SC=["/locahun3d_manifesto.html","/locahun3d_data.html","/locahun3d_demo.html","/locahun3d_privacy.html",
@@ -34,7 +34,13 @@ const D=[["SE",375,667],["iPhone15",390,844],["ProMax",430,932],["mini",744,1133
 // ⚠ 必ず headed（実Chrome）で走らせること。ヘッドレスはスクロールバーが
 //    重なり型になり 100vw と表示幅が一致してしまうため、今回の 7.5px ずれが
 //    再現せず検出できなかった（ユーザー報告で発覚）。
-const b=await chromium.launch({headless:false, channel:"chrome", args:["--hide-scrollbars=false"]});
+// --webkit で Safari エンジン(WebKit)でも回せる。iOS Safari 固有の挙動
+// （オーバーレイスクロールバー・vw の解決・zoom の扱い）を拾うため。
+const USE_WEBKIT = process.argv.includes("--webkit");
+const b = USE_WEBKIT
+  ? await webkit.launch({ headless: true })
+  : await chromium.launch({ headless: false, channel: "chrome" });
+console.log(USE_WEBKIT ? "エンジン: WebKit(Safari相当)" : "エンジン: 実Chrome(headed)");
 const ctx=await b.newContext({viewport:{width:400,height:800}});
 const p=await ctx.newPage();
 await p.route('**/*', r=>r.continue({headers:{...r.request().headers(),'cache-control':'no-cache'}}));
