@@ -73,9 +73,21 @@ const PROBE = () => {
       if (x > 1 && y > 1) overlaps.push(`${a.t}×${c.t}(${Math.round(x)}px)`);
     }
   }
+  // ⚠ 測るのは「ブランド＋スキャン/オンライン トグルのまとまり」の中心を、
+  //    **ヘッダー自身の中心**と比べた値（両方とも2026-07-29に修正）。
+  //    ・ブランド単体だと JA「ロケハン3D」124.5px と EN「Locahun 3D」131.5px の
+  //      字幅差で必ず -45.3/-59.6 と割れる。中央ぞろえは正しいのに不合格になる。
+  //    ・window.innerWidth/2 だと scrollbar-gutter:stable both-edges の下で
+  //      スクロールするページ/しないページの基準が7.5pxずれる。
+  //    375px未満はトグルがバーから●パネルへ退避するので、幅>5 で絞り、
+  //    見つからなければブランド単独中央で判定する。
+  const hdr = hd.getBoundingClientRect();
+  const tgl = [...hd.querySelectorAll('a,span')]
+    .find((e) => /^オンライン$|^Online$/.test((e.textContent || '').trim()) && e.getBoundingClientRect().width > 5);
+  const groupCenter = tgl ? (r.left + tgl.getBoundingClientRect().right) / 2 : (r.left + r.right) / 2;
   return {
-    center: +((r.left + r.right) / 2).toFixed(1),
-    viewportCenter: window.innerWidth / 2,
+    center: +groupCenter.toFixed(1),
+    viewportCenter: +(hdr.left + hdr.width / 2).toFixed(1),
     overlaps: [...new Set(overlaps)],
     items: els.length,
     overflowX: document.documentElement.scrollWidth - window.innerWidth,
