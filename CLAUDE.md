@@ -73,14 +73,19 @@
 ```
 / /about /account /cart /contact /dashboard /embed /onboarding /preview
 /pricing /privacy /properties /s /sign-in /sign-up /submit-scan /terms /unsubscribe
-/admin/{accounts,analytics,assets,contact-requests,gift-codes,inquiries,
+/admin/{accounts,analytics,assets,contact-requests,inquiries,
         marketing,payouts,properties,purchases,reports,submissions,subscriptions}
 ```
 
 EN版は `/en/*`（middleware の rewrite + 辞書方式）。
 
 **存在しないもの**（過去の記述にあるが未実装 / 廃止）:
-`/marketplace` `/community`（掲示板は物件配下）、レビュー・評価機能（削除済み）。
+`/marketplace` `/community`（掲示板は物件配下）、レビュー・評価機能（削除済み）、
+`/admin/gift-codes`（2026-07-29 に `/admin/marketing` へ統合。同ページにあった
+「全物件共通の限定無料期間」UIは廃止し、無料化は3DGSデータごとに物件エディターで設定する）。
+
+新設: `/sign-out?redirect=<path>` — サインアウトしてから指定パスへ着地させる中継。
+ログイン中に `/sign-up` へ送っても Clerk がサインアップ画面を出さずマイページへ弾くため。
 
 **残タスク**は Obsidian の該当ノートと `docs/` を参照。
 

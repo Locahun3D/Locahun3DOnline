@@ -303,49 +303,22 @@ html{scrollbar-gutter:stable both-edges}
 }
 
 /* ══════════════════════════════════════════════════════════════
-   オンライン版だけに出る要素（カート / 認証 / 通知ベル / アバター）。
-   スキャンサイトはこれらを持たないので、定義があっても影響しない。
-   ⚠ ここに置く理由: ヘッダーの見た目の正本を1ファイルに集約するため。
-      オンライン側で Tailwind に書くと、また2つのソースができて必ずズレる
-      （2026-07-29 に同じ構造が原因のズレが5件出た）。
+   ここには一時期「オンライン版だけに出る要素」（.sh-cart / .sh-auth /
+   .sh-account / .sh-role / .sh-drawer-* など9クラス）の定義を置いていたが、
+   **両サイトのどこからも使われないまま残っていた**ので撤去した（2026-07-29）。
+
+   ── 共有CSS化（案A）がここで止まっている理由 ──────────────
+   オンライン版のヘッダーは今も Tailwind クラスで書かれており、この
+   ファイルからは html の scrollbar-gutter 指定だけが効いている状態。
+   移行の壁は「スキャン/オンライン トグルのアクティブ色がサイトで違う」こと:
+       スキャン側 … 「スキャン」がアクティブ＝オレンジ #ffb454
+       オンライン … 「オンライン」がアクティブ＝シアン #5ec8e8
+   現在の `.sh-active` はオレンジを直接持っているためそのままでは共用できず、
+   サービス色を持つ2種のセル（例 .sh-cell-scan / .sh-cell-online＋.sh-active）
+   へモデルを作り直す必要がある。これは10回以上崩れてきた要素そのものの
+   作り替えになるため、着手するときは header-matrix / header-signedin /
+   header-parity / header-consistency / ui-audit を全部回して確かめること。
+
+   なお現状のズレ防止は「同じ値を2箇所に書かない」ではなく
+   「機械で全幅・全端末・サインイン有無を突き合わせる」側で担保している。
    ══════════════════════════════════════════════════════════════ */
-
-/* 右側グループ。scan では空divなので下の子要素セレクタは一致しない。 */
-.site-header .sh-right{gap:8px}
-
-/* カート（アイコン＋バッジ） */
-.site-header .sh-cart{position:relative;display:flex;align-items:center;
-  color:rgba(255,255,255,.62);transition:color .2s;white-space:nowrap}
-.site-header .sh-cart:hover{color:var(--accent)}
-.site-header .sh-cart svg{width:18px;height:18px}
-.site-header .sh-cart-badge{position:absolute;top:-8px;right:-10px;
-  min-width:16px;height:16px;padding:0 4px;display:flex;align-items:center;justify-content:center;
-  border-radius:9999px;background:var(--accent);color:var(--bg);
-  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700}
-
-/* 認証ボタン（ログイン / 新規登録）。寸法は全幅固定（R2）。 */
-.site-header .sh-auth{padding:4px 8px;border:1px solid var(--line);
-  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;
-  text-transform:uppercase;white-space:nowrap;color:var(--ink);
-  background:none;cursor:pointer;transition:border-color .2s,color .2s,background .2s}
-.site-header .sh-auth:hover{border-color:var(--accent);color:var(--accent)}
-.site-header .sh-auth.sh-auth-primary{border-color:var(--accent);color:var(--accent)}
-.site-header .sh-auth.sh-auth-primary:hover{background:var(--accent);color:var(--bg)}
-
-/* サインイン時の「マイページ」等 */
-.site-header .sh-account{display:flex;align-items:center;gap:6px;
-  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;
-  text-transform:uppercase;color:rgba(255,255,255,.62);text-decoration:none;
-  white-space:nowrap;transition:color .2s}
-.site-header .sh-account:hover{color:var(--accent)}
-.site-header .sh-role{border:1px solid var(--line);padding:2px 6px;font-size:10px}
-@media(max-width:1023px){.site-header .sh-role{display:none}}
-
-/* ドロワー内に退避させた要素の並び（R3 で「縮めず移す」先） */
-.site-header .sh-drawer-extra{display:none;flex-direction:column;align-items:stretch;
-  gap:8px;margin-top:4px;padding-top:8px;border-top:1px solid var(--line)}
-@media(max-width:1023px){.site-header .sh-drawer-extra{display:flex}}
-.site-header .sh-drawer-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-/* カート/認証は768px未満のみドロワー（バー側 768px以上表示と対にする） */
-.site-header .sh-drawer-auth{display:none}
-@media(max-width:767px){.site-header .sh-drawer-auth{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
