@@ -172,6 +172,7 @@ web.locahun3d.com    → Worker `locahun3dwebsite`（別リポジトリ・手動
 
 | スクリプト | 役割 |
 |---|---|
+| `node scripts/header-matrix.mjs` | **実Chrome(headed)**で全ページ×10端末×縦横=500計測。ページ差・端末差・向き差・サイト差を1枚で潰す。⚠ヘッドレスではスクロールバー由来のズレが再現しない |
 | `node scripts/header-live.mjs` | **本番**の両サイトでブランド中心=50vw・両サイト差0・ヘッダー内重なり0を26幅で検査 |
 | `node scripts/header-parity.mjs` | 両サイトのヘッダー共有要素の computed style 照合 |
 | `node scripts/header-consistency.mjs` | スキャン19ページ×23幅が1pxも違わないことを機械証明 |

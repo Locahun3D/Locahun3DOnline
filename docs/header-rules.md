@@ -93,13 +93,16 @@ chromium.launch({ headless: false, channel: "chrome" })
 数を測ることより、**現実を再現する環境で測ること**が優先。
 併せてブラウザペイン（実Chrome）で要所を目視する。
 
-### R7b. 触ったら本番でハーネス4本
+### R7b. 触ったら本番でハーネス5本
 ```bash
-node scripts/header-live.mjs         # 本番・ブランド中心/重なり/はみ出し
+node scripts/header-matrix.mjs       # ★実Chrome・全ページ×全端末×縦横の総当たり(500計測)
+node scripts/header-live.mjs         # 本番・ブランド中心/重なり/はみ出し(軽い常用チェック)
 node scripts/header-parity.mjs       # 両サイトの共有要素の computed style
 node scripts/header-consistency.mjs  # スキャン19ページ×23幅が1pxも違わない
 node scripts/ui-audit.mjs            # 26ページ×9幅の重なり・はみ出し
 ```
+`header-matrix.mjs` の合格条件は「ブランド中心のズレ・ヘッダー高・トグルサイズが
+**全計測で単一値**、横スクロール0」。1つでも複数値になったらページ差か端末差がある。
 
 ## 検証すべき実機幅
 

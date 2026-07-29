@@ -1,3 +1,26 @@
+/**
+ * header-matrix.mjs — 全ページ × 全端末 × 縦横 の総当たりでヘッダーを実測する。
+ *
+ *   node scripts/header-matrix.mjs           # 本番
+ *   node scripts/header-matrix.mjs --local   # localhost:3000 / 127.0.0.1:8830
+ *
+ * ⚠ **必ず headed（実Chrome）で走る**。ヘッドレスChromiumはスクロールバーが
+ *   重なり型なので `100vw` と表示幅が一致し、スクロールバー由来のズレが
+ *   **構造的に再現しない**。2026-07-29、ヘッドレスで580計測して
+ *   「全幅ズレ0」と報告した直後に、ユーザーが実Chromeで開いてズレを発見した。
+ *   数を測ることより、現実を再現する環境で測ることが優先。
+ *
+ * 既存3本との違い:
+ *   header-live.mjs       … 本番4ページ×26幅（軽い常用チェック）
+ *   header-parity.mjs     … 両サイトの共有要素の computed style 照合
+ *   header-consistency.mjs… スキャン19ページ×23幅が互いに1pxも違わない
+ *   → いずれも「全ページ×実機の縦横ペア」を横断できていなかった。
+ *     ページ差・端末差・向き差・サイト差を1枚の表で潰すのがこのハーネス。
+ *
+ * 合格条件（1つでも複数値になったら不合格）:
+ *   ブランド中心のズレ / ヘッダー高 / トグルfont-size が全計測で単一値、
+ *   かつ横スクロール 0。
+ */
 import { chromium } from "playwright";
 const ON=["/","/properties","/pricing","/about","/contact","/contact/listing","/cart","/sign-in",
   "/dashboard","/account","/privacy","/terms/tokushoho","/submit-scan","/en","/en/properties","/en/about"];
@@ -15,19 +38,6 @@ const b=await chromium.launch({headless:false, channel:"chrome", args:["--hide-s
 const ctx=await b.newContext({viewport:{width:400,height:800}});
 const p=await ctx.newPage();
 await p.route('**/*', r=>r.continue({headers:{...r.request().headers(),'cache-control':'no-cache'}}));
-// 反映待ち: online の /cart で中央ズレが0になるまで待つ（both-edges 適用の指標）
-for(let i=1;i<=20;i++){
-  await p.setViewportSize({width:820,height:1180});
-  await p.goto("https://locahun3d.com/cart",{waitUntil:"domcontentloaded",timeout:40000}).catch(()=>{});
-  await p.waitForTimeout(1200);
-  const d=await p.evaluate(()=>{const hd=document.querySelector('header');
-    const b=[...hd.querySelectorAll('a[aria-label]')].find(e=>e.getBoundingClientRect().width>5).getBoundingClientRect();
-    return +(((b.left+b.right)/2)-innerWidth/2).toFixed(1);});
-  console.log(`反映待ち ${i}: ズレ${d}`);
-  if(Math.abs(d)<1) break;
-  await new Promise(r=>setTimeout(r,40000));
-}
-
 const rows=[];
 const run=async(base,paths,site)=>{
   for(const path of paths){
