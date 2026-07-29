@@ -101,25 +101,61 @@
    ⚠ 幅で文字サイズ・余白を変えないこと（R2）。回転で見た目が変わる原因になる。
 
    狭い画面で横幅を稼ぐ手段は外周paddingだけ（要素の見た目が変わらないため）。 */
-@media(max-width:479px){
-  .site-header{padding:0 12px}
-  .site-header .sh-center{padding:0 12px}
-}
+/* ⚠ 480px未満の外周padding指定は、下の @media(max-width:1199px){padding:0 24px}
+   より **後ろ** に置くこと。同じ詳細度なので前に置くと24pxが後勝ちして効かない
+   （実測: 12pxのつもりが全帯24pxのままで、375pxの重なりが解消しなかった）。
+   実体は下部の「狭い帯の外周padding」ブロックにある。 */
 
-/* ENはバーから外してドロワーへ（R3）。
+/* ENはバーから外して「右のアカウントメニュー」へ（R3）。
    ⚠ 閾値 1024px はオンライン版 site-header.tsx の LangToggle と対。
    片方だけ変えると「片サイトだけENがある」状態になりパリティ検査が落ちる。
    実測の必要性: 375pxでは右側に トグル105px しか置けず、ENの34pxを足すと
-   ブランドが16px左へずれる。iPad縦(820px)ではENがトグルと重なる。 */
+   ブランドが16px左へずれる。320pxでは右の空きが20pxでENの34pxが入らない。
+   ⚠ 以前はドロワー(☰)の中に入れていたが、ユーザー報告
+   「EN 表記の場所がスキャンとオンラインで違う」の原因になった（2026-07-29）。
+   オンライン版は EN をログイン導線と一緒に右へ出す必要があるため、
+   スキャン側も同じ「右の●メニュー」に統一した。役割分担は両サイト共通:
+       左 ☰ = ページ移動 / 右 ● = 言語・アカウント */
+.site-header .sh-left nav a:focus-visible{color:#fafaf6}
+
+/* 右の●（アカウント/言語）ボタンとパネル。1024px未満でだけ出る。
+   オンライン版 header-account-menu.tsx と寸法1:1（36×36 / アイコン20px）。
+   ⚠ .site-header は sticky＝配置済みなので、パネルの absolute はヘッダー基準に解決される。 */
+.site-header .sh-acct{display:none;flex:none;width:36px;height:36px;margin-right:-6px;
+  align-items:center;justify-content:center;background:none;border:0;padding:0;cursor:pointer;
+  -webkit-appearance:none;appearance:none;color:rgba(255,255,255,.62);transition:color .2s}
+.site-header .sh-acct svg{display:block}
+@media(hover:hover){.site-header .sh-acct:hover{color:var(--accent)}}
+.site-header .sh-acct:focus-visible{color:var(--accent)}
+.site-header.sh-acct-open .sh-acct{color:var(--accent)}
+.site-header .sh-acct-panel{display:none;position:absolute;right:16px;top:100%;margin-top:4px;
+  z-index:20;background:#000;border:1px solid var(--line);padding:12px 16px;
+  align-items:center;gap:12px}
+/* パネル内のENチップは .sh-center 配下ではないので上の display:none に当たらない。
+   バー用の margin-left:8px だけ打ち消す。 */
+.site-header .sh-acct-panel .sh-toggle.sh-lang{margin-left:0}
+@media(max-width:479px){.site-header .sh-acct-panel{right:12px}}
+
+/* 375px未満: スキャン/オンライン トグルもバーから●パネルへ退避する（R3）。
+   実測（JA=最長ラベル・外周padding 8px）の ☰×ブランド／トグル×● の空き:
+     360px … -6.9 / -4.9  ✕     375px … +0.6 / +2.6  ○
+     384px … +5.1 / +7.1  ○     390px … +8.1 / +10.1 ○
+   375px は iPhone SE の幅。ここを下回るのは旧世代の小型端末だけなので、
+   そこだけトグルを●パネルへ畳む。縮めずに畳むのが本サイトの規則（R3）。
+   トグルを外すとブランド単独が中央に来て ☰ とも十分離れる。
+   ⚠ オンライン版 site-header.tsx の max-[375px] 指定と対。片方だけ変えない。
+   ⚠ 外周padding 12px→8px も同じ計算に効いている。戻すと375pxで重なる。 */
+.site-header .sh-acct-panel .sh-acct-toggle{display:none}
+@media(max-width:374px){
+  .site-header .sh-center .sh-toggle:not(.sh-lang){display:none}
+  .site-header .sh-acct-panel .sh-acct-toggle{display:flex}}
+/* ⚠ この帯指定は上の `.sh-acct{display:none}` より必ず後ろに置くこと。
+   同じ詳細度(0,2,0)なので、前に置くと基底のnoneが後勝ちして
+   ●ボタンが一切出ない（実測: スキャン390pxで消えた）。 */
 @media(max-width:1023px){
   .site-header .sh-center .sh-lang{display:none}
-  .site-header .sh-left nav a.sh-drawer-lang{display:flex}}
-.site-header .sh-left nav a:focus-visible{color:#fafaf6}
-/* ドロワー内のEN。既定は非表示で、バーからENを外す狭い帯だけ出す（R3）。
-   ⚠ セレクタは `.sh-left nav a.sh-drawer-lang` まで書くこと。`.sh-drawer-lang` 単独
-   (0,2,0) だと `.site-header .sh-left nav a`(0,2,1) の display:flex に負け、
-   PCのナビ行にも EN が出てしまう（実測でパリティ検査が75件不一致になった）。 */
-.site-header .sh-left nav a.sh-drawer-lang{display:none}
+  .site-header .sh-acct{display:flex}
+  .site-header.sh-acct-open .sh-acct-panel{display:flex}}
 
 
 /* ══ 全幅共通: ブランドを「画面中央」に固定する ══
@@ -201,8 +237,24 @@ html{scrollbar-gutter:stable both-edges}
 
 @media(max-width:1199px){
   .site-header{padding:0 24px;flex-wrap:nowrap}
-  .site-header .sh-right{display:none}
+  /* ⚠ .sh-right は display:none にしないこと。1024px未満ではこの中に
+     ●（言語・アカウント）ボタンが入る。以前は空のスペーサーだったので
+     消していたが、そのままだと●が一切表示されない（実測で発覚）。
+     中身のリンク類（sh-btn-*）だけを畳む。 */
+  .site-header .sh-right>a{display:none}
   .site-header .sh-user-name{display:none}}
+/* 1024–1199px は ● も出ない＝.sh-right の中身が空。flex:1 のまま残すと
+   .sh-left の取り分が減り、1024px ちょうどでナビが中央ブランドに 7px 食い込む
+   （実測・consistency ハーネスで検出）。この帯だけ完全に畳む。 */
+@media(min-width:1024px) and (max-width:1199px){
+  .site-header .sh-right{display:none}}
+
+/* 狭い帯の外周padding。狭い画面で横幅を稼ぐ唯一の手段（要素の見た目を変えないため）。
+   24px→12px で左右あわせて24px戻り、375px(iPhone SE)で ☰×ブランドの重なりが
+   -3.4px → +8.6px の余白に変わる。 */
+@media(max-width:479px){
+  .site-header{padding:0 12px}
+  .site-header .sh-center{padding:0 12px}}
 
 /* デスクトップ帯: 中央グリッドの内側端をヘッダー本体の余白に合わせる
    （EN は列3の右端＝この padding の位置に着く）。 */
@@ -224,13 +276,17 @@ html{scrollbar-gutter:stable both-edges}
   .site-header .sh-left nav a{font-size:14px;padding:11px 0;gap:10px}}
 
 /* ══ タブレット横(1024–1199px) 固有: ナビは1行フルナビのまま ══
-   ハンバーガー化はしない（この幅ならナビ・中央ブランド・ENが余裕で並ぶ。
-   実測の最小余白: ナビ右端→ブランド左端 = 67.8px @1024px）。
+   ハンバーガー化はしない（この幅ならナビ・中央ブランド・ENが並ぶ）。
    .sh-center は上の共通ブロックで絶対配置になっているので、.sh-left は
-   flex:1 1 auto で行いっぱいに広がってよい（ナビは左寄せのまま）。 */
+   flex:1 1 auto で行いっぱいに広がってよい（ナビは左寄せのまま）。
+   ⚠ nav の gap は 11px（オンライン版 site-header.tsx の gap-[11px] と同値）。
+   16px だと 1024px ちょうどでナビ右端 399px がブランド左端 392.1px に
+   6.9px 食い込む。長らく検出されなかったのは、当時 nav の最後の子が
+   非表示の .sh-drawer-lang（矩形0）で、重なり判定がそれを最後の要素として
+   見ていたため（2026-07-29、そのリンクを廃止した瞬間に露見）。 */
 @media(min-width:1024px) and (max-width:1199px){
   .site-header .sh-left{flex:1 1 auto;min-width:0;justify-content:flex-start;padding-bottom:0;gap:16px}
-  .site-header .sh-left nav{flex-wrap:nowrap;gap:16px}
+  .site-header .sh-left nav{flex-wrap:nowrap;gap:11px}
   .site-header .sh-left nav a{font-size:13px}}
 
 /* ナビ番号コード(0.1〜0.4)は 1560px 以上でのみ表示する。

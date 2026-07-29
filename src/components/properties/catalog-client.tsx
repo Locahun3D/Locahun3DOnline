@@ -537,10 +537,17 @@ export default function CatalogClient({
             （実測: 820x1180 で doc 1180→1430px・スクロールしても追従しなかった）。
             stretch なら行の高さは左カラムだけで決まり、地図はその中で
             画面高までに抑えられて余った分が sticky の可動域になる。 */}
+        {/* ⚠ 720–1023px は「絞り込みパネルの行(1行目)だけ」に置く。
+            以前は row-span-3 + sticky で3行ぶん＝左カラム全高まで伸び、
+            iPad縦(820×1180)では地図が 1098px と画面より高かった
+            （ユーザー報告「下まで伸びてるのいらない、条件記入欄と同じ高さでいい」）。
+            row-span を外して self-stretch にすると、行の高さ＝絞り込みパネルの
+            高さになるので、固定px を置かずに常に一致する（パネルの中身が
+            増減しても追従する）。sticky は不要になったので外した。 */}
         <div className="h-[calc(24vh/var(--z))] sm:max-[720px]:h-[calc(40vh/var(--z))] lg:h-auto
-          min-[720px]:max-[1024px]:h-auto min-[720px]:max-[1024px]:max-h-[calc((100vh-var(--header-h)-24px)/var(--z))]
-          min-[720px]:max-[1024px]:col-start-2 min-[720px]:max-[1024px]:row-start-1 min-[720px]:max-[1024px]:row-span-3
-          min-[720px]:max-[1024px]:self-stretch min-[720px]:max-[1024px]:sticky min-[720px]:max-[1024px]:top-[calc(var(--header-h)/var(--z))]">
+          min-[720px]:max-[1024px]:h-auto
+          min-[720px]:max-[1024px]:col-start-2 min-[720px]:max-[1024px]:row-start-1
+          min-[720px]:max-[1024px]:self-stretch">
           <CatalogMap
             items={computed}
             hoveredId={hoveredId}

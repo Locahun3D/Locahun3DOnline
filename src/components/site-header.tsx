@@ -9,6 +9,7 @@ import NotificationBell from "@/components/notification-bell";
 import LangToggle from "@/components/lang-toggle";
 import HeaderTabletNav from "@/components/header-tablet-nav";
 import HeaderAuthButtons from "@/components/header-auth-buttons";
+import HeaderAccountMenu from "@/components/header-account-menu";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
@@ -33,7 +34,10 @@ export default async function SiteHeader() {
   const lh = (href: string) => localizedHref(href, locale);
   const scanUrl = locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/";
   // EN版はブランド表記も英字に切り替える（マーク自体は共通）。
-  const brandName = locale === "en" ? "Locahun3D" : "ロケハン3D";
+  // ⚠ 表記はスキャンサイト scripts/sync_header.py の BRAND_TEXT と一字一句そろえること。
+  //    以前ここだけ "Locahun3D"（スペース無し）で、EN版のブランド幅が
+  //    両サイトで 131.2px / 131.5px と食い違っていた（2026-07-29 実測）。
+  const brandName = locale === "en" ? "Locahun 3D" : "ロケハン3D";
 
   /**
    * 帯の構成（スキャンサイト assets/site-header.css と完全に同じ切り方）:
@@ -194,18 +198,9 @@ export default async function SiteHeader() {
                                    744px以降は収まるが余裕を見て 768px を境界にした）
                   ⚠ Tailwind の max-[Npx] は「N未満」。バー側 max-[768px]:hidden と
                      ドロワー側 min-[768px]:hidden が過不足なく対になる。 */}
-              <div className="hidden max-[1024px]:flex flex-col items-stretch border-t border-line/60 mt-1 pt-2 gap-2">
-                <div className="flex items-center gap-3">
-                  <LangToggle />
-                  <span className="min-[768px]:hidden flex items-center">
-                    <CartLink />
-                  </span>
-                </div>
-                <div className="min-[768px]:hidden flex items-center gap-2 flex-wrap">
-                  {authButtons}
-                  {authSignedIn}
-                </div>
-              </div>
+              {/* ここ（☰ドロワー）はページ移動だけ。EN・カート・認証は右の●
+                  (HeaderAccountMenu)が担当する。スキャンサイトも同じ役割分担なので、
+                  「ENの場所がサイトで違う」が構造的に起きない。 */}
             </nav>
           </HeaderTabletNav>
         </div>
@@ -263,10 +258,21 @@ export default async function SiteHeader() {
               2列まとめて画面中央に来る。2026-07-29 まではブランド単体を中央にしていたが、
               それは「トグル幅が両サイトで違う」時代の回避策。ズームをヘッダーから
               外して両サイト 111.3px で一致したため、見た目どおりに戻した。 */}
-          <div className="col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 pointer-events-auto">
+          {/* ⚠ 360px未満はこのトグルをバーから外し、右の●パネルへ移す（R3）。
+              実測(JA=最長ラベル・外周padding 8px)の空き: 360px=-6.9/-4.9✕、
+              375px=+0.6/+2.6○、390px=+8.1/+10.1○。375px は iPhone SE の幅で、
+              下回るのは旧世代の小型端末だけ。外すとブランド単独が中央に来る。
+              スキャン側 assets/site-header.css の .sh-acct-toggle と対。 */}
+          <div className="max-[375px]:hidden col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 pointer-events-auto">
             {scanOnlineToggle}
             </div>
-          <LangToggle className="hidden 2xl:inline-block col-start-4 row-start-1 justify-self-end pointer-events-auto" />
+          {/* 列4は空のスペーサー（両端を同幅にしてブランド＋トグルを中央に保つ）。
+              ⚠ ここに EN を置かないこと。中央グリッドは absolute で画面端まで伸びるので、
+                 列4の右端＝右グループ（カート/マイページ/ベル/アバター）と同じ位置になり
+                 必ず重なる。実測: 1440pxで EN が2つ、1536px以上ではサインイン時に
+                 EN×アバターが28px、1920pxで EN×マイページが33.8px重なっていた
+                 （サインアウトでは右が軽く露見しない＝サインイン状態での検証が必須）。
+                 EN は下の右グループ側 LangToggle に一本化してある。 */}
         </div>
 
         {/* ⚠ 720–733px では中央グリッド側のトグル(列3)と、この右グループ先頭のENが
@@ -276,11 +282,33 @@ export default async function SiteHeader() {
             触らず、この右グループの間隔だけを詰めて解消する。 */}
         {/* ⚠ 480px未満はここをバーから外す。残すとブランドが中央からずれる
             （実測: 375pxで-10px、320pxで-37.5px）。中身はドロワー側に出す（R3）。 */}
-        <div className="max-[768px]:hidden flex items-center gap-2 max-[1024px]:gap-2 max-[767px]:gap-1 flex-1 justify-end min-w-0 relative z-[1]">
+        {/* 768px未満: バーに並べる余地が無いので、アイコン1つに畳んで押したら開く。
+            バーへ常時展開すると 375px でブランドの中央ぞろえが16px崩れる（実測）。 */}
+        <div className="flex-1 flex justify-end min-w-0 relative z-[1]">
+          <HeaderAccountMenu label={locale === "en" ? "Language & account" : "言語・アカウント"}>
+            {/* 360px未満だけバーから退避してきたスキャン/オンライン トグル。 */}
+            <div className="min-[375px]:hidden flex items-center">{scanOnlineToggle}</div>
+            <div className="flex items-center gap-3">
+              <LangToggle />
+              <span className="min-[768px]:hidden flex items-center">
+                <CartLink />
+              </span>
+            </div>
+            {/* 768–1023px ではカート/認証はバーに出ているので、ここでは重複させない。 */}
+            <div className="min-[768px]:hidden flex items-center gap-2 flex-wrap empty:hidden">
+              {authButtons}
+              {authSignedIn}
+            </div>
+          </HeaderAccountMenu>
+        </div>
+
+        <div className="max-[768px]:hidden flex items-center gap-2 max-[1024px]:gap-2 max-[767px]:gap-1 justify-end min-w-0 relative z-[1]">
           {/* ⚠ Tailwind v4 の max-[Npx] は「N未満」。スキャン側の
               @media(max-width:1023px)（1023を含む）と揃えるには max-[1024px]。
               1023px ちょうどで片サイトだけENが出る不一致が実際に発生した。 */}
-          <LangToggle className="2xl:hidden max-[1024px]:hidden" />
+          {/* 1024px以上のENはここだけ。スキャン側は右が空なので画面右端に付くが、
+              オンラインはカート/認証が居るためその左に並ぶ。この非対称だけは許容する。 */}
+          <LangToggle className="max-[1024px]:hidden" />
           <CartLink />
           {authButtons}
           {authSignedIn}

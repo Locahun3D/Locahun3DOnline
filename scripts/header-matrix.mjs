@@ -61,10 +61,24 @@ const run=async(base,paths,site)=>{
           if(!brand) return {err:'nobrand'};
           const br=brand.getBoundingClientRect();
           const cw=document.documentElement.clientWidth;
-          const tg=[...hd.querySelectorAll('a,span')].find(e=>/^スキャン$|^Scan$/.test((e.textContent||'').trim()));
-          return {c:+((br.left+br.right)/2-cw/2).toFixed(1),
+          // ⚠ 幅>5 で絞る。375px未満はトグルがバーから●パネルへ退避するため、
+          //    閉じたパネル内の矩形0の要素を掴まないようにする。
+          const tg=[...hd.querySelectorAll('a,span')].find(e=>/^スキャン$|^Scan$/.test((e.textContent||'').trim())&&e.getBoundingClientRect().width>5);
+          const hr=hd.getBoundingClientRect();
+          // ⚠ 基準は「ヘッダー自身の中心」。clientWidth/2 を基準にすると、
+          //    scrollbar-gutter:stable both-edges の下では
+          //    スクロールするページ(cw=375)としないページ(cw=390)で基準が7.5pxずれ、
+          //    実際には1pxも動いていないヘッダーが「ページごとに違う」と誤検出される
+          //    （2026-07-29、/cart や /account だけ -59.6 と出た件の真因）。
+          // ⚠ 測るのは「ブランド＋トグルのまとまり」の中心。ブランド単体だと
+          //    JA「ロケハン3D」124.5px と EN「Locahun 3D」131.5px の字幅差で
+          //    必ず値が割れる（中央ぞろえは正しいのに不合格になる）。
+          const gr=tg?tg.closest('div').getBoundingClientRect():null;
+          const g=gr?((br.left+gr.right)/2-(hr.left+hr.width/2)):0;
+          return {c:+g.toFixed(1),
+                  b:+((br.left+br.right)/2-(hr.left+hr.width/2)).toFixed(1),
                   cw:cw, iw:window.innerWidth,
-                  h:+hd.getBoundingClientRect().height.toFixed(1),
+                  h:+hr.height.toFixed(1),
                   tg:tg?getComputedStyle(tg).fontSize:'-',
                   of:document.documentElement.scrollWidth-cw};
         });
@@ -74,8 +88,10 @@ const run=async(base,paths,site)=>{
     process.stdout.write(".");
   }
 };
-await run("https://locahun3d.com",ON,"on");
-await run("https://web.locahun3d.com",SC,"sc");
+// --local: 手元のビルドを検証する（online=next start:3000 / scan=静的:8830）。
+const LOCAL = process.argv.includes("--local");
+await run(LOCAL?"http://localhost:3000":"https://locahun3d.com",ON,"on");
+await run(LOCAL?"http://127.0.0.1:8830":"https://web.locahun3d.com",SC,"sc");
 await b.close();
 console.log("");
 const ok=rows.filter(r=>!r.err);
@@ -84,5 +100,6 @@ const set=(k,s)=>[...new Set(ok.filter(r=>r.site===s).map(r=>r[k]))].sort().join
 console.log("計測数:",rows.length,"／ 問題:",bad.length);
 console.log("ヘッダー高  online:",set('h','on')," scan:",set('h','sc'));
 console.log("トグルsize  online:",set('tg','on')," scan:",set('tg','sc'));
-console.log("中心ズレ    online:",set('c','on')," scan:",set('c','sc'));
+console.log("中心ズレ    online:",set('c','on')," scan:",set('c','sc'),"（ヘッダー中心基準・0が合格）");
+console.log("参考:ブランド単体 online:",set('b','on')," scan:",set('b','sc'),"（JA/ENの字幅差で割れるのは正常）");
 for(const r of bad.slice(0,30)) console.log("  ",JSON.stringify(r));
