@@ -51,13 +51,29 @@ import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness } from "@/lib/publish-readiness";
 
+/**
+ * 入力ステップ。⚠ 並び順 = 実際に埋める順番。ここを変えたら本文側の
+ * `step === "..."` ブロックの並びも合わせること（上から順に読める状態を保つ）。
+ *
+ * ── 2026-07-30 の分割 ──────────────────────────────────
+ * 以前は 6 ステップで、02「仕様・設備」に住所・アクセス・料金・ルール・実績・
+ * タグ・図面まで詰まっていた（39欄 / 3590px）。名前と中身が一致せず
+ * 「作りづらい」の主因だったので、作業の単位で切り直した。
+ * 料金が 01（時間/日料金）と 02（最低利用時間・ロケハン費）に分かれていた問題も
+ * 「料金」ステップへ寄せて解消する。
+ * `admin: true` は運営専用（スタジオには出さない）。
+ */
 const STEPS = [
   { id: "basic", label: "基本情報" },
   { id: "specs", label: "仕様・設備" },
-  { id: "description", label: "紹介文" },
+  { id: "terms", label: "利用条件" },
+  { id: "pricing", label: "料金" },
   { id: "photos", label: "写真" },
-  { id: "splat", label: "3DGS データ" },
-  { id: "publish", label: "公開設定" },
+  { id: "plans", label: "図面" },
+  { id: "description", label: "紹介文" },
+  { id: "features", label: "特徴・タグ" },
+  { id: "splat", label: "3DGS データ", admin: true },
+  { id: "publish", label: "公開設定", admin: true },
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
@@ -323,6 +339,15 @@ export default function PropertyEditor({
   // 入力すると即座にボタンが有効になる。判定の正本は lib/publish-readiness.ts で、
   // サーバー側 requestPublishAction も同じ関数を使う。
   const requestReadiness = publishReadiness(watch());
+
+  // 運営専用ステップ（3DGS・公開設定）はスタジオに出さない。
+  // ⚠ STEPS の並び順がそのまま番号になるので、番号は配列から導出する
+  //   （StepCard に直書きすると、ステップを1つ足すたび全部ズレる）。
+  const visibleSteps = STEPS.filter((s) => !("admin" in s && s.admin) || isAdmin);
+  const stepNo = (id: StepId) => {
+    const i = visibleSteps.findIndex((s) => s.id === id);
+    return String((i < 0 ? 0 : i) + 1).padStart(2, "0");
+  };
   const currentIdx = STEPS.findIndex((s) => s.id === step);
   const progress = ((currentIdx + 1) / STEPS.length) * 100;
 
@@ -368,7 +393,7 @@ export default function PropertyEditor({
         <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-3">
           Steps
         </div>
-        {STEPS.map((s, i) => (
+        {visibleSteps.map((s, i) => (
           <button
             key={s.id}
             type="button"
@@ -563,7 +588,7 @@ export default function PropertyEditor({
         <section className="space-y-6">
           {step === "basic" && (
             <StepCard
-              n="01"
+              n={stepNo("basic")}
               title="基本情報"
               desc="検索結果とカードに出る情報です。"
             >
@@ -586,7 +611,7 @@ export default function PropertyEditor({
                 </Field>
               )}
 
-              <div className="grid md:grid-cols-3 gap-5">
+              <div className="grid md:grid-cols-2 gap-5">
                 <Field label="カテゴリ" required>
                   <select {...register("category")} className={inputClass}>
                     {PROPERTY_CATEGORIES.map((c) => (
@@ -609,73 +634,8 @@ export default function PropertyEditor({
                     placeholder="スタジオ種類を入力"
                   />
                 </Field>
-                <Field
-                  label={
-                    watch("priceType") === "flat"
-                      ? "撮影許可費用 (¥)"
-                      : watch("priceType") === "free"
-                        ? "料金（無料のため入力不要）"
-                        : "時間料金 (¥/hr)"
-                  }
-                  error={formState.errors.hourlyPrice?.message}
-                  hint={
-                    watch("priceType") === "flat"
-                      ? watch("hourlyPrice") > 0
-                        ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
-                        : "0 のままだと金額を出さず「道路使用許可の申請が必要です」と表示されます（無料という意味にはなりません）"
-                      : watch("priceType") === "free"
-                        ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
-                        : undefined
-                  }
-                  required={watch("priceType") === "hourly"}
-                >
-                  <div className="flex gap-2">
-                    <select
-                      value={watch("priceType") || "hourly"}
-                      onChange={(e) => {
-                        const v = e.target.value as "hourly" | "flat" | "free";
-                        setValue("priceType", v, { shouldDirty: true });
-                        // 撮影許可/無料は「施設所有者への通常の問い合わせ先が無い
-                        // 公共スポット」を前提にした料金モードなので、選ぶだけで
-                        // permitRequired も連動させる（Step02 の仕様欄も切り替わる）。
-                        setValue("permitRequired", v !== "hourly", { shouldDirty: true });
-                        triggerAutoSave();
-                      }}
-                      className={`${inputClass.replace("w-full ", "")} shrink-0 w-[9.5rem]`}
-                    >
-                      {(["hourly", "flat", "free"] as const).map((t) => (
-                        <option key={t} value={t} className="bg-bg">
-                          {t === "hourly" ? "時間貸し" : t === "flat" ? "撮影許可" : "無料"}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1000}
-                      disabled={watch("priceType") === "free"}
-                      placeholder={watch("priceType") === "free" ? "" : "金額を入力"}
-                      {...register("hourlyPrice", { valueAsNumber: true })}
-                      className={`${inputClass} flex-1 min-w-[7rem] disabled:opacity-40 disabled:cursor-not-allowed`}
-                    />
-                  </div>
-                </Field>
               </div>
 
-              <Field
-                label="日料金 (¥/day)"
-                hint="日貸しを行う場合のみ入力。0 のままだと「日貸し非対応」扱い。"
-                error={formState.errors.dailyPrice?.message}
-              >
-                <input
-                  type="number"
-                  min={0}
-                  step={5000}
-                  {...register("dailyPrice", { valueAsNumber: true })}
-                  className={inputClass}
-                  placeholder="0 = 日貸しなし"
-                />
-              </Field>
 
               <div className="flex items-center justify-between gap-3">
                 <div className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
@@ -906,7 +866,7 @@ export default function PropertyEditor({
           )}
 
           {step === "specs" && (
-            <StepCard n="02" title="仕様・設備" desc="フィルター検索に使われます。">
+            <StepCard n={stepNo("specs")} title="仕様・設備" desc="広さ・電源・設備など、フィルター検索に使われる条件です。">
               {watch("priceType") !== "hourly" ? (
                 <div className="border border-accent/40 bg-accent/5 px-4 py-4 space-y-4">
                   <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
@@ -1082,6 +1042,11 @@ export default function PropertyEditor({
                 )}
               </div>
 
+            </StepCard>
+          )}
+
+          {step === "terms" && (
+            <StepCard n={stepNo("terms")} title="利用条件" desc="撮影できる日・時間と、守っていただくルールです。">
               {/* ── アクセス・利用条件 ── */}
               <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
                 アクセス・利用条件
@@ -1143,6 +1108,92 @@ export default function PropertyEditor({
                 <Toggle label="喫煙所 あり" register={register("smokingArea")} />
               </div>
 
+              {/* ── ルール・規程 ── */}
+              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
+                ルール・規程
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="禁止事項" hint="複数行可">
+                  <textarea {...register("prohibitedItems")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 火気使用禁止／生活音より大きな音出し禁止" />
+                </Field>
+                <Field label="キャンセルポリシー" hint="複数行可">
+                  <textarea {...register("cancellationPolicy")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 7日前まで無料／前日50%／当日100%" />
+                </Field>
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Toggle label="保険加入 必須" register={register("insuranceRequired")} />
+                <Toggle label="立ち会い 必須" register={register("attendanceRequired")} />
+              </div>
+            </StepCard>
+          )}
+
+          {step === "pricing" && (
+            <StepCard n={stepNo("pricing")} title="料金" desc="貸し出しの料金と、別途かかる費用です。">
+                <Field
+                  label={
+                    watch("priceType") === "flat"
+                      ? "撮影許可費用 (¥)"
+                      : watch("priceType") === "free"
+                        ? "料金（無料のため入力不要）"
+                        : "時間料金 (¥/hr)"
+                  }
+                  error={formState.errors.hourlyPrice?.message}
+                  hint={
+                    watch("priceType") === "flat"
+                      ? watch("hourlyPrice") > 0
+                        ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
+                        : "0 のままだと金額を出さず「道路使用許可の申請が必要です」と表示されます（無料という意味にはなりません）"
+                      : watch("priceType") === "free"
+                        ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
+                        : undefined
+                  }
+                  required={watch("priceType") === "hourly"}
+                >
+                  <div className="flex gap-2">
+                    <select
+                      value={watch("priceType") || "hourly"}
+                      onChange={(e) => {
+                        const v = e.target.value as "hourly" | "flat" | "free";
+                        setValue("priceType", v, { shouldDirty: true });
+                        // 撮影許可/無料は「施設所有者への通常の問い合わせ先が無い
+                        // 公共スポット」を前提にした料金モードなので、選ぶだけで
+                        // permitRequired も連動させる（Step02 の仕様欄も切り替わる）。
+                        setValue("permitRequired", v !== "hourly", { shouldDirty: true });
+                        triggerAutoSave();
+                      }}
+                      className={`${inputClass.replace("w-full ", "")} shrink-0 w-[9.5rem]`}
+                    >
+                      {(["hourly", "flat", "free"] as const).map((t) => (
+                        <option key={t} value={t} className="bg-bg">
+                          {t === "hourly" ? "時間貸し" : t === "flat" ? "撮影許可" : "無料"}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000}
+                      disabled={watch("priceType") === "free"}
+                      placeholder={watch("priceType") === "free" ? "" : "金額を入力"}
+                      {...register("hourlyPrice", { valueAsNumber: true })}
+                      className={`${inputClass} flex-1 min-w-[7rem] disabled:opacity-40 disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                </Field>
+              <Field
+                label="日料金 (¥/day)"
+                hint="日貸しを行う場合のみ入力。0 のままだと「日貸し非対応」扱い。"
+                error={formState.errors.dailyPrice?.message}
+              >
+                <input
+                  type="number"
+                  min={0}
+                  step={5000}
+                  {...register("dailyPrice", { valueAsNumber: true })}
+                  className={inputClass}
+                  placeholder="0 = 日貸しなし"
+                />
+              </Field>
               {/* ── 料金の内訳 ── */}
               <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
                 料金の内訳
@@ -1160,22 +1211,11 @@ export default function PropertyEditor({
                 <textarea {...register("extraFees")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: ホール照明・音響 別途／ピアノ使用 別途" />
               </Field>
 
-              {/* ── ルール・規程 ── */}
-              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                ルール・規程
-              </div>
-              <div className="grid md:grid-cols-2 gap-5">
-                <Field label="禁止事項" hint="複数行可">
-                  <textarea {...register("prohibitedItems")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 火気使用禁止／生活音より大きな音出し禁止" />
-                </Field>
-                <Field label="キャンセルポリシー" hint="複数行可">
-                  <textarea {...register("cancellationPolicy")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 7日前まで無料／前日50%／当日100%" />
-                </Field>
-              </div>
-              <div className="grid md:grid-cols-2 gap-5">
-                <Toggle label="保険加入 必須" register={register("insuranceRequired")} />
-                <Toggle label="立ち会い 必須" register={register("attendanceRequired")} />
-              </div>
+            </StepCard>
+          )}
+
+          {step === "features" && (
+            <StepCard n={stepNo("features")} title="特徴・タグ" desc="検索でヒットしやすくなる情報です。任意ですが、埋めるほど見つけてもらえます。">
 
               {/* ── 実績・特徴 ── */}
               <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
@@ -1274,6 +1314,11 @@ export default function PropertyEditor({
                   <div className="mt-1.5 text-[11px] text-muted">{aiTagsNote}</div>
                 )}
               </Field>
+            </StepCard>
+          )}
+
+          {step === "plans" && (
+            <StepCard n={stepNo("plans")} title="図面 / フロアプラン" desc="平面図・断面図など（PDF / 画像）。任意です。">
 
               {/* ── 図面 / フロアプラン ── */}
               <div className="border-t border-line pt-5 mt-4">
@@ -1370,7 +1415,7 @@ export default function PropertyEditor({
 
           {step === "description" && (
             <StepCard
-              n="03"
+              n={stepNo("description")}
               title="紹介文"
               desc="物件詳細ページに表示されます。改行 OK、文字数の目安は 200〜800 文字。"
             >
@@ -1432,7 +1477,7 @@ export default function PropertyEditor({
 
           {step === "photos" && (
             <StepCard
-              n="04"
+              n={stepNo("photos")}
               title="写真"
               desc="カバー画像 1 枚 + ギャラリー（最大 40 枚）。ドラッグ&ドロップで public/uploads/ に保存、または既存ライブラリから選択。"
             >
@@ -1646,7 +1691,7 @@ export default function PropertyEditor({
 
           {step === "splat" && (
             <StepCard
-              n="05"
+              n={stepNo("splat")}
               title="3DGS データ"
               desc="3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
             >
@@ -2171,7 +2216,7 @@ export default function PropertyEditor({
 
           {step === "publish" && (
             <StepCard
-              n="06"
+              n={stepNo("publish")}
               title="公開設定"
               desc="必須欄が揃っていれば「公開する」ボタンで反映されます。"
             >
