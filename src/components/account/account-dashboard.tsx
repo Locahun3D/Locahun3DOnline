@@ -143,16 +143,13 @@ export default function AccountDashboard({
 
       <NotificationList notifications={notifications} en={en} locale={locale} />
 
-      {/* ── 上段: ステータス4枚（トークン / プラン / 請求書 / 配信設定） ──
-          ⚠ 配信設定はここに置く。以前は同意前だけページ上部に全幅バナー、
-            同意後はページ最下部、と場所が変わっていた（露出を稼ぐ策だったが
-            「請求書カードの右が空いているのにバナーが別行にある」状態でもあった）。
-            常にこの行の4枚目にすることで、空きが埋まり位置も一定になる。
-          ⚠ 4列は1200px以上のみ。それ未満で4列にすると1枚あたりが狭すぎる。
-          ⚠ 帯は必ず排他レンジで書く（md:max-[1199px]: と min-[1200px]:）。
-            md:grid-cols-2 と min-[1200px]:grid-cols-4 を併記すると、Tailwindの
-            出力順で md: が後勝ちし、1440pxでも2列のままになる（実測）。 */}
-      <div className="grid grid-cols-1 md:max-[1199px]:grid-cols-2 min-[1200px]:grid-cols-4 gap-2.5 sm:gap-4">
+      {/* ── 上段: ステータス3枚（トークン / プラン / 請求書＋配信設定） ──
+          ⚠ 配信設定（新着ロケ地の先行案内）は独立カードにせず、請求書カードの
+            中に入れる。以前は同意前だけページ上部に全幅バナー、同意後はページ
+            最下部、と場所が変わっていた。4枚目の独立カードにした版も試したが、
+            「請求書のタブの中に説明付きで」というご指定に合わせて中へ移した
+            （2026-07-30）。 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
         {/* TOKENS */}
         <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
@@ -247,10 +244,10 @@ export default function AccountDashboard({
           >
             {en ? "View list →" : "一覧を見る →"}
           </Link>
-        </div>
 
-        {/* 配信設定（新着ロケ地の先行案内） */}
-        <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
+          {/* 配信設定はこのカードの中。枠を二重にしないため inline で描く。 */}
+          <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} inline />
+        </div>
       </div>
 
       {/* ── 中段: 保存した物件 / 閲覧履歴 ── */}

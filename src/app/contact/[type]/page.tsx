@@ -260,21 +260,26 @@ export default async function ContactTypePage({
             </h2>
             <p className="text-[13px] leading-relaxed text-muted">
               {en
-                ? "Company, property name and address are filled in from your listing. Tell us your preferred scan dates and a contact for the day — we'll shoot the 3D data and publish after a check."
-                : "会社名・物件名・所在地は掲載ページの内容を入れてあります。スキャンの希望日と当日のご連絡先だけ記入して送信してください。3Dデータの撮影と確認のうえ公開します。"}
+                ? "Company, property name and address are filled in from your listing. Tell us your preferred scan dates, a contact for the day, and anything else we should know — we'll shoot the 3D data and publish after a check."
+                : "会社名・物件名・所在地は掲載ページの内容を入れてあります。スキャンの希望日・当日のご連絡先と、ご要望やご質問があれば本文にお書きください。3Dデータの撮影と確認のうえ公開します。"}
             </p>
             <p className="mt-2 mono text-[10px] text-muted">
               {en
-                ? "The request is submitted when you send this form."
-                : "この フォームを送信した時点で公開申請となります。"}
+                ? "Sending this form submits both your message and the publication request."
+                : "この フォームを送信すると、お問い合わせ内容の送信と公開申請が同時に行われます。"}
             </p>
           </div>
         )}
 
-        {/* 掲載依頼のフォームは、掲載できる人にだけ見せる。
-            未ログイン/個人/制作会社にはアカウント作成の導線だけを出す
-            （送っても掲載できないフォームを踏ませない）。 */}
-        {t !== "listing" || canOwn ? <ContactForm type={t} prefill={prefill} /> : null}
+        {/* ⚠ 掲載依頼(listing)のフォームは **公開申請のときだけ** 出す（?property= 付き）。
+            掲載は「先に掲載ページを作る → 出来たら公開を申請する」という順番に
+            一本化したので、ページを作る前にフォームだけ送られると、物件の実体が
+            無い問い合わせが溜まって突き合わせられなくなる（2026-07-30 の方針）。
+            申請フォームは問い合わせ本文も一緒に受け取り、送信時に
+            contact-actions が requestPublishAction を呼んで
+            **問い合わせと公開申請を同時に**成立させる。
+            申請前の人には、上の導線カード（アカウント作成／掲載ページを作成）だけを見せる。 */}
+        {t !== "listing" || prefill ? <ContactForm type={t} prefill={prefill} /> : null}
       </div>
     </div>
   );

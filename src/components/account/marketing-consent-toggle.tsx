@@ -14,9 +14,12 @@ import { updateMarketingConsentAction } from "@/lib/marketing-actions";
 export default function MarketingConsentToggle({
   initialConsent,
   en,
+  inline = false,
 }: {
   initialConsent: boolean;
   en: boolean;
+  /** 他のカードの中に入れる形。外側のカード枠・余白を持たない。 */
+  inline?: boolean;
 }) {
   const [consent, setConsent] = useState(initialConsent);
   const [pending, startTransition] = useTransition();
@@ -34,9 +37,13 @@ export default function MarketingConsentToggle({
   return (
     <div
       className={
-        highlight
-          ? "bg-[#eaf7fb] border border-[#1ea0c4]/50 p-5"
-          : "bg-white border border-[#e2e7ec] p-5"
+        // 請求書カードの中に置くときは枠を持たない（カードの入れ子を避ける）。
+        // 未同意のハイライトも、カード内では上罫線＋見出し色だけで示す。
+        inline
+          ? "mt-4 pt-4 border-t border-[#e2e7ec]"
+          : highlight
+            ? "bg-[#eaf7fb] border border-[#1ea0c4]/50 p-5"
+            : "bg-white border border-[#e2e7ec] p-5"
       }
     >
       <div className="flex items-center gap-2 mb-2">
