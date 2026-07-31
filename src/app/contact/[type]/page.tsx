@@ -7,7 +7,7 @@ import ContactForm from "@/components/contact-form";
 import ListingValue from "@/components/listing-value";
 import { getCurrentUser } from "@/lib/dal";
 import { repo } from "@/lib/store";
-import { canCreateListing, canConvertToStudio, resolveListingPrefill } from "@/lib/listing-funnel";
+import { canCreateListing, canConvertToStudio, resolveListingPrefill, STUDIO_INTENT } from "@/lib/listing-funnel";
 import { isFreeEmailDomain } from "@/lib/free-email-domains";
 import { convertToStudioAction } from "@/lib/auth-actions";
 
@@ -159,7 +159,7 @@ export default async function ContactTypePage({
                     : "掲載ページはスタジオ用アカウントから作成します。登録は無料・審査なしで、すぐに掲載ページを作り始められます。3Dスキャンはこちらで対応します。"}
                 </p>
                 <Link
-                  href={lh("/sign-up")}
+                  href={lh(`/sign-up?intent=${STUDIO_INTENT}`)}
                   className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
                 >
                   {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
@@ -234,7 +234,7 @@ export default async function ContactTypePage({
                     マイページへ弾く（ユーザー報告）。先にサインアウトしてから
                     登録画面へ着地させる。 */}
                 <Link
-                  href={lh("/sign-out?redirect=/sign-up")}
+                  href={lh(`/sign-out?redirect=/sign-up%3Fintent=${STUDIO_INTENT}`)}
                   className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
                 >
                   {en ? "Sign out and create a studio account →" : "サインアウトしてスタジオアカウントを作成 →"}

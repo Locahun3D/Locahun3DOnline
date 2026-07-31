@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import InAppBrowserWarning from "@/components/in-app-browser-warning";
+import { isStudioIntent, STUDIO_INTENT } from "@/lib/listing-funnel";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -23,7 +24,18 @@ function CardSkeleton({ h }: { h: number }) {
   );
 }
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ intent?: string }>;
+}) {
+  // 「掲載する側として登録しに来た」意図をオンボーディングへ引き継ぐ。
+  // 引き継がないと種別の既定が個人のままで、スタジオを作りに来た人が
+  // 個人アカウントを作って終わる（ユーザー報告 2026-07-30）。
+  const { intent } = await searchParams;
+  const onboardingUrl = isStudioIntent(intent)
+    ? `/onboarding?intent=${STUDIO_INTENT}`
+    : "/onboarding";
   // Already signed in (e.g. via the browser Back button)? Don't show the form —
   // leave via a server redirect so the history stack can't get trapped.
   if (await getCurrentUser()) redirect("/account");
@@ -81,7 +93,7 @@ export default async function SignUpPage() {
         </div>
         <div className="flex flex-col items-center gap-4 justify-self-center min-[1200px]:justify-self-end">
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
-      <SignUp signInUrl="/sign-in" forceRedirectUrl="/onboarding" fallback={<CardSkeleton h={570} />} />
+      <SignUp signInUrl="/sign-in" forceRedirectUrl={onboardingUrl} fallback={<CardSkeleton h={570} />} />
       {/* 明示的な同意チェックボックスは Clerk ウィジェット内には差し込めないため、
           多くの SaaS と同じ「続行=同意」形式の告知文をウィジェット直下に表示する。 */}
       <p className="max-w-sm text-center text-[12px] text-muted leading-relaxed">

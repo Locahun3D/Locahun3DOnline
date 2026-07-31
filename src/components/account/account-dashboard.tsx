@@ -143,15 +143,16 @@ export default function AccountDashboard({
 
       <NotificationList notifications={notifications} en={en} locale={locale} />
 
-      {/* 配信同意が未のうちはトグルをページ上部に出して露出を確保する
-          (従来はページ最下部のみで目に入らず、同意率2%の一因だった)。
-          同意済みの人には従来どおり下部の設定カードとして表示。 */}
-      {!user.marketingConsent && (
-        <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
-      )}
-
-      {/* ── 上段: ステータス3枚 ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
+      {/* ── 上段: ステータス4枚（トークン / プラン / 請求書 / 配信設定） ──
+          ⚠ 配信設定はここに置く。以前は同意前だけページ上部に全幅バナー、
+            同意後はページ最下部、と場所が変わっていた（露出を稼ぐ策だったが
+            「請求書カードの右が空いているのにバナーが別行にある」状態でもあった）。
+            常にこの行の4枚目にすることで、空きが埋まり位置も一定になる。
+          ⚠ 4列は1200px以上のみ。それ未満で4列にすると1枚あたりが狭すぎる。
+          ⚠ 帯は必ず排他レンジで書く（md:max-[1199px]: と min-[1200px]:）。
+            md:grid-cols-2 と min-[1200px]:grid-cols-4 を併記すると、Tailwindの
+            出力順で md: が後勝ちし、1440pxでも2列のままになる（実測）。 */}
+      <div className="grid grid-cols-1 md:max-[1199px]:grid-cols-2 min-[1200px]:grid-cols-4 gap-2.5 sm:gap-4">
         {/* TOKENS */}
         <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
@@ -247,6 +248,9 @@ export default function AccountDashboard({
             {en ? "View list →" : "一覧を見る →"}
           </Link>
         </div>
+
+        {/* 配信設定（新着ロケ地の先行案内） */}
+        <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
       </div>
 
       {/* ── 中段: 保存した物件 / 閲覧履歴 ── */}
@@ -455,10 +459,6 @@ export default function AccountDashboard({
           </form>
         </div>
       </div>
-
-      {user.marketingConsent && (
-        <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} />
-      )}
 
       {user.stripeCustomerId && (
         <div className="text-right">

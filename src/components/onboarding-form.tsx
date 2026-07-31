@@ -17,11 +17,16 @@ const FIELD =
 const LABEL =
   "mono text-[10px] tracking-[0.22em] uppercase text-muted mb-1.5 block";
 
-export default function OnboardingForm() {
+export default function OnboardingForm({
+  defaultRole = "individual",
+}: {
+  /** 初期選択。掲載依頼から来たときだけ "studio"（あくまで既定値で、変更は自由）。 */
+  defaultRole?: AccountRole;
+}) {
   const en = useLocale() === "en";
   const lc = en ? "en" : "ja";
   const [state, action, pending] = useActionState(onboardingAction, undefined);
-  const [role, setRole] = useState<AccountRole>("individual");
+  const [role, setRole] = useState<AccountRole>(defaultRole);
 
   return (
     <form action={action} className="space-y-5">

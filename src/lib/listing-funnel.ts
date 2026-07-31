@@ -116,3 +116,33 @@ export function resolveListingPrefill(
     address: [property!.prefecture, property!.city].filter(Boolean).join(""),
   };
 }
+
+
+/**
+ * 「掲載する側として登録しに来た」という意図を、サインアップ〜オンボーディングへ
+ * 引き継ぐためのクエリ値。
+ *
+ * ── なぜ必要か ────────────────────────────────────────────
+ * 掲載依頼ページの「スタジオアカウントを作成」を押しても、行き先は Clerk の
+ * 共通サインアップで、その後のオンボーディングは**既定が「個人」**。
+ * そこで種別を選び直さないと個人アカウントが出来上がり、着地は素のマイページ。
+ * 「スタジオを作りに来たのに、個人で作られてマイページに置き去り」になる
+ * （ユーザー報告 2026-07-30）。意図を持ち回して既定を撮影スタジオにする。
+ *
+ * ⚠ これは既定値の変更にすぎない。ユーザーは種別を自由に選べるままにする
+ *   （勝手に確定させない）。
+ */
+export const STUDIO_INTENT = "studio";
+
+/** クエリ ?intent= がスタジオ意図か。未知の値は無視する。 */
+export function isStudioIntent(intent: string | undefined | null): boolean {
+  return intent === STUDIO_INTENT;
+}
+
+/**
+ * オンボーディングで最初に選択させておく種別。
+ * 意図が無ければ従来どおり個人。
+ */
+export function defaultOnboardingRole(intent: string | undefined | null): "individual" | "studio" {
+  return isStudioIntent(intent) ? "studio" : "individual";
+}

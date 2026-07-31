@@ -266,6 +266,44 @@ export default async function AccountPage({
         </div>
       )}
 
+      {/* 個人アカウントへの「掲載する側でしたか？」の戻り道。
+          ⚠ これが無いと、掲載依頼から新規登録に来た人がオンボーディングで
+            種別を選び直さずに個人アカウントを作ってしまい、着地した
+            マイページに手がかりが何も無い状態になる
+            （ユーザー報告 2026-07-30「マイページに飛ばされるだけでよくわからない」）。
+            入口側（?intent=studio で撮影スタジオを既定にする）と対で入れている。
+          ⚠ 会社ドメインのメールかどうかで文面と行き先を変える。フリーメールのまま
+            スタジオを名乗れると掲載主の実在確認が無くなるため、そちらは案内のみ。 */}
+      {user.role === "individual" && (
+        <section className="border border-line bg-card p-5 mb-6">
+          <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
+            {locale === "en" ? "Listing your own space?" : "掲載する側の方へ"}
+          </div>
+          <h2 className="text-[15px] font-bold mb-2">
+            {locale === "en"
+              ? "This account is a personal account"
+              : "このアカウントは「個人」で登録されています"}
+          </h2>
+          <p className="text-[13px] leading-relaxed text-muted">
+            {isFreeEmailDomain(user.email)
+              ? locale === "en"
+                ? "To create listing pages you need a studio account, which requires your company's own email address (free webmail such as Gmail cannot be used)."
+                : "掲載ページを作るにはスタジオアカウントが必要です。スタジオアカウントは会社（スタジオ）のメールアドレスでのご登録をお願いしています（Gmail等のフリーメールはご利用いただけません）。"
+              : locale === "en"
+                ? "You're signed in with a company address, so you can switch this account to a studio account and start a listing page right away."
+                : "会社のメールアドレスでご登録いただいているので、このアカウントをそのままスタジオアカウントに切り替えて、すぐに掲載ページを作り始められます。"}
+          </p>
+          <a
+            href={locale === "en" ? "/en/contact/listing" : "/contact/listing"}
+            className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
+          >
+            {isFreeEmailDomain(user.email)
+              ? locale === "en" ? "See how listing works →" : "掲載の進め方を見る →"
+              : locale === "en" ? "Switch to a studio account →" : "スタジオアカウントに切り替える →"}
+          </a>
+        </section>
+      )}
+
       {/* 掲載者(スタジオ)だけに出す。所有物件は ownerId で引く。
           スタジオの主業務は掲載管理なので、買い手向けカード群より先に出す。 */}
       {user.role === "studio" && (

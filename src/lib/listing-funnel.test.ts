@@ -5,6 +5,8 @@ import {
   ownsProperty,
   resolveListingPrefill,
   canConvertToStudio,
+  isStudioIntent,
+  defaultOnboardingRole,
 } from "./listing-funnel";
 
 const studio = { id: "u1", role: "studio", name: "スタジオA" };
@@ -108,5 +110,23 @@ describe("canConvertToStudio — 今のアカウントをそのままスタジ�
     expect(canConvertToStudio("admin", false)).toBe(false);
     expect(canConvertToStudio(null, false)).toBe(false);
     expect(canConvertToStudio(undefined, false)).toBe(false);
+  });
+});
+
+describe("スタジオ意図の引き継ぎ", () => {
+  it("intent=studio なら初期選択が撮影スタジオになる", () => {
+    expect(isStudioIntent("studio")).toBe(true);
+    expect(defaultOnboardingRole("studio")).toBe("studio");
+  });
+
+  it("意図が無ければ従来どおり個人が初期選択", () => {
+    expect(defaultOnboardingRole(undefined)).toBe("individual");
+    expect(defaultOnboardingRole(null)).toBe("individual");
+    expect(defaultOnboardingRole("")).toBe("individual");
+  });
+
+  it("知らない値は無視する（勝手な種別にしない）", () => {
+    expect(isStudioIntent("admin")).toBe(false);
+    expect(defaultOnboardingRole("production")).toBe("individual");
   });
 });
