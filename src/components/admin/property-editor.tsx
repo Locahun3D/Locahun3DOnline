@@ -72,6 +72,9 @@ export default function PropertyEditor({
 }) {
   const router = useRouter();
   const [step, setStep] = useState<StepId>("basic");
+  // 英語(EN)欄は既定で畳む。日本語欄の直後に毎回挟まると入力のリズムが切れるうえ、
+  // 実際は空欄でよい（公開作業時に運営がAI翻訳して埋める）。必要な人だけ開く。
+  const [showEn, setShowEn] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
   const [publishing, startPublish] = useTransition();
@@ -333,6 +336,35 @@ export default function PropertyEditor({
     >
       {/* Step navigation */}
       <aside className="lg:sticky lg:top-24 self-start space-y-2">
+        {/* 申請に必要な残り。どのステップにいても「あと何を埋めればいいか」が見える。
+            判定は lib/publish-readiness.ts（申請アクションと同じ関数）。
+            以前は申請ボタンを押すまで不足が分からなかった。 */}
+        <div
+          className={`mb-4 border px-3 py-2.5 ${
+            requestReadiness.ready
+              ? "border-green-400/40 bg-green-400/[0.06]"
+              : "border-amber-400/40 bg-amber-400/[0.06]"
+          }`}
+        >
+          <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-70">
+            申請に必要な項目
+          </div>
+          {requestReadiness.ready ? (
+            <div className="text-[12px] text-green-400 mt-1">すべて入力済み</div>
+          ) : (
+            <>
+              <div className="text-[12px] text-amber-400 mt-1">
+                あと {requestReadiness.missing.length} 項目
+              </div>
+              <ul className="mt-1.5 space-y-0.5 text-[11px] text-muted leading-[1.6]">
+                {requestReadiness.missing.map((m) => (
+                  <li key={m}>・{m}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
         <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-60 mb-3">
           Steps
         </div>
@@ -355,6 +387,25 @@ export default function PropertyEditor({
             </div>
           </button>
         ))}
+
+        {/* 英語(EN)欄の表示切替。既定は畳んだ状態。 */}
+        <button
+          type="button"
+          onClick={() => setShowEn((v) => !v)}
+          aria-pressed={showEn}
+          className={`block w-full text-left px-3 py-2.5 border transition mt-4 ${
+            showEn
+              ? "border-accent text-accent"
+              : "border-line text-muted hover:text-ink hover:border-ink"
+          }`}
+        >
+          <div className="text-[12px]">
+            {showEn ? "英語(EN)欄を隠す" : "英語(EN)欄を編集する"}
+          </div>
+          <div className="mono text-[10px] opacity-60 mt-0.5">
+            未記入でOK（公開時に運営が翻訳）
+          </div>
+        </button>
       </aside>
 
       {/* Form pane */}
@@ -524,14 +575,16 @@ export default function PropertyEditor({
                   placeholder="例: Setagaya Cyc Studio｜白ホリ大スパン"
                 />
               </Field>
-              <Field label="物件名（英語・EN版で表示／未記入でOK）" error={formState.errors.titleEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                <input
-                  type="text"
-                  {...register("titleEn")}
-                  className={inputClass}
-                  placeholder="e.g. Setagaya Cyc Studio — Large-span Cyclorama（空欄なら日本語名をそのまま表示）"
-                />
-              </Field>
+              {showEn && (
+                <Field label="物件名（英語・EN版で表示／未記入でOK）" error={formState.errors.titleEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                  <input
+                    type="text"
+                    {...register("titleEn")}
+                    className={inputClass}
+                    placeholder="e.g. Setagaya Cyc Studio — Large-span Cyclorama（空欄なら日本語名をそのまま表示）"
+                  />
+                </Field>
+              )}
 
               <div className="grid md:grid-cols-3 gap-5">
                 <Field label="カテゴリ" required>
@@ -696,14 +749,16 @@ export default function PropertyEditor({
                   <input type="text" {...register("city")} className={inputClass} />
                 </Field>
               </div>
-              <Field label="市区町村（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                <input
-                  type="text"
-                  {...register("cityEn")}
-                  className={inputClass}
-                  placeholder="e.g. Tsurumi, Yokohama（空欄なら日本語をそのまま表示。都道府県は自動でローマ字化）"
-                />
-              </Field>
+              {showEn && (
+                <Field label="市区町村（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                  <input
+                    type="text"
+                    {...register("cityEn")}
+                    className={inputClass}
+                    placeholder="e.g. Tsurumi, Yokohama（空欄なら日本語をそのまま表示。都道府県は自動でローマ字化）"
+                  />
+                </Field>
+              )}
 
               <Field
                 label="座標 (lat, lng) — 地図ピンと距離計算に使用"
@@ -732,66 +787,68 @@ export default function PropertyEditor({
                   placeholder="例: 天井高 5.4m、25m スパンの白ホリ。CM・MV 撮影で実績多数。"
                 />
               </Field>
-              <Field label="サマリー（英語・EN版で表示／未記入でOK）" error={formState.errors.summaryEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                <textarea
-                  rows={3}
-                  {...register("summaryEn")}
-                  className={inputClass}
-                  placeholder="e.g. 5.4m ceilings, 25m-span cyclorama. Proven track record for commercials & music videos.（空欄なら日本語をそのまま表示）"
-                />
-                <button
-                  type="button"
-                  disabled={aiSummaryLoading}
-                  onClick={async () => {
-                    setAiSummaryLoading(true);
-                    try {
-                      const d = getValues();
-                      const res = await fetch("/api/admin/suggest-summary", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          title: d.title,
-                          category: d.category,
-                          studioType: d.studioType,
-                          prefecture: d.prefecture,
-                          city: d.city,
-                          area: d.area,
-                          contactWebsite: d.contactWebsite,
-                          description: d.description,
-                          capacity: d.capacity,
-                          floorAreaSqm: d.floorAreaSqm,
-                          ceilingHeightM: d.ceilingHeightM,
-                          hasNaturalLight: d.hasNaturalLight,
-                          parking: d.parking,
-                          loadingDock: d.loadingDock,
-                          powerVoltage: d.powerVoltage,
-                          tags: Array.isArray(d.tags) ? d.tags : [],
-                        }),
-                      });
-                      const data = (await res.json()) as {
-                        summary?: string;
-                        error?: string;
-                      };
-                      if (!res.ok || !data.summary) {
-                        alert(data.error || "サマリー生成に失敗しました");
-                        return;
+              {showEn && (
+                <Field label="サマリー（英語・EN版で表示／未記入でOK）" error={formState.errors.summaryEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                  <textarea
+                    rows={3}
+                    {...register("summaryEn")}
+                    className={inputClass}
+                    placeholder="e.g. 5.4m ceilings, 25m-span cyclorama. Proven track record for commercials & music videos.（空欄なら日本語をそのまま表示）"
+                  />
+                  <button
+                    type="button"
+                    disabled={aiSummaryLoading}
+                    onClick={async () => {
+                      setAiSummaryLoading(true);
+                      try {
+                        const d = getValues();
+                        const res = await fetch("/api/admin/suggest-summary", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            title: d.title,
+                            category: d.category,
+                            studioType: d.studioType,
+                            prefecture: d.prefecture,
+                            city: d.city,
+                            area: d.area,
+                            contactWebsite: d.contactWebsite,
+                            description: d.description,
+                            capacity: d.capacity,
+                            floorAreaSqm: d.floorAreaSqm,
+                            ceilingHeightM: d.ceilingHeightM,
+                            hasNaturalLight: d.hasNaturalLight,
+                            parking: d.parking,
+                            loadingDock: d.loadingDock,
+                            powerVoltage: d.powerVoltage,
+                            tags: Array.isArray(d.tags) ? d.tags : [],
+                          }),
+                        });
+                        const data = (await res.json()) as {
+                          summary?: string;
+                          error?: string;
+                        };
+                        if (!res.ok || !data.summary) {
+                          alert(data.error || "サマリー生成に失敗しました");
+                          return;
+                        }
+                        setValue("summary", data.summary, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        triggerAutoSave();
+                      } catch {
+                        alert("通信エラーが発生しました");
+                      } finally {
+                        setAiSummaryLoading(false);
                       }
-                      setValue("summary", data.summary, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                      triggerAutoSave();
-                    } catch {
-                      alert("通信エラーが発生しました");
-                    } finally {
-                      setAiSummaryLoading(false);
-                    }
-                  }}
-                  className="mt-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
-                >
-                  {aiSummaryLoading ? "生成中…" : "✦ AIでサマリー生成"}
-                </button>
-              </Field>
+                    }}
+                    className="mt-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
+                  >
+                    {aiSummaryLoading ? "生成中…" : "✦ AIでサマリー生成"}
+                  </button>
+                </Field>
+              )}
 
               {watch("permitRequired") && (
                 <div className="border-t border-line pt-4 mt-4">
@@ -889,18 +946,20 @@ export default function PropertyEditor({
                       placeholder="例: 撮影には所轄警察署への道路使用許可申請が必要です。申請先・必要日数・当日の交通規制・保険加入の要否などを記入してください。"
                     />
                   </Field>
-                  <Field
-                    label="許可・注意事項（英語・EN版で表示／未記入でOK）"
-                    hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。"
-                  >
-                    <textarea
-                      {...register("permitNotesEn")}
-                      className={`${inputClass} resize-y min-h-[120px]`}
-                      rows={5}
-                      maxLength={2000}
-                      placeholder="e.g. Filming requires a road-use permit application from the local police station..."
-                    />
-                  </Field>
+                  {showEn && (
+                    <Field
+                      label="許可・注意事項（英語・EN版で表示／未記入でOK）"
+                      hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。"
+                    >
+                      <textarea
+                        {...register("permitNotesEn")}
+                        className={`${inputClass} resize-y min-h-[120px]`}
+                        rows={5}
+                        maxLength={2000}
+                        placeholder="e.g. Filming requires a road-use permit application from the local police station..."
+                      />
+                    </Field>
+                  )}
                 </div>
               ) : (
                 <>
@@ -1001,22 +1060,26 @@ export default function PropertyEditor({
                 </Field>
               </div>
               <div className="grid md:grid-cols-2 gap-5">
-                <Field label="住所（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                  <input
-                    type="text"
-                    {...register("addressEn")}
-                    className={inputClass}
-                    placeholder="e.g. 2-9-2 Ariake, Koto-ku, Tokyo（空欄なら日本語をそのまま表示）"
-                  />
-                </Field>
-                <Field label="最寄り駅（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                  <input
-                    type="text"
-                    {...register("nearestStationEn")}
-                    className={inputClass}
-                    placeholder="e.g. Yurikamome Ariake Sta., 3 min walk（空欄なら日本語をそのまま表示）"
-                  />
-                </Field>
+                {showEn && (
+                  <Field label="住所（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                    <input
+                      type="text"
+                      {...register("addressEn")}
+                      className={inputClass}
+                      placeholder="e.g. 2-9-2 Ariake, Koto-ku, Tokyo（空欄なら日本語をそのまま表示）"
+                    />
+                  </Field>
+                )}
+                {showEn && (
+                  <Field label="最寄り駅（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                    <input
+                      type="text"
+                      {...register("nearestStationEn")}
+                      className={inputClass}
+                      placeholder="e.g. Yurikamome Ariake Sta., 3 min walk（空欄なら日本語をそのまま表示）"
+                    />
+                  </Field>
+                )}
               </div>
 
               {/* ── アクセス・利用条件 ── */}
@@ -1319,32 +1382,34 @@ export default function PropertyEditor({
                   placeholder="このスタジオの特徴、ロケーション、利用シーン、注意事項などをご記入ください。"
                 />
               </Field>
-              <Field label="本文（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                <textarea
-                  rows={10}
-                  {...register("descriptionEn")}
-                  className={inputClass + " font-sans leading-[1.85]"}
-                  placeholder="English description shown on the /en version.（空欄なら日本語をそのまま表示）"
-                />
-                <div className="flex items-center justify-between mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const d = getValues();
-                      const draft = generateDescriptionDraft(d);
-                      if (draft) {
-                        setValue("description", draft, { shouldDirty: true });
-                      }
-                    }}
-                    className="mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition"
-                  >
-                    ✦ AI下書き生成
-                  </button>
-                  <div className="mono text-[10px] opacity-50">
-                    {watch("description")?.length ?? 0} / 4000
+              {showEn && (
+                <Field label="本文（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                  <textarea
+                    rows={10}
+                    {...register("descriptionEn")}
+                    className={inputClass + " font-sans leading-[1.85]"}
+                    placeholder="English description shown on the /en version.（空欄なら日本語をそのまま表示）"
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = getValues();
+                        const draft = generateDescriptionDraft(d);
+                        if (draft) {
+                          setValue("description", draft, { shouldDirty: true });
+                        }
+                      }}
+                      className="mono text-[10px] tracking-[0.22em] uppercase border border-accent/50 text-accent px-3 py-1 hover:bg-accent hover:text-bg transition"
+                    >
+                      ✦ AI下書き生成
+                    </button>
+                    <div className="mono text-[10px] opacity-50">
+                      {watch("description")?.length ?? 0} / 4000
+                    </div>
                   </div>
-                </div>
-              </Field>
+                </Field>
+              )}
 
               <div className="border border-dashed border-line p-5">
                 <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent mb-2">
@@ -1836,15 +1901,17 @@ export default function PropertyEditor({
                                 placeholder="例: 高精細3DGSデータ。商用利用可。"
                               />
                             </Field>
-                            <Field label="販売説明文（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                              <textarea
-                                {...register(`splatItems.${idx}.saleDescriptionEn`)}
-                                className={inputClass}
-                                rows={2}
-                                maxLength={2000}
-                                placeholder="e.g. High-detail 3DGS data. Commercial use allowed.（空欄なら日本語をそのまま表示）"
-                              />
-                            </Field>
+                            {showEn && (
+                              <Field label="販売説明文（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
+                                <textarea
+                                  {...register(`splatItems.${idx}.saleDescriptionEn`)}
+                                  className={inputClass}
+                                  rows={2}
+                                  maxLength={2000}
+                                  placeholder="e.g. High-detail 3DGS data. Commercial use allowed.（空欄なら日本語をそのまま表示）"
+                                />
+                              </Field>
+                            )}
 
                             <FreePeriodItemEditor
                               value={watch(`splatItems.${idx}.freePeriod`)}
