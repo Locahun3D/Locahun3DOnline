@@ -73,6 +73,7 @@ const STEPS = [
   { id: "description", label: "紹介文" },
   { id: "features", label: "特徴・タグ" },
   { id: "splat", label: "3DGS データ", admin: true },
+  { id: "splatMeta", label: "3DGS 注釈・メタ", admin: true },
   { id: "publish", label: "公開設定", admin: true },
 ] as const;
 
@@ -1048,9 +1049,7 @@ export default function PropertyEditor({
           {step === "terms" && (
             <StepCard n={stepNo("terms")} title="利用条件" desc="撮影できる日・時間と、守っていただくルールです。">
               {/* ── アクセス・利用条件 ── */}
-              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                アクセス・利用条件
-              </div>
+              <SectionHead title="アクセス・利用条件" hint="いつ・どこで撮影できるか。検索の絞り込みにも使われます。" />
               <div className="grid md:grid-cols-3 gap-5">
                 <Field label="利用可能時間（補足）" hint="例: 24時間可（要相談）">
                   <input type="text" {...register("availableHours")} className={inputClass} placeholder="例: 24時間可（要相談）" />
@@ -1097,9 +1096,7 @@ export default function PropertyEditor({
               </div>
 
               {/* ── 撮影条件（設備の有無） ── */}
-              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                撮影条件（設備の有無）
-              </div>
+              <SectionHead title="撮影条件（設備の有無）" hint="あるものだけチェック。無いものは空のままで構いません。" />
               <div className="grid md:grid-cols-3 gap-5">
                 <Toggle label="火気使用 可" register={register("fireAllowed")} />
                 <Toggle label="控室 あり" register={register("greenRoom")} />
@@ -1109,9 +1106,7 @@ export default function PropertyEditor({
               </div>
 
               {/* ── ルール・規程 ── */}
-              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                ルール・規程
-              </div>
+              <SectionHead title="ルール・規程" hint="トラブルを防ぐための取り決め。空欄でも掲載できます。" />
               <div className="grid md:grid-cols-2 gap-5">
                 <Field label="禁止事項" hint="複数行可">
                   <textarea {...register("prohibitedItems")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 火気使用禁止／生活音より大きな音出し禁止" />
@@ -1195,9 +1190,7 @@ export default function PropertyEditor({
                 />
               </Field>
               {/* ── 料金の内訳 ── */}
-              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                料金の内訳
-              </div>
+              <SectionHead title="料金の内訳" hint="上の料金に含まれないもの・条件つきのものをここに。" />
               <div className="grid md:grid-cols-2 gap-5">
                 <Field label="最低利用時間 (h)" hint="0 = 設定なし">
                   <input type="number" min={0} {...register("minUsageHours", { valueAsNumber: true })} className={inputClass} placeholder="例: 2" />
@@ -1218,9 +1211,7 @@ export default function PropertyEditor({
             <StepCard n={stepNo("features")} title="特徴・タグ" desc="検索でヒットしやすくなる情報です。任意ですが、埋めるほど見つけてもらえます。">
 
               {/* ── 実績・特徴 ── */}
-              <div className="pt-3 mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
-                実績・特徴
-              </div>
+              <SectionHead title="実績・特徴" hint="「どんな画が撮れるか」が伝わる情報。検索でも効きます。" />
               <Field label="撮影実績" hint="例: MV／映画／ドラマ／CM">
                 <input type="text" {...register("shootingHistory")} className={inputClass} placeholder="例: MV／映画／ドラマ／CM" />
               </Field>
@@ -2147,6 +2138,17 @@ export default function PropertyEditor({
                 </div>
               </div>
 
+              </fieldset>
+            </StepCard>
+          )}
+
+          {step === "splatMeta" && (
+            <StepCard
+              n={stepNo("splatMeta")}
+              title="3DGS 注釈・メタ"
+              desc="スキャン条件の記録と、集計に使う分類です。運営専用。"
+            >
+              <fieldset disabled={!isAdmin} className="contents">
               {/* ── 注釈 ── */}
               <div className="border-t border-line pt-5 mt-6">
                 <Field
@@ -2717,6 +2719,27 @@ function Field({
         <span className="block text-[11px] text-accent mt-1">{error}</span>
       )}
     </label>
+  );
+}
+
+/**
+ * ステップ内のセクション見出し。
+ *
+ * ⚠ 以前は 10px のシアン文字を1行置くだけで、罫線も余白もなかった。
+ *   長いステップ（旧「仕様・設備」は3590px）の中で境目がまったく見えず、
+ *   「どこからどこまでが同じ話か」が分からない状態だった（2026-07-30 の指摘）。
+ *   上罫線＋見出し＋任意の補足で、スクロール中でも切れ目が分かるようにする。
+ */
+function SectionHead({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="pt-6 mt-2 border-t border-line">
+      <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent">
+        {title}
+      </div>
+      {hint && (
+        <p className="text-[11px] text-muted mt-1 leading-[1.7]">{hint}</p>
+      )}
+    </div>
   );
 }
 
