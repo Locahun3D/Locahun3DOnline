@@ -23,6 +23,8 @@ export type ContactPrefill = {
   company?: string;
   propertyName?: string;
   address?: string;
+  /** 公開されたときのURL。申請内容に含めて当事者間で事前に確認する。 */
+  publicUrl?: string;
 };
 
 export default function ContactForm({
@@ -136,6 +138,19 @@ export default function ContactForm({
               </Field>
               <Field en={en} label={en ? "Property name" : "物件名"} required>
                 <input name="propertyName" type="text" defaultValue={prefill?.propertyName ?? ""} placeholder={en ? "e.g. Studio XYZ" : "例: 〇〇スタジオ"} className={inputClass} />
+              </Field>
+              {/* ⚠ 公開URLは申請内容に含める。物件IDがそのままURL（かつR2キー）になり、
+                  公開後の変更は renamePropertyAction 経由でしかできない。申請の時点で
+                  スタジオと運営が同じ文字列を見て確認できるようにしておく。
+                  編集はエディターの「URLを編集」で行うため、ここは読み取り専用。 */}
+              <Field en={en} label={en ? "Public URL" : "公開URL"} note={en ? "edit in the listing editor" : "変更はエディターの「URLを編集」から"}>
+                <input
+                  name="publicUrl"
+                  type="text"
+                  readOnly
+                  defaultValue={prefill?.publicUrl ?? ""}
+                  className={`${inputClass} bg-[#f6f8fa] text-muted cursor-not-allowed`}
+                />
               </Field>
             </div>
             <div className="grid md:grid-cols-2 gap-4">

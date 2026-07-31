@@ -98,6 +98,17 @@ export interface ListingPrefill {
   company: string;
   propertyName: string;
   address: string;
+  /** 公開されたときのURL。申請内容に含めて、運営とスタジオで事前に合意する。 */
+  publicUrl: string;
+}
+
+/**
+ * 公開URL。物件IDがそのままURLになる（= R2キーでもある）ので、
+ * 申請の時点で当事者が同じ文字列を見て確認できるようにする。
+ * ⚠ 公開後にIDを変えるとURLもR2キーも変わる。変更は renamePropertyAction 経由のみ。
+ */
+export function propertyPublicUrl(id: string): string {
+  return `locahun3d.com/properties/${id}`;
 }
 
 /**
@@ -114,6 +125,7 @@ export function resolveListingPrefill(
     company: user!.name ?? "",
     propertyName: property!.title ?? "",
     address: [property!.prefecture, property!.city].filter(Boolean).join(""),
+    publicUrl: propertyPublicUrl(property!.id),
   };
 }
 

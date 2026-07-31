@@ -50,6 +50,8 @@ export const contactRequestSchema = z.object({
   area: z.string().max(120).default(""), // request: 希望エリア
   propertyName: z.string().max(120).default(""), // listing: 物件名
   address: z.string().max(200).default(""), // listing: 所在地
+  // listing(公開申請): 公開URL。フォームの値ではなく propertyId からサーバーで導出する。
+  publicUrl: z.string().max(200).default(""),
   message: z.string().max(4000).default(""), // 全type共通の本文
   attachments: z.array(z.string().max(300)).max(3).default([]), // bug: 添付画像URL
   forwardedTo: z.string().max(120).default(""),

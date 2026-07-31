@@ -9,6 +9,7 @@ import { notifyGeneralContact } from "./email";
 import { requestPublishAction } from "@/app/admin/_actions";
 import { userRepo } from "./users";
 import { createNotification } from "./notifications";
+import { propertyPublicUrl } from "./listing-funnel";
 import {
   HONEYPOT_FIELD,
   RENDERED_AT_FIELD,
@@ -176,6 +177,9 @@ export async function submitContactRequestAction(
       area: d.area,
       propertyName: d.propertyName,
       address: d.address,
+      // ⚠ フォームから来た値は使わない。読み取り専用欄でも改竄できるので、
+      //    所有者検証を通った propertyId から必ずサーバー側で組み立てる。
+      publicUrl: propertyId ? propertyPublicUrl(propertyId) : "",
       message: d.message,
       attachments,
       forwardedTo: emailed ? "operator" : "",

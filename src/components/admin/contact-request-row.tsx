@@ -138,6 +138,21 @@ export default function ContactRequestRow({
                 {c.address}
               </div>
             )}
+            {/* 公開URL＝物件ID。公開後の変更は renamePropertyAction 経由のみなので、
+                申請の時点でここを見て確定させる。 */}
+            {c.publicUrl && (
+              <div>
+                <span className="text-muted mr-2">公開URL</span>
+                <a
+                  href={`https://${c.publicUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mono text-[12px] text-accent hover:underline break-all"
+                >
+                  {c.publicUrl}
+                </a>
+              </div>
+            )}
           </div>
 
           <div className="mb-3">

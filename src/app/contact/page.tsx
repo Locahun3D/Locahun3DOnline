@@ -21,7 +21,7 @@ const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; 
   },
   {
     type: "listing",
-    desc: "スタジオ・ロケ地のオーナー様。物件を3Dスキャンして掲載しませんか。",
+    desc: "スタジオ・ロケ地のオーナー様。物件を3Dスキャンして掲載しませんか。掲載費は期限なしで無料、3Dスキャンの計測費も2026年12月31日まで無料です。",
     descEn: "Studio and location owners — list your space with a 3D scan.",
     go: "掲載のご案内へ",
     goEn: "Go to listing inquiry",
@@ -77,9 +77,9 @@ export default async function ContactHubPage() {
             {en ? CONTACT_TYPE_LABEL_EN.listing : CONTACT_TYPE_LABEL.listing}
           </div>
           <span className="mono text-[9.5px] tracking-[0.16em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
-            {en
-              ? "Listing & scan measurement free during our launch campaign (through Dec 31, 2026)"
-              : "現在、掲載＆スキャン計測無料キャンペーン中（2026年12月31日まで）"}
+            {/* ⚠ 掲載費に期限は無い。長い1行にすると見出しの横で折り返して窮屈になり、
+                「掲載費も期限つき」と誤読される。期限の話は下の説明文へ回す。 */}
+            {en ? "Listing always free" : "掲載費はずっと無料"}
           </span>
         </div>
         <p className="text-[12.5px] text-muted leading-[1.85] mb-3 max-w-[56ch]">
@@ -90,7 +90,9 @@ export default async function ContactHubPage() {
         </div>
       </Link>
 
-      <div className="grid sm:grid-cols-3 gap-4 max-w-[760px] mx-auto">
+      {/* ⚠ 列数は残っている窓口の数に合わせる。「ご相談」を廃止した際に
+          sm:grid-cols-3 のままだったので、2枚が細いまま右1枠が空いていた。 */}
+      <div className="grid sm:grid-cols-2 gap-4 max-w-[760px] mx-auto">
         {CONTACT_TYPES.filter((type) => type !== "listing").map((type) => {
           const card = HUB_CARDS.find((c) => c.type === type)!;
           return (

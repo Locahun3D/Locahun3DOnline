@@ -7,6 +7,7 @@ import {
   canConvertToStudio,
   isStudioIntent,
   defaultOnboardingRole,
+  propertyPublicUrl,
 } from "./listing-funnel";
 
 const studio = { id: "u1", role: "studio", name: "スタジオA" };
@@ -75,6 +76,7 @@ describe("resolveListingPrefill", () => {
       company: "スタジオA",
       propertyName: "白ホリA",
       address: "東京都渋谷区",
+      publicUrl: "locahun3d.com/properties/wh-002",
     });
   });
   it("所有していなければ undefined（他人の物件名を覗けない）", () => {
@@ -88,6 +90,7 @@ describe("resolveListingPrefill", () => {
       company: "",
       propertyName: "",
       address: "",
+      publicUrl: "locahun3d.com/properties/p",
     });
   });
 });
@@ -128,5 +131,23 @@ describe("スタジオ意図の引き継ぎ", () => {
   it("知らない値は無視する（勝手な種別にしない）", () => {
     expect(isStudioIntent("admin")).toBe(false);
     expect(defaultOnboardingRole("production")).toBe("individual");
+  });
+});
+
+describe("公開URLを申請内容に含める", () => {
+  it("物件IDから公開URLを組み立てる", () => {
+    expect(propertyPublicUrl("st-002")).toBe("locahun3d.com/properties/st-002");
+  });
+
+  it("prefill に公開URLが入る", () => {
+    const p = resolveListingPrefill(
+      { id: "u1", role: "studio" },
+      { id: "wh-002", ownerId: "u1", title: "倉庫", prefecture: "神奈川県", city: "横浜市" },
+    );
+    expect(p?.publicUrl).toBe("locahun3d.com/properties/wh-002");
+  });
+
+  it("所有していなければ prefill 自体が返らない（URLも漏れない）", () => {
+    expect(resolveListingPrefill({ id: "u1", role: "studio" }, { id: "wh-002", ownerId: "other" })).toBeUndefined();
   });
 });

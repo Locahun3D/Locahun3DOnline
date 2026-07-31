@@ -49,6 +49,7 @@ import SlugEditor from "./slug-editor";
 import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
+import { publishReadiness } from "@/lib/publish-readiness";
 
 const STEPS = [
   { id: "basic", label: "基本情報" },
@@ -315,6 +316,10 @@ export default function PropertyEditor({
 
   const currentTitle = watch("title");
   const currentStatus = watch("status");
+  // 申請できる状態か（3DGS以外が揃っているか）。編集中の値をそのまま見るので、
+  // 入力すると即座にボタンが有効になる。判定の正本は lib/publish-readiness.ts で、
+  // サーバー側 requestPublishAction も同じ関数を使う。
+  const requestReadiness = publishReadiness(watch());
   const currentIdx = STEPS.findIndex((s) => s.id === step);
   const progress = ((currentIdx + 1) / STEPS.length) * 100;
 
@@ -428,12 +433,31 @@ export default function PropertyEditor({
                      理由: スキャンの希望日と当日の連絡先はこの画面に無く、
                      ボタン1つで申請させると運営が別途メールで聞き直すことになる。
                      また「押しただけで申請したつもり」の取りこぼしも防げる。 */
-                  <Link
-                    href={`/contact/listing?property=${encodeURIComponent(initial.id)}`}
-                    className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-5 py-2.5 hover:bg-accent hover:text-bg transition inline-block"
-                  >
-                    公開を申請
-                  </Link>
+                  // ⚠ 3DGS以外が揃うまで申請させない。未入力のまま申請されると
+                  //    運営は撮影前に不足項目を1件ずつ聞くことになり申請の意味が消える。
+                  //    サーバー側 requestPublishAction も同じ publishReadiness で弾く（二重防御）。
+                  requestReadiness.ready ? (
+                    <Link
+                      href={`/contact/listing?property=${encodeURIComponent(initial.id)}`}
+                      className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-5 py-2.5 hover:bg-accent hover:text-bg transition inline-block"
+                    >
+                      公開を申請
+                    </Link>
+                  ) : (
+                    <div className="text-right">
+                      <span
+                        aria-disabled="true"
+                        title={`未入力: ${requestReadiness.missing.join("、")}`}
+                        className="mono text-[11px] tracking-[0.2em] uppercase border border-line text-muted px-5 py-2.5 inline-block cursor-not-allowed"
+                      >
+                        公開を申請
+                      </span>
+                      <p className="mt-2 text-[11px] text-amber-400 leading-[1.7] max-w-[36ch] ml-auto">
+                        申請には 3DGS 以外の入力が必要です。未入力:{" "}
+                        <strong className="text-ink">{requestReadiness.missing.join("、")}</strong>
+                      </p>
+                    </div>
+                  )
                 )}
               </>
             )}
@@ -500,7 +524,7 @@ export default function PropertyEditor({
                   placeholder="例: Setagaya Cyc Studio｜白ホリ大スパン"
                 />
               </Field>
-              <Field label="物件名（英語・EN版で表示）" error={formState.errors.titleEn?.message}>
+              <Field label="物件名（英語・EN版で表示／未記入でOK）" error={formState.errors.titleEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                 <input
                   type="text"
                   {...register("titleEn")}
@@ -672,7 +696,7 @@ export default function PropertyEditor({
                   <input type="text" {...register("city")} className={inputClass} />
                 </Field>
               </div>
-              <Field label="市区町村（英語・EN版で表示）">
+              <Field label="市区町村（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                 <input
                   type="text"
                   {...register("cityEn")}
@@ -708,7 +732,7 @@ export default function PropertyEditor({
                   placeholder="例: 天井高 5.4m、25m スパンの白ホリ。CM・MV 撮影で実績多数。"
                 />
               </Field>
-              <Field label="サマリー（英語・EN版で表示）" error={formState.errors.summaryEn?.message}>
+              <Field label="サマリー（英語・EN版で表示／未記入でOK）" error={formState.errors.summaryEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                 <textarea
                   rows={3}
                   {...register("summaryEn")}
@@ -866,8 +890,8 @@ export default function PropertyEditor({
                     />
                   </Field>
                   <Field
-                    label="許可・注意事項（英語・EN版で表示）"
-                    hint="警察署名・電話番号などの実務情報はそのまま。空欄なら日本語をそのまま表示。"
+                    label="許可・注意事項（英語・EN版で表示／未記入でOK）"
+                    hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。"
                   >
                     <textarea
                       {...register("permitNotesEn")}
@@ -977,7 +1001,7 @@ export default function PropertyEditor({
                 </Field>
               </div>
               <div className="grid md:grid-cols-2 gap-5">
-                <Field label="住所（英語・EN版で表示）">
+                <Field label="住所（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                   <input
                     type="text"
                     {...register("addressEn")}
@@ -985,7 +1009,7 @@ export default function PropertyEditor({
                     placeholder="e.g. 2-9-2 Ariake, Koto-ku, Tokyo（空欄なら日本語をそのまま表示）"
                   />
                 </Field>
-                <Field label="最寄り駅（英語・EN版で表示）">
+                <Field label="最寄り駅（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                   <input
                     type="text"
                     {...register("nearestStationEn")}
@@ -1295,7 +1319,7 @@ export default function PropertyEditor({
                   placeholder="このスタジオの特徴、ロケーション、利用シーン、注意事項などをご記入ください。"
                 />
               </Field>
-              <Field label="本文（英語・EN版で表示）">
+              <Field label="本文（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                 <textarea
                   rows={10}
                   {...register("descriptionEn")}
@@ -1812,7 +1836,7 @@ export default function PropertyEditor({
                                 placeholder="例: 高精細3DGSデータ。商用利用可。"
                               />
                             </Field>
-                            <Field label="販売説明文（英語・EN版で表示）" hint="">
+                            <Field label="販売説明文（英語・EN版で表示／未記入でOK）" hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
                               <textarea
                                 {...register(`splatItems.${idx}.saleDescriptionEn`)}
                                 className={inputClass}

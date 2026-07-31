@@ -20,6 +20,7 @@ import {
   pageBlockSchema,
   type Property,
 } from "@/lib/schemas";
+import { publishReadiness } from "@/lib/publish-readiness";
 
 async function assertPropertyAccess(propertyId: string) {
   const user = await getCurrentUser();
@@ -346,6 +347,17 @@ export async function requestPublishAction(id: string) {
   }
   if (existing.publishRequestedAt) {
     return { ok: true as const, alreadyRequested: true as const };
+  }
+
+  // ⚠ 3DGS以外が揃っていない申請は受け付けない。中身が空のまま申請されると、
+  //    運営は撮影に行く前に不足項目を1件ずつ問い合わせることになり申請の意味がなくなる。
+  //    判定は publish-readiness に集約（同じ関数をエディターの表示側でも使う＝二重防御）。
+  const readiness = publishReadiness(existing);
+  if (!readiness.ready) {
+    return {
+      ok: false as const,
+      error: `3DGS以外の項目を入力してから申請してください。未入力: ${readiness.missing.join("、")}`,
+    };
   }
 
   await repo.upsert({ ...existing, publishRequestedAt: new Date().toISOString() });
