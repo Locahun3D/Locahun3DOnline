@@ -5,6 +5,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 import { CONTACT_TYPES } from "@/lib/contact-requests";
 import ContactForm from "@/components/contact-form";
 import ListingValue from "@/components/listing-value";
+import SignupRequirements from "@/components/signup-requirements";
 import { getCurrentUser } from "@/lib/dal";
 import { repo } from "@/lib/store";
 import { canCreateListing, canConvertToStudio, resolveListingPrefill, STUDIO_INTENT } from "@/lib/listing-funnel";
@@ -24,12 +25,6 @@ const COPY: Record<(typeof CONTACT_TYPES)[number], { title: string; titleEn: str
     titleEn: "List your space",
     lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。掲載費は期限なしで無料、3Dスキャンの計測費も2026年12月31日まで無料です。",
     ledeEn: "We'll review your space and walk you through listing it (3D scan, shoot, publish). Listing is currently free during our launch campaign (through Dec 31, 2026).",
-  },
-  general: {
-    title: "ご相談",
-    titleEn: "General inquiry",
-    lede: "料金プラン・法人契約・提携のご相談など、なんでもどうぞ。",
-    ledeEn: "Pricing plans, corporate contracts, partnerships — anything at all.",
   },
   license: {
     title: "データ利用・提携のご相談",
@@ -164,11 +159,7 @@ export default async function ContactTypePage({
                 >
                   {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
                 </Link>
-                <p className="mt-2 mono text-[10px] text-muted">
-                  {en
-                    ? "Choose “Filming studio” as the account type, and register with your company's own email address (free webmail such as Gmail cannot be used)."
-                    : "アカウント種別で「撮影スタジオ」を選択し、会社（スタジオ）のメールアドレスでご登録ください（Gmail等のフリーメールはご利用いただけません）。"}
-                </p>
+                <SignupRequirements en={en} />
               </>
             ) : canOwn ? (
               <>
@@ -239,11 +230,7 @@ export default async function ContactTypePage({
                 >
                   {en ? "Sign out and create a studio account →" : "サインアウトしてスタジオアカウントを作成 →"}
                 </Link>
-                <p className="mt-2 mono text-[10px] text-muted">
-                  {en
-                    ? "Accounts are identified by email. Register with your company's own email address (free webmail such as Gmail cannot be used)."
-                    : "アカウントはメールアドレスで識別されます。会社（スタジオ）のメールアドレスでご登録ください（Gmail等のフリーメールはご利用いただけません）。"}
-                </p>
+                <SignupRequirements en={en} needsDifferentAddress />
               </>
             )}
           </div>

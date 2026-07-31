@@ -16,17 +16,18 @@ import { z } from "zod";
  *   読み出しは safeParse なので、enum から外すと**保存済みの問い合わせが
  *   管理画面から黙って消える**（履歴の消失＝復旧不能）。
  */
-export const CONTACT_TYPES = ["request", "listing", "general", "license"] as const;
+export const CONTACT_TYPES = ["request", "listing", "license"] as const;
 /** 受付終了したが、保存済みレコードのために型として残す種別。 */
-export const LEGACY_CONTACT_TYPES = ["bug"] as const;
+export const LEGACY_CONTACT_TYPES = ["bug", "general"] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number] | (typeof LEGACY_CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   // 受付終了（2026-07-29）。ラベルは過去レコードの表示に必要なので残す。
   bug: "バグ報告（受付終了）",
+  // 受付終了（2026-07-30）。内容別の窓口に寄せたため汎用窓口は畳んだ。
+  general: "ご相談（受付終了）",
   request: "ほしい物件追加",
   listing: "掲載依頼",
-  general: "ご相談",
   // データの再配布・AI学習利用・API/データ連携などの個別相談窓口。禁止ではなく
   // 「案件による」ため、既存の一般問い合わせ(general)とは分けて受け付ける
   // （2026-07-23新設）。

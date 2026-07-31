@@ -26,13 +26,7 @@ const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; 
     go: "掲載のご案内へ",
     goEn: "Go to listing inquiry",
   },
-  {
-    type: "general",
-    desc: "料金・法人契約・提携のご相談など、分類に迷ったらこちらへ。",
-    descEn: "Pricing, corporate plans, partnerships — anything else.",
-    go: "相談フォームへ",
-    goEn: "Go to consultation form",
-  },
+  // 汎用の「ご相談」窓口は 2026-07-30 に廃止（内容別の窓口へ寄せた）。
   {
     type: "license",
     desc: "データの再配布・AI学習利用・API/データ連携のご相談はこちら。案件ごとに条件が異なるため、まずはお気軽に。",
@@ -306,6 +300,5 @@ export default async function ContactHubPage() {
 const CONTACT_TYPE_LABEL_EN: Record<(typeof CONTACT_TYPES)[number], string> = {
   request: "Request a location",
   listing: "List your space",
-  general: "General inquiry",
   license: "Data use & partnerships",
 };

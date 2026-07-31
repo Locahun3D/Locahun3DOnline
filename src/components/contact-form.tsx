@@ -158,17 +158,7 @@ export default function ContactForm({
           </>
         )}
 
-        {type === "general" && (
-          <Field en={en} label={en ? "Your message" : "ご相談内容"} required>
-            <textarea
-              name="message"
-              rows={5}
-              required
-              placeholder={en ? "Pricing plans, corporate contracts, partnerships — anything is welcome." : "料金プラン・法人契約・提携のご相談など、なんでもどうぞ。"}
-              className={`${inputClass} leading-relaxed resize-y`}
-            />
-          </Field>
-        )}
+        {/* 「ご相談」窓口は廃止したため専用欄も撤去（2026-07-30）。 */}
 
         {type === "license" && (
           <>

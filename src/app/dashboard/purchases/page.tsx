@@ -82,7 +82,7 @@ export default async function UserPurchasesPage() {
               data purchase terms
             </Link>{" "}
             or{" "}
-            <Link href={lh("/contact/general")} target="_blank" className="underline hover:text-accent transition">
+            <Link href={lh("/contact/license")} target="_blank" className="underline hover:text-accent transition">
               contact us
             </Link>
             .
@@ -94,7 +94,7 @@ export default async function UserPurchasesPage() {
               データ購入規約
             </Link>
             、またはお気軽に{" "}
-            <Link href={lh("/contact/general")} target="_blank" className="underline hover:text-accent transition">
+            <Link href={lh("/contact/license")} target="_blank" className="underline hover:text-accent transition">
               お問い合わせ
             </Link>
             ください。
