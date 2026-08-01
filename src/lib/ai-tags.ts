@@ -40,32 +40,68 @@ async function getApiKey(): Promise<string | null> {
 }
 
 const CATEGORY_TAG: Record<string, string[]> = {
-  studio: ["スタジオ", "ホリゾント"],
-  warehouse: ["倉庫", "インダストリアル"],
-  house: ["住宅", "生活感"],
-  outdoor: ["屋外", "ロケーション"],
-  school: ["学校", "教室", "体育館"],
-  office: ["オフィス", "会議室"],
+  studio: ["スタジオ", "ホリゾント", "撮影スタジオ", "貸しスタジオ"],
+  warehouse: ["倉庫", "インダストリアル", "廃墟風", "無機質"],
+  house: ["住宅", "生活感", "民家", "一軒家"],
+  outdoor: ["屋外", "ロケーション", "野外撮影"],
+  school: ["学校", "教室", "体育館", "廃校", "学園もの"],
+  office: ["オフィス", "会議室", "ビジネスシーン"],
   other: [],
 };
 
-/** ネット検索なしで、入力フィールドから妥当なタグを導出するフォールバック。 */
+/**
+ * ネット検索なしで、入力フィールドから妥当なタグを導出するフォールバック。
+ * ⚠ 以前は12個で打ち切っていたが、「タグが少ない」という指摘（2026-08-01）を受け
+ *   観点を増やして候補の母数自体を増やした。ヒットしない観点は自然に out に
+ *   入らないので、フィールドが薄い物件では結果的に少なくなるのは許容する
+ *   （無い情報から水増しはしない）。
+ */
 function heuristicTags(input: TagSuggestInput): string[] {
   const out = new Set<string>();
   for (const t of CATEGORY_TAG[input.category] ?? []) out.add(t);
   if (input.studioType) out.add(input.studioType);
   if (input.prefecture) out.add(input.prefecture);
-  if (input.ceilingHeightM >= 5) out.add("高天井");
-  if (input.floorAreaSqm >= 300) out.add("大空間");
+  if (input.city) out.add(input.city);
+  if (input.area) out.add(input.area);
+
+  if (input.ceilingHeightM >= 8) out.add("超高天井");
+  else if (input.ceilingHeightM >= 5) out.add("高天井");
+  else if (input.ceilingHeightM > 0 && input.ceilingHeightM < 2.5) out.add("低天井");
+
+  if (input.floorAreaSqm >= 500) out.add("超大空間");
+  else if (input.floorAreaSqm >= 300) out.add("大空間");
   else if (input.floorAreaSqm > 0 && input.floorAreaSqm < 80) out.add("小規模");
-  if (input.hasNaturalLight) out.add("自然光");
-  if (input.parking) out.add("駐車場");
-  if (input.loadingDock) out.add("大型搬入可");
+  else if (input.floorAreaSqm > 0 && input.floorAreaSqm < 150) out.add("中規模");
+
+  if (input.hasNaturalLight) {
+    out.add("自然光");
+    out.add("窓あり");
+  }
+  if (input.parking) {
+    out.add("駐車場");
+    out.add("車あり撮影");
+  }
+  if (input.loadingDock) {
+    out.add("大型搬入可");
+    out.add("トラック搬入");
+  }
   if (/200\s*V/i.test(input.powerVoltage)) out.add("200V電源");
-  if (input.capacity >= 50) out.add("大人数収容");
+  if (/三相/.test(input.powerVoltage)) out.add("三相電源");
+  if (/発電機/.test(input.powerVoltage)) out.add("発電機対応");
+
+  if (input.capacity >= 100) out.add("大人数収容");
+  else if (input.capacity >= 50) out.add("中人数収容");
+  else if (input.capacity > 0 && input.capacity < 10) out.add("少人数向け");
+
+  // 撮影用途の掛け合わせ観点（複数の条件が揃うほど「〜向け」候補が増える）。
+  if (input.hasNaturalLight && input.floorAreaSqm >= 200) out.add("物撮り向け");
+  if (input.ceilingHeightM >= 5 && input.floorAreaSqm >= 300) out.add("MV撮影向け");
+  if (input.parking && input.loadingDock) out.add("大規模ロケ隊向け");
+  if (input.category === "warehouse" && input.ceilingHeightM >= 5) out.add("倉庫アクション向け");
+
   // 既存タグと重複を除外
   const existing = new Set(input.existingTags.map((t) => t.trim()));
-  return [...out].filter((t) => t && !existing.has(t)).slice(0, 12);
+  return [...out].filter((t) => t && !existing.has(t)).slice(0, 30);
 }
 
 interface AnthropicBlock {
@@ -92,8 +128,10 @@ function buildPrompt(input: TagSuggestInput): string {
     "   設備・コンセプト・撮影実績・雰囲気を読み取る。",
     "② 物件名＋所在地で web_search（Google検索相当）し、紹介記事や口コミも参照する。",
     "③ ①②の内容から、撮影・ロケハンで検索されやすい日本語タグ（短い名詞・名詞句）を提案。",
-    "観点: 建物種別 / 質感・雰囲気 / 設備 / ロケーション特性 / 撮影ジャンル適性。",
-    "6〜12個。既存タグと重複しないもの。固有名詞や住所は含めない。",
+    "観点: 建物種別 / 質感・雰囲気 / 設備 / ロケーション特性 / 撮影ジャンル適性 / ",
+    "時代感（昭和レトロ等）/ 色調（白ホリ・木質等）/ 向いている作品ジャンル（MV・ドラマ・CM等）。",
+    "できるだけ多くの観点を網羅し、20〜30個出してください（無理に水増しせず、",
+    "根拠が薄い観点は削って構いません）。既存タグと重複しないもの。固有名詞や住所は含めない。",
     "",
     `■ 物件名: ${input.title || "（不明）"}`,
     `■ カテゴリ: ${input.category}${input.studioType ? ` / ${input.studioType}` : ""}`,
@@ -186,7 +224,7 @@ export async function suggestTags(
       if (badRequest) continue;
 
       const tags = data
-        ? parseTags(data).filter((t) => !existing.has(t)).slice(0, 12)
+        ? parseTags(data).filter((t) => !existing.has(t)).slice(0, 30)
         : [];
       if (tags.length) return { tags, source: "ai" };
     } catch {

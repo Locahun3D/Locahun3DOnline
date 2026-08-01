@@ -50,3 +50,44 @@ export async function geocodeAddress(
   }
   return null;
 }
+
+/**
+ * 座標 → 日本の住所（逆ジオコーディング）。geocodeAddress の逆方向。
+ * 国土地理院の逆ジオコーディングAPI（番地・大字まで強い）→ Nominatim reverse の順。
+ * エディターの「座標から住所を自動取得」ボタンから使う。
+ */
+export async function reverseGeocodeAddress(
+  lat: number,
+  lng: number,
+): Promise<string | null> {
+  // 都道府県・市区町村名までは Nominatim reverse でしか一括取得できない
+  // （国土地理院の逆ジオコーディングは大字以下しか返さず、都道府県は
+  //  muniCd から別テーブルを引く必要があるため、ここでは Nominatim を主に使う）。
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&accept-language=ja`,
+      { headers: { "user-agent": GEO_UA, "accept-language": "ja" } },
+    );
+    if (r.ok) {
+      const j = (await r.json()) as {
+        address?: Record<string, string>;
+        display_name?: string;
+      };
+      const a = j?.address;
+      if (a) {
+        const pref = a.state ?? "";
+        const city = a.city ?? a.town ?? a.village ?? a.county ?? "";
+        const ward = a.city_district ?? a.suburb ?? "";
+        const rest = [a.neighbourhood, a.quarter, a.block ?? "", a.house_number]
+          .filter(Boolean)
+          .join("");
+        const line = [pref, city, ward, rest].filter(Boolean).join("");
+        if (line) return line;
+      }
+      if (j?.display_name) return j.display_name;
+    }
+  } catch {
+    /* fall through */
+  }
+  return null;
+}

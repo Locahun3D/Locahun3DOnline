@@ -400,7 +400,9 @@ export const propertySchema = z.object({
   /** 周辺環境（例: 静かな住宅街／湾岸の再開発エリア）。 */
   surroundings: z.string().max(300).default(""),
 
-  tags: z.array(z.string().min(1).max(20)).max(20).default([]),
+  // ⚠ 上限は検索キーワードとして使い切れる余地を残すため 60 に設定
+  //   （旧20は AIタグ自動生成が1回で12個返すだけで手入力の余地がほぼ無かった）。
+  tags: z.array(z.string().min(1).max(20)).max(60).default([]),
 
   // 2.5 Contact — property-level contact info (overrides account-level)
   contactWebsite: z.string().max(300).default(""),

@@ -108,6 +108,8 @@ export default function PropertyEditor({
   const [aiLocationLoading, setAiLocationLoading] = useState(false);
   const [aiLocationError, setAiLocationError] = useState<string | null>(null);
   const [aiTagsNote, setAiTagsNote] = useState<string | null>(null);
+  const [addrLoading, setAddrLoading] = useState(false);
+  const [addrError, setAddrError] = useState<string | null>(null);
   // タイムスタンプは new Date(...).getHours() 等でローカル(JST)整形するが、
   // SSR は Cloudflare Workers 上で UTC 実行されるため、サーバは UTC・クライアントは
   // JST で異なるテキストを描画し React #418（hydration text mismatch）を起こす。
@@ -525,19 +527,17 @@ export default function PropertyEditor({
                       公開を申請
                     </Link>
                   ) : (
-                    <div className="text-right">
-                      <span
-                        aria-disabled="true"
-                        title={`未入力: ${requestReadiness.missing.join("、")}`}
-                        className="mono text-[11px] tracking-[0.2em] uppercase border border-line text-muted px-5 py-2.5 inline-block cursor-not-allowed"
-                      >
-                        公開を申請
-                      </span>
-                      <p className="mt-2 text-[11px] text-amber-400 leading-[1.7] max-w-[36ch] ml-auto">
-                        申請には 3DGS 以外の入力が必要です。未入力:{" "}
-                        <strong className="text-ink">{requestReadiness.missing.join("、")}</strong>
-                      </p>
-                    </div>
+                    // ⚠ 不足項目の一覧は左サイドバーの「申請に必要な項目」に常時出ている
+                    //   ので、ここで同じ文をもう一段出すと2重表示になり、可変長のテキストが
+                    //   sticky ヘッダーの下（公開URL行）に重なって読めなくなる（実機で確認）。
+                    //   ここではボタンを disabled にして title 属性で要約だけ持たせる。
+                    <span
+                      aria-disabled="true"
+                      title={`未入力: ${requestReadiness.missing.join("、")}`}
+                      className="mono text-[11px] tracking-[0.2em] uppercase border border-line text-muted px-5 py-2.5 inline-block cursor-not-allowed"
+                    >
+                      公開を申請
+                    </span>
                   )
                 )}
               </>
@@ -1008,12 +1008,53 @@ export default function PropertyEditor({
               {/* 住所・最寄り駅（料金形態に関わらず入力可。詳細ページ SPECS に表示） */}
               <div className="grid md:grid-cols-2 gap-5">
                 <Field label="住所" hint="番地まで（任意）。詳細ページの SPECS に表示されます。">
-                  <input
-                    type="text"
-                    {...register("address")}
-                    className={inputClass}
-                    placeholder="例: 東京都江東区有明2-9-2"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      {...register("address")}
+                      className={`${inputClass} flex-1`}
+                      placeholder="例: 東京都江東区有明2-9-2"
+                    />
+                    {/* ⚠ 「基本情報」ステップの座標入力(coords)が既に埋まっている前提。
+                        座標→住所は Nominatim reverse（@/lib/geocode）で取得するので、
+                        座標が未入力だとボタンを出しても失敗するだけ→非表示にする。 */}
+                    {watch("coords") && (
+                      <button
+                        type="button"
+                        disabled={addrLoading}
+                        onClick={async () => {
+                          const c = getValues("coords");
+                          if (!c) return;
+                          setAddrLoading(true);
+                          setAddrError(null);
+                          try {
+                            const res = await fetch("/api/admin/reverse-geocode", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ lat: c.lat, lng: c.lng }),
+                            });
+                            const data = (await res.json()) as { address?: string; error?: string };
+                            if (!res.ok || !data.address) {
+                              setAddrError(data.error || "住所を取得できませんでした");
+                              return;
+                            }
+                            setValue("address", data.address, { shouldDirty: true, shouldValidate: true });
+                            triggerAutoSave();
+                          } catch {
+                            setAddrError("通信エラーが発生しました");
+                          } finally {
+                            setAddrLoading(false);
+                          }
+                        }}
+                        className="shrink-0 mono text-[10px] tracking-[0.18em] uppercase border border-accent/50 text-accent px-3 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait whitespace-nowrap"
+                      >
+                        {addrLoading ? "取得中…" : "座標から取得"}
+                      </button>
+                    )}
+                  </div>
+                  {addrError && (
+                    <div className="mt-1.5 text-[11px] text-red-400">{addrError}</div>
+                  )}
                 </Field>
                 <Field label="最寄り駅" hint="路線・駅名・徒歩分など（任意）。">
                   <input
@@ -1069,20 +1110,28 @@ export default function PropertyEditor({
               <div className="grid md:grid-cols-3 gap-5">
                 <Field
                   label="利用可能な時間帯"
-                  hint="開始〜終了を指定（例: 10:30〜19:00）。上の「利用可能時間（補足）」の自由記述とは別に、検索での絞り込みに使われます。"
+                  hint="開始〜終了を指定（例: 10時〜19時）。上の「利用可能時間（補足）」の自由記述とは別に、検索での絞り込みに使われます。分単位の予約は無いため時間単位のみです。"
                 >
                   <div className="flex items-center gap-2.5 pt-1">
-                    <input
-                      type="time"
+                    <select
                       {...register("customHoursStart")}
                       className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
-                    />
+                    >
+                      <option value="">--</option>
+                      {HOUR_OPTIONS.map((h) => (
+                        <option key={h} value={`${h}:00`}>{h}時</option>
+                      ))}
+                    </select>
                     <span className="text-[12.5px] text-ink/50">〜</span>
-                    <input
-                      type="time"
+                    <select
                       {...register("customHoursEnd")}
                       className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
-                    />
+                    >
+                      <option value="">--</option>
+                      {HOUR_OPTIONS.map((h) => (
+                        <option key={h} value={`${h}:00`}>{h}時</option>
+                      ))}
+                    </select>
                     {(watch("customHoursStart") || watch("customHoursEnd")) && (
                       <button
                         type="button"
@@ -2352,6 +2401,10 @@ export default function PropertyEditor({
 
 /** 撮影機材のプルダウン選択肢。自由入力は無し（固定2択）。 */
 const CAPTURE_DEVICE_OPTIONS = ["Portalcam", "A7III"] as const;
+/** 利用可能な時間帯の選択肢。分単位の予約は無いので時間のみ。
+    ⚠ schemas.ts の customHoursStart/End は "([01]\d|2[0-3]):[0-5]\d" で 00〜23時までしか
+      許可していない（24:00 は弾かれる）ので、選択肢もそれに合わせて 00〜23 に揃える。 */
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 
 const inputClass =
   "w-full bg-white text-[#111] border border-neutral-300 px-3 py-2.5 text-[15px] font-medium focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/25 transition mono placeholder:text-[#9aa0a6] placeholder:font-normal";
