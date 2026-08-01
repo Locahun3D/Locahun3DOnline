@@ -92,6 +92,10 @@ export default function PropertyEditor({
   // 英語(EN)欄は既定で畳む。日本語欄の直後に毎回挟まると入力のリズムが切れるうえ、
   // 実際は空欄でよい（公開作業時に運営がAI翻訳して埋める）。必要な人だけ開く。
   const [showEn, setShowEn] = useState(false);
+  // 3DGSデータ行の開閉。行IDごとに保持し、既定は畳んだ状態。
+  // ⚠ ファイル1件ごとに販売設定・無料期間・ライセンスまで並ぶので、
+  //   全部開くと3件で5000pxを超える（実測 41欄/5399px）。
+  const [splatOpen, setSplatOpen] = useState<Record<string, boolean>>({});
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
   const [publishing, startPublish] = useTransition();
@@ -1714,7 +1718,13 @@ export default function PropertyEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={() => splatItemsArray.append({ id: crypto.randomUUID(), label: "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] })}
+                    onClick={() => {
+                      splatItemsArray.append({ id: crypto.randomUUID(), label: "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] });
+                      // 追加した行はすぐ入力するので開いておく。
+                      const added = getValues("splatItems");
+                      const last = added[added.length - 1];
+                      if (last) setSplatOpen((m) => ({ ...m, [last.id]: true }));
+                    }}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -1760,7 +1770,28 @@ export default function PropertyEditor({
                         >
                           削除
                         </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSplatOpen((m) => ({ ...m, [field.id]: !m[field.id] }))
+                          }
+                          aria-expanded={!!splatOpen[field.id]}
+                          className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-1.5 text-muted hover:text-accent hover:border-accent transition shrink-0"
+                        >
+                          {splatOpen[field.id] ? "閉じる" : "開く"}
+                        </button>
                       </div>
+
+                      {/* ⚠ 本体は既定で畳む。ファイル数に比例して伸び、3件で5000pxを超える。
+                          開いている行だけ詳細を出す（開閉状態は splatOpen で行ID別に保持）。 */}
+                      {!splatOpen[field.id] ? (
+                        <div className="mono text-[10px] text-muted flex items-center gap-3 flex-wrap">
+                          <span>{watch(`splatItems.${idx}.splatUrl`) ? "● データあり" : "○ 未アップロード"}</span>
+                          {watch(`splatItems.${idx}.forSale`) && <span className="text-accent">販売中</span>}
+                          <span className="opacity-60">{watch(`splatItems.${idx}.sizeMb`) ? `${watch(`splatItems.${idx}.sizeMb`)} MB` : ""}</span>
+                        </div>
+                      ) : (
+                      <>
 
                       <div className="mono text-[9px] tracking-[0.2em] uppercase text-accent/60">
                         ① ビューアー用 3DGS ファイル
@@ -2133,6 +2164,8 @@ export default function PropertyEditor({
                           </select>
                         </Field>
                       </div>
+                      </>
+                      )}
                     </div>
                   ))}
                 </div>
