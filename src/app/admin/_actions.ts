@@ -557,7 +557,9 @@ export async function renamePropertyAction(
   }
 
   // 1) 物件レコードを新IDで作成 → 旧IDを削除（先に作成してデータ消失を防ぐ）。
-  await repo.upsert({ ...existing, id: newId });
+  // ⚠ URLを能動的に変更した時点で「確認した」とみなし urlConfirmedAt を立てる
+  //   （公開申請の必須項目。publishablePropertySchema参照）。
+  await repo.upsert({ ...existing, id: newId, urlConfirmedAt: new Date().toISOString() });
   await repo.remove(oldId);
 
   // 2) 参照を移行（公開前の下書きなら大半は空。公開済みでも安全に付け替える）。
@@ -590,6 +592,25 @@ export async function renamePropertyAction(
   revalidatePath(`/properties/${oldId}`);
   revalidatePath(`/properties/${newId}`);
   redirect(`/admin/properties/${newId}/edit`);
+}
+
+/**
+ * URLを変更せず「このURLでよい」と確認したことを記録する。
+ * renamePropertyAction と同じ urlConfirmedAt を、リネームせずに立てるための
+ * 軽量版（自動生成IDのままで問題ない物件向け）。
+ * ⚠ ここではリダイレクトしない（呼び出し元 SlugEditor は編集フォームの中に
+ *   埋め込まれており、ページ遷移すると入力中の他フィールドが失われる）。
+ *   戻り値の確認時刻を使って、呼び出し側が RHF の urlConfirmedAt を
+ *   その場で更新する（サーバー側は直接 upsert 済みなので反映は保証される）。
+ */
+export async function confirmPropertySlugAction(id: string): Promise<{ ok: boolean; confirmedAt?: string }> {
+  await assertPropertyAccess(id);
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false };
+  const confirmedAt = new Date().toISOString();
+  await repo.upsert({ ...existing, urlConfirmedAt: confirmedAt });
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return { ok: true, confirmedAt };
 }
 
 /** Save the studio page builder blocks for a property. */

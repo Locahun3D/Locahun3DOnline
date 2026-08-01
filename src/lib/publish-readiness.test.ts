@@ -18,6 +18,7 @@ const filled = (over: Record<string, unknown> = {}) =>
     summary: "白ホリのある大スパンスタジオです。",
     hourlyPrice: 15000,
     cover: { src: "/uploads/st-001/cover.jpg", alt: "スタジオ全景", width: 1600, height: 1000 },
+    urlConfirmedAt: "2026-08-01T00:00:00.000Z",
     ...over,
   });
 
@@ -51,6 +52,12 @@ describe("publishReadiness — 3DGS以外が揃っているか", () => {
   it("料金は許可制の場所では不要（撮影に道路使用許可が要る場所など）", () => {
     expect(publishReadiness(filled({ hourlyPrice: 0, permitRequired: true })).ready).toBe(true);
     expect(publishReadiness(filled({ hourlyPrice: 0, permitRequired: false })).missing).toContain("時間料金");
+  });
+
+  it("公開URLを確認していないと申請できない（2026-08-01方針）", () => {
+    const r = publishReadiness(filled({ urlConfirmedAt: "" }));
+    expect(r.ready).toBe(false);
+    expect(r.missing).toContain("公開URLの確認");
   });
 
   it("壊れた入力でも例外にせず未準備として返す", () => {

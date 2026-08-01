@@ -92,6 +92,16 @@ export default async function PricingPage({
         </div>
       )}
 
+      {checkout === "studio_not_allowed" && (
+        <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
+          <p>
+            {en
+              ? "Studio accounts are for managing your own listing and aren't eligible for viewing subscriptions or token purchases."
+              : "撮影スタジオアカウントは自分の物件を管理するための専用アカウントです。閲覧サブスクやトークン購入の対象ではありません。"}
+          </p>
+        </div>
+      )}
+
       <header className="text-center mb-12">
         <h1 className="serif text-[clamp(1.55rem,4.5vw,3.6rem)] font-bold leading-[1.3] max-w-[26ch] mx-auto">
           {en ? (

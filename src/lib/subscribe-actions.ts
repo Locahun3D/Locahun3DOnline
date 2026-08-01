@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireOnboarded } from "./dal";
 import { userRepo } from "./users";
-import { ACCOUNT_PLANS, type AccountPlan } from "./account-schema";
+import { ACCOUNT_PLANS, type AccountPlan, isStudioPurchaseRestricted } from "./account-schema";
 import { applyPlan } from "./subscription";
 import { notifySubscription } from "./email";
 import {
@@ -44,6 +44,12 @@ export async function subscribeAction(
 ): Promise<void> {
   const user = await requireOnboarded();
   if (!(ACCOUNT_PLANS as readonly string[]).includes(plan)) redirect("/pricing");
+
+  // 撮影スタジオは自分の物件管理専用アカウント。閲覧サブスクの対象外
+  // （2026-08-01 の方針。トークン購入・他物件のデータ購入も同様に禁止）。
+  if (isStudioPurchaseRestricted(user.role)) {
+    redirect("/pricing?checkout=studio_not_allowed");
+  }
 
   // Team の「NDA締結で全て閲覧可」は canViewBackyard/canViewNdaOnly
   // (account-schema.ts) が role==="production" を要求する。ここで弾かないと、
@@ -110,6 +116,7 @@ export async function subscribeAction(
 /** Stripe Customer Portal を開く（支払い方法変更・解約）。 */
 export async function openBillingPortalAction(): Promise<void> {
   const user = await requireOnboarded();
+  if (isStudioPurchaseRestricted(user.role)) redirect("/pricing");
   if (!stripeEnabled()) redirect("/pricing");
   const u = await userRepo.get(user.id);
   if (!u?.stripeCustomerId) redirect("/pricing");

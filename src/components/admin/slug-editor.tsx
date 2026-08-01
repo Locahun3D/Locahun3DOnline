@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { renamePropertyAction, type RenameState } from "@/app/admin/_actions";
+import { renamePropertyAction, confirmPropertySlugAction, type RenameState } from "@/app/admin/_actions";
 import PreviewShare from "./preview-share";
 import EmbedShare from "./embed-share";
 
@@ -15,6 +15,8 @@ export default function SlugEditor({
   status,
   embedded = false,
   isAdmin = false,
+  urlConfirmedAt = "",
+  onConfirmed,
 }: {
   id: string;
   status: string;
@@ -28,9 +30,14 @@ export default function SlugEditor({
    * サーバーアクション内の redirect は 303 になりページ全体を持っていく。
    */
   isAdmin?: boolean;
+  /** 公開URLを確認・変更済みか（publishablePropertySchemaの必須項目）。 */
+  urlConfirmedAt?: string;
+  /** 「このURLでよい」確認後、親フォームのRHF状態を即時更新するコールバック。 */
+  onConfirmed?: (confirmedAt: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(id);
+  const [confirming, startConfirm] = useTransition();
   const [state, action, pending] = useActionState<RenameState, FormData>(
     renamePropertyAction,
     undefined,
@@ -65,6 +72,30 @@ export default function SlugEditor({
               locahun3d.com/properties/
               <span className="text-accent font-bold">{id}</span>
             </code>
+            {/* ⚠ 公開申請には「公開URLを確認したこと」が必須（publishablePropertySchema
+                の urlConfirmedAt）。URLを変更すれば renamePropertyAction が自動で
+                立てるが、自動生成IDのままでよい場合に確認する手段が無かった。
+                このボタンは confirmPropertySlugAction を直接呼び、リダイレクトせず
+                onConfirmed で親フォームのRHF状態をその場で更新する。 */}
+            {urlConfirmedAt ? (
+              <span className="mono text-[10px] tracking-[0.12em] uppercase text-green-700 shrink-0">
+                ✓ 確認済み
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={confirming}
+                onClick={() => {
+                  startConfirm(async () => {
+                    const res = await confirmPropertySlugAction(id);
+                    if (res.ok && res.confirmedAt) onConfirmed?.(res.confirmedAt);
+                  });
+                }}
+                className="mono text-[10px] tracking-[0.12em] uppercase text-accent border border-accent/50 px-2.5 py-1 rounded-md hover:bg-accent hover:text-white transition disabled:opacity-50 shrink-0"
+              >
+                {confirming ? "確認中…" : "このURLでよい"}
+              </button>
+            )}
             {/* 仮URL発行（限定プレビュー共有URL）。公開URLのすぐ隣に置くことで、
                 「まだ下書きだが先方に見せたい」場面で見つけやすくする。 */}
             <div className="ml-auto flex items-center gap-2">

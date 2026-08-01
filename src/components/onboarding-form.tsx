@@ -118,18 +118,22 @@ export default function OnboardingForm({
 
       {/* 配信同意: 特定電子メール法のオプトイン原則により既定は必ずOFF。
           文言はベネフィット先行(何が・どう止められるか)で具体化し、
-          枠をアクセント色にして視認性を上げる(同意率2%改善施策)。 */}
-      <label className="block border border-[#5ec8e8]/40 bg-[#161e22] p-3 cursor-pointer">
+          枠をアクセント色にして視認性を上げる(同意率2%改善施策)。
+          ⚠ 以前はここだけ #161e22 の濃紺べた塗りで、白ベースのオンボーディング
+          画面の中で「ここだけ黒い」浮いた見た目になっていた（2026-08-01指摘）。
+          ページの他パーツと同じ bg-bg/border-line/text-ink トークンに揃え、
+          強調はアクセント色の枠線と薄い塗りだけで表現する。 */}
+      <label className="block border border-accent/40 bg-accent/[0.06] p-3 cursor-pointer">
         <span className="flex items-center gap-2 mb-1">
-          <span className="mono text-[10px] tracking-[0.22em] uppercase text-[#5ec8e8]">
+          <span className="mono text-[10px] tracking-[0.22em] uppercase text-accent">
             {en ? "Early access news" : "新着ロケ地の先行案内"}
           </span>
-          <span className="mono text-[9px] tracking-[0.14em] uppercase border border-[#5ec8e8]/50 text-[#5ec8e8] px-1.5 py-0.5">
+          <span className="mono text-[9px] tracking-[0.14em] uppercase border border-accent/50 text-accent px-1.5 py-0.5">
             {en ? "Recommended" : "おすすめ"}
           </span>
         </span>
         <span className="flex gap-3 items-start text-[12px] leading-[1.7]">
-          <input type="checkbox" name="marketingConsent" className="mt-0.5 accent-[#5ec8e8]" />
+          <input type="checkbox" name="marketingConsent" className="mt-0.5 accent-accent" />
           <span className="text-muted">
             {en
               ? "Get an email when new 3DGS locations go live, plus campaign news (optional). Unsubscribe anytime with one click."

@@ -27,6 +27,7 @@ const FIELD_LABEL: Record<string, string> = {
   "cover.alt": "カバー画像の代替テキスト",
   hourlyPrice: "時間料金",
   category: "カテゴリ",
+  urlConfirmedAt: "公開URLの確認",
 };
 
 export interface PublishReadiness {

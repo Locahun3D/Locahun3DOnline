@@ -101,6 +101,16 @@ export function requiresNda(role: AccountRole): boolean {
   return role === "production";
 }
 
+/**
+ * 撮影スタジオ(studio)は「自分の物件を管理する」専用アカウント。
+ * サブスク契約・トークン購入・他物件の3Dデータ購入・トークン消費視聴は
+ * 対象外（2026-08-01 の方針）。掲載者としての機能（掲載ページ作成・
+ * admin側プレビューでの自分の物件の確認）は引き続き使える。
+ */
+export function isStudioPurchaseRestricted(role: AccountRole | string | undefined | null): boolean {
+  return role === "studio";
+}
+
 export const userSchema = z.object({
   /** Clerk userId (e.g. "user_2ab..."). */
   id: z.string().min(1),

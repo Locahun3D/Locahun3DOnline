@@ -262,6 +262,10 @@ export const PAGE_BLOCK_LABEL: Record<PageBlockKind, string> = {
 export const propertySchema = z.object({
   id: z.string().min(1),
   ownerId: z.string().default(""),
+  /** 公開URL(=id)を確認・変更した日時(ISO)。空なら未確認。
+      renamePropertyAction（変更）と confirmPropertySlugAction（このURLでよい）
+      の両方でセットされる。公開申請の必須項目（publishablePropertySchema）。 */
+  urlConfirmedAt: z.string().default(""),
   status: z.enum(PROPERTY_STATUSES).default("draft"),
   visibility: z.enum(PROPERTY_VISIBILITIES).default("public"),
 
@@ -588,6 +592,7 @@ export function isNewProperty(
  * All "required for publish" fields are enforced here, not in the draft schema.
  */
 export const publishablePropertySchema = propertySchema.extend({
+  urlConfirmedAt: z.string().min(1, "公開URLを確認してください"),
   title: z
     .string()
     .min(2, "タイトルは 2 文字以上で入力してください")

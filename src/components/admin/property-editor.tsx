@@ -547,7 +547,16 @@ export default function PropertyEditor({
 
           {/* 公開URL（スラッグ）— 独立パネルではなくこの枠の2行目に統合 */}
           <div className="pt-3 border-t border-line">
-            <SlugEditor id={initial.id} status={currentStatus} embedded isAdmin={isAdmin} />
+            <SlugEditor
+              id={initial.id}
+              status={currentStatus}
+              embedded
+              isAdmin={isAdmin}
+              urlConfirmedAt={watch("urlConfirmedAt")}
+              onConfirmed={(confirmedAt) =>
+                setValue("urlConfirmedAt", confirmedAt, { shouldDirty: true, shouldValidate: true })
+              }
+            />
           </div>
 
           {/* 物件⇄アカウントの紐付け（社内運用・admin専用）。studio側には

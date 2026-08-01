@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { repo as propertyRepo } from "@/lib/store";
-import { canViewBackyard, canViewNdaOnly, totalTokens } from "@/lib/account-schema";
+import { canViewBackyard, canViewNdaOnly, totalTokens, isStudioPurchaseRestricted } from "@/lib/account-schema";
+import { ownsProperty } from "@/lib/listing-funnel";
 import { userRepo } from "@/lib/users";
 import {
   viewUnlockRepo,
@@ -155,6 +156,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "NDA限定データです" }, { status: 403 });
     }
 
+    // 撮影スタジオは自分の物件管理専用アカウント。他物件のウォークスルー視聴
+    // （トークン消費）は対象外。自分の物件は下の isOwnStudioProperty で
+    // admin と同じ「無料・記録あり」扱いにする（掲載内容の確認に使うため）。
+    const isOwnStudioProperty =
+      isStudioPurchaseRestricted(user.role) &&
+      ownsProperty(user, { id: matchedProperty.id, ownerId: matchedProperty.ownerId });
+    if (isStudioPurchaseRestricted(user.role) && !isOwnStudioProperty) {
+      return NextResponse.json(
+        { error: "撮影スタジオアカウントは他物件の視聴対象外です" },
+        { status: 403 },
+      );
+    }
+
     /* ── トークン消費ゲート ─────────────────────────────────────────
      * 全プラン共通で「シーン(splatItem)単位」で tokenCost トークンを消費して
      * 視聴をアンロックする（フリープランも含む — 月次付与分等で保有していれば
@@ -172,6 +186,8 @@ export async function GET(req: Request) {
      * 全員無条件で無制限視聴のため、履歴に残す意味が薄い）。
      */
     const isAdmin = user.role === "admin";
+    // 自分の物件は admin と同じ「無料・記録あり」扱い（掲載内容の確認用）。
+    const isFreeViewer = isAdmin || isOwnStudioProperty;
     if (!freeAccess) {
       const propertyId = matchedProperty.id;
       const splatItemIndex = matchedIndex;
@@ -190,9 +206,10 @@ export async function GET(req: Request) {
       if (!alreadyUnlocked) {
         // 残高は「stale な user」ではなく直前に取り直す（gift-actions.ts と同様、
         // 二度クリック等の並行リクエストによる二重消費/lost-update を避ける）。
-        // 管理者は残高チェック・減算の対象外（下の if (!isAdmin) 参照）。
-        const fresh = isAdmin ? user : ((await userRepo.get(user.id)) ?? user);
-        if (!isAdmin) {
+        // 管理者・自分の物件を見る撮影スタジオは残高チェック・減算の対象外
+        // （下の if (!isFreeViewer) 参照）。
+        const fresh = isFreeViewer ? user : ((await userRepo.get(user.id)) ?? user);
+        if (!isFreeViewer) {
           const spendable = totalTokens(fresh); // 月次 + 購入 + 貢献枠
           if (spendable < tokenCost) {
             return NextResponse.json(
@@ -220,12 +237,12 @@ export async function GET(req: Request) {
           propertyId,
           splatItemId,
           splatItemIndex,
-          tokensSpent: isAdmin ? 0 : tokenCost,
+          tokensSpent: isFreeViewer ? 0 : tokenCost,
           unlockedAt: now,
           expiresAt: oneYearFrom(now),
         });
 
-        if (!isAdmin) {
+        if (!isFreeViewer) {
           // 消費順は「先に失効するものから」= 利用者にとって最も損の少ない順。
           //   ①tokenBalance  サブスク付与分。毎月満タンに補充される＝使わないと
           //                   翌月に上書きされて消えるので最優先。

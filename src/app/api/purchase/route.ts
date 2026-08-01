@@ -10,6 +10,7 @@ import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
+import { isStudioPurchaseRestricted } from "@/lib/account-schema";
 import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
@@ -18,6 +19,14 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
+  }
+  // 撮影スタジオは自分の物件管理専用アカウント。他物件の3Dデータ購入は対象外
+  // （2026-08-01 の方針。subscribeAction/buyTokenPackActionと同じ制限）。
+  if (isStudioPurchaseRestricted(user.role)) {
+    return NextResponse.json(
+      { error: "撮影スタジオアカウントはデータ購入の対象外です" },
+      { status: 403 },
+    );
   }
 
   const body = await req.json();

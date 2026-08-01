@@ -7,6 +7,7 @@ import { requireOnboarded } from "./dal";
 import { userRepo } from "./users";
 import { TOKEN_PACK } from "./schemas";
 import { stripeEnabled, getStripe, tokenPackPriceId } from "./stripe";
+import { isStudioPurchaseRestricted } from "./account-schema";
 
 /** リクエスト由来のオリジン（localhost依存を排除）。 */
 async function requestOrigin(): Promise<string> {
@@ -70,6 +71,12 @@ export async function grantTokenPack(
  */
 export async function buyTokenPackAction(): Promise<void> {
   const user = await requireOnboarded();
+
+  // 撮影スタジオは自分の物件管理専用アカウント。閲覧トークンの購入は対象外
+  // （subscribeAction と同じ方針、2026-08-01）。
+  if (isStudioPurchaseRestricted(user.role)) {
+    redirect("/pricing?checkout=studio_not_allowed");
+  }
 
   if (!stripeEnabled()) {
     await grantTokenPack(user.id, `stub_${Date.now()}`);
