@@ -151,7 +151,12 @@ export default async function SiteHeader() {
       <div className="flex frame items-center h-[55px] gap-2 min-[1200px]:gap-3">
         <div className="flex items-center gap-4 xl:gap-7 flex-1 min-w-0">
           <HeaderTabletNav menuLabel={locale === "en" ? "Menu" : "メニュー"}>
-            <nav className="flex items-center gap-[11px] min-[1200px]:gap-4 min-[1440px]:gap-6 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
+            {/* ⚠ 1024–1199px の gap は 8px。この帯だけ ⌂掲載管理 / ⚙管理 が
+                ナビ側に出るぶんナビが1項目長くなり、11px だと中央のブランドへ
+                5.4px 食い込む（admin でサインインしたときだけ出る。実測: /,
+                /properties, /pricing, /account, /dashboard, /cart の6ページ）。
+                8px にすると 4つの間隔で 12px 縮み、6.6px の余裕が出る。 */}
+            <nav className="flex items-center gap-2 min-[1200px]:gap-4 min-[1440px]:gap-6 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
               {NAV.map((n) => (
                 <Link
                   key={n.href}
