@@ -20,10 +20,18 @@ export function mapTileConfig(): { url: string; attribution: string } {
         '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> <a href="https://www.mapbox.com/map-feedback/" target="_blank" rel="noopener">Improve this map</a>',
     };
   }
-  // 開発用フォールバック（本番では NEXT_PUBLIC_MAPBOX_TOKEN を必ず設定すること）。
+  // ⚠ 開発用フォールバック。以前はここに英語の "dev fallback — set
+  //   NEXT_PUBLIC_MAPBOX_TOKEN for production" という開発者向け文言が入っていたが、
+  //   本番でトークン未設定のまま公開されたときにそのまま顧客の目に見える形で
+  //   露出していた（2026-08-01 実機確認）。attribution は必ず表示される文字列
+  //   なので、ここには顧客向けに違和感のない文言だけを置く。トークン未設定の
+  //   警告はコンソールログ（下記）に出す。
+  if (process.env.NODE_ENV !== "production") {
+    console.warn("[map-tiles] NEXT_PUBLIC_MAPBOX_TOKEN 未設定。OSM標準タイルにフォールバックしています。");
+  }
   return {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (dev fallback — set NEXT_PUBLIC_MAPBOX_TOKEN for production)',
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   };
 }

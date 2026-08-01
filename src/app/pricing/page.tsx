@@ -38,7 +38,9 @@ const COMPARE_ROWS: Array<{
   // 付与数は PLAN_TOKEN_BUDGET / SIGNUP_BONUS_TOKENS から導出する。以前ここは
   // 数値べた書きで、定数側を変更しても料金表が古い数字のまま残る状態だった。
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} トークン`, `${SIGNUP_BONUS_TOKENS} tokens at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} トークン`, `${PLAN_TOKEN_BUDGET.individual} tokens / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} トークン`, `${PLAN_TOKEN_BUDGET.studio} tokens / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} トークン`, `${PLAN_TOKEN_BUDGET.team} tokens / mo`] },
-  { label: ["制限あり / NDA 限定シーンの閲覧", "Restricted / NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
+  // ⚠ 以前は「制限あり / NDA 限定シーンの閲覧」だったが、「制限あり」が何の制限か
+  //   一瞬迷う（2026-08-01 レビュー）。行の意味は「NDA限定シーンの閲覧」だけなので短縮。
+  { label: ["NDA 限定シーンの閲覧", "NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
   { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["3 端末", "3 devices"], studio: ["10 端末", "10 devices"], team: ["30 端末", "30 devices"] },
   { label: ["請求書 自動送付 / 電子帳簿対応", "Invoice auto-send / e-bookkeeping"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓ 一括", "✓ batch"] },
   { label: ["年払 -20% 適用", "Annual −20%"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
@@ -76,8 +78,8 @@ export default async function PricingPage({
         <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
           <p>
             {en
-              ? "Team is only available to “Production” accounts (NDA-signed). Your current account type can't unlock its restricted/NDA-only viewing benefit, so we didn't process the subscription."
-              : "Team プランは「制作会社（NDA締結）」アカウント限定です。現在のアカウント種別では制限あり/NDA限定シーンの閲覧特典を得られないため、お申し込みを処理しませんでした。"}
+              ? "Team is only available to “Production” accounts (NDA-signed). Your current account type can't unlock its NDA-only viewing benefit, so we didn't process the subscription."
+              : "Team プランは「制作会社（NDA締結）」アカウント限定です。現在のアカウント種別ではNDA限定シーンの閲覧特典を得られないため、お申し込みを処理しませんでした。"}
           </p>
           {canApplyForProduction && (
             <Link

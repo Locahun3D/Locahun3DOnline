@@ -48,6 +48,29 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * 「ステップ N / 3」とだけ書かれていて、残りのステップが何かはどこにも
+ * 書かれていなかった。掲載を決めた人が先の見通しを持てるよう、1行のミニ
+ * プレビューを添える（2026-08-01 レビュー）。current は 1〜3。
+ */
+function ListingStepsPreview({ en, current }: { en: boolean; current: 1 | 2 | 3 }) {
+  const steps = en
+    ? ["Studio account", "Create listing page", "Publish"]
+    : ["アカウント作成", "掲載ページ作成", "公開を申請"];
+  return (
+    <div className="mt-4 pt-3 border-t border-line flex items-center gap-1.5 flex-wrap mono text-[10px] tracking-[0.1em] uppercase">
+      {steps.map((s, i) => (
+        <span key={s} className="flex items-center gap-1.5">
+          {i > 0 && <span className="opacity-30">→</span>}
+          <span className={i + 1 === current ? "text-accent" : "opacity-45"}>
+            {i + 1}. {s}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default async function ContactTypePage({
   params,
   searchParams,
@@ -160,6 +183,7 @@ export default async function ContactTypePage({
                   {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
                 </Link>
                 <SignupRequirements en={en} />
+                <ListingStepsPreview en={en} current={1} />
               </>
             ) : canOwn ? (
               <>
@@ -180,6 +204,7 @@ export default async function ContactTypePage({
                 >
                   {en ? "Go to listing pages →" : "掲載ページを作成する →"}
                 </Link>
+                <ListingStepsPreview en={en} current={2} />
               </>
             ) : canConvert ? (
               <>
@@ -207,6 +232,7 @@ export default async function ContactTypePage({
                     ? "Free, no review. Viewing and purchases stay exactly as they are."
                     : "無料・審査なし。閲覧や購入の履歴はそのまま引き継がれます。"}
                 </p>
+                <ListingStepsPreview en={en} current={1} />
               </>
             ) : (
               <>
@@ -231,6 +257,7 @@ export default async function ContactTypePage({
                   {en ? "Sign out and create a studio account →" : "サインアウトしてスタジオアカウントを作成 →"}
                 </Link>
                 <SignupRequirements en={en} needsDifferentAddress />
+                <ListingStepsPreview en={en} current={1} />
               </>
             )}
           </div>
@@ -255,6 +282,7 @@ export default async function ContactTypePage({
                 ? "Sending this form submits both your message and the publication request."
                 : "この フォームを送信すると、お問い合わせ内容の送信と公開申請が同時に行われます。"}
             </p>
+            <ListingStepsPreview en={en} current={3} />
           </div>
         )}
 

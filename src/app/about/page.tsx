@@ -96,9 +96,13 @@ export default async function AboutPage() {
       no: "06",
       label: ["活用", "Use cases"],
       title: ["AI・産業向けにも活用できます", "Also usable for AI & industrial applications"],
+      // ⚠ 以前は「AIモデルの学習データとしての利用にも前向きです。案件によって条件が
+      //   変わるため、まずはお気軽にご相談ください。」まで書いていたが、これは
+      //   /contact の Q.06 の回答とほぼ同文だった。/about は一覧性重視のページなので
+      //   用途の列挙だけにとどめ、条件・相談導線は下の link に譲る（2026-08-01 レビュー）。
       desc: [
-        "プリビズ・VFXだけでなく、工場や商業施設のデジタルツイン、研修・防災シミュレーションなどの産業用途にも活用できます。AIモデルの学習データとしての利用にも前向きです。案件によって条件が変わるため、まずはお気軽にご相談ください。",
-        "Beyond previz and VFX, the data works for industrial use cases like digital twins of factories and commercial facilities, and training or disaster-prevention simulations. We're also open to AI-training use — terms just vary by case, so feel free to reach out and ask.",
+        "プリビズ・VFXだけでなく、工場や商業施設のデジタルツイン、研修・防災シミュレーションなどの産業用途にも活用できます。",
+        "Beyond previz and VFX, the data works for industrial use cases like digital twins of factories and commercial facilities, and training or disaster-prevention simulations.",
       ],
       link: { href: "/contact/license", text: ["活用について相談する →", "Ask about use cases →"] },
     },

@@ -47,8 +47,11 @@ const ja = {
 
   // --- Home (/) ---
   "home.scan.h2": "スキャン",
+  // ⚠ オンライン側「ブラウザだけで撮影前ロケハン。」と対になるよう、ベネフィットを
+  //   主語に先出し。以前は「実空間を3D Gaussian Splattingでスキャンし〜」と専門用語が
+  //   先頭に来ており、初見の制作会社担当者には重かった（2026-08-01 レビューで指摘）。
   "home.scan.desc":
-    "実空間を 3D Gaussian Splatting でスキャンし、現場をまるごとデータ化して持ち帰る。撮影・制作のための実測 3D。",
+    "現場に行かず下見できる3Dデータを、代わりに撮ってきます。実測・実際の質感をそのまま記録する、撮影・制作のための実寸3D。",
   "home.scan.cta": "スキャンを見る",
   "home.online.h2": "オンライン",
   "home.online.desc":
@@ -82,7 +85,9 @@ const ja = {
   "plan.free.desc": "登録だけで OK。アカウント作成時 6 トークン付与でハウススタジオを試せる。",
   "plan.free.f1": "全物件のサムネイル・写真閲覧",
   "plan.free.f2": "地図・フィルタ・距離検索",
-  "plan.free.f3": "見積もり依頼 月 1 件まで",
+  // ⚠ 以前は「見積もり依頼」だったが、/contact ページ側は同じ機能を「問い合わせ」と
+  //   呼んでおり表記ゆれになっていた。呼び方を統一（2026-08-01 レビュー）。
+  "plan.free.f3": "問い合わせ 月 1 件まで",
   "plan.free.f4": "3DGS ウォークスルー 登録時 6 トークン (一度限り)",
   "plan.ind.desc": "個人クリエイター向け。月 16 トークンで案件 4-6 件分のロケハンに。",
   "plan.ind.f1": "3DGS ウォークスルー 月 16 トークン",
@@ -90,7 +95,7 @@ const ja = {
   "plan.ind.f3": "図面ダウンロード 無制限",
   "plan.ind.f4": "履歴・ブックマーク 永続保存",
   "plan.ind.f5": "ログイン端末 3 台まで",
-  "plan.ind.f6": "見積もり依頼 無制限",
+  "plan.ind.f6": "問い合わせ 無制限",
   "plan.ind.f7": "請求書を毎月自動送付 (電子帳簿対応)",
   "plan.studio.desc": "小規模制作チーム向け。月 32 トークン + 10 端末共有。単発撮影でも余裕。",
   "plan.studio.f1": "Individual の全機能",
@@ -126,7 +131,7 @@ const en: Record<keyof typeof ja, string> = {
   // --- Home (/) ---
   "home.scan.h2": "Scan",
   "home.scan.desc":
-    "We scan real spaces with 3D Gaussian Splatting and bring the entire location back as data — measured 3D for shooting and production.",
+    "Skip the site visit — we scout it for you and bring back real 3D data. Measured, true to life, ready for shooting and production.",
   "home.scan.cta": "View Scan",
   "home.online.h2": "Online",
   "home.online.desc":
@@ -161,7 +166,7 @@ const en: Record<keyof typeof ja, string> = {
     "Just sign up. You get 6 tokens on account creation to try a house studio.",
   "plan.free.f1": "Thumbnails & photos for all locations",
   "plan.free.f2": "Map, filters & distance search",
-  "plan.free.f3": "Up to 1 quote request / month",
+  "plan.free.f3": "Up to 1 inquiry / month",
   "plan.free.f4": "3DGS walkthrough — 6 tokens at signup (one-time)",
   "plan.ind.desc":
     "For individual creators. 16 tokens/month — enough scouting for 4–6 projects.",
@@ -170,7 +175,7 @@ const en: Record<keyof typeof ja, string> = {
   "plan.ind.f3": "Unlimited floor-plan downloads",
   "plan.ind.f4": "Permanent history & bookmarks",
   "plan.ind.f5": "Up to 3 devices signed in",
-  "plan.ind.f6": "Unlimited quote requests",
+  "plan.ind.f6": "Unlimited inquiries",
   "plan.ind.f7": "Monthly invoice auto-sent (e-bookkeeping ready)",
   "plan.studio.desc":
     "For small production teams. 32 tokens/month + 10 shared devices — ample even for one-off shoots.",

@@ -249,12 +249,17 @@ export default async function ContactHubPage() {
                 "購入データをVRChat等に組み込んで公開したり、再配布・AI学習に使ったりできますか？",
                 "Can I embed the data in VRChat, redistribute it, or use it for AI training?",
               ],
+              // ⚠ 以前は「標準ライセンスは映像・画像などの制作物を作る利用が対象で〜」という
+              //   前置きの後に「対象外です」が来る構成で、最初の1文だけ読んで離脱すると
+              //   「できる」と誤解しかねなかった。結論（標準は不可・拡張なら可）を
+              //   最初の1文に前出しする（2026-08-01 レビュー）。
               a: [
                 <>
+                  標準ライセンスでは不可、拡張ライセンスなら対応できることが多いです。
                   標準ライセンスは映像・画像などの制作物を作る利用が対象で、データ自体を
                   ソフトウェア製品に組み込んで配布する利用（VRChatワールド等への実装・公開もここに
-                  含まれます）は対象外です。ソフトウェアへの組込・改変配布まで含めたい場合は、
-                  拡張ライセンスで対応できることが多いです。とはいえ本当に良いかは公開範囲や
+                  含まれます）は対象外です。ソフトウェアへの組込・改変配布まで含めたい場合は
+                  拡張ライセンスの範囲になります。とはいえ本当に良いかは公開範囲や
                   用途によるので、まずは軽い気持ちで
                   <Link href={lh("/contact/license")} className="text-accent hover:underline">
                     お問い合わせ
@@ -266,11 +271,12 @@ export default async function ContactHubPage() {
                   いきたい分野なので、ぜひお気軽にご相談ください。
                 </>,
                 <>
+                  Not under the standard license, but usually yes under the extended license.
                   The standard license covers creating productions like film and images — it
                   doesn&apos;t cover embedding the data itself into a software product for
                   distribution (which includes implementing and publishing it as a VRChat
-                  world). The extended license usually covers embedding and modified
-                  redistribution. Whether that&apos;s the right fit depends on the scope and use
+                  world). Embedding and modified redistribution falls under the extended
+                  license. Whether that&apos;s the right fit depends on the scope and use
                   case, so just{" "}
                   <Link href={lh("/contact/license")} className="text-accent hover:underline">
                     reach out
