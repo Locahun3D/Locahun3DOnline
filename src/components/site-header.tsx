@@ -291,9 +291,14 @@ export default async function SiteHeader() {
             <div className="min-[375px]:hidden flex items-center">{scanOnlineToggle}</div>
             <div className="flex items-center gap-3">
               <LangToggle />
-              <span className="min-[768px]:hidden flex items-center">
-                <CartLink />
-              </span>
+              {/* 撮影スタジオは自分の物件管理専用アカウント。他物件のデータ購入は
+                  対象外（サーバー側も /api/purchase で403）なので、買えないカートへの
+                  導線自体を出さない（2026-08-01）。 */}
+              {user?.role !== "studio" && (
+                <span className="min-[768px]:hidden flex items-center">
+                  <CartLink />
+                </span>
+              )}
             </div>
             {/* 768–1023px ではカート/認証はバーに出ているので、ここでは重複させない。 */}
             <div className="min-[768px]:hidden flex items-center gap-2 flex-wrap empty:hidden">
@@ -310,7 +315,7 @@ export default async function SiteHeader() {
           {/* 1024px以上のENはここだけ。スキャン側は右が空なので画面右端に付くが、
               オンラインはカート/認証が居るためその左に並ぶ。この非対称だけは許容する。 */}
           <LangToggle className="max-[1024px]:hidden" />
-          <CartLink />
+          {user?.role !== "studio" && <CartLink />}
           {authButtons}
           {authSignedIn}
         </div>

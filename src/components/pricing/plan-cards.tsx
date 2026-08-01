@@ -244,6 +244,18 @@ export default function PlanCards({
                       </Link>
                     );
                   }
+                  // 撮影スタジオは自分の物件管理専用アカウント。閲覧サブスクは
+                  // 対象外（サーバー側は subscribeAction が studio_not_allowed で弾く。
+                  // ここではボタンを押させる前に説明を出す、2026-08-01）。
+                  if (signedIn && currentRole === "studio") {
+                    return (
+                      <p className="text-[11px] text-muted leading-[1.6] border border-line px-3 py-2.5">
+                        {locale === "en"
+                          ? "Not available for studio accounts"
+                          : "撮影スタジオアカウントは対象外です"}
+                      </p>
+                    );
+                  }
                   if (signedIn) {
                     return (
                       <button
