@@ -36,6 +36,18 @@ export default function StudioListings({
     draft: "border-line text-muted",
   };
 
+  /** 上の4ステップ「1.情報を入力〜4.公開」のうち、今どこにいるかの番号(1〜4)。
+      下の一覧バッジ(step関数)と同じ判定基準。 */
+  const stepIndex = (p: Property): 1 | 2 | 3 | 4 => {
+    if (p.status === "published") return 4;
+    if (p.splatUrl) return 3;
+    if (p.publishRequestedAt) return 2;
+    return 1;
+  };
+  // 4つの箱が全部同じ見た目で「今どこにいるか分からない」という指摘（2026-08-01）。
+  // 手持ちの物件がどのステップにいるかを箱に反映する（複数物件あれば複数点灯）。
+  const activeSteps = new Set(properties.map(stepIndex));
+
   return (
     <section className="mt-6 border border-line bg-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -56,11 +68,21 @@ export default function StudioListings({
         {(en
           ? ["1. Fill in the details", "2. Request a scan", "3. We scan on site", "4. We publish"]
           : ["1. 情報を入力", "2. 撮影を依頼", "3. 当社が現地撮影", "4. 当社が確認して公開"]
-        ).map((s) => (
-          <li key={s} className="border border-line px-3 py-2 text-[12px] leading-snug">
-            {s}
-          </li>
-        ))}
+        ).map((s, i) => {
+          const active = activeSteps.has((i + 1) as 1 | 2 | 3 | 4);
+          return (
+            <li
+              key={s}
+              className={`border px-3 py-2 text-[12px] leading-snug transition ${
+                active
+                  ? "border-accent text-accent bg-accent/[0.06] font-bold"
+                  : "border-line text-muted"
+              }`}
+            >
+              {s}
+            </li>
+          );
+        })}
       </ol>
 
       {properties.length === 0 ? (
