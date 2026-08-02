@@ -44,6 +44,8 @@ export default async function TermsServicePage() {
             <li>利用者は、真実かつ正確な情報を登録するものとします。</li>
             <li>アカウントは登録者本人のみが利用でき、第三者への譲渡・貸与はできません。</li>
             <li>制作会社（production）区分での登録は、当社の承認をもって有効となります。当社は登録内容に基づき承認可否を判断します。</li>
+            <li>撮影スタジオ（studio）区分は、自らの物件（スタジオ・ロケーション施設）の掲載・管理を目的とする区分です。当区分での登録者は、有料プラン（サブスクリプション）への加入、閲覧用トークンの購入、および自己が所有・管理する物件以外の3Dデータの購入・視聴の対象外とします。</li>
+            <li>ゲスト（guest）区分は、当社が招待した利用者に付与される区分です。招待時に付与されるトークンには有効期限がありません。</li>
             <li>登録情報に変更が生じた場合、利用者は速やかに最新の内容へ更新するものとします。</li>
           </ol>
         </section>
@@ -112,28 +114,37 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第7条（投稿コンテンツの管理）</h2>
+          <h2 className="serif text-lg mb-4">第7条（ホスティング商品）</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>当社は、物件ページの3Dツアーを利用者自身のウェブサイト等に埋め込み表示できる機能、およびそのアクセス解析（以下「ホスティング商品」）を、当社が発行するコードを通じて提供します。</li>
+            <li>ホスティング商品は、2026年中は無償で提供します。2027年以降の提供条件は、対象物件ごとのスキャン代金<strong>10万円（税別）および実費交通費</strong>を基準とし、当社が個別にご案内します。</li>
+            <li>利用者は、当社が発行した埋め込みコードを、当社の指定する範囲を超えて第三者に譲渡・再配布してはなりません。</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">第8条（投稿コンテンツの管理）</h2>
           <p className="opacity-80">
             当社は、利用者の投稿が第4条各号に該当すると判断した場合、事前の通知なく当該投稿の削除、非表示化、またはアカウントの利用制限を行うことができます。通報が一定件数に達した投稿は自動的に非表示となる場合があります。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第8条（サービスの停止・変更）</h2>
+          <h2 className="serif text-lg mb-4">第9条（サービスの停止・変更）</h2>
           <p className="opacity-80">
             当社は、システムの保守・点検、天災その他やむを得ない事由がある場合、利用者への事前告知なく本サービスの全部または一部の提供を停止・変更することがあります。当社は、これにより利用者に生じた損害について、当社の故意または重過失による場合を除き、責任を負いません。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第9条（利用制限・登録抹消）</h2>
+          <h2 className="serif text-lg mb-4">第10条（利用制限・登録抹消）</h2>
           <p className="opacity-80">
             当社は、利用者が本規約に違反した場合、事前の通知なく当該利用者に対する本サービスの利用を制限し、またはアカウント登録を抹消することができます。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第10条（免責事項）</h2>
+          <h2 className="serif text-lg mb-4">第11条（免責事項）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>当社は、本サービスに掲載される物件情報・3Dスキャンデータの正確性・完全性を保証するものではありません。実際の撮影可否・許可要件は、利用者ご自身で各物件の管理者・関係機関にご確認ください。</li>
             <li>当社は、利用者間または利用者と第三者との間で生じたトラブルについて、一切の責任を負いません。</li>
@@ -142,14 +153,14 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第11条（規約の変更）</h2>
+          <h2 className="serif text-lg mb-4">第12条（規約の変更）</h2>
           <p className="opacity-80">
             当社は、必要と判断した場合、利用者への通知なく本規約を変更できるものとします。変更後の規約は本サービス上に掲示した時点で効力を生じます。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第12条（準拠法・管轄裁判所）</h2>
+          <h2 className="serif text-lg mb-4">第13条（準拠法・管轄裁判所）</h2>
           <p className="opacity-80">
             本規約の解釈にあたっては日本法を準拠法とします。本サービスに関して紛争が生じた場合には、東京地方裁判所を第一審の専属的合意管轄裁判所とします。
           </p>
@@ -159,6 +170,7 @@ export default async function TermsServicePage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月11日<br />
             改定日: 2026年7月23日（第6条として3Dデータのライセンス分類を新設し、以降の条項を繰り下げ。再配布・AI学習利用は事前のご相談・個別合意により可能とする方針を明記）<br />
+            改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -219,6 +231,8 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             <li>Users must register true and accurate information.</li>
             <li>Accounts may only be used by the registered individual and may not be transferred or lent to third parties.</li>
             <li>Registration as a &quot;production company&quot; requires our approval, which we grant at our discretion based on the submitted information.</li>
+            <li>The &quot;studio&quot; account type is for listing and managing your own property (studio or location facility). Studio accounts are not eligible to subscribe to a paid plan, purchase viewing tokens, or purchase/view 3D data for properties other than their own.</li>
+            <li>The &quot;guest&quot; account type is granted to users we invite. Tokens granted upon invitation do not expire.</li>
             <li>Users must promptly update their registration information when it changes.</li>
           </ol>
         </section>
@@ -270,7 +284,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             </li>
           </ul>
           <p className="opacity-80 mb-3">
-            <strong>Under every category</strong>, redistributing, reselling, or lending the data itself, and <strong>using the data as training data for machine-learning or generative-AI models</strong>, are prohibited (except with our prior written permission).
+            <strong>Under every category</strong>, redistributing, reselling, or lending the data itself, and <strong>using the data as training data for machine-learning or generative-AI models</strong>, require our prior consultation and individual written agreement. Terms vary by intended use, so please feel free to contact us if you are interested.
           </p>
           <p className="opacity-80">
             Detailed conditions and prohibited acts for each category are set out in the{" "}
@@ -282,28 +296,37 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 7 (Content Moderation)</h2>
+          <h2 className="serif text-lg mb-4">Article 7 (Hosting Product)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>We provide a feature that lets you embed a property&apos;s 3D tour on your own website or elsewhere, together with access analytics (the &quot;Hosting Product&quot;), via embed code we issue.</li>
+            <li>The Hosting Product is provided free of charge through the end of 2026. From 2027 onward, terms are based on a scan fee of <strong>¥100,000 (excl. tax) plus actual travel expenses</strong> per property, which we will confirm with you individually.</li>
+            <li>Users may not transfer or redistribute embed codes we issue to third parties beyond the scope we specify.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 className="serif text-lg mb-4">Article 8 (Content Moderation)</h2>
           <p className="opacity-80">
             If we determine that a post violates Article 4, we may remove or hide it, or restrict the user&apos;s account, without prior notice. Posts that receive a certain number of reports may be automatically hidden.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 8 (Suspension &amp; Changes)</h2>
+          <h2 className="serif text-lg mb-4">Article 9 (Suspension &amp; Changes)</h2>
           <p className="opacity-80">
             We may suspend or change all or part of the Service without prior notice for maintenance, inspection, force majeure, or other unavoidable reasons. We are not liable for any resulting damages except where caused by our willful misconduct or gross negligence.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 9 (Restriction &amp; Termination)</h2>
+          <h2 className="serif text-lg mb-4">Article 10 (Restriction &amp; Termination)</h2>
           <p className="opacity-80">
             We may restrict a user&apos;s access to the Service or terminate their account without prior notice if the user violates these Terms.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 10 (Disclaimer)</h2>
+          <h2 className="serif text-lg mb-4">Article 11 (Disclaimer)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We do not guarantee the accuracy or completeness of listing information or 3D scan data on the Service. Users should confirm actual filming permission requirements directly with each location&apos;s manager or the relevant authorities.</li>
             <li>We are not liable for disputes arising between users or between a user and a third party.</li>
@@ -312,14 +335,14 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 11 (Changes to these Terms)</h2>
+          <h2 className="serif text-lg mb-4">Article 12 (Changes to these Terms)</h2>
           <p className="opacity-80">
             We may change these Terms without notice to users when we deem it necessary. Revised Terms take effect once posted on the Service.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 12 (Governing Law &amp; Jurisdiction)</h2>
+          <h2 className="serif text-lg mb-4">Article 13 (Governing Law &amp; Jurisdiction)</h2>
           <p className="opacity-80">
             These Terms are governed by the laws of Japan. The Tokyo District Court shall have exclusive jurisdiction as the court of first instance for any disputes relating to the Service.
           </p>
@@ -329,6 +352,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: July 11, 2026<br />
             Revised: July 23, 2026 (added Article 6 on 3D data license categories and the prohibition of AI-training use; renumbered subsequent articles)<br />
+            Revised: August 2, 2026 (added studio/guest account terms to Article 2; added Article 7 on the Hosting Product, renumbering subsequent articles)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import Link from "next/link";
 import { submitScanSubmissionAction, type ScanSubmitState } from "@/lib/scan-submission-actions";
 import { PROPERTY_CATEGORIES, categoryLabel } from "@/lib/schemas";
-import { useLocale } from "@/components/locale-provider";
+import { useLocale, useHref } from "@/components/locale-provider";
 
 const MAX_SAMPLE_IMAGES = 5;
 const MAX_SAMPLE_IMAGE_BYTES = 25 * 1024 * 1024; // 25MB
@@ -13,20 +14,20 @@ const inputClass =
   "w-full border border-line rounded-md px-3.5 py-2.5 text-[14px] bg-white focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition";
 
 const CONSENT_ITEMS_JA = [
-  "私は日本国内に居住する18歳以上の個人、または日本法人です（分配の受取には本人名義の銀行口座が必要です）",
+  "私は日本国内に居住する個人（未成年者は法定代理人の同意を得た方）、または日本法人です（分配の受取には本人名義の銀行口座が必要です）",
   "本データは自身が撮影したもので、撮影禁止区域への立入等の違反なく撮影されており、第三者の権利を侵害しないことを保証します",
   "掲載・販売は当社が施設の許諾を得られた場合のみ行われ、それまで内容は非公開で取り扱われます（審査・権利調整に必要な範囲での閲覧・複製を除く）",
   "許諾が得られなかった場合、お預かりした内容（サンプル画像を含む）は削除されます",
-  "売上の分配率・支払条件は成立時に個別に合意します（個人への支払いは源泉徴収の対象となる場合があります）",
+  "売上の分配率は、施設許諾を当社が取得した場合30%、私自身が取得し取り次いだ場合50%です。四半期ごとに精算し、個人への支払いは源泉徴収の対象となります",
   "本データのAI学習利用に関するライセンス管理は当社と施設管理者に委ねます",
 ];
 
 const CONSENT_ITEMS_EN = [
-  "I am an individual aged 18 or older residing in Japan, or a Japanese corporation (a bank account in your own name is required to receive payouts).",
+  "I am an individual residing in Japan (minors: with a legal guardian's consent), or a Japanese corporation (a bank account in your own name is required to receive payouts).",
   "This data was captured by me, without entering restricted areas or violating facility rules, and does not infringe any third party's rights.",
   "Listing and sale will only happen once we have obtained the facility's permission — until then, everything is handled privately (except viewing/copying needed for review and rights clearance).",
   "If permission cannot be obtained, everything we hold (including sample images) will be deleted.",
-  "Revenue share and payment terms will be agreed individually once a deal is reached (payments to individuals may be subject to withholding tax).",
+  "The revenue share is 30% if we obtain the facility's permission, or 50% if I obtain it myself and relay it to Locahun 3D. Settlement is quarterly, and payments to individuals are made net of withholding tax.",
   "Management of AI-training licensing for this data is entrusted to us and the facility's manager.",
 ];
 
@@ -37,6 +38,7 @@ const CONSENT_ITEMS_EN = [
  */
 export default function ScanSubmitForm() {
   const en = useLocale() === "en";
+  const lh = useHref();
   const [state, formAction, pending] = useActionState<ScanSubmitState, FormData>(
     submitScanSubmissionAction,
     undefined,
@@ -207,14 +209,30 @@ export default function ScanSubmitForm() {
             ))}
           </ul>
           <p className="text-[10.5px] text-muted/80 leading-relaxed mb-4">
-            {en
-              ? "Note: formal program terms are still being prepared. This application is governed by the items above; before any deal is finalized, we will ask for your separate agreement to the formal terms and the individual payout terms."
-              : "（注記）本プログラムの正式な規約は整備中です。申請時点では上記の項目のみが適用され、成立の前には、正式な規約および分配条件について改めて個別に同意をお願いします。"}
+            {en ? (
+              <>
+                Full details (settlement timing, carryover, withholding tax, etc.) are set out in the{" "}
+                <Link href={lh("/terms/submission")} className="text-accent hover:underline" target="_blank">
+                  Scan Submission Agreement
+                </Link>
+                . Submitting this application constitutes agreement to that document.
+              </>
+            ) : (
+              <>
+                詳細な条件（精算時期・繰越・源泉徴収等）は
+                <Link href={lh("/terms/submission")} className="text-accent hover:underline" target="_blank">
+                  持ち込みスキャン規約
+                </Link>
+                に定めています。本申請の送信をもって同規約への同意とみなします。
+              </>
+            )}
           </p>
           <label className="flex items-start gap-2.5 mb-5 cursor-pointer">
             <input type="checkbox" name="consent" required className="mt-0.5" />
             <span className="text-[13px] leading-relaxed">
-              {en ? "I have read and agree to the above." : "上記の内容を確認し、同意します。"}
+              {en
+                ? "I have read and agree to the above and the Scan Submission Agreement."
+                : "上記の内容および持ち込みスキャン規約を確認し、同意します。"}
             </span>
           </label>
 

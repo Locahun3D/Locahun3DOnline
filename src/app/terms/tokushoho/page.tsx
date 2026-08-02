@@ -60,6 +60,10 @@ export default async function TokushohoPage() {
           value="デジタルデータの性質上、購入後の返品・キャンセルは原則として承りません。データの破損等、当方に起因する不具合が確認された場合は、返金または代替データの提供にて対応いたします。"
         />
         <Row
+          label="サブスクリプションの解約"
+          value="アカウント画面のポータル（Stripeカスタマーポータル）からいつでも解約できます。解約後も、既にお支払いいただいた契約期間の終了まではサービスをご利用いただけます。日割りでの返金は行いません。プラン変更時の差額は日割りで計算されます。"
+        />
+        <Row
           label="動作環境"
           value="Google Chrome / Safari / Firefox / Edge の最新版。3Dビューアーの利用にはWebGL 2.0対応ブラウザが必要です。"
         />
@@ -67,6 +71,7 @@ export default async function TokushohoPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月1日<br />
+            改定日: 2026年8月2日（サブスクリプションの解約条件を追記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -136,6 +141,10 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
           value="Due to the nature of digital data, returns and cancellations after purchase are not accepted as a general rule. If a defect attributable to us (e.g. corrupted data) is confirmed, we will provide a refund or replacement data."
         />
         <Row
+          label="Subscription cancellation"
+          value="You may cancel anytime from the account portal (Stripe Customer Portal). After cancelling, you may continue using the Service through the end of the period you already paid for; we do not provide prorated refunds. When changing plans, the difference is prorated."
+        />
+        <Row
           label="System requirements"
           value="Latest version of Google Chrome / Safari / Firefox / Edge. WebGL 2.0 compatible browser required for the 3D viewer."
         />
@@ -143,6 +152,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: July 1, 2026<br />
+            Revised: August 2, 2026 (added subscription cancellation terms)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
