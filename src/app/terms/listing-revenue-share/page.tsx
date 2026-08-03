@@ -80,9 +80,9 @@ export default async function ListingRevenueSharePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第5条（独占性）</h2>
+          <h2 className="serif text-lg mb-4">第5条（非独占）</h2>
           <p className="opacity-80">
-            対象物件が本サービスに掲載されている間、掲載者は当社以外の第三者に対し、同一施設の3Dスキャンおよびそのデータ販売を許諾しないものとします。掲載を終了した場合、この制限は将来に向かって効力を失います。
+            本規約に基づく分配は、対象物件を本サービスに掲載していることを条件とするものであり、掲載者が同一施設について当社以外の第三者にも3Dスキャンおよびそのデータ販売を許諾することを妨げません。
           </p>
         </section>
 
@@ -196,9 +196,9 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 5 (Exclusivity)</h2>
+          <h2 className="serif text-lg mb-4">Article 5 (Non-exclusive)</h2>
           <p className="opacity-80">
-            While a Target Property is listed on the Service, the Lister shall not permit any third party other than us to scan the same facility or sell 3D data of it. This restriction ceases prospectively once the listing ends.
+            The revenue share under these terms is conditioned on the Target Property being listed on the Service, and does not prevent the Lister from also permitting other third parties to scan the same facility or sell 3D data of it.
           </p>
         </section>
 
