@@ -13,9 +13,15 @@
  *                                    「問い合わせが直接届く」
  *   ここだけ良く見せるために盛らない（実態と違う約束になる）。
  */
+import Link from "next/link";
+import { localizedHref } from "@/lib/i18n/dictionaries";
+
 const FREE_UNTIL = "2026年12月31日";
+/** データ販売分配率。/terms/listing-revenue-share と必ず一致させること。 */
+const DATA_SALE_SHARE = "20%";
 
 export default function ListingValue({ en }: { en: boolean }) {
+  const locale = en ? "en" : "ja";
   const rows = [
     {
       label: en ? "3D scan" : "3Dスキャン計測",
@@ -55,6 +61,13 @@ export default function ListingValue({ en }: { en: boolean }) {
       body: en
         ? "Messages from your property page are forwarded to the address you register."
         : "物件ページのフォームから届いた問い合わせは、ご登録のアドレスへそのまま転送されます。",
+    },
+    {
+      no: "04",
+      title: en ? `${DATA_SALE_SHARE} of data sales, paid to you` : `データが売れたら${DATA_SALE_SHARE}を分配`,
+      body: en
+        ? `If your property's 3D data (PLY/OBJ) sells, ${DATA_SALE_SHARE} of the revenue is paid to you. Settled quarterly.`
+        : `物件の3Dデータ（PLY/OBJ）が売れた場合、売上の${DATA_SALE_SHARE}を分配します。四半期ごとに精算します。`,
     },
   ];
 
@@ -148,6 +161,12 @@ export default function ListingValue({ en }: { en: boolean }) {
             </div>
           ))}
         </div>
+        <p className="text-[11px] text-muted mt-2">
+          {en ? "Details: " : "詳細: "}
+          <Link href={localizedHref("/terms/listing-revenue-share", locale)} className="text-accent hover:underline">
+            {en ? "Listing Data Revenue Share Terms" : "掲載データ販売分配規約"}
+          </Link>
+        </p>
       </section>
     </div>
   );
