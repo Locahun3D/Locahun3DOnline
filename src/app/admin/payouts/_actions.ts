@@ -18,6 +18,7 @@ import {
   type PayoutSettlement,
   type MissingAccrual,
 } from "@/lib/payouts";
+import { encryptMyNumber } from "@/lib/mynumber-crypto";
 
 /**
  * サーバーアクション用の admin チェック。
@@ -66,6 +67,28 @@ export async function savePayeeAction(
   const contactEmail = String(formData.get("contactEmail") ?? "").trim();
   const invoiceRegNumber = String(formData.get("invoiceRegNumber") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim().slice(0, 500);
+  const userId = String(formData.get("userId") ?? "").trim();
+
+  // マイナンバー: 空欄のまま更新した場合は既存の暗号文を維持する
+  // （毎回マスク表示から平文入力へ戻すことはしない = 再入力時のみ上書き）。
+  const myNumberDigits = String(formData.get("myNumberDigits") ?? "").trim();
+  let myNumberEncrypted: string | undefined;
+  if (myNumberDigits) {
+    if (!/^\d{12}$/.test(myNumberDigits)) {
+      return { ok: false, error: "マイナンバーは数字12桁で入力してください" };
+    }
+    try {
+      myNumberEncrypted = await encryptMyNumber(myNumberDigits);
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "マイナンバーの暗号化に失敗しました",
+      };
+    }
+  } else if (id) {
+    const existing = await payeeRepo.get(id);
+    myNumberEncrypted = existing?.myNumberEncrypted ?? "";
+  }
 
   const accountTypeRaw = String(formData.get("accountType") ?? "");
   const accountType = (BANK_ACCOUNT_TYPES as readonly string[]).includes(accountTypeRaw)
@@ -96,6 +119,8 @@ export async function savePayeeAction(
       bank: bank.data,
       invoiceRegNumber,
       note,
+      userId,
+      myNumberEncrypted: myNumberEncrypted ?? "",
     });
     revalidatePath("/admin/payouts");
     return { ok: true, payee };

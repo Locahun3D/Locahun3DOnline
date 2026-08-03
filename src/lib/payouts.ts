@@ -80,6 +80,20 @@ export const payeeSchema = z.object({
   bank: bankInfoSchema,
   /** 適格請求書発行事業者番号（インボイス制度）。任意。 */
   invoiceRegNumber: z.string().default(""),
+  /**
+   * このPayeeが紐づくサイトアカウント(Clerk userId)。空文字 = 旧来どおり
+   * 管理者が手動で作成した受取者（サイトアカウントと紐付かない）。
+   * 直接掲載スタジオの分配自動作成(publishAction)は、この値でスタジオの
+   * userIdと突き合わせてPayeeを検索する。
+   */
+  userId: z.string().default(""),
+  /**
+   * マイナンバー（個人番号）の暗号文。@/lib/mynumber-crypto の
+   * encryptMyNumber で暗号化した文字列のみを保存する。平文は絶対に
+   * 保存しない。空文字 = 未登録。源泉徴収が発生する個人(entityType:
+   * "individual")の支払調書提出に必要（2026-08-02 リーガルチェックで追加）。
+   */
+  myNumberEncrypted: z.string().default(""),
   note: z.string().max(500).default(""),
   createdAt: z.string().default(() => new Date().toISOString()),
   updatedAt: z.string().default(() => new Date().toISOString()),
@@ -97,6 +111,13 @@ export type PayoutRole = (typeof PAYOUT_ROLES)[number];
 
 /** 当社取り分の下限（%）。分配率の合計はこれを超えて設定できない。 */
 export const MAX_TOTAL_SPLIT_PERCENT = 70;
+
+/**
+ * 直接掲載スタジオへのデータ販売分配率（%）。/terms/listing-revenue-share 第2条。
+ * 持ち込みスキャン(30%/50%)とは別枠 — 対象は掲載者自身が直接掲載した物件のみ
+ * （第1条で持ち込み経由の物件は明示的に除外）。
+ */
+export const STUDIO_VENUE_SHARE_PERCENT = 20;
 
 export const payoutSplitLineSchema = z.object({
   payeeId: z.string(),
@@ -248,6 +269,9 @@ async function writeAll<T>(file: string, key: string, items: T[]): Promise<void>
   await safeWriteFile(file, JSON.stringify({ version: 1, [key]: items }, null, 2));
 }
 
+// ⚠ userId は payees テーブルの実カラムには無い（migrations/0014）。マイグレーション無しで
+//   済ませるため、d1Upsert の data(JSON) 列にだけ保持し、検索は payeeRepo.list() 後に
+//   メモリ上でフィルタする（現状の件数規模なら十分安価）。
 function payeeCols(p: Payee): Record<string, string | number | null> {
   return {
     id: p.id,
@@ -297,6 +321,13 @@ export const payeeRepo = {
     if (!db) throw new Error("受取者データの保存先 (D1) が利用できません");
     await d1Upsert(db, PAYEES_TABLE, "id", payeeCols(validated), validated);
     return validated;
+  },
+
+  /** userId(Clerk) に紐づく受取者を探す。紐付けが無ければ null。 */
+  async findByUserId(userId: string): Promise<Payee | null> {
+    if (!userId) return null;
+    const all = await this.list();
+    return all.find((p) => p.userId === userId) ?? null;
   },
 };
 
@@ -365,6 +396,38 @@ export const payoutSplitRepo = {
     if (db) await d1Delete(db, SPLITS_TABLE, "property_id", propertyId);
   },
 };
+
+/**
+ * 直接掲載スタジオの物件が公開されたタイミングで呼ぶ（publishAction /
+ * publishByIdAction から）。ownerId(=スタジオのuserId) に紐づく受取者が
+ * 既に登録済みなら、その物件の分配設定に venue 20% 行を自動追加する。
+ *
+ * ⚠ 冪等・非破壊: 対象payeeの行が既にあれば何もしない。他の受取者の行
+ * （持ち込みスキャン経由のscanner行など）には触れない。受取者が未登録なら
+ * 何もしない（先に /admin/payouts で受取者登録が必要 — 20%約束は
+ * 受取者登録済みのスタジオにのみ実際に適用される）。
+ */
+export async function autoCreateStudioVenueSplit(
+  propertyId: string,
+  ownerId: string | null | undefined,
+): Promise<void> {
+  if (!ownerId) return;
+  const payee = await payeeRepo.findByUserId(ownerId);
+  if (!payee) return;
+
+  const existing = await payoutSplitRepo.get(propertyId);
+  const lines = existing?.lines ?? [];
+  if (lines.some((l) => l.payeeId === payee.id)) return;
+
+  const nextLines: PayoutSplitLine[] = [
+    ...lines,
+    { payeeId: payee.id, role: "venue" as PayoutRole, ratePercent: STUDIO_VENUE_SHARE_PERCENT },
+  ];
+  // 合計が70%上限を超える場合(既存行が多い等)は自動追加をスキップし、
+  // admin が /admin/payouts で手動調整する（サイレント失敗にはしないよう、
+  // 呼び出し元はこの関数の結果を待たずに公開処理自体は継続してよい設計）。
+  await payoutSplitRepo.save(propertyId, nextLines);
+}
 
 function ledgerCols(e: PayoutLedgerEntry): Record<string, string | number | null> {
   return {

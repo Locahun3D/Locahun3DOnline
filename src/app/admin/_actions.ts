@@ -12,7 +12,7 @@ import { toR2Key } from "@/lib/asset-keys";
 import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/dal";
 import { protectStudioManagedFields } from "@/lib/studio-guard";
 import { createNotification } from "@/lib/notifications";
-import { renamePayoutRecordsForProperty } from "@/lib/payouts";
+import { renamePayoutRecordsForProperty, autoCreateStudioVenueSplit } from "@/lib/payouts";
 import { fillPropertyEnglish, needsEnglish } from "@/lib/property-translate";
 import {
   propertySchema,
@@ -291,6 +291,13 @@ export async function publishAction(input: unknown) {
     /* 翻訳できなくても公開は継続 */
   }
   await repo.upsert(toPublish);
+  // 直接掲載スタジオの分配自動設定。受取者が未登録なら何もしない設計なので
+  // 失敗しても公開自体は止めない（翻訳フォールバックと同じ扱い）。
+  try {
+    await autoCreateStudioVenueSplit(toPublish.id, toPublish.ownerId);
+  } catch {
+    /* 分配自動設定に失敗しても公開は継続。/admin/payouts で手動対応可 */
+  }
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   revalidatePath("/properties");
@@ -396,6 +403,11 @@ export async function publishByIdAction(id: string) {
   await repo.upsert(
     stampPublishedAt({ ...parsed.data, status: "published", publishRequestedAt: null }),
   );
+  try {
+    await autoCreateStudioVenueSplit(parsed.data.id, parsed.data.ownerId);
+  } catch {
+    /* 分配自動設定に失敗しても公開は継続。/admin/payouts で手動対応可 */
+  }
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   revalidatePath(`/properties/${id}`);

@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/dal";
 import { repo as propertyRepo } from "@/lib/store";
+import { userRepo } from "@/lib/users";
 import {
   payeeRepo,
   payoutSplitRepo,
@@ -30,17 +31,24 @@ export default async function AdminPayoutsPage({
         }
       : null;
 
-  const [payees, properties, splits, accrued, settlements] = await Promise.all([
+  const [payees, properties, splits, accrued, settlements, users] = await Promise.all([
     payeeRepo.list(),
     propertyRepo.list(),
     payoutSplitRepo.list(),
     payoutLedgerRepo.list({ status: "accrued" }),
     payoutSettlementRepo.list(),
+    userRepo.list(),
   ]);
 
   const propertiesForSelect = properties
     .map((p) => ({ id: p.id, title: p.title || p.id }))
     .sort((a, b) => a.title.localeCompare(b.title, "ja"));
+
+  // 直接掲載スタジオの分配自動設定(userId紐付け)用の選択肢。
+  const studioUsers = users
+    .filter((u) => u.role === "studio")
+    .map((u) => ({ id: u.id, label: u.name || u.email || u.id }))
+    .sort((a, b) => a.label.localeCompare(b.label, "ja"));
 
   const accruedByPayee = new Map<string, { amountYen: number }[]>();
   for (const row of accrued) {
@@ -88,6 +96,7 @@ export default async function AdminPayoutsPage({
         accruedSummaryByPayee={accruedSummaryByPayee}
         settlementsByPayee={settlementsByPayee}
         prefill={prefill}
+        studioUsers={studioUsers}
       />
     </div>
   );

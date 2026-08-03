@@ -56,6 +56,11 @@ function maskAccountNumber(accountNumber: string): string {
   return `••••${accountNumber.slice(-4)}`;
 }
 
+/** マイナンバー登録有無のマスク表示（@/lib/mynumber-crypto の maskMyNumber と同じ表示規約）。 */
+function maskMyNumber(hasValue: boolean): string {
+  return hasValue ? "登録済み" : "未登録";
+}
+
 function fmtYen(n: number): string {
   return `¥${n.toLocaleString()}`;
 }
@@ -91,6 +96,8 @@ interface PayoutsAdminProps {
   accruedSummaryByPayee: Record<string, AccruedSummary>;
   settlementsByPayee: Record<string, PayoutSettlement[]>;
   prefill?: PayeePrefill | null;
+  /** userId紐付け選択肢（直接掲載スタジオの分配自動設定用）。 */
+  studioUsers?: { id: string; label: string }[];
 }
 
 export default function PayoutsAdmin({
@@ -100,6 +107,7 @@ export default function PayoutsAdmin({
   accruedSummaryByPayee,
   settlementsByPayee,
   prefill = null,
+  studioUsers = [],
 }: PayoutsAdminProps) {
   const [tab, setTab] = useState<Tab>("payees");
 
@@ -129,7 +137,9 @@ export default function PayoutsAdmin({
         ))}
       </div>
 
-      {tab === "payees" && <PayeesTab payees={payees} prefill={prefill} />}
+      {tab === "payees" && (
+        <PayeesTab payees={payees} prefill={prefill} studioUsers={studioUsers} />
+      )}
       {tab === "splits" && (
         <SplitsTab properties={properties} payees={payees} splits={splits} />
       )}
@@ -149,7 +159,15 @@ export default function PayoutsAdmin({
 // 受取者タブ
 // ──────────────────────────────────────────────────────────────────
 
-function PayeesTab({ payees, prefill }: { payees: Payee[]; prefill: PayeePrefill | null }) {
+function PayeesTab({
+  payees,
+  prefill,
+  studioUsers,
+}: {
+  payees: Payee[];
+  prefill: PayeePrefill | null;
+  studioUsers: { id: string; label: string }[];
+}) {
   const [editing, setEditing] = useState<Payee | null>(null);
   // プリフィルがあれば最初からフォームを開く（持ち込み詳細からの導線）
   const [showForm, setShowForm] = useState(!!prefill);
@@ -186,6 +204,7 @@ function PayeesTab({ payees, prefill }: { payees: Payee[]; prefill: PayeePrefill
                 <th className="px-4 py-3 font-normal">区分</th>
                 <th className="px-4 py-3 font-normal">口座</th>
                 <th className="px-4 py-3 font-normal">インボイス番号</th>
+                <th className="px-4 py-3 font-normal">マイナンバー</th>
                 <th className="px-4 py-3 font-normal text-center">操作</th>
               </tr>
             </thead>
@@ -207,6 +226,9 @@ function PayeesTab({ payees, prefill }: { payees: Payee[]; prefill: PayeePrefill
                   <td className="px-4 py-3 mono text-[11px] opacity-60">
                     {p.invoiceRegNumber || "—"}
                   </td>
+                  <td className="px-4 py-3 mono text-[11px] opacity-60">
+                    {maskMyNumber(!!p.myNumberEncrypted)}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <button
                       type="button"
@@ -227,7 +249,12 @@ function PayeesTab({ payees, prefill }: { payees: Payee[]; prefill: PayeePrefill
       )}
 
       {showForm && (
-        <PayeeForm payee={editing} prefill={editing ? null : prefill} onDone={() => setShowForm(false)} />
+        <PayeeForm
+          payee={editing}
+          prefill={editing ? null : prefill}
+          studioUsers={studioUsers}
+          onDone={() => setShowForm(false)}
+        />
       )}
     </div>
   );
@@ -236,10 +263,12 @@ function PayeesTab({ payees, prefill }: { payees: Payee[]; prefill: PayeePrefill
 function PayeeForm({
   payee,
   prefill,
+  studioUsers,
   onDone,
 }: {
   payee: Payee | null;
   prefill?: PayeePrefill | null;
+  studioUsers: { id: string; label: string }[];
   onDone: () => void;
 }) {
   const [state, formAction, pending] = useActionState<SavePayeeState, FormData>(
@@ -310,6 +339,40 @@ function PayeeForm({
           <input name="note" defaultValue={payee?.note ?? prefill?.note ?? ""} maxLength={500} className={inputCls} />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            紐づくスタジオアカウント（任意）
+          </span>
+          <select name="userId" defaultValue={payee?.userId ?? ""} className={inputCls}>
+            <option value="">紐づけなし（従来どおり手動管理）</option>
+            {studioUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.label}</option>
+            ))}
+          </select>
+          <span className="text-[11px] text-muted">
+            設定すると、そのスタジオの物件公開時に分配設定（施設20%）が自動作成されます。
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            マイナンバー（{payee?.myNumberEncrypted ? "登録済み・再入力で上書き" : "任意・数字12桁"}）
+          </span>
+          <input
+            name="myNumberDigits"
+            type="password"
+            inputMode="numeric"
+            pattern="\d{12}"
+            maxLength={12}
+            placeholder={payee?.myNumberEncrypted ? "•••••••••••• (変更する場合のみ入力)" : "123456789012"}
+            className={inputCls}
+          />
+          <span className="text-[11px] text-muted">
+            暗号化して保存され、一覧・編集画面には常にマスク表示のみ（平文は表示されません）。
+            源泉徴収が発生する個人受取者の支払調書提出に必要な場合のみ入力してください。
+          </span>
+        </label>
+
         <div className="sm:col-span-2 lg:col-span-3 border-t border-line/50 pt-4 mt-1">
           <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-3">
             振込先口座
@@ -342,8 +405,8 @@ function PayeeForm({
           </div>
           <p className="mt-3 text-[11px] leading-relaxed opacity-60">
             ※ 口座は<strong>受取者本人（法人は当該法人）名義</strong>であることを登録前に確認すること。
-            個人への支払いは支払調書のためマイナンバーの取得が必要になる場合があるが、
-            <strong>本画面では扱わない</strong>（特定個人情報のため、成立時に書面等で別途取得・保管する）。
+            マイナンバーは上の欄で暗号化して登録できます（特定個人情報のため、取得時は
+            利用目的の明示など法令上の手続きを別途行うこと）。
           </p>
         </div>
 
