@@ -76,8 +76,23 @@ export default async function TermsServicePage() {
 
         <section>
           <h2 className="serif text-lg mb-4">第5条（知的財産権）</h2>
-          <p className="opacity-80">
+          <p className="opacity-80 mb-3">
             本サービスに関する著作権・商標権その他の知的財産権は、当社または正当な権利を有する第三者に帰属します。利用者が投稿した掲示板の著作権は投稿者に留保されますが、利用者は当社に対し、本サービスの提供・運営・宣伝に必要な範囲で当該投稿を利用（複製・表示等）する権利を許諾するものとします。
+          </p>
+          {/* ⚠ 2段階の穴があった（2026-08-02指摘・対応）。
+              ①3Dビューアーのカメラツールは、データを購入していない閲覧者
+                （サブスク/トークンで見られる人）でも、カメラ情報付きJPEGを書き出せる。
+              ②ウォークスルーは実データ（RAD/splat等）をブラウザへストリーミングする
+                以上、技術的な解析・通信傍受等により3Dスキャンデータ自体を
+                取得しうる状態も生じる。
+              第6条・データ購入規約は「購入したデータ」にしかかからないため、
+              購入せずに得た画像・データがAI学習・再配布の縛りを回避できてしまう
+              穴があった。第6条と同じ制限をここで及ぼす。禁止事項自体は第4条5号
+              （3Dスキャンデータの無断提供・転売の禁止）で既にカバーされているが、
+              AI学習利用の扱いが「本データ」＝購入データに限定されていたため、
+              閲覧のみで取得したデータには及んでいなかった。 */}
+          <p className="opacity-80">
+            本サービスの閲覧（ウォークスルー・カメラツールによるJPEG書き出しを含みます）を通じて利用者が取得した画像・スクリーンショット等、および当該閲覧を通じて技術的な手段により取得しうる3Dスキャンデータ自体についても、購入の有無にかかわらず、第6条に定める3Dデータのライセンス分類と同様に、<strong>データ自体の再配布・転売、および機械学習・生成AIモデルの学習データとしての利用</strong>には、当社との事前のご相談・個別の書面合意が必要です。
           </p>
         </section>
 
@@ -170,7 +185,7 @@ export default async function TermsServicePage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月11日<br />
             改定日: 2026年7月23日（第6条として3Dデータのライセンス分類を新設し、以降の条項を繰り下げ。再配布・AI学習利用は事前のご相談・個別合意により可能とする方針を明記）<br />
-            改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ）<br />
+            改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ／第5条に、閲覧を通じて取得した画像・スクリーンショットおよび技術的手段により取得しうる3Dデータ自体について、購入データと同様の再配布・AI学習利用制限を追記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -262,8 +277,11 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
 
         <section>
           <h2 className="serif text-lg mb-4">Article 5 (Intellectual Property)</h2>
-          <p className="opacity-80">
+          <p className="opacity-80 mb-3">
             Copyrights, trademarks, and other intellectual property rights relating to the Service belong to us or to third parties with legitimate rights. Copyright in board posts and reviews submitted by users remains with the user, but the user grants us a license to use (reproduce, display, etc.) such content to the extent necessary to provide, operate, and promote the Service.
+          </p>
+          <p className="opacity-80">
+            Images and screenshots obtained by a user through viewing the Service (including JPEGs exported via the camera tool during a walkthrough), and any 3D scan data itself that may be obtainable through technical means during such viewing, are subject to the same restrictions as the 3D data license categories in Article 6 regardless of whether the data was purchased: <strong>redistributing or reselling the data itself, and using it as training data for machine-learning or generative-AI models</strong>, require our prior consultation and individual written agreement.
           </p>
         </section>
 
@@ -352,7 +370,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: July 11, 2026<br />
             Revised: July 23, 2026 (added Article 6 on 3D data license categories and the prohibition of AI-training use; renumbered subsequent articles)<br />
-            Revised: August 2, 2026 (added studio/guest account terms to Article 2; added Article 7 on the Hosting Product, renumbering subsequent articles)<br />
+            Revised: August 2, 2026 (added studio/guest account terms to Article 2; added Article 7 on the Hosting Product, renumbering subsequent articles; added to Article 5 that images/screenshots obtained while viewing, and 3D data itself obtainable by technical means during viewing, are subject to the same redistribution/AI-training restrictions as purchased data)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
