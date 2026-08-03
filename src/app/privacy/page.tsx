@@ -38,6 +38,9 @@ export default async function PrivacyPage() {
             <li>決済情報: 購入履歴、サブスクリプションプラン。クレジットカード番号そのものは当社では保持せず、決済代行会社 Stripe, Inc. が管理します。</li>
             <li>投稿情報: 物件掲示板への投稿、ブックマーク、NDA（秘密保持契約）の同意記録</li>
             <li>お問い合わせ情報: お問い合わせフォームに入力された氏名・メールアドレス・電話番号（任意）・利用目的・メッセージ内容</li>
+            <li>
+              分配金の振込先情報: 掲載データ販売分配・持ち込みスキャンの分配対象となる方から、振込先の銀行口座情報（銀行名・支店名・口座種別・口座番号・口座名義）をお預かりします。源泉徴収の対象となる支払いについては、法令に基づき税務署への支払調書提出に必要な情報（個人番号を含みます）もあわせてお預かりする場合があります。
+            </li>
             <li>アクセス情報: ページ閲覧数、参照元、デバイス種別などの統計情報（個人を特定しない集計データ）</li>
             <li>Cookie等: ログイン状態の維持のため、認証基盤が発行するCookieを使用します</li>
           </ol>
@@ -51,6 +54,7 @@ export default async function PrivacyPage() {
             <li>3DGSウォークスルーの閲覧、掲示板・レビュー機能など本サービスの提供のため</li>
             <li>決済処理、請求書発行、購入履歴の管理のため</li>
             <li>お問い合わせへの対応、および掲載物件の連絡先への転送のため</li>
+            <li>掲載データ販売分配・持ち込みスキャンの分配金精算、法令に基づく支払調書の作成・提出のため</li>
             <li>不正利用・荒らし行為の防止、通報への対応のため</li>
             <li>サービス品質向上のための統計分析のため</li>
             <li>重要なお知らせ（規約改定、メンテナンス等）の通知のため</li>
@@ -72,7 +76,7 @@ export default async function PrivacyPage() {
         <section>
           <h2 className="serif text-lg mb-4">第4条（保存期間）</h2>
           <p className="opacity-80">
-            アカウント情報は、退会または削除の申し出があるまで保存します。購入履歴は関連法令に基づく保存義務期間、お問い合わせ情報は対応完了後合理的な期間、それぞれ保存の上で削除します。
+            アカウント情報は、退会または削除の申し出があるまで保存します。購入履歴は関連法令に基づく保存義務期間、お問い合わせ情報は対応完了後合理的な期間、それぞれ保存の上で削除します。分配金の振込先情報（個人番号を含む場合はこれも同様）は、関連法令が定める保存期間（国税関係書類は原則7年間）を経過した後、速やかに廃棄します。
           </p>
         </section>
 
@@ -110,6 +114,7 @@ export default async function PrivacyPage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月11日<br />
+            改定日: 2026年8月2日（分配金の振込先情報・支払調書対応に関する取得情報・利用目的・保存期間を追記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -159,6 +164,9 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
             <li>Payment information: purchase history and subscription plan. Credit card numbers are not held by us and are managed by our payment processor, Stripe, Inc.</li>
             <li>Content you post: location board comments, reviews and ratings, bookmarks, and NDA (non-disclosure agreement) acceptance records.</li>
             <li>Inquiry information: name, email, phone number (optional), purpose, and message content submitted via contact forms.</li>
+            <li>
+              Payout bank details: for recipients of listing data revenue share or scan submission revenue share, we collect bank transfer details (bank name, branch, account type, account number, account holder). For payments subject to withholding tax, we may also collect information required by law to file a payment record statement with the tax office, including the individual&apos;s My Number.
+            </li>
             <li>Access information: page views, referrers, and device type as aggregate statistics that do not identify individuals.</li>
             <li>Cookies: cookies issued by our authentication provider to maintain your signed-in session.</li>
           </ol>
@@ -171,6 +179,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
             <li>Providing the Service, including 3DGS walkthroughs, the board, and reviews.</li>
             <li>Payment processing, invoicing, and purchase history management.</li>
             <li>Responding to inquiries and forwarding them to the relevant listed location.</li>
+            <li>Settling revenue share payments for listing data sales and scan submissions, and preparing/filing payment record statements as required by law.</li>
             <li>Preventing abuse and spam, and handling reports.</li>
             <li>Statistical analysis to improve service quality.</li>
             <li>Sending important notices (terms updates, maintenance, etc.).</li>
@@ -192,7 +201,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="serif text-lg mb-4">Article 4 (Retention Period)</h2>
           <p className="opacity-80">
-            Account information is retained until you request account deletion. Purchase history is retained for the period required by applicable law, and inquiry information is retained for a reasonable period after resolution before deletion.
+            Account information is retained until you request account deletion. Purchase history is retained for the period required by applicable law, and inquiry information is retained for a reasonable period after resolution before deletion. Payout bank details (and My Number where collected) are retained for the period required by applicable law (generally 7 years for tax-related records in Japan) and promptly destroyed thereafter.
           </p>
         </section>
 
@@ -227,6 +236,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: July 11, 2026<br />
+            Revised: August 2, 2026 (added payout bank details and payment-record-statement handling to the information we collect, purposes, and retention period)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

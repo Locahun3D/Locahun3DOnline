@@ -23,7 +23,8 @@ export interface Notification {
    * scan_status=持ち込みスキャンの状態変更（申請者へ） /
    * contact_request=サイト全体お問い合わせの新着（運営へ） /
    * production_request=制作会社(NDA)アカウント申請の新着（運営へ） /
-   * production_status=制作会社(NDA)アカウント申請の結果（申請者へ）
+   * production_status=制作会社(NDA)アカウント申請の結果（申請者へ） /
+   * policy_update=規約・条件変更のお知らせ（掲載者・利用者へ）
    */
   type:
     | "inquiry_reply"
@@ -33,7 +34,8 @@ export interface Notification {
     | "scan_status"
     | "contact_request"
     | "production_request"
-    | "production_status";
+    | "production_status"
+    | "policy_update";
   title: string;
   body: string;
   /** クリック時の遷移先（相対パス）。 */

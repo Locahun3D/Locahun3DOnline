@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
+import { repo as propertyRepo } from "./store";
 import { purchaseRepo } from "./purchases";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactStatus } from "./contact-requests";
@@ -479,5 +480,54 @@ export async function bulkDeleteTestPurchasesAction(): Promise<void> {
     await purchaseRepo.remove(p.id);
   }
   revalidatePath("/admin/purchases");
+}
+
+/**
+ * 直接掲載スタジオ（自らスタジオアカウントで掲載依頼し、当社が現地スキャンした
+ * 公開済み物件のオーナー）へ、新設した掲載データ販売分配規約（20%分配）を
+ * アプリ内通知で一括案内する。
+ *
+ * ⚠ 対象は「studio ロール かつ ownerId が紐づく公開済み物件を持つユーザー」のみ。
+ *   持ち込みスキャン経由の物件（ownerId が提出者ではなく運営/別ownerになりうる）は
+ *   対象外 — 施設側への分配は無い方針（/terms/listing-revenue-share 第1条参照）ため。
+ * 1ユーザー1通に集約する（複数物件を持っていても通知は1件）。
+ * 既に通知済みのユーザーには再送しない（type+link一致で判定、冪等）。
+ */
+export async function notifyStudioRevenueShareAction(): Promise<{ notified: number; skipped: number }> {
+  await requireAdmin();
+  const LINK = "/terms/listing-revenue-share";
+  const [users, properties] = await Promise.all([userRepo.list(), propertyRepo.list()]);
+  const studioIds = new Set(users.filter((u) => u.role === "studio").map((u) => u.id));
+  const ownersWithPublished = new Set(
+    properties
+      .filter((p) => p.status === "published" && p.ownerId && studioIds.has(p.ownerId))
+      .map((p) => p.ownerId as string),
+  );
+
+  let notified = 0;
+  let skipped = 0;
+  for (const userId of ownersWithPublished) {
+    const existing = await notificationRepoHasPolicyUpdate(userId, LINK);
+    if (existing) {
+      skipped++;
+      continue;
+    }
+    await createNotification({
+      userId,
+      type: "policy_update",
+      title: "掲載物件のデータ販売分配について",
+      body: "掲載いただいている物件の3Dデータが販売された場合、売上の20%を分配する規約を新設しました。内容をご確認ください。",
+      link: LINK,
+    });
+    notified++;
+  }
+  return { notified, skipped };
+}
+
+/** 同じ内容の policy_update 通知を既に受け取っているか（重複送信防止）。 */
+async function notificationRepoHasPolicyUpdate(userId: string, link: string): Promise<boolean> {
+  const { listNotifications } = await import("./notifications");
+  const list = await listNotifications(userId, 100);
+  return list.some((n) => n.type === "policy_update" && n.link === link);
 }
 

@@ -4,6 +4,7 @@ import { emailEnabled } from "@/lib/email";
 import { giftCodeRepo } from "@/lib/gift-codes";
 import MarketingComposer from "@/components/admin/marketing-composer";
 import GiftCodeAdmin from "@/components/admin/gift-code-admin";
+import StudioRevenueShareNotice from "@/components/admin/studio-revenue-share-notice";
 
 export const metadata = { title: "マーケティング" };
 
@@ -44,6 +45,8 @@ export default async function AdminMarketingPage() {
       </div>
 
       <MarketingComposer disabled={!emailEnabled()} />
+
+      <StudioRevenueShareNotice />
 
       <section id="gift-codes" className="border-t border-line pt-10 scroll-mt-24">
         <header className="mb-8">
