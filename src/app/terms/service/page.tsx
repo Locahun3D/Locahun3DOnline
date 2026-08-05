@@ -152,10 +152,11 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第10条（利用制限・登録抹消）</h2>
-          <p className="opacity-80">
-            当社は、利用者が本規約に違反した場合、事前の通知なく当該利用者に対する本サービスの利用を制限し、またはアカウント登録を抹消することができます。
-          </p>
+          <h2 className="serif text-lg mb-4">第10条（退会・利用制限・登録抹消）</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>利用者は、当社所定の方法により、いつでもアカウントの削除（退会）を申し出ることができます。退会後の個人情報の取扱いは<Link href={localizedHref("/privacy", locale)} className="text-accent hover:underline">プライバシーポリシー</Link>によります。</li>
+            <li>当社は、利用者が本規約に違反した場合、事前の通知なく当該利用者に対する本サービスの利用を制限し、またはアカウント登録を抹消することができます。</li>
+          </ol>
         </section>
 
         <section>
@@ -163,14 +164,20 @@ export default async function TermsServicePage() {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>当社は、本サービスに掲載される物件情報・3Dスキャンデータの正確性・完全性を保証するものではありません。実際の撮影可否・許可要件は、利用者ご自身で各物件の管理者・関係機関にご確認ください。</li>
             <li>当社は、利用者間または利用者と第三者との間で生じたトラブルについて、一切の責任を負いません。</li>
-            <li>当社の債務不履行または不法行為により利用者に生じた損害の賠償責任は、法令上許容される範囲において、利用者が当該サービスに支払った直近1ヶ月分の利用料金を上限とします。</li>
+            {/* ⚠「直近1ヶ月分の利用料金」だけだと無料ユーザーは上限0円=実質全部免責となり、
+                消費者契約法8条で条項ごと無効になるリスクがあった（2026-08-04リーガル点検）。
+                故意・重過失のカーブアウト明示＋無償利用時の下限額で手当て。 */}
+            <li>当社の債務不履行または不法行為により利用者に生じた損害の賠償責任は、当社の故意または重過失による場合を除き、利用者が当該サービスに支払った直近1ヶ月分の利用料金（無償で利用している場合は金10,000円）を上限とします。</li>
           </ol>
         </section>
 
         <section>
           <h2 className="serif text-lg mb-4">第12条（規約の変更）</h2>
+          {/* ⚠ 旧文言「通知なく変更できる」は民法548条の4（定型約款の変更）の
+              周知要件を満たさず無効リスクがあった（2026-08-04リーガル点検）。
+              事前周知＋効力発生時期の明示＋不同意時の退会導線に改めた。 */}
           <p className="opacity-80">
-            当社は、必要と判断した場合、利用者への通知なく本規約を変更できるものとします。変更後の規約は本サービス上に掲示した時点で効力を生じます。
+            当社は、民法第548条の4の規定に基づき、本規約を変更することがあります。変更を行う場合、当社は、変更後の規約の内容および効力発生時期を、効力発生時期の相当期間前までに本サービス上への掲示その他適切な方法により周知します。変更後の規約に同意いただけない場合、利用者は効力発生前に第10条の退会を申し出ることができます。
           </p>
         </section>
 
@@ -186,6 +193,7 @@ export default async function TermsServicePage() {
             制定日: 2026年7月11日<br />
             改定日: 2026年7月23日（第6条として3Dデータのライセンス分類を新設し、以降の条項を繰り下げ。再配布・AI学習利用は事前のご相談・個別合意により可能とする方針を明記）<br />
             改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ／第5条に、閲覧を通じて取得した画像・スクリーンショットおよび技術的手段により取得しうる3Dデータ自体について、購入データと同様の再配布・AI学習利用制限を追記）<br />
+            改定日: 2026年8月4日（第10条に利用者からの退会手続きを追記／第11条3項の賠償上限に故意・重過失の除外と無償利用時の下限額を明記／第12条の規約変更手続きを事前周知方式に変更）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -337,10 +345,11 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 10 (Restriction &amp; Termination)</h2>
-          <p className="opacity-80">
-            We may restrict a user&apos;s access to the Service or terminate their account without prior notice if the user violates these Terms.
-          </p>
+          <h2 className="serif text-lg mb-4">Article 10 (Withdrawal, Restriction &amp; Termination)</h2>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80">
+            <li>Users may request deletion of their account (withdrawal) at any time by the method we designate. Handling of personal information after withdrawal is governed by the <Link href={localizedHref("/privacy", locale)} className="text-accent hover:underline">Privacy Policy</Link>.</li>
+            <li>We may restrict a user&apos;s access to the Service or terminate their account without prior notice if the user violates these Terms.</li>
+          </ol>
         </section>
 
         <section>
@@ -348,14 +357,14 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We do not guarantee the accuracy or completeness of listing information or 3D scan data on the Service. Users should confirm actual filming permission requirements directly with each location&apos;s manager or the relevant authorities.</li>
             <li>We are not liable for disputes arising between users or between a user and a third party.</li>
-            <li>To the extent permitted by law, our liability for damages arising from our breach of contract or tort is limited to the amount the user paid for the Service in the most recent one-month period.</li>
+            <li>Except in cases of our willful misconduct or gross negligence, our liability for damages arising from our breach of contract or tort is limited to the amount the user paid for the Service in the most recent one-month period (or ¥10,000 if the user uses the Service free of charge).</li>
           </ol>
         </section>
 
         <section>
           <h2 className="serif text-lg mb-4">Article 12 (Changes to these Terms)</h2>
           <p className="opacity-80">
-            We may change these Terms without notice to users when we deem it necessary. Revised Terms take effect once posted on the Service.
+            We may change these Terms pursuant to Article 548-4 of the Civil Code of Japan. When making changes, we will announce the revised Terms and their effective date a reasonable period in advance by posting on the Service or by other appropriate means. If you do not agree to the revised Terms, you may withdraw your account under Article 10 before they take effect.
           </p>
         </section>
 
@@ -371,6 +380,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             Established: July 11, 2026<br />
             Revised: July 23, 2026 (added Article 6 on 3D data license categories and the prohibition of AI-training use; renumbered subsequent articles)<br />
             Revised: August 2, 2026 (added studio/guest account terms to Article 2; added Article 7 on the Hosting Product, renumbering subsequent articles; added to Article 5 that images/screenshots obtained while viewing, and 3D data itself obtainable by technical means during viewing, are subject to the same redistribution/AI-training restrictions as purchased data)<br />
+            Revised: August 4, 2026 (added user-initiated withdrawal to Article 10; added willful-misconduct/gross-negligence carve-out and a floor amount for free users to the liability cap in Article 11; changed Article 12 to an advance-notice amendment procedure)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

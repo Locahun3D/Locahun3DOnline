@@ -37,6 +37,7 @@ export default async function DataDownloadTermsPage() {
             <li>「本データ」とは、ロケハン3Dが提供する3Dスキャンデータ（PLY、OBJ、ZIP形式を含む）を指します。</li>
             <li>「購入者」とは、本サービスを通じて本データを購入した法人または個人を指します。</li>
             <li>「スタジオ」とは、本データのスキャン対象となった撮影スタジオ・ロケーション施設を指します。</li>
+            <li>本サービスの運営者および本データの販売者は、KWI株式会社（以下「当社」）です。本規約において本サービスが負う義務・責任は、当社が負います。</li>
           </ol>
         </section>
 
@@ -52,7 +53,9 @@ export default async function DataDownloadTermsPage() {
               {/* schemas.ts の DATA_LICENSE_LABEL/DATA_LICENSE_DESC と内容を一致させること */}
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li><strong>標準ライセンス</strong> — 商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。</li>
-                <li><strong>エディトリアル限定</strong> — 報道・教育・個人利用に限定。広告等の商用利用は不可。</li>
+                {/* エディトリアル限定は新規販売を停止済み（2026-07 実装変更）。過去購入分の
+                    利用条件として定義は残す — 規約から消すと過去の領収書記載区分が宙に浮く。 */}
+                <li><strong>エディトリアル限定</strong> — 報道・教育・個人利用に限定。広告等の商用利用は不可。<span className="opacity-70">※現在、新規販売でのご選択は停止しています。過去に本区分で提供されたデータには引き続き適用されます。</span></li>
                 <li><strong>拡張ライセンス</strong> — 商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。</li>
                 <li><strong>カスタム（要相談）</strong> — 利用範囲を個別に取り決め。購入前にお問い合わせください。</li>
               </ul>
@@ -100,7 +103,10 @@ export default async function DataDownloadTermsPage() {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本データは撮影時点の空間を3Dスキャンしたものであり、現在の施設状態との差異が生じる場合があります。</li>
             <li>本データの精度・解像度は撮影条件に依存し、完全な正確性を保証するものではありません。</li>
-            <li>本データの利用によって生じた直接的・間接的な損害について、本サービスは責任を負いません。</li>
+            {/* ⚠ 旧文言は全部免責で、個人購入者がいる以上消費者契約法8条により
+                条項ごと無効になるリスクが高かった（2026-08-04リーガル点検）。
+                旧書式Cと同じ「上限=支払対価・故意重過失を除く」方式へ是正。 */}
+            <li>本データの利用に関して当社が購入者に対して負う損害賠償責任は、請求原因を問わず、当社の故意または重過失による場合を除き、当該本データについて購入者が現実に支払った対価を上限とします。</li>
           </ol>
         </section>
 
@@ -134,8 +140,8 @@ export default async function DataDownloadTermsPage() {
         <section>
           <h2 className="serif text-lg mb-4">第9条（規約の変更）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>本規約は予告なく変更される場合があります。</li>
-            <li>変更後の規約は、本ページに掲載された時点で効力を生じるものとします。</li>
+            <li>当社は、必要と判断した場合、本規約を変更することがあります。変更を行う場合、当社は、変更後の規約の内容および効力発生時期を、効力発生時期の相当期間前までに本ページへの掲示その他適切な方法により周知します。</li>
+            <li>変更後の規約は、購入済みの本データの利用条件に不利益に遡及して適用されません（第2条5項のとおり、購入時に選択した区分の条件が適用されます）。</li>
           </ol>
         </section>
 
@@ -151,6 +157,7 @@ export default async function DataDownloadTermsPage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年6月23日<br />
             改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ／第2条に対価・契約成立時点、第8条にスタジオ運営者からの許諾取得努力義務を追記／第2条にゲーム等ソフトウェア製品への組込利用は拡張ライセンスが必要である旨、第4条に組込利用時のデータ抽出可能性についての取り扱いを追記）<br />
+            改定日: 2026年8月4日（第1条に契約当事者がKWI株式会社である旨を明記／第2条5項にエディトリアル限定区分の新規販売停止を注記／第5条3項の免責を賠償上限方式（支払対価・故意重過失を除く）に変更／第9条の規約変更手続きを事前周知方式に変更し、購入済み分への不遡及を明記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -199,6 +206,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>&quot;Data&quot; means the 3D scan data provided by Locahun 3D (including PLY, OBJ and ZIP formats).</li>
             <li>&quot;Purchaser&quot; means the corporation or individual that purchases the Data through the Service.</li>
             <li>&quot;Studio&quot; means the filming studio or location facility that is the subject of the scanned Data.</li>
+            <li>The operator of the Service and the seller of the Data is KWI Inc. (&quot;we&quot;, &quot;us&quot;). Obligations and liabilities of the Service under these terms are borne by KWI Inc.</li>
           </ol>
         </section>
 
@@ -213,7 +221,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               The specific scope of use depends on the license tier selected at purchase. The tier is shown on the purchase receipt.
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li><strong>Standard license</strong> — Use in commercial &amp; non-commercial productions. Redistribution or resale of the data itself is not permitted.</li>
-                <li><strong>Editorial only</strong> — Limited to news, education and personal use. Commercial use such as advertising is not permitted.</li>
+                <li><strong>Editorial only</strong> — Limited to news, education and personal use. Commercial use such as advertising is not permitted. <span className="opacity-70">*This tier is no longer offered for new purchases; it continues to apply to Data previously provided under it.</span></li>
                 <li><strong>Extended license</strong> — Commercial use plus bundling into templates / embedded products and modified redistribution.</li>
                 <li><strong>Custom (by arrangement)</strong> — Scope arranged individually. Please contact us before purchasing.</li>
               </ul>
@@ -259,7 +267,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>The Data is a 3D scan of the space at the time of capture and may differ from the facility&apos;s current state.</li>
             <li>The accuracy and resolution of the Data depend on capture conditions and are not guaranteed to be fully accurate.</li>
-            <li>The Service is not liable for any direct or indirect damages arising from use of the Data.</li>
+            <li>Our liability to the Purchaser for damages relating to use of the Data, regardless of the cause of action, is limited to the amount the Purchaser actually paid for the relevant Data, except in cases of our willful misconduct or gross negligence.</li>
           </ol>
         </section>
 
@@ -293,8 +301,8 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="serif text-lg mb-4">Article 9 (Changes to these terms)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>These terms may be changed without notice.</li>
-            <li>The amended terms take effect when posted on this page.</li>
+            <li>We may change these terms when we deem it necessary. When making changes, we will announce the revised terms and their effective date a reasonable period in advance by posting on this page or by other appropriate means.</li>
+            <li>Amended terms do not retroactively apply to the disadvantage of Data already purchased (as stated in Article 2.5, the tier conditions selected at purchase continue to apply).</li>
           </ol>
         </section>
 
@@ -310,6 +318,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: June 23, 2026<br />
             Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8; clarified in Articles 2 and 4 that embedding into games/software requires the extended license, with the treatment of incidental data extractability)<br />
+            Amended: August 4, 2026 (named KWI Inc. as the contracting party in Article 1; noted in Article 2.5 that the Editorial tier is closed to new purchases; replaced the blanket disclaimer in Article 5.3 with a liability cap equal to the price paid, excluding willful misconduct/gross negligence; changed Article 9 to an advance-notice amendment procedure with non-retroactivity for purchased Data)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

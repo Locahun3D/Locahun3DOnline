@@ -96,7 +96,7 @@ export default async function ListingRevenueSharePage() {
         <section>
           <h2 className="serif text-lg mb-4">第7条（規約の変更）</h2>
           <p className="opacity-80">
-            当社は、必要と判断した場合、掲載者への通知なく本規約を変更できるものとします。変更後の規約は本ページに掲載した時点で効力を生じますが、既に生じた売上に対応する分配率には遡及して適用しません。
+            当社は、必要と判断した場合、本規約を変更することがあります。変更を行う場合、当社は、変更後の規約の内容および効力発生時期を、効力発生時期の相当期間前までに本ページへの掲示その他適切な方法により周知します。変更後の規約は、既に生じた売上に対応する分配率には遡及して適用しません。
           </p>
         </section>
 
@@ -110,6 +110,7 @@ export default async function ListingRevenueSharePage() {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年8月2日<br />
+            改定日: 2026年8月4日（第7条の規約変更手続きを事前周知方式に変更）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -216,7 +217,7 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="serif text-lg mb-4">Article 7 (Changes to these terms)</h2>
           <p className="opacity-80">
-            We may change these terms without notice to Listers when we deem it necessary. Revised terms take effect once posted on this page, but do not retroactively apply to the revenue share for sales that have already occurred.
+            We may change these terms when we deem it necessary. When making changes, we will announce the revised terms and their effective date a reasonable period in advance by posting on this page or by other appropriate means. Revised terms do not retroactively apply to the revenue share for sales that have already occurred.
           </p>
         </section>
 
@@ -230,6 +231,7 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
         <div className="border-t border-line pt-6 mt-10">
           <p className="mono text-[11px] opacity-40">
             Established: August 2, 2026<br />
+            Revised: August 4, 2026 (changed Article 7 to an advance-notice amendment procedure)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
