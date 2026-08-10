@@ -130,9 +130,14 @@ export default async function TermsServicePage() {
 
         <section>
           <h2 className="serif text-lg mb-4">第7条（ホスティング商品）</h2>
+          {/* ⚠ 2026-08-10に価格モデルを変更（本人判断）。旧: 一括の「スキャン代金10万円＋交通費」
+              → 新: データ販売価格の20%/年（従価）＋ホスティング契約時はスキャン費用無料。
+              初期費用という決裁ハードルを消して継続収益へ振り替える設計（D-008の
+              「スキャン=資産+CAC、回収はホスティングで」の枠組みに沿う）。 */}
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>当社は、物件ページの3Dツアーを利用者自身のウェブサイト等に埋め込み表示できる機能、およびそのアクセス解析（以下「ホスティング商品」）を、当社が発行するコードを通じて提供します。</li>
-            <li>ホスティング商品は、2026年中は無償で提供します。2027年以降の提供条件は、対象物件ごとのスキャン代金<strong>10万円（税別）および実費交通費</strong>を基準とし、当社が個別にご案内します。</li>
+            <li>ホスティング商品は、2026年中は無償で提供します。2027年以降の料金は、対象物件の3Dデータ販売価格の<strong>20%に相当する額を年額</strong>とします。販売価格は当社が定めるものとし、当該物件の3Dデータを販売していない場合も、当社が定める参考販売価格を基準として年額を算定します。</li>
+            <li>ホスティング商品をお申し込みいただく場合、対象物件のスキャン費用は無償とします。この場合において、ホスティング契約の開始から3年未満で解約されるときは、スキャン費用相当額（10万円・税別）に残存年数を3で除した割合を乗じた額を精算していただきます。</li>
             <li>利用者は、当社が発行した埋め込みコードを、当社の指定する範囲を超えて第三者に譲渡・再配布してはなりません。</li>
           </ol>
         </section>
@@ -194,6 +199,7 @@ export default async function TermsServicePage() {
             改定日: 2026年7月23日（第6条として3Dデータのライセンス分類を新設し、以降の条項を繰り下げ。再配布・AI学習利用は事前のご相談・個別合意により可能とする方針を明記）<br />
             改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ／第5条に、閲覧を通じて取得した画像・スクリーンショットおよび技術的手段により取得しうる3Dデータ自体について、購入データと同様の再配布・AI学習利用制限を追記）<br />
             改定日: 2026年8月4日（第10条に利用者からの退会手続きを追記／第11条3項の賠償上限に故意・重過失の除外と無償利用時の下限額を明記／第12条の規約変更手続きを事前周知方式に変更）<br />
+            改定日: 2026年8月10日（第7条のホスティング商品の料金を、2027年以降は3Dデータ販売価格の20%の年額とする従価方式に変更。あわせてホスティング商品をお申し込みの場合のスキャン費用の無償化と、3年未満での解約時の精算を追記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -325,7 +331,8 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <h2 className="serif text-lg mb-4">Article 7 (Hosting Product)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We provide a feature that lets you embed a property&apos;s 3D tour on your own website or elsewhere, together with access analytics (the &quot;Hosting Product&quot;), via embed code we issue.</li>
-            <li>The Hosting Product is provided free of charge through the end of 2026. From 2027 onward, terms are based on a scan fee of <strong>¥100,000 (excl. tax) plus actual travel expenses</strong> per property, which we will confirm with you individually.</li>
+            <li>The Hosting Product is provided free of charge through the end of 2026. From 2027 onward, the annual fee is <strong>20% of the 3D data sale price</strong> for the property. We set the sale price; where the property&apos;s 3D data is not offered for sale, the annual fee is calculated against a reference sale price we determine.</li>
+            <li>If you subscribe to the Hosting Product, the scan fee for the property is waived. If you cancel within three years of the hosting subscription start date, you will be charged the scan fee equivalent (¥100,000, excl. tax) multiplied by the remaining years divided by three.</li>
             <li>Users may not transfer or redistribute embed codes we issue to third parties beyond the scope we specify.</li>
           </ol>
         </section>
@@ -381,6 +388,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             Revised: July 23, 2026 (added Article 6 on 3D data license categories and the prohibition of AI-training use; renumbered subsequent articles)<br />
             Revised: August 2, 2026 (added studio/guest account terms to Article 2; added Article 7 on the Hosting Product, renumbering subsequent articles; added to Article 5 that images/screenshots obtained while viewing, and 3D data itself obtainable by technical means during viewing, are subject to the same redistribution/AI-training restrictions as purchased data)<br />
             Revised: August 4, 2026 (added user-initiated withdrawal to Article 10; added willful-misconduct/gross-negligence carve-out and a floor amount for free users to the liability cap in Article 11; changed Article 12 to an advance-notice amendment procedure)<br />
+            Revised: August 10, 2026 (changed the Hosting Product fee in Article 7 to an ad valorem annual fee of 20% of the 3D data sale price from 2027 onward; added the scan-fee waiver for hosting subscribers and the settlement due on cancellation within three years)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
