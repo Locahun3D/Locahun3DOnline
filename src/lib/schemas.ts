@@ -132,9 +132,9 @@ export const DATA_LICENSE_MATRIX: {
 
 /** 可否表の下に出す補足。ライセンスを問わず効く条件を明示する。 */
 export const DATA_LICENSE_MATRIX_NOTE_JA =
-  "再配布・転売・貸与、AI学習利用は、いずれのライセンスも事前のご相談・個別合意が必要です。ご希望の場合はお気軽にお問い合わせください。";
+  "再配布・転売・貸与、AI学習利用は、いずれのライセンスも事前のご相談・個別合意が必要です。ご希望の場合はお気軽にお問い合わせください。本データには撮影対象の空間に写り込んだ第三者の看板・広告・ロゴ・美術品等が含まれる場合があります。制作物として公開・納品・配布する際は、ライセンス区分によらず、それらを削除・加工したうえでご利用ください（詳細はデータ購入規約第3条）。";
 export const DATA_LICENSE_MATRIX_NOTE_EN =
-  "Redistribution/resale and AI-training use require prior consultation and a separate agreement, regardless of license. Please contact us if you're interested.";
+  "Redistribution/resale and AI-training use require prior consultation and a separate agreement, regardless of license. Please contact us if you're interested. The data may include third-party signage, advertisements, logos, or artwork captured within the scanned space. Before publishing, delivering, or distributing any work you create, please remove or edit out such material — this applies to every license tier (see Article 3 of the data purchase terms for details).";
 
 export function dataLicenseLabel(l: DataLicense, locale?: string): string {
   return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];
