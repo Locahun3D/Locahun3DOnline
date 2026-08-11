@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 
 /**
  * スマホ用のアカウントメニュー（バー右端のアイコン → 押すと下に開く）。
@@ -31,14 +30,6 @@ export default function HeaderAccountMenu({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // ヘッダーは layout 常駐でクライアント遷移してもアンマウントされないため、
-  // パネル内リンクで遷移した後も開いたまま残る（下の「遷移すればアンマウント
-  // される」という旧コメントは SPA 遷移では成り立たない）。pathname で閉じる。
-  const pathname = usePathname();
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
   useEffect(() => {
     if (!open) return;
     // 1024px 以上へリサイズしたら閉じる（バー側に EN が出るため二重になる）。
@@ -61,7 +52,10 @@ export default function HeaderAccountMenu({
   }, [open]);
 
   return (
-    <div ref={wrapRef} className="min-[1024px]:hidden relative shrink-0">
+    // 2026-08-12: EN をバー直接表示へ移したため、768–1023px ではパネルの中身が
+    // 空になる（カート/認証は 768px 以上でバー側に出ている）。●は中身のある
+    // 768px 未満だけ表示する。
+    <div ref={wrapRef} className="min-[768px]:hidden relative shrink-0">
       <button
         type="button"
         aria-label={label}

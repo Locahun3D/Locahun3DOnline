@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 
 /**
  * タブレット縦(720–1023px)専用のハンバーガー＋ドロワー。
@@ -25,14 +24,6 @@ export default function HeaderTabletNav({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-
-  // ヘッダーは layout に置かれクライアント遷移でアンマウントされないため、
-  // ルートが変わってもドロワーが開いたまま残る（ユーザー報告 2026-08-12）。
-  // 遷移を pathname で検知して必ず閉じる。
-  const pathname = usePathname();
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   // 1024px 以上へリサイズしたらドロワー状態を捨てる（開いたまま帯を跨ぐと
   // ≥1024 で絶対配置の残骸が残る）。
@@ -68,6 +59,13 @@ export default function HeaderTabletNav({
       </button>
       <div
         id="header-tablet-nav"
+        // ヘッダーは layout 常駐でクライアント遷移してもアンマウントされないため、
+        // ドロワー内リンクで遷移した後も開いたまま残っていた（ユーザー報告 2026-08-12）。
+        // effect で pathname を見る方式は react-hooks/set-state-in-effect に当たるので、
+        // リンククリック（イベント）で閉じる。ハッシュ遷移や同一ページ遷移でも閉じる。
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest("a")) setOpen(false);
+        }}
         className={
           "max-[1024px]:absolute max-[1024px]:inset-x-0 max-[1024px]:top-full max-[1024px]:z-10 " +
           // 半透明だと背後のページ本文が透けて読みにくかった（実測スクショ）ので不透明。

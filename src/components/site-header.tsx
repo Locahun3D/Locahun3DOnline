@@ -8,7 +8,6 @@ import NotificationBell from "@/components/notification-bell";
 import LangToggle from "@/components/lang-toggle";
 import HeaderTabletNav from "@/components/header-tablet-nav";
 import HeaderAuthButtons from "@/components/header-auth-buttons";
-import HeaderAccountMenu from "@/components/header-account-menu";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
@@ -210,10 +209,24 @@ export default async function SiteHeader() {
                                    744px以降は収まるが余裕を見て 768px を境界にした）
                   ⚠ Tailwind の max-[Npx] は「N未満」。バー側 max-[768px]:hidden と
                      ドロワー側 min-[768px]:hidden が過不足なく対になる。 */}
-              {/* ここ（☰ドロワー）はページ移動だけ。EN・カート・認証は右の●
-                  (HeaderAccountMenu)が担当する。スキャンサイトも同じ役割分担なので、
-                  「ENの場所がサイトで違う」が構造的に起きない。 */}
             </nav>
+            {/* 2026-08-12: ●(HeaderAccountMenu)を廃止（ユーザー指示「ENだけでいい」）。
+                旧●パネルの中身はこのドロワー下部へ移した。ENだけはバー右側に常時表示。
+                出し分け境界はバー側と必ず対にする:
+                  スキャン/オンライン トグル : <375（バーの中央グリッドから退避）
+                  カート/認証              : <768（768以上はバー右グループに出ている） */}
+            <div className="min-[1024px]:hidden mt-1 pt-3 border-t border-line flex items-center gap-3 flex-wrap empty:hidden">
+              <span className="min-[375px]:hidden flex items-center">{scanOnlineToggle}</span>
+              {user?.role !== "studio" && (
+                <span className="min-[768px]:hidden flex items-center">
+                  <CartLink />
+                </span>
+              )}
+              <span className="min-[768px]:hidden flex items-center gap-2 flex-wrap empty:hidden">
+                {authButtons}
+                {authSignedIn}
+              </span>
+            </div>
           </HeaderTabletNav>
         </div>
 
@@ -296,27 +309,16 @@ export default async function SiteHeader() {
             （実測: 375pxで-10px、320pxで-37.5px）。中身はドロワー側に出す（R3）。 */}
         {/* 768px未満: バーに並べる余地が無いので、アイコン1つに畳んで押したら開く。
             バーへ常時展開すると 375px でブランドの中央ぞろえが16px崩れる（実測）。 */}
-        <div className="flex-1 flex justify-end min-w-0 relative z-[1]">
-          <HeaderAccountMenu label={locale === "en" ? "Language & account" : "言語・アカウント"}>
-            {/* 360px未満だけバーから退避してきたスキャン/オンライン トグル。 */}
-            <div className="min-[375px]:hidden flex items-center">{scanOnlineToggle}</div>
-            <div className="flex items-center gap-3">
-              <LangToggle />
-              {/* 撮影スタジオは自分の物件管理専用アカウント。他物件のデータ購入は
-                  対象外（サーバー側も /api/purchase で403）なので、買えないカートへの
-                  導線自体を出さない（2026-08-01）。 */}
-              {user?.role !== "studio" && (
-                <span className="min-[768px]:hidden flex items-center">
-                  <CartLink />
-                </span>
-              )}
-            </div>
-            {/* 768–1023px ではカート/認証はバーに出ているので、ここでは重複させない。 */}
-            <div className="min-[768px]:hidden flex items-center gap-2 flex-wrap empty:hidden">
-              {authButtons}
-              {authSignedIn}
-            </div>
-          </HeaderAccountMenu>
+        <div className="flex-1 flex justify-end min-w-0 relative z-[1] items-center gap-2">
+          {/* 2026-08-12: EN はスマホ帯でも●パネル内でなくバーに直接出す（ユーザー要望
+              「ヘッダー右上にENが表示されてほしい」）。スキャン側は●自体を廃止して
+              EN を列4常時表示にしたので、位置（右端付近）が両サイトで一致する。
+              1024px以上は下の右グループ側 LangToggle が担当（重複防止で min-[1024px]:hidden）。 */}
+          <LangToggle className="min-[1024px]:hidden" />
+          {/* ● (言語・アカウント) ボタンは 2026-08-12 に廃止（ユーザー指示「ENだけでいい」。
+              EN と ● を並べると 375px で中央トグルに EN が重なることも実測）。
+              旧●パネルの中身（≤374pxのトグル退避・カート・認証）は ☰ ドロワー下部へ
+              移動した（HeaderTabletNav の children 側）。スキャンサイトも同日●廃止済み。 */}
         </div>
 
         <div className="max-[768px]:hidden flex items-center gap-2 max-[1024px]:gap-2 max-[767px]:gap-1 justify-end min-w-0 relative z-[1]">
