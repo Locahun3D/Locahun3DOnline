@@ -142,6 +142,17 @@ export default async function SiteHeader() {
       style={{ zoom: "calc(1 / var(--z))", lineHeight: 1.5, letterSpacing: "normal" }}
       className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm"
     >
+      {/* ⚠ スマホ実機(WebKit)対策のバックストップ。sticky＋zoom(1/--z)＋bg/95+blur の
+          組み合わせは、実機でスクロール中にヘッダー上側が透けて本文が見える
+          （ユーザー報告 2026-08-12。デスクトップChromeのモバイルエミュでは再現しない）。
+          ヘッダー自身の箱に頼らず、実画面の最上部56px(このスコープはヘッダーの
+          逆zoom内なので h-14=実px)を fixed の不透明レイヤーで常に塗っておく。
+          ヘッダーが正位置にある限り完全に背後に隠れるので見た目は不変。
+          1024px以上は問題が出ておらず、すりガラス表現を保つため出さない。 */}
+      <div
+        aria-hidden
+        className="min-[1024px]:hidden fixed inset-x-0 top-0 h-14 -z-[1] bg-bg border-b border-line"
+      />
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに
           切り替える。1024px 以上は従来どおり 左=ナビ / 中央=ブランド / 右=操作。 */}

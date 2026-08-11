@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * タブレット縦(720–1023px)専用のハンバーガー＋ドロワー。
@@ -24,6 +25,14 @@ export default function HeaderTabletNav({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+
+  // ヘッダーは layout に置かれクライアント遷移でアンマウントされないため、
+  // ルートが変わってもドロワーが開いたまま残る（ユーザー報告 2026-08-12）。
+  // 遷移を pathname で検知して必ず閉じる。
+  const pathname = usePathname();
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   // 1024px 以上へリサイズしたらドロワー状態を捨てる（開いたまま帯を跨ぐと
   // ≥1024 で絶対配置の残骸が残る）。

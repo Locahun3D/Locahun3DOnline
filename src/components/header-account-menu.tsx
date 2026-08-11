@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * スマホ用のアカウントメニュー（バー右端のアイコン → 押すと下に開く）。
@@ -29,6 +30,14 @@ export default function HeaderAccountMenu({
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  // ヘッダーは layout 常駐でクライアント遷移してもアンマウントされないため、
+  // パネル内リンクで遷移した後も開いたまま残る（下の「遷移すればアンマウント
+  // される」という旧コメントは SPA 遷移では成り立たない）。pathname で閉じる。
+  const pathname = usePathname();
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
