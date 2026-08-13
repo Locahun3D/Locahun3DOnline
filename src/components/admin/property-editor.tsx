@@ -90,9 +90,11 @@ export default function PropertyEditor({
 }) {
   const router = useRouter();
   const [step, setStep] = useState<StepId>("basic");
-  // 英語(EN)欄は既定で畳む。日本語欄の直後に毎回挟まると入力のリズムが切れるうえ、
-  // 実際は空欄でよい（公開作業時に運営がAI翻訳して埋める）。必要な人だけ開く。
-  const [showEn, setShowEn] = useState(false);
+  // 英語(EN)欄は 2026-08-13 にエディターから引っ込めた（本人指示）。EN は公開作業の
+  // ときに運営がAI翻訳して埋めるので、掲載者にも運営にも入力させる場面が無い。
+  // ⚠ 各EN入力ブロックは残してある（この定数を true にすれば元どおり出る）。値自体は
+  //   フォーム状態に保持されるので、UIを隠しても既存のEN訳が消えることはない。
+  const showEn = false;
   // 3DGSデータ行の開閉。行IDごとに保持し、既定は畳んだ状態。
   // ⚠ ファイル1件ごとに販売設定・無料期間・ライセンスまで並ぶので、
   //   全部開くと3件で5000pxを超える（実測 41欄/5399px）。
@@ -432,24 +434,6 @@ export default function PropertyEditor({
           </button>
         ))}
 
-        {/* 英語(EN)欄の表示切替。既定は畳んだ状態。 */}
-        <button
-          type="button"
-          onClick={() => setShowEn((v) => !v)}
-          aria-pressed={showEn}
-          className={`block w-full text-left px-3 py-2.5 border transition mt-4 ${
-            showEn
-              ? "border-accent text-accent"
-              : "border-line text-muted hover:text-ink hover:border-ink"
-          }`}
-        >
-          <div className="text-[12px]">
-            {showEn ? "英語(EN)欄を隠す" : "英語(EN)欄を編集する"}
-          </div>
-          <div className="mono text-[10px] opacity-60 mt-0.5">
-            未記入でOK（公開時に運営が翻訳）
-          </div>
-        </button>
       </aside>
 
       {/* Form pane */}
@@ -1451,6 +1435,8 @@ export default function PropertyEditor({
                           <button
                             type="button"
                             onClick={() => {
+                              // ⚠ 差し替えは元ファイルをR2から削除する不可逆操作（本人指示 2026-08-13）。
+                              if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
                               const url = watch(`blueprints.${idx}.url`);
                               setValue(`blueprints.${idx}.url`, "", { shouldDirty: true });
                               if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
@@ -1623,6 +1609,8 @@ export default function PropertyEditor({
                     <button
                       type="button"
                       onClick={() => {
+                        // ⚠ 差し替えは元ファイルをR2から削除する不可逆操作（本人指示 2026-08-13）。
+                        if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
                         const prevSrc = getValues("cover.src");
                         setValue("cover.src", "", { shouldDirty: true });
                         setValue("cover.alt", "", { shouldDirty: true });
@@ -1869,7 +1857,15 @@ export default function PropertyEditor({
                         <button
                           type="button"
                           onClick={() => {
+                            // ⚠ この削除は R2 の実ファイル(3DGS本体・プレビュー動画・
+                            //   DL用ZIP)も消す不可逆操作。誤爆すると再アップロードに
+                            //   なるため確認を1回挟む（本人指示 2026-08-13）。
                             const item = getValues(`splatItems.${idx}`);
+                            const name = (item.label || "").trim() || `${idx + 1}件目`;
+                            if (!window.confirm(`「${name}」の3DGSデータを削除します。
+アップロード済みのファイルも一緒に削除され、元に戻せません。
+
+削除しますか？`)) return;
                             splatItemsArray.remove(idx);
                             if (previewItemIdx === idx) setPreviewItemIdx(null);
                             const urls = [
@@ -1963,6 +1959,8 @@ export default function PropertyEditor({
                           <button
                             type="button"
                             onClick={() => {
+                              // ⚠ 差し替えは元ファイルをR2から削除する不可逆操作（本人指示 2026-08-13）。
+                              if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
                               const prevUrl = getValues(`splatItems.${idx}.splatUrl`);
                               setValue(`splatItems.${idx}.splatUrl`, "", { shouldDirty: true });
                               setValue(`splatItems.${idx}.sizeMb`, 0, { shouldDirty: true });
@@ -2122,6 +2120,8 @@ export default function PropertyEditor({
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      // ⚠ 差し替えは元ファイルをR2から削除する不可逆操作（本人指示 2026-08-13）。
+                                      if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
                                       const prevUrl = getValues(`splatItems.${idx}.downloadFileUrl`);
                                       setValue(`splatItems.${idx}.downloadFileUrl`, "", { shouldDirty: true });
                                       setValue(`splatItems.${idx}.downloadFileSizeMb`, 0, { shouldDirty: true });
