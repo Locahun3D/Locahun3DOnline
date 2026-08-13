@@ -56,18 +56,22 @@ html:has(.about07) body{ background:#fff; }
 .about07{
   --ink:#101828;
   --muted:#526174;
-  --blue:#155eef;
-  --navy:#0d2f63;
-  --cyan:#0891b2;
+  /* 青のトーンだけサイトのアクセントに合わせる（2026-08-14）。
+     07 の汎用青 #155eef / 紺 #0d2f63 / シアン #0891b2 は使わない。 */
+  --blue:var(--color-accent);
+  --navy:color-mix(in srgb, var(--color-accent) 55%, black);
+  --cyan:var(--color-accent);
   --line:#d8e3ef;
   --soft:#f7fafc;
   --green:#0f9f6e;
   --radius:8px;
-  zoom:calc(1 / var(--z));
+  /* ⚠ 07と1:1に見せるため zoom を打ち消していたが、そうすると文字だけ
+     他ページより大きく見える。サイト共通の zoom に乗せて倍率を揃える。 */
   margin:0;
   color:var(--ink);
   background:#fff;
-  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* 書体は他ページと同じ（globals.css の --font-sans = Noto Sans JP）。 */
+  font-family:var(--font-sans);
   line-height:1.8;
   font-weight:400;
   letter-spacing:normal;
@@ -101,16 +105,16 @@ html:has(.about07) body{ background:#fff; }
   gap:8px;
   padding:6px 10px;
   border-radius:999px;
-  border:1px solid #c3dcfb;
-  background:#eef6ff;
+  border:1px solid color-mix(in srgb, var(--color-accent) 32%, white);
+  background:color-mix(in srgb, var(--color-accent) 10%, white);
   color:var(--blue);
   font-size:13px;
-  font-weight:850;
+  font-weight:700;
   line-height:1.4;
 }
 .about07 h1{
   margin:18px 0 14px;
-  font-size:clamp(38px, 5vw, 64px);
+  font-size:clamp(1.55rem, 4.5vw, 3.6rem); /* 他ページ h1 と同値 */
   line-height:1.08;
   text-wrap:balance;
   letter-spacing:0;
@@ -155,7 +159,7 @@ html:has(.about07) body{ background:#fff; }
   gap:8px;
   color:var(--blue);
   font-size:13px;
-  font-weight:850;
+  font-weight:700;
   margin-bottom:10px;
 }
 .about07 .role-dot{
@@ -166,7 +170,7 @@ html:has(.about07) body{ background:#fff; }
 }
 .about07 .segment h2{
   margin:0 0 10px;
-  font-size:clamp(24px, 3vw, 34px);
+  font-size:clamp(1.15rem, 2vw, 1.44rem); /* 他ページ h2 と同値(23px) */
   line-height:1.18;
   text-wrap:balance;
   letter-spacing:0;
@@ -233,7 +237,7 @@ html:has(.about07) body{ background:#fff; }
 }
 .about07 h2.section-title{
   margin:0;
-  font-size:clamp(28px, 3vw, 42px);
+  font-size:clamp(1.2rem, 2.2vw, 1.7rem); /* 他ページ h2 と同水準 */
   line-height:1.18;
   text-wrap:balance;
   letter-spacing:0;
@@ -348,13 +352,13 @@ html:has(.about07) body{ background:#fff; }
   align-items:center;
   padding:36px;
   border-radius:8px;
-  background:linear-gradient(135deg, #0d2f63, #155eef);
+  background:linear-gradient(135deg, var(--navy), var(--blue));
   color:#fff;
-  box-shadow:0 22px 60px rgba(21,94,239,.23);
+  box-shadow:0 22px 60px color-mix(in srgb, var(--color-accent) 23%, transparent);
 }
 .about07 .cta-panel h2{
   margin:0;
-  font-size:clamp(28px, 3vw, 42px);
+  font-size:clamp(1.2rem, 2.2vw, 1.7rem);
   line-height:1.18;
   text-wrap:balance;
   letter-spacing:0;
