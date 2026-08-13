@@ -124,10 +124,12 @@ export default function PropertyEditor({
   //    毎レンダー新しくなるオブジェクトを依存に入れる＝effectが毎回走る、
   //    という悪化を招く（実際に警告が出ていた）。
   const { capturedUrl, capturedIdx, clearResult, queueCaptures } = capture;
-  // プレビュー動画生成の録画前ウォームアップを +3秒 する（重いシーンで画質が
-  // 乗り切る前に録画が始まりボケるのを防ぐ）。既定OFF。
-  const [warmupPlus3, setWarmupPlus3] = useState(false);
-  const captureWarmupMs = warmupPlus3 ? 3000 : 0;
+  // プレビュー動画生成の録画前ウォームアップ追加時間。重いシーンで画質が
+  // 乗り切る前に録画が始まるとボケるため +3秒 待つ。
+  // ⚠ 2026-08-13: 以前はチェックボックスで都度ON/OFFさせていたが、運用上は
+  //   常にONで良く「選ばせる必要がない」という判断で常時適用に変更（本人指示）。
+  //   3秒の待ちよりボケた動画を作り直す方がはるかに高くつく。
+  const captureWarmupMs = 3000;
 
   const form = useForm<Property>({
     // zod's input type (fields with .default() are optional) differs from the
@@ -1774,25 +1776,7 @@ export default function PropertyEditor({
               {/* ── 3DGS アイテム (複数・ラベル付き) ── */}
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-                      3DGS データ（フロア・区画別）
-                    </div>
-                    {/* 動画生成のウォームアップ+3秒トグル。重いシーンでプレビュー
-                        動画がボケる時にON（録画前に画質を乗り切らせる）。 */}
-                    <label
-                      className="flex items-center gap-1.5 text-[11px] text-ink/70 cursor-pointer select-none"
-                      title="重いシーンでプレビュー動画がボケるときに ON（録画前の待ち時間を +3 秒）"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={warmupPlus3}
-                        onChange={(e) => setWarmupPlus3(e.target.checked)}
-                        className="accent-accent"
-                      />
-                      ウォームアップ +3秒
-                    </label>
-                  </div>
+                  <div />
                   <button
                     type="button"
                     onClick={() => {
@@ -1811,24 +1795,6 @@ export default function PropertyEditor({
                   </button>
                 </div>
 
-                {/* 状態の凡例。行ごとの文字ラベルを全部消した代わりに、
-                    「どこを見ればいいか」をここ 1 箇所に集約する。 */}
-                {splatItemsArray.fields.length > 0 && (
-                  <div className="flex items-center gap-4 mb-2 text-[11px] text-muted">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-3 h-3 border border-line bg-[#141414]" />
-                      未アップロード
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-3 h-3 border border-amber-400 bg-amber-400/[0.3]" />
-                      動画を生成中
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-3 h-3 border border-[#5ec8e8] bg-[#5ec8e8]/[0.3]" />
-                      完了
-                    </span>
-                  </div>
-                )}
 
                 {splatItemsArray.fields.length === 0 && (
                   <div className="text-[12px] text-muted py-4 text-center border border-dashed border-line">
@@ -2085,16 +2051,6 @@ export default function PropertyEditor({
                         </div>
                       )}
 
-                      <div className="mono text-[9px] tracking-[0.2em] uppercase text-ink/40">
-                        ② メモ（任意）
-                      </div>
-                      <textarea
-                        {...register(`splatItems.${idx}.notes`)}
-                        className={`${inputClass} resize-y min-h-[60px]`}
-                        rows={2}
-                        placeholder="注釈（スキャン条件・注意点・撮影メモなど）"
-                      />
-
                       {/* Per-item data sale settings */}
                       <div className="border-t border-line/40 pt-3 mt-3">
                         <label className="flex items-center gap-3 cursor-pointer mb-3">
@@ -2330,20 +2286,6 @@ export default function PropertyEditor({
                 </div>
               </div>
 
-              {/* ── 注釈（旧「3DGS 注釈・メタ」ステップ。往復が面倒なので統合） ── */}
-              <div className="border-t border-line pt-5 mt-6">
-                <Field
-                  label="3DGS データ注釈"
-                  hint="スキャン条件・特記事項・撮影時の天候や機材など自由記述"
-                >
-                  <textarea
-                    {...register("splatNotes")}
-                    className={`${inputClass} resize-y min-h-[80px]`}
-                    rows={3}
-                    placeholder="例: 晴天14時撮影 / Insta360 X4使用 / 一部足場あり注意 / 2F奥の部屋は未スキャン"
-                  />
-                </Field>
-              </div>
 
               {/* ── 共通メタ ── */}
               <div className="border-t border-line pt-5 mt-6">
@@ -2499,7 +2441,7 @@ export default function PropertyEditor({
 // --- small UI helpers ------------------------------------------------------
 
 /** 撮影機材のプルダウン選択肢。自由入力は無し（固定2択）。 */
-const CAPTURE_DEVICE_OPTIONS = ["Portalcam", "A7III"] as const;
+const CAPTURE_DEVICE_OPTIONS = ["Portalcam", "K2"] as const;
 /** 利用可能な時間帯の選択肢。分単位の予約は無いので時間のみ。
     ⚠ schemas.ts の customHoursStart/End は "([01]\d|2[0-3]):[0-5]\d" で 00〜23時までしか
       許可していない（24:00 は弾かれる）ので、選択肢もそれに合わせて 00〜23 に揃える。 */
