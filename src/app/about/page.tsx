@@ -388,29 +388,35 @@ export default async function AboutPage() {
     },
   ];
 
+  // ⚠ 地の色は白（07 の body は #fff）。theme-online の既定 bg は #f6f8fa の
+  //   グレー寄りで、07 と並べると全体がくすんで見えたため bg-white で上書きする。
   return (
-    <div className="theme-online frame pb-12 sm:pb-24">
+    <div className="theme-online bg-white frame pb-12 sm:pb-24">
       {/* ── 1. HERO（07 の .hero: 上下グラデ + 中央寄せ eyebrow / h1 / lead） ── */}
       <section
         className="text-center pt-10 sm:pt-14 pb-10 sm:pb-14"
         style={{
+          // 07 は #fff → #f5faff のごく淡いグラデ。accent 9% だと青が乗りすぎて
+          // 07 と別物に見えたので、07 の実測値に相当する 4% まで薄める。
           background:
-            "linear-gradient(180deg, white, color-mix(in srgb, var(--color-accent) 9%, white))",
+            "linear-gradient(180deg, white, color-mix(in srgb, var(--color-accent) 4%, white))",
         }}
       >
         <Eyebrow>{en ? "For owners / For scouts" : "掲載する側 / 探す側"}</Eyebrow>
+        {/* ⚠ 07 の h1 は色を使わない黒一色。アクセント色で一部を強調すると
+            07 と印象が変わるため、強調は入れない。 */}
         <h1 className="mt-5 mb-4 font-black tracking-normal text-[clamp(1.9rem,5vw,4rem)] leading-[1.14] max-w-[24ch] mx-auto text-balance">
           {en ? (
             <>
               Real locations,
               <br />
-              scouted <em className="not-italic text-accent">in your browser</em>.
+              scouted in your browser.
             </>
           ) : (
             <>
               実在のロケ地を、
               <br />
-              <em className="not-italic text-accent">ブラウザで歩いて</em>下見。
+              ブラウザで歩いて下見。
             </>
           )}
         </h1>
@@ -438,7 +444,10 @@ export default async function AboutPage() {
               key={s.no}
               className={`rounded-lg border border-line bg-white overflow-hidden flex flex-col ${SHADOW_CARD}`}
             >
-              <div className="relative aspect-[16/9] bg-[#eef2f5] border-b border-line overflow-hidden">
+              {/* ⚠ 07 はセグメントが2枚で画像が主役級に大きい。ここは対象が3系統
+                  あるため 1枚あたりが細くなり、16/9 だと画像が痩せる。
+                  4/3 にして画像の存在感を07に寄せる。 */}
+              <div className="relative aspect-[4/3] bg-[#eef2f5] border-b border-line overflow-hidden">
                 {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
                 <LightboxImage
                   src={s.img.src}
