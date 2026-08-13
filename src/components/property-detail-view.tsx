@@ -836,8 +836,17 @@ export default function PropertyDetailView({
                 以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
                 `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
                 大きさになっていた（実測 PC1440 で高さ 760px 超）。複数件のときの
-                「左右2分割でちょうどいい」大きさを1件のときの基準にする。 */}
-            <div className="grid lg:grid-cols-2 gap-x-8 gap-y-10">
+                「左右2分割でちょうどいい」大きさを1件のときの基準にする。
+                ただし1件だけを2カラムのまま置くと左半分に寄って右半分が丸ごと
+                空くので、その時だけ「1カラム分の幅(= (100% - gap)/2)」を保った
+                まま中央へ寄せる。gap-x-8 = 2rem を引いてから半分にしている。 */}
+            <div
+              className={
+                visibleSplatItems.length > 1
+                  ? "grid lg:grid-cols-2 gap-x-8 gap-y-10"
+                  : "space-y-10 lg:max-w-[calc((100%-2rem)/2)] lg:mx-auto"
+              }
+            >
               {visibleSplatItems.map(({ it: item, origIndex }, i) => {
                 // 限定無料期間はアイテム単位(item.freePeriod)。sharePreview(先方
                 // 共有プレビュー)は購入導線自体を出さない仕様のためここで force。
