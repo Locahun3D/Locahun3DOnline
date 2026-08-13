@@ -832,21 +832,24 @@ export default function PropertyDetailView({
         ) : (
           <section className="mb-16">
             <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
-            {/* 3DGSが複数ある時はページ幅で2つ並べる（1つなら全幅で大きく）。 */}
-            <div
-              className={
-                visibleSplatItems.length > 1
-                  ? "grid lg:grid-cols-2 gap-x-8 gap-y-10"
-                  : "space-y-10"
-              }
-            >
+            {/* ⚠ 件数に関わらず常に2カラムのグリッドに置く（2026-08-13）。
+                以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
+                `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
+                大きさになっていた（実測 PC1440 で高さ 760px 超）。複数件のときの
+                「左右2分割でちょうどいい」大きさを1件のときの基準にする。 */}
+            <div className="grid lg:grid-cols-2 gap-x-8 gap-y-10">
               {visibleSplatItems.map(({ it: item, origIndex }, i) => {
                 // 限定無料期間はアイテム単位(item.freePeriod)。sharePreview(先方
                 // 共有プレビュー)は購入導線自体を出さない仕様のためここで force。
                 const itemDataSaleFree = isDataSaleFree(item.freePeriod, nowIso);
                 const itemDataSaleDisabled = sharePreview || isDataSaleDisabled(item.freePeriod, nowIso);
                 return (
-                <section key={origIndex}>
+                /* 縦の上限をビューポート高で縛る。ビューアーは aspect-video なので
+                   「高さの上限」は幅の上限として書くしかない（max-h では中の
+                   aspect-video が縮まずはみ出す）。--z は html の zoom なので
+                   実画面基準の vh は必ず var(--z) で割る（CLAUDE.md の規約）。
+                   高さ 45vh 相当 → 幅 45vh × 16/9。 */
+                <section key={origIndex} className="max-w-[calc(45vh/var(--z)*16/9)]">
                   <div className="flex items-baseline gap-3 mb-4 mono text-[11px] tracking-[0.16em] uppercase">
                     <span className="text-accent font-medium">
                       GS-{String(i + 1).padStart(2, "0")}
@@ -1028,11 +1031,13 @@ export default function PropertyDetailView({
         {/* ══════════════════════════════════════════════════
          *  Related studios（共有プレビューでは非表示 — 確認対象の物件に専念）
          * ══════════════════════════════════════════════════ */}
-        {!sharePreview && (
+        {/* ⚠ 類似スタジオが1件も無いときは、セクションごと出さない（2026-08-13）。
+            以前は「掲載準備中です」の破線ボックスを出していたが、ページ末尾に
+            中身の無い枠が居座るだけで邪魔だという運用判断。 */}
+        {!sharePreview && others.length > 0 && (
         <section className="mb-20">
           <Eyebrow en="RELATED" jp={en ? "Similar studios" : "類似スタジオ"} />
-          {others.length > 0 ? (
-            <div className="grid gap-4">
+          <div className="grid gap-4">
               {others.map((p) => (
                 <Link
                   key={p.id}
@@ -1070,20 +1075,7 @@ export default function PropertyDetailView({
                   )}
                 </Link>
               ))}
-            </div>
-          ) : (
-            <div className="border border-dashed border-line py-16 text-center bg-white">
-              <p className="text-ink/40 text-[14px]">
-                {en ? "Similar studios are coming soon." : "現在、類似スタジオの掲載準備中です"}
-              </p>
-              <Link
-                href={lh("/properties")}
-                className="inline-block mt-4 mono text-[12px] tracking-[0.15em] uppercase text-accent hover:underline"
-              >
-                {en ? "See all locations →" : "すべての物件を見る →"}
-              </Link>
-            </div>
-          )}
+          </div>
         </section>
         )}
       </div>

@@ -476,35 +476,10 @@ export default function CatalogClient({
   }, [en]);
 
   return (
+    // ⚠ 見出し（CATALOG / Find a Location）と「掲載スタジオ募集中」の募集枠は
+    //    2026-08-13 に撤去（運用判断）。キーワード検索と物件リストを1画面でも
+    //    多く見せるため、空いた分は詰めて検索UIを最上部に置く。
     <div className="frame-wide pt-3 sm:pt-5 pb-12 sm:pb-32">
-      <div className="chapter-rule mb-2.5 sm:mb-4">
-        <span className="opacity-60">CATALOG</span>
-        <span>Find a Location</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
-
-      {/* ⚠ 掲載件数がまだ少ない時期（サービス立ち上げ直後）は、初訪問の制作会社が
-          「中身が少ないサービス」と受け取ってしまう。少なさを隠すのではなく
-          「これから伸びる」という文脈に変える募集導線を出す（2026-08-01、
-          実際に本番で1件のみの状態を確認して追加）。閾値5件は目安。 */}
-      {items.length > 0 && items.length < 5 && (
-        <div className="mb-4 border border-accent/40 bg-accent/[0.06] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[12.5px] leading-[1.8]">
-            {en ? (
-              <>掲載スタジオ募集中 — <strong>listing is free, with no end date</strong>. Own a location? List it in about 20 minutes.</>
-            ) : (
-              <>掲載スタジオ募集中 — <strong>掲載費はずっと無料</strong>です。スタジオ・ロケ地をお持ちの方はぜひご連絡ください。</>
-            )}
-          </p>
-          <Link
-            href={en ? "/en/contact/listing" : "/contact/listing"}
-            className="shrink-0 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
-          >
-            {en ? "List your studio →" : "掲載を依頼する →"}
-          </Link>
-        </div>
-      )}
-
       {/* ══ タブレット縦(720–1023px)だけ「左=絞り込み+件数/ソート+カード / 右=地図sticky」
           の2カラムにする ══
           理由: 縦積みのままだと 1画面をほぼ地図が占有するのに情報が無く（実測
