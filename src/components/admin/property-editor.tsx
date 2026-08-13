@@ -323,6 +323,9 @@ export default function PropertyEditor({
     });
   };
 
+  // ⚠ 呼び出し元の「Danger zone」ブロックは 2026-08-13 に非表示化した（本人指示）。
+  //    復活させるときにそのまま使えるよう、ハンドラ本体は残してある。
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onArchive = () => {
     if (!confirm("この物件をアーカイブしますか？")) return;
     startPublish(async () => {
@@ -331,6 +334,7 @@ export default function PropertyEditor({
     });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onDelete = () => {
     if (!confirm("この物件を完全に削除します。よろしいですか？")) return;
     startPublish(async () => {
@@ -1096,12 +1100,14 @@ export default function PropertyEditor({
                 )}
               </div>
 
+              {/* ⚠ 旧「特徴・タグ」ステップをこのステップへ統合した名残で、
+                  見出しが「特徴・タグ」＋「実績・特徴」と2枚続き、上の1枚が
+                  中身の無い空見出しに見えていた（2026-08-13 修正）。
+                  中身は元から下の実績・特徴〜タグなので、見出しは1枚に統合し、
+                  区切り線だけ残す。 */}
               <div className="border-t border-line pt-6 mt-8">
-                <SectionHead title="特徴・タグ" hint="検索でヒットしやすくなる情報です。任意ですが、埋めるほど見つけてもらえます。" />
+                <SectionHead title="実績・特徴・タグ" hint="「どんな画が撮れるか」が伝わる情報です。検索でヒットしやすくなるので、埋めるほど見つけてもらえます。" />
               </div>
-
-              {/* ── 実績・特徴 ── */}
-              <SectionHead title="実績・特徴" hint="「どんな画が撮れるか」が伝わる情報。検索でも効きます。" />
               <Field label="撮影実績" hint="例: MV／映画／ドラマ／CM">
                 <input type="text" {...register("shootingHistory")} className={inputClass} placeholder="例: MV／映画／ドラマ／CM" />
               </Field>
@@ -2369,32 +2375,12 @@ export default function PropertyEditor({
                 </div>
               </div>
 
-              <div className="border border-line p-5">
-                <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  Danger zone
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={onArchive}
-                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
-                  >
-                    アーカイブ
-                  </button>
-                  {/* 完全削除は deleteAction=requireAdmin。studio に見せると押した瞬間
-                      redirect("/") でページごと追い出される（3df0885 と同じ事故クラス）
-                      うえ、そもそも削除は誤操作の被害が大きく admin 専任の方針。 */}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={onDelete}
-                      className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
-                    >
-                      完全削除
-                    </button>
-                  )}
-                </div>
-              </div>
+              {/* ⚠ 「Danger zone（アーカイブ / 完全削除）」は 2026-08-13 に
+                  エディターから非表示にした（本人指示）。日常の編集画面に
+                  取り返しのつかない操作を置いておく理由がない。
+                  onArchive / onDelete と各アクションは残してあるので、
+                  必要になったらここを戻すだけで復活する。
+                  物件一覧（/admin/properties）側の一括操作は従来どおり。 */}
             </StepCard>
           )}
         </section>
