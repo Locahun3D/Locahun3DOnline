@@ -835,27 +835,9 @@ export default async function AboutPage() {
       {/* ── 中核技術（07 の .section-head + .product） ── */}
       <section>
         <div className="wrap">
-          <div className="section-head">
-            <h2 className="section-title">
-              {en ? (
-                <>
-                  It all rests on one high-fidelity 3D scan.
-                </>
-              ) : (
-                <>
-                  <span className="w">すべての</span>
-                  <span className="w">土台は、</span>
-                  <span className="w">高精細な</span>
-                  <span className="w">3D スキャン。</span>
-                </>
-              )}
-            </h2>
-            <p>
-              {en
-                ? "Locations and studios are reconstructed as 3D Gaussian Splatting and made walkable in the browser. It is not CG modeling — the real dimensions, textures and lighting are recorded as they are, so owners can show a space honestly and scouts can compare it fairly."
-                : "ロケ地・スタジオを 3D Gaussian Splatting として再構成し、ブラウザ上で歩いて確認できるようにします。CG モデリングではなく、実寸・実際の質感・照明をそのまま記録しているため、掲載する側は空間をありのまま見せられ、探す側は比較しやすくなります。"}
-            </p>
-          </div>
+          {/* ⚠ ここにあった見出し「すべての土台は、高精細な3Dスキャン。」と
+              その説明文は 2026-08-14 に削除（本人指示）。同じ内容は下の
+              仕組み(STEP 02)で説明しており、重複していた。 */}
           <div className="product">
             <div className="screen">
               {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
