@@ -371,27 +371,29 @@ export default function ViewerGate({
         />
       )}
 
-      <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 text-center px-6"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)" }}
+      {/* ⚠ 2026-08-13: ここは以前「白い箱＋ボタン」の独自UIだったが、背後のシーンを
+          隠すうえに未ログイン時と見た目が別物で分かりづらかった。本人指示により
+          **未ログイン時のオーバーレイと同じ形**に統一し、状態ごとに文言だけ変える。
+          （未ログイン側の実装＝この上の <button> と構造・クラスを揃えてあるので、
+            片方を触るときはもう片方も合わせること） */}
+      <a
+        href={fullViewerUrl}
+        target="_blank"
+        rel="noopener"
+        onClick={openViewer}
+        className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-6 cursor-pointer backdrop-blur-md bg-black/55 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-300"
       >
-        {/* ⚠ 2026-08-13: 以前は w-full + bg-white/95 でカード幅いっぱいの
-            不透明な白い箱になっており、背後のシーンが完全に隠れて
-            「大きすぎて見えない」と指摘された。
-            → w-full をやめてコンテンツ幅（上限 max-w）に縮め、左右の内側余白も
-              詰め、背景を半透明にして背後が透けるようにした。
-            （親は align-items:center なので w-full を外すと shrink-to-fit する） */}
-        <div className="max-w-full flex flex-col items-center gap-2 px-3.5 py-2.5 border border-accent/70 bg-white/70 backdrop-blur-sm shadow-lg">
-          <div
-            className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
-              previewToken || freeAccess || alreadyUnlocked
-                ? "text-green-600"
-                : "text-accent"
-            }`}
-          >
-            {previewToken
-              ? en ? "● Shared preview · no tokens used" : "● 共有プレビュー · トークン消費なし"
-              : embedToken
-                ? en ? "● 3D tour · free to view" : "● 3Dツアー · 無料で閲覧できます"
+        <div
+          className={`mono text-[11px] font-semibold tracking-[0.3em] uppercase mb-4 drop-shadow ${
+            previewToken || embedToken || freeAccess || alreadyUnlocked
+              ? "text-green-400"
+              : "text-accent"
+          }`}
+        >
+          {previewToken
+            ? en ? "● Shared preview · no tokens used" : "● 共有プレビュー · トークン消費なし"
+            : embedToken
+              ? en ? "● 3D tour · free to view" : "● 3Dツアー · 無料で閲覧できます"
               : freeAccess
                 ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
                 : alreadyUnlocked
@@ -399,27 +401,18 @@ export default function ViewerGate({
                   : en
                     ? `● ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
                     : `● ${tokenCost} トークン消費`}
-          </div>
-
-          {!alreadyUnlocked && (
-            <p className="text-[12px] font-semibold text-ink/85 max-w-[44ch] leading-[1.75]">
-              {en
-                ? "Opens the 3D walkthrough in a new tab"
-                : "別タブで 3D ウォークスルーを開きます"}
-            </p>
-          )}
-
-          <a
-            href={fullViewerUrl}
-            target="_blank"
-            rel="noopener"
-            onClick={openViewer}
-            className="inline-flex items-center gap-2 px-6 py-3 mono text-[11px] font-bold tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-white transition"
-          >
-            {en ? "Open 3D viewer ↗" : "3Dビューアーを開く ↗"}
-          </a>
         </div>
-      </div>
+        <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
+          {previewToken || embedToken
+            ? en ? (<>Open the 3DGS<br />walkthrough.</>) : (<>3DGS ウォークスルーを<br />開きます。</>)
+            : freeAccess
+              ? en ? (<>Watch the 3DGS walkthrough<br />free of charge.</>) : (<>無料で 3DGS<br />ウォークスルーが見られます。</>)
+              : alreadyUnlocked
+                ? en ? (<>Watch the 3DGS<br />walkthrough again.</>) : (<>3DGS ウォークスルーを<br />もう一度見られます。</>)
+                : en ? (<>Use {tokenCost} token{tokenCost > 1 ? "s" : ""} to see<br />the 3DGS walkthrough.</>)
+                     : (<>{tokenCost} トークンで<br />3DGS ウォークスルーが見られます。</>)}
+        </div>
+      </a>
     </div>
 
     {/* 大容量シーンの事前警告 / トークン不足は、カード内(aspect-video +

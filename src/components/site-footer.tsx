@@ -11,41 +11,32 @@ export default async function SiteFooter() {
   return (
     // モバイルは margin 0 — ライト背景ページで margin が「裸の黒帯」として
     // 見える実害があったため、コンテンツ側の pb だけで間隔を作る。
-    <footer className="relative mt-0 sm:mt-32 border-t border-line">
+    <footer className="theme-online relative mt-0 sm:mt-32 border-t border-line">
       <div className="frame pt-8 pb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted">
+        <div className="mono text-[10px] tracking-[0.28em] uppercase text-ink/70">
           {en
             ? `© ${year} Locahun 3D — KWI Inc.`
             : `© ${year} ロケハン3D — KWI株式会社`}
         </div>
-        <nav className="flex flex-wrap gap-4 mono text-[10px] tracking-[0.18em] uppercase text-muted">
-          <Link href={lh("/terms/service")} className="hover:text-foreground transition">
+        <nav className="flex flex-wrap gap-4 mono text-[10px] tracking-[0.18em] uppercase text-ink/70">
+          <Link href={lh("/terms/service")} className="hover:text-accent transition">
             {en ? "Terms of Service" : "利用規約"}
           </Link>
-          <Link href={lh("/privacy")} className="hover:text-foreground transition">
+          <Link href={lh("/privacy")} className="hover:text-accent transition">
             {en ? "Privacy Policy" : "プライバシーポリシー"}
           </Link>
-          <Link href={lh("/terms/tokushoho")} className="hover:text-foreground transition">
+          <Link href={lh("/terms/tokushoho")} className="hover:text-accent transition">
             {en ? "Commercial Disclosure" : "特定商取引法"}
           </Link>
-          <Link href={lh("/terms/data-download")} className="hover:text-foreground transition">
+          <Link href={lh("/terms/data-download")} className="hover:text-accent transition">
             {en ? "Purchase Terms" : "データ購入規約"}
           </Link>
-          <Link href={lh("/submit-scan")} className="hover:text-foreground transition">
-            {en ? "Bring your own scan" : "持ち込みスキャン"}
+          <Link href={lh("/contact/listing")} className="hover:text-accent transition">
+            {en ? "List your location" : "掲載依頼"}
           </Link>
         </nav>
       </div>
 
-      <div
-        aria-hidden
-        className="absolute left-0 right-0 bottom-0 h-2"
-        style={{
-          backgroundImage: "linear-gradient(90deg, #000 50%, transparent 50%)",
-          backgroundSize: "12px 8px",
-          backgroundColor: "rgba(255,255,255,.04)",
-        }}
-      />
     </footer>
   );
 }
