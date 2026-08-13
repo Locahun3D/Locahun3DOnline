@@ -116,26 +116,32 @@ export default function ViewerGate({
             }}
           />
         )}
-        {/* タップ/クリックで登録ポップアップを開く（ホバー非依存＝モバイルでも機能する）。
-            ⚠ 2026-08-13: 以前はここに
-              ① アクセント色の「● 無料登録が必要 · N トークン消費」
-              ② 大きなセリフ体の「無料アカウント登録で 3DGS ウォークスルーが見られます。」
-            の2つが重なって出ており、しかもホバーするまで見えなかったため
-            「トークンの表示があちこちにあって分かりにくい」と指摘された。
-            → 「N トークンで見られます」の白文字 1 行だけに集約し、常時表示にした。 */}
+        {/* タップ/クリックで登録ポップアップを開く（ホバー非依存＝モバイルでも機能する）。 */}
         <button
           type="button"
           onClick={() => setShowAuthModal(true)}
-          className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 text-center px-6 cursor-pointer bg-black/45 hover:bg-black/60 transition-colors duration-300"
+          className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-6 cursor-pointer backdrop-blur-md bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         >
-          <div className="text-[15px] md:text-[17px] font-bold text-white drop-shadow-lg">
+          <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
             {en
-              ? `Viewable with ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
-              : `${tokenCost} トークンで見られます`}
+              ? `● Free account required · ${tokenCost} token(s)`
+              : `● 無料登録が必要 · ${tokenCost} トークン消費`}
           </div>
-          <span className="mono text-[10px] tracking-[0.24em] uppercase text-white/85 border border-white/60 px-4 py-2">
-            {en ? "Sign up free" : "無料登録して見る"}
-          </span>
+          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
+            {en ? (
+              <>
+                Create a free account
+                <br />
+                to unlock the 3DGS walkthrough.
+              </>
+            ) : (
+              <>
+                無料アカウント登録で
+                <br />
+                3DGS ウォークスルーが見られます。
+              </>
+            )}
+          </div>
         </button>
 
         {/* 登録モーダル — 「Free でできること比較型」。
