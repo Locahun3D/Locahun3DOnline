@@ -91,7 +91,7 @@ html:has(.about07) body{ background:#fff; }
   margin:0 auto;
 }
 .about07 .hero{
-  padding:62px 0 70px;
+  padding:70px 0 78px;
   background:linear-gradient(180deg, #fff, #f5faff);
 }
 .about07 .center{
@@ -128,8 +128,8 @@ html:has(.about07) body{ background:#fff; }
 .about07 .segments{
   display:grid;
   grid-template-columns:repeat(3, 1fr);
-  gap:18px;
-  margin-top:34px;
+  gap:20px;
+  margin-top:38px;
 }
 .about07 .segment{
   border:1px solid var(--line);
@@ -148,7 +148,7 @@ html:has(.about07) body{ background:#fff; }
   border-bottom:1px solid var(--line);
 }
 .about07 .segment-body{
-  padding:24px;
+  padding:28px;
   display:flex;
   flex-direction:column;
   flex:1;
@@ -185,7 +185,7 @@ html:has(.about07) body{ background:#fff; }
   padding:0;
   list-style:none;
   display:grid;
-  gap:9px;
+  gap:12px;
   color:#334155;
   font-size:15px;
   align-content:start;
@@ -202,8 +202,8 @@ html:has(.about07) body{ background:#fff; }
 .about07 .segment-actions{
   display:flex;
   flex-wrap:wrap;
-  gap:10px;
-  margin-top:22px;
+  gap:12px;
+  margin-top:26px;
 }
 .about07 .btn{
   min-height:46px;
@@ -226,13 +226,13 @@ html:has(.about07) body{ background:#fff; }
   color:var(--navy);
 }
 .about07 section{
-  padding:72px 0;
+  padding:80px 0;
 }
 .about07 .section-head{
   display:grid;
   grid-template-columns:.9fr 1.1fr;
-  gap:34px;
-  margin-bottom:28px;
+  gap:38px;
+  margin-bottom:32px;
   align-items:start;
 }
 .about07 h2.section-title{
@@ -257,7 +257,7 @@ html:has(.about07) body{ background:#fff; }
 .about07 .product{
   display:grid;
   grid-template-columns:1.1fr .9fr;
-  gap:20px;
+  gap:24px;
   align-items:stretch;
 }
 .about07 .screen{
@@ -276,14 +276,14 @@ html:has(.about07) body{ background:#fff; }
 }
 .about07 .feature-list{
   display:grid;
-  gap:14px;
+  gap:16px;
   align-content:start;
 }
 .about07 .feature{
   border:1px solid var(--line);
   border-radius:8px;
   background:#fff;
-  padding:20px;
+  padding:24px;
 }
 .about07 .feature h3{
   margin:0 0 7px;
@@ -326,7 +326,7 @@ html:has(.about07) body{ background:#fff; }
 .about07 .flow{
   display:grid;
   grid-template-columns:repeat(4, 1fr);
-  gap:14px;
+  gap:16px;
 }
 .about07 .flow-item{
   border:1px solid var(--line);
@@ -348,9 +348,9 @@ html:has(.about07) body{ background:#fff; }
 .about07 .cta-panel{
   display:grid;
   grid-template-columns:1fr auto;
-  gap:24px;
+  gap:28px;
   align-items:center;
-  padding:36px;
+  padding:40px;
   border-radius:8px;
   background:linear-gradient(135deg, var(--navy), var(--blue));
   color:#fff;
@@ -383,14 +383,14 @@ html:has(.about07) body{ background:#fff; }
 }
 @media (max-width: 640px){
   .about07 .wrap{ width:min(100% - 28px, 1160px); }
-  .about07 .hero{ padding:44px 0 52px; }
+  .about07 .hero{ padding:50px 0 58px; }
   .about07 .lead{ font-size:16px; }
   .about07 .segment-actions .btn,
   .about07 .cta-panel .btn{ width:100%; }
-  .about07 section{ padding:54px 0; }
+  .about07 section{ padding:60px 0; }
   .about07 .screen img{ min-height:250px; }
   .about07 .flow{ grid-template-columns:1fr; }
-  .about07 .cta-panel{ padding:26px; }
+  .about07 .cta-panel{ padding:30px; }
   .about07 .feature.detail{ grid-template-columns:1fr; }
   .about07 .pc-break{ display:none; }
 }
