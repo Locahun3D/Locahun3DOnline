@@ -914,13 +914,11 @@ export const PLAN_TOKEN_BUDGET = {
 } as const;
 
 /**
- * 従量課金（トークンパック）。サブスクに満たない利用者と、カタログが薄い
- * 現段階での支払い意思を測るための単発購入。
- *
- * 単価はサブスクより高く設定する（¥600/本 > individual の ¥325/本）。
- * これを下回るとサブスクへ移行する動機が消えるため、値下げする場合も
- * PLAN_LIST_PRICE_JPY.individual / PLAN_TOKEN_BUDGET.individual を上回る
- * 単価を維持すること。
+ * @deprecated トークンの単品購入は **2026-08-13 に廃止**。購入導線
+ * （料金ページ／マイページのカード・Stripe Checkout・戻りルート）は全て撤去済みで、
+ * この定数は「廃止前に支払われた分の付与（grantTokenPack）」と、
+ * viewer-gate.tsx に残る旧ボタンの表示のためだけに残っている。
+ * 新しい購入 UI をこの定数から生やさないこと。
  */
 export const TOKEN_PACK = {
   tokens: 5,

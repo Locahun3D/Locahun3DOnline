@@ -15,6 +15,7 @@ import {
 } from "@/lib/schemas";
 import type { LicenseOption } from "@/lib/license-options";
 import LicenseDifference, { LicenseDescription } from "@/components/license-difference";
+import DataInquiry from "@/components/data-inquiry";
 import { useLocale } from "@/components/locale-provider";
 
 interface DataSalePanelProps {
@@ -264,6 +265,17 @@ export default function DataSalePanel({
       {/* 比較表は basis-full で1行を占有させる。狭いテキスト列に入れると
           横スクロールが出て右端の列が切れる（実機で確認して移動した）。 */}
       <LicenseDifference options={licenseOptions} selected={license} locale={lc} />
+
+      {/* 「自分の用途で使えるのか」を比較表の直下でそのまま聞ける。
+          ⚠ LicenseDifference は区分が1つだと null を返すので、問い合わせ導線は
+             その中に入れず必ずここに置く（1区分の物件でも聞けるようにする）。 */}
+      <DataInquiry
+        propertyId={propertyId}
+        propertyTitle={propertyTitle}
+        itemLabel={itemLabel}
+        licenseLabel={dataLicenseLabel(license, lc)}
+        en={en}
+      />
     </div>
   );
 }

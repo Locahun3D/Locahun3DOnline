@@ -1,10 +1,12 @@
 /**
- * 掲載依頼ページの「費用」と「掲載すると何が起きるか」を図で示すブロック。
+ * 掲載依頼ページの「費用」と「掲載すると何が起きるか」を示すブロック。
  *
- * ── なぜ図なのか ────────────────────────────────────────────
- * 費用の説明が文章だと「無料キャンペーン（2026年12月31日まで）」だけが目に入り、
- * **掲載費そのものは期限なしで無料**という一番効く事実が埋もれる。
- * 期限が付くのはスキャン計測費だけなので、2本の帯の長さの違いで一目で分かるようにした。
+ * ── 2026-08-13 リデザイン ──────────────────────────────────
+ * 以前は 10px の mono ラベルと帯グラフ・3列レイアウトで情報が細かく散っており、
+ * 「細々していて見づらい」との指摘を受けた。読み取ってほしい順（①いくらか →
+ * ②いつまでか → ③何が起きるか）に沿って、金額を大きな数字で先に出し、
+ * 補足を本文サイズに引き上げた。帯グラフは「長さの違い」を読み解く必要があり、
+ * 2枚のカードで「期限なし / 2026年12月31日まで」と書く方が速い。
  *
  * ⚠ 数字・条件はサイト内の他の記述と必ず一致させること（実測の出所）:
  *     app/contact/page.tsx のQ&A  … 「今後もスキャン以降の掲載費は無料です」
@@ -12,6 +14,9 @@
  *     app/about/page.tsx          … 「約20分のスキャン1回で掲載」「内覧対応を削減」
  *                                    「問い合わせが直接届く」
  *   ここだけ良く見せるために盛らない（実態と違う約束になる）。
+ *
+ * ⚠ `bg-card` はこのプロジェクトに定義が無く（globals.css の @theme に
+ *   --color-card は無い）背景が付かない。カードは `bg-white` を使うこと。
  */
 import Link from "next/link";
 import { localizedHref } from "@/lib/i18n/dictionaries";
@@ -22,21 +27,23 @@ const DATA_SALE_SHARE = "20%";
 
 export default function ListingValue({ en }: { en: boolean }) {
   const locale = en ? "en" : "ja";
-  const rows = [
-    {
-      label: en ? "3D scan" : "3Dスキャン計測",
-      sub: en ? "One ~20-min visit" : "1回・約20分",
-      // 期間限定なので帯を途中で止める。
-      width: "46%",
-      capped: true,
-      note: en ? `Free through Dec 31, ${FREE_UNTIL.slice(0, 4)}` : `${FREE_UNTIL}まで`,
-    },
+
+  const costs = [
     {
       label: en ? "Listing" : "掲載",
-      sub: en ? "After publication, ongoing" : "公開後・ずっと",
-      width: "100%",
-      capped: false,
-      note: en ? "No end date" : "期限なし",
+      term: en ? "No end date" : "期限なし",
+      termAccent: true,
+      body: en
+        ? "No monthly fee and no commission on bookings, for as long as you stay listed."
+        : "公開後もずっと無料です。月額費用も成約手数料もいただきません。",
+    },
+    {
+      label: en ? "3D scan" : "3Dスキャン計測",
+      term: en ? `Free through Dec 31, ${FREE_UNTIL.slice(0, 4)}` : `${FREE_UNTIL}まで`,
+      termAccent: false,
+      body: en
+        ? "One visit of about 20 minutes. Only this part is tied to the campaign period."
+        : "1回・約20分の訪問撮影です。期限が付くのはこの計測費だけです。",
     },
   ];
 
@@ -72,98 +79,76 @@ export default function ListingValue({ en }: { en: boolean }) {
   ];
 
   return (
-    <div className="mb-10 space-y-8">
-      {/* ── 費用 ── */}
+    <div className="mb-12 space-y-10">
+      {/* ── 費用 ─────────────────────────────────────────── */}
       <section>
-        <h2 className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-3">
+        <h2 className="text-[17px] font-bold mb-1.5">
           {en ? "What it costs" : "掲載にかかる費用"}
         </h2>
-
-        <div className="border border-line bg-card">
-          {rows.map((r, i) => (
-            <div
-              key={r.label}
-              className={`px-5 py-4 sm:flex sm:items-center sm:gap-5 ${i > 0 ? "border-t border-line" : ""}`}
-            >
-              <div className="sm:w-[150px] shrink-0">
-                <div className="text-[13px] font-bold">{r.label}</div>
-                <div className="mono text-[10px] text-muted mt-0.5">{r.sub}</div>
-              </div>
-
-              {/* 帯の長さ＝無料でいられる期間。止まる/続くを線の終わり方で示す。 */}
-              <div className="flex-1 min-w-0 mt-2 sm:mt-0 flex items-center gap-3">
-                <div className="relative flex-1 h-[10px] bg-line/40">
-                  <div
-                    className="absolute inset-y-0 left-0 bg-accent/70"
-                    style={{ width: r.width }}
-                  />
-                  {r.capped ? (
-                    // 期限で切れることを示す縦棒
-                    <span
-                      className="absolute top-[-5px] bottom-[-5px] w-px bg-ink"
-                      style={{ left: r.width }}
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <span
-                      className="absolute right-[-9px] top-1/2 -translate-y-1/2 text-accent text-[13px] leading-none"
-                      aria-hidden="true"
-                    >
-                      →
-                    </span>
-                  )}
-                </div>
-                <div className="serif text-[20px] font-bold text-accent leading-none tabular-nums">
-                  ¥0
-                </div>
-              </div>
-
-              <div className="mono text-[10px] tracking-[0.12em] text-muted sm:w-[150px] sm:text-right mt-1 sm:mt-0">
-                {r.note}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-[12.5px] text-muted leading-[1.9] mt-3">
+        <p className="text-[13px] text-muted leading-[1.8] mb-4">
           {en ? (
             <>
-              Only the scan fee is tied to the campaign. <strong className="text-ink">The listing
-              itself stays free with no end date</strong> — there is no monthly fee and no
-              commission on bookings.
+              Both are free right now. Only the scan fee is tied to the campaign
+              <br className="pc" /> — the listing itself has no end date.
             </>
           ) : (
             <>
-              期限が付くのはスキャン計測費だけです。
-              <strong className="text-ink">掲載そのものは期限なしで無料</strong>
-              で、月額費用も成約手数料もいただきません。
+              どちらも無料です。期限が付くのはスキャン計測費だけで、
+              <br className="pc" />
+              掲載そのものに期限はありません。
             </>
           )}
         </p>
-      </section>
 
-      {/* ── メリット ── */}
-      <section>
-        <h2 className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-3">
-          {en ? "What listing does for you" : "掲載するとどうなるか"}
-        </h2>
-        {/* ⚠ 3カラムにしない。このページの本文カラムは約560pxしかなく、
-            3等分すると1行10文字程度で7行に折り返して読めなかった（実測）。
-            番号を左に出す縦積みなら、狭いカラムでも1項目が2〜3行に収まる。 */}
-        <div className="border border-line bg-card divide-y divide-line">
-          {benefits.map((b) => (
-            <div key={b.no} className="px-5 py-4 flex gap-4">
-              <div className="mono text-[10px] tracking-[0.2em] text-accent pt-1 shrink-0">{b.no}</div>
-              <div className="min-w-0">
-                <div className="text-[13px] font-bold mb-1 leading-[1.6]">{b.title}</div>
-                <p className="text-[12.5px] text-muted leading-[1.9]">{b.body}</p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {costs.map((c) => (
+            <div key={c.label} className="border border-line bg-white px-6 py-5">
+              <div className="text-[13px] font-bold mb-2">{c.label}</div>
+              <div className="flex items-baseline gap-3 mb-3">
+                <span className="serif text-[36px] leading-none text-accent tabular-nums">¥0</span>
+                <span
+                  className={`text-[12px] leading-[1.5] ${
+                    c.termAccent ? "text-accent font-bold" : "text-muted"
+                  }`}
+                >
+                  {c.term}
+                </span>
               </div>
+              <p className="text-[13px] text-muted leading-[1.85]">{c.body}</p>
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-muted mt-2">
+      </section>
+
+      {/* ── メリット ─────────────────────────────────────── */}
+      <section>
+        <h2 className="text-[17px] font-bold mb-1.5">
+          {en ? "What listing does for you" : "掲載するとどうなるか"}
+        </h2>
+        <p className="text-[13px] text-muted leading-[1.8] mb-4">
+          {en
+            ? "Four things change once your space is on Locahun 3D."
+            : "ロケハン3Dに載ると、次の4つが変わります。"}
+        </p>
+
+        {/* 2カラムまで。本文カラムが狭い環境で3等分すると1行10文字程度に
+            折り返して読めなくなる（実測済み・過去に差し戻した）。 */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          {benefits.map((b) => (
+            <div key={b.no} className="border border-line bg-white px-6 py-5">
+              <div className="mono text-[10px] tracking-[0.24em] text-accent mb-2">{b.no}</div>
+              <div className="text-[14px] font-bold leading-[1.6] mb-1.5">{b.title}</div>
+              <p className="text-[13px] text-muted leading-[1.9]">{b.body}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[12px] text-muted mt-3">
           {en ? "Details: " : "詳細: "}
-          <Link href={localizedHref("/terms/listing-revenue-share", locale)} className="text-accent hover:underline">
+          <Link
+            href={localizedHref("/terms/listing-revenue-share", locale)}
+            className="text-accent hover:underline"
+          >
             {en ? "Listing Data Revenue Share Terms" : "掲載データ販売分配規約"}
           </Link>
         </p>

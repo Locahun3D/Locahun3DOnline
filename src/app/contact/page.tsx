@@ -249,43 +249,33 @@ export default async function ContactHubPage() {
                 "購入データをVRChat等に組み込んで公開したり、再配布・AI学習に使ったりできますか？",
                 "Can I embed the data in VRChat, redistribute it, or use it for AI training?",
               ],
-              // ⚠ 以前は「標準ライセンスは映像・画像などの制作物を作る利用が対象で〜」という
-              //   前置きの後に「対象外です」が来る構成で、最初の1文だけ読んで離脱すると
-              //   「できる」と誤解しかねなかった。結論（標準は不可・拡張なら可）を
-              //   最初の1文に前出しする（2026-08-01 レビュー）。
+              // ⚠ 結論（標準は不可・拡張なら可）を必ず最初の1文に置くこと。
+              //   前置きから始めると、最初の1文だけ読んで離脱した人が「できる」と
+              //   誤解する（2026-08-01 レビュー）。
+              //   長すぎて読まれないという指摘を受け、要点3行に短縮（2026-08-13）。
               a: [
                 <>
-                  標準ライセンスでは不可、拡張ライセンスなら対応できることが多いです。
-                  標準ライセンスは映像・画像などの制作物を作る利用が対象で、データ自体を
-                  ソフトウェア製品に組み込んで配布する利用（VRChatワールド等への実装・公開もここに
-                  含まれます）は対象外です。ソフトウェアへの組込・改変配布まで含めたい場合は
-                  拡張ライセンスの範囲になります。とはいえ本当に良いかは公開範囲や
-                  用途によるので、まずは軽い気持ちで
+                  標準ライセンスでは不可、拡張ライセンスなら可能な場合が多いです。
+                  標準は映像・画像などの制作物を作る利用まで。データ自体をソフトウェアに
+                  組み込んで配布する利用（VRChatワールドの公開など）は拡張の範囲です。
+                  <br />
+                  AI学習利用も禁止ではなく個別のご相談です。
                   <Link href={lh("/contact/license")} className="text-accent hover:underline">
                     お問い合わせ
                   </Link>
-                  ください。すぐに反応します。
-                  <br />
-                  AI学習データとしての利用も同様です。「禁止」ではなく個別のご相談・調整とお考え
-                  ください — 当社としてもAI学習プラットフォームとしての展開に前向きに取り組んで
-                  いきたい分野なので、ぜひお気軽にご相談ください。
+                  ください。
                 </>,
                 <>
-                  Not under the standard license, but usually yes under the extended license.
-                  The standard license covers creating productions like film and images — it
-                  doesn&apos;t cover embedding the data itself into a software product for
-                  distribution (which includes implementing and publishing it as a VRChat
-                  world). Embedding and modified redistribution falls under the extended
-                  license. Whether that&apos;s the right fit depends on the scope and use
-                  case, so just{" "}
-                  <Link href={lh("/contact/license")} className="text-accent hover:underline">
-                    reach out
-                  </Link>{" "}
-                  — we respond quickly.
+                  Not under the standard license; usually yes under the extended one.
+                  Standard covers making productions like film and images. Embedding the data
+                  itself into software for distribution (e.g. publishing a VRChat world) needs
+                  the extended license.
                   <br />
-                  The same goes for AI-training use — think of it as something we work out
-                  together, not a flat no. We&apos;re genuinely excited about growing into an
-                  AI-training data platform, so please get in touch.
+                  AI-training use isn&apos;t a flat no either — we work it out case by case.{" "}
+                  <Link href={lh("/contact/license")} className="text-accent hover:underline">
+                    Just ask
+                  </Link>
+                  .
                 </>,
               ],
             },

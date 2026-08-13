@@ -34,7 +34,7 @@ export default function SignupRequirements({
             <div className="text-[13px] font-bold leading-[1.6]">
               {en ? "Pick “Filming studio” as the account type" : "アカウント種別は「撮影スタジオ」を選ぶ"}
             </div>
-            <p className="text-[12px] text-muted leading-[1.8] mt-0.5">
+            <p className="text-[12.5px] text-muted leading-[1.85] mt-0.5">
               {en
                 ? "It's the first question after sign-up. Personal accounts cannot create listing pages."
                 : "登録直後に聞かれます。「個人」で作ると掲載ページを作成できません。"}
@@ -65,7 +65,7 @@ export default function SignupRequirements({
                 </span>
               </div>
             </div>
-            <p className="text-[12px] text-muted leading-[1.8] mt-2">
+            <p className="text-[12.5px] text-muted leading-[1.85] mt-2">
               {en
                 ? "Gmail, Outlook, Yahoo and the like cannot be used — the address is how we confirm the studio exists."
                 : "Gmail・Outlook・Yahooメール等はご利用いただけません。掲載主が実在することの確認に使うためです。"}

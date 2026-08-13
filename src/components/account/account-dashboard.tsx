@@ -2,8 +2,7 @@ import Link from "next/link";
 import type { PublicUser } from "@/lib/account-schema";
 import { totalTokens, publicDisplayName } from "@/lib/account-schema";
 import DisplayNameEditor from "@/components/account/display-name-editor";
-import { PLAN_TOKEN_BUDGET, TOKEN_PACK } from "@/lib/schemas";
-import { buyTokenPackAction } from "@/lib/token-pack-actions";
+import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
 import type { Property } from "@/lib/schemas";
 import type { ViewUnlock } from "@/lib/view-unlocks";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
@@ -436,30 +435,9 @@ export default function AccountDashboard({
         {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード） */}
         <RedeemGift />
 
-        {/* トークン追加購入（従量課金）。サブスク未満の利用者が、月額契約に
-            踏み切らずにその場で残高を足せる導線。
-            撮影スタジオは自分の物件管理専用アカウント（他物件のトークン視聴は
-            対象外）なので、買っても使い道が無いこの導線自体を出さない
-            （サーバー側は buyTokenPackAction が studio_not_allowed で弾く、2026-08-01）。 */}
-        {user.role !== "studio" && (
-          <div className="border border-line p-5">
-            <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted mb-2">
-              {en ? "Buy tokens" : "トークンを追加購入"}
-            </div>
-            <p className="text-[12px] leading-[1.8] text-ink/75 mb-3">
-              {en
-                ? `${TOKEN_PACK.tokens} tokens for ¥${TOKEN_PACK.priceYen.toLocaleString()}. Valid for ${TOKEN_PACK.expiryMonths} months from purchase. No subscription required.`
-                : `${TOKEN_PACK.tokens}枚 ¥${TOKEN_PACK.priceYen.toLocaleString()}。購入から${TOKEN_PACK.expiryMonths}ヶ月間有効。月額契約は不要です。`}
-            </p>
-            <form action={buyTokenPackAction}>
-              <button className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition">
-                {en
-                  ? `Buy ${TOKEN_PACK.tokens} tokens →`
-                  : `${TOKEN_PACK.tokens}枚を購入 →`}
-              </button>
-            </form>
-          </div>
-        )}
+        {/* トークン追加購入（5枚 ¥3,000）のカードは 2026-08-13 に廃止。
+            トークンは月額プランの付与のみで、買い足す導線は持たない。
+            既に購入済みの残高は上の残高表示のまま失効日まで使える。 */}
       </div>
 
       {user.stripeCustomerId && (

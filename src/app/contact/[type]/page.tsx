@@ -23,8 +23,11 @@ const COPY: Record<(typeof CONTACT_TYPES)[number], { title: string; titleEn: str
   listing: {
     title: "掲載依頼",
     titleEn: "List your space",
-    lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。掲載費は期限なしで無料、3Dスキャンの計測費も2026年12月31日まで無料です。",
-    ledeEn: "We'll review your space and walk you through listing it (3D scan, shoot, publish). Listing is currently free during our launch campaign (through Dec 31, 2026).",
+    // ⚠ 費用の条件はすぐ下の ListingValue が大きな数字で示す。ここで重ねて
+    //   書くと同じ話が3箇所（バッジ・リード文・カード）に出て冗長になる
+    //   （2026-08-13 リデザインで整理）。
+    lede: "物件を拝見し、担当者より掲載の流れ（3Dスキャン・撮影・公開）をご案内します。",
+    ledeEn: "We'll review your space and walk you through listing it — 3D scan, shoot, then publish.",
   },
   license: {
     title: "データ利用・提携のご相談",
@@ -49,25 +52,63 @@ export async function generateMetadata({
 }
 
 /**
- * 「ステップ N / 3」とだけ書かれていて、残りのステップが何かはどこにも
- * 書かれていなかった。掲載を決めた人が先の見通しを持てるよう、1行のミニ
- * プレビューを添える（2026-08-01 レビュー）。current は 1〜3。
+ * 掲載までの流れ（3ステップ）。
+ *
+ * ── 2026-08-13 リデザイン ──────────────────────────────────
+ * 以前は各アクションカードの下に 10px の1行プレビューとして畳まれており、
+ * 「今どこにいて、次に何が起きるか」が読み取りにくかった（「細々していて
+ * 見づらい」との指摘）。独立したセクションに引き上げ、各ステップに1行の
+ * 説明を添えて、現在地をカードの塗りで示す。current は 1〜3。
  */
-function ListingStepsPreview({ en, current }: { en: boolean; current: 1 | 2 | 3 }) {
+function ListingSteps({ en, current }: { en: boolean; current: 1 | 2 | 3 }) {
   const steps = en
-    ? ["Studio account", "Create listing page", "Publish"]
-    : ["アカウント作成", "掲載ページ作成", "公開を申請"];
+    ? [
+        { t: "Studio account", d: "Free, no review" },
+        { t: "Create listing page", d: "Everything except the 3D scan" },
+        { t: "Request publication", d: "We scan, check, then publish" },
+      ]
+    : [
+        { t: "アカウント作成", d: "無料・審査なし" },
+        { t: "掲載ページを作成", d: "3Dスキャン以外を入力" },
+        { t: "公開を申請", d: "撮影・確認のうえ公開" },
+      ];
   return (
-    <div className="mt-4 pt-3 border-t border-line flex items-center gap-1.5 flex-wrap mono text-[10px] tracking-[0.1em] uppercase">
-      {steps.map((s, i) => (
-        <span key={s} className="flex items-center gap-1.5">
-          {i > 0 && <span className="opacity-30">→</span>}
-          <span className={i + 1 === current ? "text-accent" : "opacity-45"}>
-            {i + 1}. {s}
-          </span>
-        </span>
-      ))}
-    </div>
+    <section className="mb-8">
+      <h2 className="text-[17px] font-bold mb-4">
+        {en ? "How it works" : "掲載までの流れ"}
+      </h2>
+      <ol className="grid sm:grid-cols-3 gap-3">
+        {steps.map((s, i) => {
+          const n = i + 1;
+          const active = n === current;
+          const done = n < current;
+          return (
+            <li
+              key={s.t}
+              className={`border px-5 py-4 ${
+                active ? "border-accent bg-accent/[0.06]" : "border-line bg-white"
+              }`}
+            >
+              <div
+                className={`mono text-[10px] tracking-[0.24em] uppercase mb-2 ${
+                  active ? "text-accent" : "text-muted"
+                }`}
+              >
+                {done ? `✓ 0${n}` : `0${n}`}
+              </div>
+              <div
+                className={`text-[14px] font-bold leading-[1.6] mb-1 ${
+                  active ? "text-accent" : ""
+                }`}
+              >
+                {s.t}
+              </div>
+              <p className="text-[12.5px] text-muted leading-[1.8]">{s.d}</p>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
@@ -117,6 +158,10 @@ export default async function ContactTypePage({
     redirect(lh("/admin/properties"));
   }
 
+  // 掲載までの3ステップの現在地。下のアクションカードの分岐と 1:1 で対応させること
+  // （ここがズレると「今どこにいるか」の表示だけが嘘になる）。
+  const listingStep: 1 | 2 | 3 = prefill ? 3 : canOwn ? 2 : 1;
+
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
       <div className="chapter-rule">
@@ -125,7 +170,10 @@ export default async function ContactTypePage({
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
 
-      <div className="max-w-[620px] mx-auto">
+      {/* 掲載依頼は費用カード・流れ・登録条件と横並びの情報が多く、620px だと
+          どのブロックも2〜3行に折り返して「細々」して見えた。この種別だけ
+          お問い合わせハブ(/contact)と同じ 760px に広げる（2026-08-13）。 */}
+      <div className={`${t === "listing" ? "max-w-[760px]" : "max-w-[620px]"} mx-auto`}>
         <Link
           href={lh("/contact")}
           className="text-[12px] text-muted hover:text-accent transition"
@@ -141,12 +189,10 @@ export default async function ContactTypePage({
         </h1>
         {t === "listing" && (
           <div className="inline-block mono text-[10px] tracking-[0.2em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-3 py-1 mb-4">
-            {en
-              ? "Listing is always free — the 3D scan is free too through Dec 31, 2026"
-              : "掲載費はずっと無料／3Dスキャン計測も2026年12月31日まで無料"}
+            {en ? "Listing is always free" : "掲載費はずっと無料"}
           </div>
         )}
-        <p className="text-[13.5px] text-muted leading-[1.9] mb-8">
+        <p className="text-[14px] text-muted leading-[1.9] mb-10">
           {en ? copy.ledeEn : copy.lede}
         </p>
 
@@ -161,103 +207,97 @@ export default async function ContactTypePage({
         {/* 費用とメリットの図。公開申請モード(prefill)では既に掲載を決めた人なので出さない。 */}
         {t === "listing" && !prefill && <ListingValue en={en} />}
 
+        {/* 流れは分岐カードの外に独立させる。以前は各カードの下に 10px の
+            1行プレビューとして畳まれていて全体像が掴めなかった。 */}
+        {t === "listing" && <ListingSteps en={en} current={listingStep} />}
+
         {t === "listing" && !prefill && (
-          <div className="mb-8 border border-line bg-card p-5">
+          <div className="mb-10 border border-accent/40 bg-white p-6 sm:p-7">
             {!user ? (
               <>
-                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
-                  {en ? "Step 1 / 3" : "ステップ 1 / 3"}
-                </div>
-                <h2 className="text-[15px] font-bold mb-2">
+                <h2 className="text-[18px] font-bold mb-2.5">
                   {en ? "Create a studio account" : "まずスタジオ用アカウントを作成"}
                 </h2>
-                <p className="text-[13px] leading-relaxed text-muted">
+                <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? "Listings are created from a studio account. Sign up (free, no review) and you can start a listing page right away — we handle the 3D scan."
-                    : "掲載ページはスタジオ用アカウントから作成します。登録は無料・審査なしで、すぐに掲載ページを作り始められます。3Dスキャンはこちらで対応します。"}
+                    : "掲載ページはスタジオ用アカウントから作成します。登録は無料・審査なしで、"}
+                  {!en && <br className="pc" />}
+                  {!en && "すぐに掲載ページを作り始められます。3Dスキャンはこちらで対応します。"}
                 </p>
                 <Link
                   href={lh(`/sign-up?intent=${STUDIO_INTENT}`)}
-                  className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
+                  className="mt-5 inline-block bg-accent text-white px-6 py-3 text-[14px] font-bold hover:bg-accent/85 transition"
                 >
                   {en ? "Create a studio account →" : "スタジオアカウントを作成 →"}
                 </Link>
                 <SignupRequirements en={en} />
-                <ListingStepsPreview en={en} current={1} />
               </>
             ) : canOwn ? (
               <>
-                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
-                  {en ? "Step 2 / 3" : "ステップ 2 / 3"}
-                </div>
-                <h2 className="text-[15px] font-bold mb-2">
+                <h2 className="text-[18px] font-bold mb-2.5">
                   {en ? "Create the listing page" : "物件の掲載ページを作成"}
                 </h2>
-                <p className="text-[13px] leading-relaxed text-muted">
+                <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? "Fill in everything except the 3D scan — we shoot that. When you're done, the editor takes you here to request publication."
-                    : "3Dスキャン以外の情報を入力してください（撮影はこちらで行います）。入力が終わったら、エディターからこのページに戻って公開を申請します。"}
+                    : "3Dスキャン以外の情報を入力してください（撮影はこちらで行います）。"}
+                  {!en && <br className="pc" />}
+                  {!en && "入力が終わったら、エディターからこのページに戻って公開を申請します。"}
                 </p>
                 <Link
                   href={lh("/admin/properties")}
-                  className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
+                  className="mt-5 inline-block bg-accent text-white px-6 py-3 text-[14px] font-bold hover:bg-accent/85 transition"
                 >
                   {en ? "Go to listing pages →" : "掲載ページを作成する →"}
                 </Link>
-                <ListingStepsPreview en={en} current={2} />
               </>
             ) : canConvert ? (
               <>
                 {/* 会社ドメインのメールでログイン済み。新規登録に送っても Clerk が
                     サインアップ画面を出さずマイページへ弾くうえ、撮影スタジオは
                     元々自己申告で選べる種別なので、このまま切り替える。 */}
-                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
-                  {en ? "Step 1 / 3" : "ステップ 1 / 3"}
-                </div>
-                <h2 className="text-[15px] font-bold mb-2">
+                <h2 className="text-[18px] font-bold mb-2.5">
                   {en ? "Switch this account to a studio account" : "このアカウントをスタジオアカウントにする"}
                 </h2>
-                <p className="text-[13px] leading-relaxed text-muted">
+                <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? `You're signed in with a company address (${user?.email}). No second account needed — switch this one to a studio account and start a listing page right away.`
                     : `会社のメールアドレス（${user?.email}）でログイン中です。別のアカウントを作る必要はありません。このアカウントをスタジオアカウントに切り替えると、すぐに掲載ページを作り始められます。`}
                 </p>
                 <form action={convertToStudioAction}>
-                  <button className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition cursor-pointer">
+                  <button className="mt-5 inline-block bg-accent text-white px-6 py-3 text-[14px] font-bold hover:bg-accent/85 transition cursor-pointer">
                     {en ? "Switch to a studio account →" : "スタジオアカウントに切り替える →"}
                   </button>
                 </form>
-                <p className="mt-2 mono text-[10px] text-muted">
+                <p className="mt-3 text-[12.5px] text-muted leading-[1.8]">
                   {en
                     ? "Free, no review. Viewing and purchases stay exactly as they are."
                     : "無料・審査なし。閲覧や購入の履歴はそのまま引き継がれます。"}
                 </p>
-                <ListingStepsPreview en={en} current={1} />
               </>
             ) : (
               <>
-                <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
-                  {en ? "Step 1 / 3" : "ステップ 1 / 3"}
-                </div>
-                <h2 className="text-[15px] font-bold mb-2">
+                <h2 className="text-[18px] font-bold mb-2.5">
                   {en ? "A studio account is required" : "スタジオ用アカウントが必要です"}
                 </h2>
-                <p className="text-[13px] leading-relaxed text-muted">
+                <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? "Your current account type cannot create listings. Sign up separately as a studio — it's free and takes effect immediately."
-                    : "現在のアカウント種別では掲載ページを作成できません。スタジオ用に別途アカウントをご登録ください（無料・登録後すぐ利用可）。"}
+                    : "現在のアカウント種別では掲載ページを作成できません。"}
+                  {!en && <br className="pc" />}
+                  {!en && "スタジオ用に別途アカウントをご登録ください（無料・登録後すぐ利用可）。"}
                 </p>
                 {/* ⚠ ログイン中に /sign-up へ送っても Clerk がサインアップ画面を出さず
                     マイページへ弾く（ユーザー報告）。先にサインアウトしてから
                     登録画面へ着地させる。 */}
                 <Link
                   href={lh(`/sign-out?redirect=/sign-up%3Fintent=${STUDIO_INTENT}`)}
-                  className="mt-4 inline-block border border-accent px-5 py-2.5 text-[13px] text-accent hover:bg-accent hover:text-bg transition"
+                  className="mt-5 inline-block bg-accent text-white px-6 py-3 text-[14px] font-bold hover:bg-accent/85 transition"
                 >
                   {en ? "Sign out and create a studio account →" : "サインアウトしてスタジオアカウントを作成 →"}
                 </Link>
                 <SignupRequirements en={en} needsDifferentAddress />
-                <ListingStepsPreview en={en} current={1} />
               </>
             )}
           </div>
@@ -265,24 +305,20 @@ export default async function ContactTypePage({
 
         {/* 公開申請モード: エディターから物件を持って来た場合 */}
         {prefill && (
-          <div className="mb-8 border border-accent/40 bg-accent/5 p-5">
-            <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
-              {en ? "Step 3 / 3" : "ステップ 3 / 3"}
-            </div>
-            <h2 className="text-[15px] font-bold mb-2">
+          <div className="mb-8 border border-accent/40 bg-accent/5 p-6 sm:p-7">
+            <h2 className="text-[18px] font-bold mb-2.5 leading-[1.5]">
               {en ? `Request publication: ${prefill.propertyName}` : `公開を申請: ${prefill.propertyName}`}
             </h2>
-            <p className="text-[13px] leading-relaxed text-muted">
+            <p className="text-[13.5px] leading-[1.9] text-muted">
               {en
                 ? "Company, property name and address are filled in from your listing. Tell us your preferred scan dates, a contact for the day, and anything else we should know — we'll shoot the 3D data and publish after a check."
                 : "会社名・物件名・所在地は掲載ページの内容を入れてあります。スキャンの希望日・当日のご連絡先と、ご要望やご質問があれば本文にお書きください。3Dデータの撮影と確認のうえ公開します。"}
             </p>
-            <p className="mt-2 mono text-[10px] text-muted">
+            <p className="mt-3 text-[12.5px] text-muted leading-[1.8]">
               {en
                 ? "Sending this form submits both your message and the publication request."
-                : "この フォームを送信すると、お問い合わせ内容の送信と公開申請が同時に行われます。"}
+                : "このフォームを送信すると、お問い合わせ内容の送信と公開申請が同時に行われます。"}
             </p>
-            <ListingStepsPreview en={en} current={3} />
           </div>
         )}
 

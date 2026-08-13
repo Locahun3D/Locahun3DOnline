@@ -82,9 +82,10 @@ export async function POST(req: Request) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
 
-        // トークンパック(単発購入)。主経路は /api/token-pack/return だが、
-        // ユーザーが戻る前にタブを閉じると未付与のまま残るため保険で処理する。
-        // grantTokenPack は sessionId 記録で冪等なので二重付与にはならない。
+        // トークンパック(単発購入)は 2026-08-13 に廃止。新規の Checkout は
+        // 作られないのでここは通常発火しない。廃止デプロイの直前に決済画面を
+        // 開いたままだった人の完了イベントが後から届いたときに、支払わせたまま
+        // 付与しない事故を防ぐためだけに残してある（数週間後に削除可）。
         if (s.metadata?.type === "token_pack") {
           const userId = s.client_reference_id || s.metadata?.userId;
           if (
