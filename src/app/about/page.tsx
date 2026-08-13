@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
@@ -22,49 +23,376 @@ const SCAN_URL = "https://web.locahun3d.com/";
 const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
 
 /* ──────────────────────────────────────────────
- * デザイン案 07（public/_design/home/07.html）の構成・見た目をそのまま採用したページ。
- * 2026-08-14 に旧「罫線主体・角なし・影なし」版から作り直し。
+ * public/_design/home/07.html の <style> をそのまま移植したページ。
+ * 2026-08-14: 「トンマナに寄せる」調整を全部やめ、07 の CSS を数値ごと複製した。
  *
- *   1. HERO      — 薄いグラデ帯 + 丸ピル eyebrow + h1 + リード
- *   2. SEGMENTS  — 立場別カード3枚（画像 / 役割 / 見出し / 1文 / ✓リスト / ボタン2つ）
- *   3. CORE      — 2カラム見出し帯 + 大スクショ(.screen) + 機能カード3枚
- *   4. FLOW      — 薄い背景の帯 + 2カラム見出し帯 + 4列フロー
- *   5. HOW IT WORKS — サムネイル付き3ステップ
- *   6. DETAILS   — 機能の詳細（明細リスト9行）
- *   7. CTA       — グラデーションパネル（左に見出し+一文 / 右にボタン）
+ *  - セレクタは 07 のまま（.wrap / .hero / .segment / .screen / .flow / .cta-panel …）。
+ *    他ページに影響しないよう全部 `.about07` 配下にスコープしてある。
+ *  - 07 が body に当てていたもの（font-family / line-height:1.8 / color / background:#fff）は
+ *    `.about07` に当てる。加えて globals.css が body に入れている
+ *    letter-spacing:0.04em / font-weight:300 / word-break:auto-phrase / text-wrap:pretty は
+ *    07 には無いので `.about07` で素の値へ戻す（残すと字送りが 07 とズレる）。
+ *  - 色は 07 の値をそのまま（--blue #155eef / --navy #0d2f63 等）。
+ *    サイトの accent トークンには置き換えない。
+ *  - ⚠ zoom: html に zoom(0.7/0.8/0.9) が掛かっているため、そのままだと同じ幅で並べても
+ *    07 より 0.7〜0.9 倍で描画されて別物に見える。site-header.tsx と同じ手法で
+ *    `zoom: calc(1 / var(--z))` を当てて実寸 1:1 に戻し、07.html と同一の描画にする。
+ *  - Tailwind preflight が h1〜h3 の font-weight/margin を潰すので、07 の UA 既定
+ *    （bold=700）を明示で復元している。
  *
- * ⚠ トンマナ統一の対象は「色」だけ。07 の角丸 8px・カードの影・丸ピル・ボタン形状・
- *   余白（gap 18px 等）・ゴシック極太の見出しはそのまま活かす。差し替えるのは 07 の
- *   汎用青 (#155eef / #0d2f63 / #0891b2) → サイトのトークン
- *   （--color-accent / text-ink / text-muted / border-line）のみ。見出しに明朝系の
- *   `serif` ユーティリティは使わない（07 と印象が変わるため。2026-08-14 指摘）。
- * サムネイルはスキャンサービス側のデモ画像 (public/about/*.webp) を使用。
+ * 07 に無いセクション（仕組み3ステップ / 機能の詳細9行）は 07 の既存クラス
+ * （.segments+.segment / .feature-list+.feature）を流用して組む。
  * ────────────────────────────────────────────── */
 
-type Bi = [string, string];
-
-/* 07 の .btn / .btn.primary / .btn.secondary 相当（角丸 8px・min-height 46px）。
-   色だけサイトの accent / line / ink トークンに差し替えている。 */
-const BTN =
-  "inline-flex items-center justify-center min-h-[46px] px-4 py-2.5 rounded-lg mono text-[11px] tracking-[0.14em] uppercase leading-tight text-center transition max-sm:w-full";
-const BTN_PRIMARY = `${BTN} bg-accent border border-accent text-white hover:opacity-90`;
-const BTN_SECONDARY = `${BTN} bg-white border border-line text-ink hover:border-accent hover:text-accent`;
-const BTN_ON_ACCENT = `${BTN} bg-white border border-white text-accent hover:opacity-90`;
-
-/* 07 の .segment / .screen の影を値ごと踏襲（白いカードが浮くのが 07 の見た目の核）。
-   落ち影はアクセント色に寄せずニュートラルのままにする。
-   ⚠ `rgb(0_0_0/0.10)` 記法だと Tailwind がクラスを生成せず影が消える（実測）。 */
-const SHADOW_CARD = "shadow-[0_20px_54px_rgba(15,23,42,0.10)]";
-const SHADOW_SCREEN = "shadow-[0_22px_58px_rgba(15,23,42,0.11)]";
-
-/** 07 の .eyebrow（丸ピル）。色は accent、書体は mono。 */
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/35 bg-accent/10 text-accent mono text-[10px] sm:text-[11px] tracking-[0.16em] uppercase leading-tight">
-      {children}
-    </span>
-  );
+/** 07.html の <style> をそのまま `.about07` 配下へスコープしたもの。値は一切変えていない。 */
+const CSS = `
+/* ⚠ globals.css の html は黒地で、かつ scrollbar-gutter: stable both-edges が
+   左右に 15px ずつ余白を予約している。暗いページでは黒地に黒余白なので見えないが、
+   07 は白基調なので**ページの両脇に黒い帯**として露出する（実測 1440 で 15px×2）。
+   このページを表示している間だけ html/body を白にして帯を消す。
+   :has() なので /about 以外には一切かからない。 */
+html:has(.about07),
+html:has(.about07) body{ background:#fff; }
+.about07{
+  --ink:#101828;
+  --muted:#526174;
+  --blue:#155eef;
+  --navy:#0d2f63;
+  --cyan:#0891b2;
+  --line:#d8e3ef;
+  --soft:#f7fafc;
+  --green:#0f9f6e;
+  --radius:8px;
+  zoom:calc(1 / var(--z));
+  margin:0;
+  color:var(--ink);
+  background:#fff;
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height:1.8;
+  font-weight:400;
+  letter-spacing:normal;
+  word-break:normal;
+  overflow-wrap:normal;
+  line-break:auto;
+  text-wrap:wrap;
+  -webkit-font-smoothing:auto;
 }
+.about07 *{ box-sizing:border-box; }
+.about07 a{ color:inherit; text-decoration:none; }
+.about07 img{ display:block; max-width:100%; }
+/* Tailwind preflight で潰れる UA 既定（見出しの bold）を 07 と同じ 700 に戻す */
+.about07 h1,.about07 h2,.about07 h3{ font-weight:700; }
+.about07 .wrap{
+  width:min(1160px, calc(100% - 48px));
+  margin:0 auto;
+}
+.about07 .hero{
+  padding:62px 0 70px;
+  background:linear-gradient(180deg, #fff, #f5faff);
+}
+.about07 .center{
+  text-align:center;
+  max-width:850px;
+  margin:0 auto 34px;
+}
+.about07 .eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid #c3dcfb;
+  background:#eef6ff;
+  color:var(--blue);
+  font-size:13px;
+  font-weight:850;
+  line-height:1.4;
+}
+.about07 h1{
+  margin:18px 0 14px;
+  font-size:clamp(38px, 5vw, 64px);
+  line-height:1.08;
+  text-wrap:balance;
+  letter-spacing:0;
+}
+.about07 .lead{
+  margin:0 auto;
+  color:var(--muted);
+  font-size:18px;
+  max-width:760px;
+}
+.about07 .segments{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:18px;
+  margin-top:34px;
+}
+.about07 .segment{
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  overflow:hidden;
+  text-align:left;
+  box-shadow:0 20px 54px rgba(15,23,42,.10);
+  display:flex;
+  flex-direction:column;
+}
+.about07 .segment img{
+  width:100%;
+  aspect-ratio:16 / 9;
+  object-fit:cover;
+  border-bottom:1px solid var(--line);
+}
+.about07 .segment-body{
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  flex:1;
+}
+.about07 .role{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:var(--blue);
+  font-size:13px;
+  font-weight:850;
+  margin-bottom:10px;
+}
+.about07 .role-dot{
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:var(--green);
+}
+.about07 .segment h2{
+  margin:0 0 10px;
+  font-size:clamp(24px, 3vw, 34px);
+  line-height:1.18;
+  text-wrap:balance;
+  letter-spacing:0;
+}
+.about07 .segment p{
+  margin:0;
+  color:var(--muted);
+  font-size:15px;
+}
+.about07 .segment ul{
+  margin:18px 0 0;
+  padding:0;
+  list-style:none;
+  display:grid;
+  gap:9px;
+  color:#334155;
+  font-size:15px;
+  align-content:start;
+  flex:1;
+}
+.about07 .segment li{
+  display:flex;
+  gap:9px;
+}
+.about07 .check{
+  color:var(--green);
+  font-weight:900;
+}
+.about07 .segment-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:22px;
+}
+.about07 .btn{
+  min-height:46px;
+  padding:11px 16px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  line-height:1.2;
+}
+.about07 .btn.primary{
+  color:#fff;
+  background:var(--blue);
+  border-color:var(--blue);
+}
+.about07 .btn.secondary{
+  background:#fff;
+  color:var(--navy);
+}
+.about07 section{
+  padding:72px 0;
+}
+.about07 .section-head{
+  display:grid;
+  grid-template-columns:.9fr 1.1fr;
+  gap:34px;
+  margin-bottom:28px;
+  align-items:start;
+}
+.about07 h2.section-title{
+  margin:0;
+  font-size:clamp(28px, 3vw, 42px);
+  line-height:1.18;
+  text-wrap:balance;
+  letter-spacing:0;
+}
+.about07 .section-head p{
+  margin:0;
+  color:var(--muted);
+}
+.about07 .section-head p a{
+  color:var(--blue);
+  font-weight:800;
+}
+/* 見出しだけの帯（07 の .section-head は2カラム前提なので1カラムに落とす） */
+.about07 .section-head.solo{
+  grid-template-columns:1fr;
+}
+.about07 .product{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:20px;
+  align-items:stretch;
+}
+.about07 .screen{
+  border:1px solid #cbd9e9;
+  border-radius:8px;
+  background:#fff;
+  padding:10px;
+  box-shadow:0 22px 58px rgba(15,23,42,.11);
+}
+.about07 .screen img{
+  width:100%;
+  height:100%;
+  min-height:360px;
+  object-fit:cover;
+  border-radius:6px;
+}
+.about07 .feature-list{
+  display:grid;
+  gap:14px;
+  align-content:start;
+}
+.about07 .feature{
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  padding:20px;
+}
+.about07 .feature h3{
+  margin:0 0 7px;
+  font-size:18px;
+  line-height:1.35;
+  text-wrap:balance;
+}
+.about07 .feature p{
+  margin:0;
+  color:var(--muted);
+  font-size:15px;
+}
+/* 機能の詳細（07 に無い行）: .feature の中を「本文＋サムネ」の2カラムにするだけ。
+   値は 07 のもの（gap 20px = .product、角丸 6px と枠 = .screen img / var(--line)）。 */
+.about07 .feature.detail{
+  display:grid;
+  grid-template-columns:1fr 220px;
+  gap:20px;
+  align-items:center;
+}
+.about07 .detail-shot{
+  width:100%;
+  aspect-ratio:16 / 9;
+  object-fit:cover;
+  border-radius:6px;
+  border:1px solid var(--line);
+}
+.about07 .detail-link{
+  display:inline-block;
+  margin-top:8px;
+  color:var(--blue);
+  font-weight:800;
+  font-size:14px;
+}
+.about07 .soft{
+  background:var(--soft);
+  border-top:1px solid #e6edf5;
+  border-bottom:1px solid #e6edf5;
+}
+.about07 .flow{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:14px;
+}
+.about07 .flow-item{
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  padding:20px;
+}
+.about07 .flow-item strong{
+  display:block;
+  font-size:16px;
+  margin-bottom:6px;
+}
+.about07 .flow-item p{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.7;
+}
+.about07 .cta-panel{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:24px;
+  align-items:center;
+  padding:36px;
+  border-radius:8px;
+  background:linear-gradient(135deg, #0d2f63, #155eef);
+  color:#fff;
+  box-shadow:0 22px 60px rgba(21,94,239,.23);
+}
+.about07 .cta-panel h2{
+  margin:0;
+  font-size:clamp(28px, 3vw, 42px);
+  line-height:1.18;
+  text-wrap:balance;
+  letter-spacing:0;
+}
+.about07 .cta-panel p{
+  color:#dbeafe;
+  margin:8px 0 0;
+}
+.about07 .cta-panel .btn{
+  background:#fff;
+  color:var(--navy);
+  border-color:#fff;
+}
+.about07 .pc-break{ display:inline; }
+.about07 .w{ display:inline-block; }
+@media (max-width: 980px){
+  .about07 .segments,
+  .about07 .section-head,
+  .about07 .product,
+  .about07 .cta-panel{ grid-template-columns:1fr; }
+  .about07 .flow{ grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 640px){
+  .about07 .wrap{ width:min(100% - 28px, 1160px); }
+  .about07 .hero{ padding:44px 0 52px; }
+  .about07 .lead{ font-size:16px; }
+  .about07 .segment-actions .btn,
+  .about07 .cta-panel .btn{ width:100%; }
+  .about07 section{ padding:54px 0; }
+  .about07 .screen img{ min-height:250px; }
+  .about07 .flow{ grid-template-columns:1fr; }
+  .about07 .cta-panel{ padding:26px; }
+  .about07 .feature.detail{ grid-template-columns:1fr; }
+  .about07 .pc-break{ display:none; }
+}
+`;
+
+type Bi = [string, string];
 
 export default async function AboutPage() {
   const locale = await getLocale();
@@ -72,20 +400,25 @@ export default async function AboutPage() {
   const t = (v: Bi) => v[en ? 1 : 0];
   const lh = (href: string) => localizedHref(href, locale);
 
-  // 2. 立場別セグメント（07 の segments）
+  // 立場別セグメント（07 の .segments。07 は2枚だがこちらは3枚）
+  // ⚠ 見出しは 07 と同じく <span class="w"> の文節単位で折る（素のままだと
+  //    「制作会社・ク / リエイター」のように語中で割れる）。JA/EN で要素数を揃える。
   const SEGMENTS: Array<{
-    no: string;
+    key: string;
     role: Bi;
-    title: Bi;
+    title: Bi[];
     desc: Bi;
     img: { src: string; alt: Bi };
     points: Bi[];
     actions: Array<{ href: string; text: Bi; external?: boolean; primary?: boolean }>;
   }> = [
     {
-      no: "01",
+      key: "demand",
       role: ["需要側", "Demand side"],
-      title: ["制作会社・クリエイター", "Production & creators"],
+      title: [
+        ["制作会社・", "Production"],
+        ["クリエイター", "& creators"],
+      ],
       desc: [
         "カタログと地図で候補地を絞り込み、ブラウザで歩いて下見できます。",
         "Narrow down candidates on the catalog and map, then walk them in your browser.",
@@ -106,9 +439,12 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "02",
+      key: "supply",
       role: ["供給側", "Supply side"],
-      title: ["スタジオ・ロケ地オーナー", "Studio & location owners"],
+      title: [
+        ["スタジオ・", "Studio &"],
+        ["ロケ地オーナー", "location owners"],
+      ],
       desc: [
         "約 20 分のスキャン 1 回で掲載でき、問い合わせは直接届きます。",
         "One ~20-minute scan gets you listed, and inquiries reach you directly.",
@@ -132,9 +468,12 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "03",
+      key: "previz",
       role: ["需要側", "Demand side"],
-      title: ["プリビズ・VFX チーム", "Previz & VFX teams"],
+      title: [
+        ["プリビズ・", "Previz &"],
+        ["VFX チーム", "VFX teams"],
+      ],
       desc: [
         "実寸の 3D データを購入して、カメラ設計や絵コンテにそのまま使えます。",
         "Buy the true-to-scale 3D data and use it directly for camera planning and boards.",
@@ -159,7 +498,7 @@ export default async function AboutPage() {
     },
   ];
 
-  // 3. 核となる技術（07 の product ブロック右側の機能カード）
+  // 中核技術（07 の .product 右側 .feature-list）
   const CORE: Array<{ title: Bi; desc: Bi }> = [
     {
       title: ["ブラウザだけで閲覧できる", "Runs in the browser alone"],
@@ -184,10 +523,10 @@ export default async function AboutPage() {
     },
   ];
 
-  // 4. 利用の流れ（旧 FEATURES 01〜04 を 1〜2 文に圧縮）
-  const FLOW: Array<{ no: string; title: Bi; desc: Bi }> = [
+  // 利用の流れ（07 の .flow 4列）
+  const FLOW: Array<{ key: string; title: Bi; desc: Bi }> = [
     {
-      no: "01",
+      key: "search",
       title: ["探す", "Search"],
       desc: [
         "エリア・カテゴリ・料金・天井高・面積・電源・駐車場・利用時間帯で絞り込み。駅や現在地からの距離順にも並べ替えられます。",
@@ -195,7 +534,7 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "02",
+      key: "walk",
       title: ["歩く", "Walk"],
       desc: [
         "物件ページからそのままウォークスルー。視聴はトークン制で、Free 登録で 6 トークンが付きます。",
@@ -203,7 +542,7 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "03",
+      key: "assess",
       title: ["検討する", "Assess"],
       desc: [
         "距離を実寸で測り、焦点距離 14〜200mm で構図を確認。必要なら 3D データ（PLY / RAD / OBJ）そのものを購入できます。",
@@ -211,7 +550,7 @@ export default async function AboutPage() {
       ],
     },
     {
-      no: "04",
+      key: "share",
       title: ["共有する", "Share"],
       desc: [
         "物件を名前付きボードに保存。Studio / Team プランは読み取り専用の共有 URL を発行できます。",
@@ -220,13 +559,8 @@ export default async function AboutPage() {
     },
   ];
 
-  // 5. 仕組み（サムネイル付き工程）
-  const STEPS: Array<{
-    no: string;
-    img: { src: string; alt: Bi };
-    title: Bi;
-    desc: Bi;
-  }> = [
+  // 仕組み（07 の .segment を流用した3ステップ）
+  const STEPS: Array<{ no: string; img: { src: string; alt: Bi }; title: Bi; desc: Bi }> = [
     {
       no: "STEP 01",
       img: {
@@ -243,7 +577,10 @@ export default async function AboutPage() {
       no: "STEP 02",
       img: {
         src: "/demo-pcloud.webp",
-        alt: ["実写に3DGSの生ポイントクラウドを重ねた比較画像", "Photo blended with raw 3DGS point cloud data"],
+        alt: [
+          "実写に3DGSの生ポイントクラウドを重ねた比較画像",
+          "Photo blended with raw 3DGS point cloud data",
+        ],
       },
       title: ["3DGS 化", "3DGS reconstruction"],
       desc: [
@@ -255,7 +592,10 @@ export default async function AboutPage() {
       no: "STEP 03",
       img: {
         src: "/about/walkthrough.webp",
-        alt: ["公開された3DGSデータをビューアで歩いている画面", "Walking a published 3DGS capture in the viewer"],
+        alt: [
+          "公開された3DGSデータをビューアで歩いている画面",
+          "Walking a published 3DGS capture in the viewer",
+        ],
       },
       title: ["カタログ公開", "Published to the catalog"],
       desc: [
@@ -265,16 +605,16 @@ export default async function AboutPage() {
     },
   ];
 
-  // 6. 機能の詳細（一列の明細リスト。画像がある行はサムネ添付）
+  // 機能の詳細（07 の .feature を流用した9行）
   const DETAILS: Array<{
-    no: string;
+    key: string;
     label: Bi;
     desc: Bi;
     img?: { src: string; alt: Bi };
     link?: { href: string; text: Bi };
   }> = [
     {
-      no: "01",
+      key: "filters",
       label: ["検索フィルタ", "Search filters"],
       desc: [
         "エリア・カテゴリ・スタジオ種類・料金・天井高・面積・収容人数・電源（200V）・駐車場・利用時間帯。駅や現在地からの距離順ソートに対応。",
@@ -287,7 +627,7 @@ export default async function AboutPage() {
       link: { href: "/properties", text: ["物件一覧 →", "Catalog →"] },
     },
     {
-      no: "02",
+      key: "walkthrough",
       label: ["ウォークスルー操作", "Walkthrough controls"],
       desc: [
         "ドラッグで見回し、WASD／タッチで移動。アプリのインストールは不要で、ブラウザだけで動きます。ビューア内では 2 点間の距離測定もできます。",
@@ -299,7 +639,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "03",
+      key: "camtools",
       label: ["カメラツール", "Camera tools"],
       desc: [
         "焦点距離（14〜200mm）・アスペクト比・セーフフレーム・構図グリッドを設定して、実際の画角で構図を検討できます。ショット情報付きの JPEG 書き出しにも対応。",
@@ -314,7 +654,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "04",
+      key: "tokens",
       label: ["視聴トークン", "Viewing tokens"],
       desc: [
         "Free 登録で 6 トークン、有料プランは月 16〜120 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
@@ -327,7 +667,7 @@ export default async function AboutPage() {
       link: { href: "/pricing", text: ["料金プラン →", "Pricing →"] },
     },
     {
-      no: "05",
+      key: "formats",
       label: ["購入データ形式", "Purchase formats"],
       desc: [
         "PLY / OBJ の実寸データ。Unreal Engine などのプリビズ・VFX パイプラインへ取り込み、カメラ設計や絵コンテの背景にそのまま使えます。",
@@ -342,7 +682,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "06",
+      key: "boards",
       label: ["ブックマーク共有", "Board sharing"],
       desc: [
         "候補物件を名前付きボードに整理。Studio / Team プランはボード単位の読み取り専用共有 URL を発行できます。",
@@ -354,7 +694,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "07",
+      key: "inquiries",
       label: ["掲示板・問い合わせ", "Board & inquiries"],
       desc: [
         "物件掲示板の閲覧は全員可、書き込みは有料プラン。問い合わせフォームの内容は掲載スタジオへ直接届きます。",
@@ -366,7 +706,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "08",
+      key: "invoices",
       label: ["請求書", "Invoices"],
       desc: [
         "有料プランは毎月の請求書を自動送付（電子帳簿保存法・インボイス制度対応）。登録番号（T番号）は申込時に入力でき、請求書へ自動反映されます。",
@@ -378,7 +718,7 @@ export default async function AboutPage() {
       },
     },
     {
-      no: "09",
+      key: "ai",
       label: ["AI・産業活用", "AI & industrial use"],
       desc: [
         "AIモデルの学習データ、工場・商業施設のデジタルツイン、防災・研修シミュレーションなど、プリビズ以外の産業活用にもご利用いただけます。AI学習目的の利用は事前のご相談・個別合意が必要ですが、当社としても前向きに取り組みたい分野です。まずはお気軽にお問い合わせください。",
@@ -388,148 +728,132 @@ export default async function AboutPage() {
     },
   ];
 
-  // ⚠ 地の色は白（07 の body は #fff）。theme-online の既定 bg は #f6f8fa の
-  //   グレー寄りで、07 と並べると全体がくすんで見えたため bg-white で上書きする。
   return (
-    <div className="theme-online bg-white frame pb-12 sm:pb-24">
-      {/* ── 1. HERO（07 の .hero: 上下グラデ + 中央寄せ eyebrow / h1 / lead） ── */}
-      <section
-        className="text-center pt-10 sm:pt-14 pb-10 sm:pb-14"
-        style={{
-          // 07 は #fff → #f5faff のごく淡いグラデ。accent 9% だと青が乗りすぎて
-          // 07 と別物に見えたので、07 の実測値に相当する 4% まで薄める。
-          background:
-            "linear-gradient(180deg, white, color-mix(in srgb, var(--color-accent) 4%, white))",
-        }}
-      >
-        <Eyebrow>{en ? "For owners / For scouts" : "掲載する側 / 探す側"}</Eyebrow>
-        {/* ⚠ 07 の h1 は色を使わない黒一色。アクセント色で一部を強調すると
-            07 と印象が変わるため、強調は入れない。 */}
-        <h1 className="mt-5 mb-4 font-black tracking-normal text-[clamp(1.9rem,5vw,4rem)] leading-[1.14] max-w-[24ch] mx-auto text-balance">
-          {en ? (
-            <>
-              Real locations,
-              <br />
-              scouted in your browser.
-            </>
-          ) : (
-            <>
-              実在のロケ地を、
-              <br />
-              ブラウザで歩いて下見。
-            </>
-          )}
-        </h1>
-        <p className="text-[14px] sm:text-[16px] text-muted max-w-[58ch] mx-auto leading-[1.85]">
-          {en ? (
-            <>
-              Locahun3D scans real locations into 3DGS (3D Gaussian Splatting)
-              data and lists them on this catalog. You can check a space&apos;s
-              size, ceiling height and lighting without visiting, and buy the 3D
-              data itself when you need it.
-            </>
-          ) : (
-            <>
-              ロケハン3D は、実在のロケ地を 3DGS（3D Gaussian Splatting）データ化して
-              カタログに掲載しているサービスです。現地に行かなくても空間の広さ・天井高・
-              光の入り方を確認でき、必要なら 3D データそのものを購入できます。
-            </>
-          )}
-        </p>
+    // theme-online は色目的ではなく、globals.css の
+    // `main:has(> .theme-online) + footer { margin-top:0 }` を効かせるため
+    // （付けないとライト地とフッターの間に黒帯が出る）。色は下の .about07 が全部上書きする。
+    <div className="about07 theme-online">
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-        {/* 07 の .segments（角丸カード + 影 + gap 18px） */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-[18px] mt-9 text-left">
-          {SEGMENTS.map((s) => (
-            <article
-              key={s.no}
-              className={`rounded-lg border border-line bg-white overflow-hidden flex flex-col ${SHADOW_CARD}`}
-            >
-              {/* ⚠ 07 はセグメントが2枚で画像が主役級に大きい。ここは対象が3系統
-                  あるため 1枚あたりが細くなり、16/9 だと画像が痩せる。
-                  4/3 にして画像の存在感を07に寄せる。 */}
-              <div className="relative aspect-[4/3] bg-[#eef2f5] border-b border-line overflow-hidden">
+      {/* ── HERO（07 の .hero） ── */}
+      <section className="hero">
+        <div className="wrap">
+          <div className="center">
+            <span className="eyebrow">
+              {en ? "For owners / For scouts" : "掲載する側 / 探す側"}
+            </span>
+            <h1>
+              {en ? (
+                <>
+                  Real locations,
+                  <span className="pc-break">
+                    <br />
+                  </span>{" "}
+                  scouted in your browser.
+                </>
+              ) : (
+                <>
+                  <span className="w">実在の</span>
+                  <span className="w">ロケ地を、</span>
+                  <span className="pc-break">
+                    <br />
+                  </span>
+                  <span className="w">ブラウザで</span>
+                  <span className="w">歩いて</span>
+                  <span className="w">下見。</span>
+                </>
+              )}
+            </h1>
+            <p className="lead">
+              {en
+                ? "Locahun3D scans real locations into 3DGS (3D Gaussian Splatting) data and lists them on this catalog. You can check a space's size, ceiling height and lighting without visiting, and buy the 3D data itself when you need it."
+                : "ロケハン3D は、実在のロケ地を 3DGS（3D Gaussian Splatting）データ化してカタログに掲載しているサービスです。現地に行かなくても空間の広さ・天井高・光の入り方を確認でき、必要なら 3D データそのものを購入できます。"}
+            </p>
+          </div>
+          <div className="segments">
+            {SEGMENTS.map((s) => (
+              <article className="segment" key={s.key}>
                 {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
-                <LightboxImage
-                  src={s.img.src}
-                  alt={t(s.img.alt)}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6 flex flex-col flex-1">
-                <span className="inline-flex items-center gap-2 mono text-[10px] tracking-[0.22em] uppercase text-accent mb-2.5">
-                  <span aria-hidden className="w-2 h-2 rounded-full bg-accent" />
-                  {s.no} — {t(s.role)}
-                </span>
-                <h2 className="font-black tracking-normal text-[clamp(1.15rem,2.2vw,1.5rem)] leading-[1.3] mb-2.5 text-balance">
-                  {t(s.title)}
-                </h2>
-                <p className="text-[13.5px] text-muted leading-[1.8]">{t(s.desc)}</p>
-                <ul className="mt-4 grid gap-2.5 text-[13px] text-ink/85 leading-[1.7] list-none flex-1 content-start">
-                  {s.points.map((p) => (
-                    <li key={p[0]} className="flex gap-2.5">
-                      <span aria-hidden className="text-accent font-bold shrink-0">
-                        ✓
-                      </span>
-                      <span>{t(p)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-wrap gap-2.5 mt-5">
-                  {s.actions.map((a) =>
-                    a.external ? (
-                      <a
-                        key={a.href + a.text[0]}
-                        href={a.href}
-                        target="_blank"
-                        rel="noopener"
-                        className={a.primary ? BTN_PRIMARY : BTN_SECONDARY}
-                      >
-                        {t(a.text)}
-                      </a>
-                    ) : (
-                      <Link
-                        key={a.href + a.text[0]}
-                        href={lh(a.href)}
-                        className={a.primary ? BTN_PRIMARY : BTN_SECONDARY}
-                      >
-                        {t(a.text)}
-                      </Link>
-                    )
-                  )}
+                <LightboxImage src={s.img.src} alt={t(s.img.alt)} />
+                <div className="segment-body">
+                  <span className="role">
+                    <span className="role-dot" />
+                    {t(s.role)}
+                  </span>
+                  <h2>
+                    {s.title.map((c, i) => (
+                      <Fragment key={c[0]}>
+                        {/* .w は inline-block なので EN は語間スペースを外側に置く */}
+                        {en && i > 0 ? " " : null}
+                        <span className="w">{t(c)}</span>
+                      </Fragment>
+                    ))}
+                  </h2>
+                  <p>{t(s.desc)}</p>
+                  <ul>
+                    {s.points.map((p) => (
+                      <li key={p[0]}>
+                        <span className="check">✓</span>
+                        <span>{t(p)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="segment-actions">
+                    {s.actions.map((a) =>
+                      a.external ? (
+                        <a
+                          key={a.href + a.text[0]}
+                          className={a.primary ? "btn primary" : "btn secondary"}
+                          href={a.href}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          {t(a.text)}
+                        </a>
+                      ) : (
+                        <Link
+                          key={a.href + a.text[0]}
+                          className={a.primary ? "btn primary" : "btn secondary"}
+                          href={lh(a.href)}
+                        >
+                          {t(a.text)}
+                        </Link>
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── 2. CORE（07 の section-head + product） ── */}
-      <section className="py-14 sm:py-[72px]">
-        <Eyebrow>{en ? "Core technology" : "核となる技術"}</Eyebrow>
-        <div className="grid md:grid-cols-[0.9fr_1.1fr] gap-5 md:gap-[34px] items-start mt-5 mb-7">
-          <h2 className="font-black tracking-normal text-[clamp(1.4rem,3vw,2.4rem)] leading-[1.25] text-balance">
-            {en ? (
-              <>
-                It all rests on one <br className="pc" />
-                <em className="not-italic text-accent">high-fidelity 3D scan</em>.
-              </>
-            ) : (
-              <>
-                すべての土台は、<br className="pc" />
-                <em className="not-italic text-accent">高精細な 3D スキャン</em>。
-              </>
-            )}
-          </h2>
-          <p className="text-[14px] text-muted leading-[1.85]">
-            {en
-              ? "Locations and studios are reconstructed as 3D Gaussian Splatting and made walkable in the browser. It is not CG modeling — the real dimensions, textures and lighting are recorded as they are, so owners can show a space honestly and scouts can compare it fairly."
-              : "ロケ地・スタジオを 3D Gaussian Splatting として再構成し、ブラウザ上で歩いて確認できるようにします。CG モデリングではなく、実寸・実際の質感・照明をそのまま記録しているため、掲載する側は空間をありのまま見せられ、探す側は比較しやすくなります。"}
-          </p>
-        </div>
-        <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-5 items-stretch">
-          {/* 07 の .screen: 白い額縁 + 角丸 + 落ち影 */}
-          <div className={`rounded-lg border border-line bg-white p-2.5 ${SHADOW_SCREEN}`}>
-            <div className="relative rounded-md overflow-hidden bg-[#eef2f5] aspect-[16/10] lg:aspect-auto lg:h-full lg:min-h-[360px]">
+      {/* ── 中核技術（07 の .section-head + .product） ── */}
+      <section>
+        <div className="wrap">
+          <div className="section-head">
+            <h2 className="section-title">
+              {en ? (
+                <>
+                  It all rests on one high-fidelity 3D scan.
+                </>
+              ) : (
+                <>
+                  <span className="w">すべての</span>
+                  <span className="w">土台は、</span>
+                  <span className="w">高精細な</span>
+                  <span className="w">3D スキャン。</span>
+                </>
+              )}
+            </h2>
+            <p>
+              {en
+                ? "Locations and studios are reconstructed as 3D Gaussian Splatting and made walkable in the browser. It is not CG modeling — the real dimensions, textures and lighting are recorded as they are, so owners can show a space honestly and scouts can compare it fairly."
+                : "ロケ地・スタジオを 3D Gaussian Splatting として再構成し、ブラウザ上で歩いて確認できるようにします。CG モデリングではなく、実寸・実際の質感・照明をそのまま記録しているため、掲載する側は空間をありのまま見せられ、探す側は比較しやすくなります。"}
+            </p>
+          </div>
+          <div className="product">
+            <div className="screen">
               {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
               <LightboxImage
                 src="/about/walkthrough.webp"
@@ -538,204 +862,180 @@ export default async function AboutPage() {
                     ? "Walking a published 3DGS capture in the viewer"
                     : "公開された3DGSデータをビューアで歩いている画面"
                 }
-                className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
+            <div className="feature-list">
+              {CORE.map((c) => (
+                <article className="feature" key={c.title[0]}>
+                  <h3>{t(c.title)}</h3>
+                  <p>{t(c.desc)}</p>
+                </article>
+              ))}
+            </div>
           </div>
-          <div className="grid gap-3.5 content-start">
-            {CORE.map((c) => (
-              <article key={c.title[0]} className="rounded-lg border border-line bg-white p-5">
-                <h3 className="font-extrabold text-[17px] leading-[1.4] mb-1.5">{t(c.title)}</h3>
-                <p className="text-[13.5px] text-muted leading-[1.8]">{t(c.desc)}</p>
+        </div>
+      </section>
+
+      {/* ── 利用の流れ（07 の .soft + .flow） ── */}
+      <section className="soft">
+        <div className="wrap">
+          <div className="section-head">
+            <h2 className="section-title">
+              {en ? (
+                <>
+                  Search, walk, assess, share.
+                </>
+              ) : (
+                <>
+                  <span className="w">探して、</span>
+                  <span className="w">歩いて、</span>
+                  <span className="w">検討して、</span>
+                  <span className="w">共有する。</span>
+                </>
+              )}
+            </h2>
+            <p>
+              {en
+                ? "From catalog search to sharing with your team, the steps that come before a shoot can all be handled online."
+                : "カタログ検索からチーム共有まで、撮影前の候補地検討に必要な流れをオンラインで進められます。"}
+            </p>
+          </div>
+          <div className="flow">
+            {FLOW.map((f) => (
+              <div className="flow-item" key={f.key}>
+                <strong>{t(f.title)}</strong>
+                <p>{t(f.desc)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 仕組み（07 の .segment を流用した3ステップ） ── */}
+      <section>
+        <div className="wrap">
+          <div className="section-head">
+            <h2 className="section-title">
+              {en ? (
+                <>
+                  From a 20-minute walk to a published location.
+                </>
+              ) : (
+                <>
+                  <span className="w">約 20 分の</span>
+                  <span className="w">歩行スキャンから、</span>
+                  <span className="w">カタログ</span>
+                  <span className="w">公開まで。</span>
+                </>
+              )}
+            </h2>
+            <p>
+              {en ? (
+                <>
+                  Scanning is a separate service —{" "}
+                  <a href={SCAN_URL} target="_blank" rel="noopener">
+                    details at web.locahun3d.com
+                  </a>
+                  .
+                </>
+              ) : (
+                <>
+                  スキャン自体は別サービスとして提供しています。詳細は{" "}
+                  <a href={SCAN_URL} target="_blank" rel="noopener">
+                    web.locahun3d.com
+                  </a>{" "}
+                  をご覧ください。
+                </>
+              )}
+            </p>
+          </div>
+          <div className="segments">
+            {STEPS.map((s) => (
+              <article className="segment" key={s.no}>
+                {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
+                <LightboxImage src={s.img.src} alt={t(s.img.alt)} />
+                <div className="segment-body">
+                  <span className="role">
+                    <span className="role-dot" />
+                    {s.no}
+                  </span>
+                  <h2>
+                    <span className="w">{t(s.title)}</span>
+                  </h2>
+                  <p>{t(s.desc)}</p>
+                </div>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── 3. FLOW（07 の .soft 帯 + 4列） ── */}
-      <section className="bg-accent/5 border border-line px-5 sm:px-8 py-12 sm:py-[64px] rounded-lg">
-        <Eyebrow>{en ? "How you use it" : "利用の流れ"}</Eyebrow>
-        <div className="grid md:grid-cols-[0.9fr_1.1fr] gap-5 md:gap-[34px] items-start mt-5 mb-7">
-          <h2 className="font-black tracking-normal text-[clamp(1.4rem,3vw,2.4rem)] leading-[1.25] text-balance">
-            {en ? (
-              <>
-                Search, walk, <br className="pc" />
-                assess, share.
-              </>
-            ) : (
-              <>
-                探して、歩いて、<br className="pc" />
-                検討して、共有する。
-              </>
-            )}
-          </h2>
-          <p className="text-[14px] text-muted leading-[1.85]">
-            {en
-              ? "From catalog search to sharing with your team, the steps that come before a shoot can all be handled online."
-              : "カタログ検索からチーム共有まで、撮影前の候補地検討に必要な流れをオンラインで進められます。"}
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {FLOW.map((f) => (
-            <div key={f.no} className="rounded-lg border border-line bg-white p-5">
-              <span className="mono text-[10px] tracking-[0.22em] uppercase text-accent">{f.no}</span>
-              <strong className="block text-[16px] font-extrabold leading-[1.4] mt-1 mb-1.5">
-                {t(f.title)}
-              </strong>
-              <p className="text-[13px] text-muted leading-[1.75]">{t(f.desc)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 4. HOW IT WORKS（サムネイル付き3ステップ） ── */}
-      <section className="py-14 sm:py-[72px]">
-        <Eyebrow>{en ? "Scan to catalog" : "仕組み"}</Eyebrow>
-        <h2 className="font-black tracking-normal text-[clamp(1.4rem,3vw,2.4rem)] leading-[1.25] mt-5 mb-7 text-balance">
-          {en ? (
-            <>
-              From a 20-minute walk <br className="pc" />
-              to a published location.
-            </>
-          ) : (
-            <>
-              約 20 分の歩行スキャンから、<br className="pc" />
-              カタログ公開まで。
-            </>
-          )}
-        </h2>
-        <div className="grid sm:grid-cols-3 gap-[18px]">
-          {STEPS.map((s, i) => (
-            <article
-              key={s.no}
-              className={`rounded-lg border border-line bg-white overflow-hidden flex flex-col ${SHADOW_CARD}`}
-            >
-              <div className="relative aspect-[16/9] bg-[#eef2f5] border-b border-line overflow-hidden">
-                {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
-                <LightboxImage
-                  src={s.img.src}
-                  alt={t(s.img.alt)}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <span className="mono text-[10px] tracking-[0.22em] uppercase text-accent">
-                  {s.no}
-                  {i < STEPS.length - 1 && <span className="ml-2 opacity-50">→</span>}
-                </span>
-                <h3 className="font-extrabold text-[17px] leading-[1.4] mt-1.5 mb-1.5">
-                  {t(s.title)}
-                </h3>
-                <p className="text-[13.5px] text-muted leading-[1.8]">{t(s.desc)}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-        <p className="mt-5 text-[13px] text-muted leading-[1.8]">
-          {en ? (
-            <>
-              Scanning is a separate service —{" "}
-              <a href={SCAN_URL} target="_blank" rel="noopener" className="text-accent hover:underline">
-                details at web.locahun3d.com
-              </a>
-              .
-            </>
-          ) : (
-            <>
-              スキャン自体は別サービスとして提供しています。詳細は{" "}
-              <a href={SCAN_URL} target="_blank" rel="noopener" className="text-accent hover:underline">
-                web.locahun3d.com
-              </a>{" "}
-              をご覧ください。
-            </>
-          )}
-        </p>
-      </section>
-
-      {/* ── 5. DETAILS（機能の詳細・明細リスト9行） ── */}
-      <section className="pb-14 sm:pb-[72px]">
-        <Eyebrow>{en ? "Feature details" : "機能の詳細"}</Eyebrow>
-        <h2 className="font-black tracking-normal text-[clamp(1.4rem,3vw,2.4rem)] leading-[1.25] mt-5 mb-7 text-balance">
-          {en ? "Everything, in detail." : "機能の詳細。"}
-        </h2>
-        <div className={`rounded-lg border border-line bg-white overflow-hidden ${SHADOW_CARD}`}>
-          {DETAILS.map((d, i) => (
-            <div
-              key={d.no}
-              className={`grid md:grid-cols-[200px_1fr_auto] gap-x-6 gap-y-3 items-center px-5 sm:px-6 py-5 ${
-                i > 0 ? "border-t border-line" : ""
-              }`}
-            >
-              <div>
-                <span className="mono text-[10px] tracking-[0.22em] uppercase text-accent">{d.no}</span>
-                <span className="ml-2.5 text-[14.5px] font-extrabold">{t(d.label)}</span>
-              </div>
-              <div>
-                <p className="text-[13px] text-muted leading-[1.8]">{t(d.desc)}</p>
-                {d.link && (
-                  <Link
-                    href={lh(d.link.href)}
-                    className="inline-block mt-2 mono text-[10px] tracking-[0.18em] uppercase text-accent hover:underline"
-                  >
-                    {t(d.link.text)}
-                  </Link>
-                )}
-              </div>
-              {d.img && (
-                <div className="w-full md:w-[200px] aspect-[16/9] rounded-md border border-line bg-[#eef2f5] overflow-hidden relative">
+      {/* ── 機能の詳細（07 の .feature を流用した9行） ── */}
+      <section className="soft">
+        <div className="wrap">
+          <div className="section-head solo">
+            <h2 className="section-title">
+              {en ? "Everything, in detail." : "機能の詳細。"}
+            </h2>
+          </div>
+          <div className="feature-list">
+            {DETAILS.map((d) => (
+              <article className={d.img ? "feature detail" : "feature"} key={d.key}>
+                <div>
+                  <h3>{t(d.label)}</h3>
+                  <p>{t(d.desc)}</p>
+                  {d.link && (
+                    <Link className="detail-link" href={lh(d.link.href)}>
+                      {t(d.link.text)}
+                    </Link>
+                  )}
+                </div>
+                {d.img && (
+                  /* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */
                   <LightboxImage
                     src={d.img.src}
                     alt={t(d.img.alt)}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="detail-shot"
                   />
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── 6. CTA パネル（07 の .cta-panel。グラデは accent の濃淡で作る） ── */}
+      {/* ── CTA（07 の .cta-panel） ── */}
       <section>
-        <div
-          className="rounded-lg text-white grid lg:grid-cols-[1fr_auto] gap-6 lg:gap-8 items-center p-7 sm:p-9 shadow-[0_22px_60px_rgba(15,23,42,0.22)]"
-          style={{
-            background:
-              "linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 55%, black), var(--color-accent))",
-          }}
-        >
+        <div className="wrap cta-panel">
           <div>
-            <h2 className="font-black tracking-normal text-[clamp(1.4rem,3vw,2.4rem)] leading-[1.25] text-balance">
+            <h2>
               {en ? (
                 <>
-                  Take the next step, <br className="pc" />
-                  whichever side you&apos;re on.
+                  Take the next step, whichever side you&apos;re on.
                 </>
               ) : (
                 <>
-                  立場に合わせて、<br className="pc" />
-                  次の一歩へ。
+                  <span className="w">立場に</span>
+                  <span className="w">合わせて、</span>
+                  <span className="w">次の</span>
+                  <span className="w">一歩へ。</span>
                 </>
               )}
             </h2>
-            <p className="mt-2.5 text-[13.5px] leading-[1.8] text-white/85 max-w-[62ch]">
+            <p>
               {en
                 ? "Four plans: Free / Individual / Studio / Team. Walkthrough viewing is token-based, and annual billing saves 20%. The demo requires no sign-up."
                 : "プランは Free / Individual / Studio / Team の 4 段階。ウォークスルーの視聴はトークン制で、年払いは -20% です。デモは登録不要で視聴できます。"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2.5 lg:flex-col lg:min-w-[250px]">
-            <a href={DEMO_URL} target="_blank" rel="noopener" className={BTN_ON_ACCENT}>
+          <div className="segment-actions">
+            <a className="btn" href={DEMO_URL} target="_blank" rel="noopener">
               {en ? "▶ Try the demo — no sign-up" : "▶ デモを歩く — 登録不要"}
             </a>
-            <Link href={lh("/properties")} className={BTN_ON_ACCENT}>
+            <Link className="btn" href={lh("/properties")}>
               {en ? "Browse the catalog →" : "物件を探す →"}
             </Link>
-            <Link
-              href={lh("/pricing")}
-              className={`${BTN} bg-transparent border border-white/70 text-white hover:bg-white/10`}
-            >
+            <Link className="btn" href={lh("/pricing")}>
               {en ? "See pricing" : "料金プランを見る"}
             </Link>
           </div>
