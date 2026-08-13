@@ -86,9 +86,15 @@ html:has(.about07) body{ background:#fff; }
 .about07 img{ display:block; max-width:100%; }
 /* Tailwind preflight で潰れる UA 既定（見出しの bold）を 07 と同じ 700 に戻す */
 .about07 h1,.about07 h2,.about07 h3{ font-weight:700; }
+/* ⚠ コンテンツ幅は他ページと揃える（2026-08-14）。07 は 1160px 固定だったが、
+   サイトの他ページは globals.css の @utility frame（padding-inline を
+   max(clamp(1rem,4vw,48px), (100vw - --container-frame)/2) で取る方式）を使っており、
+   /about だけ本文が 240px ほど狭く、ページを移動すると幅が変わって見えていた。
+   frame と同じ式にして、どのページでも本文の左右が一致するようにする。 */
 .about07 .wrap{
-  width:min(1160px, calc(100% - 48px));
-  margin:0 auto;
+  width:100%;
+  margin:0;
+  padding-inline:max(clamp(1rem, 4vw, 48px), calc((100vw - var(--container-frame, 1440px)) / 2));
 }
 .about07 .hero{
   padding:70px 0 78px;
@@ -382,7 +388,7 @@ html:has(.about07) body{ background:#fff; }
   .about07 .flow{ grid-template-columns:repeat(2, 1fr); }
 }
 @media (max-width: 640px){
-  .about07 .wrap{ width:min(100% - 28px, 1160px); }
+  /* .wrap の幅は padding-inline 方式に統一したため、ここでの上書きは不要 */
   .about07 .hero{ padding:50px 0 58px; }
   .about07 .lead{ font-size:16px; }
   .about07 .segment-actions .btn,
@@ -835,6 +841,11 @@ export default async function AboutPage() {
       {/* ── 中核技術（07 の .section-head + .product） ── */}
       <section>
         <div className="wrap">
+          <div className="chapter-rule">
+            <span className="opacity-60">FEATURES</span>
+            <span>{en ? "What you can do" : "できること"}</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
           {/* ⚠ ここにあった見出し「すべての土台は、高精細な3Dスキャン。」と
               その説明文は 2026-08-14 に削除（本人指示）。同じ内容は下の
               仕組み(STEP 02)で説明しており、重複していた。 */}
@@ -865,6 +876,11 @@ export default async function AboutPage() {
       {/* ── 利用の流れ（07 の .soft + .flow） ── */}
       <section className="soft">
         <div className="wrap">
+          <div className="chapter-rule">
+            <span className="opacity-60">FLOW</span>
+            <span>{en ? "How you use it" : "利用の流れ"}</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
           <div className="section-head">
             <h2 className="section-title">
               {en ? (
@@ -900,6 +916,11 @@ export default async function AboutPage() {
       {/* ── 仕組み（07 の .segment を流用した3ステップ） ── */}
       <section>
         <div className="wrap">
+          <div className="chapter-rule">
+            <span className="opacity-60">HOW IT WORKS</span>
+            <span>{en ? "Scan to catalog" : "仕組み"}</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
           <div className="section-head">
             <h2 className="section-title">
               {en ? (
@@ -959,6 +980,11 @@ export default async function AboutPage() {
       {/* ── 機能の詳細（07 の .feature を流用した9行） ── */}
       <section className="soft">
         <div className="wrap">
+          <div className="chapter-rule">
+            <span className="opacity-60">DETAILS</span>
+            <span>{en ? "Feature details" : "機能の詳細"}</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
           <div className="section-head solo">
             <h2 className="section-title">
               {en ? "Everything, in detail." : "機能の詳細。"}
