@@ -237,18 +237,55 @@ export default function PropertyEditor({
   useEffect(() => { onSaveDraftRef.current = onSaveDraft; }, [onSaveDraft]);
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // 「1.5秒の待機中で、まだ保存に入っていない変更があるか」。
+  // タイマーID(autoSaveTimer)は発火後も残るため、待機中かどうかの判定には使えない。
+  const autoSavePendingRef = useRef(false);
   const triggerAutoSave = useCallback(
     (delayMs = 0) => {
       clearTimeout(autoSaveTimer.current);
       if (delayMs === 0) {
+        autoSavePendingRef.current = false;
         onSaveDraft();
       } else {
-        autoSaveTimer.current = setTimeout(() => onSaveDraft(), delayMs);
+        autoSavePendingRef.current = true;
+        autoSaveTimer.current = setTimeout(() => {
+          autoSavePendingRef.current = false;
+          onSaveDraft();
+        }, delayMs);
       }
     },
     [onSaveDraft],
   );
-  useEffect(() => () => clearTimeout(autoSaveTimer.current), []);
+
+  // ⚠ アンマウント時は待機中の保存を「捨てる」のではなく必ず流し切る（2026-08-13）。
+  //   以前は clearTimeout するだけだったため、入力してから 1.5 秒の debounce が
+  //   確定する前に別ページへ移動すると、その入力が無言で消えていた
+  //   （実測: 入力 300ms 後に離脱 → 保存されず / 3 秒待って離脱 → 保存される）。
+  //   打合せで挙がった「開くを押して戻るとデータが消えることがある」の正体。
+  //   startSave(useTransition) はアンマウント済みコンポーネントの state 更新に
+  //   なるため使わず、サーバーアクションを直接叩く（結果の表示先はもう無い）。
+  useEffect(() => {
+    return () => {
+      clearTimeout(autoSaveTimer.current);
+      if (!autoSavePendingRef.current || conflictRef.current) return;
+      autoSavePendingRef.current = false;
+      void saveDraftAction(getValues(), {
+        expectedUpdatedAt: baseUpdatedAtRef.current,
+      }).catch(() => {});
+    };
+  }, [getValues]);
+
+  // タブを閉じる・リロード・外部サイトへ移動する場合はアンマウントの後始末が
+  // 走らない（かつ非同期の保存も完了しない）ので、待機中の変更があるときだけ
+  // ブラウザ標準の離脱確認を出す。待機は最大1.5秒なので通常は一切出ない。
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!autoSavePendingRef.current) return;
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   useEffect(() => {
     if (capturedUrl && capturedIdx !== null) {
