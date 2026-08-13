@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 import { useLocale, useHref } from "@/components/locale-provider";
-import { TOKEN_PACK } from "@/lib/schemas";
-import { buyTokenPackAction } from "@/lib/token-pack-actions";
 
 /**
  * 1物件に複数シーンがあると ViewerGate が並ぶ分だけ自動再生プレビュー動画も
@@ -486,19 +484,10 @@ export default function ViewerGate({
                   tokenError.bonusTokens
                 } です。`}
           </p>
-          {/* トークン不足のこの瞬間が、追加購入の意思が最も高い地点。サブスク
-              (月額)より先に、その場で解決できる単発購入を主導線として出す。 */}
-          <form action={buyTokenPackAction} className="mt-3.5">
-            <button
-              type="submit"
-              className="w-full px-4 py-2.5 text-[12.5px] font-bold rounded-sm bg-accent text-white hover:bg-accent/85 transition"
-            >
-              {en
-                ? `Buy ${TOKEN_PACK.tokens} tokens — ¥${TOKEN_PACK.priceYen.toLocaleString()}`
-                : `トークン${TOKEN_PACK.tokens}枚を購入 — ¥${TOKEN_PACK.priceYen.toLocaleString()}`}
-            </button>
-          </form>
-          <div className="flex flex-wrap gap-2 mt-2">
+          {/* ⚠ ここにあった「トークン5枚を購入 ¥3,000」の単発購入ボタンは
+              2026-08-13 に廃止（運用判断。単発購入自体をサービスから撤去）。
+              トークン不足の解決導線はプラン(サブスク)へ一本化する。 */}
+          <div className="flex flex-wrap gap-2 mt-3.5">
             <Link
               href={lh(`/pricing?from=${propertyId}`)}
               className="px-4 py-2 text-[12px] font-semibold rounded-sm border border-red-300 text-red-700 hover:bg-red-100 transition"
