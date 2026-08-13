@@ -47,6 +47,10 @@ yarn-error.log*
 # admin from ADMIN_EMAIL / ADMIN_PASSWORD. Never commit. (Migrates to D1/Clerk.)
 /data/users.json
 
+# 削除アカウントのアーカイブ（dev のローカル保存先）。users.json と同じく
+# 個人情報そのものなのでコミットしない。本番は D1 の deleted_accounts テーブル。
+/data/deleted-accounts.json
+
 # vercel
 .vercel
 

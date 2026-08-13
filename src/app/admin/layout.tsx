@@ -32,7 +32,9 @@ export default async function AdminLayout({
           // ギフトコードは専用ページ(/admin/gift-codes)を廃止しマーケティング配下へ統合。
           // 全物件共通の「限定無料期間」UIも同時に廃止（無料化は3DGSデータごとに
           // 物件エディターで設定する運用に一本化したため）。
-          { href: "/admin/marketing#gift-codes", label: "↳ ギフトコード", sub: true },
+          // サイドバーの「↳ ギフトコード」リンクも 2026-08-13 に撤去。マーケティング
+          // ページを少しスクロールすれば同じ場所（#gift-codes）に着くため、
+          // 一段深いだけの重複リンクだった（運用担当の指摘）。
           { href: "/admin/purchases", label: "データ販売" },
           { href: "/admin/submissions", label: "持ち込みスキャン" },
           { href: "/admin/payouts", label: "精算" },

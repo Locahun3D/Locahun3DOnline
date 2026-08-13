@@ -6,6 +6,7 @@ import { listRecentEvents } from "@/lib/analytics-events";
 import { purchaseRepo } from "@/lib/purchases";
 import { CATEGORY_LABEL } from "@/lib/schemas";
 import { jstDayKey, fmtDateTimeJST } from "@/lib/date-format";
+import SubscriptionSummary from "@/components/admin/subscription-summary";
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
   view: "閲覧",
@@ -16,6 +17,19 @@ export const metadata = { title: "アナリティクス" };
 
 const PERIODS = [1, 7, 14, 30, 90] as const;
 type Period = (typeof PERIODS)[number];
+
+/**
+ * 縦一列に全部並べると「サブスク売上まで潜るのが面倒」だったため、
+ * 最上部のタブで3系統に切り替える（運用担当の指摘・2026-08-13）。
+ * タブ状態は URL の ?tab= で持つ — 既存の期間・検索リンクと同じ Link 方式に
+ * 揃えられ、サーバーコンポーネントのままでよく、URL 共有もできる。
+ */
+const TABS = [
+  { key: "views", label: "閲覧" },
+  { key: "subscriptions", label: "サブスクリプション" },
+  { key: "purchases", label: "物件購入" },
+] as const;
+type Tab = (typeof TABS)[number]["key"];
 
 function lastNDays(n: number): string[] {
   const out: string[] = [];
@@ -33,7 +47,7 @@ function fmtPrice(n: number) {
 export default async function AdminAnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ days?: string; q?: string; studio?: string }>;
+  searchParams: Promise<{ days?: string; q?: string; studio?: string; tab?: string }>;
 }) {
   await requireAdmin();
 
@@ -42,6 +56,8 @@ export default async function AdminAnalyticsPage({
     PERIODS.find((p) => String(p) === sp.days) ?? 14;
   const query = (sp.q ?? "").trim().toLowerCase();
   const studioFilter = sp.studio ?? "";
+  const tab: Tab =
+    (TABS.find((t) => t.key === sp.tab)?.key as Tab | undefined) ?? "views";
 
   const [props, stats, allPurchases, recentEvents] = await Promise.all([
     repo.list(),
@@ -166,22 +182,28 @@ export default async function AdminAnalyticsPage({
     .filter((p) => p && p.status !== "archived")
     .map((p) => ({ id: p!.id, title: p!.title || p!.id }));
 
-  return (
-    <div className="p-6 md:p-10">
-      <div className="chapter-rule">
-        <span className="opacity-60">ADMIN</span>
-        <span>アナリティクス — 閲覧・購入・需要傾向</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-        <span className="opacity-60">{rows.length} スタジオ</span>
-      </div>
+  // 購入だけを見るタブ用（購入実績のあるスタジオのみ）。
+  const purchaseRows = rows.filter((r) => r.purchases > 0 || r.revenue > 0);
 
-      {/* Period selector + search */}
+  const qs = (over: { tab?: Tab; days?: Period; studio?: string }) => {
+    const p = new URLSearchParams();
+    p.set("tab", over.tab ?? tab);
+    p.set("days", String(over.days ?? days));
+    if (query) p.set("q", query);
+    const st = over.studio !== undefined ? over.studio : studioFilter;
+    if (st) p.set("studio", st);
+    return `/admin/analytics?${p.toString()}`;
+  };
+
+  /** 期間セレクタ＋検索（閲覧・物件購入タブで共有）。 */
+  const filters = (
+    <>
       <div className="flex flex-wrap items-center gap-2 mb-4 mono text-[10px] tracking-[0.22em] uppercase">
         <span className="text-muted mr-1">期間</span>
         {PERIODS.map((p) => (
           <Link
             key={p}
-            href={`/admin/analytics?days=${p}${query ? `&q=${encodeURIComponent(query)}` : ""}${studioFilter ? `&studio=${studioFilter}` : ""}`}
+            href={qs({ days: p })}
             className={`px-3 py-1.5 border transition ${
               days === p
                 ? "border-accent text-accent"
@@ -193,8 +215,8 @@ export default async function AdminAnalyticsPage({
         ))}
       </div>
 
-      {/* Search + studio filter */}
       <form className="flex flex-wrap items-center gap-3 mb-8">
+        <input type="hidden" name="tab" value={tab} />
         <input type="hidden" name="days" value={days} />
         <input
           type="search"
@@ -221,245 +243,356 @@ export default async function AdminAnalyticsPage({
         </button>
         {(query || studioFilter) && (
           <Link
-            href={`/admin/analytics?days=${days}`}
+            href={`/admin/analytics?tab=${tab}&days=${days}`}
             className="mono text-[10px] tracking-[0.18em] uppercase text-muted hover:text-ink transition"
           >
             リセット
           </Link>
         )}
       </form>
+    </>
+  );
 
-      {!hasAnyData ? (
-        <p className="text-[13px] text-muted">
-          まだ計測データがありません。公開中の物件詳細ページが閲覧されると、ここに集計されます。
-        </p>
+  return (
+    <div className="p-6 md:p-10">
+      <div className="chapter-rule">
+        <span className="opacity-60">ADMIN</span>
+        <span>アナリティクス — 閲覧・購入・需要傾向</span>
+        <span className="flex-1 h-px bg-current opacity-25" />
+        <span className="opacity-60">{rows.length} スタジオ</span>
+      </div>
+
+      {/* Tabs */}
+      <nav
+        className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.22em] uppercase"
+        aria-label="アナリティクスの表示切替"
+      >
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={qs({ tab: t.key })}
+            aria-current={tab === t.key ? "page" : undefined}
+            className={`px-4 py-2 border transition ${
+              tab === t.key
+                ? "border-accent text-accent bg-accent/10"
+                : "border-line text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+
+      {tab === "subscriptions" ? (
+        <SubscriptionSummary heading="サブスクリプション売上" />
       ) : (
         <>
-          {/* Summary (period-scoped) */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-10">
-            {[
-              { label: `閲覧数（${days}日）`, value: totalViews.toLocaleString("ja-JP"), color: "" },
-              { label: "3DGS 起動", value: totalOpens.toLocaleString("ja-JP"), color: "" },
-              { label: "起動率", value: `${overallConv}%`, color: "" },
-              { label: "1日平均", value: avgPerDay, color: "" },
-              { label: `購入（${days}日）`, value: String(totalPurchases), color: "text-green-400" },
-              { label: `売上（${days}日）`, value: fmtPrice(totalRevenue), color: "text-accent" },
-            ].map((c) => (
-              <div key={c.label} className="border border-line bg-[#1c1c1c] p-4">
-                <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted mb-2">
-                  {c.label}
-                </div>
-                <div className={`serif text-2xl ${c.color || "text-accent"}`}>{c.value}</div>
-              </div>
-            ))}
-          </div>
+          {filters}
 
-          {/* All-time purchase summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-            {[
-              { label: "累計購入件数", value: String(completedPurchases.length) },
-              { label: "累計売上", value: fmtPrice(allTimeRevenue) },
-              { label: "返金件数", value: String(refundedPurchases.length) },
-              { label: "返金総額", value: fmtPrice(allTimeRefunds) },
-            ].map((c) => (
-              <div key={c.label} className="border border-line bg-[#1a1a1a] p-3">
-                <div className="mono text-[9px] tracking-[0.24em] uppercase text-muted mb-1">
-                  {c.label}
-                </div>
-                <div className="serif text-lg text-ink">{c.value}</div>
+          {!hasAnyData ? (
+            <p className="text-[13px] text-muted">
+              まだ計測データがありません。公開中の物件詳細ページが閲覧されると、ここに集計されます。
+            </p>
+          ) : tab === "purchases" ? (
+            <>
+              {/* 期間内の購入サマリー */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+                {[
+                  { label: `購入（${days}日）`, value: String(totalPurchases), color: "text-green-400" },
+                  { label: `売上（${days}日）`, value: fmtPrice(totalRevenue), color: "text-accent" },
+                  { label: `閲覧（${days}日）`, value: totalViews.toLocaleString("ja-JP"), color: "" },
+                  {
+                    label: "購入率（閲覧比）",
+                    value: totalViews > 0 ? `${Math.round((totalPurchases / totalViews) * 100)}%` : "—",
+                    color: "",
+                  },
+                ].map((c) => (
+                  <div key={c.label} className="border border-line bg-[#1c1c1c] p-4">
+                    <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted mb-2">
+                      {c.label}
+                    </div>
+                    <div className={`serif text-2xl ${c.color || "text-accent"}`}>{c.value}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* Trend */}
-          <div className="mb-10">
-            <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-              ● 直近 {days} 日の閲覧推移{peak.v > 0 ? `（ピーク ${peak.d.slice(5)} / ${peak.v}）` : ""}
-            </div>
-            <div className="border border-line p-5 flex items-end gap-1 h-40 overflow-x-auto">
-              {dailyViews.map(({ d, v, p }) => (
-                <div
-                  key={d}
-                  className="flex-1 min-w-[6px] flex flex-col items-center justify-end h-full"
-                  title={`${d}: ${v} 閲覧${p > 0 ? ` / ${p} 購入` : ""}`}
-                >
-                  {p > 0 && (
-                    <div
-                      className="w-full bg-green-500/70"
-                      style={{ height: `${(p / dailyMax) * 100}%`, minHeight: "3px" }}
-                    />
-                  )}
-                  <div
-                    className="w-full bg-accent/70 hover:bg-accent transition"
-                    style={{ height: `${(v / dailyMax) * 100}%`, minHeight: v > 0 ? "2px" : "0" }}
-                  />
-                  {days <= 30 && (
-                    <div className="mono text-[8px] text-muted mt-1.5">{d.slice(5)}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4 mt-2 mono text-[9px] text-muted">
-              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-accent/70 inline-block" /> 閲覧</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-green-500/70 inline-block" /> 購入</span>
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-[1fr_300px] gap-8">
-            {/* Ranking (period-scoped) */}
-            <div>
-              <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                ● スタジオ別ランキング（{days}日・閲覧順）
+              {/* All-time purchase summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+                {[
+                  { label: "累計購入件数", value: String(completedPurchases.length) },
+                  { label: "累計売上", value: fmtPrice(allTimeRevenue) },
+                  { label: "返金件数", value: String(refundedPurchases.length) },
+                  { label: "返金総額", value: fmtPrice(allTimeRefunds) },
+                ].map((c) => (
+                  <div key={c.label} className="border border-line bg-[#1a1a1a] p-3">
+                    <div className="mono text-[9px] tracking-[0.24em] uppercase text-muted mb-1">
+                      {c.label}
+                    </div>
+                    <div className="serif text-lg text-ink">{c.value}</div>
+                  </div>
+                ))}
               </div>
-              <div className="border border-line overflow-x-auto">
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
-                      <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">スタジオ</th>
-                      <th className="text-right px-3 py-2.5 font-normal">閲覧</th>
-                      <th className="text-right px-3 py-2.5 font-normal">起動</th>
-                      <th className="text-right px-3 py-2.5 font-normal">起動率</th>
-                      <th className="text-right px-3 py-2.5 font-normal">購入</th>
-                      <th className="text-right px-3 py-2.5 font-normal">売上</th>
-                      <th className="text-left px-3 py-2.5 font-normal">主な流入</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.length === 0 ? (
-                      <tr><td colSpan={7} className="px-3 py-6 text-center text-muted">この期間のデータはありません。</td></tr>
-                    ) : (
-                      rows.map((r, i) => (
-                        <tr key={r.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
-                          <td className="px-3 py-2.5">
-                            <Link href={`/admin/analytics?days=${days}&studio=${r.id}`} className="hover:text-accent transition">
-                              {r.title}
-                            </Link>
-                            <span className="mono text-[9px] text-muted ml-2">
-                              {r.category ? CATEGORY_LABEL[r.category] : ""}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5 text-right text-ink">{r.views}</td>
-                          <td className="px-3 py-2.5 text-right text-accent">{r.opens}</td>
-                          <td className="px-3 py-2.5 text-right text-muted">{r.conv}%</td>
-                          <td className="px-3 py-2.5 text-right text-green-400">{r.purchases || "—"}</td>
-                          <td className="px-3 py-2.5 text-right mono text-[11px]">{r.revenue > 0 ? fmtPrice(r.revenue) : "—"}</td>
-                          <td className="px-3 py-2.5 text-muted">{r.topRef}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
 
-            <div className="space-y-8">
-              {/* Devices */}
+              {/* 購入のあったスタジオ */}
               <div>
                 <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  ● 端末別（{scopedIds ? "絞込中" : "全期間"}）
+                  ● 物件別の購入（{days}日・売上順）
                 </div>
-                <div className="border border-line p-4 space-y-3">
-                  {devTotal === 0 ? (
-                    <p className="text-[12px] text-muted">データなし</p>
-                  ) : (
-                    devOrder
-                      .filter((k) => (devAgg[k] ?? 0) > 0)
-                      .map((k) => {
-                        const n = devAgg[k] ?? 0;
-                        const pct = Math.round((n / devTotal) * 100);
-                        return (
-                          <div key={k}>
+                <div className="border border-line overflow-x-auto">
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                        <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">スタジオ</th>
+                        <th className="text-right px-3 py-2.5 font-normal">購入</th>
+                        <th className="text-right px-3 py-2.5 font-normal">売上</th>
+                        <th className="text-right px-3 py-2.5 font-normal">返金</th>
+                        <th className="text-right px-3 py-2.5 font-normal">閲覧</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchaseRows.length === 0 ? (
+                        <tr><td colSpan={5} className="px-3 py-6 text-center text-muted">この期間の購入はありません。</td></tr>
+                      ) : (
+                        [...purchaseRows]
+                          .sort((a, b) => b.revenue - a.revenue)
+                          .map((r, i) => (
+                            <tr key={r.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
+                              <td className="px-3 py-2.5">
+                                <Link href={qs({ studio: r.id })} className="hover:text-accent transition">
+                                  {r.title}
+                                </Link>
+                                <span className="mono text-[9px] text-muted ml-2">
+                                  {r.category ? CATEGORY_LABEL[r.category] : ""}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-right text-green-400">{r.purchases || "—"}</td>
+                              <td className="px-3 py-2.5 text-right mono text-[11px] text-accent">
+                                {r.revenue > 0 ? fmtPrice(r.revenue) : "—"}
+                              </td>
+                              <td className="px-3 py-2.5 text-right text-muted">{r.refunds || "—"}</td>
+                              <td className="px-3 py-2.5 text-right text-ink">{r.views}</td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Summary (period-scoped) */}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-10">
+                {[
+                  { label: `閲覧数（${days}日）`, value: totalViews.toLocaleString("ja-JP"), color: "" },
+                  { label: "3DGS 起動", value: totalOpens.toLocaleString("ja-JP"), color: "" },
+                  { label: "起動率", value: `${overallConv}%`, color: "" },
+                  { label: "1日平均", value: avgPerDay, color: "" },
+                  { label: `購入（${days}日）`, value: String(totalPurchases), color: "text-green-400" },
+                  { label: `売上（${days}日）`, value: fmtPrice(totalRevenue), color: "text-accent" },
+                ].map((c) => (
+                  <div key={c.label} className="border border-line bg-[#1c1c1c] p-4">
+                    <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted mb-2">
+                      {c.label}
+                    </div>
+                    <div className={`serif text-2xl ${c.color || "text-accent"}`}>{c.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Trend */}
+              <div className="mb-10">
+                <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
+                  ● 直近 {days} 日の閲覧推移{peak.v > 0 ? `（ピーク ${peak.d.slice(5)} / ${peak.v}）` : ""}
+                </div>
+                <div className="border border-line p-5 flex items-end gap-1 h-40 overflow-x-auto">
+                  {dailyViews.map(({ d, v, p }) => (
+                    <div
+                      key={d}
+                      className="flex-1 min-w-[6px] flex flex-col items-center justify-end h-full"
+                      title={`${d}: ${v} 閲覧${p > 0 ? ` / ${p} 購入` : ""}`}
+                    >
+                      {p > 0 && (
+                        <div
+                          className="w-full bg-green-500/70"
+                          style={{ height: `${(p / dailyMax) * 100}%`, minHeight: "3px" }}
+                        />
+                      )}
+                      <div
+                        className="w-full bg-accent/70 hover:bg-accent transition"
+                        style={{ height: `${(v / dailyMax) * 100}%`, minHeight: v > 0 ? "2px" : "0" }}
+                      />
+                      {days <= 30 && (
+                        <div className="mono text-[8px] text-muted mt-1.5">{d.slice(5)}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 mt-2 mono text-[9px] text-muted">
+                  <span className="flex items-center gap-1"><span className="w-3 h-2 bg-accent/70 inline-block" /> 閲覧</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-2 bg-green-500/70 inline-block" /> 購入</span>
+                </div>
+              </div>
+
+              <div className="grid lg:grid-cols-[1fr_300px] gap-8">
+                {/* Ranking (period-scoped) */}
+                <div>
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
+                    ● スタジオ別ランキング（{days}日・閲覧順）
+                  </div>
+                  <div className="border border-line overflow-x-auto">
+                    <table className="w-full text-[12px]">
+                      <thead>
+                        <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                          <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">スタジオ</th>
+                          <th className="text-right px-3 py-2.5 font-normal">閲覧</th>
+                          <th className="text-right px-3 py-2.5 font-normal">起動</th>
+                          <th className="text-right px-3 py-2.5 font-normal">起動率</th>
+                          <th className="text-right px-3 py-2.5 font-normal">購入</th>
+                          <th className="text-right px-3 py-2.5 font-normal">売上</th>
+                          <th className="text-left px-3 py-2.5 font-normal">主な流入</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.length === 0 ? (
+                          <tr><td colSpan={7} className="px-3 py-6 text-center text-muted">この期間のデータはありません。</td></tr>
+                        ) : (
+                          rows.map((r, i) => (
+                            <tr key={r.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
+                              <td className="px-3 py-2.5">
+                                <Link href={qs({ studio: r.id })} className="hover:text-accent transition">
+                                  {r.title}
+                                </Link>
+                                <span className="mono text-[9px] text-muted ml-2">
+                                  {r.category ? CATEGORY_LABEL[r.category] : ""}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-right text-ink">{r.views}</td>
+                              <td className="px-3 py-2.5 text-right text-accent">{r.opens}</td>
+                              <td className="px-3 py-2.5 text-right text-muted">{r.conv}%</td>
+                              <td className="px-3 py-2.5 text-right text-green-400">{r.purchases || "—"}</td>
+                              <td className="px-3 py-2.5 text-right mono text-[11px]">{r.revenue > 0 ? fmtPrice(r.revenue) : "—"}</td>
+                              <td className="px-3 py-2.5 text-muted">{r.topRef}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  {/* Devices */}
+                  <div>
+                    <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
+                      ● 端末別（{scopedIds ? "絞込中" : "全期間"}）
+                    </div>
+                    <div className="border border-line p-4 space-y-3">
+                      {devTotal === 0 ? (
+                        <p className="text-[12px] text-muted">データなし</p>
+                      ) : (
+                        devOrder
+                          .filter((k) => (devAgg[k] ?? 0) > 0)
+                          .map((k) => {
+                            const n = devAgg[k] ?? 0;
+                            const pct = Math.round((n / devTotal) * 100);
+                            return (
+                              <div key={k}>
+                                <div className="flex justify-between text-[11px] mb-1">
+                                  <span className="text-ink">{DEVICE_LABEL[k]}</span>
+                                  <span className="mono text-muted">{n}（{pct}%）</span>
+                                </div>
+                                <div className="h-1.5 bg-[#222]">
+                                  <div className="h-full bg-accent/70" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Referrers */}
+                  <div>
+                    <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
+                      ● 流入元（{scopedIds ? "絞込中" : "全期間"}・閲覧ベース）
+                    </div>
+                    <div className="border border-line p-4 space-y-3">
+                      {refRows.length === 0 ? (
+                        <p className="text-[12px] text-muted">データなし</p>
+                      ) : (
+                        refRows.slice(0, 8).map(([src, n]) => (
+                          <div key={src}>
                             <div className="flex justify-between text-[11px] mb-1">
-                              <span className="text-ink">{DEVICE_LABEL[k]}</span>
-                              <span className="mono text-muted">{n}（{pct}%）</span>
+                              <span className="text-ink truncate">{src}</span>
+                              <span className="mono text-muted">{n}</span>
                             </div>
                             <div className="h-1.5 bg-[#222]">
-                              <div className="h-full bg-accent/70" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-accent/70" style={{ width: `${(n / refMax) * 100}%` }} />
                             </div>
                           </div>
-                        );
-                      })
-                  )}
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Referrers */}
-              <div>
-                <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  ● 流入元（{scopedIds ? "絞込中" : "全期間"}・閲覧ベース）
-                </div>
-                <div className="border border-line p-4 space-y-3">
-                  {refRows.length === 0 ? (
-                    <p className="text-[12px] text-muted">データなし</p>
-                  ) : (
-                    refRows.slice(0, 8).map(([src, n]) => (
-                      <div key={src}>
-                        <div className="flex justify-between text-[11px] mb-1">
-                          <span className="text-ink truncate">{src}</span>
-                          <span className="mono text-muted">{n}</span>
-                        </div>
-                        <div className="h-1.5 bg-[#222]">
-                          <div className="h-full bg-accent/70" style={{ width: `${(n / refMax) * 100}%` }} />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 最近の閲覧者（個別イベントログ・サインイン済みのみ本人特定） */}
-          <div className="mt-10">
-            <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-              ● 最近の閲覧者{studioFilter ? "（絞込中）" : ""}（直近{recentEvents.length}件）
-            </div>
-            <div className="border border-line overflow-x-auto">
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
-                    <th className="text-left px-3 py-2.5 font-normal min-w-[130px]">日時</th>
-                    <th className="text-left px-3 py-2.5 font-normal min-w-[160px]">物件</th>
-                    <th className="text-left px-3 py-2.5 font-normal">種別</th>
-                    <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">誰が</th>
-                    <th className="text-left px-3 py-2.5 font-normal">端末</th>
-                    <th className="text-left px-3 py-2.5 font-normal">流入元</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentEvents.length === 0 ? (
-                    <tr><td colSpan={6} className="px-3 py-6 text-center text-muted">まだイベントがありません。</td></tr>
-                  ) : (
-                    recentEvents.map((e, i) => (
-                      <tr key={e.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
-                        <td className="px-3 py-2.5 mono text-[11px] text-muted">
-                          {fmtDateTimeJST(e.createdAt)}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Link href={`/admin/analytics?days=${days}&studio=${e.propertyId}`} className="hover:text-accent transition">
-                            {titleOf.get(e.propertyId)?.title || e.propertyId}
-                          </Link>
-                        </td>
-                        <td className="px-3 py-2.5 text-muted">{EVENT_TYPE_LABEL[e.type] ?? e.type}</td>
-                        <td className="px-3 py-2.5">
-                          {e.userEmail ? (
-                            <span className="text-ink">{e.userEmail}</span>
-                          ) : (
-                            <span className="text-muted">匿名（未サインイン）</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-muted">{DEVICE_LABEL[e.device as DeviceKind] ?? e.device}</td>
-                        <td className="px-3 py-2.5 text-muted">{classifyReferrer(e.referrer)}</td>
+              {/* 最近の閲覧者（個別イベントログ・サインイン済みのみ本人特定）。
+                  100件が常時開いていて邪魔だという指摘のため、既定は閉じた
+                  <details> にする（見たい時だけ開く）。 */}
+              <details className="mt-10 border border-line">
+                <summary className="mono text-[10px] tracking-[0.28em] uppercase text-muted px-4 py-3 cursor-pointer hover:text-ink transition list-none marker:hidden">
+                  ▸ 最近の閲覧者{studioFilter ? "（絞込中）" : ""}（直近{recentEvents.length}件・クリックで展開）
+                </summary>
+                <div className="border-t border-line overflow-x-auto">
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                        <th className="text-left px-3 py-2.5 font-normal min-w-[130px]">日時</th>
+                        <th className="text-left px-3 py-2.5 font-normal min-w-[160px]">物件</th>
+                        <th className="text-left px-3 py-2.5 font-normal">種別</th>
+                        <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">誰が</th>
+                        <th className="text-left px-3 py-2.5 font-normal">端末</th>
+                        <th className="text-left px-3 py-2.5 font-normal">流入元</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <p className="mono text-[9px] text-muted mt-2">
-              サインイン済みユーザーのみメールアドレスが表示されます。未サインインの閲覧は「匿名」表示のまま個人を特定しません。
-            </p>
-          </div>
+                    </thead>
+                    <tbody>
+                      {recentEvents.length === 0 ? (
+                        <tr><td colSpan={6} className="px-3 py-6 text-center text-muted">まだイベントがありません。</td></tr>
+                      ) : (
+                        recentEvents.map((e, i) => (
+                          <tr key={e.id} className={`border-b border-line ${i % 2 === 1 ? "bg-[#1a1a1a]" : ""}`}>
+                            <td className="px-3 py-2.5 mono text-[11px] text-muted">
+                              {fmtDateTimeJST(e.createdAt)}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <Link href={qs({ studio: e.propertyId })} className="hover:text-accent transition">
+                                {titleOf.get(e.propertyId)?.title || e.propertyId}
+                              </Link>
+                            </td>
+                            <td className="px-3 py-2.5 text-muted">{EVENT_TYPE_LABEL[e.type] ?? e.type}</td>
+                            <td className="px-3 py-2.5">
+                              {e.userEmail ? (
+                                <span className="text-ink">{e.userEmail}</span>
+                              ) : (
+                                <span className="text-muted">匿名（未サインイン）</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-muted">{DEVICE_LABEL[e.device as DeviceKind] ?? e.device}</td>
+                            <td className="px-3 py-2.5 text-muted">{classifyReferrer(e.referrer)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mono text-[9px] text-muted px-4 py-2 border-t border-line">
+                  サインイン済みユーザーのみメールアドレスが表示されます。未サインインの閲覧は「匿名」表示のまま個人を特定しません。
+                </p>
+              </details>
+            </>
+          )}
         </>
       )}
     </div>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
+import { deletedAccountRepo } from "./deleted-accounts";
 import { repo as propertyRepo } from "./store";
 import { purchaseRepo } from "./purchases";
 import { inquiryRepo, type InquiryStatus } from "./inquiries";
@@ -124,11 +125,31 @@ export async function setTokenBalanceAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/accounts");
 }
 
-/** Delete an account (cannot delete yourself). */
+/**
+ * アカウントを削除する（自分自身は削除できない）。
+ *
+ * ⚠ 2026-08-13 変更: 押した瞬間に消える即時削除をやめ、
+ *   「削除理由の入力必須 + アーカイブへ退避」に変えた（誤操作の復旧手段が
+ *   まったく無い状態だったため）。理由が空文字なら何もせず戻る（UI 側でも
+ *   required で止めているが、サーバー側でも必ず弾く）。
+ *   退避先を users の soft-delete 列にしなかった理由は
+ *   migrations/0017_deleted_accounts.sql の冒頭コメント参照。
+ */
 export async function deleteAccountAction(formData: FormData): Promise<void> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (id === admin.id) return;
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!id || id === admin.id) return;
+  if (!reason) return; // 理由なしの削除は認めない
+  const u = await userRepo.get(id);
+  if (!u) return;
+  // アーカイブに失敗したら削除しない（記録の無い消失を作らない）。
+  await deletedAccountRepo.archive({
+    user: u,
+    reason,
+    deletedBy: admin.id,
+    deletedByEmail: admin.email ?? "",
+  });
   await userRepo.remove(id);
   revalidatePath("/admin/accounts");
 }

@@ -26,6 +26,19 @@ import {
 } from "@/lib/admin-actions";
 import { isFreeEmailDomain } from "@/lib/free-email-domains";
 import { REJECT_REASONS, REJECT_REASON_LABEL, type RejectReason } from "@/lib/account-reject-reasons";
+import { fmtDateTimeJST } from "@/lib/date-format";
+
+/** 削除アーカイブの表示に必要な最小形（サーバーから渡す。lib/deleted-accounts.ts の DeletedAccount 相当）。 */
+export type ArchivedAccountView = {
+  id: string;
+  email: string;
+  name: string;
+  reason: string;
+  deletedAt: string;
+  deletedByEmail: string;
+  role: string;
+  plan: string;
+};
 
 const PAGE_SIZE = 50;
 
@@ -39,14 +52,19 @@ export default function AccountsAdmin({
   users,
   adminId,
   initialStatus = "all",
+  archived = [],
 }: {
   users: User[];
   adminId: string;
   initialStatus?: AccountStatus | "all";
+  archived?: ArchivedAccountView[];
 }) {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AccountRole | "all">("all");
   const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">(initialStatus);
+  // 「削除済み（アーカイブ）」は users とは別ストアなので、状態フィルタとは
+  // 独立した表示切替として持つ（deleted は AccountStatus に存在しない）。
+  const [showArchived, setShowArchived] = useState(false);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
@@ -166,10 +184,11 @@ export default function AccountsAdmin({
               type="button"
               onClick={() => {
                 setStatusFilter(s);
+                setShowArchived(false);
                 setPage(1);
               }}
               className={`px-3 py-1.5 border transition ${
-                statusFilter === s
+                !showArchived && statusFilter === s
                   ? "border-accent text-accent"
                   : "border-line text-muted hover:border-ink hover:text-ink"
               }`}
@@ -178,14 +197,31 @@ export default function AccountsAdmin({
               {s === "pending" && pendingCount > 0 ? ` (${pendingCount})` : ""}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setShowArchived(true)}
+            className={`px-3 py-1.5 border transition ${
+              showArchived
+                ? "border-accent text-accent"
+                : "border-line text-muted hover:border-ink hover:text-ink"
+            }`}
+          >
+            削除済み{archived.length > 0 ? ` (${archived.length})` : ""}
+          </button>
         </div>
         <span className="mono text-[11px] text-muted ml-auto">
-          {filtered.length === 0
-            ? "0 件"
-            : `${pageStart + 1}〜${pageStart + pageUsers.length} / 全${filtered.length}件`}
+          {showArchived
+            ? `削除済み ${archived.length} 件`
+            : filtered.length === 0
+              ? "0 件"
+              : `${pageStart + 1}〜${pageStart + pageUsers.length} / 全${filtered.length}件`}
         </span>
       </div>
 
+      {showArchived ? (
+        <ArchivedList archived={archived} />
+      ) : (
+        <>
       {/* フリープラン全員へのトークン一括付与（選択とは無関係・対象は plan==="free" 全員）。
           登録ボーナスを1→6に修正した際、修正前に登録済みのフリーユーザーは
           古い残高のまま取り残されていたため、その差分を埋める救済用に追加。
@@ -274,7 +310,12 @@ export default function AccountsAdmin({
           {pageUsers.map((u) => (
             <div
               key={u.id}
-              className={`border p-4 grid gap-3 md:grid-cols-[20px_1fr_auto] md:items-center ${
+              // 情報列の最小幅を確保する。以前は `1fr` だったため、操作列
+              // （studio 行の物件ID入力など要素が多い行）が広がると情報列が
+              // ほぼ0まで潰れ、日本語が1文字ずつ縦積みになって行が数百px
+              // に伸びていた。minmax(16rem,1fr) で潰れる代わりに操作列を
+              // 折り返させる。
+              className={`border p-4 grid gap-3 md:grid-cols-[20px_minmax(16rem,1fr)_auto] md:items-center ${
                 selected.has(u.id) ? "border-accent/50 bg-accent/10" : "border-line"
               }`}
             >
@@ -329,7 +370,9 @@ export default function AccountsAdmin({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+              {/* relative: 削除の理由入力パネルをこの中に絶対配置で開くため
+                  （インラインで開くと auto 列が広がって左の情報列が潰れる）。 */}
+              <div className="relative flex flex-wrap items-center gap-2 md:justify-end">
                 {u.status === "pending" && (
                   <>
                     <form action={approveAccountAction}>
@@ -429,12 +472,7 @@ export default function AccountsAdmin({
                   端末
                 </Link>
 
-                {u.id !== adminId && (
-                  <form action={deleteAccountAction}>
-                    <input type="hidden" name="id" value={u.id} />
-                    <button className="mono text-[10px] uppercase border border-red-400/40 text-red-400/80 px-2 py-1.5 hover:bg-red-400 hover:text-bg transition">削除</button>
-                  </form>
-                )}
+                {u.id !== adminId && <DeleteAccountControl user={u} />}
               </div>
             </div>
           ))}
@@ -451,7 +489,130 @@ export default function AccountsAdmin({
           )}
         </div>
       )}
+        </>
+      )}
     </div>
+  );
+}
+
+/**
+ * 削除済み（アーカイブ）アカウントの一覧。物理削除をやめたので、消したあとでも
+ * 「誰を・いつ・なぜ」消したかをここで確認できる。復元 UI は今は置かない
+ * （Clerk 側の本体アカウントの扱いと合わせて設計が要るため。スナップショットは
+ * D1 の deleted_accounts.data に完全な形で残っている）。
+ */
+function ArchivedList({ archived }: { archived: ArchivedAccountView[] }) {
+  if (archived.length === 0) {
+    return <p className="text-[13px] text-muted">削除されたアカウントはありません。</p>;
+  }
+  return (
+    <div className="space-y-3">
+      <p className="text-[12px] text-muted">
+        削除されたアカウントの記録です。ログインはできませんが、内容は保存されています。
+      </p>
+      {archived.map((a) => (
+        <div key={a.id} className="border border-line p-4 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[14px] text-ink">{a.name || "(名前なし)"}</span>
+            <span className="mono text-[10px] tracking-[0.2em] uppercase border border-red-400/40 text-red-400 px-1.5 py-0.5">
+              削除済み
+            </span>
+            <span className="mono text-[10px] tracking-[0.2em] uppercase border border-line px-1.5 py-0.5 text-muted">
+              {ROLE_LABEL[a.role as AccountRole] ?? a.role}
+            </span>
+          </div>
+          <div className="mono text-[11px] text-muted truncate">{a.email}</div>
+          <div className="mono text-[10px] text-muted">
+            削除 {a.deletedAt ? fmtDateTimeJST(a.deletedAt) : "—"}
+            {a.deletedByEmail ? ` · 実行 ${a.deletedByEmail}` : ""} · プラン{" "}
+            {(a.plan || "").toUpperCase()}
+          </div>
+          <div className="text-[12px] text-ink/80 border-l-2 border-line pl-3 mt-2 whitespace-pre-wrap">
+            理由: {a.reason}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * アカウント削除。押しただけでは消さない二段構え:
+ *   1回目のクリックで理由の入力欄を開き、理由（必須）を書いて「削除を実行」で初めて
+ *   サーバーアクションへ送る。削除された内容はアーカイブに残る（物理削除しない）。
+ * 空欄送信は input の required で止め、サーバー側(deleteAccountAction)でも再度弾く。
+ */
+function DeleteAccountControl({ user }: { user: User }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mono text-[10px] uppercase border border-red-400/40 text-red-400/80 px-2 py-1.5 hover:bg-red-400 hover:text-bg transition"
+      >
+        削除
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={deleteAccountAction}
+      // 管理画面は .theme-online（ライト）。パネルだけ暗色にすると周囲の
+      // カードから浮くので、面は通常の bg-bg + border-line のまま、
+      // 「危険な操作」であることは左端の赤い帯と赤文字だけで示す。
+      // （globals.css の暗色→ライト変換リストに無いクラスを新規に使わない）
+      className="absolute right-0 top-full mt-1 z-20 flex flex-wrap items-center gap-1.5 border border-line border-l-2 border-l-red-600 bg-bg shadow-lg px-3 py-3 w-[min(24rem,80vw)]"
+      onSubmit={(e) => {
+        if (!reason.trim()) {
+          e.preventDefault();
+          return;
+        }
+        if (
+          !confirm(
+            `${user.name} さんのアカウントを削除します。\n理由: ${reason.trim()}\n\n` +
+              `削除後もアーカイブ（削除済み一覧）に記録が残ります。よろしいですか？`,
+          )
+        ) {
+          e.preventDefault();
+        }
+      }}
+    >
+      <input type="hidden" name="id" value={user.id} />
+      <label className="mono text-[10px] uppercase text-red-600 tracking-[0.18em]">
+        削除理由（必須）
+      </label>
+      <input
+        type="text"
+        name="reason"
+        required
+        autoFocus
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="例: 本人からの退会希望 / 重複アカウント"
+        className="bg-bg border border-line text-ink px-2 py-1.5 text-[12px] w-full focus:outline-none focus:border-accent"
+      />
+      <button
+        type="submit"
+        disabled={!reason.trim()}
+        className="mono text-[10px] uppercase border border-red-600/50 text-red-600 px-2 py-1.5 hover:bg-red-600 hover:text-bg transition disabled:opacity-40 disabled:pointer-events-none"
+      >
+        削除を実行
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(false);
+          setReason("");
+        }}
+        className="mono text-[10px] uppercase border border-line text-muted px-2 py-1.5 hover:text-ink transition"
+      >
+        取消
+      </button>
+    </form>
   );
 }
 
