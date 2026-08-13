@@ -72,8 +72,9 @@ const STEPS = [
   { id: "plans", label: "図面" },
   { id: "description", label: "紹介文" },
   { id: "features", label: "特徴・タグ" },
+  // 2026-08-13: 「3DGS データ」と「3DGS 注釈・メタ」は同じ作業の続きなのに
+  // ステップが分かれており往復が必要だった（運用担当の指摘）。1つに統合した。
   { id: "splat", label: "3DGS データ", admin: true },
-  { id: "splatMeta", label: "3DGS 注釈・メタ", admin: true },
   { id: "publish", label: "公開設定", admin: true },
 ] as const;
 
@@ -203,7 +204,16 @@ export default function PropertyEditor({
         baseUpdatedAtRef.current = res.updatedAt;
         setSavedAt(new Date().toISOString());
         setSaveError(null);
-        router.refresh();
+        // ⚠ ここで router.refresh() を呼んではいけない（2026-08-13 に撤去）。
+        //   App Router は refresh のたびにページ先頭へスクロールを戻す
+        //   （html の scroll-behavior:smooth と相まって、ゆっくり上へ吸い込まれる）。
+        //   下書き保存は 1.5 秒 debounce で常時走り、3DGS アップロード中や
+        //   プレビュー動画の生成完了でも走るため、作業中ずっと画面が上へ
+        //   流されていた（実測: 60 秒で scrollY 861 → 0）。
+        //   サーバー側 saveDraftAction の revalidatePath は残してあるので、
+        //   他ページ（物件一覧など）は次に開いた時点で最新になる。
+        //   この画面の表示の正はフォーム(RHF)側の値で、savedAt/baseUpdatedAt も
+        //   ここで更新しているため RSC の再取得は不要。
       } catch (e) {
         console.error(e);
         setSaveError(
@@ -220,7 +230,7 @@ export default function PropertyEditor({
         }
       }
     });
-  }, [getValues, startSave, router]);
+  }, [getValues, startSave]);
   // onSaveDraft を finally から自己参照するための ref（宣言順の循環を避ける）。
   const onSaveDraftRef = useRef<typeof onSaveDraft>(onSaveDraft);
   useEffect(() => { onSaveDraftRef.current = onSaveDraft; }, [onSaveDraft]);
@@ -559,13 +569,9 @@ export default function PropertyEditor({
             />
           </div>
 
-          {/* 物件⇄アカウントの紐付け（社内運用・admin専用）。studio側には
-              見せる情報ではないので isAdmin のときだけ描画する。 */}
-          {isAdmin && (
-            <div className="pt-3 border-t border-line">
-              <PropertyOwnerPanel propertyId={initial.id} />
-            </div>
-          )}
+          {/* ⚠ 物件⇄アカウントの紐付けパネルはここ(sticky ヘッダー)から
+              「基本情報」ステップ内へ移した（2026-08-13）。常時ヘッダーに
+              居座って 200px 以上を占め、スクロールしても本文が読めなかったため。 */}
         </div>
 
         {/* Progress bar */}
@@ -876,6 +882,16 @@ export default function PropertyEditor({
                   </Field>
                 </div>
               </div>
+
+              {/* ── 物件⇄アカウントの紐付け（社内運用・admin専用）──
+                  以前は独立パネルとして sticky ヘッダーに常駐していたが、
+                  基本情報の一部なのでこのステップへ統合した（2026-08-13）。
+                  studio 側には見せる情報ではないので isAdmin のときだけ描画する。 */}
+              {isAdmin && (
+                <div className="border-t border-line pt-5 mt-4">
+                  <PropertyOwnerPanel propertyId={initial.id} />
+                </div>
+              )}
             </StepCard>
           )}
 
@@ -1746,7 +1762,7 @@ export default function PropertyEditor({
             <StepCard
               n={stepNo("splat")}
               title="3DGS データ"
-              desc="3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。"
+              desc="3DGSファイルをアップロード。駐車場・1F・2F等フロア別に複数登録できます。注釈・メタ情報も同じページの下部にまとめてあります。"
             >
               {!isAdmin && (
                 <div className="border border-accent/40 bg-accent/10 px-4 py-3 mb-5 text-[12.5px] leading-[1.85]">
@@ -1764,20 +1780,26 @@ export default function PropertyEditor({
                     </div>
                     {/* 動画生成のウォームアップ+3秒トグル。重いシーンでプレビュー
                         動画がボケる時にON（録画前に画質を乗り切らせる）。 */}
-                    <label className="flex items-center gap-1.5 text-[11px] text-ink/70 cursor-pointer select-none">
+                    <label
+                      className="flex items-center gap-1.5 text-[11px] text-ink/70 cursor-pointer select-none"
+                      title="重いシーンでプレビュー動画がボケるときに ON（録画前の待ち時間を +3 秒）"
+                    >
                       <input
                         type="checkbox"
                         checked={warmupPlus3}
                         onChange={(e) => setWarmupPlus3(e.target.checked)}
                         className="accent-accent"
                       />
-                      ウォームアップ +3秒（重いシーンのボケ対策）
+                      ウォームアップ +3秒
                     </label>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      splatItemsArray.append({ id: crypto.randomUUID(), label: "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] });
+                      // ラベルは毎回イチから打ち直すのが手間なので「物件名＋半角スペース」
+                      // を初期値にする（続けて「1F」「駐車場」等だけ打てば済む）。
+                      const titleSeed = (getValues("title") || "").trim();
+                      splatItemsArray.append({ id: crypto.randomUUID(), label: titleSeed ? `${titleSeed} ` : "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] });
                       // 追加した行はすぐ入力するので開いておく。
                       const added = getValues("splatItems");
                       const last = added[added.length - 1];
@@ -1789,6 +1811,25 @@ export default function PropertyEditor({
                   </button>
                 </div>
 
+                {/* 状態の凡例。行ごとの文字ラベルを全部消した代わりに、
+                    「どこを見ればいいか」をここ 1 箇所に集約する。 */}
+                {splatItemsArray.fields.length > 0 && (
+                  <div className="flex items-center gap-4 mb-2 text-[11px] text-muted">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 border border-line bg-[#141414]" />
+                      未アップロード
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 border border-amber-400 bg-amber-400/[0.3]" />
+                      動画を生成中
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 border border-[#5ec8e8] bg-[#5ec8e8]/[0.3]" />
+                      完了
+                    </span>
+                  </div>
+                )}
+
                 {splatItemsArray.fields.length === 0 && (
                   <div className="text-[12px] text-muted py-4 text-center border border-dashed border-line">
                     「+ 追加」で 3DGS データを登録（駐車場・1F・2F 等）
@@ -1796,8 +1837,59 @@ export default function PropertyEditor({
                 )}
 
                 <div className="space-y-4">
-                  {splatItemsArray.fields.map((field, idx) => (
-                    <div key={field.id} className="border border-line bg-[#141414] p-4 space-y-3">
+                  {splatItemsArray.fields.map((field, idx) => {
+                    // ── 進捗を「枠の色」で一覧表示する（2026-08-13）──
+                    // 小さいプログレスバーだけでは全体のどこまで終わったか読めない、
+                    // という運用側の指摘。行ごとに 3 状態で塗り分ける。
+                    //   done      = プレビュー動画まで生成済み（青系）
+                    //   running   = この行を今まさに処理中（アンバー）
+                    //   それ以外  = 未アップロード / 動画未生成（既定色）
+                    // ⚠⚠ 開閉状態のキーは「データ側の id」を使うこと。
+                    //   useFieldArray の field.id は RHF が内部で randomUUID を
+                    //   振り直す値で、**配列に setValue が走るたび全件作り直される**
+                    //   （RHF の array subject が `fields.map(generateId)` する）。
+                    //   これを開閉キーに使っていたため、3DGS のアップロード完了や
+                    //   「差し替え」で splatItems.N.xxx を setValue した瞬間に
+                    //   splatOpen のキーが全部迷子になり、
+                    //     開いていた行が勝手に閉じる → ページ丈が数千px縮む →
+                    //     ブラウザがスクロール位置をページ先頭側へ戻す
+                    //   という「動画生成中にタブが閉じて先頭に戻される」不具合に
+                    //   なっていた（2026-08-13 修正）。データ側 id は永続値なので
+                    //   再レンダーでも保存でもぶれない。
+                    const itemKey = watch(`splatItems.${idx}.id`) || field.id;
+                    const itemHasSplat = !!watch(`splatItems.${idx}.splatUrl`);
+                    const itemHasVideo = !!watch(`splatItems.${idx}.previewVideoUrl`);
+                    const itemRunning =
+                      capture.capturedIdx === idx &&
+                      (capture.state === "loading" ||
+                        capture.state === "recording" ||
+                        capture.state === "uploading");
+                    const itemDone = itemHasSplat && itemHasVideo && !itemRunning;
+                    // ── 状態は「枠の色」だけで示す（2026-08-13）──
+                    //   灰 = 未アップロード / 橙 = 処理中 / 青 = 完了。
+                    //   色で分かることは文字で重ねて書かない（二重表示にしない）。
+                    //   文字を残すのは色で表せない「％」と、異常系（データはあるのに
+                    //   動画が無い）だけ。凡例はリストの上に 1 箇所だけ置く。
+                    const rowClass = itemRunning
+                      ? "border-amber-400 bg-amber-400/[0.12]"
+                      : itemDone
+                        ? "border-[#5ec8e8] bg-[#5ec8e8]/[0.12]"
+                        : "border-line bg-[#141414]";
+                    // 色だけでは読めない人・読み上げ向けに状態をテキストでも持たせる
+                    const rowState = itemRunning
+                      ? "プレビュー動画を生成中"
+                      : itemDone
+                        ? "完了（プレビュー動画あり）"
+                        : itemHasSplat
+                          ? "プレビュー動画なし"
+                          : "未アップロード";
+                    return (
+                    <div
+                      key={field.id}
+                      aria-label={`${idx + 1}件目: ${rowState}`}
+                      title={rowState}
+                      className={`border p-4 space-y-3 transition-colors ${rowClass}`}
+                    >
                       <div className="flex items-center gap-3">
                         <span className="mono text-[10px] text-accent opacity-60 w-5 shrink-0">
                           {String(idx + 1).padStart(2, "0")}
@@ -1831,24 +1923,32 @@ export default function PropertyEditor({
                         <button
                           type="button"
                           onClick={() =>
-                            setSplatOpen((m) => ({ ...m, [field.id]: !m[field.id] }))
+                            setSplatOpen((m) => ({ ...m, [itemKey]: !m[itemKey] }))
                           }
-                          aria-expanded={!!splatOpen[field.id]}
+                          aria-expanded={!!splatOpen[itemKey]}
                           className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-1.5 text-muted hover:text-accent hover:border-accent transition shrink-0"
                         >
-                          {splatOpen[field.id] ? "閉じる" : "開く"}
+                          {splatOpen[itemKey] ? "閉じる" : "開く"}
                         </button>
                       </div>
 
                       {/* ⚠ 本体は既定で畳む。ファイル数に比例して伸び、3件で5000pxを超える。
-                          開いている行だけ詳細を出す（開閉状態は splatOpen で行ID別に保持）。 */}
-                      {!splatOpen[field.id] ? (
-                        <div className="mono text-[10px] text-muted flex items-center gap-3 flex-wrap">
-                          <span>{watch(`splatItems.${idx}.splatUrl`) ? "● データあり" : "○ 未アップロード"}</span>
-                          {watch(`splatItems.${idx}.forSale`) && <span className="text-accent">販売中</span>}
-                          <span className="opacity-60">{watch(`splatItems.${idx}.sizeMb`) ? `${watch(`splatItems.${idx}.sizeMb`)} MB` : ""}</span>
+                          開いている行だけ詳細を出す（開閉状態は splatOpen で行ID別に保持）。
+                          容量・URL・販売状態などの詳細は「開く」の中だけに置き、
+                          畳んでいる間は 1 行 = 1 データの密度を保つ。 */}
+                      {!splatOpen[itemKey] && (itemRunning || (itemHasSplat && !itemHasVideo)) && (
+                        <div className="mono text-[10px] flex items-center gap-2">
+                          {itemRunning ? (
+                            <span className="text-amber-600">
+                              生成中{capture.progressPct > 0 ? ` ${capture.progressPct}%` : "…"}
+                            </span>
+                          ) : (
+                            <span className="text-muted">プレビュー動画なし</span>
+                          )}
                         </div>
-                      ) : (
+                      )}
+
+                      {!splatOpen[itemKey] ? null : (
                       <>
 
                       <div className="mono text-[9px] tracking-[0.2em] uppercase text-accent/60">
@@ -2225,22 +2325,12 @@ export default function PropertyEditor({
                       </>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              </fieldset>
-            </StepCard>
-          )}
-
-          {step === "splatMeta" && (
-            <StepCard
-              n={stepNo("splatMeta")}
-              title="3DGS 注釈・メタ"
-              desc="スキャン条件の記録と、集計に使う分類です。運営専用。"
-            >
-              <fieldset disabled={!isAdmin} className="contents">
-              {/* ── 注釈 ── */}
+              {/* ── 注釈（旧「3DGS 注釈・メタ」ステップ。往復が面倒なので統合） ── */}
               <div className="border-t border-line pt-5 mt-6">
                 <Field
                   label="3DGS データ注釈"

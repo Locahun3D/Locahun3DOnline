@@ -116,32 +116,26 @@ export default function ViewerGate({
             }}
           />
         )}
-        {/* タップ/クリックで登録ポップアップを開く（ホバー非依存＝モバイルでも機能する）。 */}
+        {/* タップ/クリックで登録ポップアップを開く（ホバー非依存＝モバイルでも機能する）。
+            ⚠ 2026-08-13: 以前はここに
+              ① アクセント色の「● 無料登録が必要 · N トークン消費」
+              ② 大きなセリフ体の「無料アカウント登録で 3DGS ウォークスルーが見られます。」
+            の2つが重なって出ており、しかもホバーするまで見えなかったため
+            「トークンの表示があちこちにあって分かりにくい」と指摘された。
+            → 「N トークンで見られます」の白文字 1 行だけに集約し、常時表示にした。 */}
         <button
           type="button"
           onClick={() => setShowAuthModal(true)}
-          className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-6 cursor-pointer backdrop-blur-md bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 text-center px-6 cursor-pointer bg-black/45 hover:bg-black/60 transition-colors duration-300"
         >
-          <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
+          <div className="text-[15px] md:text-[17px] font-bold text-white drop-shadow-lg">
             {en
-              ? `● Free account required · ${tokenCost} token(s)`
-              : `● 無料登録が必要 · ${tokenCost} トークン消費`}
+              ? `Viewable with ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
+              : `${tokenCost} トークンで見られます`}
           </div>
-          <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
-            {en ? (
-              <>
-                Create a free account
-                <br />
-                to unlock the 3DGS walkthrough.
-              </>
-            ) : (
-              <>
-                無料アカウント登録で
-                <br />
-                3DGS ウォークスルーが見られます。
-              </>
-            )}
-          </div>
+          <span className="mono text-[10px] tracking-[0.24em] uppercase text-white/85 border border-white/60 px-4 py-2">
+            {en ? "Sign up free" : "無料登録して見る"}
+          </span>
         </button>
 
         {/* 登録モーダル — 「Free でできること比較型」。
@@ -374,10 +368,13 @@ export default function ViewerGate({
       <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 text-center px-6"
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)" }}
       >
-        {/* w-full が必須: 親(.absolute...justify-end)は align-items:center で
-            stretchしないため、このdivは本来コンテンツ幅にshrink-to-fitする。
-            w-full を明示してこのカード幅を基準に確定させる。 */}
-        <div className="w-full flex flex-col items-center gap-2.5 px-6 py-4 border border-accent/70 bg-white/95 backdrop-blur-md shadow-lg">
+        {/* ⚠ 2026-08-13: 以前は w-full + bg-white/95 でカード幅いっぱいの
+            不透明な白い箱になっており、背後のシーンが完全に隠れて
+            「大きすぎて見えない」と指摘された。
+            → w-full をやめてコンテンツ幅（上限 max-w）に縮め、左右の内側余白も
+              詰め、背景を半透明にして背後が透けるようにした。
+            （親は align-items:center なので w-full を外すと shrink-to-fit する） */}
+        <div className="max-w-full flex flex-col items-center gap-2 px-3.5 py-2.5 border border-accent/70 bg-white/70 backdrop-blur-sm shadow-lg">
           <div
             className={`mono text-[11px] font-bold tracking-[0.32em] uppercase ${
               previewToken || freeAccess || alreadyUnlocked

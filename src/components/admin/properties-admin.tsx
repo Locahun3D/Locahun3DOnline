@@ -23,7 +23,8 @@ export type PropertyListItem = {
   publishRequestedAt?: string | null;
 };
 
-const GRID = "grid-cols-[34px_72px_1fr_96px_96px_140px_minmax(290px,320px)]";
+// ステータス列は 72px だとバッジ（大きくした）が収まらないので 104px に広げる。
+const GRID = "grid-cols-[34px_104px_1fr_96px_96px_140px_minmax(290px,320px)]";
 
 const STATUS_TABS: { key: PropertyStatus | "all"; label: string }[] = [
   { key: "all", label: "全て" },
@@ -210,7 +211,7 @@ export default function PropertiesAdmin({
       )}
 
       <div className="border border-line overflow-x-auto">
-        <div className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60 min-w-[860px]`}>
+        <div className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60 min-w-[892px]`}>
           <div className="flex items-center">
             {/* 全選択チェックボックスは一括操作(admin専用)のためのUI。studioには出さない。 */}
             {isAdmin && (
@@ -239,7 +240,7 @@ export default function PropertiesAdmin({
           filtered.map((p) => (
             <div
               key={p.id}
-              className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line items-center transition min-w-[860px] ${
+              className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line items-center transition min-w-[892px] ${
                 selected.has(p.id) ? "bg-accent/10" : "hover:bg-neutral-100"
               }`}
             >
@@ -310,17 +311,23 @@ function BulkBtn({
   );
 }
 
+/**
+ * 一覧の「下書き / 公開中」表示。9px の極小バッジで埋もれて読めない、という
+ * 運用側の指摘（2026-08-13）を受けて、文字を大きく・色で区別し・●で状態が
+ * 一目で分かる形にした。
+ */
 function StatusBadge({ status }: { status: PropertyStatus }) {
   const styles =
     status === "published"
-      ? "bg-accent text-bg"
+      ? "bg-[#0f7a4a] text-white border-[#0f7a4a]"
       : status === "draft"
-        ? "bg-[#222] text-ink"
-        : "bg-[#111] text-muted";
+        ? "bg-amber-100 text-amber-900 border-amber-400"
+        : "bg-neutral-200 text-neutral-600 border-neutral-400";
   return (
     <span
-      className={`inline-block px-2 py-1 mono text-[9px] tracking-[0.22em] uppercase text-center ${styles}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 border text-[12px] font-bold leading-none whitespace-nowrap ${styles}`}
     >
+      <span aria-hidden="true">{status === "published" ? "●" : status === "draft" ? "◐" : "○"}</span>
       {STATUS_LABEL[status]}
     </span>
   );

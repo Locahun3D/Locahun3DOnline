@@ -30,15 +30,24 @@ import { buildViewerUrl } from "@/lib/viewer";
  *  - ポップアップブロックに殺されない／別窓を放置監視しなくてよい。
  *  - ビューアーの ?capture=1 は postMessage を `window.opener || parent` に送る
  *    ため、iframe(parent) でもそのまま動く（ビューアー側の変更は不要）。
- *  - ⚠ iframe を display:none にすると requestAnimationFrame が止まり
- *    キャプチャが進まない。必ず「見える」状態でレンダリングさせる。
- *    → 右下に縮小サムネイル（1920×1080 を CSS transform で 320×180 に縮小）
- *      として表示し、進行が目視できるようにする。
+ *  - ⚠ iframe を display:none / visibility:hidden にすると
+ *    requestAnimationFrame が止まりキャプチャが進まない。必ずレイアウトに
+ *    存在させ、合成され続ける状態にしておくこと。
+ *
+ * ── 2026-08-13: 「完全にバックグラウンド」化 ───────────────────
+ * 以前は右下に 320×180 のサムネイルを出して録画中の映像を見せていたが、
+ * 運用上プレビュー映像を見る必要はなく（進捗さえ分かればよい）、大きな
+ * 黒い箱が編集画面の上に居座って邪魔になっていた。
+ * そこで iframe 自体は 1920×1080 のまま（＝キャプチャ解像度を維持し
+ * rAF も回り続ける）レイアウトに残しつつ、
+ *   ① 表示サイズを極小（THUMB_W×THUMB_H）に縮小し
+ *   ② 不透明カバーを被せて映像を隠し、代わりに文言だけ出す
+ * という形にした。display:none にはしていないので録画は従来どおり動く。
  */
 const FRAME_W = 1920;
 const FRAME_H = 1080;
-const THUMB_W = 320;
-const THUMB_H = 180;
+const THUMB_W = 168;
+const THUMB_H = 26;
 
 interface CaptureFrame {
   container: HTMLDivElement;
@@ -47,28 +56,34 @@ interface CaptureFrame {
 
 function createCaptureFrame(url: string): CaptureFrame {
   const container = document.createElement("div");
+  // 画面のどこにも重ならない右下の小さな帯。編集中のフォームを塞がない。
   container.style.cssText =
-    "position:fixed;right:16px;bottom:16px;z-index:9999;" +
-    "background:#111;border:1px solid #ffb454;box-shadow:0 8px 32px rgba(0,0,0,.6);";
-  const label = document.createElement("div");
-  label.textContent = "プレビュー録画中（このタブ内で自動実行）";
-  label.style.cssText =
-    "font:10px/1.6 ui-monospace,monospace;letter-spacing:.08em;color:#ffb454;" +
-    "padding:6px 10px;border-bottom:1px solid #333;user-select:none;";
-  const stage = document.createElement("div");
-  stage.style.cssText = `width:${THUMB_W}px;height:${THUMB_H}px;overflow:hidden;position:relative;background:#000;`;
+    "position:fixed;right:12px;bottom:12px;z-index:9999;pointer-events:none;" +
+    `width:${THUMB_W}px;height:${THUMB_H}px;overflow:hidden;` +
+    "background:#111;border:1px solid #ffb454;box-shadow:0 4px 16px rgba(0,0,0,.45);";
   const iframe = document.createElement("iframe");
   iframe.src = url;
   iframe.setAttribute("title", "3DGS preview capture");
+  iframe.setAttribute("tabindex", "-1");
+  iframe.setAttribute("aria-hidden", "true");
   // iframe 自体は 1920×1080 のビューポートを持たせ（キャプチャ解像度と一致）、
-  // CSS transform で右下サムネイルに縮小表示する。ユーザー操作は不要なので
+  // CSS transform で極小に縮小する。display:none にすると rAF が止まるので
+  // 「隠す」のは上に被せるカバーで行う。ユーザー操作は不要なので
   // pointer-events は切る。
   iframe.style.cssText =
-    `width:${FRAME_W}px;height:${FRAME_H}px;border:0;` +
+    `position:absolute;top:0;left:0;width:${FRAME_W}px;height:${FRAME_H}px;border:0;` +
     `transform:scale(${THUMB_W / FRAME_W});transform-origin:top left;pointer-events:none;`;
-  stage.appendChild(iframe);
-  container.appendChild(label);
-  container.appendChild(stage);
+  // 映像を見せる必要はない（進捗さえ分かればよい）のでカバーで覆う。
+  // ⚠ 完全不透明ではなく alpha .94 にしてある。不透明だとブラウザが背後の
+  //    iframe の描画を省略しうる（オクルージョンカリング）ため、確実に
+  //    合成させ続けて rAF を止めないための保険。見た目は不透明と同じ。
+  const cover = document.createElement("div");
+  cover.textContent = "プレビュー動画を生成中…";
+  cover.style.cssText =
+    "position:absolute;inset:0;background:rgba(17,17,17,.94);color:#ffb454;user-select:none;" +
+    "font:10px/26px ui-monospace,monospace;letter-spacing:.08em;text-align:center;";
+  container.appendChild(iframe);
+  container.appendChild(cover);
   document.body.appendChild(container);
   return { container, iframe };
 }
