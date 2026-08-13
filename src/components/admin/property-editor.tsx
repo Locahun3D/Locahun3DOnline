@@ -69,9 +69,6 @@ const STEPS = [
   { id: "terms", label: "利用条件" },
   { id: "pricing", label: "料金" },
   { id: "photos", label: "写真" },
-  { id: "plans", label: "図面" },
-  { id: "description", label: "紹介文" },
-  { id: "features", label: "特徴・タグ" },
   // 2026-08-13: 「3DGS データ」と「3DGS 注釈・メタ」は同じ作業の続きなのに
   // ステップが分かれており往復が必要だった（運用担当の指摘）。1つに統合した。
   { id: "splat", label: "3DGS データ", admin: true },
@@ -882,7 +879,7 @@ export default function PropertyEditor({
           )}
 
           {step === "specs" && (
-            <StepCard n={stepNo("specs")} title="仕様・設備" desc="広さ・電源・設備など、フィルター検索に使われる条件です。">
+            <StepCard n={stepNo("specs")} title="仕様・設備" desc="広さ・電源・設備と、検索でヒットしやすくなる特徴タグです。">
               {watch("priceType") !== "hourly" ? (
                 <div className="border border-accent/40 bg-accent/5 px-4 py-4 space-y-4">
                   <div className="mono text-[10px] tracking-[0.28em] uppercase text-accent/80">
@@ -1099,180 +1096,9 @@ export default function PropertyEditor({
                 )}
               </div>
 
-            </StepCard>
-          )}
-
-          {step === "terms" && (
-            <StepCard n={stepNo("terms")} title="利用条件" desc="撮影できる日・時間と、守っていただくルールです。">
-              {/* ── アクセス・利用条件 ── */}
-              <SectionHead title="アクセス・利用条件" hint="いつ・どこで撮影できるか。検索の絞り込みにも使われます。" />
-              <div className="grid md:grid-cols-3 gap-5">
-                <Field label="利用可能時間（補足）" hint="例: 24時間可（要相談）">
-                  <input type="text" {...register("availableHours")} className={inputClass} placeholder="例: 24時間可（要相談）" />
-                </Field>
-                <Field label="撮影可能日" hint="例: 平日／土日祝（要相談）">
-                  <input type="text" {...register("availableDays")} className={inputClass} placeholder="例: 平日／土日祝" />
-                </Field>
-                <Field label="申込期限（リードタイム）" hint="例: 1週間前">
-                  <input type="text" {...register("bookingDeadline")} className={inputClass} placeholder="例: 1週間前" />
-                </Field>
+              <div className="border-t border-line pt-6 mt-8">
+                <SectionHead title="特徴・タグ" hint="検索でヒットしやすくなる情報です。任意ですが、埋めるほど見つけてもらえます。" />
               </div>
-
-              <div className="grid md:grid-cols-3 gap-5">
-                <Field
-                  label="利用可能な時間帯"
-                  hint="開始〜終了を指定（例: 10時〜19時）。上の「利用可能時間（補足）」の自由記述とは別に、検索での絞り込みに使われます。分単位の予約は無いため時間単位のみです。"
-                >
-                  <div className="flex items-center gap-2.5 pt-1">
-                    <select
-                      {...register("customHoursStart")}
-                      className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
-                    >
-                      <option value="">--</option>
-                      {HOUR_OPTIONS.map((h) => (
-                        <option key={h} value={`${h}:00`}>{h}時</option>
-                      ))}
-                    </select>
-                    <span className="text-[12.5px] text-ink/50">〜</span>
-                    <select
-                      {...register("customHoursEnd")}
-                      className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
-                    >
-                      <option value="">--</option>
-                      {HOUR_OPTIONS.map((h) => (
-                        <option key={h} value={`${h}:00`}>{h}時</option>
-                      ))}
-                    </select>
-                    {(watch("customHoursStart") || watch("customHoursEnd")) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setValue("customHoursStart", "", { shouldDirty: true });
-                          setValue("customHoursEnd", "", { shouldDirty: true });
-                        }}
-                        className="text-[11px] text-muted hover:text-ink underline"
-                      >
-                        クリア
-                      </button>
-                    )}
-                  </div>
-                </Field>
-              </div>
-
-              {/* ── 撮影条件（設備の有無） ── */}
-              <SectionHead title="撮影条件（設備の有無）" hint="あるものだけチェック。無いものは空のままで構いません。" />
-              <div className="grid md:grid-cols-3 gap-5">
-                <Toggle label="火気使用 可" register={register("fireAllowed")} />
-                <Toggle label="控室 あり" register={register("greenRoom")} />
-                <Toggle label="トイレ あり" register={register("restroom")} />
-                <Toggle label="空調 あり" register={register("airConditioning")} />
-                <Toggle label="喫煙所 あり" register={register("smokingArea")} />
-              </div>
-
-              {/* ── ルール・規程 ── */}
-              <SectionHead title="ルール・規程" hint="トラブルを防ぐための取り決め。空欄でも掲載できます。" />
-              <div className="grid md:grid-cols-2 gap-5">
-                <Field label="禁止事項" hint="複数行可">
-                  <textarea {...register("prohibitedItems")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 火気使用禁止／生活音より大きな音出し禁止" />
-                </Field>
-                <Field label="キャンセルポリシー" hint="複数行可">
-                  <textarea {...register("cancellationPolicy")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 7日前まで無料／前日50%／当日100%" />
-                </Field>
-              </div>
-              <div className="grid md:grid-cols-2 gap-5">
-                <Toggle label="保険加入 必須" register={register("insuranceRequired")} />
-                <Toggle label="立ち会い 必須" register={register("attendanceRequired")} />
-              </div>
-            </StepCard>
-          )}
-
-          {step === "pricing" && (
-            <StepCard n={stepNo("pricing")} title="料金" desc="貸し出しの料金と、別途かかる費用です。">
-                <Field
-                  label={
-                    watch("priceType") === "flat"
-                      ? "撮影許可費用 (¥)"
-                      : watch("priceType") === "free"
-                        ? "料金（無料のため入力不要）"
-                        : "時間料金 (¥/hr)"
-                  }
-                  error={formState.errors.hourlyPrice?.message}
-                  hint={
-                    watch("priceType") === "flat"
-                      ? watch("hourlyPrice") > 0
-                        ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
-                        : "0 のままだと金額を出さず「道路使用許可の申請が必要です」と表示されます（無料という意味にはなりません）"
-                      : watch("priceType") === "free"
-                        ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
-                        : undefined
-                  }
-                  required={watch("priceType") === "hourly"}
-                >
-                  <div className="flex gap-2">
-                    <select
-                      value={watch("priceType") || "hourly"}
-                      onChange={(e) => {
-                        const v = e.target.value as "hourly" | "flat" | "free";
-                        setValue("priceType", v, { shouldDirty: true });
-                        // 撮影許可/無料は「施設所有者への通常の問い合わせ先が無い
-                        // 公共スポット」を前提にした料金モードなので、選ぶだけで
-                        // permitRequired も連動させる（Step02 の仕様欄も切り替わる）。
-                        setValue("permitRequired", v !== "hourly", { shouldDirty: true });
-                        triggerAutoSave();
-                      }}
-                      className={`${inputClass.replace("w-full ", "")} shrink-0 w-[9.5rem]`}
-                    >
-                      {(["hourly", "flat", "free"] as const).map((t) => (
-                        <option key={t} value={t} className="bg-bg">
-                          {t === "hourly" ? "時間貸し" : t === "flat" ? "撮影許可" : "無料"}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1000}
-                      disabled={watch("priceType") === "free"}
-                      placeholder={watch("priceType") === "free" ? "" : "金額を入力"}
-                      {...register("hourlyPrice", { valueAsNumber: true })}
-                      className={`${inputClass} flex-1 min-w-[7rem] disabled:opacity-40 disabled:cursor-not-allowed`}
-                    />
-                  </div>
-                </Field>
-              <Field
-                label="日料金 (¥/day)"
-                hint="日貸しを行う場合のみ入力。0 のままだと「日貸し非対応」扱い。"
-                error={formState.errors.dailyPrice?.message}
-              >
-                <input
-                  type="number"
-                  min={0}
-                  step={5000}
-                  {...register("dailyPrice", { valueAsNumber: true })}
-                  className={inputClass}
-                  placeholder="0 = 日貸しなし"
-                />
-              </Field>
-              {/* ── 料金の内訳 ── */}
-              <SectionHead title="料金の内訳" hint="上の料金に含まれないもの・条件つきのものをここに。" />
-              <div className="grid md:grid-cols-2 gap-5">
-                <Field label="最低利用時間 (h)" hint="0 = 設定なし">
-                  <input type="number" min={0} {...register("minUsageHours", { valueAsNumber: true })} className={inputClass} placeholder="例: 2" />
-                </Field>
-                <Field label="ロケハン費" hint="例: 1.5hまで無料">
-                  <input type="text" {...register("scoutingFee")} className={inputClass} placeholder="例: 1.5hまで無料" />
-                </Field>
-              </div>
-              <Toggle label="表示金額は税込（オフ = 税別）" register={register("taxIncluded")} />
-              <Field label="追加費用" hint="照明・音響・機材・ピアノ使用など別途かかる費用（複数行可）">
-                <textarea {...register("extraFees")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: ホール照明・音響 別途／ピアノ使用 別途" />
-              </Field>
-
-            </StepCard>
-          )}
-
-          {step === "features" && (
-            <StepCard n={stepNo("features")} title="特徴・タグ" desc="検索でヒットしやすくなる情報です。任意ですが、埋めるほど見つけてもらえます。">
 
               {/* ── 実績・特徴 ── */}
               <SectionHead title="実績・特徴" hint="「どんな画が撮れるか」が伝わる情報。検索でも効きます。" />
@@ -1372,110 +1198,90 @@ export default function PropertyEditor({
             </StepCard>
           )}
 
-          {step === "plans" && (
-            <StepCard n={stepNo("plans")} title="図面 / フロアプラン" desc="平面図・断面図など（PDF / 画像）。任意です。">
-
-              {/* ── 図面 / フロアプラン ── */}
-              <div className="border-t border-line pt-5 mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-                    図面 / フロアプラン
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => blueprintsArray.append({ label: "", url: "" })}
-                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
-                  >
-                    + 追加
-                  </button>
-                </div>
-
-                {blueprintsArray.fields.length === 0 && (
-                  <div className="text-[12px] text-muted py-4 text-center border border-dashed border-line">
-                    「+ 追加」で図面を登録（PDF / 画像 — 50 MB まで）
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  {blueprintsArray.fields.map((field, idx) => (
-                    <div key={field.id} className="border border-line bg-[#141414] p-4 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="text"
-                          {...register(`blueprints.${idx}.label`)}
-                          className={`${inputClass} flex-1`}
-                          placeholder="ラベル（例: 1F 平面図 / 断面図）"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const url = watch(`blueprints.${idx}.url`);
-                            blueprintsArray.remove(idx);
-                            if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
-                          }}
-                          className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
-                        >
-                          削除
-                        </button>
-                      </div>
-                      {watch(`blueprints.${idx}.url`) ? (
-                        <div className="flex items-center gap-3">
-                          <div className="mono text-[18px] text-accent">■</div>
-                          <div className="flex-1 min-w-0 text-[11px] mono truncate">
-                            {watch(`blueprints.${idx}.url`)}
-                          </div>
-                          <a
-                            href={watch(`blueprints.${idx}.url`)}
-                            target="_blank"
-                            rel="noopener"
-                            className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
-                          >
-                            確認
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // ⚠ 差し替えは元ファイルをR2から削除する不可逆操作（本人指示 2026-08-13）。
-                              if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
-                              const url = watch(`blueprints.${idx}.url`);
-                              setValue(`blueprints.${idx}.url`, "", { shouldDirty: true });
-                              if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
-                            }}
-                            className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
-                          >
-                            差し替え
-                          </button>
-                        </div>
-                      ) : (
-                        <FileDropzone
-                          propertyId={initial.id}
-                          kind="document"
-                          accept=".pdf,.jpg,.jpeg,.png,.webp"
-                          label="図面ファイル (PDF / 画像)"
-                          hint="PDF / JPEG / PNG / WebP — 50 MB まで"
-                          onUploaded={(f) => {
-                            setValue(
-                              `blueprints.${idx}.url`,
-                              f.url,
-                              { shouldDirty: true, shouldValidate: true },
-                            );
-                            triggerAutoSave();
-                          }}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
+          {step === "terms" && (
+            <StepCard n={stepNo("terms")} title="利用条件" desc="撮影できる日・時間、守っていただくルール、物件の紹介文です。">
+              {/* ── アクセス・利用条件 ── */}
+              <SectionHead title="アクセス・利用条件" hint="いつ・どこで撮影できるか。検索の絞り込みにも使われます。" />
+              <div className="grid md:grid-cols-3 gap-5">
+                <Field label="利用可能時間（補足）" hint="例: 24時間可（要相談）">
+                  <input type="text" {...register("availableHours")} className={inputClass} placeholder="例: 24時間可（要相談）" />
+                </Field>
+                <Field label="撮影可能日" hint="例: 平日／土日祝（要相談）">
+                  <input type="text" {...register("availableDays")} className={inputClass} placeholder="例: 平日／土日祝" />
+                </Field>
+                <Field label="申込期限（リードタイム）" hint="例: 1週間前">
+                  <input type="text" {...register("bookingDeadline")} className={inputClass} placeholder="例: 1週間前" />
+                </Field>
               </div>
-            </StepCard>
-          )}
 
-          {step === "description" && (
-            <StepCard
-              n={stepNo("description")}
-              title="紹介文"
-              desc="物件詳細ページに表示されます。改行 OK、文字数の目安は 200〜800 文字。"
-            >
+              <div className="grid md:grid-cols-3 gap-5">
+                <Field
+                  label="利用可能な時間帯"
+                  hint="開始〜終了を指定（例: 10時〜19時）。上の「利用可能時間（補足）」の自由記述とは別に、検索での絞り込みに使われます。分単位の予約は無いため時間単位のみです。"
+                >
+                  <div className="flex items-center gap-2.5 pt-1">
+                    <select
+                      {...register("customHoursStart")}
+                      className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
+                    >
+                      <option value="">--</option>
+                      {HOUR_OPTIONS.map((h) => (
+                        <option key={h} value={`${h}:00`}>{h}時</option>
+                      ))}
+                    </select>
+                    <span className="text-[12.5px] text-ink/50">〜</span>
+                    <select
+                      {...register("customHoursEnd")}
+                      className="border border-line rounded-md px-2.5 py-1.5 text-[13px]"
+                    >
+                      <option value="">--</option>
+                      {HOUR_OPTIONS.map((h) => (
+                        <option key={h} value={`${h}:00`}>{h}時</option>
+                      ))}
+                    </select>
+                    {(watch("customHoursStart") || watch("customHoursEnd")) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue("customHoursStart", "", { shouldDirty: true });
+                          setValue("customHoursEnd", "", { shouldDirty: true });
+                        }}
+                        className="text-[11px] text-muted hover:text-ink underline"
+                      >
+                        クリア
+                      </button>
+                    )}
+                  </div>
+                </Field>
+              </div>
+
+              {/* ── 撮影条件（設備の有無） ── */}
+              <SectionHead title="撮影条件（設備の有無）" hint="あるものだけチェック。無いものは空のままで構いません。" />
+              <div className="grid md:grid-cols-3 gap-5">
+                <Toggle label="火気使用 可" register={register("fireAllowed")} />
+                <Toggle label="控室 あり" register={register("greenRoom")} />
+                <Toggle label="トイレ あり" register={register("restroom")} />
+                <Toggle label="空調 あり" register={register("airConditioning")} />
+                <Toggle label="喫煙所 あり" register={register("smokingArea")} />
+              </div>
+
+              {/* ── ルール・規程 ── */}
+              <SectionHead title="ルール・規程" hint="トラブルを防ぐための取り決め。空欄でも掲載できます。" />
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="禁止事項" hint="複数行可">
+                  <textarea {...register("prohibitedItems")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 火気使用禁止／生活音より大きな音出し禁止" />
+                </Field>
+                <Field label="キャンセルポリシー" hint="複数行可">
+                  <textarea {...register("cancellationPolicy")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={1000} placeholder="例: 7日前まで無料／前日50%／当日100%" />
+                </Field>
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Toggle label="保険加入 必須" register={register("insuranceRequired")} />
+                <Toggle label="立ち会い 必須" register={register("attendanceRequired")} />
+              </div>
+              <div className="border-t border-line pt-6 mt-8">
+                <SectionHead title="紹介文" hint="物件の紹介文です。" />
+              </div>
               <Field label="本文">
                 <textarea
                   rows={14}
@@ -1529,6 +1335,91 @@ export default function PropertyEditor({
                   スタジオページビルダーを開く →
                 </a>
               </div>
+            </StepCard>
+          )}
+
+          {step === "pricing" && (
+            <StepCard n={stepNo("pricing")} title="料金" desc="貸し出しの料金と、別途かかる費用です。">
+                <Field
+                  label={
+                    watch("priceType") === "flat"
+                      ? "撮影許可費用 (¥)"
+                      : watch("priceType") === "free"
+                        ? "料金（無料のため入力不要）"
+                        : "時間料金 (¥/hr)"
+                  }
+                  error={formState.errors.hourlyPrice?.message}
+                  hint={
+                    watch("priceType") === "flat"
+                      ? watch("hourlyPrice") > 0
+                        ? "時間に関わらず一定の金額（例: 道路使用許可の実費相当）"
+                        : "0 のままだと金額を出さず「道路使用許可の申請が必要です」と表示されます（無料という意味にはなりません）"
+                      : watch("priceType") === "free"
+                        ? "「料金の性質」で無料を選択中のため 0 のままで構いません"
+                        : undefined
+                  }
+                  required={watch("priceType") === "hourly"}
+                >
+                  <div className="flex gap-2">
+                    <select
+                      value={watch("priceType") || "hourly"}
+                      onChange={(e) => {
+                        const v = e.target.value as "hourly" | "flat" | "free";
+                        setValue("priceType", v, { shouldDirty: true });
+                        // 撮影許可/無料は「施設所有者への通常の問い合わせ先が無い
+                        // 公共スポット」を前提にした料金モードなので、選ぶだけで
+                        // permitRequired も連動させる（Step02 の仕様欄も切り替わる）。
+                        setValue("permitRequired", v !== "hourly", { shouldDirty: true });
+                        triggerAutoSave();
+                      }}
+                      className={`${inputClass.replace("w-full ", "")} shrink-0 w-[9.5rem]`}
+                    >
+                      {(["hourly", "flat", "free"] as const).map((t) => (
+                        <option key={t} value={t} className="bg-bg">
+                          {t === "hourly" ? "時間貸し" : t === "flat" ? "撮影許可" : "無料"}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000}
+                      disabled={watch("priceType") === "free"}
+                      placeholder={watch("priceType") === "free" ? "" : "金額を入力"}
+                      {...register("hourlyPrice", { valueAsNumber: true })}
+                      className={`${inputClass} flex-1 min-w-[7rem] disabled:opacity-40 disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                </Field>
+              <Field
+                label="日料金 (¥/day)"
+                hint="日貸しを行う場合のみ入力。0 のままだと「日貸し非対応」扱い。"
+                error={formState.errors.dailyPrice?.message}
+              >
+                <input
+                  type="number"
+                  min={0}
+                  step={5000}
+                  {...register("dailyPrice", { valueAsNumber: true })}
+                  className={inputClass}
+                  placeholder="0 = 日貸しなし"
+                />
+              </Field>
+              {/* ── 料金の内訳 ── */}
+              <SectionHead title="料金の内訳" hint="上の料金に含まれないもの・条件つきのものをここに。" />
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="最低利用時間 (h)" hint="0 = 設定なし">
+                  <input type="number" min={0} {...register("minUsageHours", { valueAsNumber: true })} className={inputClass} placeholder="例: 2" />
+                </Field>
+                <Field label="ロケハン費" hint="例: 1.5hまで無料">
+                  <input type="text" {...register("scoutingFee")} className={inputClass} placeholder="例: 1.5hまで無料" />
+                </Field>
+              </div>
+              <Toggle label="表示金額は税込（オフ = 税別）" register={register("taxIncluded")} />
+              <Field label="追加費用" hint="照明・音響・機材・ピアノ使用など別途かかる費用（複数行可）">
+                <textarea {...register("extraFees")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: ホール照明・音響 別途／ピアノ使用 別途" />
+              </Field>
+
             </StepCard>
           )}
 
@@ -1744,6 +1635,102 @@ export default function PropertyEditor({
                     triggerAutoSave();
                   }}
                 />
+              </div>
+              <div className="border-t border-line pt-6 mt-8">
+                <SectionHead title="図面 / フロアプラン" hint="平面図・断面図など（PDF / 画像）。任意です。" />
+              </div>
+
+              {/* ── 図面 / フロアプラン ── */}
+              <div className="border-t border-line pt-5 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
+                    図面 / フロアプラン
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => blueprintsArray.append({ label: "", url: "" })}
+                    className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                  >
+                    + 追加
+                  </button>
+                </div>
+
+                {blueprintsArray.fields.length === 0 && (
+                  <div className="text-[12px] text-muted py-4 text-center border border-dashed border-line">
+                    「+ 追加」で図面を登録（PDF / 画像 — 50 MB まで）
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {blueprintsArray.fields.map((field, idx) => (
+                    <div key={field.id} className="border border-line bg-[#141414] p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          {...register(`blueprints.${idx}.label`)}
+                          className={`${inputClass} flex-1`}
+                          placeholder="ラベル（例: 1F 平面図 / 断面図）"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = watch(`blueprints.${idx}.url`);
+                            blueprintsArray.remove(idx);
+                            if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                          }}
+                          className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
+                        >
+                          削除
+                        </button>
+                      </div>
+                      {watch(`blueprints.${idx}.url`) ? (
+                        <div className="flex items-center gap-3">
+                          <div className="mono text-[18px] text-accent">■</div>
+                          <div className="flex-1 min-w-0 text-[11px] mono truncate">
+                            {watch(`blueprints.${idx}.url`)}
+                          </div>
+                          <a
+                            href={watch(`blueprints.${idx}.url`)}
+                            target="_blank"
+                            rel="noopener"
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
+                          >
+                            確認
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // ⚠ 差し替えは元ファイルをR2から削除する不可逆操作（本人指示 2026-08-13）。
+                              if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
+                              const url = watch(`blueprints.${idx}.url`);
+                              setValue(`blueprints.${idx}.url`, "", { shouldDirty: true });
+                              if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                            }}
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                          >
+                            差し替え
+                          </button>
+                        </div>
+                      ) : (
+                        <FileDropzone
+                          propertyId={initial.id}
+                          kind="document"
+                          accept=".pdf,.jpg,.jpeg,.png,.webp"
+                          label="図面ファイル (PDF / 画像)"
+                          hint="PDF / JPEG / PNG / WebP — 50 MB まで"
+                          onUploaded={(f) => {
+                            setValue(
+                              `blueprints.${idx}.url`,
+                              f.url,
+                              { shouldDirty: true, shouldValidate: true },
+                            );
+                            triggerAutoSave();
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </StepCard>
           )}
