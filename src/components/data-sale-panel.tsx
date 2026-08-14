@@ -77,7 +77,10 @@ export default function DataSalePanel({
 
   const toggleCart = () => {
     if (inCart) removeFromCart(propertyId, splatItemIndex);
-    else
+    // 規約に同意していない状態ではカートに入れられない（2026-08-14 本人指示。
+    // 「購入する」は元から同意必須だったが、カート経由だと同意なしで決済まで
+    // 進めてしまう抜け道になっていた）。ボタン側の disabled と二重にガードする。
+    else if (agreedTerms)
       addToCart({
         propertyId,
         splatItemIndex,
@@ -243,7 +246,15 @@ export default function DataSalePanel({
               <button
                 type="button"
                 onClick={toggleCart}
-                className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap"
+                disabled={!agreedTerms}
+                title={
+                  !agreedTerms
+                    ? en
+                      ? "Agree to the terms first"
+                      : "先に規約に同意してください"
+                    : undefined
+                }
+                className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
               >
                 {en ? "+ Cart" : "+ カート"}
               </button>

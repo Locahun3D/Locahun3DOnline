@@ -356,7 +356,10 @@ export default function ViewerGate({
   /* --- Always open in new tab --- */
   return (
     <>
-    <div className="relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
+    {/* ⚠ group を忘れると中のオーバーレイ（group-hover:opacity-100）が一生
+        発火せず「未ログインでしか表示が出ない」ように見える（2026-08-14 実害）。
+        未ログイン側(上)の外枠と同じく必ず group を付けること。 */}
+    <div className="group relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
       {previewVideoUrl ? (
         <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
       ) : (
