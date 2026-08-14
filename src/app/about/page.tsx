@@ -46,13 +46,12 @@ const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
 
 /** 07.html の <style> をそのまま `.about07` 配下へスコープしたもの。値は一切変えていない。 */
 const CSS = `
-/* ⚠ globals.css の html は黒地で、かつ scrollbar-gutter: stable both-edges が
-   左右に 15px ずつ余白を予約している。暗いページでは黒地に黒余白なので見えないが、
-   07 は白基調なので**ページの両脇に黒い帯**として露出する（実測 1440 で 15px×2）。
-   このページを表示している間だけ html/body を白にして帯を消す。
-   :has() なので /about 以外には一切かからない。 */
-html:has(.about07),
-html:has(.about07) body{ background:#fff; }
+/* ⚠ ここで html/body を白にしてはいけない（2026-08-14 実害）。
+   scrollbar-gutter: stable both-edges が左右 15px を予約しており、
+   ヘッダーもその内側（left:15 / 幅1410）に置かれる。html を白にすると
+   **ヘッダーの左隣 15px だけが白く抜けて**、ヘッダーが欠けて見える。
+   他のライトページ（/pricing 等）も html は黒のままで、本文と
+   ヘッダーが同じ 15px の内側に揃っている。/about もそれに合わせる。 */
 .about07{
   --ink:#101828;
   --muted:#526174;
