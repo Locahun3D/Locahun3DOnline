@@ -120,7 +120,7 @@ const CSS = `
 .about07 h1{
   margin:18px 0 14px;
   font-size:clamp(1.55rem, 4.5vw, 3.6rem); /* 他ページ h1 と同値 */
-  line-height:1.08;
+  line-height:1.3; /* 他ページ h1 と同値 */
   text-wrap:balance;
   letter-spacing:0;
 }
@@ -745,12 +745,18 @@ export default async function AboutPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       {/* ── HERO（07 の .hero） ── */}
+      {/* ⚠ ページ冒頭の作りは他ページ（/pricing 等）に揃える（2026-08-14 指摘）。
+          他ページは「chapter-rule の帯 → 中央寄せ h1（一部を accent で強調）」。
+          07 の丸ピル eyebrow だけ /about で浮いていたので chapter-rule に置き換え、
+          h1 にも他ページと同じ accent の強調を戻す。 */}
       <section className="hero">
         <div className="wrap">
+          <div className="chapter-rule">
+            <span className="opacity-60">ABOUT</span>
+            <span>{en ? "Service" : "サービスについて"}</span>
+            <span className="flex-1 h-px bg-current opacity-25" />
+          </div>
           <div className="center">
-            <span className="eyebrow">
-              {en ? "For owners / For scouts" : "掲載する側 / 探す側"}
-            </span>
             <h1>
               {en ? (
                 <>
@@ -758,7 +764,7 @@ export default async function AboutPage() {
                   <span className="pc-break">
                     <br />
                   </span>{" "}
-                  scouted in your browser.
+                  scouted <em className="not-italic text-accent">in your browser</em>.
                 </>
               ) : (
                 <>
@@ -767,8 +773,10 @@ export default async function AboutPage() {
                   <span className="pc-break">
                     <br />
                   </span>
-                  <span className="w">ブラウザで</span>
-                  <span className="w">歩いて</span>
+                  <em className="not-italic text-accent">
+                    <span className="w">ブラウザで</span>
+                    <span className="w">歩いて</span>
+                  </em>
                   <span className="w">下見。</span>
                 </>
               )}
