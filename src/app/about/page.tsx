@@ -53,16 +53,17 @@ const CSS = `
    他のライトページ（/pricing 等）も html は黒のままで、本文と
    ヘッダーが同じ 15px の内側に揃っている。/about もそれに合わせる。 */
 .about07{
-  --ink:#101828;
-  --muted:#526174;
+  /* 文字・線の色はサイトのトークンに統一（2026-08-14。07独自の灰は使わない） */
+  --ink:var(--color-ink);
+  --muted:var(--color-muted);
   /* 青のトーンだけサイトのアクセントに合わせる（2026-08-14）。
      07 の汎用青 #155eef / 紺 #0d2f63 / シアン #0891b2 は使わない。 */
   --blue:var(--color-accent);
   --navy:color-mix(in srgb, var(--color-accent) 55%, black);
   --cyan:var(--color-accent);
-  --line:#d8e3ef;
+  --line:var(--color-line);
   --soft:#f7fafc;
-  --green:#0f9f6e;
+  --green:var(--color-accent); /* ✓と役割ドットも07の緑をやめアクセントに統一 */
   --radius:8px;
   /* ⚠ 07と1:1に見せるため zoom を打ち消していたが、そうすると文字だけ
      他ページより大きく見える。サイト共通の zoom に乗せて倍率を揃える。 */
@@ -127,7 +128,8 @@ const CSS = `
 .about07 .lead{
   margin:0 auto;
   color:var(--muted);
-  font-size:18px;
+  font-size:14px; /* 他ページのリード文と同値 */
+  line-height:1.85;
   max-width:760px;
 }
 .about07 .segments{
@@ -159,12 +161,16 @@ const CSS = `
   flex:1;
 }
 .about07 .role{
+  /* 他ページのラベル様式（mono text-[10px] tracking-[0.28em] uppercase）に統一 */
   display:inline-flex;
   align-items:center;
   gap:8px;
   color:var(--blue);
-  font-size:13px;
-  font-weight:700;
+  font-family:"JetBrains Mono", var(--font-sans), monospace;
+  font-size:10px;
+  letter-spacing:0.28em;
+  text-transform:uppercase;
+  font-weight:500;
   margin-bottom:10px;
 }
 .about07 .role-dot{
@@ -183,7 +189,8 @@ const CSS = `
 .about07 .segment p{
   margin:0;
   color:var(--muted);
-  font-size:15px;
+  font-size:13px; /* 他ページの本文と同水準 */
+  line-height:1.85;
 }
 .about07 .segment ul{
   margin:18px 0 0;
@@ -191,8 +198,8 @@ const CSS = `
   list-style:none;
   display:grid;
   gap:12px;
-  color:#334155;
-  font-size:15px;
+  color:var(--color-ink);
+  font-size:13px; /* 他ページの本文と同水準 */
   align-content:start;
   flex:1;
 }
@@ -211,16 +218,25 @@ const CSS = `
   margin-top:26px;
 }
 .about07 .btn{
+  /* 他ページのボタン様式に統一（2026-08-14。/pricing の実測:
+     角なし・JetBrains Mono 11px・uppercase・tracking 0.22em・weight 500） */
   min-height:46px;
-  padding:11px 16px;
-  border-radius:8px;
+  padding:12px 16px;
+  border-radius:0;
   border:1px solid var(--line);
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  font-weight:800;
+  font-family:"JetBrains Mono", var(--font-sans), monospace;
+  font-size:11px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  font-weight:500;
   line-height:1.2;
+  transition:opacity .2s, border-color .2s, color .2s;
 }
+.about07 .btn.primary:hover{ opacity:.9; }
+.about07 .btn.secondary:hover{ border-color:var(--blue); color:var(--blue); }
 .about07 .btn.primary{
   color:#fff;
   background:var(--blue);
@@ -299,7 +315,8 @@ const CSS = `
 .about07 .feature p{
   margin:0;
   color:var(--muted);
-  font-size:15px;
+  font-size:13px; /* 他ページの本文と同水準 */
+  line-height:1.85;
 }
 /* 機能の詳細（07 に無い行）: .feature の中を「本文＋サムネ」の2カラムにするだけ。
    値は 07 のもの（gap 20px = .product、角丸 6px と枠 = .screen img / var(--line)）。 */
@@ -357,7 +374,8 @@ const CSS = `
   align-items:center;
   padding:40px;
   border-radius:8px;
-  background:linear-gradient(135deg, var(--navy), var(--blue));
+  /* サイトにグラデーションは無いのでベタ塗りに統一（2026-08-14） */
+  background:var(--blue);
   color:#fff;
   box-shadow:0 22px 60px color-mix(in srgb, var(--color-accent) 23%, transparent);
 }
