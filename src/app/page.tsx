@@ -46,8 +46,13 @@ const EXTRA_CSS = `
      ヘッダー下端より 11px 上に来たので 72px * --z にしてある。 */
 .about07 #service{ scroll-margin-top:calc(72px * var(--z, 1)); }
 
-/* CTA のボタンは3つ並ぶので、パネルを縦積みにして横幅を確保する。 */
-.about07 .cta-panel.stack{ grid-template-columns:1fr; }
+/* ⚠ CTA パネルを .stack(1カラム) にしてはいけない（2026-08-16 本人指摘）。
+   広い画面で中身が左端に張り付き、右半分が空く。07 本来の
+   「左=テキスト / 右=ボタン」の2カラム（.cta-panel の既定）を使う。
+   ボタン3つは右カラム内で縦に積む。980px 以下は既存の media query が
+   1カラムへ落とすので狭幅は問題ない。 */
+.about07 .cta-panel .segment-actions{ flex-direction:column; align-items:stretch; }
+@media (max-width:980px){ .about07 .cta-panel .segment-actions{ flex-direction:row; } }
 `;
 
 export async function generateMetadata() {
@@ -285,6 +290,7 @@ const DETAILS: Array<{
   desc: Bi;
   img?: { src: string; alt: Bi };
   link?: { href: string; text: Bi };
+  extLink?: { href: string; hrefEn: string; text: Bi };
 }> = [
   {
     key: "filters",
@@ -398,6 +404,12 @@ const DETAILS: Array<{
       "The data also supports uses beyond previz — AI model training sets, digital twins for factories and commercial facilities, and disaster-prevention or training simulations. AI-training use needs prior consultation and a separate agreement, but it's an area we're genuinely excited about — reach out and let's talk.",
     ],
     link: { href: "/contact/license", text: ["活用について相談する →", "Ask about use cases →"] },
+    // 2026-08-16 本人指示「技術ブログにも誘導して」。works は外部(URL不変)なので extLink。
+    extLink: {
+      href: "https://web.locahun3d.com/works/index.html",
+      hrefEn: "https://web.locahun3d.com/en/works/index.html",
+      text: ["技術ブログで事例を見る →", "See examples on the tech blog →"],
+    },
   },
 ];
 
@@ -674,6 +686,17 @@ export default async function HomePage() {
                       {t(d.link.text)}
                     </Link>
                   )}
+                  {d.extLink && (
+                    <a
+                      className="detail-link"
+                      style={{ marginLeft: d.link ? "18px" : 0 }}
+                      href={en ? d.extLink.hrefEn : d.extLink.href}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      {t(d.extLink.text)}
+                    </a>
+                  )}
                 </div>
                 {d.img && (
                   /* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */
@@ -687,7 +710,7 @@ export default async function HomePage() {
 
       {/* ── 主要導線（旧 /about の CTA パネルをそのまま） ── */}
       <section>
-        <div className="wrap cta-panel stack">
+        <div className="wrap cta-panel">
           <div>
             <h2>
               {en ? (
