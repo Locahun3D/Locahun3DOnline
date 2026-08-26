@@ -22,8 +22,10 @@
  *   かつ横スクロール 0。
  */
 import { chromium, webkit } from "playwright";
-const ON=["/","/properties","/pricing","/about","/contact","/contact/listing","/cart","/sign-in",
-  "/dashboard","/account","/privacy","/terms/tokushoho","/submit-scan","/en","/en/properties","/en/about"];
+// ⚠ 2026-08-16: /about（→ /#service）と /demo（→ /pricing）はリダイレクトになったので外した。
+//    着地先の "/" と "/pricing" は既にこのリストに入っている。
+const ON=["/","/properties","/pricing","/contact","/contact/listing","/cart","/sign-in",
+  "/dashboard","/account","/privacy","/terms/tokushoho","/submit-scan","/en","/en/properties","/en/pricing"];
 const SC=["/locahun3d_manifesto.html","/locahun3d_data.html","/locahun3d_demo.html","/locahun3d_privacy.html",
   "/works/index.html","/works/isaacsim-3dgs-import.html","/works/chevron-rokunowa-mv.html",
   "/en/locahun3d_manifesto.html","/en/works/index.html"];

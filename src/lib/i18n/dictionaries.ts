@@ -30,8 +30,10 @@ type Dict = Record<string, string>;
 
 const ja = {
   "nav.properties": "物件を探す",
-  "nav.demo": "デモ",
-  "nav.pricing": "料金",
+  // ⚠ 2026-08-16: /demo は /pricing へ統合（本人指示「料金とデモまとめて」）。
+  //   デモ体験・料金シミュレーターは料金ページ内にあるのでラベルも併記に変えた。
+  //   旧 "nav.demo" キーは削除済み（ナビ項目も 6→5 に減った）。
+  "nav.pricing": "料金・デモ",
   "nav.about": "サービスについて",
   // 実績＆ブログ は web.locahun3d.com/works/ のまま（URL不変・本人指示 2026-08-16）。
   // ラベルはスキャンサイトのヘッダーと同一表記。
@@ -86,8 +88,7 @@ const ja = {
 
 const en: Record<keyof typeof ja, string> = {
   "nav.properties": "Browse Locations",
-  "nav.demo": "Demo",
-  "nav.pricing": "Pricing",
+  "nav.pricing": "Pricing & Demo",
   "nav.about": "About",
   "nav.works": "Work & Blog",
   "nav.contact": "Contact",

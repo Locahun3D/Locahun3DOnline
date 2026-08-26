@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PlanCards from "@/components/pricing/plan-cards";
+import EstimateSimulator from "@/components/demo/estimate-simulator";
 import FreeDemoFunnel from "@/components/pricing/free-demo-funnel";
 import RoiCalculator from "@/components/pricing/roi-calculator";
 import { getCurrentUser } from "@/lib/dal";
@@ -11,14 +12,14 @@ export async function generateMetadata() {
   const locale = await getLocale();
   return locale === "en"
     ? {
-        title: "Pricing",
+        title: "Pricing & Demo",
         description:
-          "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus token-based 3DGS walkthroughs. Save 20% with annual billing.",
+          "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus token-based 3DGS walkthroughs. Save 20% with annual billing. Walk the demo scene and get a ballpark for a scan request.",
       }
     : {
-        title: "料金プラン",
+        title: "料金・デモ",
         description:
-          "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -20%。",
+          "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -20%。デモ体験とスキャン依頼の概算シミュレーターも。",
       };
 }
 
@@ -173,6 +174,45 @@ export default async function PricingPage({
 
       {/* ROI calculator — how much a subscription saves vs. on-site scouting */}
       <RoiCalculator en={en} />
+
+      {/* ── スキャン依頼の概算（旧 /demo からの移設・2026-08-16） ──
+          ⚠ シミュレーターの計算式・金額・選択肢は移設元のまま（14ケース検算済みの
+             資産）。`src/components/demo/estimate-simulator.tsx` を触るときは
+             移植元 digiroke3d_Web/locahun3d_demo.html と突き合わせること。
+          リード文は /demo で使っていたものをそのまま流用している。 */}
+      <section id="estimate" className="mt-16 scroll-mt-24">
+        <div className="chapter-rule">
+          <span className="opacity-60">SCAN</span>
+          <span>{en ? "Estimate a scan request" : "スキャン依頼の概算"}</span>
+          <span className="flex-1 h-px bg-current opacity-25" />
+        </div>
+        {/* ⚠ 中身の最大幅は移設元 /demo と同じ 1000px。frame 幅（1440px）いっぱいに
+            広げると選択欄が横に伸びきって別物になる（実測 1440px）。
+            見出し帯だけは他セクションと同じく全幅のまま。 */}
+        <div className="max-w-[1000px] mx-auto">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="serif text-[clamp(1.2rem,2.2vw,1.7rem)] font-bold leading-[1.35]">
+              {en ? (
+                <>
+                  Get an <em className="not-italic text-accent">estimate</em> from your project
+                  scale
+                </>
+              ) : (
+                <>
+                  プロジェクト規模から、<em className="not-italic text-accent">概算</em>を出す
+                </>
+              )}
+            </h2>
+            <p className="mt-3 text-[13px] text-muted leading-[1.85]">
+              {en
+                ? "Just pick a shoot date and a few options. For a detailed quote, get in touch."
+                : "撮影日と各項目を選ぶだけ。詳細見積はお問い合わせください。"}
+            </p>
+          </div>
+
+          <EstimateSimulator en={en} />
+        </div>
+      </section>
 
       {/* Comparison table */}
       <section className="mt-16">

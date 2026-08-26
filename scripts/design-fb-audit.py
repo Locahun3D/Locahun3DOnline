@@ -55,10 +55,13 @@ CHECKS = [
      "src/components/admin/property-editor.tsx", r"router\.refresh\(\)[\s\S]{0,80}baseUpdatedAtRef", False),
     ("離脱時に待機中の自動保存を流し切る（B-8: 入力が無言で消える）",
      "src/components/admin/property-editor.tsx", r"beforeunload", True),
-    ("/about は 07様式のCSS（.about07 スコープ）を使う",
-     "src/app/about/page.tsx", r"about07", True),
+    # ⚠ 2026-08-16: /about はトップ(/)の #service セクションへ統合され、
+    #   src/app/about/page.tsx は redirect だけの薄いファイルになった。
+    #   検査対象を移設先 src/app/page.tsx へ移す（項目は落とさない）。
+    ("サービスについて（トップ #service）は 07様式のCSS（.about07 スコープ）を使う",
+     "src/app/page.tsx", r"about07", True),
     ("07の生青 #155eef をコードに直書きしない（accentトークン経由）",
-     "src/app/about/page.tsx", r"#155eef;", False),
+     "src/app/page.tsx", r"#155eef;", False),
     ("カタログの CATALOG 見出しを復活させない（2026-08-13 撤去）",
      "src/components/properties/catalog-client.tsx", r">Find a Location<", False),
     ("カタログの募集枠を復活させない",

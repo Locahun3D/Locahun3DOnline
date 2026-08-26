@@ -36,9 +36,11 @@ const SCAN_JA = [
 ];
 const PAGES = [
   // オンライン（Next.js）
-  ...["/", "/properties", "/pricing", "/about", "/contact",
+  // ⚠ 2026-08-16: /about は "/" の #service へ、/demo は /pricing へ統合（どちらも redirect）。
+  //    着地先の "/" と "/pricing"（/en 版含む）で検査する。
+  ...["/", "/properties", "/pricing", "/contact",
     "/contact/bug", "/contact/request", "/contact/listing", "/contact/general",
-    "/en", "/en/properties", "/en/pricing", "/en/about"].map((p) => ({ url: ONLINE + p, site: "online" })),
+    "/en", "/en/properties", "/en/pricing"].map((p) => ({ url: ONLINE + p, site: "online" })),
   // スキャン（静的HTML）
   ...SCAN_JA.map((p) => ({ url: `${SCAN}/${p}`, site: "scan" })),
   ...SCAN_JA.filter((p) => p !== "locahun3d_contact.html").map((p) => ({ url: `${SCAN}/en/${p}`, site: "scan" })),

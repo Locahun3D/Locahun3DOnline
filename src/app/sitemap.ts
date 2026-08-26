@@ -7,7 +7,9 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://locahun3d.com";
  * 静的なマーケティング系ページ（会員専用・管理系は含めない）。
  * ja/en 両方のバリアントを出す。
  */
-const STATIC_PATHS = ["/", "/properties", "/pricing", "/about"];
+// ⚠ 2026-08-16: /about はトップの #service へ統合（redirect のみ）、/demo は /pricing へ
+//   統合したので、どちらも sitemap には出さない（リダイレクト先だけを出す）。
+const STATIC_PATHS = ["/", "/properties", "/pricing"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const properties = await getPublishedProperties();
