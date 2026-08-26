@@ -30,13 +30,15 @@ type Dict = Record<string, string>;
 
 const ja = {
   "nav.properties": "物件を探す",
+  "nav.demo": "デモ",
   "nav.pricing": "料金",
   "nav.about": "サービスについて",
+  // 実績＆ブログ は web.locahun3d.com/works/ のまま（URL不変・本人指示 2026-08-16）。
+  // ラベルはスキャンサイトのヘッダーと同一表記。
+  "nav.works": "実績＆ブログ",
   "nav.contact": "お問い合わせ",
   "nav.menuOpen": "メニューを開く",
   "nav.menuClose": "メニューを閉じる",
-  "header.scan": "スキャン",
-  "header.online": "オンライン",
   "auth.login": "ログイン",
   "auth.signup": "新規登録",
   "auth.mypage": "マイページ",
@@ -44,35 +46,6 @@ const ja = {
   "auth.adminShort": "管理",
   "lang.toEN": "EN",
   "lang.toJA": "日本語",
-
-  // --- Home (/) ---
-  "home.scan.h2": "スキャン",
-  // ⚠ オンライン側「ブラウザだけで撮影前ロケハン。」と対になるよう、ベネフィットを
-  //   主語に先出し。以前は「実空間を3D Gaussian Splattingでスキャンし〜」と専門用語が
-  //   先頭に来ており、初見の制作会社担当者には重かった（2026-08-01 レビューで指摘）。
-  "home.scan.desc":
-    "現場に行かず下見できる3Dデータを、代わりに撮ってきます。実測・実際の質感をそのまま記録する、撮影・制作のための実寸3D。",
-  "home.scan.cta": "スキャンを見る",
-  "home.online.h2": "オンライン",
-  "home.online.desc":
-    "ブラウザだけで撮影前ロケハン。スタジオ・倉庫・住宅・屋外ロケ地を 3D で検索し、構図・レンズ・光・動線を現場に行かず検証する。",
-  "home.online.cta": "オンラインを見る",
-  "home.about.eyebrow": "About — ロケハン3D とは",
-  "home.about.lead": "ロケハン3D は、実空間を 3D で扱う 2つのサービスです。",
-  "home.about.scanTitle": "ロケハン3D スキャン",
-  "home.about.scanDesc":
-    "現場に出張し、実空間を 3D Gaussian Splatting でデータ化。撮影・制作のための実測 3D を作ります。",
-  "home.about.scanCta": "スキャンを見る",
-  "home.about.onlineTitle": "ロケハン3D オンライン",
-  "home.about.onlineDesc":
-    "スキャンした空間をブラウザで検証・共有・貸出。撮影前ロケハンとスタジオ検索を遠隔で完結します。",
-  "home.about.onlineCta": "オンラインを見る",
-  "home.cta.headline": "あなたの現場を、3Dに。",
-  "home.cta.sub":
-    "スキャンして持ち帰り、オンラインで活かす。撮影前の往復を、ブラウザの中へ。",
-  "home.cta.scanBtn": "スキャンを相談",
-  "home.cta.onlineBtn": "オンラインに登録",
-
 
   // --- Plan cards (/pricing) ---
   "plan.billing.monthly": "月払い",
@@ -113,13 +86,13 @@ const ja = {
 
 const en: Record<keyof typeof ja, string> = {
   "nav.properties": "Browse Locations",
+  "nav.demo": "Demo",
   "nav.pricing": "Pricing",
   "nav.about": "About",
+  "nav.works": "Work & Blog",
   "nav.contact": "Contact",
   "nav.menuOpen": "Open menu",
   "nav.menuClose": "Close menu",
-  "header.scan": "Scan",
-  "header.online": "Online",
   "auth.login": "Log in",
   "auth.signup": "Sign up",
   "auth.mypage": "My Page",
@@ -127,32 +100,6 @@ const en: Record<keyof typeof ja, string> = {
   "auth.adminShort": "Admin",
   "lang.toEN": "EN",
   "lang.toJA": "JA",
-
-  // --- Home (/) ---
-  "home.scan.h2": "Scan",
-  "home.scan.desc":
-    "Skip the site visit — we scout it for you and bring back real 3D data. Measured, true to life, ready for shooting and production.",
-  "home.scan.cta": "View Scan",
-  "home.online.h2": "Online",
-  "home.online.desc":
-    "Scout before the shoot from your browser. Search studios, warehouses, homes and outdoor locations in 3D, and check framing, lenses, light and movement without visiting the site.",
-  "home.online.cta": "View Online",
-  "home.about.eyebrow": "About — What is Locahun 3D",
-  "home.about.lead": "Locahun 3D is two services for working with real spaces in 3D.",
-  "home.about.scanTitle": "Locahun 3D Scan",
-  "home.about.scanDesc":
-    "We come on site and capture real spaces with 3D Gaussian Splatting — building measured 3D for shooting and production.",
-  "home.about.scanCta": "View Scan",
-  "home.about.onlineTitle": "Locahun 3D Online",
-  "home.about.onlineDesc":
-    "Review, share and rent scanned spaces in your browser — completing pre-shoot scouting and studio search remotely.",
-  "home.about.onlineCta": "View Online",
-  "home.cta.headline": "Bring your location into 3D.",
-  "home.cta.sub":
-    "Scan it, take it back, and put it to work online — moving the pre-shoot back-and-forth into the browser.",
-  "home.cta.scanBtn": "Talk to us about Scan",
-  "home.cta.onlineBtn": "Sign up for Online",
-
 
   // --- Plan cards (/pricing) ---
   "plan.billing.monthly": "Monthly",

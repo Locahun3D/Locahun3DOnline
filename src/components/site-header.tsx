@@ -11,11 +11,18 @@ import HeaderAuthButtons from "@/components/header-auth-buttons";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
-const NAV: { href: string; key: DictKey; code: string }[] = [
+/**
+ * ナビ。`external` は別サイト（works）へのリンクで、新しいタブで開く。
+ * ⚠ works の URL は不変（本人指示 2026-08-16）。X で共有済みのリンクを全部生かすため、
+ *   web.locahun3d.com/works/ のまま。EN は /en/works/。
+ */
+const NAV: { href: string; key: DictKey; code: string; external?: boolean }[] = [
   { href: "/properties", key: "nav.properties", code: "0.1" },
-  { href: "/pricing", key: "nav.pricing", code: "0.2" },
-  { href: "/about", key: "nav.about", code: "0.3" },
-  { href: "/contact", key: "nav.contact", code: "0.4" },
+  { href: "/demo", key: "nav.demo", code: "0.2" },
+  { href: "/pricing", key: "nav.pricing", code: "0.3" },
+  { href: "/about", key: "nav.about", code: "0.4" },
+  { href: "/works/index.html", key: "nav.works", code: "0.5", external: true },
+  { href: "/contact", key: "nav.contact", code: "0.6" },
 ];
 
 export default async function SiteHeader() {
@@ -30,7 +37,6 @@ export default async function SiteHeader() {
   const locale = await getLocale();
   const t = (k: DictKey) => translate(locale, k);
   const lh = (href: string) => localizedHref(href, locale);
-  const scanUrl = locale === "en" ? "https://web.locahun3d.com/en/" : "https://web.locahun3d.com/";
   // EN版はブランド表記も英字に切り替える（マーク自体は共通）。
   // ⚠ 表記はスキャンサイト scripts/sync_header.py の BRAND_TEXT と一字一句そろえること。
   //    以前ここだけ "Locahun3D"（スペース無し）で、EN版のブランド幅が
@@ -103,27 +109,10 @@ export default async function SiteHeader() {
     </Show>
   );
 
-  // トグルの状態規則（スキャンサイトと共通）:
-  // 各セルは常に自サービス色のボーダー50%、アクティブ側のみ bg12%+文字を
-  // サービス色に。数値もスキャン側 @media(max-width:1199px) ブロックと1:1。
-  // ⚠ 寸法は全幅固定。幅で変えると回転で見た目が変わる（docs/header-rules.md R2）。
-  //    値はスキャンサイト assets/site-header.css の .sh-toggle と 1:1。
-  const scanOnlineToggle = (
-    <div className="flex items-stretch brand text-[9px] tracking-[0.04em]">
-      <a
-        href={scanUrl}
-        className="px-1.5 py-[3px] border border-[#ffb454]/50 text-ink hover:bg-[#ffb454] hover:text-bg transition whitespace-nowrap"
-      >
-        {t("header.scan")}
-      </a>
-      <a
-        href={lh("/properties")}
-        className="px-1.5 py-[3px] border border-l-0 border-[#5ec8e8]/50 text-[#5ec8e8] bg-[#5ec8e8]/12 hover:bg-[#5ec8e8] hover:text-bg transition whitespace-nowrap"
-      >
-        {t("header.online")}
-      </a>
-    </div>
-  );
+  // ⚠ 2026-08-16: 「スキャン / オンライン」トグルは撤去した。2サイト分岐を廃止し
+  //    locahun3d.com へ一本化する方針（本人指示）のため、切り替える先が無くなった。
+  //    代わりに works（実績＆ブログ）と /demo をナビに置いている。
+  //    これに伴い中央グリッドは「ブランド単体を中央」に戻してある。
 
   return (
     // ⚠ ヘッダーだけ html の zoom を打ち消す。--z は 720/1200px で
@@ -166,19 +155,40 @@ export default async function SiteHeader() {
                 5.4px 食い込む（admin でサインインしたときだけ出る。実測: /,
                 /properties, /pricing, /account, /dashboard, /cart の6ページ）。
                 8px にすると 4つの間隔で 12px 縮み、6.6px の余裕が出る。 */}
-            <nav className="flex items-center gap-2 min-[1200px]:gap-4 min-[1440px]:gap-6 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
-              {NAV.map((n) => (
-                <Link
-                  key={n.href}
-                  href={lh(n.href)}
-                  className="group flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-muted hover:text-ink transition-colors whitespace-nowrap"
-                >
-                  <span className="hidden min-[1440px]:inline mono text-[10px] tracking-[0.2em] opacity-50 group-hover:text-accent group-hover:opacity-100 transition">
+            {/* ⚠ 2026-08-16: ナビが4→6項目になったので gap を詰めた。
+                以前の min-[1440px]:gap-6 では 1440px の JA で
+                「お問い合わせ」が中央ブランドへ 81.9px 食い込んでいた（実測）。 */}
+            <nav className="flex items-center gap-2 min-[1200px]:gap-3 min-[1680px]:gap-5 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-0">
+              {NAV.map((n) => {
+                // ⚠ 1024–1199px は6項目だと中央ブランドに食い込む（実測）。
+                //    この帯だけ 12px にして幅を確保する（≥1200px は従来の13px）。
+                const cls =
+                  "group flex items-center gap-1.5 text-[13px] max-[1200px]:text-[12px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-muted hover:text-ink transition-colors whitespace-nowrap";
+                // ⚠ 番号(0.1〜)は幅に余裕がある帯だけ。6項目になった分しきい値を
+                //    1440→1920px へ上げた（1440px では中央ブランドと重なる。実測）。
+                const code = (
+                  <span className="hidden min-[1920px]:inline mono text-[10px] tracking-[0.2em] opacity-50 group-hover:text-accent group-hover:opacity-100 transition">
                     {n.code}
                   </span>
-                  {t(n.key)}
-                </Link>
-              ))}
+                );
+                return n.external ? (
+                  <a
+                    key={n.href}
+                    href={`https://web.locahun3d.com${locale === "en" ? "/en" : ""}${n.href}`}
+                    target="_blank"
+                    rel="noopener"
+                    className={cls}
+                  >
+                    {code}
+                    {t(n.key)}
+                  </a>
+                ) : (
+                  <Link key={n.href} href={lh(n.href)} className={cls}>
+                    {code}
+                    {t(n.key)}
+                  </Link>
+                );
+              })}
               {/* 掲載管理 / 管理 の入口は右側に置いてあるが `hidden min-[1200px]:inline-block`
                   なので 720–1199px では完全に消えていた（実測: 744/768/820/834/1024/1180 で
                   リンクが存在しない）。「これが無いと掲載ページに辿り着けない」入口なので、
@@ -189,7 +199,13 @@ export default async function SiteHeader() {
                   href={lh("/admin/properties")}
                   className="min-[1200px]:hidden flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
                 >
-                  ⌂ {locale === "en" ? "Listings" : "掲載管理"}
+                  {/* ⚠ 1024–1199px（1行ナビ）はラベルを落としてアイコンだけにする。
+                      ナビが6項目になったぶん、この1項目が中央ブランドへ食い込む
+                      （実測 1024px で 24.8px）。ドロワー帯(≤1023)はラベルを出す。 */}
+                  ⌂{" "}
+                  <span className="min-[1024px]:max-[1200px]:hidden">
+                    {locale === "en" ? "Listings" : "掲載管理"}
+                  </span>
                 </Link>
               )}
               {user?.role === "admin" && (
@@ -197,7 +213,7 @@ export default async function SiteHeader() {
                   href={lh("/admin")}
                   className="min-[1200px]:hidden flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
                 >
-                  ⚙ {t("auth.admin")}
+                  ⚙ <span className="min-[1024px]:max-[1200px]:hidden">{t("auth.admin")}</span>
                 </Link>
               )}
               {/* 480px未満でバーから外した分をここに出す。
@@ -213,10 +229,10 @@ export default async function SiteHeader() {
             {/* 2026-08-12: ●(HeaderAccountMenu)を廃止（ユーザー指示「ENだけでいい」）。
                 旧●パネルの中身はこのドロワー下部へ移した。ENだけはバー右側に常時表示。
                 出し分け境界はバー側と必ず対にする:
-                  スキャン/オンライン トグル : <375（バーの中央グリッドから退避）
-                  カート/認証              : <768（768以上はバー右グループに出ている） */}
+                  カート/認証              : <768（768以上はバー右グループに出ている）
+                ⚠ 2026-08-16: ここにあった「スキャン/オンライン トグル(<375)」は
+                  分岐廃止に伴い撤去した。 */}
             <div className="min-[1024px]:hidden mt-1 pt-3 border-t border-line flex items-center gap-3 flex-wrap empty:hidden">
-              <span className="min-[375px]:hidden flex items-center">{scanOnlineToggle}</span>
               {user?.role !== "studio" && (
                 <span className="min-[768px]:hidden flex items-center">
                   <CartLink />
@@ -261,12 +277,13 @@ export default async function SiteHeader() {
             （実測: elementFromPoint が右側グループを返していた）。
             グリッド自体は pointer-events-none なので、上に乗せても右側の
             ボタンのクリックは妨げない。 */}
-        {/* ⚠ 列は minmax(0,1fr) にする。素の 1fr だと col3(トグル)の最小幅が
-            col1(空)より大きくなって列が広がり、ブランドが左へ押される
-            （実測 375px: col1=99.3 / col3=119.3 → 中心が-10px、320pxで-37.5px）。
+        {/* ⚠ 列は minmax(0,1fr) にする。素の 1fr だと右列の最小幅が左列より大きくなって
+            列が広がり、ブランドが左へ押される（トグルが居た頃の実測 375px:
+            col1=99.3 / col3=119.3 → 中心が-10px、320pxで-37.5px）。
             0まで縮める指定にすれば左右の列は必ず同幅になり、ブランドは常に中央。
-            はみ出た分は右の padding 内に収まる（実測 375pxで10px、余白16px）。 */}
-        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-[55px] px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
+            ⚠ 2026-08-16: スキャン/オンライン トグル（旧・列3）の撤去に伴い
+            3列（1fr / ブランド / 1fr）へ戻した。 */}
+        <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-[55px] px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
           <Link
             href={lh("/")}
             aria-label={brandName}
@@ -275,36 +292,15 @@ export default async function SiteHeader() {
             <HeaderMark />
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
           </Link>
-          {/* トグルと（≥1536pxで中央側に出る）EN は必ず1つの列3グループにまとめる。
-              別々に col-start-3 を振ると重なる。EN を justify-self-end にするのも不可で、
-              右端にはカート/認証ボタンが居るため衝突する（scan側は .sh-right が空なので
-              右端でよい、という非対称はここだけ許容する）。 */}
-          {/* ⚠ ブランド(列2)とトグル(列3)を「1組」で中央に置く。両端は同幅の1frなので
-              2列まとめて画面中央に来る。2026-07-29 まではブランド単体を中央にしていたが、
-              それは「トグル幅が両サイトで違う」時代の回避策。ズームをヘッダーから
-              外して両サイト 111.3px で一致したため、見た目どおりに戻した。 */}
-          {/* ⚠ 360px未満はこのトグルをバーから外し、右の●パネルへ移す（R3）。
-              実測(JA=最長ラベル・外周padding 8px)の空き: 360px=-6.9/-4.9✕、
-              375px=+0.6/+2.6○、390px=+8.1/+10.1○。375px は iPhone SE の幅で、
-              下回るのは旧世代の小型端末だけ。外すとブランド単独が中央に来る。
-              スキャン側 assets/site-header.css の .sh-acct-toggle と対。 */}
-          <div className="max-[375px]:hidden col-start-3 row-start-1 justify-self-start flex items-center gap-2 ml-2 pointer-events-auto">
-            {scanOnlineToggle}
-            </div>
-          {/* 列4は空のスペーサー（両端を同幅にしてブランド＋トグルを中央に保つ）。
+          {/* 列3は空のスペーサー（両端を同幅にしてブランドを中央に保つ）。
               ⚠ ここに EN を置かないこと。中央グリッドは absolute で画面端まで伸びるので、
-                 列4の右端＝右グループ（カート/マイページ/ベル/アバター）と同じ位置になり
+                 列3の右端＝右グループ（カート/マイページ/ベル/アバター）と同じ位置になり
                  必ず重なる。実測: 1440pxで EN が2つ、1536px以上ではサインイン時に
                  EN×アバターが28px、1920pxで EN×マイページが33.8px重なっていた
                  （サインアウトでは右が軽く露見しない＝サインイン状態での検証が必須）。
                  EN は下の右グループ側 LangToggle に一本化してある。 */}
         </div>
 
-        {/* ⚠ 720–733px では中央グリッド側のトグル(列3)と、この右グループ先頭のENが
-            重なる（本番=未ログインで EN/カート/ログイン/新規登録 の4項目が並ぶ最も
-            混む状態で、実測 720px:-6px / 730px:-1px）。スキャンサイトは右側が空なので
-            起きない＝オンライン版固有。中央機構やトグル側（両サイト共通＝パリティ対象）は
-            触らず、この右グループの間隔だけを詰めて解消する。 */}
         {/* ⚠ 480px未満はここをバーから外す。残すとブランドが中央からずれる
             （実測: 375pxで-10px、320pxで-37.5px）。中身はドロワー側に出す（R3）。 */}
         {/* 768px未満: バーに並べる余地が無いので、アイコン1つに畳んで押したら開く。
