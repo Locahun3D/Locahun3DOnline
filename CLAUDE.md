@@ -183,3 +183,4 @@ web.locahun3d.com    → Worker `locahun3dwebsite`（別リポジトリ・手動
 | `node scripts/header-parity.mjs` | 両サイトのヘッダー共有要素の computed style 照合 |
 | `node scripts/header-consistency.mjs` | スキャン19ページ×23幅が1pxも違わないことを機械証明 |
 | `node scripts/ui-audit.mjs` | 26ページ×9幅の重なり・はみ出し検査 |
+| `python scripts/design-fb-audit.py` | **本人のデザインFB 27項目の回帰検査**。UIを触る作業の完了報告前に必ず実行。台帳=`F:\Claude\docs\デザインFB台帳_locahun3d.md` |
