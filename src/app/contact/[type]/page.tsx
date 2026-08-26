@@ -14,7 +14,7 @@ import { convertToStudioAction } from "@/lib/auth-actions";
 
 /**
  * 受付中の窓口のうち、この汎用ページで扱うもの。
- * ⚠ scan（製作側スキャン依頼）は概算シミュレーターを併設する専用ページ
+ * ⚠ scan（制作側スキャン依頼）は概算シミュレーターを併設する専用ページ
  *   `src/app/contact/scan/page.tsx` を持つ（静的セグメントが動的 [type] より
  *   優先されるのでここには来ない）。そのため Partial にして、
  *   COPY に無い種別は 404 で弾く。

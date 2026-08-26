@@ -5,7 +5,7 @@ import { CONTACT_TYPE_LABEL } from "@/lib/contact-requests";
 import ScanRequest from "@/components/contact/scan-request";
 
 /**
- * /contact/scan — 製作側スキャン依頼（2026-08-16 新設・本人指示）。
+ * /contact/scan — 制作側スキャン依頼（2026-08-16 新設・本人指示）。
  *
  * - 概算シミュレーターは元々 /demo にあり、統合で一度 /pricing に置いたものを
  *   ここへ移した。/pricing は視聴サブスクの話に専念する。

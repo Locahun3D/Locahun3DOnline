@@ -3,14 +3,14 @@
  * Ported from the manifesto site (web.locahun3d.com). Inherits size via props.
  *
  * ⚠ 2026-08-16: 既定のレティクル色を旧アクセントのオレンジ #ffb454 から
- *   オンラインの青 #5ec8e8 へ変更（本人指示「ここの色、青だけにして」）。
+ *   テーマ青 #1ea0c4 へ統一（本人指示「ここの色、青だけにして」→「修正」で #5ec8e8 から変更 2026-08-16）。
  *   ヘッダーはモノクロ＋青のみの構成にする。使用箇所は HeaderMark のみ。
  */
 export default function ScanMark({
   size = 58,
   className = "",
   /** Reticle (center) color. 既定＝オンラインの青。 */
-  reticle = "#5ec8e8",
+  reticle = "#1ea0c4",
 }: {
   size?: number;
   className?: string;

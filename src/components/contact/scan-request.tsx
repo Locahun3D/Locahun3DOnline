@@ -5,7 +5,7 @@ import EstimateSimulator from "@/components/demo/estimate-simulator";
 import ContactForm from "@/components/contact-form";
 
 /**
- * /contact/scan（製作側スキャン依頼）の本体。
+ * /contact/scan（制作側スキャン依頼）の本体。
  *
  * 概算シミュレーターとお問い合わせフォームを1つのクライアント境界に入れて、
  * **選択内容を持ったままフォームまで運ぶ**。

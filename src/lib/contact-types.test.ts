@@ -7,7 +7,7 @@ import path from "node:path";
  *   - src/lib/contact-requests.ts        … 正（サーバー側。メール件名・通知・管理画面の絞り込み）
  *   - src/components/admin/contact-request-row.tsx … client 用の複製（server-only を import できない）
  * 片方だけ足すと管理画面の行バッジが undefined になり「どの窓口の問い合わせか」が消える。
- * 新種別（2026-08-16 の scan＝製作側スキャン依頼）を足したときに実際に踏みかけたので、
+ * 新種別（2026-08-16 の scan＝制作側スキャン依頼）を足したときに実際に踏みかけたので、
  * 2つが一致していることをテストで固定する。
  *
  * ⚠ 実行時 import ではなくソースを読んで突き合わせる。contact-requests.ts は
@@ -37,7 +37,7 @@ describe("contact type labels", () => {
   it("受付中の種別（LEGACY を除く）にはすべてラベルがある", () => {
     const active = [...lib.matchAll(/export const CONTACT_TYPES = \[([^\]]+)\]/g)][0]?.[1] ?? "";
     const types = [...active.matchAll(/"([a-z]+)"/g)].map((m) => m[1]);
-    expect(types).toContain("scan"); // 製作側スキャン依頼（/contact/scan）
+    expect(types).toContain("scan"); // 制作側スキャン依頼（/contact/scan）
     for (const t of types) expect(labelKeys(lib)).toContain(t);
   });
 });

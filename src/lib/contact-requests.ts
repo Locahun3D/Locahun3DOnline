@@ -34,9 +34,9 @@ export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   license: "データ利用・提携のご相談",
   // 撮影・映像制作のためのロケ地/施設スキャンの依頼窓口（2026-08-16新設）。
   // /contact/scan に概算シミュレーターを併設し、選択内容を本文へ添えて届く。
-  // ⚠ 表記は本人指示どおり「製作側」。社内の他所は「制作」表記が多いので、
+  // ⚠ 表記は本人指示どおり「制作側」。社内の他所は「制作」表記が多いので、
   //   統一するかどうかは本人確認事項（勝手に直さない）。
-  scan: "製作側スキャン依頼",
+  scan: "制作側スキャン依頼",
 };
 
 export const contactStatusSchema = z.enum(["new", "read", "archived"]);

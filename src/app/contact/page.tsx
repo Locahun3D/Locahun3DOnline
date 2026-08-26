@@ -100,7 +100,7 @@ export default async function ContactHubPage() {
 
       {/* ⚠ 列数は残っている窓口の数に合わせる。「ご相談」を廃止した際に
           sm:grid-cols-3 のままだったので、2枚が細いまま右1枠が空いていた。
-          2026-08-16 に「製作側スキャン依頼」を追加して3枚になったので3列へ戻した。 */}
+          2026-08-16 に「制作側スキャン依頼」を追加して3枚になったので3列へ戻した。 */}
       <div className="grid sm:grid-cols-3 gap-4 max-w-[760px] mx-auto">
         {CONTACT_TYPES.filter((type) => type !== "listing").map((type) => {
           const card = HUB_CARDS.find((c) => c.type === type)!;
