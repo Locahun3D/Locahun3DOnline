@@ -1,12 +1,16 @@
 /**
- * ロケハン3D scan-target mark — corner brackets + amber reticle.
+ * ロケハン3D scan-target mark — corner brackets + blue reticle.
  * Ported from the manifesto site (web.locahun3d.com). Inherits size via props.
+ *
+ * ⚠ 2026-08-16: 既定のレティクル色を旧アクセントのオレンジ #ffb454 から
+ *   オンラインの青 #5ec8e8 へ変更（本人指示「ここの色、青だけにして」）。
+ *   ヘッダーはモノクロ＋青のみの構成にする。使用箇所は HeaderMark のみ。
  */
 export default function ScanMark({
   size = 58,
   className = "",
-  /** Reticle (center) color. SCAN = amber (default), ONLINE = blue. */
-  reticle = "#ffb454",
+  /** Reticle (center) color. 既定＝オンラインの青。 */
+  reticle = "#5ec8e8",
 }: {
   size?: number;
   className?: string;

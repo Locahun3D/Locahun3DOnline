@@ -30,9 +30,15 @@ export type ContactPrefill = {
 export default function ContactForm({
   type,
   prefill,
+  estimateSummary,
 }: {
   type: ContactType;
   prefill?: ContactPrefill;
+  /** scan（製作側スキャン依頼）専用。概算シミュレーターの選択内容。
+   *  ⚠ ここには**入れずに** hidden で送り、サーバー側で本文の先頭へ足す。
+   *  本文欄へ直接書き込むと、利用者が書いた文章と混ざるうえ、書いた後に
+   *  シミュレーターを触られると古い内容が本文に残る（＝嘘の申告になる）。 */
+  estimateSummary?: string;
 }) {
   const en = useLocale() === "en";
   const [state, formAction, pending] = useActionState<ContactState, FormData>(
@@ -41,6 +47,8 @@ export default function ContactForm({
   );
   const renderedAtRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  /** 返信が前提の窓口（担当者名・メール必須）。サーバー側の検証と対。 */
+  const needsReply = type === "listing" || type === "scan";
 
   // ⚠ ボット判定用のレンダー時刻。これが無いと送信が「速すぎる」扱いで
   //    弾かれ得るので、フォームの種別に関係なく必ず入れる。
@@ -104,6 +112,10 @@ export default function ContactForm({
         <input type="hidden" name="propertyId" value={prefill.propertyId} />
       )}
       <input type="hidden" name={RENDERED_AT_FIELD} ref={renderedAtRef} defaultValue="" />
+      {/* 概算の選択内容。サーバー側で本文の先頭に付けて保存・転送する。 */}
+      {type === "scan" && estimateSummary && (
+        <input type="hidden" name="estimate" value={estimateSummary} />
+      )}
       <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
         <label>
           Website
@@ -175,6 +187,49 @@ export default function ContactForm({
 
         {/* 「ご相談」窓口は廃止したため専用欄も撤去（2026-07-30）。 */}
 
+        {type === "scan" && (
+          <>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field en={en} label={en ? "Company" : "会社名・屋号"} optional>
+                <input name="company" type="text" placeholder={en ? "Acme Inc." : "株式会社〇〇"} className={inputClass} />
+              </Field>
+              <Field en={en} label={en ? "Phone" : "電話番号"} optional>
+                <input name="phone" type="tel" placeholder="03-0000-0000" className={inputClass} />
+              </Field>
+            </div>
+            <Field
+              en={en}
+              label={en ? "Location / facility to scan" : "スキャン対象のロケ地・施設"}
+              optional
+            >
+              <input
+                name="area"
+                type="text"
+                placeholder={en ? "e.g. a warehouse in Kawasaki, Kanagawa" : "例: 神奈川県川崎市の倉庫"}
+                className={inputClass}
+              />
+            </Field>
+            <Field
+              en={en}
+              label={en ? "Details of your request" : "ご依頼の内容"}
+              required
+              note={en ? "intended use, schedule, anything to note" : "撮影の用途・スケジュール・注意事項など"}
+            >
+              <textarea
+                name="message"
+                rows={5}
+                required
+                placeholder={
+                  en
+                    ? "e.g. We're scouting for a TV commercial and would like the interior and the front yard scanned."
+                    : "例: CM撮影のロケハン用に、屋内と前庭をスキャンしてほしいです。"
+                }
+                className={`${inputClass} leading-relaxed resize-y`}
+              />
+            </Field>
+          </>
+        )}
+
         {type === "license" && (
           <>
             <Field en={en} label={en ? "Company (optional)" : "会社名・屋号（任意）"}>
@@ -199,28 +254,39 @@ export default function ContactForm({
           </>
         )}
 
+        {/* ⚠ 連絡先の要否は type ごとに変える。掲載依頼(listing)とスキャン依頼(scan)は
+            こちらから見積・日程を返す前提なので担当者名とメールを必須にする
+            （サーバー側 contact-actions の requiredContactSchema と対にすること）。 */}
         <div className="border-t border-line pt-5 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
             <Field
               en={en}
-              label={type === "listing" ? (en ? "Contact person" : "ご担当者名") : en ? "Name" : "お名前"}
-              required={type === "listing"}
-              optional={type !== "listing"}
+              label={
+                type === "listing" || type === "scan"
+                  ? en
+                    ? "Contact person"
+                    : "ご担当者名"
+                  : en
+                    ? "Name"
+                    : "お名前"
+              }
+              required={needsReply}
+              optional={!needsReply}
             >
               <input
                 name="name"
                 type="text"
                 placeholder={en ? "Jane Smith" : "山田 太郎"}
-                required={type === "listing"}
+                required={needsReply}
                 className={inputClass}
               />
             </Field>
-            <Field en={en} label={en ? "Email" : "メールアドレス"} required={type === "listing"} optional={type !== "listing"}>
+            <Field en={en} label={en ? "Email" : "メールアドレス"} required={needsReply} optional={!needsReply}>
               <input
                 name="email"
                 type="email"
                 placeholder="info@example.com"
-                required={type === "listing"}
+                required={needsReply}
                 ref={emailRef}
                 className={inputClass}
               />
@@ -245,7 +311,9 @@ export default function ContactForm({
                   ? prefill?.propertyId
                     ? en ? "Submit publication request →" : "この内容で公開を申請する →"
                     : en ? "Request a listing →" : "掲載を依頼する →"
-                  : en ? "Send →" : "送信する →"}
+                  : type === "scan"
+                    ? en ? "Request a quote with these settings →" : "この内容で見積を依頼する →"
+                    : en ? "Send →" : "送信する →"}
             </button>
           </div>
         </div>

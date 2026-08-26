@@ -43,9 +43,10 @@ const inputSchema = z.object({
   message: z.string().trim().min(1, "お問い合わせ内容を入力してください").max(4000),
 });
 
-// 掲載依頼(listing)は担当者へ連絡が取れないと案内を進められないため、
-// ご担当者名・メールアドレスを必須にする（他 type は匿名送信を維持）。
-const listingContactSchema = inputSchema
+// 掲載依頼(listing)とスキャン依頼(scan)は担当者へ連絡が取れないと見積・日程を
+// 返せないため、ご担当者名・メールアドレスを必須にする（他 type は匿名送信を維持）。
+// ⚠ フォーム側 contact-form.tsx の needsReply と必ず対にすること。
+const requiredContactSchema = inputSchema
   .extend({
     name: z.string().trim().min(1, "ご担当者名を入力してください").max(80),
     email: z
@@ -111,8 +112,20 @@ export async function submitContactRequestAction(
   // ⚠ 値は信用しない。所有者かどうかは下の requestPublishAction 側で検証する
   //    （assertPropertyAccess が他人の物件を弾く）。
   const propertyId = str("propertyId").trim();
+  // スキャン依頼は概算シミュレーターの選択内容を本文の先頭に付ける。
+  // ⚠ クライアント由来の文字列なので、長さを切って本文と同じ扱いにする
+  //    （HTMLは email.ts 側で esc される）。本文が空でも選択内容だけの
+  //    問い合わせにはしない（何をしたいのかが分からないため message は必須のまま）。
+  const estimate = str("estimate").trim().slice(0, 800);
+  if (raw.type === "scan" && estimate && raw.message) {
+    // 合計は本文の上限(4000)に収める。付加分のせいで利用者の入力が
+    // 「長すぎます」で弾かれるのを避ける。
+    raw.message = `${estimate}\n\n${raw.message}`.slice(0, 4000);
+  }
   const parsed =
-    raw.type === "listing" ? listingContactSchema.safeParse(raw) : inputSchema.safeParse(raw);
+    raw.type === "listing" || raw.type === "scan"
+      ? requiredContactSchema.safeParse(raw)
+      : inputSchema.safeParse(raw);
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message ?? "入力内容をご確認ください。";
     return { ok: false, error: first };

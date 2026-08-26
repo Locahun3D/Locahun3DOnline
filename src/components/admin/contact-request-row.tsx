@@ -17,6 +17,9 @@ const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   listing: "掲載依頼",
   general: "ご相談",
   license: "データ利用・提携のご相談",
+  // ⚠ src/lib/contact-requests.ts の CONTACT_TYPE_LABEL と一字一句そろえること
+  //   （このファイルは client なので複製している）。
+  scan: "製作側スキャン依頼",
 };
 
 function fmtDate(iso: string) {

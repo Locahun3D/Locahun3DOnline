@@ -34,6 +34,14 @@ const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; 
     go: "相談フォームへ",
     goEn: "Go to consultation form",
   },
+  {
+    // 2026-08-16 新設。概算シミュレーターは元 /demo → /pricing から移設。
+    type: "scan",
+    desc: "撮影・映像制作のためのロケ地・施設スキャンのご依頼。概算シミュレーター付き。",
+    descEn: "Request a scan of a location or facility for your shoot. Comes with an estimate simulator.",
+    go: "依頼フォームへ",
+    goEn: "Go to scan request",
+  },
 ];
 
 export default async function ContactHubPage() {
@@ -91,8 +99,9 @@ export default async function ContactHubPage() {
       </Link>
 
       {/* ⚠ 列数は残っている窓口の数に合わせる。「ご相談」を廃止した際に
-          sm:grid-cols-3 のままだったので、2枚が細いまま右1枠が空いていた。 */}
-      <div className="grid sm:grid-cols-2 gap-4 max-w-[760px] mx-auto">
+          sm:grid-cols-3 のままだったので、2枚が細いまま右1枠が空いていた。
+          2026-08-16 に「製作側スキャン依頼」を追加して3枚になったので3列へ戻した。 */}
+      <div className="grid sm:grid-cols-3 gap-4 max-w-[760px] mx-auto">
         {CONTACT_TYPES.filter((type) => type !== "listing").map((type) => {
           const card = HUB_CARDS.find((c) => c.type === type)!;
           return (
@@ -299,4 +308,5 @@ const CONTACT_TYPE_LABEL_EN: Record<(typeof CONTACT_TYPES)[number], string> = {
   request: "Request a location",
   listing: "List your space",
   license: "Data use & partnerships",
+  scan: "Scan request",
 };

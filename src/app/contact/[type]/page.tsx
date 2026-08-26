@@ -12,8 +12,16 @@ import { canCreateListing, canConvertToStudio, resolveListingPrefill, STUDIO_INT
 import { isFreeEmailDomain } from "@/lib/free-email-domains";
 import { convertToStudioAction } from "@/lib/auth-actions";
 
-/** 受付中の窓口だけ。CONTACT_TYPES と1:1（受付終了した種別は入れない＝URLは404）。 */
-const COPY: Record<(typeof CONTACT_TYPES)[number], { title: string; titleEn: string; lede: string; ledeEn: string }> = {
+/**
+ * 受付中の窓口のうち、この汎用ページで扱うもの。
+ * ⚠ scan（製作側スキャン依頼）は概算シミュレーターを併設する専用ページ
+ *   `src/app/contact/scan/page.tsx` を持つ（静的セグメントが動的 [type] より
+ *   優先されるのでここには来ない）。そのため Partial にして、
+ *   COPY に無い種別は 404 で弾く。
+ */
+const COPY: Partial<
+  Record<(typeof CONTACT_TYPES)[number], { title: string; titleEn: string; lede: string; ledeEn: string }>
+> = {
   request: {
     title: "ほしい物件追加",
     titleEn: "Request a location",
@@ -125,6 +133,8 @@ export default async function ContactTypePage({
   if (!(CONTACT_TYPES as readonly string[]).includes(type)) notFound();
   const t = type as (typeof CONTACT_TYPES)[number];
   const copy = COPY[t];
+  // 専用ページを持つ種別（scan）はここに落ちてこないが、来た場合は404にする。
+  if (!copy) notFound();
 
   const locale = await getLocale();
   const en = locale === "en";

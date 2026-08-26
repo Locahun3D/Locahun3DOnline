@@ -16,7 +16,7 @@ import { z } from "zod";
  *   読み出しは safeParse なので、enum から外すと**保存済みの問い合わせが
  *   管理画面から黙って消える**（履歴の消失＝復旧不能）。
  */
-export const CONTACT_TYPES = ["request", "listing", "license"] as const;
+export const CONTACT_TYPES = ["request", "listing", "license", "scan"] as const;
 /** 受付終了したが、保存済みレコードのために型として残す種別。 */
 export const LEGACY_CONTACT_TYPES = ["bug", "general"] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number] | (typeof LEGACY_CONTACT_TYPES)[number];
@@ -32,6 +32,11 @@ export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   // 「案件による」ため、既存の一般問い合わせ(general)とは分けて受け付ける
   // （2026-07-23新設）。
   license: "データ利用・提携のご相談",
+  // 撮影・映像制作のためのロケ地/施設スキャンの依頼窓口（2026-08-16新設）。
+  // /contact/scan に概算シミュレーターを併設し、選択内容を本文へ添えて届く。
+  // ⚠ 表記は本人指示どおり「製作側」。社内の他所は「制作」表記が多いので、
+  //   統一するかどうかは本人確認事項（勝手に直さない）。
+  scan: "製作側スキャン依頼",
 };
 
 export const contactStatusSchema = z.enum(["new", "read", "archived"]);

@@ -34,7 +34,8 @@ const ja = {
   //   デモ体験・料金シミュレーターは料金ページ内にあるのでラベルも併記に変えた。
   //   旧 "nav.demo" キーは削除済み（ナビ項目も 6→5 に減った）。
   "nav.pricing": "料金・デモ",
-  "nav.about": "サービスについて",
+  // ⚠ 2026-08-16: 「サービスについて」はナビ項目ごと廃止（内容はトップ本体へ移設）。
+  //   キーも未使用になったので削除した。
   // 実績＆ブログ は web.locahun3d.com/works/ のまま（URL不変・本人指示 2026-08-16）。
   // ラベルはスキャンサイトのヘッダーと同一表記。
   "nav.works": "実績＆ブログ",
@@ -89,7 +90,6 @@ const ja = {
 const en: Record<keyof typeof ja, string> = {
   "nav.properties": "Browse Locations",
   "nav.pricing": "Pricing & Demo",
-  "nav.about": "About",
   "nav.works": "Work & Blog",
   "nav.contact": "Contact",
   "nav.menuOpen": "Open menu",

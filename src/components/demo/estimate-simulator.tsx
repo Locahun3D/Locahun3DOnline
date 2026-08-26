@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 
 /**
@@ -81,7 +81,21 @@ const OPT_OPTIONS: Opt[] = [
   { value: 1, ja: "前日・別日に撮影（+ ¥40,000）", en: "Shot on a prior / separate day (+ ¥40,000)" },
 ];
 
-export default function EstimateSimulator({ en }: { en: boolean }) {
+/** 選択内容＋概算のまとめ。問い合わせ本文に添えるための素の文字列。 */
+export type EstimateSummary = string;
+
+export default function EstimateSimulator({
+  en,
+  /** CTA の遷移先。既定は /contact（EN: /en/contact）。同ページ内フォームへ
+   *  送りたい場合は "#scan-form" のようなアンカーを渡す。 */
+  ctaHref,
+  /** 選択が変わるたびに「選択内容＋概算」のまとめを親へ渡す（任意）。 */
+  onEstimate,
+}: {
+  en: boolean;
+  ctaHref?: string;
+  onEstimate?: (summary: EstimateSummary) => void;
+}) {
   const [scale, setScale] = useState(1);
   const [scan, setScan] = useState(0);
   const [method, setMethod] = useState(1);
@@ -143,6 +157,49 @@ export default function EstimateSimulator({ en }: { en: boolean }) {
       : `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WK_JP[d.getDay()]}） 納品予定`;
     return { placeholder: false, text };
   }, [date, scan, scale, method, en]);
+
+  /* ── 選択内容のまとめ ──
+     問い合わせフォームへ添えるための文字列。⚠ 金額・納期は上で計算済みの
+     price / delivery をそのまま文字にするだけ。ここで再計算しないこと
+     （計算式を二重に持つと片方だけ直して食い違う）。 */
+  const summary = useMemo(() => {
+    const pick = (opts: Opt[], v: number) => {
+      const x = opts.find((o) => o.value === v);
+      return x ? (en ? x.en : x.ja) : "";
+    };
+    const amount = price.contact
+      ? en
+        ? "Contact us (10+ locations)"
+        : "お問い合わせ（10 地点以上）"
+      : en
+        ? `${price.original} → 50% OFF: ¥ ${price.main}`
+        : `${price.original} → 50%OFF適用: ¥ ${price.main}`;
+    const rows: [string, string][] = en
+      ? [
+          ["Scale", pick(SCALE_OPTIONS, scale)],
+          ["Locations", pick(SCAN_OPTIONS, scan)],
+          ["Capture method", pick(METHOD_OPTIONS, method)],
+          ["On-site accompaniment", pick(OPT_OPTIONS, opt)],
+          ["Planned shoot date", date || "(not selected)"],
+          ["Estimate", amount],
+          ["Delivery", delivery.text],
+        ]
+      : [
+          ["撮影規模", pick(SCALE_OPTIONS, scale)],
+          ["スキャン地点数", pick(SCAN_OPTIONS, scan)],
+          ["取得方法", pick(METHOD_OPTIONS, method)],
+          ["撮影同行", pick(OPT_OPTIONS, opt)],
+          ["撮影予定日", date || "（未選択）"],
+          ["概算", amount],
+          ["納期", delivery.text],
+        ];
+    const head = en ? "[Estimate simulator]" : "【概算シミュレーターの選択内容】";
+    return [head, ...rows.map(([k, v]) => `${k}: ${v}`)].join("\n");
+  }, [en, scale, scan, method, opt, date, price, delivery]);
+
+  useEffect(() => {
+    onEstimate?.(summary);
+  }, [summary, onEstimate]);
 
   const labelCls = "mono text-[10px] tracking-[0.28em] uppercase text-muted";
   const fieldCls =
@@ -309,12 +366,23 @@ export default function EstimateSimulator({ en }: { en: boolean }) {
         </div>
 
         <div className="flex flex-col gap-3.5 lg:max-w-[280px] w-full">
-          <Link
-            href={en ? "/en/contact" : "/contact"}
-            className="min-h-[46px] px-4 py-3 inline-flex items-center justify-center bg-accent text-white border border-accent mono text-[11px] tracking-[0.22em] uppercase font-medium leading-[1.2] hover:opacity-90 transition-opacity"
-          >
-            {en ? "Request a detailed quote →" : "詳細見積を依頼 →"}
-          </Link>
+          {/* 同ページ内にフォームがある場合（/contact/scan）はアンカーで下へ運ぶ。
+              ページ遷移だと選択内容が消えるため Link ではなく素の <a>。 */}
+          {ctaHref?.startsWith("#") ? (
+            <a
+              href={ctaHref}
+              className="min-h-[46px] px-4 py-3 inline-flex items-center justify-center bg-accent text-white border border-accent mono text-[11px] tracking-[0.22em] uppercase font-medium leading-[1.2] hover:opacity-90 transition-opacity"
+            >
+              {en ? "Request a detailed quote →" : "詳細見積を依頼 →"}
+            </a>
+          ) : (
+            <Link
+              href={ctaHref ?? (en ? "/en/contact" : "/contact")}
+              className="min-h-[46px] px-4 py-3 inline-flex items-center justify-center bg-accent text-white border border-accent mono text-[11px] tracking-[0.22em] uppercase font-medium leading-[1.2] hover:opacity-90 transition-opacity"
+            >
+              {en ? "Request a detailed quote →" : "詳細見積を依頼 →"}
+            </Link>
+          )}
           <span className="mono text-[10px] tracking-[0.16em] uppercase text-muted leading-[1.85] text-center text-balance">
             {en ? "— Contact us with these settings —" : "— この条件でお問い合わせいただけます —"}
           </span>

@@ -16,24 +16,16 @@ import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries"
  * ⚠ works の URL は不変（本人指示 2026-08-16）。X で共有済みのリンクを全部生かすため、
  *   web.locahun3d.com/works/ のまま。EN は /en/works/。
  */
-const NAV: {
-  href: string;
-  key: DictKey;
-  code: string;
-  external?: boolean;
-  /** トップページ内アンカー。EN は "/en#service" のように locale 接頭辞を先頭に付ける。 */
-  anchor?: boolean;
-}[] = [
+const NAV: { href: string; key: DictKey; code: string; external?: boolean }[] = [
   { href: "/properties", key: "nav.properties", code: "0.1" },
-  // ⚠ 2026-08-16: /demo を独立項目として持たない。デモ体験＋料金シミュレーターは
-  //   /pricing に統合した（本人指示「料金とデモまとめて」）。ナビは5項目。
+  // ⚠ 2026-08-16: /demo を独立項目として持たない。デモ体験は /pricing に統合した
+  //   （本人指示「料金とデモまとめて」）。
   { href: "/pricing", key: "nav.pricing", code: "0.2" },
-  // ⚠ 2026-08-16: 「サービスについて」はページを廃し、トップ内の見出し（#service）へ昇格
-  //   （本人指示）。EN は /en#service。localizedHref に通すと "/en/#service" になるので
-  //   ここだけ locale で直に出し分ける（`anchor: true` で下の分岐に入る）。
-  { href: "/#service", key: "nav.about", code: "0.3", anchor: true },
-  { href: "/works/index.html", key: "nav.works", code: "0.4", external: true },
-  { href: "/contact", key: "nav.contact", code: "0.5" },
+  // ⚠ 2026-08-16: 「サービスについて」はナビ項目ごと廃止（本人指示）。内容はトップ本体
+  //   （旧 /about をそのまま移設）になった。/about・/en/about は /#service への
+  //   恒久リダイレクトとして残っているが、ナビからは辿らせない。ナビは4項目。
+  { href: "/works/index.html", key: "nav.works", code: "0.3", external: true },
+  { href: "/contact", key: "nav.contact", code: "0.4" },
 ];
 
 export default async function SiteHeader() {
@@ -122,7 +114,8 @@ export default async function SiteHeader() {
 
   // ⚠ 2026-08-16: 「スキャン / オンライン」トグルは撤去した。2サイト分岐を廃止し
   //    locahun3d.com へ一本化する方針（本人指示）のため、切り替える先が無くなった。
-  //    代わりに works（実績＆ブログ）をナビに置いている（/demo は /pricing へ統合）。
+  //    代わりに works（実績＆ブログ）をナビに置いている（/demo は /pricing へ、
+  //    /about はトップ本体へ統合し、どちらもナビ項目としては持たない）。
   //    これに伴い中央グリッドは「ブランド単体を中央」に戻してある。
 
   return (
@@ -194,18 +187,7 @@ export default async function SiteHeader() {
                     {t(n.key)}
                   </a>
                 ) : (
-                  <Link
-                    key={n.href}
-                    // トップ内アンカーは "/#service" → EN は "/en#service"。
-                    href={
-                      n.anchor
-                        ? locale === "en"
-                          ? `/en${n.href.slice(1)}`
-                          : n.href
-                        : lh(n.href)
-                    }
-                    className={cls}
-                  >
+                  <Link key={n.href} href={lh(n.href)} className={cls}>
                     {code}
                     {t(n.key)}
                   </Link>
