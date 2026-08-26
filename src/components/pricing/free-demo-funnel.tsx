@@ -1,4 +1,5 @@
-const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
+// showcase=1 = 自動機能ツアー（本人指示 2026-08-16。未対応ビューアーでは無視され通常デモ）
+const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&showcase=1";
 
 /**
  * 料金ページ ヒーロー直下 / プランの上に置く「無料体験ファネル」。

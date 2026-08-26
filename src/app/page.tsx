@@ -78,9 +78,11 @@ type Bi = [string, string];
  * 文言・画像・リンクは /about のものをそのまま。CSS も共有の ABOUT07_CSS。
  * ────────────────────────────────────────────── */
 const SCAN_URL = "https://web.locahun3d.com/";
-// ⚠ デモ誘導はビューアー直行ではなく説明ページ /pricing へ（本人判断 2026-08-16）。
-//   直行だと357MBのシーンが無説明で読み込まれ、特にスマホで体験が悪い。
-//   ビューアーへの直リンクは /pricing の FreeDemoFunnel（説明つき）の中の1箇所に集約。
+// ⚠ デモ誘導は「機能ツアー付きデモ」へ（本人指示 2026-08-16）。showcase=1 は
+//   ビューアーの自動ツアーモード（実装作業中）。現行本番ビューアーは未知の
+//   パラメータを無視するため、ツアーが乗る前でも普通のデモとして安全に動く。
+const DEMO_TOUR_URL =
+  "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&showcase=1";
 
 /** 立場別セグメント（/about の SEGMENTS） */
 const SERVICE_SEGMENTS: Array<{
@@ -115,7 +117,7 @@ const SERVICE_SEGMENTS: Array<{
     ],
     actions: [
       { href: "/properties", text: ["物件を探す →", "Browse the catalog →"], primary: true },
-      { href: "/pricing", text: ["デモを見る", "See the demo"] },
+      { href: DEMO_TOUR_URL, text: ["デモツアーを見る", "Take the demo tour"], external: true },
     ],
   },
   {
@@ -144,7 +146,7 @@ const SERVICE_SEGMENTS: Array<{
     ],
     actions: [
       { href: "/contact/listing", text: ["掲載を依頼する →", "Request a listing →"], primary: true },
-      { href: "/pricing", text: ["デモを見る", "See the demo"] },
+      { href: DEMO_TOUR_URL, text: ["デモツアーを見る", "Take the demo tour"], external: true },
     ],
   },
   {
@@ -736,9 +738,9 @@ export default async function HomePage() {
             {/* ⚠ デモはビューアー本体へ直接（旧 /about と同じ）。/pricing 内にも
                 デモ導線はあるが、ここで /pricing を2つ並べると同じ行き先の
                 ボタンが重複するため。 */}
-            <Link className="btn" href={lh("/pricing")}>
-              {en ? "▶ See the demo — no sign-up" : "▶ デモを見る — 登録不要"}
-            </Link>
+            <a className="btn" href={DEMO_TOUR_URL} target="_blank" rel="noopener">
+              {en ? "▶ Demo tour — no sign-up" : "▶ デモツアーを見る — 登録不要"}
+            </a>
             <Link className="btn" href={lh("/properties")}>
               {en ? "Browse the catalog →" : "物件を探す →"}
             </Link>

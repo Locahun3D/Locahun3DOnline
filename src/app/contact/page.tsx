@@ -3,7 +3,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { CONTACT_TYPES, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 
-const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1";
+// showcase=1 = 自動機能ツアー（本人指示 2026-08-16。未対応ビューアーでは無視され通常デモ）
+const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&showcase=1";
 
 export async function generateMetadata() {
   const locale = await getLocale();
