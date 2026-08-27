@@ -53,6 +53,10 @@ const EXTRA_CSS = `
    1カラムへ落とすので狭幅は問題ない。 */
 .about07 .cta-panel .segment-actions{ flex-direction:column; align-items:stretch; }
 @media (max-width:980px){ .about07 .cta-panel .segment-actions{ flex-direction:row; } }
+/* ⚠ 大型モニターでは .wrap ごと 1900px 超まで広がり、パネルの中身が左端に
+   張り付いて見える（本人指摘 2026-08-27）。CTA だけは最大幅を切って中央に置く。
+   1360px は本文グリッド（1160px）より一回り広く、通常のPCでは従来と同じ見た目。 */
+.about07 .cta-panel{ max-width:1360px; margin-inline:auto; }
 `;
 
 export async function generateMetadata() {
