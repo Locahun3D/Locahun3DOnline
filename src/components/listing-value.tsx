@@ -18,8 +18,29 @@
  * ⚠ `bg-card` はこのプロジェクトに定義が無く（globals.css の @theme に
  *   --color-card は無い）背景が付かない。カードは `bg-white` を使うこと。
  */
+import { Fragment } from "react";
 import Link from "next/link";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+
+/* 日本語の説明文は「句点（。）ごとに改行」する（CLAUDE.md 日本語タイポルール）。
+   最終文の後には入れない。全端末共通の意図改行なので素の <br />。
+   英語は句点が無いので素通りする。文言は変えない。 */
+function sentenceBreaks(text: string) {
+  const parts = text.split("。");
+  const tail = parts.pop() ?? "";
+  if (parts.length === 0) return text;
+  return (
+    <>
+      {parts.map((s, i) => (
+        <Fragment key={i}>
+          {s}。
+          {i < parts.length - 1 || tail !== "" ? <br /> : null}
+        </Fragment>
+      ))}
+      {tail}
+    </>
+  );
+}
 
 const FREE_UNTIL = "2026年12月31日";
 /** データ販売分配率。/terms/listing-revenue-share と必ず一致させること。 */
@@ -93,9 +114,12 @@ export default function ListingValue({ en }: { en: boolean }) {
             </>
           ) : (
             <>
-              どちらも無料です。期限が付くのはスキャン計測費だけで、
-              <br className="pc" />
-              掲載そのものに期限はありません。
+              {/* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。全端末共通なので素の <br />。
+                  文中（「だけで、」）にあった <br className="pc" /> は、句点以外では
+                  折らないルールに合わせて撤去し、自然折り返しに任せる。 */}
+              どちらも無料です。
+              <br />
+              期限が付くのはスキャン計測費だけで、掲載そのものに期限はありません。
             </>
           )}
         </p>
@@ -114,7 +138,7 @@ export default function ListingValue({ en }: { en: boolean }) {
                   {c.term}
                 </span>
               </div>
-              <p className="text-[13px] text-muted leading-[1.85]">{c.body}</p>
+              <p className="text-[13px] text-muted leading-[1.85]">{sentenceBreaks(c.body)}</p>
             </div>
           ))}
         </div>
@@ -138,7 +162,7 @@ export default function ListingValue({ en }: { en: boolean }) {
             <div key={b.no} className="border border-line bg-white px-6 py-5">
               <div className="mono text-[10px] tracking-[0.24em] text-accent mb-2">{b.no}</div>
               <div className="text-[14px] font-bold leading-[1.6] mb-1.5">{b.title}</div>
-              <p className="text-[13px] text-muted leading-[1.9]">{b.body}</p>
+              <p className="text-[13px] text-muted leading-[1.9]">{sentenceBreaks(b.body)}</p>
             </div>
           ))}
         </div>

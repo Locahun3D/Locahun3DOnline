@@ -252,9 +252,9 @@ export default async function ContactTypePage({
                 <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? "Listings are created from a studio account. Sign up (free, no review) and you can start a listing page right away — we handle the 3D scan."
-                    : "掲載ページはスタジオ用アカウントから作成します。登録は無料・審査なしで、"}
-                  {!en && <br className="pc" />}
-                  {!en && "すぐに掲載ページを作り始められます。3Dスキャンはこちらで対応します。"}
+                    : sentenceBreaks(
+                        "掲載ページはスタジオ用アカウントから作成します。登録は無料・審査なしで、すぐに掲載ページを作り始められます。3Dスキャンはこちらで対応します。"
+                      )}
                 </p>
                 <Link
                   href={lh(`/sign-up?intent=${STUDIO_INTENT}`)}
@@ -272,9 +272,9 @@ export default async function ContactTypePage({
                 <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? "Fill in everything except the 3D scan — we shoot that. When you're done, the editor takes you here to request publication."
-                    : "3Dスキャン以外の情報を入力してください（撮影はこちらで行います）。"}
-                  {!en && <br className="pc" />}
-                  {!en && "入力が終わったら、エディターからこのページに戻って公開を申請します。"}
+                    : sentenceBreaks(
+                        "3Dスキャン以外の情報を入力してください（撮影はこちらで行います）。入力が終わったら、エディターからこのページに戻って公開を申請します。"
+                      )}
                 </p>
                 <Link
                   href={lh("/admin/properties")}
@@ -294,7 +294,9 @@ export default async function ContactTypePage({
                 <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? `You're signed in with a company address (${user?.email}). No second account needed — switch this one to a studio account and start a listing page right away.`
-                    : `会社のメールアドレス（${user?.email}）でログイン中です。別のアカウントを作る必要はありません。このアカウントをスタジオアカウントに切り替えると、すぐに掲載ページを作り始められます。`}
+                    : sentenceBreaks(
+                        `会社のメールアドレス（${user?.email}）でログイン中です。別のアカウントを作る必要はありません。このアカウントをスタジオアカウントに切り替えると、すぐに掲載ページを作り始められます。`
+                      )}
                 </p>
                 <form action={convertToStudioAction}>
                   <button className="mt-5 inline-block bg-accent text-white px-6 py-3 text-[14px] font-bold hover:bg-accent/85 transition cursor-pointer">
@@ -304,7 +306,7 @@ export default async function ContactTypePage({
                 <p className="mt-3 text-[12.5px] text-muted leading-[1.8]">
                   {en
                     ? "Free, no review. Viewing and purchases stay exactly as they are."
-                    : "無料・審査なし。閲覧や購入の履歴はそのまま引き継がれます。"}
+                    : sentenceBreaks("無料・審査なし。閲覧や購入の履歴はそのまま引き継がれます。")}
                 </p>
               </>
             ) : (
@@ -315,9 +317,9 @@ export default async function ContactTypePage({
                 <p className="text-[13.5px] leading-[1.9] text-muted">
                   {en
                     ? "Your current account type cannot create listings. Sign up separately as a studio — it's free and takes effect immediately."
-                    : "現在のアカウント種別では掲載ページを作成できません。"}
-                  {!en && <br className="pc" />}
-                  {!en && "スタジオ用に別途アカウントをご登録ください（無料・登録後すぐ利用可）。"}
+                    : sentenceBreaks(
+                        "現在のアカウント種別では掲載ページを作成できません。スタジオ用に別途アカウントをご登録ください（無料・登録後すぐ利用可）。"
+                      )}
                 </p>
                 {/* ⚠ ログイン中に /sign-up へ送っても Clerk がサインアップ画面を出さず
                     マイページへ弾く（ユーザー報告）。先にサインアウトしてから
@@ -343,7 +345,9 @@ export default async function ContactTypePage({
             <p className="text-[13.5px] leading-[1.9] text-muted">
               {en
                 ? "Company, property name and address are filled in from your listing. Tell us your preferred scan dates, a contact for the day, and anything else we should know — we'll shoot the 3D data and publish after a check."
-                : "会社名・物件名・所在地は掲載ページの内容を入れてあります。スキャンの希望日・当日のご連絡先と、ご要望やご質問があれば本文にお書きください。3Dデータの撮影と確認のうえ公開します。"}
+                : sentenceBreaks(
+                    "会社名・物件名・所在地は掲載ページの内容を入れてあります。スキャンの希望日・当日のご連絡先と、ご要望やご質問があれば本文にお書きください。3Dデータの撮影と確認のうえ公開します。"
+                  )}
             </p>
             <p className="mt-3 text-[12.5px] text-muted leading-[1.8]">
               {en

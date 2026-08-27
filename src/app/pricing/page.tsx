@@ -246,9 +246,19 @@ export default async function PricingPage({
             {en ? "Token expiry" : "トークンの有効期限"}
           </div>
           <p>
-            {en
-              ? "Tokens expire 1 year after they are granted, resetting oldest-first. Unlocking a scene costs tokens once — you can revisit that exact scene free for 1 year afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
-              : "トークンは付与（追加）から 1 年で有効期限。期限が来たものから順にリセット（失効）します。シーンのアンロックにトークンを消費するのは初回のみで、その後 1 年間は同じシーンを無償で再視聴できます。1 物件に複数シーンがある場合（例: 4 部屋あるスタジオ）は、シーンごとに個別に消費されます。"}
+            {en ? (
+              "Tokens expire 1 year after they are granted, resetting oldest-first. Unlocking a scene costs tokens once — you can revisit that exact scene free for 1 year afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
+            ) : (
+              /* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。全端末共通なので素の <br />。 */
+              <>
+                トークンは付与（追加）から 1 年で有効期限。
+                <br />
+                期限が来たものから順にリセット（失効）します。
+                <br />
+                シーンのアンロックにトークンを消費するのは初回のみで、その後 1 年間は同じシーンを無償で再視聴できます。
+                <br />1 物件に複数シーンがある場合（例: 4 部屋あるスタジオ）は、シーンごとに個別に消費されます。
+              </>
+            )}
           </p>
         </div>
         <div className="border-t border-line pt-5">
@@ -256,9 +266,18 @@ export default async function PricingPage({
             {en ? "Payment / upgrades" : "支払 / アップグレード"}
           </div>
           <p>
-            {en
-              ? "Credit card (Stripe). Team supports invoice billing. Individual ↔ Studio ↔ Team switch in one click, prorated by the day."
-              : "クレジットカード (Stripe)。Team は請求書払い対応。Individual ↔ Studio ↔ Team はワンクリック切替、差額は日割り。"}
+            {en ? (
+              "Credit card (Stripe). Team supports invoice billing. Individual ↔ Studio ↔ Team switch in one click, prorated by the day."
+            ) : (
+              /* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。全端末共通なので素の <br />。 */
+              <>
+                クレジットカード (Stripe)。
+                <br />
+                Team は請求書払い対応。
+                <br />
+                Individual ↔ Studio ↔ Team はワンクリック切替、差額は日割り。
+              </>
+            )}
           </p>
         </div>
         <div className="border-t border-line pt-5">
@@ -280,7 +299,10 @@ export default async function PricingPage({
                 <a href="https://web.locahun3d.com/locahun3d_contact.html" className="text-accent hover:underline">
                   お問い合わせ
                 </a>{" "}
-                から。現在はキャンペーンにより掲載無料です。
+                {/* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。 */}
+                から。
+                <br />
+                現在はキャンペーンにより掲載無料です。
               </>
             )}
           </p>

@@ -13,6 +13,28 @@
  * ⚠ 判定の実体は lib/free-email-domains.ts。ここに挙げる例はその代表であって
  *   一覧ではない（新しいフリーメールは今後も出るので「等」を外さない）。
  */
+import { Fragment } from "react";
+
+/* 日本語の説明文は「句点（。）ごとに改行」する（CLAUDE.md 日本語タイポルール）。
+   最終文の後には入れない。全端末共通の意図改行なので素の <br />。
+   英語は句点が無いので素通りする。文言は変えない。 */
+function sentenceBreaks(text: string) {
+  const parts = text.split("。");
+  const tail = parts.pop() ?? "";
+  if (parts.length === 0) return text;
+  return (
+    <>
+      {parts.map((s, i) => (
+        <Fragment key={i}>
+          {s}。
+          {i < parts.length - 1 || tail !== "" ? <br /> : null}
+        </Fragment>
+      ))}
+      {tail}
+    </>
+  );
+}
+
 export default function SignupRequirements({
   en,
   /** 既にログイン中の人向け。別アドレスが必要な旨を足す。 */
@@ -37,7 +59,7 @@ export default function SignupRequirements({
             <p className="text-[12.5px] text-muted leading-[1.85] mt-0.5">
               {en
                 ? "It's the first question after sign-up. Personal accounts cannot create listing pages."
-                : "登録直後に聞かれます。「個人」で作ると掲載ページを作成できません。"}
+                : sentenceBreaks("登録直後に聞かれます。「個人」で作ると掲載ページを作成できません。")}
             </p>
           </div>
         </li>
@@ -66,13 +88,22 @@ export default function SignupRequirements({
               </div>
             </div>
             <p className="text-[12.5px] text-muted leading-[1.85] mt-2">
-              {en
-                ? "Gmail, Outlook, Yahoo and the like cannot be used — the address is how we confirm the studio exists."
-                : "Gmail・Outlook・Yahooメール等はご利用いただけません。掲載主が実在することの確認に使うためです。"}
-              {needsDifferentAddress &&
-                (en
-                  ? " Accounts are identified by email, so use an address different from the one you're signed in with."
-                  : "なお、アカウントはメールアドレスで識別されるため、今ログイン中のものとは別のアドレスをご用意ください。")}
+              {en ? (
+                <>
+                  Gmail, Outlook, Yahoo and the like cannot be used — the address is how we
+                  confirm the studio exists.
+                  {needsDifferentAddress &&
+                    " Accounts are identified by email, so use an address different from the one you're signed in with."}
+                </>
+              ) : (
+                // 句点ごとに改行するため、追記分も1本の文字列にしてから分割する。
+                sentenceBreaks(
+                  "Gmail・Outlook・Yahooメール等はご利用いただけません。掲載主が実在することの確認に使うためです。" +
+                    (needsDifferentAddress
+                      ? "なお、アカウントはメールアドレスで識別されるため、今ログイン中のものとは別のアドレスをご用意ください。"
+                      : "")
+                )
+              )}
             </p>
           </div>
         </li>
