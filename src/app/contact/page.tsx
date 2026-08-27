@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
@@ -9,6 +10,26 @@ const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&sh
 export async function generateMetadata() {
   const locale = await getLocale();
   return { title: locale === "en" ? "Contact｜Locahun 3D" : "お問い合わせ｜ロケハン3D" };
+}
+
+/* 日本語の説明文は「句点（。）ごとに改行」する（本人指示 2026-08-27）。
+   最終文の後には入れない。全端末共通の意図改行なので素の <br />。
+   英語は句点が無いので素通りする（EN は自然折り返しのまま）。文言は変えない。 */
+function sentenceBreaks(text: string) {
+  const parts = text.split("。");
+  const tail = parts.pop() ?? "";
+  if (parts.length === 0) return text;
+  return (
+    <>
+      {parts.map((s, i) => (
+        <Fragment key={i}>
+          {s}。
+          {i < parts.length - 1 || tail !== "" ? <br /> : null}
+        </Fragment>
+      ))}
+      {tail}
+    </>
+  );
 }
 
 const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; goEn: string }[] = [
@@ -92,7 +113,11 @@ export default async function ContactHubPage() {
           </span>
         </div>
         <p className="text-[12.5px] text-muted leading-[1.85] mb-3 max-w-[56ch]">
-          {en ? HUB_CARDS.find((c) => c.type === "listing")!.descEn : HUB_CARDS.find((c) => c.type === "listing")!.desc}
+          {sentenceBreaks(
+            en
+              ? HUB_CARDS.find((c) => c.type === "listing")!.descEn
+              : HUB_CARDS.find((c) => c.type === "listing")!.desc
+          )}
         </p>
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
           {(en ? HUB_CARDS.find((c) => c.type === "listing")!.goEn : HUB_CARDS.find((c) => c.type === "listing")!.go)} →
@@ -118,7 +143,7 @@ export default async function ContactHubPage() {
                 {en ? CONTACT_TYPE_LABEL_EN[type] : CONTACT_TYPE_LABEL[type]}
               </div>
               <p className="text-[12px] text-muted leading-[1.8] mb-3">
-                {en ? card.descEn : card.desc}
+                {sentenceBreaks(en ? card.descEn : card.desc)}
               </p>
               <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
                 {(en ? card.goEn : card.go)} →
@@ -140,9 +165,11 @@ export default async function ContactHubPage() {
           {en ? "Bring your own scan" : "持ち込みスキャン"}
         </div>
         <p className="text-[12px] text-muted leading-[1.8] mb-3 max-w-[56ch]">
-          {en
-            ? "Captured a scan of a real space yourself? We negotiate rights with the facility and sell it on Locahun 3D, sharing the revenue with you."
-            : "あなたが撮影したスキャンデータを、ロケハン3Dが施設と権利調整のうえ販売し、売上を分配するプログラムです。"}
+          {sentenceBreaks(
+            en
+              ? "Captured a scan of a real space yourself? We negotiate rights with the facility and sell it on Locahun 3D, sharing the revenue with you."
+              : "あなたが撮影したスキャンデータを、ロケハン3Dが施設と権利調整のうえ販売し、売上を分配するプログラムです。"
+          )}
         </p>
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
           {en ? "Apply" : "申請フォームへ"} →

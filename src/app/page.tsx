@@ -89,6 +89,32 @@ export async function generateMetadata() {
 type Bi = [string, string];
 
 /* ──────────────────────────────────────────────
+ * 日本語の説明文は「句点（。）ごとに改行」する（本人指示 2026-08-27
+ * 「文章ごとの改行になっていないとわかりずらい」）。
+ *  - 最終文の後には改行を入れない。
+ *  - 全端末共通の意図改行なので `<br className="pc">` ではなく素の `<br />`。
+ *    390px で1文が2行に折り返すのは正常（句点改行は保たれる）。
+ *  - 英語は句点が無いので素通りする（EN は自然折り返しのまま）。
+ *  - 文言そのものは変えない。改行の挿入だけ。
+ * ────────────────────────────────────────────── */
+function sentenceBreaks(text: string) {
+  const parts = text.split("。");
+  const tail = parts.pop() ?? "";
+  if (parts.length === 0) return text;
+  return (
+    <>
+      {parts.map((s, i) => (
+        <Fragment key={i}>
+          {s}。
+          {i < parts.length - 1 || tail !== "" ? <br /> : null}
+        </Fragment>
+      ))}
+      {tail}
+    </>
+  );
+}
+
+/* ──────────────────────────────────────────────
  * ここから下は 2026-08-16 に /about から移設した「サービスについて」節
  * （本人指示: /about を独立ページとしてやめ、トップ内の見出しへ昇格）。
  * 文言・画像・リンクは /about のものをそのまま。CSS も共有の ABOUT07_CSS。
@@ -487,9 +513,11 @@ export default async function HomePage() {
               )}
             </h1>
             <p className="lead">
-              {en
-                ? "Locahun3D scans real locations into 3DGS (3D Gaussian Splatting) data and lists them on this catalog. You can check a space's size, ceiling height and lighting without visiting, and buy the 3D data itself when you need it."
-                : "ロケハン3D は、実在のロケ地を 3DGS（3D Gaussian Splatting）データ化してカタログに掲載しているサービスです。現地に行かなくても空間の広さ・天井高・光の入り方を確認でき、必要なら 3D データそのものを購入できます。"}
+              {sentenceBreaks(
+                en
+                  ? "Locahun3D scans real locations into 3DGS (3D Gaussian Splatting) data and lists them on this catalog. You can check a space's size, ceiling height and lighting without visiting, and buy the 3D data itself when you need it."
+                  : "ロケハン3D は、実在のロケ地を 3DGS（3D Gaussian Splatting）データ化してカタログに掲載しているサービスです。現地に行かなくても空間の広さ・天井高・光の入り方を確認でき、必要なら 3D データそのものを購入できます。"
+              )}
             </p>
           </div>
           <div className="segments">
@@ -513,7 +541,7 @@ export default async function HomePage() {
                       </Fragment>
                     ))}
                   </h2>
-                  <p>{t(s.desc)}</p>
+                  <p>{sentenceBreaks(t(s.desc))}</p>
                   <ul>
                     {s.points.map((p) => (
                       <li key={p[0]}>
@@ -576,7 +604,7 @@ export default async function HomePage() {
               {CORE.map((c) => (
                 <article className="feature" key={c.title[0]}>
                   <h3>{t(c.title)}</h3>
-                  <p>{t(c.desc)}</p>
+                  <p>{sentenceBreaks(t(c.desc))}</p>
                 </article>
               ))}
             </div>
@@ -606,16 +634,18 @@ export default async function HomePage() {
               )}
             </h2>
             <p>
-              {en
-                ? "From catalog search to sharing with your team, the steps that come before a shoot can all be handled online."
-                : "カタログ検索からチーム共有まで、撮影前の候補地検討に必要な流れをオンラインで進められます。"}
+              {sentenceBreaks(
+                en
+                  ? "From catalog search to sharing with your team, the steps that come before a shoot can all be handled online."
+                  : "カタログ検索からチーム共有まで、撮影前の候補地検討に必要な流れをオンラインで進められます。"
+              )}
             </p>
           </div>
           <div className="flow">
             {FLOW.map((f) => (
               <div className="flow-item" key={f.key}>
                 <strong>{t(f.title)}</strong>
-                <p>{t(f.desc)}</p>
+                <p>{sentenceBreaks(t(f.desc))}</p>
               </div>
             ))}
           </div>
@@ -654,7 +684,10 @@ export default async function HomePage() {
                 </>
               ) : (
                 <>
-                  スキャン自体は別サービスとして提供しています。詳細は{" "}
+                  {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
+                  スキャン自体は別サービスとして提供しています。
+                  <br />
+                  詳細は{" "}
                   <a href={SCAN_URL} target="_blank" rel="noopener">
                     web.locahun3d.com
                   </a>{" "}
@@ -676,7 +709,7 @@ export default async function HomePage() {
                   <h2>
                     <span className="w">{t(s.title)}</span>
                   </h2>
-                  <p>{t(s.desc)}</p>
+                  <p>{sentenceBreaks(t(s.desc))}</p>
                 </div>
               </article>
             ))}
@@ -700,7 +733,7 @@ export default async function HomePage() {
               <article className={d.img ? "feature detail" : "feature"} key={d.key}>
                 <div>
                   <h3>{t(d.label)}</h3>
-                  <p>{t(d.desc)}</p>
+                  <p>{sentenceBreaks(t(d.desc))}</p>
                   {d.link && (
                     <Link className="detail-link" href={lh(d.link.href)}>
                       {t(d.link.text)}
@@ -745,9 +778,11 @@ export default async function HomePage() {
               )}
             </h2>
             <p>
-              {en
-                ? "Four plans: Free / Individual / Studio / Team. Walkthrough viewing is token-based, and annual billing saves 20%. The demo requires no sign-up."
-                : "プランは Free / Individual / Studio / Team の 4 段階。ウォークスルーの視聴はトークン制で、年払いは -20% です。デモは登録不要で視聴できます。"}
+              {sentenceBreaks(
+                en
+                  ? "Four plans: Free / Individual / Studio / Team. Walkthrough viewing is token-based, and annual billing saves 20%. The demo requires no sign-up."
+                  : "プランは Free / Individual / Studio / Team の 4 段階。ウォークスルーの視聴はトークン制で、年払いは -20% です。デモは登録不要で視聴できます。"
+              )}
             </p>
           </div>
           <div className="segment-actions">

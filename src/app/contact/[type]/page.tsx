@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getLocale } from "@/lib/i18n/server";
@@ -19,6 +20,26 @@ import { convertToStudioAction } from "@/lib/auth-actions";
  *   優先されるのでここには来ない）。そのため Partial にして、
  *   COPY に無い種別は 404 で弾く。
  */
+/* 日本語のリード文は「句点（。）ごとに改行」する（本人指示 2026-08-27）。
+   最終文の後には入れない。全端末共通の意図改行なので素の <br />。
+   英語は句点が無いので素通りする。文言は変えない。 */
+function sentenceBreaks(text: string) {
+  const parts = text.split("。");
+  const tail = parts.pop() ?? "";
+  if (parts.length === 0) return text;
+  return (
+    <>
+      {parts.map((s, i) => (
+        <Fragment key={i}>
+          {s}。
+          {i < parts.length - 1 || tail !== "" ? <br /> : null}
+        </Fragment>
+      ))}
+      {tail}
+    </>
+  );
+}
+
 const COPY: Partial<
   Record<(typeof CONTACT_TYPES)[number], { title: string; titleEn: string; lede: string; ledeEn: string }>
 > = {
@@ -203,7 +224,7 @@ export default async function ContactTypePage({
           </div>
         )}
         <p className="text-[14px] text-muted leading-[1.9] mb-10">
-          {en ? copy.ledeEn : copy.lede}
+          {sentenceBreaks(en ? copy.ledeEn : copy.lede)}
         </p>
 
         {/* ══ 掲載依頼の導線 ══

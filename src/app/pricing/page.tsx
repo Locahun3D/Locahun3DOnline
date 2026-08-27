@@ -128,8 +128,11 @@ export default async function PricingPage({
             </>
           ) : (
             <>
+              {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
               3DGS ウォークスルーは <em className="not-italic text-accent">トークン制</em>。
+              <br />
               スタジオの規模に応じてトークン消費が変わり、月の予算内で何件でも見られます。
+              <br />
               年払いで -20%、Studio が最もバランス良い選択肢です。
             </>
           )}
@@ -157,16 +160,26 @@ export default async function PricingPage({
           </>
         ) : (
           <>
+            {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
             すべての有料プランは、毎月の<strong className="text-ink">請求書を自動送付</strong>
-            （電子帳簿保存法・インボイス制度対応）。登録番号(T番号)は申込時に入力でき、請求書へ自動反映されます。
+            （電子帳簿保存法・インボイス制度対応）。
+            <br />
+            登録番号(T番号)は申込時に入力でき、請求書へ自動反映されます。
           </>
         )}
       </p>
       {user && (
         <p className="text-center mono text-[10px] text-muted mt-4 tracking-[0.1em]">
-          {en
-            ? "※ Payment integration is in progress. Plan changes apply instantly for now."
-            : "※ 決済連携は準備中です。現在はプラン変更が即時反映されます。"}
+          {en ? (
+            "※ Payment integration is in progress. Plan changes apply instantly for now."
+          ) : (
+            /* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */
+            <>
+              ※ 決済連携は準備中です。
+              <br />
+              現在はプラン変更が即時反映されます。
+            </>
+          )}
         </p>
       )}
 

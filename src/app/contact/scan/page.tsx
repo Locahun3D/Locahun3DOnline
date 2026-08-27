@@ -58,9 +58,18 @@ export default async function ContactScanPage() {
           {en ? "Scan request" : CONTACT_TYPE_LABEL.scan}
         </h1>
         <p className="text-[14px] text-muted leading-[1.9] mb-10">
-          {en
-            ? "Request a 3D scan of a location or facility for your shoot. Pick a shoot date and a few options for an instant ballpark — for a detailed quote, send it with the form below."
-            : "撮影・映像制作のためのロケ地・施設スキャンのご依頼を受け付けています。撮影日と各項目を選ぶと概算が出ます。詳細見積は下のフォームからご依頼ください。"}
+          {en ? (
+            "Request a 3D scan of a location or facility for your shoot. Pick a shoot date and a few options for an instant ballpark — for a detailed quote, send it with the form below."
+          ) : (
+            /* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */
+            <>
+              撮影・映像制作のためのロケ地・施設スキャンのご依頼を受け付けています。
+              <br />
+              撮影日と各項目を選ぶと概算が出ます。
+              <br />
+              詳細見積は下のフォームからご依頼ください。
+            </>
+          )}
         </p>
 
         <ScanRequest en={en} />
