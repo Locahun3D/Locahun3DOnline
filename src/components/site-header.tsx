@@ -305,7 +305,10 @@ export default async function SiteHeader() {
             className="flex items-center col-start-2 row-start-1 gap-1.5 pointer-events-auto"
           >
             <HeaderMark />
-            <span className="brand text-lg tracking-[0.01em] whitespace-nowrap">{brandName}</span>
+            {/* ⚠ relative -top-px は光学補正（2026-08-27 本人指摘「ロゴ、上下中央からずれてる」）。
+                ボックス中心はマークと一致していたが、Noto Sans JP のグリフが行内で
+                1px強下に沈み、マークより低く見えていた。数値でなく見た目で合わせる。 */}
+            <span className="brand text-lg tracking-[0.01em] whitespace-nowrap relative -top-px">{brandName}</span>
           </Link>
           {/* 列3は空のスペーサー（両端を同幅にしてブランドを中央に保つ）。
               ⚠ ここに EN を置かないこと。中央グリッドは absolute で画面端まで伸びるので、
