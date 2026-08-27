@@ -139,7 +139,6 @@ export default async function PricingPage({
       {/* Free demo funnel — walk a real scanned property, no sign-up required */}
       <FreeDemoFunnel
         signUpHref={lh("/sign-up")}
-        accountHref={lh("/account")}
         demoCover={demoCover}
         en={en}
         signedIn={!!user}

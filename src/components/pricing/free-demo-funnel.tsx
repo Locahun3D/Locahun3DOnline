@@ -8,13 +8,11 @@ const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&sh
  */
 export default function FreeDemoFunnel({
   signUpHref,
-  accountHref,
   demoCover,
   en,
   signedIn = false,
 }: {
   signUpHref: string;
-  accountHref: string;
   demoCover: { src: string; alt: string } | null;
   en: boolean;
   signedIn?: boolean;
@@ -52,21 +50,10 @@ export default function FreeDemoFunnel({
             >
               {en ? "▶ Walk the demo — no sign-up" : "▶ デモを歩く — 登録不要"}
             </a>
-            {signedIn ? (
-              <>
-                <a
-                  href={accountHref}
-                  className="block text-center px-4 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-ink hover:border-ink/60 transition"
-                >
-                  {en ? "Check your token balance →" : "マイページでトークン残高を確認 →"}
-                </a>
-                <span className="text-center text-[10.5px] text-muted">
-                  {en
-                    ? "You're already signed in"
-                    : "既にログイン済みです"}
-                </span>
-              </>
-            ) : (
+            {/* ⚠ ログイン済みのときの「マイページでトークン残高を確認→」ボタンと
+                「既にログイン済みです」の注記は 2026-08-27 に削除（本人指示
+                「ここの表示いらない」）。ログイン済みならデモボタンだけで足りる。 */}
+            {signedIn ? null : (
               <>
                 <a
                   href={signUpHref}

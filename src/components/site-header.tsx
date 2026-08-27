@@ -131,7 +131,18 @@ export default async function SiteHeader() {
       //    トグルの枠が縦に2.7px、ブランド文字が1px大きくなる
       //    （実測 390/820/1440 の全幅で再現。ユーザー報告「枠が拡大される」の正体）。
       //    横幅は一致していたため font-size だけ見ていては気づけなかった。
-      style={{ zoom: "calc(1 / var(--z))", lineHeight: 1.5, letterSpacing: "normal" }}
+      // ⚠ ヘッダー配下の accent は青 #1ea0c4 に固定（本人指示「ここの色、青だけにして」
+      //    → 2026-08-27「スマホのハンバーガーメニューが黄色」）。黒ヘッダーは
+      //    theme-online の外なので --color-accent がルート既定の #ffb454(アンバー)の
+      //    ままになり、ハンバーガーの線(bg-accent)やドロワー内リンク(text-accent)が
+      //    黄色く出ていた。CSS変数をサブツリーごと上書きして、ヘッダー内の
+      //    accent 系ユーティリティを全て青に落とす。
+      style={{
+        zoom: "calc(1 / var(--z))",
+        lineHeight: 1.5,
+        letterSpacing: "normal",
+        ["--color-accent" as string]: "#1ea0c4",
+      }}
       className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm"
     >
       {/* ⚠ スマホ実機(WebKit)対策のバックストップ。sticky＋zoom(1/--z)＋bg/95+blur の
