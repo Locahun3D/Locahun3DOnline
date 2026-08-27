@@ -63,7 +63,7 @@ export default function FreeDemoFunnel({
                     ? "Sign up free — get 6 tokens"
                     : "無料登録して 6 トークンを受け取る"}
                 </a>
-                <span className="text-center text-[10.5px] text-muted">
+                <span className="text-center text-[10.5px] max-[720px]:text-[12px] text-muted">
                   {en
                     ? "Free plan never expires — no card required"
                     : "Free プランは期限なし・カード登録なし"}

@@ -18,22 +18,27 @@ export default async function SiteFooter() {
             ? `© ${year} Locahun 3D — KWI Inc.`
             : `© ${year} ロケハン3D — KWI株式会社`}
         </div>
-        <nav className="flex flex-wrap gap-4 mono text-[10px] tracking-[0.18em] uppercase text-ink/70">
-          <Link href={lh("/terms/service")} className="hover:text-accent transition">
-            {en ? "Terms of Service" : "利用規約"}
-          </Link>
-          <Link href={lh("/privacy")} className="hover:text-accent transition">
-            {en ? "Privacy Policy" : "プライバシーポリシー"}
-          </Link>
-          <Link href={lh("/terms/tokushoho")} className="hover:text-accent transition">
-            {en ? "Commercial Disclosure" : "特定商取引法"}
-          </Link>
-          <Link href={lh("/terms/data-download")} className="hover:text-accent transition">
-            {en ? "Purchase Terms" : "データ購入規約"}
-          </Link>
-          <Link href={lh("/contact/listing")} className="hover:text-accent transition">
-            {en ? "List your location" : "掲載依頼"}
-          </Link>
+        {/* ⚠ スマホ(<720px)はタップ領域を 44px 確保する（Apple HIG / WCAG 2.5.5）。
+            文字サイズ 10px は意匠なので変えず、min-h + inline-flex で「押せる高さ」
+            だけを広げる。縦の gap は 8px 以上（隣接誤タップ防止）。
+            2026-08-27: 以前は html の zoom 0.7 でこのリンクが実効 7px / 高さ 12.6px
+            しか無かった。zoom を 1.0 に戻したうえで、ここも実寸で 44px にする。 */}
+        <nav className="flex flex-wrap gap-4 max-[720px]:gap-x-4 max-[720px]:gap-y-2 mono text-[10px] tracking-[0.18em] uppercase text-ink/70">
+          {[
+            { href: "/terms/service", label: en ? "Terms of Service" : "利用規約" },
+            { href: "/privacy", label: en ? "Privacy Policy" : "プライバシーポリシー" },
+            { href: "/terms/tokushoho", label: en ? "Commercial Disclosure" : "特定商取引法" },
+            { href: "/terms/data-download", label: en ? "Purchase Terms" : "データ購入規約" },
+            { href: "/contact/listing", label: en ? "List your location" : "掲載依頼" },
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={lh(l.href)}
+              className="hover:text-accent transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
+            >
+              {l.label}
+            </Link>
+          ))}
         </nav>
       </div>
 

@@ -86,12 +86,12 @@ export default function SimilarPropertySearch() {
               ? "Paste a reference page URL…"
               : "イメージに近いページのURLを貼り付け…"
           }
-          className="flex-1 min-w-0 border border-line rounded-md px-3 py-2 min-[768px]:max-[1200px]:py-1 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition"
+          className="flex-1 min-w-0 border border-line rounded-md px-3 py-2 max-[720px]:min-h-[44px] min-[768px]:max-[1200px]:py-1 text-[12px] sm:text-[13px] focus:outline-none focus:border-accent transition"
         />
         <button
           type="submit"
           disabled={pending}
-          className="shrink-0 px-3 sm:px-5 py-2 min-[768px]:max-[1200px]:py-1 mono text-[10px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.2em] uppercase bg-accent text-white hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+          className="shrink-0 px-3 sm:px-5 py-2 max-[720px]:min-h-[44px] min-[768px]:max-[1200px]:py-1 mono text-[10px] max-[720px]:text-[11px] sm:text-[11px] tracking-[0.08em] sm:tracking-[0.2em] uppercase bg-accent text-white hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
         >
           {pending ? "…" : en ? "Find →" : "探す →"}
         </button>

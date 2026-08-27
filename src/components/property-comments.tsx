@@ -566,7 +566,7 @@ export default function PropertyComments({
           </p>
           <Link
             href={en ? "/en/pricing" : "/pricing"}
-            className="inline-block mono text-[10.5px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
+            className="inline-block max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-center max-[720px]:min-h-[44px] mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
           >
             {en ? "View plans →" : "プランを見る →"}
           </Link>

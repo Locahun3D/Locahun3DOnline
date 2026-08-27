@@ -320,7 +320,7 @@ export default function PropertyDetailView({
        * ══════════════════════════════════════════════════ */}
       <div className="frame pt-6">
         <nav className="mono text-[10.5px] tracking-[0.24em] uppercase text-muted flex gap-2 items-center">
-          <Link href={lh("/properties")} className="text-accent hover:opacity-75 transition font-medium">
+          <Link href={lh("/properties")} className="text-accent hover:opacity-75 transition font-medium max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]">
             CATALOG
           </Link>
           <span>/</span>
@@ -348,11 +348,11 @@ export default function PropertyDetailView({
               }}
             />
             <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1">
-              <div className="mono text-[10.5px] tracking-[0.18em] uppercase text-white/55">
+              <div className="mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.18em] max-[720px]:tracking-[0.05em] uppercase text-white/55">
                 {slateRows.map((row) => (
                   <div
                     key={row.k}
-                    className="flex justify-between gap-3 py-2.5 border-b border-dashed border-white/[0.16]"
+                    className="flex justify-between max-[720px]:items-center gap-3 py-2.5 border-b border-dashed border-white/[0.16]"
                   >
                     <span>{row.k}</span>
                     {row.href ? (
@@ -360,7 +360,7 @@ export default function PropertyDetailView({
                         href={row.href}
                         target={row.href.startsWith("http") ? "_blank" : undefined}
                         rel={row.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                        className="font-normal text-right text-[#fafaf6] hover:text-accent transition break-all"
+                        className="font-normal text-right text-[#fafaf6] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-end max-[720px]:min-h-[44px] hover:text-accent transition break-all"
                       >
                         {row.v}
                       </a>
@@ -472,7 +472,7 @@ export default function PropertyDetailView({
           </div>
 
           {/* ── cover photo ── */}
-          <div className="relative min-h-[280px] lg:min-h-[440px] bg-[#14181c]">
+          <div className="relative min-h-[280px] max-[720px]:min-h-0 max-[720px]:aspect-[16/9] lg:min-h-[440px] bg-[#14181c]">
             {property.cover.src ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -685,7 +685,7 @@ export default function PropertyDetailView({
                   href={`https://www.google.com/maps/search/?api=1&query=${property.coords.lat},${property.coords.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-block mono text-[11px] tracking-[0.15em] uppercase text-accent hover:underline"
+                  className="mt-4 inline-block max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] mono text-[11px] tracking-[0.15em] uppercase text-accent hover:underline"
                 >
                   {en ? "Open in Google Maps →" : "Google Maps で開く →"}
                 </a>
@@ -937,7 +937,7 @@ export default function PropertyDetailView({
                       </span>
                       <a
                         href={`tel:${property.contactPhone}`}
-                        className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition"
+                        className="font-bold border-b border-ink/30 max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] hover:text-accent hover:border-accent transition"
                       >
                         {property.contactPhone}
                       </a>
@@ -950,7 +950,7 @@ export default function PropertyDetailView({
                       </span>
                       <a
                         href={`mailto:${property.contactEmail}`}
-                        className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                        className="font-bold border-b border-ink/30 max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] hover:text-accent hover:border-accent transition break-all"
                       >
                         {property.contactEmail}
                       </a>
@@ -969,7 +969,7 @@ export default function PropertyDetailView({
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-bold border-b border-ink/30 hover:text-accent hover:border-accent transition break-all"
+                        className="font-bold border-b border-ink/30 max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] hover:text-accent hover:border-accent transition break-all"
                       >
                         {property.contactWebsite}
                       </a>
@@ -1001,7 +1001,7 @@ export default function PropertyDetailView({
                     />
                   </div>
                   {hasContact && (
-                    <p className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted pt-2">
+                    <p className="mono text-[9.5px] max-[720px]:text-[11px] tracking-[0.2em] uppercase text-muted pt-2">
                       RESPONSE WITHIN 1 BUSINESS DAY
                     </p>
                   )}

@@ -115,7 +115,7 @@ export default function PlanCards({
           <button
             type="button"
             onClick={() => setMode("monthly")}
-            className={`px-5 py-2 mono text-[11px] tracking-[0.24em] uppercase transition ${
+            className={`px-5 py-2 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[11px] tracking-[0.24em] uppercase transition ${
               mode === "monthly" ? "bg-accent text-bg" : "text-muted hover:text-ink"
             }`}
           >
@@ -124,7 +124,7 @@ export default function PlanCards({
           <button
             type="button"
             onClick={() => setMode("annual")}
-            className={`px-5 py-2 mono text-[11px] tracking-[0.24em] uppercase transition ${
+            className={`px-5 py-2 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[11px] tracking-[0.24em] uppercase transition ${
               mode === "annual" ? "bg-accent text-bg" : "text-muted hover:text-ink"
             }`}
           >
@@ -144,7 +144,10 @@ export default function PlanCards({
             <div
               key={p.code}
               className={
-                "relative border p-2.5 sm:p-6 flex flex-col gap-2.5 sm:gap-4 " +
+                // ⚠ スマホ(<720px)は p-4(16px) 以上。以前は p-2.5(10px) だったが
+                //    html zoom 0.7 のときの実効 7px を前提にした値で、zoom 1.0 では
+                //    カード内が窮屈すぎた（2026-08-27 計測 minPad=10px）。
+                "relative border p-2.5 max-[720px]:p-4 sm:p-6 flex flex-col gap-2.5 sm:gap-4 " +
                 (p.accent
                   ? "border-accent bg-[#0e1a20]"
                   : "border-line bg-[#222]")
@@ -198,12 +201,14 @@ export default function PlanCards({
                     {locale === "en" ? "−20% with annual billing" : "年払いで -20%"}
                   </div>
                 )}
-                <p className="text-[10.5px] sm:text-[12px] text-muted mt-2 sm:mt-3 leading-[1.55] sm:leading-[1.65]">
+                {/* ⚠ スマホは 12px / 行間 1.6 を下回らせない（10.5px×zoom0.7＝7.35px
+                    だった名残。zoom 1.0 では 10.5px がそのまま出て読めない）。 */}
+                <p className="text-[10.5px] max-[720px]:text-[12px] sm:text-[12px] text-muted mt-2 sm:mt-3 leading-[1.55] max-[720px]:leading-[1.65] sm:leading-[1.65]">
                   {t(p.desc)}
                 </p>
               </div>
 
-              <ul className="text-[10.5px] sm:text-[12px] space-y-1 sm:space-y-1.5 leading-[1.5] sm:leading-[1.6] text-muted">
+              <ul className="text-[10.5px] max-[720px]:text-[12px] sm:text-[12px] space-y-1 max-[720px]:space-y-1.5 sm:space-y-1.5 leading-[1.5] max-[720px]:leading-[1.6] sm:leading-[1.6] text-muted">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-1.5 sm:gap-2">
                     <span className="text-accent mt-0.5">▸</span>
@@ -217,7 +222,9 @@ export default function PlanCards({
                   const planKey = p.code.toLowerCase();
                   const isCurrent = signedIn && currentPlan === planKey;
                   const cls =
-                    "block text-center w-full px-2 sm:px-4 py-2 sm:py-2.5 mono text-[9px] sm:text-[11px] tracking-[0.12em] sm:tracking-[0.22em] uppercase border transition " +
+                    // ⚠ 主要CTA。スマホは実寸 44px の高さを必ず確保する。
+                    "block text-center w-full px-2 sm:px-4 py-2 sm:py-2.5 mono text-[9px] max-[720px]:text-[11px] sm:text-[11px] tracking-[0.12em] max-[720px]:tracking-[0.1em] sm:tracking-[0.22em] uppercase border transition " +
+                    "max-[720px]:flex max-[720px]:items-center max-[720px]:justify-center max-[720px]:min-h-[44px] " +
                     (p.accent
                       ? "border-accent text-accent hover:bg-accent hover:text-bg"
                       : "border-line hover:border-ink");
@@ -236,7 +243,7 @@ export default function PlanCards({
                     return (
                       <Link
                         href={lh("/account/upgrade")}
-                        className="block text-center text-[11px] text-muted leading-[1.6] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition"
+                        className="block text-center text-[11px] text-muted leading-[1.6] border border-line px-3 py-2.5 max-[720px]:min-h-[44px] max-[720px]:flex max-[720px]:items-center max-[720px]:justify-center hover:border-accent hover:text-accent transition"
                       >
                         {locale === "en"
                           ? "Production accounts only — apply →"

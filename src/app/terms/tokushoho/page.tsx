@@ -80,7 +80,7 @@ export default async function TokushohoPage() {
       <div className="mt-10 text-center">
         <Link
           href={localizedHref("/", locale)}
-          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition"
+          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
         >
           ← トップに戻る
         </Link>
@@ -161,7 +161,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
       <div className="mt-10 text-center">
         <Link
           href={localizedHref("/", locale)}
-          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition"
+          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
         >
           ← Back to top
         </Link>

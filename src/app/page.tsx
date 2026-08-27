@@ -57,6 +57,18 @@ const EXTRA_CSS = `
    張り付いて見える（本人指摘 2026-08-27）。CTA だけは最大幅を切って中央に置く。
    1360px は本文グリッド（1160px）より一回り広く、通常のPCでは従来と同じ見た目。 */
 .about07 .cta-panel{ max-width:1360px; margin-inline:auto; }
+
+/* スマホ(<720px)のタップ領域。2026-08-27 に html の zoom を 0.7→1.0 に戻したので、
+   ここの px はそのまま実 px になる。「物件一覧 →」等のリンクは 25px しか高さが
+   無く指で押しにくいため、見た目の文字サイズは変えずに 44px の当たりを作る。
+   ⚠ 720px は globals.css のズーム帯の境界と同じ。ずらさないこと。 */
+@media (max-width:719px){
+  .about07 .detail-link{
+    display:inline-flex;
+    align-items:center;
+    min-height:44px;
+  }
+}
 `;
 
 export async function generateMetadata() {

@@ -73,7 +73,7 @@ export default function DataInquiry({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mono text-[10px] tracking-[0.14em] uppercase text-accent/80 hover:text-accent"
+          className="mono text-[10px] max-[720px]:text-[11px] tracking-[0.14em] uppercase text-accent/80 hover:text-accent max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
         >
           {en
             ? "▸ Ask about this data's usage rights"

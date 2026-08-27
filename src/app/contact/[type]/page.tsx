@@ -186,7 +186,7 @@ export default async function ContactTypePage({
       <div className={`${t === "listing" ? "max-w-[760px]" : "max-w-[620px]"} mx-auto`}>
         <Link
           href={lh("/contact")}
-          className="text-[12px] text-muted hover:text-accent transition"
+          className="text-[12px] text-muted hover:text-accent transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
         >
           {en ? "← Back to contact" : "← お問い合わせ一覧に戻る"}
         </Link>

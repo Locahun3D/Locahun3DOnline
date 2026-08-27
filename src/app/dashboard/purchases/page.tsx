@@ -242,7 +242,7 @@ export default async function UserPurchasesPage() {
       <div className="mt-10 text-center">
         <Link
           href={lh("/account")}
-          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition"
+          className="mono text-[10px] tracking-[0.22em] uppercase opacity-50 hover:opacity-100 transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
         >
           {en ? "← Back to account" : "← アカウントに戻る"}
         </Link>

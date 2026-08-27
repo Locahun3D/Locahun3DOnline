@@ -143,7 +143,7 @@ export default function RoiCalculator({ en }: { en: boolean }) {
               {save >= 0 ? "−" : "+"}
               {yen(save, en)}
             </div>
-            <div className="text-[10.5px] text-muted mt-2">
+            <div className="text-[10.5px] max-[720px]:text-[12px] text-muted mt-2">
               {en ? (
                 <>
                   <b className="text-ink">{hours} hours</b> of travel go straight
@@ -157,7 +157,7 @@ export default function RoiCalculator({ en }: { en: boolean }) {
             </div>
           </div>
 
-          <p className="text-[10px] text-muted leading-[1.9] mt-2">
+          <p className="text-[10px] max-[720px]:text-[11px] text-muted leading-[1.9] mt-2">
             {en
               ? "※ Traditional cost estimated as people × trips × (fare + ¥5,000 half-day labor cost)."
               : "※ 従来コスト = 人数 × 回数 ×（交通費 + 半日拘束の人件費 ¥5,000）で概算。"}

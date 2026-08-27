@@ -27,7 +27,7 @@ export function LicenseDescription({
   locale: string;
 }) {
   return (
-    <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+    <p className="mt-1.5 text-[11px] max-[720px]:text-[12px] leading-relaxed text-muted">
       {dataLicenseDesc(selected, locale)}
     </p>
   );

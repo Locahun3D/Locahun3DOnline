@@ -146,7 +146,7 @@ export default function DataSalePanel({
           </span>
         </div>
         {description && (
-          <p className="text-[11px] opacity-60 mt-0.5 line-clamp-1">{description}</p>
+          <p className="text-[11px] max-[720px]:text-[12px] opacity-60 mt-0.5 max-[720px]:line-clamp-none line-clamp-1">{description}</p>
         )}
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
         {licenseOptions.length > 1 ? (
@@ -205,7 +205,7 @@ export default function DataSalePanel({
           </span>
           <Link
             href={en ? "/en/dashboard/purchases" : "/dashboard/purchases"}
-            className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
+            className="px-4 py-1.5 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
           >
             {en ? "To downloads →" : "ダウンロードへ →"}
           </Link>
@@ -223,22 +223,22 @@ export default function DataSalePanel({
             )}
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <label className="flex items-center gap-1.5 cursor-pointer text-[10px] opacity-60 hover:opacity-80 transition">
+          <div className="flex items-center gap-3 shrink-0 max-[720px]:flex-wrap max-[720px]:gap-x-3 max-[720px]:gap-y-2 max-[720px]:w-full max-[720px]:shrink">
+            <label className="flex items-center gap-1.5 cursor-pointer text-[10px] max-[720px]:text-[12px] max-[720px]:gap-2 max-[720px]:min-h-[44px] opacity-60 hover:opacity-80 transition">
               <input
                 type="checkbox"
                 checked={agreedTerms}
                 onChange={(e) => setAgreedTerms(e.target.checked)}
-                className="w-3.5 h-3.5 accent-accent shrink-0"
+                className="w-3.5 h-3.5 max-[720px]:w-5 max-[720px]:h-5 accent-accent shrink-0"
               />
-              <Link href={en ? "/en/terms/data-download" : "/terms/data-download"} target="_blank" className="underline">
+              <Link href={en ? "/en/terms/data-download" : "/terms/data-download"} target="_blank" className="underline max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]">
                 {en ? "Agree to terms" : "規約同意"}
               </Link>
             </label>
             {inCart ? (
               <Link
                 href={en ? "/en/cart" : "/cart"}
-                className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+                className="px-3 py-1.5 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
               >
                 {en ? "✓ Cart → view" : "✓ カート → 見る"}
               </Link>
@@ -254,7 +254,7 @@ export default function DataSalePanel({
                       : "先に規約に同意してください"
                     : undefined
                 }
-                className="px-3 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
+                className="px-3 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
               >
                 {en ? "+ Cart" : "+ カート"}
               </button>
@@ -262,7 +262,7 @@ export default function DataSalePanel({
             <button
               onClick={handlePurchase}
               disabled={loading || !agreedTerms}
-              className="px-4 py-1.5 mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
+              className="px-4 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
             >
               {loading
                 ? en ? "Processing..." : "処理中..."

@@ -50,14 +50,14 @@ export default function SignupRequirements({
             </div>
             {/* 言葉より実例。○/✕ を並べるだけで「会社ドメイン」が伝わる。 */}
             <div className="mt-2 space-y-1">
-              <div className="flex items-center gap-2 text-[12px]">
+              <div className="flex items-center gap-2 text-[12px] max-[720px]:flex-wrap max-[720px]:gap-y-0.5">
                 <span className="mono text-[11px] text-[#0f766e] font-bold shrink-0" aria-hidden="true">○</span>
                 <span className="mono text-[11.5px] text-ink break-all">info@your-studio.co.jp</span>
                 <span className="text-[11px] text-muted shrink-0">
                   {en ? "company domain" : "会社のドメイン"}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-[12px]">
+              <div className="flex items-center gap-2 text-[12px] max-[720px]:flex-wrap max-[720px]:gap-y-0.5">
                 <span className="mono text-[11px] text-[#c2410c] font-bold shrink-0" aria-hidden="true">✕</span>
                 <span className="mono text-[11.5px] text-muted line-through break-all">your-name@gmail.com</span>
                 <span className="text-[11px] text-muted shrink-0">

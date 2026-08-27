@@ -661,7 +661,7 @@ function FiltersPanel(p: FiltersProps) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="min-[720px]:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 hover:border-accent transition"
+        className="min-[720px]:hidden w-full flex items-center justify-between border border-line bg-[#2a2a2a] px-3 py-2 min-h-[44px] hover:border-accent transition"
       >
         <span className="mono text-[11px] tracking-[0.2em] uppercase">🔍 {en ? "Filters" : "絞り込み検索"}</span>
         <span className="flex items-baseline gap-1.5">
@@ -1276,7 +1276,7 @@ function SortBar({
 }) {
   const en = useLocale() === "en";
   return (
-    <div className={`mt-3 sm:mt-4 border border-line bg-[#222] px-2.5 sm:px-4 py-1.5 sm:py-2.5 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 text-[11px] mono ${className}`}>
+    <div className={`mt-3 sm:mt-4 border border-line bg-[#222] px-2.5 max-[720px]:px-4 sm:px-4 py-1.5 max-[720px]:py-3 sm:py-2.5 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 text-[11px] mono ${className}`}>
       <div className="flex items-baseline gap-1.5 sm:gap-2 font-sans">
         <span className="brand text-xl sm:text-2xl text-accent">{resultCount.toLocaleString(en ? "en-US" : "ja-JP")}</span>
         <span className="text-[11px] sm:text-[12px] font-medium opacity-70">{en ? "results" : "件"}</span>
@@ -1293,7 +1293,7 @@ function SortBar({
               <button
                 type="button"
                 onClick={() => setSort(c.ascKey)}
-                className={`px-2 py-1 mono text-[10px] tracking-[0.18em] uppercase transition ${
+                className={`px-2 py-1 max-[720px]:min-h-[44px] max-[720px]:min-w-[44px] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.18em] uppercase transition ${
                   sort === c.ascKey
                     ? "bg-accent text-bg"
                     : "text-muted hover:text-accent"
@@ -1305,7 +1305,7 @@ function SortBar({
               <button
                 type="button"
                 onClick={() => setSort(c.descKey)}
-                className={`px-2 py-1 mono text-[10px] tracking-[0.18em] uppercase transition ${
+                className={`px-2 py-1 max-[720px]:min-h-[44px] max-[720px]:min-w-[44px] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.18em] uppercase transition ${
                   sort === c.descKey
                     ? "bg-accent text-bg"
                     : "text-muted hover:text-accent"

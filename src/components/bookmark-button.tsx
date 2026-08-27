@@ -140,7 +140,7 @@ export default function BookmarkButton({
           aria-pressed={bookmarked}
           aria-haspopup="menu"
           aria-expanded={open}
-          className={`inline-flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] rounded-sm border px-4 py-2.5 backdrop-blur-md shadow-lg transition ${
+          className={`inline-flex items-center gap-2 text-[13px] font-semibold tracking-[0.04em] rounded-sm border px-4 py-2.5 max-[720px]:min-h-[44px] backdrop-blur-md shadow-lg transition ${
             bookmarked
               ? "border-accent bg-accent text-black"
               : "border-white/60 bg-black/35 text-white hover:bg-white hover:text-black hover:border-white"
@@ -163,7 +163,7 @@ export default function BookmarkButton({
           aria-expanded={open}
           aria-label={label}
           title={label}
-          className={`grid place-items-center w-8 h-8 rounded-sm border backdrop-blur transition ${
+          className={`grid place-items-center w-8 h-8 max-[720px]:w-11 max-[720px]:h-11 rounded-sm border backdrop-blur transition ${
             bookmarked
               ? "border-accent bg-accent/90 text-bg"
               : "border-line bg-bg/75 text-ink hover:border-accent hover:text-accent"
@@ -182,7 +182,7 @@ export default function BookmarkButton({
         aria-pressed={bookmarked}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`inline-flex items-center gap-2 mono text-[11px] tracking-[0.18em] uppercase border px-4 py-2.5 transition ${
+        className={`inline-flex items-center justify-center gap-2 mono text-[11px] tracking-[0.18em] uppercase border px-4 py-2.5 max-[720px]:min-h-[44px] transition ${
           bookmarked
             ? "border-accent text-accent bg-accent/10"
             : "border-line text-ink hover:border-accent hover:text-accent"
@@ -327,7 +327,7 @@ function SavePopover({
           type="button"
           onClick={onCreateAndSave}
           disabled={!newName.trim()}
-          className="mono text-[10px] tracking-[0.14em] uppercase border border-accent text-accent px-2.5 py-1.5 hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:pointer-events-none shrink-0"
+          className="mono text-[10px] max-[720px]:text-[11px] tracking-[0.14em] uppercase border border-accent text-accent px-2.5 py-1.5 max-[720px]:min-h-[44px] hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:pointer-events-none shrink-0"
         >
           {en ? "Save" : "保存"}
         </button>
