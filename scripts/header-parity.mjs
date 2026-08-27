@@ -9,14 +9,29 @@
  *   ブランド文字 / スキャン・オンライントグルの各セル / ENチップ / ナビ項目 / 行の高さ
  * サイト固有要素（カート・認証ボタン・ナビ項目数）は構成差として対象外。
  * ヘッダーを触ったら ui-audit.mjs と合わせて必ず実行すること。
+ *
+ * ── --works モード（2026-08-27 追加）─────────────────────────
+ *   node scripts/header-parity.mjs --works --local
+ *   node scripts/header-parity.mjs --works
+ * 実績＆ブログ（web.locahun3d.com/works/**）の帯を検査する。works は URL を
+ * 変えられない（共有リンク保護）ので別ドメインのままだが、「別サイトへ飛ばされた
+ * 感じ」を消すためヘッダー・フッターだけをオンライン版と一致させてある。
+ * 比較対象はブランド文字 / ナビ項目 / EN チップ / ヘッダー高 /
+ * フッターの © 行・規約リンク。works 側の正典は
+ *   digiroke3d_Web/assets/works-header.css + scripts/sync_header.py
+ * ⚠ ポート: --local の works は 127.0.0.1:8830（digiroke3d_Web を配信）。
+ *   オンライン側は 3001（header-signedin.mjs と同じ `next dev -p 3001`）。
  */
 import { chromium } from "playwright";
 
 const LOCAL = process.argv.includes("--local");
-const ONLINE = LOCAL ? "http://localhost:3000/" : "https://locahun3d.com/";
+const WORKS = process.argv.includes("--works");
+const ONLINE = LOCAL
+  ? `http://localhost:${WORKS ? 3001 : 3000}/`
+  : "https://locahun3d.com/";
 const SCAN = LOCAL
-  ? "http://127.0.0.1:8830/locahun3d_manifesto.html"
-  : "https://web.locahun3d.com/locahun3d_manifesto.html";
+  ? `http://127.0.0.1:8830/${WORKS ? "works/index.html" : "locahun3d_manifesto.html"}`
+  : `https://web.locahun3d.com/${WORKS ? "works/index.html" : "locahun3d_manifesto.html"}`;
 
 // [width, height, tier]
 //   "mobile"  : 2段ヘッダー帯 (<720px)
@@ -93,7 +108,23 @@ const PAIRS = [
   ["nav-item", "header nav a", ".site-header .sh-left nav a",
     ["fontFamily", "fontSize", "fontWeight", "color"]],
 ];
-function pairsFor() { return PAIRS; }
+
+// works 用。works にはスキャン/オンライン トグルが無い（オンライン版と同じ構成）ので、
+// 共通要素はブランド・ナビ・EN・帯の高さ・フッターだけ。
+// ⚠ フッターは works 側だけ zoom で倍率を合わせている（オンライン版は html の zoom
+//   の内側にある）。computed の fontSize は zoom 前の値なので、この照合は
+//   「同じ CSS px を使っているか」を見る。実寸の一致はスクショ比較側の担当。
+const WORKS_PAIRS = [
+  ["brand", "header a[aria-label] span.brand", ".site-header.sh-works .sh-brand-text"],
+  ["nav-item", "header nav a", ".site-header.sh-works .sh-left nav a",
+    ["fontFamily", "fontSize", "fontWeight", "color"]],
+  ["lang", 'header a[aria-label="Language"]', ".site-header.sh-works .sh-lang"],
+  ["header-h", "header", ".site-header.sh-works", ["h"]],
+  ["foot-copy", "footer .mono", ".site-foot .sf-copy"],
+  ["foot-link", "footer nav a", ".site-foot .sf-links a",
+    ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "color"]],
+];
+function pairsFor() { return WORKS ? WORKS_PAIRS : PAIRS; }
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext();
@@ -121,6 +152,12 @@ for (const [w, h, tier] of VIEWPORTS) {
     }
     for (const prop of propList ?? PROPS) {
       let ov = o[prop], sv = s[prop];
+      // next/font はフォント名を `__Noto_Sans_JP_1a2b3c` のようなハッシュ付きに
+      // 差し替える。静的サイト側は素の "Noto Sans JP" なので、比較の前に戻す。
+      if (prop === "fontFamily") {
+        const norm = (v) => String(v).replace(/^__(.+?)_[0-9a-f]+$/, "$1").replace(/_/g, " ");
+        ov = norm(ov); sv = norm(sv);
+      }
       // letterSpacing "normal" と "0px" は同値扱い
       if (prop === "letterSpacing") {
         ov = ov === "normal" ? "0px" : ov;

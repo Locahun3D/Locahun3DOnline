@@ -288,17 +288,17 @@ export default async function PricingPage({
             {en ? (
               <>
                 To list your own studio,{" "}
-                <a href="https://web.locahun3d.com/locahun3d_contact.html" className="text-accent hover:underline">
+                <Link href={lh("/contact/listing")} className="text-accent hover:underline">
                   get in touch
-                </a>
+                </Link>
                 . Listing is currently free during our launch campaign.
               </>
             ) : (
               <>
                 自スタジオを掲載したい方は{" "}
-                <a href="https://web.locahun3d.com/locahun3d_contact.html" className="text-accent hover:underline">
+                <Link href={lh("/contact/listing")} className="text-accent hover:underline">
                   お問い合わせ
-                </a>{" "}
+                </Link>{" "}
                 {/* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。 */}
                 から。
                 <br />

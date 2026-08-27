@@ -12,7 +12,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
 /**
- * ナビ。`external` は別サイト（works）へのリンクで、新しいタブで開く。
+ * ナビ。`external` は別ドメイン（works）へのリンク。`<Link>` ではなく素の `<a>` に
+ * するためのフラグで、**同一タブで開く**（2026-08-27 本人指示）。
  * ⚠ works の URL は不変（本人指示 2026-08-16）。X で共有済みのリンクを全部生かすため、
  *   web.locahun3d.com/works/ のまま。EN は /en/works/。
  */
@@ -189,9 +190,11 @@ export default async function SiteHeader() {
                 return n.external ? (
                   <a
                     key={n.href}
+                    // ⚠ target="_blank" は付けない（本人指示 2026-08-27
+                    //    「別タブになる・別サイトへ飛ばされる感じが良くない」）。
+                    //    works 側もヘッダー/フッターをこのページと同じ見た目に揃えたので、
+                    //    同一タブで遷移してもサイトを離れた感じにならない。
                     href={`https://web.locahun3d.com${locale === "en" ? "/en" : ""}${n.href}`}
-                    target="_blank"
-                    rel="noopener"
                     className={cls}
                   >
                     {code}

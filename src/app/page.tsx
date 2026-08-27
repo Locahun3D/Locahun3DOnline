@@ -743,9 +743,9 @@ export default async function HomePage() {
                     <a
                       className="detail-link"
                       style={{ marginLeft: d.link ? "18px" : 0 }}
+                      // ⚠ works へのリンクは同一タブ（本人指示 2026-08-27）。
+                      //    works 側のヘッダー/フッターを本サイトと同じ見た目に揃えてある。
                       href={en ? d.extLink.hrefEn : d.extLink.href}
-                      target="_blank"
-                      rel="noopener"
                     >
                       {t(d.extLink.text)}
                     </a>
