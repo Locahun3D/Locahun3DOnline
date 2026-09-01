@@ -26,6 +26,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-locale", "en");
     if (basePath.startsWith("/embed/")) requestHeaders.set("x-embed", "1");
+    if (basePath.startsWith("/partials/")) requestHeaders.set("x-partial", "1");
     return NextResponse.rewrite(rewriteUrl, {
       request: { headers: requestHeaders },
     });
@@ -44,6 +45,15 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (basePath.startsWith("/embed/")) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-embed", "1");
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  /* /partials/* は「他サイトへ配るヘッダー部品」の素材。ルート layout に
+   * 骨組みだけ（ヘッダー/フッター/装飾なし）で描かせるための目印。
+   * → src/app/partials/header/route.ts */
+  if (basePath.startsWith("/partials/")) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-partial", "1");
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 });

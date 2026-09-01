@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Show, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
 import { listNotifications } from "@/lib/notifications";
@@ -68,8 +69,17 @@ export default async function SiteHeader() {
   // modal 経路の着地先は client 側で現在パスから決める（HeaderAuthButtons）。
   // ヘッダーは全ページ共通なので、サーバーで固定値を渡すと
   // 「どのページで押しても同じ場所に着地」になってしまう。
+  // works（静的HTML）へ配るヘッダー部品を描いている最中か。
+  // Clerk の `Show` はクライアント判定なので、SSR結果をそのまま静的ページへ
+  // 埋める用途では認証ボタンが消えてしまう。部品では未ログイン形で固定する。
+  const isPartial = (await headers()).get("x-partial") === "1";
+
   const authButtons = (
-    <HeaderAuthButtons loginLabel={t("auth.login")} signupLabel={t("auth.signup")} />
+    <HeaderAuthButtons
+      loginLabel={t("auth.login")}
+      signupLabel={t("auth.signup")}
+      alwaysSignedOut={isPartial}
+    />
   );
 
   const authSignedIn = (

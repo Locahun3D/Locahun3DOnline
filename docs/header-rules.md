@@ -170,3 +170,50 @@ Clerk 公式のバックエンドAPIで検証用ユーザーと `sign_in_token` 
 また、測る対象は「ブランド＋トグルのまとまり」の中心にすること。ブランド単体だと
 JA「ロケハン3D」124.5px と EN「Locahun 3D」131.5px の字幅差で必ず値が割れ、
 中央ぞろえが正しいのに不合格になる。
+
+## R10: works（web.locahun3d.com/works/**）はヘッダーを複製しない（2026-09-01）
+
+本人指示「他のページと合わせる形にしたい。ヘッダーの複製に独立してパッチを
+当て続けるのは構造的によくない、やめて」。
+
+works は静的HTMLで、長らく `<header class="site-header sh-works">` ＋
+`assets/works-header.css` という**別実装**を持っていた。オンライン版のヘッダーを
+直すたびに works 側へ同じ修正を書き写す運用で、寸法や項目が延々とズレ続けた。
+
+### 仕組み
+
+```
+locahun3d.com                              web.locahun3d.com（別リポ digiroke3d_Web）
+  /partials/header-frame  ← ヘッダーだけを描くページ
+  /partials/header        ← その HTML と CSS を Declarative Shadow DOM 1ブロックに
+                            まとめて返す（route.ts / src/lib/header-partial.ts）
+                                   │
+                                   └── worker.js の injectOnlineHeader() が
+                                       /works/** 配信時に HTMLRewriter で
+                                       静的ヘッダーを丸ごと置換
+```
+
+- **works 側にヘッダーの数値を一切置かない。**見た目の調整はこのリポだけで完結する。
+- 静的ヘッダーと `works-header.css` は**フォールバックとして残す**。部品の取得に
+  失敗したら静的ヘッダーがそのまま出る（ヘッダー無しのページを絶対に出さない）。
+- Shadow DOM に閉じているので works の記事CSSと相互汚染しない（実測: 記事本文の
+  スクショはフォールバック時と1pxも変わらない）。
+
+### 落とし穴（実際に踏んだ）
+
+| 症状 | 原因 |
+|---|---|
+| ヘッダー下の1pxボーダーが消える（56→55px） | `@property` は @font-face と同じく document スコープで Shadow DOM 内では登録されない。`var(--tw-border-style)` が無効化される。Tailwind が出している `@layer properties` の @supports フォールバックのゲートを外して解決 |
+| @font-face が漏れる / `@layer properties` ごと落ちる | ビルド後CSSは at-rule の直前にコメントが付く。prelude をコメント込みで判定すると at-rule と認識できず、コメント内の `.module.css` をクラス名として拾ってしまう |
+| ヘッダーが56px下がる | 旧ヘッダーが position:fixed だったため各 works ページに `body{padding-top:56px}` がある。差し替え後は sticky なので、置換したページに限り打ち消す |
+| CSS変数が全部効かない | Shadow 内では `:root` が何にもマッチしない。`:root`/`html`/`body` を `:host` へ寄せる |
+| ヘッダーが 1.25 倍で描かれる | `html{zoom}` はページ側の指定。works に zoom は無いので `zoom`/`--z` 宣言を落として `:host{--z:1}` を与える |
+| position:sticky が効かない | ホストに箱があると sticky がその高さに閉じ込められる。`:host{display:contents}` |
+
+### 制約
+- 認証状態は載せない（Cookie を転送せずキャッシュ可能にするため）。works のヘッダーは
+  常に未ログイン形（EN / カート / ログイン / 新規登録）。ログイン/新規登録は
+  最小のシムで `locahun3d.com/sign-in` `/sign-up` へ遷移する（モーダルは出ない）。
+- works ページでは React が動かないので、ハンバーガーの開閉も同じシムが担当する。
+  `header-tablet-nav.tsx` の開閉クラスを変えたら `src/lib/header-partial.ts` の
+  `DYNAMIC_CLASSES` とシムを対で直すこと。

@@ -187,7 +187,16 @@ export default async function RootLayout({
   // ヘッダー・フッターを出さない（掲載者のサイト内にナビが二重に現れて
   // デザインを壊すため）。App Router の layout は自分の pathname を知れないので
   // middleware が付ける x-embed で判定する（DECISION_LOG D-008）。
-  const isEmbed = (await headers()).get("x-embed") === "1";
+  const h = await headers();
+  const isEmbed = h.get("x-embed") === "1";
+  // /partials/* は works（別サイト）へ配るヘッダー部品の素材ページ。
+  // ヘッダーだけを素で描き、フッターも装飾も出さない。
+  // ⚠ next/font の変数クラス（--font-sans 等）は html に付いたままにする。
+  //   works へ渡す部品では敢えて継承させず、@theme 既定の "Noto Sans JP" を
+  //   works 側の Google Fonts で解決させる（Shadow DOM 内では @font-face が
+  //   効かないため。src/lib/header-partial.ts 参照）。
+  const isPartial = h.get("x-partial") === "1";
+  const bare = isEmbed || isPartial;
   return (
     <html
       lang={locale}
@@ -198,13 +207,13 @@ export default async function RootLayout({
           内容の少ないページ(/sign-in, /cart 等)でフッターが画面途中で終わり、
           その下に黒い空白が残っていた（実測: 390px で147px、820pxで236px、
           1440pxで75px）。実画面基準の高さは --z 規約どおり calc(100vh/var(--z))。 */}
-      <body className={isEmbed ? "" : "min-h-[calc(100vh/var(--z))] flex flex-col"}>
+      <body className={bare ? "" : "min-h-[calc(100vh/var(--z))] flex flex-col"}>
         <LocaleProvider locale={locale}>
           <ClerkProvider
             localization={locale === "en" ? enUSFixed : jaJPFixed}
             appearance={clerkAppearance}
           >
-            {isEmbed ? (
+            {bare ? (
               children
             ) : (
               <>

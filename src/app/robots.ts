@@ -24,6 +24,8 @@ export default function robots(): MetadataRoute.Robots {
         "/cart",
         "/sign-in",
         "/sign-up",
+        // 他サイトへ配るヘッダー部品の配信ルート（人が見るページではない）
+        "/partials/",
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,

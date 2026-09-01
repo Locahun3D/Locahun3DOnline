@@ -20,9 +20,18 @@ import { usePathname } from "next/navigation";
 export default function HeaderAuthButtons({
   loginLabel,
   signupLabel,
+  alwaysSignedOut = false,
 }: {
   loginLabel: string;
   signupLabel: string;
+  /**
+   * `<Show when="signed-out">` を外して常に出す。
+   * works へ配るヘッダー部品（/partials/header）専用のスイッチ。
+   * Clerk の `Show` はクライアント判定なので SSR の HTML には何も残らず、
+   * 静的HTMLへ埋める部品では認証ボタンが丸ごと消えてしまうため。
+   * ⚠ ボタンのマークアップはここ1箇所（下の `buttons`）のまま。複製しない。
+   */
+  alwaysSignedOut?: boolean;
 }) {
   const pathname = usePathname();
   // 認証画面自身へ戻すと堂々巡りになるので、その場合だけホームへ。
@@ -32,18 +41,23 @@ export default function HeaderAuthButtons({
       ? pathname
       : "/";
 
-  return (
-    <Show when="signed-out">
+  const buttons = (
+    <>
+      {/* data-auth: works（静的HTML）へ配るヘッダー部品では React が動かないため、
+          このボタンを /sign-in・/sign-up への遷移に配線するための目印。
+          オンライン版の挙動には一切影響しない（src/lib/header-partial.ts）。 */}
       <SignInButton mode="modal" fallbackRedirectUrl={backTo}>
-        <button className="px-2 py-1 text-[9px] mono tracking-[0.12em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
+        <button data-auth="signin" className="px-2 py-1 text-[9px] mono tracking-[0.12em] uppercase border border-line text-ink hover:border-accent hover:text-accent transition whitespace-nowrap">
           {loginLabel}
         </button>
       </SignInButton>
       <SignUpButton mode="modal" forceRedirectUrl="/onboarding">
-        <button className="px-2 py-1 text-[9px] mono tracking-[0.12em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
+        <button data-auth="signup" className="px-2 py-1 text-[9px] mono tracking-[0.12em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition whitespace-nowrap">
           {signupLabel}
         </button>
       </SignUpButton>
-    </Show>
+    </>
   );
+
+  return alwaysSignedOut ? buttons : <Show when="signed-out">{buttons}</Show>;
 }
