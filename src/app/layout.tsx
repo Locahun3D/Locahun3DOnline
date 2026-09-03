@@ -5,8 +5,10 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-// ⚠ ヘッダーCSSの正本は digiroke3d_Web/assets/site-header.css。
-//    ここで読むのは機械コピー（scripts/sync-header-css.mjs）。直接編集しないこと。
+// ⚠ 2026-09-03 works 統合まで、このCSSの正本は digiroke3d_Web/assets/site-header.css
+//    で、scripts/sync-header-css.mjs が機械コピーしていた。マーケサイトの静的
+//    ヘッダーが無くなった（works も本物の SiteHeader を使う）ので同期は廃止し、
+//    **このファイルが正本**になった。ここを直接編集してよい。
 //    globals.css の後に読むことで、ヘッダーのスタイルが本文側の指定に負けない。
 import "./site-header.css";
 import SiteHeader from "@/components/site-header";
@@ -188,15 +190,7 @@ export default async function RootLayout({
   // デザインを壊すため）。App Router の layout は自分の pathname を知れないので
   // middleware が付ける x-embed で判定する（DECISION_LOG D-008）。
   const h = await headers();
-  const isEmbed = h.get("x-embed") === "1";
-  // /partials/* は works（別サイト）へ配るヘッダー部品の素材ページ。
-  // ヘッダーだけを素で描き、フッターも装飾も出さない。
-  // ⚠ next/font の変数クラス（--font-sans 等）は html に付いたままにする。
-  //   works へ渡す部品では敢えて継承させず、@theme 既定の "Noto Sans JP" を
-  //   works 側の Google Fonts で解決させる（Shadow DOM 内では @font-face が
-  //   効かないため。src/lib/header-partial.ts 参照）。
-  const isPartial = h.get("x-partial") === "1";
-  const bare = isEmbed || isPartial;
+  const bare = h.get("x-embed") === "1";
   return (
     <html
       lang={locale}

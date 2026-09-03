@@ -41,6 +41,12 @@ const PAGES = [
   ...["/", "/properties", "/pricing", "/contact",
     "/contact/bug", "/contact/request", "/contact/listing", "/contact/general",
     "/en", "/en/properties", "/en/pricing"].map((p) => ({ url: ONLINE + p, site: "online" })),
+  // works（実績＆技術ブログ）— 2026-09-03 にオンライン版へ統合。ホストは
+  // web.locahun3d.com のまま（URL不変・本人指示）。一覧と記事1本を見る。
+  // ⚠ ローカル検証は --scan http://localhost:3005 を渡すこと（統合後の works は
+  //    オンライン版の Next ルート /works/[page] が出す）。
+  ...["works/index.html", "works/isaacsim-3dgs-robot-demos.html", "en/works/index.html"]
+    .map((p) => ({ url: `${SCAN}/${p}`, site: "scan" })),
   // スキャン（静的HTML）
   ...SCAN_JA.map((p) => ({ url: `${SCAN}/${p}`, site: "scan" })),
   ...SCAN_JA.filter((p) => p !== "locahun3d_contact.html").map((p) => ({ url: `${SCAN}/en/${p}`, site: "scan" })),

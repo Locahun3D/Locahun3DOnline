@@ -24,8 +24,10 @@ export default function robots(): MetadataRoute.Robots {
         "/cart",
         "/sign-in",
         "/sign-up",
-        // 他サイトへ配るヘッダー部品の配信ルート（人が見るページではない）
-        "/partials/",
+        // works（実績＆技術ブログ）は従来どおり全ページ noindex。
+        // 各ページの metadata にも robots: noindex を入れてある。
+        "/works/",
+        "/en/works/",
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,

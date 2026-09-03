@@ -38,6 +38,9 @@ export default async function AdminLayout({
           { href: "/admin/purchases", label: "データ販売" },
           { href: "/admin/submissions", label: "持ち込みスキャン" },
           { href: "/admin/payouts", label: "精算" },
+          // works（実績＆技術ブログ）の公開状態。旧マーケサイトの
+          // /works/admin.html + /api/works を統合したもの（2026-09-03）。
+          { href: "/admin/works", label: "実績＆技術ブログ" },
         ] as AdminNavItem[])
       : []),
   ];

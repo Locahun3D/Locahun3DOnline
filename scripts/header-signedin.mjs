@@ -62,7 +62,11 @@ if (!ticket.token) { console.error("サインインチケットの発行に失�
 //    スクロールバー由来のズレが構造的に再現しない（docs/header-rules.md R7）。
 const W = [320, 360, 375, 390, 430, 600, 719, 720, 744, 767, 768, 820, 834,
   1023, 1024, 1100, 1199, 1200, 1366, 1440, 1535, 1536, 1600, 1920];
-const PATHS = ["/", "/properties", "/pricing", "/account", "/dashboard", "/cart", "/en/properties"];
+// works（実績＆技術ブログ）も 2026-09-03 の統合で本物のヘッダーになった。
+// 記事ページは本文が独自CSS（黒地・独自リセット）を持つので、ログイン済みで
+// 右側が最も重い状態でヘッダーが崩れないかをここでも見る。
+const PATHS = ["/", "/properties", "/pricing", "/account", "/dashboard", "/cart", "/en/properties",
+  "/works/index.html", "/works/isaacsim-3dgs-robot-demos.html"];
 
 const b = await chromium.launch({ headless: false, channel: "chrome" });
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });

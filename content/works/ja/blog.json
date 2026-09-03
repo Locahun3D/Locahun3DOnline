@@ -1,0 +1,24 @@
+{
+ "locale": "ja",
+ "title": "ロケハン3D｜技術ブログ",
+ "description": null,
+ "canonical": "https://web.locahun3d.com/works/index.html#blog",
+ "fontsHref": null,
+ "redirectTo": "/works/index.html#blog",
+ "og": {
+  "type": null,
+  "title": null,
+  "description": null,
+  "url": null,
+  "image": null,
+  "siteName": null
+ },
+ "twitter": {
+  "card": null,
+  "title": null,
+  "description": null,
+  "image": null
+ },
+ "css": ".works-root{background:#000;color:#fafaf6;font-family:ui-sans-serif,system-ui,sans-serif;\n    display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}\n.works-root a{color:#1ea0c4}",
+ "bodyHtml": "<p>技術ブログは <a href=\"index.html#blog\">実績＆技術ブログ</a> に統合されました。自動的に移動しない場合はリンクをクリックしてください。</p>"
+}

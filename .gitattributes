@@ -1,0 +1,4 @@
+# works の取り込み結果は LF 固定（生成物。手で触らない）。
+# 再取り込みのたびに全行差分が出るのを防ぐ。
+content/works/**/*.json text eol=lf
+src/content/works.generated.ts text eol=lf

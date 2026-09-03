@@ -15,11 +15,15 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // ⚠ 自己参照 service binding。Worker は自分自身への HTTP fetch を全経路で
-  //    遮断される（自ゾーンも workers.dev も 522。/partials/header で本番実測）。
-  //    自分自身は binding 経由でのみ呼べる。
-  "services": [
-    { "binding": "SELF", "service": "locahun3d-online" }
+  // works（実績＆技術ブログ）の記事ごとの公開状態。
+  // 旧マーケサイト Worker (`locahun3dwebsite`) が使っていたネームスペースを
+  // そのまま流用する（既存データを引き継ぐ）。キーは `works:<slug>`。
+  // → src/lib/works-gating.ts / src/app/admin/works
+  "kv_namespaces": [
+    {
+      "binding": "WORKS_KV",
+      "id": "d864f7aaf51c481a8feff5078d2f33f4"
+    }
   ],
   "r2_buckets": [
     {
@@ -46,6 +50,11 @@
     "STRIPE_PRICE_TEAM_MONTHLY": "price_1ToVB43G4r5QaMCIO3xLjUCb",
     "STRIPE_PRICE_TEAM_ANNUAL": "price_1ToVB73G4r5QaMCIlQMEmIPG"
   },
+  // ⚠ works 統合の切替（web.locahun3d.com をこの Worker へ付け替える）は
+  //    **手動**で行う（本人が実施）。ここに
+  //      { "pattern": "web.locahun3d.com", "custom_domain": true }
+  //    を足すと deploy した瞬間に切り替わってしまうため、切替が済むまで書かない。
+  //    手順とロールバックは docs/works-integration-2026-09-03.md。
   "routes": [
     { "pattern": "locahun3d.com", "custom_domain": true },
     { "pattern": "www.locahun3d.com", "custom_domain": true }

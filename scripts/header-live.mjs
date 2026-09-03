@@ -43,6 +43,8 @@ const PAGES = [
   { site: "online", base: ONLINE, path: "/" },
   { site: "scan", base: SCAN, path: "/locahun3d_manifesto.html" },
   { site: "scan", base: SCAN, path: "/works/index.html" },
+  // 記事ページ（本文が独自CSSを持つので一覧とは別に見る）。
+  { site: "scan", base: SCAN, path: "/works/isaacsim-3dgs-robot-demos.html" },
 ];
 
 const CENTER_TOLERANCE = 1; // px。ズーム倍率由来の丸めを吸収する

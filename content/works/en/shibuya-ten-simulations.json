@@ -1,0 +1,24 @@
+{
+ "locale": "en",
+ "title": "Redirecting",
+ "description": null,
+ "canonical": "https://web.locahun3d.com/en/works/isaacsim-3dgs-robot-demos.html",
+ "fontsHref": null,
+ "redirectTo": "/en/works/isaacsim-3dgs-robot-demos.html#pedrule",
+ "og": {
+  "type": "article",
+  "title": "Redirecting",
+  "description": null,
+  "url": "https://web.locahun3d.com/en/works/isaacsim-3dgs-robot-demos.html",
+  "image": "https://web.locahun3d.com/assets/Digiloke_OG_Cover.jpg",
+  "siteName": "Locahun 3D"
+ },
+ "twitter": {
+  "card": "summary_large_image",
+  "title": "Redirecting",
+  "description": null,
+  "image": "https://web.locahun3d.com/assets/Digiloke_OG_Cover.jpg"
+ },
+ "css": "",
+ "bodyHtml": "<a href=\"/en/works/isaacsim-3dgs-robot-demos.html#pedrule\">Moved</a>"
+}

@@ -8,7 +8,98 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { type NextRequest, NextResponse } from "next/server";
 
 // 保護対象は locale を剥がした素のパスで判定する（/en/admin も守る）。
+// ⚠ /works/** は入れない（実績＆技術ブログは公開ページ。記事単位の非公開は
+//    KV ゲーティング側で行う → src/lib/works-gating.ts）。
 const PROTECTED = /^\/(account|dashboard|admin|onboarding)(?:\/|$)/;
+
+/* ══════════════════════════════════════════════════════════════════════
+ * ホスト振り分け（2026-09-03 works 統合）
+ *
+ * works（実績＆技術ブログ）は URL を1文字も変えられない（本人指示 2026-08-16。
+ * X で共有済みのリンクを全部生かすため）。そこで **web.locahun3d.com の
+ * カスタムドメインをこの Worker へ付け替え**、旧マーケサイト Worker
+ * (`locahun3dwebsite`) を退役させる。
+ *
+ *   web.locahun3d.com  … /works/** ・ /en/works/** ・ /assets/** だけを配る。
+ *                        それ以外は locahun3d.com へ 301（旧 worker.js の
+ *                        RETIRE 表をそのまま移植）。
+ *   locahun3d.com      … /works/** ・ /en/works/** は web.locahun3d.com へ 301。
+ *                        正典URLを1つに保つ（重複コンテンツを作らない）。
+ *   その他(workers.dev / localhost) … 素通し（検証用）。
+ * ══════════════════════════════════════════════════════════════════════ */
+const WORKS_HOST = "web.locahun3d.com";
+const ONLINE_HOST = "locahun3d.com";
+const ONLINE_ORIGIN = `https://${ONLINE_HOST}`;
+const WORKS_ORIGIN = `https://${WORKS_HOST}`;
+
+/** 旧マーケサイトのページ → オンライン版の着地先（digiroke3d_Web/worker.js より移植）。 */
+const RETIRE: Record<string, string> = {
+  "/": "/",
+  "/index.html": "/",
+  "/locahun3d_manifesto.html": "/",
+  "/locahun3d_demo.html": "/pricing", // 料金・デモ統合先（#estimate にシミュレーター）
+  "/locahun3d_contact.html": "/contact",
+  "/locahun3d_data.html": "/#service", // データ活用 → トップのサービス紹介
+  "/locahun3d_pitch_hub.html": "/",
+  "/locahun3d_privacy.html": "/privacy",
+  "/locahun3d_online.html": "/",
+  "/en": "/en",
+  "/en/": "/en",
+  "/en/index.html": "/en",
+  "/en/locahun3d_manifesto.html": "/en",
+  "/en/locahun3d_demo.html": "/en/pricing",
+  "/en/locahun3d_contact.html": "/en/contact",
+  "/en/locahun3d_data.html": "/en#service",
+  "/en/locahun3d_pitch_hub.html": "/en",
+  "/en/locahun3d_privacy.html": "/en/privacy",
+  "/en/locahun3d_online.html": "/en",
+};
+
+/** 旧マーケサイト Worker だけが持っていた API。退役を明示する。 */
+const GONE = /^\/api\/(contact|works)(?:\/|$)/;
+
+/** works として web.locahun3d.com で配り続けるパス。 */
+const WORKS_PATH = /^\/(?:en\/)?works(?:\/|$)/;
+
+/** web.locahun3d.com でも素通しが要るパス（Next のランタイム資産・Clerk・クローラ向け）。 */
+const PASSTHROUGH = /^\/(?:_next|__clerk)(?:\/|$)|^\/(?:robots\.txt|sitemap\.xml)$/;
+
+function hostOf(req: NextRequest): string {
+  return (req.headers.get("host") ?? "").split(":")[0].toLowerCase();
+}
+
+/**
+ * ホストに応じた 301/410 を返す。素通しでよければ null。
+ * Clerk より前に評価する（認証を通す必要がないリダイレクトのため）。
+ */
+function hostRouting(req: NextRequest): NextResponse | null {
+  const host = hostOf(req);
+  const { pathname, search } = req.nextUrl;
+
+  if (host === WORKS_HOST) {
+    if (WORKS_PATH.test(pathname) || pathname.startsWith("/assets/") || PASSTHROUGH.test(pathname)) {
+      return null;
+    }
+    if (GONE.test(pathname)) {
+      return new NextResponse("Gone", {
+        status: 410,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    const mapped = Object.prototype.hasOwnProperty.call(RETIRE, pathname)
+      ? RETIRE[pathname]
+      : "/";
+    return NextResponse.redirect(new URL(mapped, ONLINE_ORIGIN), 301);
+  }
+
+  if (host === ONLINE_HOST || host === `www.${ONLINE_HOST}`) {
+    if (WORKS_PATH.test(pathname)) {
+      return NextResponse.redirect(new URL(pathname + search, WORKS_ORIGIN), 301);
+    }
+  }
+
+  return null;
+}
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
   const url = req.nextUrl;
@@ -26,7 +117,6 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-locale", "en");
     if (basePath.startsWith("/embed/")) requestHeaders.set("x-embed", "1");
-    if (basePath.startsWith("/partials/")) requestHeaders.set("x-partial", "1");
     return NextResponse.rewrite(rewriteUrl, {
       request: { headers: requestHeaders },
     });
@@ -45,15 +135,6 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (basePath.startsWith("/embed/")) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-embed", "1");
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  /* /partials/* は「他サイトへ配るヘッダー部品」の素材。ルート layout に
-   * 骨組みだけ（ヘッダー/フッター/装飾なし）で描かせるための目印。
-   * → src/app/partials/header/route.ts */
-  if (basePath.startsWith("/partials/")) {
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set("x-partial", "1");
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 });
@@ -100,6 +181,11 @@ export default async function middleware(
   req: NextRequest,
   event: Parameters<typeof clerkHandler>[1],
 ) {
+  // ホスト振り分けは Clerk より前。web.locahun3d.com の退役ページや
+  // 正典URL統一の 301 は認証と無関係で、Clerk を通す必要がない。
+  const routed = hostRouting(req);
+  if (routed) return routed;
+
   try {
     return await clerkHandler(req, event);
   } catch (err) {
@@ -161,7 +247,13 @@ export default async function middleware(
 export const config = {
   matcher: [
     // Skip Next internals and static files unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // ⚠ 拡張子の除外リストから **html を外してある**（2026-09-03 works 統合）。
+    //    works の正典URLは /works/<slug>.html・/en/works/<slug>.html で、
+    //    ・/en/** → 素パスへの rewrite（x-locale=en）
+    //    ・web.locahun3d.com / locahun3d.com のホスト振り分け 301
+    //    のどちらも middleware でしか行えない。html を除外したままだと
+    //    EN 記事が日本語で出て、旧マーケサイトのページも 301 されない。
+    "/((?!_next|[^?]*\\.(?:css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     // Always run for API/clerk routes
     "/(api|trpc)(.*)",
     "/__clerk/:path*",

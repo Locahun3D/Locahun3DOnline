@@ -88,6 +88,19 @@ EN版は `/en/*`（middleware の rewrite + 辞書方式）。
 新設: `/sign-out?redirect=<path>` — サインアウトしてから指定パスへ着地させる中継。
 ログイン中に `/sign-up` へ送っても Clerk がサインアップ画面を出さずマイページへ弾くため。
 
+### works（実績＆技術ブログ）— 2026-09-03 に統合
+
+`/works/<slug>.html` ・ `/en/works/<slug>.html` はこのリポのルート
+（`src/app/works/[page]/page.tsx`）が出す。ホストは **`web.locahun3d.com` のまま**
+（URLを1文字も変えない。X で共有済み）。middleware がホストで振り分ける。
+
+- 記事の**生成は今までどおり `digiroke3d_Web/works` 側** → `node scripts/import-works.mjs`
+  → `content/works/**` と `src/content/works.generated.ts` を commit。
+- 記事CSSは `.works-root` にスコープ。`.works-scale` が html の zoom を打ち消す。
+- 公開状態は Cloudflare KV `WORKS_KV`（`/admin/works` で操作）。
+- メディアは R2（`works/images/**`・`works/videos/**`・`assets/**`）。
+- 詳細・切替手順・ロールバックは `docs/works-integration-2026-09-03.md`。
+
 **残タスク**は Obsidian の該当ノートと `docs/` を参照。
 
 ### データ層
@@ -185,3 +198,4 @@ web.locahun3d.com    → Worker `locahun3dwebsite`（別リポジトリ・手動
 | `node scripts/header-consistency.mjs` | スキャン19ページ×23幅が1pxも違わないことを機械証明 |
 | `node scripts/ui-audit.mjs` | 26ページ×9幅の重なり・はみ出し検査 |
 | `python scripts/design-fb-audit.py` | **本人のデザインFB 27項目の回帰検査**。UIを触る作業の完了報告前に必ず実行。台帳=`F:\Claude\docs\デザインFB台帳_locahun3d.md` |
+| `node scripts/import-works.mjs` | works 記事の取り込み（`digiroke3d_Web/works` → `content/works/**`）。記事を足したら実行して commit |

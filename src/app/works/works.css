@@ -1,0 +1,45 @@
+/* works（実績＆技術ブログ）の土台。
+ *
+ * 記事ごとの見た目は content/works/<locale>/<slug>.json の `css` に入っており、
+ * 取り込み時に `.works-root` へスコープ済み（scripts/import-works.mjs）。
+ * ページ側が <style> として吐くので、ここには「スコープの中に閉じ込められない分」
+ * ＝ html 要素と zoom の扱いだけを置く。
+ *
+ * ⚠ このファイルは src/app/works/layout.tsx でのみ import する。App Router は
+ *   ルート単位で CSS を読み込むので、他ページへは配られない（works は黒地・
+ *   独自リセット持ちなので漏らすと全ページを壊す）。
+ */
+
+/* ── zoom を打ち消す ───────────────────────────────────────────────
+ * 記事CSSは zoom=1（マーケサイトの静的HTML）を前提に px で書かれている。
+ * オンライン版は globals.css で html に zoom（<720px=1 / 720–1199px=0.8 /
+ * ≥1200px=0.9）を掛けているため、そのまま置くと PC で10%小さく描かれ、
+ * さらに vw/vh を使った箇所（.lightbox img の 96vw 等）が z 倍ずれる。
+ * SiteHeader と同じやり方でズームの外に出し、実効ズーム 1.0 ＝ 取り込み元と
+ * 同一寸法にする（docs/header-rules.md R2 と同じ理屈）。
+ *
+ * ⚠ zoom と --z の宣言は必ず別の要素に置くこと。同じ要素に
+ *   `zoom: calc(1/var(--z)); --z: 1;` と書くと、その要素自身の --z が 1 に
+ *   なった状態で zoom が解決され、打ち消しが効かなくなる（calc(1/1)=1）。
+ *   → 外側 .works-scale が zoom、内側 .works-root が --z の再宣言。
+ *   （globals.css 冒頭の規約 1.「zoom を宣言する場所では --z をペアで宣言」を
+ *   2要素で満たす形）
+ */
+.works-scale {
+  zoom: calc(1 / var(--z));
+}
+.works-root {
+  --z: 1;
+}
+
+/* ── アンカー着地 ─────────────────────────────────────────────────
+ * 記事CSSの `html{scroll-padding-top:72px}` は取り込みで `.works-root` へ
+ * 移ってしまう（スコープ化の副作用）が、実際にスクロールするのは html なので
+ * そこでは効かない。#lidar 等の見出しリンクが sticky ヘッダーの下に潜るため、
+ * html 側で予約し直す。
+ * `:has()` で works ページの時だけに限定する（このCSS自体 works ルートでしか
+ * 読まれないが、クライアント遷移で残っても他ページへ影響させないため）。 */
+html:has(.works-root) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px;
+}
