@@ -40,6 +40,15 @@ const MEMO_TTL_MS = 5 * 60 * 1000;
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = url.origin;
+  // ⚠ 本番の自己フェッチは自ゾーンのホスト名だと Cloudflare に遮断され 522 になる
+  //   （Worker が自分の zone へ fetch → 自分自身に届かない。2026-08-30 本番実測）。
+  //   dev(:3001) では現れないので必ず本番で確認すること。回避は workers.dev ホスト
+  //   経由（別ゾーン扱いで許可される）。環境変数で差し替え可能にしておく。
+  const internalOrigin =
+    process.env.PARTIALS_INTERNAL_ORIGIN ||
+    (process.env.NODE_ENV === "production"
+      ? "https://locahun3d-online.nakamurakou1108.workers.dev"
+      : origin);
   const locale = (await headers()).get("x-locale") === "en" ? "en" : "ja";
   const alt = sanitizeAltLangUrl(url.searchParams.get("alt"));
 
@@ -50,7 +59,7 @@ export async function GET(request: Request) {
   if (hit && Date.now() - hit.at < MEMO_TTL_MS) return respond(hit.body);
 
   try {
-    const frameUrl = `${origin}${locale === "en" ? "/en" : ""}/partials/header-frame`;
+    const frameUrl = `${internalOrigin}${locale === "en" ? "/en" : ""}/partials/header-frame`;
     // ⚠ Cookie は渡さない（未ログイン形で固定＝キャッシュ可能にするため）。
     const res = await fetch(frameUrl, {
       headers: { "user-agent": "locahun3d-header-partial" },
@@ -64,7 +73,7 @@ export async function GET(request: Request) {
 
     const cssParts: string[] = [...extractInlineStyles(page)];
     for (const href of extractStylesheetHrefs(page)) {
-      const cssRes = await fetch(new URL(href, origin).toString(), { cache: "no-store" });
+      const cssRes = await fetch(new URL(href, internalOrigin).toString(), { cache: "no-store" });
       if (cssRes.ok) cssParts.push(await cssRes.text());
     }
     if (!cssParts.length) throw new Error("no stylesheet found");
