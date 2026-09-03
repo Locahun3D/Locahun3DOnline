@@ -15,6 +15,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // ⚠ 自己参照 service binding。Worker は自分自身への HTTP fetch を全経路で
+  //    遮断される（自ゾーンも workers.dev も 522。/partials/header で本番実測）。
+  //    自分自身は binding 経由でのみ呼べる。
+  "services": [
+    { "binding": "SELF", "service": "locahun3d-online" }
+  ],
   "r2_buckets": [
     {
       "binding": "R2_ASSETS",

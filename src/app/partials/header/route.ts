@@ -44,11 +44,20 @@ export async function GET(request: Request) {
   //   （Worker が自分の zone へ fetch → 自分自身に届かない。2026-08-30 本番実測）。
   //   dev(:3001) では現れないので必ず本番で確認すること。回避は workers.dev ホスト
   //   経由（別ゾーン扱いで許可される）。環境変数で差し替え可能にしておく。
-  const internalOrigin =
-    process.env.PARTIALS_INTERNAL_ORIGIN ||
-    (process.env.NODE_ENV === "production"
-      ? "https://locahun3d-online.nakamurakou1108.workers.dev"
-      : origin);
+  // ⚠ Worker は「自分自身」への HTTP fetch を全経路で遮断される（自ゾーンの
+  //   ホスト名も自分の workers.dev も本番実測で 522）。dev では現れないので
+  //   必ず本番で確認すること。正攻法は自己参照 service binding（wrangler.jsonc の
+  //   SELF）。dev では binding が無いため通常の fetch に落とす。
+  const selfFetch: typeof fetch = await (async () => {
+    try {
+      const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+      const { env } = await getCloudflareContext();
+      const self = (env as { SELF?: { fetch: typeof fetch } }).SELF;
+      if (self) return self.fetch.bind(self);
+    } catch {}
+    return fetch;
+  })();
+  const internalOrigin = process.env.PARTIALS_INTERNAL_ORIGIN || origin;
   const locale = (await headers()).get("x-locale") === "en" ? "en" : "ja";
   const alt = sanitizeAltLangUrl(url.searchParams.get("alt"));
 
@@ -61,7 +70,7 @@ export async function GET(request: Request) {
   try {
     const frameUrl = `${internalOrigin}${locale === "en" ? "/en" : ""}/partials/header-frame`;
     // ⚠ Cookie は渡さない（未ログイン形で固定＝キャッシュ可能にするため）。
-    const res = await fetch(frameUrl, {
+    const res = await selfFetch(frameUrl, {
       headers: { "user-agent": "locahun3d-header-partial" },
       cache: "no-store",
     });
@@ -73,7 +82,7 @@ export async function GET(request: Request) {
 
     const cssParts: string[] = [...extractInlineStyles(page)];
     for (const href of extractStylesheetHrefs(page)) {
-      const cssRes = await fetch(new URL(href, internalOrigin).toString(), { cache: "no-store" });
+      const cssRes = await selfFetch(new URL(href, internalOrigin).toString(), { cache: "no-store" });
       if (cssRes.ok) cssParts.push(await cssRes.text());
     }
     if (!cssParts.length) throw new Error("no stylesheet found");
