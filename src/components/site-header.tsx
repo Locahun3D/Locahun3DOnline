@@ -154,19 +154,19 @@ export default async function SiteHeader() {
         letterSpacing: "normal",
         ["--color-accent" as string]: "#1ea0c4",
       }}
-      className="sticky top-0 z-50 border-b border-line bg-bg/95 backdrop-blur-sm"
+      // ⚠ 1024px未満は **すりガラス禁止・完全不透明**（bg-bg のみ）。
+      //    backdrop-filter を sticky ヘッダーに載せると、iOS実機のモーメンタム
+      //    スクロール中に再描画が遅れてヘッダーが透け、本文が貫通して見える
+      //    （報告 2026-08-12 と 2026-09-03。エミュ・Playwright WebKit では再現しない）。
+      //    以前の対策の fixed 不透明バックストップは仕様上無効だった:
+      //    backdrop-filter を持つ要素は fixed 子孫の containing block になるため
+      //    （CSS Filter Effects L2）、「画面に固定」のつもりのレイヤーがヘッダーに
+      //    追従して一緒に遅延し、何も守っていなかった。よってバックストップは廃止し、
+      //    原因の backdrop-filter 自体をモバイル/タブレットから除いた。
+      //    1024px以上（PC・問題未報告）だけ、すりガラス表現を維持する。
+      //    ここに blur を復活させないこと。
+      className="sticky top-0 z-50 border-b border-line bg-bg min-[1024px]:bg-bg/95 min-[1024px]:backdrop-blur-sm"
     >
-      {/* ⚠ スマホ実機(WebKit)対策のバックストップ。sticky＋zoom(1/--z)＋bg/95+blur の
-          組み合わせは、実機でスクロール中にヘッダー上側が透けて本文が見える
-          （ユーザー報告 2026-08-12。デスクトップChromeのモバイルエミュでは再現しない）。
-          ヘッダー自身の箱に頼らず、実画面の最上部56px(このスコープはヘッダーの
-          逆zoom内なので h-14=実px)を fixed の不透明レイヤーで常に塗っておく。
-          ヘッダーが正位置にある限り完全に背後に隠れるので見た目は不変。
-          1024px以上は問題が出ておらず、すりガラス表現を保つため出さない。 */}
-      <div
-        aria-hidden
-        className="min-[1024px]:hidden fixed inset-x-0 top-0 h-14 -z-[1] bg-bg border-b border-line"
-      />
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに
           切り替える。1024px 以上は従来どおり 左=ナビ / 中央=ブランド / 右=操作。 */}
