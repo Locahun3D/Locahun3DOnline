@@ -13,6 +13,20 @@ import {
 /**
  * GET /partials/header      （EN は /en/partials/header）
  *
+ * ⚠⚠ **本番では使われていない**（2026-09-03〜）。dev 検証用に残してあるだけ。
+ *   理由: このルートは自分の /partials/header-frame を self-fetch して合成するが、
+ *   Cloudflare 上で **Worker が自分自身へ fetch する経路は全滅**する
+ *   （自ゾーンのホスト名・自分の workers.dev・自己参照 service binding SELF の
+ *   いずれも本番実測 522。SELF は下の診断で `bound` まで出るのに、binding 越しに
+ *   再入した OpenNext が内部でまた自己フェッチするため中で 522 になる）。
+ *   → **合成は works 側（digiroke3d_Web/lib/header-partial.mjs + worker.js の
+ *   injectOnlineHeader）へ移した**。works の Worker から当リポの workers.dev への
+ *   fetch は自己参照ではないので通る。本番の works ページはそちらの経路で描画される。
+ *   ここと `@/lib/header-partial` は**正典**として維持し（works 側はその移植）、
+ *   変更するときは works 側も必ず追随させること。
+ *
+ * ── 以下、当ルート自体の説明 ────────────────────────────────────────
+ *
  * works（web.locahun3d.com/works/**・静的HTML）へ埋め込むための、
  * 自己完結したヘッダー部品を返す。中身は Declarative Shadow DOM 1ブロック:
  *
