@@ -96,7 +96,7 @@ export async function GET(request: Request) {
   } catch (err) {
     // 取得側（works の Worker）は失敗時に静的ヘッダーへフォールバックする。
     // 壊れた部品を返すくらいなら 503 を返してフォールバックさせる方が安全。
-    return new Response(`header partial unavailable: ${(err as Error).message}`, {
+    return new Response(`header partial unavailable v3: ${(err as Error).message}`, {
       status: 503,
       headers: { "cache-control": "no-store", "content-type": "text/plain; charset=utf-8" },
     });
