@@ -48,13 +48,15 @@ export async function GET(request: Request) {
   //   ホスト名も自分の workers.dev も本番実測で 522）。dev では現れないので
   //   必ず本番で確認すること。正攻法は自己参照 service binding（wrangler.jsonc の
   //   SELF）。dev では binding が無いため通常の fetch に落とす。
+  let selfDiag = "none";
   const selfFetch: typeof fetch = await (async () => {
     try {
       const { getCloudflareContext } = await import("@opennextjs/cloudflare");
       const { env } = await getCloudflareContext();
       const self = (env as { SELF?: { fetch: typeof fetch } }).SELF;
-      if (self) return self.fetch.bind(self);
-    } catch {}
+      if (self) { selfDiag = "bound"; return self.fetch.bind(self); }
+      selfDiag = "env-keys:" + Object.keys(env as object).filter(k => /SELF|ASSETS|DB/.test(k)).join(",");
+    } catch (e) { selfDiag = "ctx-error:" + (e as Error).message.slice(0, 60); }
     return fetch;
   })();
   const internalOrigin = process.env.PARTIALS_INTERNAL_ORIGIN || origin;
@@ -96,7 +98,7 @@ export async function GET(request: Request) {
   } catch (err) {
     // 取得側（works の Worker）は失敗時に静的ヘッダーへフォールバックする。
     // 壊れた部品を返すくらいなら 503 を返してフォールバックさせる方が安全。
-    return new Response(`header partial unavailable v3: ${(err as Error).message}`, {
+    return new Response(`header partial unavailable v4[${selfDiag}]: ${(err as Error).message}`, {
       status: 503,
       headers: { "cache-control": "no-store", "content-type": "text/plain; charset=utf-8" },
     });
