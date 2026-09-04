@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import SiteLink from "@/components/site-link";
+import { onlineHref } from "@/lib/online-href";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { markNotificationsReadAction } from "@/lib/notification-actions";
 import type { Notification } from "@/lib/notifications";
@@ -23,13 +24,17 @@ export default function NotificationBell({
   unreadCount,
   locale,
   en,
+  absolute = false,
 }: {
   notifications: Notification[];
   unreadCount: number;
   locale: Locale;
   en: boolean;
+  /** works ホスト（web.locahun3d.com）で描かれているか。真なら
+   *  locahun3d.com の絶対URL＋素の <a> にする（→ src/lib/online-href.ts）。 */
+  absolute?: boolean;
 }) {
-  const lh = (href: string) => localizedHref(href, locale);
+  const lh = (href: string) => onlineHref(localizedHref(href, locale), absolute);
   const [open, setOpen] = useState(false);
   // 既読化はサーバー再取得を待たず即バッジを消す（楽観更新）。
   const [locallyRead, setLocallyRead] = useState(false);
@@ -122,7 +127,7 @@ export default function NotificationBell({
             <ul className="divide-y divide-[#e2e7ec]">
               {recent.map((n) => (
                 <li key={n.id}>
-                  <Link
+                  <SiteLink absolute={absolute}
                     href={lh(n.link)}
                     onClick={() => setOpen(false)}
                     className="block px-4 py-3 hover:bg-[#f5f8fa] transition group"
@@ -143,19 +148,19 @@ export default function NotificationBell({
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </SiteLink>
                 </li>
               ))}
             </ul>
           )}
 
-          <Link
+          <SiteLink absolute={absolute}
             href={lh("/account#notifications")}
             onClick={() => setOpen(false)}
             className="block px-4 py-3 border-t border-[#e2e7ec] text-center mono text-[10px] tracking-[0.18em] uppercase text-[#1ea0c4] hover:bg-[#f5f8fa] transition sticky bottom-0 bg-white"
           >
             {en ? "View all →" : "すべての通知を見る →"}
-          </Link>
+          </SiteLink>
         </div>
       )}
     </div>

@@ -1,13 +1,17 @@
-import Link from "next/link";
+import { headers } from "next/headers";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import SiteLink from "@/components/site-link";
+import { isWorksHostname, onlineHref } from "@/lib/online-href";
 import { fmtDateOnlyJST } from "@/lib/date-format";
 
 export default async function SiteFooter() {
   const year = fmtDateOnlyJST(new Date()).slice(0, 4);
   const locale = await getLocale();
   const en = locale === "en";
-  const lh = (href: string) => localizedHref(href, locale);
+  // works ホストでは絶対URL＋素の <a>（プリフェッチの 301 で CORS エラーになるため）。
+  const onWorksHost = isWorksHostname((await headers()).get("host"));
+  const lh = (href: string) => onlineHref(localizedHref(href, locale), onWorksHost);
   return (
     // モバイルは margin 0 — ライト背景ページで margin が「裸の黒帯」として
     // 見える実害があったため、コンテンツ側の pb だけで間隔を作る。
@@ -31,13 +35,13 @@ export default async function SiteFooter() {
             { href: "/terms/data-download", label: en ? "Purchase Terms" : "データ購入規約" },
             { href: "/contact/listing", label: en ? "List your location" : "掲載依頼" },
           ].map((l) => (
-            <Link
+            <SiteLink absolute={onWorksHost}
               key={l.href}
               href={lh(l.href)}
               className="hover:text-accent transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
             >
               {l.label}
-            </Link>
+            </SiteLink>
           ))}
         </nav>
       </div>

@@ -179,3 +179,54 @@ DNS 伝播を待つ必要は無い（どちらも同じ Cloudflare のカスタ�
   （`/en/pricing` vs `/en/works/index.html`）以外**完全一致**。
 - ブラウザコンソールのエラー 0（`suppressHydrationWarning` が必須。本文同梱の
   script が hydration 前に DOM を書き換えるため）。
+
+---
+
+## 9. 追記 2026-09-04 — works ホストのヘッダー/フッターのリンクを絶対URLに
+
+切替直後の本番 `https://web.locahun3d.com/works/*.html` で、コンソールに CORS の
+赤エラーが1ページ4本出ていた。
+
+原因: works ページのヘッダー/フッターは本物の `SiteHeader`/`SiteFooter` なので
+`<Link href="/properties">` などが並ぶ。Next.js がそれを**プリフェッチ**して
+`web.locahun3d.com/properties?_rsc=…` を叩き、上の §2 のとおり middleware が
+`https://locahun3d.com/` へ 301 → クロスオリジンのリダイレクトになり、
+`fetch` が CORS で弾かれる（機能は動くがコンソールが汚い）。
+
+対処: **works ホストで描かれるときだけ**、works 以外へ向く内部リンクを
+`https://locahun3d.com` 起点の絶対URL＋**素の `<a>`** にする（素の `<a>` は
+Next のプリフェッチ対象外）。
+
+- `src/lib/online-href.ts` — `isWorksHostname(host)` / `onlineHref(path, absolute)`
+- `src/components/site-link.tsx` — `absolute` が真なら `<a>`、偽なら `<Link>`
+  （"use client" は付けない。サーバー/クライアント両方から使う）
+- `SiteHeader` / `SiteFooter`（server component）が `headers().get("host")` で判定し、
+  `CartLink` / `NotificationBell`（client）へは `absolute` prop で渡す。
+
+そのままにしたもの:
+
+| 対象 | 理由 |
+|---|---|
+| 言語トグル（`LangToggle`） | 行き先が `/en/works/**`＝同一オリジン。素の `<a>` で元から prefetch しない |
+| works 内リンク（記事本文・一覧カード・戻るリンク） | 取り込んだ生HTMLの素の `<a>`。同一オリジン |
+| ナビの「実績＆ブログ」 | 元から `https://web.locahun3d.com/...` の素の `<a>` |
+| Clerk のログイン/新規登録 | `SignInButton mode="modal"` でページ遷移しない。`fallbackRedirectUrl` は現在のパス（`/works/x.html`）＝**同一オリジンの相対**なので、works に居たまま戻る |
+| workers.dev / localhost | 従来どおり相対（＝ローカル検証で本番と同じページ内リンクを踏める） |
+
+### 検証（2026-09-04、ローカル）
+Chromium を `--host-resolver-rules=MAP web.locahun3d.com:80 127.0.0.1:<port>` で
+起動し、**本物のオリジン `http://web.locahun3d.com` のまま**ローカルサーバへ当てて計測。
+
+| | works ホスト | 通常ホスト |
+|---|---|---|
+| `?_rsc=` プリフェッチ（`next start` の本番ビルド） | **0 本** | 9 本（従来どおり） |
+| ヘッダーの href | 全て `https://locahun3d.com/...`（works ナビと言語トグルを除く） | 相対（`/properties` 等・変更なし） |
+| フッターの href | 全て `https://locahun3d.com/...` | 相対 |
+| コンソールエラー（dev, works 3ページ） | HMR の WebSocket 以外 **0** | — |
+
+（`next start` 時に出る `clerk.locahun3d.com/v1/client` の 400 は、本番Clerk鍵を
+偽オリジン `http://web.locahun3d.com` から叩いたローカル固有の事象。本番の works
+ホストは apex cookie で正規に扱われる。）
+
+その他: `design-fb-audit` 29 OK / 0 NG、`header-signedin --base :3005` 216計測 0件、
+`ui-audit` 27ページ×9幅 0件、`vitest` 125件（`online-href` のテストを追加）。

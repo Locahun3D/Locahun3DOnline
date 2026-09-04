@@ -184,8 +184,14 @@ npm run lint     # ESLint
 
 ```
 locahun3d.com (apex) → Worker `locahun3d-online`（@opennextjs/cloudflare）
-web.locahun3d.com    → Worker `locahun3dwebsite`（別リポジトリ・手動デプロイ）
+web.locahun3d.com    → Worker `locahun3d-online`（2026-09-04 切替済み。works 専用ホスト。
+                       works 以外は locahun3d.com へ 301。旧 Worker `locahun3dwebsite`
+                       は退役。ロールバックはカスタムドメインを戻すだけ）
 ```
+
+⚠ works ホストで描くヘッダー/フッターのリンクは `<Link>` ではなく **絶対URL＋素の `<a>`**
+（`src/lib/online-href.ts` / `src/components/site-link.tsx`）。`<Link>` のままだと Next の
+プリフェッチが 301 を跨いで CORS エラーを出す。
 
 ## 検証ハーネス（UIを触ったら必ず実行）
 

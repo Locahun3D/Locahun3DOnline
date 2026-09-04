@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { cartCount, onCartChange } from "@/lib/cart";
 import { useLocale } from "@/components/locale-provider";
 import { localizedHref } from "@/lib/i18n/dictionaries";
+import SiteLink from "@/components/site-link";
+import { onlineHref } from "@/lib/online-href";
 
-export default function CartLink() {
+/** `absolute`: works ホストで描かれているか（SiteHeader がサーバー側で判定して渡す）。 */
+export default function CartLink({ absolute = false }: { absolute?: boolean }) {
   const [count, setCount] = useState(0);
   const locale = useLocale();
   const en = locale === "en";
@@ -18,8 +20,9 @@ export default function CartLink() {
   }, []);
 
   return (
-    <Link
-      href={localizedHref("/cart", locale)}
+    <SiteLink
+      absolute={absolute}
+      href={onlineHref(localizedHref("/cart", locale), absolute)}
       aria-label={en ? `Cart (${count} item${count === 1 ? "" : "s"})` : `カート（${count}点）`}
       className="relative flex items-center text-muted hover:text-accent transition whitespace-nowrap"
       title={en ? "Cart" : "カート"}
@@ -44,6 +47,6 @@ export default function CartLink() {
           {count}
         </span>
       )}
-    </Link>
+    </SiteLink>
   );
 }

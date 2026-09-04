@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { headers } from "next/headers";
 import { Show, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
 import { listNotifications } from "@/lib/notifications";
@@ -8,6 +8,8 @@ import NotificationBell from "@/components/notification-bell";
 import LangToggle from "@/components/lang-toggle";
 import HeaderTabletNav from "@/components/header-tablet-nav";
 import HeaderAuthButtons from "@/components/header-auth-buttons";
+import SiteLink from "@/components/site-link";
+import { isWorksHostname, onlineHref } from "@/lib/online-href";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref, translate, type DictKey } from "@/lib/i18n/dictionaries";
 
@@ -40,7 +42,12 @@ export default async function SiteHeader() {
   const recentNotifications = notifications.slice(0, 12);
   const locale = await getLocale();
   const t = (k: DictKey) => translate(locale, k);
-  const lh = (href: string) => localizedHref(href, locale);
+  /* works ホスト（web.locahun3d.com）で描いているか。
+     真なら works 以外へ向くリンクを locahun3d.com の絶対URL＋素の <a> にして、
+     Next のプリフェッチが 301 を跨いで CORS エラーを出すのを止める
+     （2026-09-04 本番で1ページ4本。→ src/lib/online-href.ts）。 */
+  const onWorksHost = isWorksHostname((await headers()).get("host"));
+  const lh = (href: string) => onlineHref(localizedHref(href, locale), onWorksHost);
   // EN版はブランド表記も英字に切り替える（マーク自体は共通）。
   // ⚠ 表記はスキャンサイト scripts/sync_header.py の BRAND_TEXT と一字一句そろえること。
   //    以前ここだけ "Locahun3D"（スペース無し）で、EN版のブランド幅が
@@ -75,7 +82,7 @@ export default async function SiteHeader() {
   const authSignedIn = (
     <Show when="signed-in">
       {user && (
-        <Link
+        <SiteLink absolute={onWorksHost}
           href={lh("/account")}
           className="flex items-center gap-1.5 text-[11px] mono tracking-[0.12em] uppercase text-muted hover:text-accent transition whitespace-nowrap"
         >
@@ -83,32 +90,32 @@ export default async function SiteHeader() {
               マイページで確認でき、毎ページ出す情報ではないため
               （2026-07-29 ユーザー判断）。右側が軽くなる副次効果もある。 */}
           <span className="hidden min-[360px]:inline">{t("auth.mypage")}</span>
-        </Link>
+        </SiteLink>
       )}
       {/* スタジオ(掲載者)の入口。これが無いと、掲載ページを作る権限はあるのに
           /admin/properties を直接URLで教えてもらう以外に辿り着けなかった。 */}
       {user?.role === "studio" && (
-        <Link
+        <SiteLink absolute={onWorksHost}
           href={lh("/admin/properties")}
           className="hidden min-[1200px]:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line pl-3 hover:text-accent transition whitespace-nowrap"
         >
           ⌂ {locale === "en" ? "Listings" : "掲載管理"}
-        </Link>
+        </SiteLink>
       )}
       {/* 管理者リンクはPC専用（旧 mobile-nav.tsx から踏襲、モバイルは基本操作しないため非表示） */}
       {user?.role === "admin" && (
-        <Link
+        <SiteLink absolute={onWorksHost}
           href={lh("/admin")}
           className="hidden min-[1200px]:inline-block px-3 py-1.5 text-[10px] mono tracking-[0.22em] uppercase text-muted border-l border-line pl-3 hover:text-accent transition whitespace-nowrap"
         >
           ⚙ {t("auth.admin")}
-        </Link>
+        </SiteLink>
       )}
       {/* ⚠ ベルはアバター（UserButton）の右。並びは
           … マイページ / アバター / ベル。以前はベルがアバターの左だった。 */}
       <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
       {user && (
-        <NotificationBell notifications={recentNotifications} unreadCount={unreadCount} locale={locale} en={locale === "en"} />
+        <NotificationBell notifications={recentNotifications} unreadCount={unreadCount} locale={locale} en={locale === "en"} absolute={onWorksHost} />
       )}
     </Show>
   );
@@ -201,10 +208,10 @@ export default async function SiteHeader() {
                     {t(n.key)}
                   </a>
                 ) : (
-                  <Link key={n.href} href={lh(n.href)} className={cls}>
+                  <SiteLink absolute={onWorksHost} key={n.href} href={lh(n.href)} className={cls}>
                     {code}
                     {t(n.key)}
-                  </Link>
+                  </SiteLink>
                 );
               })}
               {/* 掲載管理 / 管理 の入口は右側に置いてあるが `hidden min-[1200px]:inline-block`
@@ -213,7 +220,7 @@ export default async function SiteHeader() {
                   この帯だけナビ側（720–1023はドロワー / 1024–1199は1行ナビ）に出す。
                   ≥1200px は従来の右側リンクがあるので min-[1200px]:hidden で重複を防ぐ。 */}
               {user?.role === "studio" && (
-                <Link
+                <SiteLink absolute={onWorksHost}
                   href={lh("/admin/properties")}
                   className="min-[1200px]:hidden flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
                 >
@@ -224,15 +231,15 @@ export default async function SiteHeader() {
                   <span className="min-[1024px]:max-[1200px]:hidden">
                     {locale === "en" ? "Listings" : "掲載管理"}
                   </span>
-                </Link>
+                </SiteLink>
               )}
               {user?.role === "admin" && (
-                <Link
+                <SiteLink absolute={onWorksHost}
                   href={lh("/admin")}
                   className="min-[1200px]:hidden flex items-center gap-1.5 text-[13px] max-[1024px]:text-[14px] max-[1024px]:py-[11px] max-[1024px]:gap-2.5 font-light text-accent hover:text-ink transition-colors whitespace-nowrap"
                 >
                   ⚙ <span className="min-[1024px]:max-[1200px]:hidden">{t("auth.admin")}</span>
-                </Link>
+                </SiteLink>
               )}
               {/* 480px未満でバーから外した分をここに出す。
                   幅を稼ぐために「消す」のではなく「移す」のがルール（R3）。 */}
@@ -253,7 +260,7 @@ export default async function SiteHeader() {
             <div className="min-[1024px]:hidden mt-1 pt-3 border-t border-line flex items-center gap-3 flex-wrap empty:hidden">
               {user?.role !== "studio" && (
                 <span className="min-[768px]:hidden flex items-center">
-                  <CartLink />
+                  <CartLink absolute={onWorksHost} />
                 </span>
               )}
               <span className="min-[768px]:hidden flex items-center gap-2 flex-wrap empty:hidden">
@@ -302,7 +309,7 @@ export default async function SiteHeader() {
             ⚠ 2026-08-16: スキャン/オンライン トグル（旧・列3）の撤去に伴い
             3列（1fr / ブランド / 1fr）へ戻した。 */}
         <div className="z-[2] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-0 absolute inset-x-0 top-0 h-[55px] px-[max(clamp(1rem,4vw,48px),calc((100vw_-_1440px)/2))] pointer-events-none">
-          <Link
+          <SiteLink absolute={onWorksHost}
             href={lh("/")}
             aria-label={brandName}
             className="flex items-center col-start-2 row-start-1 gap-1.5 pointer-events-auto"
@@ -312,7 +319,7 @@ export default async function SiteHeader() {
                 ボックス中心はマークと一致していたが、Noto Sans JP のグリフが行内で
                 1px強下に沈み、マークより低く見えていた。数値でなく見た目で合わせる。 */}
             <span className="brand text-lg tracking-[0.01em] whitespace-nowrap relative -top-px">{brandName}</span>
-          </Link>
+          </SiteLink>
           {/* 列3は空のスペーサー（両端を同幅にしてブランドを中央に保つ）。
               ⚠ ここに EN を置かないこと。中央グリッドは absolute で画面端まで伸びるので、
                  列3の右端＝右グループ（カート/マイページ/ベル/アバター）と同じ位置になり
@@ -345,7 +352,7 @@ export default async function SiteHeader() {
           {/* 1024px以上のENはここだけ。スキャン側は右が空なので画面右端に付くが、
               オンラインはカート/認証が居るためその左に並ぶ。この非対称だけは許容する。 */}
           <LangToggle className="max-[1024px]:hidden" />
-          {user?.role !== "studio" && <CartLink />}
+          {user?.role !== "studio" && <CartLink absolute={onWorksHost} />}
           {authButtons}
           {authSignedIn}
         </div>
