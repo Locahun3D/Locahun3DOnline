@@ -1,10 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * /about の参考スクリーンショット用画像。クリックで原寸拡大（ライトボックス）。
  * Escape キー・背景クリック・×ボタンで閉じる。
+ *
+ * ⚠ モーダルは `createPortal` で `document.body` 直下に描く（zoomable-image.tsx と同じ）。
+ *   以前はサムネイルの隣にインライン描画していたため、`.about07 .segment img
+ *   {width:100%; aspect-ratio:16/9; object-fit:cover}` などセクションスコープの
+ *   画像規則が拡大画像にも当たり、**16:9に切り抜かれたまま画面より大きく表示**
+ *   されていた（本人報告 2026-09-04「画像をクリックすると見切れたまま拡大」）。
+ *   body 直下ならセクションのCSSも祖先の overflow/transform も届かない。
  */
 export default function LightboxImage({
   src,
@@ -17,6 +25,13 @@ export default function LightboxImage({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // createPortal はマウント後にしか使えない（SSR と DOM を一致させるための判定）。
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   const close = useCallback(() => setOpen(false), []);
   useEffect(() => {
@@ -44,7 +59,7 @@ export default function LightboxImage({
         onClick={() => setOpen(true)}
         className={`cursor-zoom-in ${className}`}
       />
-      {open && (
+      {open && mounted && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -67,7 +82,8 @@ export default function LightboxImage({
           >
             ×
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

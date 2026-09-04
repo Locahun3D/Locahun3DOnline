@@ -119,7 +119,6 @@ function sentenceBreaks(text: string) {
  * （本人指示: /about を独立ページとしてやめ、トップ内の見出しへ昇格）。
  * 文言・画像・リンクは /about のものをそのまま。CSS も共有の ABOUT07_CSS。
  * ────────────────────────────────────────────── */
-const SCAN_URL = "https://web.locahun3d.com/";
 // ⚠ デモ誘導は「機能ツアー付きデモ」へ（本人指示 2026-08-16）。showcase=1 は
 //   ビューアーの自動ツアーモード（実装作業中）。現行本番ビューアーは未知の
 //   パラメータを無視するため、ツアーが乗る前でも普通のデモとして安全に動く。
@@ -674,24 +673,19 @@ export default async function HomePage() {
               )}
             </h2>
             <p>
+              {/* ⚠ 2026-09-04: 旧「スキャン自体は別サービス…web.locahun3d.com」は
+                  2サイト分岐の名残で、統合後は行き先が存在しない。本人指示
+                  「問い合わせページに繋がるように」→ /contact へ。 */}
               {en ? (
                 <>
-                  Scanning is a separate service —{" "}
-                  <a href={SCAN_URL} target="_blank" rel="noopener">
-                    details at web.locahun3d.com
-                  </a>
-                  .
+                  To request a scan,{" "}
+                  <Link href={lh("/contact")}>contact us</Link>.
                 </>
               ) : (
                 <>
-                  {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
-                  スキャン自体は別サービスとして提供しています。
-                  <br />
-                  詳細は{" "}
-                  <a href={SCAN_URL} target="_blank" rel="noopener">
-                    web.locahun3d.com
-                  </a>{" "}
-                  をご覧ください。
+                  スキャン（撮影）のご依頼は{" "}
+                  <Link href={lh("/contact")}>お問い合わせ</Link>
+                  {" "}から。
                 </>
               )}
             </p>
