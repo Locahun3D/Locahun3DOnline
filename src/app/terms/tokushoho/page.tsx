@@ -5,7 +5,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 export async function generateMetadata() {
   const locale = await getLocale();
   return {
-    title: locale === "en" ? "Legal Notice (Act on Specified Commercial Transactions)｜Locahun 3D" : "特定商取引法に基づく表記｜ロケハン3D",
+    title: locale === "en" ? "Legal Notice (Act on Specified Commercial Transactions)" : "特定商取引法に基づく表記｜ロケハン3D",
   };
 }
 

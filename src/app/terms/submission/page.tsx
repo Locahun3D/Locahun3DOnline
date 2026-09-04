@@ -5,7 +5,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 export async function generateMetadata() {
   const locale = await getLocale();
   return {
-    title: locale === "en" ? "Scan Submission Agreement｜Locahun 3D" : "持ち込みスキャン規約｜ロケハン3D",
+    title: locale === "en" ? "Scan Submission Agreement" : "持ち込みスキャン規約｜ロケハン3D",
   };
 }
 

@@ -9,7 +9,7 @@ const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&sh
 
 export async function generateMetadata() {
   const locale = await getLocale();
-  return { title: locale === "en" ? "Contact｜Locahun 3D" : "お問い合わせ｜ロケハン3D" };
+  return { title: locale === "en" ? "Contact" : "お問い合わせ｜ロケハン3D" };
 }
 
 /* 日本語の説明文は「句点（。）ごとに改行」する（本人指示 2026-08-27）。
@@ -44,7 +44,8 @@ const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; 
   {
     type: "listing",
     desc: "スタジオ・ロケ地のオーナー様。物件を3Dスキャンして掲載しませんか。掲載費は期限なしで無料、3Dスキャンの計測費も2026年12月31日まで無料です。",
-    descEn: "Studio and location owners — list your space with a 3D scan.",
+    descEn:
+      "Studio and location owners — list your space with a 3D scan. Listing is free with no expiry, and the 3D scan fee is also free through Dec 31, 2026.",
     go: "掲載のご案内へ",
     goEn: "Go to listing inquiry",
   },
@@ -97,7 +98,7 @@ export default async function ContactHubPage() {
         className="block max-w-[760px] mx-auto mb-6 bg-white border-2 border-accent px-7 py-7 hover:bg-accent/[0.04] transition relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 mono text-[9.5px] tracking-[0.2em] uppercase bg-accent text-white px-3 py-1">
-          {en ? "Pick up" : "ピックアップ"}
+          {en ? "Featured" : "ピックアップ"}
         </div>
         <div className="mono text-[10px] tracking-[0.3em] uppercase text-accent mb-3">
           /contact/listing

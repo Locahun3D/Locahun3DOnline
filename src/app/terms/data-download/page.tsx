@@ -5,7 +5,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 export async function generateMetadata() {
   const locale = await getLocale();
   return {
-    title: locale === "en" ? "3D Data Purchase Agreement｜Locahun 3D" : "3Dデータ購入規約｜ロケハン3D",
+    title: locale === "en" ? "3D Data Purchase Agreement" : "3Dデータ購入規約｜ロケハン3D",
   };
 }
 

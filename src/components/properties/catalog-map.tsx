@@ -12,6 +12,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Property } from "@/lib/schemas";
 import { mapTileConfig } from "@/lib/map-tiles";
+import { useLocale } from "@/components/locale-provider";
 
 /**
  * Default Leaflet marker images fail to load with bundlers because of broken
@@ -72,6 +73,7 @@ function ViewportFitter({ reference }: { reference: Props["reference"] }) {
  */
 function ResetViewControl({ reference }: { reference: Props["reference"] }) {
   const map = useMap();
+  const en = useLocale() === "en";
   // クリック時点の最新 reference を参照する（コントロールDOMは初回のみ生成）。
   // ⚠ レンダー中に ref へ書かないこと（React はレンダーを破棄・再実行できるため
   //   不正。React Compiler も "Cannot access refs during render" で弾く）。
@@ -88,9 +90,9 @@ function ResetViewControl({ reference }: { reference: Props["reference"] }) {
       const div = L.DomUtil.create("div", "leaflet-bar");
       const a = L.DomUtil.create("a", "", div);
       a.href = "#";
-      a.title = "最初の表示に戻る / Reset view";
+      a.title = en ? "Reset view" : "最初の表示に戻る / Reset view";
       a.setAttribute("role", "button");
-      a.setAttribute("aria-label", "最初の表示に戻る");
+      a.setAttribute("aria-label", en ? "Reset view" : "最初の表示に戻る");
       a.textContent = "⊕";
       a.style.fontSize = "15px";
       L.DomEvent.on(a, "click", (e) => {
@@ -106,7 +108,7 @@ function ResetViewControl({ reference }: { reference: Props["reference"] }) {
     return () => {
       control.remove();
     };
-  }, [map]);
+  }, [map, en]);
   return null;
 }
 

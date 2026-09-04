@@ -12,7 +12,7 @@ import RevenueSimulator from "@/components/revenue-simulator";
 export async function generateMetadata() {
   const locale = await getLocale();
   return {
-    title: locale === "en" ? "Bring your own scan｜Locahun 3D" : "持ち込みスキャン｜ロケハン3D",
+    title: locale === "en" ? "Bring your own scan" : "持ち込みスキャン｜ロケハン3D",
   };
 }
 

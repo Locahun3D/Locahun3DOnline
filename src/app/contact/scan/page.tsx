@@ -17,7 +17,7 @@ export async function generateMetadata() {
   const locale = await getLocale();
   return locale === "en"
     ? {
-        title: "Scan request｜Contact｜Locahun 3D",
+        title: "Scan request | Contact",
         description:
           "Request a 3D scan of a location or facility for your shoot. Get a ballpark from shoot scale, number of locations and capture method, then send it with your inquiry.",
       }

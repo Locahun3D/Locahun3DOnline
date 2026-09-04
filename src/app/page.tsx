@@ -182,7 +182,7 @@ const SERVICE_SEGMENTS: Array<{
       ["問い合わせが直接届く", "Inquiries reach you directly"],
       [
         "現在キャンペーンで掲載無料（2026年12月31日まで）",
-        "Free during our launch campaign (through Dec 31, 2026)",
+        "Free listing during our launch campaign (through Dec 31, 2026)",
       ],
     ],
     actions: [
@@ -382,7 +382,7 @@ const DETAILS: Array<{
     label: ["視聴トークン", "Viewing tokens"],
     desc: [
       "Free 登録で 6 トークン、有料プランは月 16〜120 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
-      "6 tokens at Free signup; paid plans grant 16–60 per month. Unlocking a scene costs tokens once — revisits are free for 1 year.",
+      "6 tokens at Free signup; paid plans grant 16–120 per month. Unlocking a scene costs tokens once — revisits are free for 1 year.",
     ],
     img: {
       src: "/about/tokens.webp",
@@ -514,7 +514,7 @@ export default async function HomePage() {
             <p className="lead">
               {sentenceBreaks(
                 en
-                  ? "Locahun3D scans real locations into 3DGS (3D Gaussian Splatting) data and lists them on this catalog. You can check a space's size, ceiling height and lighting without visiting, and buy the 3D data itself when you need it."
+                  ? "Locahun 3D scans real locations into 3DGS (3D Gaussian Splatting) data and lists them on this catalog. You can check a space's size, ceiling height and lighting without visiting, and buy the 3D data itself when you need it."
                   : "ロケハン3D は、実在のロケ地を 3DGS（3D Gaussian Splatting）データ化してカタログに掲載しているサービスです。現地に行かなくても空間の広さ・天井高・光の入り方を確認でき、必要なら 3D データそのものを購入できます。"
               )}
             </p>

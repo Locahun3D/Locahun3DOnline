@@ -314,7 +314,7 @@ export default async function SiteHeader() {
             aria-label={brandName}
             className="flex items-center col-start-2 row-start-1 gap-1.5 pointer-events-auto"
           >
-            <HeaderMark />
+            <HeaderMark label={brandName} />
             {/* ⚠ relative -top-px は光学補正（2026-08-27 本人指摘「ロゴ、上下中央からずれてる」）。
                 ボックス中心はマークと一致していたが、Noto Sans JP のグリフが行内で
                 1px強下に沈み、マークより低く見えていた。数値でなく見た目で合わせる。 */}

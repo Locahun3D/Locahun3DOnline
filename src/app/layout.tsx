@@ -161,16 +161,20 @@ export async function generateMetadata(): Promise<Metadata> {
       : "ロケハン3D オンラインは、実空間を 3D Gaussian Splatting で持ち帰り、ブラウザだけで現場検証・スタジオ検索・撮影前ロケハンを完結させるサービスです。",
     // オンライン版の既定ファビコンは青。トップ (/) のみ page.tsx で白に上書きする。
     icons: { icon: "/icon-blue.svg" },
+    // ⚠ 2026-09-04: /en でも siteName / locale / image alt が日本語のままだった。
+    //   OGP は SNS カードにそのまま出るので locale で出し分ける。
     openGraph: {
       type: "website",
-      siteName: "ロケハン3D",
-      locale: "ja_JP",
+      siteName: en ? "Locahun 3D" : "ロケハン3D",
+      locale: en ? "en_US" : "ja_JP",
       images: [
         {
           url: "/og-cover.jpg",
           width: 1200,
           height: 630,
-          alt: "ロケハン3D — 実空間を 3D Gaussian Splatting で持ち帰る",
+          alt: en
+            ? "Locahun 3D — bring real spaces home as 3D Gaussian Splatting"
+            : "ロケハン3D — 実空間を 3D Gaussian Splatting で持ち帰る",
         },
       ],
     },

@@ -10,6 +10,13 @@ import ScanMark from "@/components/scan-mark";
  *   （ライトテーマの accent #1ea0c4 は黒地では沈む）。
  *   これに伴い usePathname が不要になり、client component ではなくなった。
  */
-export default function HeaderMark({ size = 22 }: { size?: number }) {
-  return <ScanMark size={size} className="flex-none" />;
+export default function HeaderMark({
+  size = 22,
+  label,
+}: {
+  size?: number;
+  /** ロゴの alt。site-header から locale 別の brandName を渡す。 */
+  label?: string;
+}) {
+  return <ScanMark size={size} label={label} className="flex-none" />;
 }

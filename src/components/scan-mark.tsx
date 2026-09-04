@@ -11,10 +11,13 @@ export default function ScanMark({
   className = "",
   /** Reticle (center) color. 既定＝オンラインの青。 */
   reticle = "#1ea0c4",
+  /** ロゴの代替テキスト。EN ページでは "Locahun 3D" を渡す（2026-09-04）。 */
+  label = "ロケハン3D",
 }: {
   size?: number;
   className?: string;
   reticle?: string;
+  label?: string;
 }) {
   return (
     <svg
@@ -22,7 +25,7 @@ export default function ScanMark({
       width={size}
       height={size}
       role="img"
-      aria-label="ロケハン3D"
+      aria-label={label}
       className={className}
     >
       <g
