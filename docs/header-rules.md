@@ -5,7 +5,8 @@
 ヘッダーを触る前に必ず読むこと。
 
 対象: `locahun3d_online/src/components/site-header.tsx` と
-`digiroke3d_Web/assets/site-header.css`（この2つが唯一のソース）。
+`locahun3d_online/src/app/site-header.css`。このファイルが唯一の正本。
+旧スキャンサイト（`digiroke3d_Web`）との同期は 2026-09-04 廃止。
 
 ## 何が起きていたか（2026-07-28 実測）
 
@@ -129,7 +130,8 @@ node scripts/ui-audit.mjs            # 26ページ×9幅の重なり・はみ出
 - **切替点を下げたら、その帯だけに出ていた要素が消えた**（トグルが768–1279pxで消失）
   → 切替点を動かしたら、その帯域を必ずスクショで目視する
 - **CSSを各HTMLへコピペ** → 3系統にdriftし「ページによって文字サイズが変わる」
-  → `assets/site-header.css` 1本＋`sync_header.py` で同期
+  → `src/app/site-header.css` 1本に統一（このファイルが唯一の正本。
+  旧スキャンサイトとの同期は 2026-09-04 廃止）
 
 ## R8: 検証は必ず「サインイン状態」でも行う
 

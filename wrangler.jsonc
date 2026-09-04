@@ -50,13 +50,11 @@
     "STRIPE_PRICE_TEAM_MONTHLY": "price_1ToVB43G4r5QaMCIO3xLjUCb",
     "STRIPE_PRICE_TEAM_ANNUAL": "price_1ToVB73G4r5QaMCIlQMEmIPG"
   },
-  // ⚠ works 統合の切替（web.locahun3d.com をこの Worker へ付け替える）は
-  //    **手動**で行う（本人が実施）。ここに
-  //      { "pattern": "web.locahun3d.com", "custom_domain": true }
-  //    を足すと deploy した瞬間に切り替わってしまうため、切替が済むまで書かない。
-  //    手順とロールバックは docs/works-integration-2026-09-03.md。
+  // 2026-09-04 works 統合で移管（web.locahun3d.com は手動切替済み。
+  // 手順とロールバックは docs/works-integration-2026-09-03.md）。
   "routes": [
     { "pattern": "locahun3d.com", "custom_domain": true },
-    { "pattern": "www.locahun3d.com", "custom_domain": true }
+    { "pattern": "www.locahun3d.com", "custom_domain": true },
+    { "pattern": "web.locahun3d.com", "custom_domain": true }
   ]
 }
