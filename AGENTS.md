@@ -10,3 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Latest handoff (current architecture, pitfalls, open items): `F:\docs\HANDOFF_2026-09-05_works完全統合・ヘッダー根本治療・整理.md`.
 - Hard rules: no `git push` without explicit instruction (push = production deploy); verify on a real browser at 1440/820/390 before claiming a fix; run `python scripts/design-fb-audit.py` before reporting any UI change; never change a works URL; keep reports short.
 <!-- END:nextjs-agent-rules -->
+
+# Global (2026-09-05)
+
+Global rules and knowledge moved from Claude: `C:\Users\askgg\.codex\AGENTS.md` and `C:\Users\askgg\.codex\memory\MEMORY.md` (read first, then CLAUDE.md here). Never `git push` without an explicit instruction; CF auto-deploy is off, deploy only via the npm deploy scripts.
