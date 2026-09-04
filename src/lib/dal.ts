@@ -21,7 +21,20 @@ import { deviceLimitForPlan, enforceDeviceLimit } from "./device-limit";
 const DEVICE_LIMIT_RECHECK_MS = 10 * 60 * 1000;
 
 export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
-  const { userId } = await auth();
+  /* ⚠ middleware の matcher が除外するパス（/favicon.ico や存在しない *.svg 等）で
+     404 ページを描くと、ルート layout の SiteHeader → ここ → auth() が
+     「clerkMiddleware() を検出できない」と投げて **500** になっていた
+     （本番実測 2026-09-04: /favicon.ico・/nonexistent.svg が 500。ブラウザは
+     /favicon.ico を毎ページ自動要求する）。そのケースは未ログイン扱いにして
+     404 を正しく返す。保護ルートは middleware が先に auth.protect() するので、
+     ここで握りつぶしても認可は緩まない。 */
+  let userId: string | null = null;
+  try {
+    ({ userId } = await auth());
+  } catch (err) {
+    if (err instanceof Error && /clerkMiddleware/.test(err.message)) return null;
+    throw err;
+  }
   if (!userId) return null;
 
   const existing = await userRepo.get(userId);

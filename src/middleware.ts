@@ -253,7 +253,14 @@ export const config = {
     //    ・web.locahun3d.com / locahun3d.com のホスト振り分け 301
     //    のどちらも middleware でしか行えない。html を除外したままだと
     //    EN 記事が日本語で出て、旧マーケサイトのページも 301 されない。
-    "/((?!_next|[^?]*\\.(?:css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // ⚠ 2026-09-04: 拡張子による除外そのものをやめた。除外パスで **存在しない**
+    //    ファイル（/favicon.ico・/foo.svg 等）を要求されると、404 ページのルート
+    //    layout が SiteHeader → Clerk の auth() を呼び「clerkMiddleware() を検出
+    //    できない」で **500** になっていた（本番実測。ブラウザは /favicon.ico を
+    //    毎ページ自動要求する）。middleware を全パスで動かせば 404 が正しく返る。
+    //    コストは public/ の実ファイルや R2 配信ルートにも Clerk の軽い検証が
+    //    走る程度（DB は叩かない）。_next の内部資産だけは除外。
+    "/((?!_next/static|_next/image).*)",
     // Always run for API/clerk routes
     "/(api|trpc)(.*)",
     "/__clerk/:path*",
