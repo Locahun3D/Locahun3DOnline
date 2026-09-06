@@ -3,6 +3,7 @@
 // Cloudflare Workers にはファイルシステムが無いため、記事 JSON は静的 import で
 // バンドルに焼き込む。ここは束ねるだけのモジュール。
 import type { WorksPage } from "@/lib/works-content";
+import p_ja_3dgs_codex_hall_modeling from "../../content/works/ja/3dgs-codex-hall-modeling.json";
 import p_ja_3dgs_file_formats from "../../content/works/ja/3dgs-file-formats.json";
 import p_ja_3dgs_lidar_denoise from "../../content/works/ja/3dgs-lidar-denoise.json";
 import p_ja_3dgs_software_comparison from "../../content/works/ja/3dgs-software-comparison.json";
@@ -17,6 +18,7 @@ import p_ja_portalcam_xbin_raw_extraction from "../../content/works/ja/portalcam
 import p_ja_shibuya_ten_simulations from "../../content/works/ja/shibuya-ten-simulations.json";
 import p_ja_ue5_xgrids_3dgs_aerial_ai from "../../content/works/ja/ue5-xgrids-3dgs-aerial-ai.json";
 import p_ja_vectorworks_3dgs_mesh from "../../content/works/ja/vectorworks-3dgs-mesh.json";
+import p_en_3dgs_codex_hall_modeling from "../../content/works/en/3dgs-codex-hall-modeling.json";
 import p_en_3dgs_file_formats from "../../content/works/en/3dgs-file-formats.json";
 import p_en_3dgs_lidar_denoise from "../../content/works/en/3dgs-lidar-denoise.json";
 import p_en_3dgs_software_comparison from "../../content/works/en/3dgs-software-comparison.json";
@@ -34,6 +36,7 @@ import p_en_vectorworks_3dgs_mesh from "../../content/works/en/vectorworks-3dgs-
 
 export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
  ja: {
+  "3dgs-codex-hall-modeling": p_ja_3dgs_codex_hall_modeling as WorksPage,
   "3dgs-file-formats": p_ja_3dgs_file_formats as WorksPage,
   "3dgs-lidar-denoise": p_ja_3dgs_lidar_denoise as WorksPage,
   "3dgs-software-comparison": p_ja_3dgs_software_comparison as WorksPage,
@@ -50,6 +53,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "vectorworks-3dgs-mesh": p_ja_vectorworks_3dgs_mesh as WorksPage,
  },
  en: {
+  "3dgs-codex-hall-modeling": p_en_3dgs_codex_hall_modeling as WorksPage,
   "3dgs-file-formats": p_en_3dgs_file_formats as WorksPage,
   "3dgs-lidar-denoise": p_en_3dgs_lidar_denoise as WorksPage,
   "3dgs-software-comparison": p_en_3dgs_software_comparison as WorksPage,
