@@ -89,7 +89,7 @@ export default function PropertyCard({
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {property.prefecture} / {property.city}
         </div>
-        <h3 className="serif text-[1.15rem] leading-[1.5] group-hover:text-accent transition">
+        <h3 className="serif text-[1.15rem] leading-[1.5] group-hover:text-accent transition whitespace-pre-wrap [overflow-wrap:anywhere]">
           {property.title}
         </h3>
         <p className="text-[13px] leading-[1.7] text-muted line-clamp-2">

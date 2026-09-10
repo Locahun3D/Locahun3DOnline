@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import {
   postCommentAction,
   deleteCommentAction,
@@ -292,13 +293,7 @@ export default function PropertyComments({
   const fmt = (iso: string) => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleString(en ? "en-US" : "ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return fmtDateTimeLocaleJST(d, en ? "en-US" : "ja-JP");
   };
 
   const byId = new Map(comments.map((c) => [c.id, c]));

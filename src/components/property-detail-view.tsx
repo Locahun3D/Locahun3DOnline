@@ -371,7 +371,7 @@ export default function PropertyDetailView({
                 ))}
               </div>
 
-              <h1 className="text-[clamp(24px,3vw,32px)] font-bold leading-[1.34] mt-6 mb-1.5">
+              <h1 className="text-[24px] lg:text-[32px] font-bold leading-[1.34] mt-6 mb-1.5 whitespace-pre-wrap [overflow-wrap:anywhere]">
                 {property.title || (en ? "(Untitled location)" : "（無題の物件）")}
               </h1>
               <p className="text-[13px] text-white/55">

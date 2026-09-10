@@ -637,8 +637,8 @@ export default function PropertyEditor({
               desc="検索結果とカードに出る情報です。"
             >
               <Field label="物件名" error={formState.errors.title?.message} required>
-                <input
-                  type="text"
+                <textarea
+                  rows={2}
                   {...register("title")}
                   className={inputClass}
                   placeholder="例: Setagaya Cyc Studio｜白ホリ大スパン"
@@ -646,8 +646,8 @@ export default function PropertyEditor({
               </Field>
               {showEn && (
                 <Field label="物件名（英語・EN版で表示／未記入でOK）" error={formState.errors.titleEn?.message} hint="空欄のままで構いません。公開作業のときに運営側でAI翻訳して埋めます（内容は公開前に確認します）。">
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     {...register("titleEn")}
                     className={inputClass}
                     placeholder="e.g. Setagaya Cyc Studio — Large-span Cyclorama（空欄なら日本語名をそのまま表示）"

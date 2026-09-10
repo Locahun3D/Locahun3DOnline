@@ -1413,7 +1413,7 @@ function PropertyCardLite({
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {property.prefecture} / {property.city}
         </div>
-        <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2 min-h-[3.05rem]">
+        <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2 min-h-[3.05rem] whitespace-pre-wrap [overflow-wrap:anywhere]">
           {property.title}
         </h3>
         <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">
