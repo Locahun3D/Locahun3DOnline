@@ -71,20 +71,31 @@ export async function GET(
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
       headers.set("Cache-Control", cache);
+      headers.set("ETag", obj.httpEtag);
+      headers.set("Last-Modified", obj.uploaded.toUTCString());
       return new NextResponse(obj.body as ReadableStream, { status: 206, headers });
     }
 
-    const obj = await bucket.get(key);
+    const obj = await (req.method === "HEAD" ? bucket.head(key) : bucket.get(key));
     if (!obj) return new NextResponse("Not found", { status: 404 });
 
     const headers = new Headers();
     headers.set("Content-Type", "application/octet-stream");
-    if (obj.size) headers.set("Content-Length", String(obj.size));
+    headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", cache);
-    return new NextResponse(obj.body as ReadableStream, { headers });
+    headers.set("ETag", obj.httpEtag);
+    headers.set("Last-Modified", obj.uploaded.toUTCString());
+    return new NextResponse(req.method === "HEAD" ? null : obj.body as ReadableStream, { headers });
   } catch (e) {
     console.error("demo-asset error:", e);
     return NextResponse.json({ error: "stream failed" }, { status: 500 });
   }
+}
+
+export async function HEAD(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  // Reuse the exact allowlist/error path; never send a body, including on errors.
+  const response = await GET(req, context);
+  await response.body?.cancel();
+  return new NextResponse(null, { status: response.status, headers: response.headers });
 }

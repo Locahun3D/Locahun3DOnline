@@ -83,7 +83,7 @@ export async function GET(
   } catch {
     cache = undefined;
   }
-  if (cache && !rangeHeader) {
+  if (cache && !rangeHeader && req.method !== "HEAD") {
     try {
       const hit = await cache.match(req);
       if (hit) return hit;
@@ -118,6 +118,8 @@ export async function GET(
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
       headers.set("Cache-Control", cacheControlFor(total));
+      headers.set("ETag", obj.httpEtag);
+      headers.set("Last-Modified", obj.uploaded.toUTCString());
       // Next.js/OpenNext は既定で全レスポンスに RSC 用の
       // "Vary: rsc, next-router-state-tree, ..." を付与するが、これは生バイナリ
       // 配信には無関係かつリクエストごとに変わり得るヘッダーのため、Cloudflare
@@ -129,7 +131,7 @@ export async function GET(
     }
 
     // Full response
-    const obj = await bucket.get(key);
+    const obj = await (req.method === "HEAD" ? bucket.head(key) : bucket.get(key));
     if (!obj) return new NextResponse("Not found", { status: 404 });
 
     const size = obj.size ?? 0;
@@ -137,10 +139,13 @@ export async function GET(
 
     const headers = new Headers();
     headers.set("Content-Type", obj.httpMetadata?.contentType || "application/octet-stream");
-    if (obj.size) headers.set("Content-Length", String(obj.size));
+    headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", cacheControlFor(size));
     headers.set("Vary", "Accept-Encoding");
+    headers.set("ETag", obj.httpEtag);
+    headers.set("Last-Modified", obj.uploaded.toUTCString());
+    if (req.method === "HEAD") return new NextResponse(null, { headers });
 
     // 小容量ファイル（画像等）は body をバッファ化して Cache API にも保存する
     // （ReadableStream は 1 回しか消費できないため、バッファ化するなら
@@ -165,6 +170,13 @@ export async function GET(
     console.error("R2 fetch error:", e);
     return NextResponse.json({ error: "R2 fetch failed" }, { status: 500 });
   }
+}
+
+export async function HEAD(req: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  // Keep geometry blocking ahead of metadata access; do not populate GET cache.
+  const response = await GET(req, context);
+  await response.body?.cancel();
+  return new NextResponse(null, { status: response.status, headers: response.headers });
 }
 
 /**

@@ -2,3 +2,7 @@
 # 再取り込みのたびに全行差分が出るのを防ぐ。
 content/works/**/*.json text eol=lf
 src/content/works.generated.ts text eol=lf
+
+# Viewer release digests require byte-identical generated HTML and vendor assets.
+public/viewer/offline-viewer.html -text
+public/viewer/vendor/*.js -text
