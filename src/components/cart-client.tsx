@@ -214,7 +214,7 @@ export default function CartClient() {
               >
                 {i.title || i.propertyId}
               </Link>
-              {i.label && (
+              {i.label?.trim() && i.label.trim() !== i.title?.trim() && (
                 <span className="ml-2 mono text-[10px] tracking-[0.14em] uppercase border border-line px-1.5 py-0.5 opacity-60">
                   {i.label}
                 </span>
