@@ -1,6 +1,13 @@
 {
- "generatedAt": "2026-09-06T08:28:35.849Z",
+ "generatedAt": "2026-09-12T04:36:27.919Z",
  "pages": {
+  "3dgs-blender-workflow": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "購入した3DGSデータをBlenderで使う方法｜ロケハン3D 技術ブログ"
+  },
   "3dgs-codex-hall-modeling": {
    "locales": [
     "ja",
@@ -104,7 +111,7 @@
     "ja",
     "en"
    ],
-   "title": "3DGSスキャンをVectorworksで使うには｜ロケハン3D 技術ブログ"
+   "title": "3DGSをVectorworksで使う現実的な方法｜ロケハン3D 技術ブログ"
   }
  }
 }
