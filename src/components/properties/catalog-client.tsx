@@ -487,7 +487,7 @@ export default function CatalogClient({
     // ⚠ 見出し（CATALOG / Find a Location）と「掲載スタジオ募集中」の募集枠は
     //    2026-08-13 に撤去（運用判断）。キーワード検索と物件リストを1画面でも
     //    多く見せるため、空いた分は詰めて検索UIを最上部に置く。
-    <div className="frame-wide pt-3 sm:pt-5 pb-12 sm:pb-32">
+    <div className="frame-wide pt-2 pb-12 sm:pb-32">
       {/* 地図はPCのみ。タブレット・スマホは検索と一覧に全幅を使う。 */}
       <div>
       {/* Top band: search panel (left) + map (right), flush to the same height.
@@ -574,11 +574,8 @@ export default function CatalogClient({
             </p>
           </div>
         ) : (
-          /* 列数は帯を排他の範囲で書く（sm:/md: と min-[N]: を同じプロパティで
-             重ねると出力順で勝敗が不定になる）。720–1023px は左カラム内なので1列。
-             〜639:1 / 640–719:2 / 720–1023:1 / 1024–1279:3 / 1280–1535:4 /
-             1536–2199:5 / 2200以上:6（720–1023 以外は従来と同じ列数）。 */
-          <ul className="grid grid-cols-1 sm:grid-cols-2 min-[1024px]:max-[1280px]:grid-cols-3 min-[1280px]:max-[1536px]:grid-cols-4 min-[1536px]:max-[2200px]:grid-cols-5 min-[2200px]:grid-cols-6 gap-5 min-[720px]:max-[1024px]:gap-3">
+          /* 空の列も維持するauto-fillと幅上限で、少数結果でもカードを引き伸ばさない。 */
+          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] gap-5 min-[720px]:max-[1024px]:gap-3">
             {computed.map((p) => (
               <li
                 key={p.id}
@@ -673,44 +670,6 @@ function FiltersPanel(p: FiltersProps) {
 
       {/* 折りたたみ本体: スマホ(<720px)は open のときだけ展開 / 720px以上は常時展開 */}
       <div className={`${open ? "block" : "hidden"} min-[720px]:block space-y-2.5 min-[720px]:max-[1024px]:space-y-1.5`}>
-      {/* 最近の検索条件: 常時・1行固定高さ (横スクロール) でパネル高さを安定させ、
-          チップ出現/折り返しによる枠全体のサイズ変動を防ぐ。 */}
-      <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap min-h-[30px]">
-        <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-50 mr-0.5 shrink-0">
-          {en ? "Recent" : "最近の条件"}
-        </span>
-        {p.recent.length === 0 ? (
-          <span className="text-[11px] text-muted/60 shrink-0">{en ? "None" : "なし"}</span>
-        ) : (
-          p.recent.map((s) => {
-            const key = snapshotKey(s);
-            const label = describeSnapshot(s, en);
-            return (
-              <span
-                key={key}
-                className="group inline-flex items-center border border-line bg-[#2c2c2c] hover:border-accent transition rounded-none shrink-0"
-              >
-                <button
-                  type="button"
-                  onClick={() => p.applyRecent(s)}
-                  title={label}
-                  className="font-sans text-[11px] text-ink/85 group-hover:text-accent transition px-2 py-1 max-w-[220px] truncate text-left"
-                >
-                  {label}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => p.removeRecent(key)}
-                  aria-label={en ? "Remove this filter" : "この条件を削除"}
-                  className="px-1.5 py-1 text-[12px] leading-none text-muted hover:text-ink border-l border-line/70 transition"
-                >
-                  ×
-                </button>
-              </span>
-            );
-          })
-        )}
-      </div>
 
       {/* Left: keyword + additional-condition toggles · Right: reference/distance */}
       <div className="grid @3xl:grid-cols-2 gap-x-6 gap-y-2.5">
@@ -832,13 +791,13 @@ function FiltersPanel(p: FiltersProps) {
             options={CEILING_OPTS} format={(v) => `${v}m`}
           />
           <Row label={en ? "Hours" : "利用時間"}>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="time"
                 value={p.hoursFrom}
                 onChange={(e) => p.setHoursFrom(e.target.value)}
                 aria-label={en ? "From" : "開始時刻"}
-                className={`${inputCls} w-[108px]`}
+                className={`${inputCls} w-[90px]`}
               />
               <span className="mono text-[12px] opacity-50">{en ? "–" : "〜"}</span>
               <input
@@ -846,7 +805,7 @@ function FiltersPanel(p: FiltersProps) {
                 value={p.hoursTo}
                 onChange={(e) => p.setHoursTo(e.target.value)}
                 aria-label={en ? "To" : "終了時刻"}
-                className={`${inputCls} w-[108px]`}
+                className={`${inputCls} w-[90px]`}
               />
               {(p.hoursFrom || p.hoursTo) && (
                 <button
@@ -858,6 +817,23 @@ function FiltersPanel(p: FiltersProps) {
                   ✕
                 </button>
               )}
+              <details className="relative ml-auto shrink-0">
+                <summary className="cursor-pointer text-[11px] whitespace-nowrap border border-line px-2 py-1.5">
+                  {en ? "Recent" : "最近の条件"}
+                </summary>
+                <div className="absolute right-0 top-full z-30 mt-1 w-[280px] max-w-[80vw] border border-line bg-bg p-2 shadow-lg space-y-1">
+                  {p.recent.length === 0 ? <p className="text-[11px] text-muted">{en ? "None" : "なし"}</p> : p.recent.map((s) => (
+                    <div key={snapshotKey(s)} className="flex items-center gap-1">
+                      <button type="button" className="min-w-0 flex-1 truncate text-left text-[11px] p-1 hover:text-accent"
+                        onClick={(event) => { p.applyRecent(s); event.currentTarget.closest("details")?.removeAttribute("open"); }}>
+                        {describeSnapshot(s, en)}
+                      </button>
+                      <button type="button" onClick={() => p.removeRecent(snapshotKey(s))}
+                        aria-label={en ? "Remove this filter" : "この条件を削除"} className="shrink-0 px-2 py-1">×</button>
+                    </div>
+                  ))}
+                </div>
+              </details>
             </div>
           </Row>
         </div>

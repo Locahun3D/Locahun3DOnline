@@ -222,7 +222,7 @@ export async function submitContactRequestAction(
         type: "contact_request",
         title: `【${typeLabel}】新しいお問い合わせが届きました`,
         body: `${d.name || "匿名"} さん: ${d.message.slice(0, 120)}`,
-        link: "/admin/contact-requests",
+        link: `/admin/contact-requests#${id}`,
       });
     }
   } catch (e) {

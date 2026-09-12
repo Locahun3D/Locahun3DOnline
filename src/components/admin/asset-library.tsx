@@ -258,9 +258,9 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
     [filtered, usage],
   );
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const allUnused = assets.filter(a => (usage[a.url]?.length ?? 0) === 0);
 
-  async function onBulkDeleteUnused() {
-    const targets = unusedInFiltered;
+  async function onBulkDeleteUnused(targets = unusedInFiltered) {
     if (targets.length === 0) return;
     const totalBytes = targets.reduce((sum, a) => sum + (a.size || 0), 0);
     const ok = confirm(
@@ -272,7 +272,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
     try {
       const ids = new Set(targets.map((a) => a.id));
       const results = await Promise.all(
-        targets.map((a) => assetApi({ action: "delete", id: a.id }).then((success) => ({ id: a.id, success }))),
+        targets.map((a) => assetApi({ action: "delete", id: a.id, unusedOnly: true }).then((success) => ({ id: a.id, success }))),
       );
       const failedIds = new Set(results.filter((r) => !r.success).map((r) => r.id));
       setAssets((prev) => prev.filter((x) => !ids.has(x.id) || failedIds.has(x.id)));
@@ -330,6 +330,14 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
             placeholder="物件フォルダを検索…"
             className="bg-[#222] border border-line px-2 py-1 text-[13px] w-52"
           />
+          <button
+            onClick={() => onBulkDeleteUnused(allUnused)}
+            disabled={bulkDeleting || allUnused.length === 0}
+            className="text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-3 py-1.5 disabled:opacity-40"
+            title="全フォルダの未使用アセットが対象です。使用中のアセットは削除しません。"
+          >
+            {bulkDeleting ? "削除中…" : `未使用アセットを削除（${allUnused.length}件）`}
+          </button>
           {replaceProgress != null && (
             <span className="mono text-[11px] text-accent">差し替え中… {replaceProgress}%</span>
           )}
@@ -446,7 +454,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
         </label>
         {unusedInFiltered.length > 0 && (
           <button
-            onClick={onBulkDeleteUnused}
+            onClick={() => onBulkDeleteUnused()}
             disabled={bulkDeleting}
             className="text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-2.5 py-1 transition-colors disabled:opacity-40"
             title="現在の検索・絞り込み条件に一致する未使用アセットのみを削除します（使用中のアセットは対象外）"

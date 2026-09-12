@@ -8,6 +8,8 @@ import {
   clearCart,
   onCartChange,
   reconcileCart,
+  restoreRemovedCartItem,
+  type RemovedCartItem,
   type CartItem,
 } from "@/lib/cart";
 import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
@@ -22,9 +24,11 @@ export default function CartClient() {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [removedItems, setRemovedItems] = useState<RemovedCartItem[]>([]);
   const [details, setDetails] = useState<Record<string, { license?: DataLicense; purchaseContents: PurchaseContent[] }>>({});
   // 価格変更/販売終了の再検証結果（マウント時の1回だけ表示するバナー）。
   const [notice, setNotice] = useState<{ removedCount: number; priceChangedCount: number } | null>(null);
+  const cartRequestKey = JSON.stringify(items.map(i => [i.propertyId, i.splatItemIndex, i.license]));
 
   // ⚠ react-hooks/set-state-in-effect はここでは誤検知。
   //    カートの実体は localStorage。SSR では読めないのでマウント後に同期する。
@@ -44,6 +48,7 @@ export default function CartClient() {
   useEffect(() => {
     const cart = getCart();
     if (cart.length === 0) return;
+    let active = true;
     (async () => {
       try {
         const res = await fetch("/api/cart/prices", {
@@ -57,10 +62,11 @@ export default function CartClient() {
             })),
           }),
         });
-        if (!res.ok) return;
+        if (!res.ok || !active) return;
         const data = (await res.json()) as {
           items: { propertyId: string; splatItemIndex: number; price: number; available: boolean; license?: DataLicense; purchaseContents: PurchaseContent[] }[];
         };
+        if (!active) return;
         setDetails(Object.fromEntries(data.items.map((item) => [`${item.propertyId}:${item.splatItemIndex}`, item])));
         const { changed, removed, priceChanged } = reconcileCart(data.items);
         if (changed) {
@@ -72,10 +78,25 @@ export default function CartClient() {
         // サーバー側再検証で最終的な安全性は担保される）。
       }
     })();
-     
-  }, []);
+    return () => { active = false; };
+  }, [cartRequestKey]);
 
   const total = items.reduce((n, i) => n + i.price, 0);
+
+  const removeItem = (item: CartItem) => {
+    const current = getCart();
+    const index = current.findIndex(i => i.propertyId === item.propertyId && i.splatItemIndex === item.splatItemIndex);
+    if (index < 0) return;
+    setRemovedItems(previous => [...previous, { item: current[index], index }]);
+    removeFromCart(item.propertyId, item.splatItemIndex);
+  };
+
+  const undoRemove = () => {
+    const last = removedItems.at(-1);
+    if (!last) return;
+    restoreRemovedCartItem(last);
+    setRemovedItems(previous => previous.slice(0, -1));
+  };
 
   const checkout = async () => {
     if (!agreed) {
@@ -123,6 +144,19 @@ export default function CartClient() {
 
   if (!mounted) return null;
 
+  const undoNotice = removedItems.length > 0 && (
+    <div role="status" className="border border-line bg-bg px-4 py-3 flex flex-wrap items-center gap-3 text-[13px]">
+      <span className="flex-1 min-w-0 break-words">{en ? "Removed: " : "削除しました："}{removedItems.at(-1)?.item.title} {removedItems.at(-1)?.item.label}</span>
+      <button type="button" onClick={undoRemove} className="border border-accent text-accent px-3 py-2 min-h-[44px]">{en ? "Undo" : "元に戻す"}</button>
+    </div>
+  );
+
+  const usageLink = (
+    <a href={`https://web.locahun3d.com/${en ? "en/" : ""}works/index.html#blog`} className="inline-flex items-center min-h-[44px] text-[13px] text-accent underline underline-offset-4">
+      {en ? "How to use the data →" : "データの活用方法について →"}
+    </a>
+  );
+
   const noticeBanner = notice && (
     <div className="border border-amber-400/40 bg-amber-400/5 px-4 py-3 text-[12.5px] text-amber-300 flex items-start justify-between gap-3">
       <span>
@@ -144,6 +178,7 @@ export default function CartClient() {
     return (
       <div className="space-y-4">
         {noticeBanner}
+        {undoNotice}
         <div className="border border-line p-10 text-center">
           <p className="text-sm opacity-50 mb-4">{en ? "Your cart is empty." : "カートは空です。"}</p>
           <Link
@@ -153,6 +188,7 @@ export default function CartClient() {
             {en ? "Browse locations →" : "物件を探す →"}
           </Link>
         </div>
+        {usageLink}
       </div>
     );
   }
@@ -160,6 +196,7 @@ export default function CartClient() {
   return (
     <div className="space-y-6">
       {noticeBanner}
+      {undoNotice}
       <div className="space-y-3">
         {items.map((i) => {
           const detail = details[`${i.propertyId}:${i.splatItemIndex}`];
@@ -202,7 +239,7 @@ export default function CartClient() {
             </div>
             <button
               type="button"
-              onClick={() => removeFromCart(i.propertyId, i.splatItemIndex)}
+              onClick={() => removeItem(i)}
               className="mono text-[10px] uppercase border border-line px-2 py-1 text-muted hover:border-red-400 hover:text-red-400 transition"
             >
               {en ? "Remove" : "削除"}
@@ -210,6 +247,8 @@ export default function CartClient() {
           </div>
         ); })}
       </div>
+
+      {usageLink}
 
       <div className="border border-accent/40 bg-[#0a0906] p-5 flex flex-wrap items-center gap-4">
         <div className="flex-1">

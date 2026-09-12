@@ -44,6 +44,7 @@ export default function ContactRequestRow({
 
   return (
     <div
+      id={c.id}
       className={`border rounded-md ${
         c.status === "new" ? "border-accent/60 bg-[#1a1a1a]" : "border-line"
       }`}

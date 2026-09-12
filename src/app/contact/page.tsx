@@ -75,13 +75,10 @@ export default async function ContactHubPage() {
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
 
-      <header className="text-center max-w-[60ch] mx-auto mb-14">
-        <h1 className="serif text-[clamp(1.5rem,4.5vw,3rem)] font-bold leading-[1.3] mb-4">
+      <header className="text-center max-w-[60ch] mx-auto mb-6">
+        <h1 className="serif text-[clamp(1.5rem,4.5vw,3rem)] font-bold leading-[1.3]">
           {en ? "Contact" : "お問い合わせ"}
         </h1>
-        <p className="text-[14px] text-muted leading-[1.95]">
-          {en ? "Please choose the topic that fits your request." : "ご用件をお選びください。"}
-        </p>
       </header>
 
       {/* ピックアップ — 掲載依頼（無料キャンペーン中）を優先訴求 */}

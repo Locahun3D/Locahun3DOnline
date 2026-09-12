@@ -112,26 +112,6 @@ export default async function PricingPage({
             </>
           )}
         </h1>
-        <p className="mt-4 sm:mt-6 text-[14px] text-muted max-w-[58ch] mx-auto leading-[1.85]">
-          {en ? (
-            <>
-              3DGS walkthroughs run on{" "}
-              <em className="not-italic text-accent">tokens</em>. Token cost scales
-              with studio size, and you can view as many as you like within your
-              monthly budget. Annual billing saves 20% — Studio is the best-balanced
-              choice.
-            </>
-          ) : (
-            <>
-              {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
-              3DGS ウォークスルーは <em className="not-italic text-accent">トークン制</em>。
-              <br />
-              スタジオの規模に応じてトークン消費が変わり、月の予算内で何件でも見られます。
-              <br />
-              年払いで -20%、Studio が最もバランス良い選択肢です。
-            </>
-          )}
-        </p>
       </header>
 
       {/* Free demo funnel — walk a real scanned property, no sign-up required */}
@@ -163,20 +143,6 @@ export default async function PricingPage({
           </>
         )}
       </p>
-      {user && (
-        <p className="text-center mono text-[10px] text-muted mt-4 tracking-[0.1em]">
-          {en ? (
-            "※ Payment integration is in progress. Plan changes apply instantly for now."
-          ) : (
-            /* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */
-            <>
-              ※ 決済連携は準備中です。
-              <br />
-              現在はプラン変更が即時反映されます。
-            </>
-          )}
-        </p>
-      )}
 
       {/* ROI calculator — how much a subscription saves vs. on-site scouting */}
       <RoiCalculator en={en} />

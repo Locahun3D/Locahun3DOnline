@@ -9,6 +9,8 @@ import BulkDeleteTestButton from "@/components/admin/bulk-delete-test-button";
 import { stripeConfigStatus } from "@/lib/stripe";
 import StripeSetupPanel from "@/components/admin/stripe-setup-panel";
 import { fmtDateTimeJST } from "@/lib/date-format";
+import { filterAdminPurchases } from "@/lib/admin-purchase-filters";
+import PendingPurchasesToggle from "@/components/admin/pending-purchases-toggle";
 
 export const metadata = { title: "データ販売" };
 
@@ -38,14 +40,15 @@ function fmtDate(iso: string) {
 export default async function PurchasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; property?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; property?: string; status?: string; pending?: string }>;
 }) {
   await requireAdmin();
 
   const sp = await searchParams;
   const query = (sp.q ?? "").trim().toLowerCase();
   const filterPropertyId = sp.property ?? "";
-  const filterStatus = sp.status ?? "";
+  const filterStatus = ["", "completed", "refunded", "cancelled"].includes(sp.status ?? "completed") ? sp.status ?? "completed" : "completed";
+  const showPending = sp.pending === "1";
 
   const allPurchases = await purchaseRepo.list();
   const allProps = await propertyRepo.list();
@@ -55,19 +58,7 @@ export default async function PurchasesPage({
   const propTitleMap = new Map(allProps.map((p) => [p.id, p.title || p.id]));
 
   // Filter purchases
-  let purchases = allPurchases;
-  if (query) {
-    purchases = purchases.filter((p) => {
-      const hay = `${p.propertyTitle} ${p.userEmail} ${p.itemLabel}`.toLowerCase();
-      return hay.includes(query);
-    });
-  }
-  if (filterPropertyId) {
-    purchases = purchases.filter((p) => p.propertyId === filterPropertyId);
-  }
-  if (filterStatus) {
-    purchases = purchases.filter((p) => p.status === filterStatus);
-  }
+  const purchases = filterAdminPurchases(allPurchases, { q: query, property: filterPropertyId, status: filterStatus, showPending });
 
   const completedAll = allPurchases.filter((p) => p.status === "completed");
   const refundedAll = allPurchases.filter((p) => p.status === "refunded");
@@ -77,6 +68,7 @@ export default async function PurchasesPage({
   // Per-studio purchase stats
   const studioStats = new Map<string, { count: number; revenue: number; refunds: number }>();
   for (const p of allPurchases) {
+    if (p.status !== "completed" && p.status !== "refunded") continue;
     const s = studioStats.get(p.propertyId) ?? { count: 0, revenue: 0, refunds: 0 };
     if (p.status === "completed") { s.count += 1; s.revenue += p.priceYen; }
     if (p.status === "refunded") { s.refunds += 1; }
@@ -96,7 +88,7 @@ export default async function PurchasesPage({
       <header className="flex items-baseline gap-4 flex-wrap">
         <h1 className="serif text-2xl tracking-wider">データ販売管理</h1>
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
-          {allPurchases.length} purchases
+          全履歴 {allPurchases.length} 件
         </span>
         {(() => {
           const s = stripeConfigStatus();
@@ -140,13 +132,13 @@ export default async function PurchasesPage({
         </div>
         <div className="border border-line p-5 bg-[#141414]">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
-            総購入件数
+            購入完了件数
           </div>
           <div className="text-2xl font-semibold">{completedAll.length}</div>
         </div>
         <div className="border border-line p-5 bg-[#141414]">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
-            総売上
+            売上（完了分）
           </div>
           <div className="text-2xl font-semibold text-accent">{fmtPrice(totalRevenue)}</div>
         </div>
@@ -165,7 +157,7 @@ export default async function PurchasesPage({
             スタジオ別売上
           </h2>
           <div className="border border-line overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm text-ink">
               <thead>
                 <tr className="mono text-[10px] tracking-[0.2em] uppercase text-left opacity-40 border-b border-line">
                   <th className="px-4 py-3 font-normal">スタジオ</th>
@@ -227,20 +219,19 @@ export default async function PurchasesPage({
               defaultValue={filterStatus}
               className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
             >
-              {/* 「処理中」はStripe決済リダイレクト待ちの一瞬の状態で、絞り込んでも
-                  操作できることが無いため選択肢から除外（該当行自体は「すべて」に混在表示）。 */}
               <option value="">状態すべて</option>
               <option value="completed">完了</option>
               <option value="refunded">返金済</option>
               <option value="cancelled">キャンセル</option>
             </select>
+            <PendingPurchasesToggle checked={showPending} />
             <button
               type="submit"
               className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-2 text-muted hover:text-accent hover:border-accent transition"
             >
               検索
             </button>
-            {(query || filterPropertyId || filterStatus) && (
+            {(query || filterPropertyId || filterStatus !== "completed" || showPending) && (
               <Link
                 href="/admin/purchases"
                 className="mono text-[10px] tracking-[0.18em] uppercase text-muted hover:text-ink transition"
@@ -256,7 +247,7 @@ export default async function PurchasesPage({
           <p className="text-sm opacity-50">該当する購入はありません。</p>
         ) : (
           <div className="border border-line overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm text-ink">
               <thead>
                 <tr className="mono text-[10px] tracking-[0.2em] uppercase text-left opacity-40 border-b border-line">
                   <th className="px-4 py-3 font-normal">日時</th>

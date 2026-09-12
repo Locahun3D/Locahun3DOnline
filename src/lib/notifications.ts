@@ -105,22 +105,43 @@ export async function createNotification(
 }
 
 export async function listNotifications(userId: string, limit = 30): Promise<Notification[]> {
+  let notifications: Notification[];
   if (canAccessLocalFs()) {
     const s = await readStore();
-    return s.notifications
+    notifications = s.notifications
       .filter((n) => n.userId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, limit);
-  }
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } else {
   const db = await getD1();
   if (!db) return [];
   const res = await db
-    .prepare(`SELECT * FROM ${TABLE} WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`)
-    .bind(userId, limit)
+    .prepare(`SELECT * FROM ${TABLE} WHERE user_id = ? ORDER BY created_at DESC`)
+    .bind(userId)
     .all();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rows = ((res?.results ?? []) as Record<string, any>[]);
-  return rows.map(rowToNotification);
+  notifications = rows.map(rowToNotification);
+  }
+  // Derive visibility from the source so already archived historical notices also
+  // disappear. Do not delete notifications: restoring an inquiry restores its notice.
+  const [contacts, inquiries] = await Promise.all([
+    notifications.some(n => n.type === "contact_request")
+      ? import("./contact-requests").then(m => m.contactRequestRepo.list()) : [],
+    notifications.some(n => n.type === "inquiry_new")
+      ? import("./inquiries").then(m => m.inquiryRepo.list()) : [],
+  ]);
+  return notifications.filter(n => {
+    if (n.type !== "contact_request" && n.type !== "inquiry_new") return true;
+    const rows = n.type === "contact_request" ? contacts : inquiries;
+    const id = n.link.split("#")[1];
+    if (id) return rows.some(row => row.id === id && row.status !== "archived");
+    // Older notices had no source ID. Only hide an unambiguous archived match;
+    // a similarly worded active request must never lose its notification.
+    const matches = rows.filter(row => n.body === ("propertyTitle" in row
+      ? `${row.name || "匿名"} さん（${row.propertyTitle}）: ${row.message.slice(0, 120)}`
+      : `${row.name || "匿名"} さん: ${row.message.slice(0, 120)}`));
+    return matches.length === 0 || matches.some(row => row.status !== "archived");
+  }).slice(0, limit);
 }
 
 export async function markAllRead(userId: string): Promise<void> {

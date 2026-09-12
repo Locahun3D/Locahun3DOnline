@@ -41,7 +41,7 @@ export default async function PropertiesPage() {
 
   return (
     <div className="theme-online">
-      <div className="frame-wide pt-5">
+      <div className="frame-wide pt-2">
         <SimilarPropertySearch />
       </div>
       <CatalogClient

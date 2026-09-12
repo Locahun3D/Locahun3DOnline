@@ -3,10 +3,8 @@ import type { PurchaseContent } from "@/lib/purchase-contents";
 export default function PurchaseContents({ files, en }: { files: PurchaseContent[]; en: boolean }) {
   return (
     <section className="mt-3 border-t border-line pt-3 text-[13px] leading-[1.8]" aria-label={en ? "Included downloads" : "購入に含まれるデータ"}>
-      <h4 className="font-medium">{en ? "Included downloads" : "購入に含まれるデータ"}</h4>
       {files.length ? (
         <>
-          <p className="text-muted">{en ? `${files.length} downloadable file${files.length === 1 ? "" : "s"}` : `ダウンロード対象：${files.length}ファイル`}</p>
           <ul className="mt-1 space-y-1">
             {files.map((file, index) => (
               <li key={index} className="flex flex-wrap items-baseline gap-x-3 border-b border-line/50 py-1 last:border-0">

@@ -63,6 +63,17 @@ export function clearCart(): void {
   save([]);
 }
 
+export interface RemovedCartItem { item: CartItem; index: number }
+
+export function restoreRemovedCartItem({ item, index }: RemovedCartItem): void {
+  const current = getCart();
+  const key = cartKey(item.propertyId, item.splatItemIndex);
+  // A later addition (possibly with a new license/price) wins over this snapshot.
+  if (current.some(i => cartKey(i.propertyId, i.splatItemIndex) === key)) return;
+  current.splice(Math.min(Math.max(0, index), current.length), 0, item);
+  save(current);
+}
+
 /**
  * カート内アイテムの価格スナップショットを最新値へ同期し、販売終了/購入済みに
  * なったアイテムを除去する。localStorage のカートは価格を追加時点のまま保持
@@ -85,7 +96,9 @@ export function reconcileCart(
   for (const item of current) {
     const k = cartKey(item.propertyId, item.splatItemIndex);
     const l = latestMap.get(k);
-    if (!l || !l.available) {
+    // Not in this response means it may have been added after the request began.
+    if (!l) { next.push(item); continue; }
+    if (!l.available) {
       removed.push(item);
       continue;
     }

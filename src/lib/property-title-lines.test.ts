@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {propertySchema,localizeProperty} from './schemas';
+import {propertyTitleSegments} from './property-presentation';
 
 describe('authored property title line breaks',()=>{
   it('retains line breaks through persistence and localization',()=>{
@@ -14,10 +15,14 @@ describe('authored property title line breaks',()=>{
     for(const name of ['title','titleEn'])
       expect(source).toMatch(new RegExp('<textarea\\s[^>]*register\\("'+name+'"\\)[^>]*/>'));
   });
-  it('preserves authored line breaks on detail and catalog title surfaces',()=>{
-    for(const file of ['src/components/property-detail-view.tsx','src/components/property-card.tsx','src/components/properties/catalog-client.tsx']){
-      const source=readFileSync(file,'utf8');
-      expect(source).toMatch(/<h[13] className="[^"]*whitespace-pre-wrap[^"]*">\s*\{property.title/);
+  it('preserves authored line breaks while grouping title words for display',()=>{
+    // Browser rendering is covered by verify-property-presentation.mjs at three
+    // widths. Assert content here, not the incidental JSX expression spelling.
+    for(const title of ['Studio\nSeeYouTomorrow','Studio\nSee You Tomorrow','渋谷\nスクランブル交差点']){
+      const parts=propertyTitleSegments(title);
+      expect(parts.join('')).toBe(title);
+      expect(parts.filter(part=>part.includes('\n'))).toEqual(['\n']);
+      expect(parts.filter(part=>!part.includes('\n')).join('')).toBe(title.replace('\n',''));
     }
   });
 });

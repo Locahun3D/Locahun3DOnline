@@ -17,7 +17,7 @@ import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
 import ZoomableImage from "@/components/zoomable-image";
-import PropertyMap from "@/components/property-map";
+import { googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
 import PropertyComments, { type CommentItem } from "@/components/property-comments";
 
 /**
@@ -186,14 +186,16 @@ export default function PropertyDetailView({
   // 撮影メタ情報（PROD./SCENE/DATE/LOC.）ではなく、すぐ使える連絡先を
   // 同じ「スレート・データシート」の見た目のまま表示する。
   const slateRows: { k: string; v: string; href?: string }[] = [];
+  const displayedEmail = publicPropertyEmail(property.id, property.contactEmail);
+  const mapsUrl = googleMapsUrl(property.coords, property.address);
   if (property.contactPhone) {
     slateRows.push({ k: "TEL", v: property.contactPhone, href: `tel:${property.contactPhone}` });
   }
-  if (property.contactEmail) {
+  if (displayedEmail) {
     slateRows.push({
       k: "MAIL",
-      v: property.contactEmail,
-      href: `mailto:${property.contactEmail}`,
+      v: displayedEmail,
+      href: `mailto:${displayedEmail}`,
     });
   }
   if (property.contactWebsite) {
@@ -373,7 +375,9 @@ export default function PropertyDetailView({
               </div>
 
               <h1 className="text-[24px] lg:text-[32px] font-bold leading-[1.34] mt-6 mb-1.5 whitespace-pre-wrap [overflow-wrap:anywhere]">
-                {property.title || (en ? "(Untitled location)" : "（無題の物件）")}
+                {propertyTitleSegments(property.title || (en ? "(Untitled location)" : "（無題の物件）")).map((part, index) => (
+                  part.includes("\n") ? <br key={index} /> : <span key={index} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
+                ))}
               </h1>
               <p className="text-[13px] text-white/55">
                 {property.prefecture} {property.city}
@@ -417,7 +421,7 @@ export default function PropertyDetailView({
               </div>
 
               <div className="mt-auto pt-6">
-                <p className="mono text-[24px] mb-3.5">
+                {!(property.permitRequired && property.priceType === "flat" && property.hourlyPrice === 0) && <p className="mono text-[24px] mb-3.5">
                   {property.priceType === "free" ? (
                     <small className="text-[13px] text-white/55 tracking-[0.1em]">
                       {en ? "Free" : "無料"}
@@ -447,7 +451,7 @@ export default function PropertyDetailView({
                       {en ? "Contact for pricing" : "お問い合わせください"}
                     </small>
                   )}
-                </p>
+                </p>}
                 {property.priceType === "hourly" && property.dailyPrice > 0 && (
                   <p className="mono text-[11px] text-white/50 mb-4 -mt-2">
                     {en ? "Daily" : "日貸し"} ¥
@@ -456,13 +460,13 @@ export default function PropertyDetailView({
                 )}
                 <div className="flex flex-wrap gap-2">
                   <a
-                    href={property.permitRequired ? "#permit-notice" : "#inquiry"}
+                    href={property.permitRequired ? (property.permitNotes ? "#permit-notice" : undefined) : "#inquiry"}
                     className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 bg-accent border border-accent text-[#0a2a35] hover:brightness-[1.06] transition"
                   >
                     {property.permitRequired
                       ? en
-                        ? `${property.permitType || "Permit"} info`
-                        : `${property.permitType || "撮影許可"}について`
+                        ? `${property.permitType || "Filming permit"} required`
+                        : `${property.permitType || "撮影許可"}の申請が必要です`
                       : en
                         ? "Contact us"
                         : "お問い合わせ"}
@@ -569,16 +573,11 @@ export default function PropertyDetailView({
               )}
             </div>
 
-            {property.permitRequired && (
-              <div id="permit-notice" className="mt-6 border border-amber-400/60 bg-amber-50 px-4 py-3 scroll-mt-20">
-                <div className="text-[11px] font-bold tracking-[0.12em] text-amber-700 mb-1">
-                  {en ? "⚠ Permit required for filming" : "⚠ 撮影には許可の取得が必要です"}
-                </div>
-                {property.permitNotes && (
-                  <p className="text-[12px] text-amber-900/90 leading-relaxed whitespace-pre-wrap">
+            {property.permitRequired && property.permitNotes && (
+              <div id="permit-notice" className="mt-6 border border-accent/60 bg-accent/5 px-4 py-3 scroll-mt-20">
+                  <p className="text-[12px] text-ink leading-relaxed whitespace-pre-wrap">
                     {property.permitNotes}
                   </p>
-                )}
               </div>
             )}
           </div>
@@ -651,18 +650,11 @@ export default function PropertyDetailView({
       {/* ══════════════════════════════════════════════════
        *  Access — single-marker map + address / station
        * ══════════════════════════════════════════════════ */}
-      {property.coords && (
+      {mapsUrl && (
         <section className="frame pt-12">
           <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
             <Eyebrow en="ACCESS" jp={en ? "Access" : "アクセス"} />
-            <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-              <div className="relative min-h-[280px]">
-                <PropertyMap
-                  lat={property.coords.lat}
-                  lng={property.coords.lng}
-                  label={property.title}
-                />
-              </div>
+            <div>
               <div className="flex flex-col">
                 <div className="space-y-3 text-[14px] flex-1">
                   {property.address && (
@@ -683,7 +675,7 @@ export default function PropertyDetailView({
                   )}
                 </div>
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${property.coords.lat},${property.coords.lng}`}
+                  href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 inline-block max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] mono text-[11px] tracking-[0.15em] uppercase text-accent hover:underline"
@@ -948,16 +940,16 @@ export default function PropertyDetailView({
                       </a>
                     </div>
                   )}
-                  {property.contactEmail && (
+                  {displayedEmail && (
                     <div className="flex gap-5 py-3 border-b border-line">
                       <span className="mono text-[10px] tracking-[0.22em] uppercase text-muted w-[54px] pt-0.5 shrink-0">
                         MAIL
                       </span>
                       <a
-                        href={`mailto:${property.contactEmail}`}
+                        href={`mailto:${displayedEmail}`}
                         className="font-bold border-b border-ink/30 max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] hover:text-accent hover:border-accent transition break-all"
                       >
-                        {property.contactEmail}
+                        {displayedEmail}
                       </a>
                     </div>
                   )}
@@ -1005,11 +997,6 @@ export default function PropertyDetailView({
                       revalidate={`/properties/${property.id}`}
                     />
                   </div>
-                  {hasContact && (
-                    <p className="mono text-[9.5px] max-[720px]:text-[11px] tracking-[0.2em] uppercase text-muted pt-2">
-                      RESPONSE WITHIN 1 BUSINESS DAY
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

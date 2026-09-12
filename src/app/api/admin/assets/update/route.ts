@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
-import { assetRepo } from "@/lib/store";
+import { assetRepo, repo } from "@/lib/store";
+import { computeAssetUsage } from "@/lib/asset-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,13 @@ export async function POST(req: Request) {
   if (action === "delete") {
     const a = await assetRepo.get(id);
     if (!a) return NextResponse.json({ ok: false, reason: "not_found" });
+    if (body.unusedOnly === true) {
+      const [properties, assets] = await Promise.all([repo.list(), assetRepo.list()]);
+      const usage = computeAssetUsage(properties, assets);
+      if ((usage[a.url]?.length ?? 0) > 0) {
+        return NextResponse.json({ ok: false, reason: "asset_in_use" }, { status: 409 });
+      }
+    }
     await assetRepo.remove(id);
     return NextResponse.json({ ok: true });
   }

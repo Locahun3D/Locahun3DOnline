@@ -127,10 +127,11 @@ export async function submitInquiryAction(
     message: d.message,
   });
 
+  const inquiryId = randomUUID();
   // 2) 必ず記録（メール不可でも運営が後から確認できる）。
   try {
     await inquiryRepo.upsert({
-      id: randomUUID(),
+      id: inquiryId,
       propertyId: property.id,
       propertyTitle: property.title,
       userId: signedInUserId,
@@ -170,7 +171,7 @@ export async function submitInquiryAction(
         type: "inquiry_new",
         title: "物件への問い合わせが届きました",
         body: `${d.name || "匿名"} さん（${property.title}）: ${d.message.slice(0, 120)}`,
-        link: "/admin/inquiries",
+        link: `/admin/inquiries#${inquiryId}`,
       });
     }
   } catch (e) {

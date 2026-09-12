@@ -269,6 +269,7 @@ export async function setInquiryStatusAction(formData: FormData): Promise<void> 
   if (!i) return;
   await inquiryRepo.upsert({ ...i, status });
   revalidatePath("/admin/inquiries");
+  revalidatePath("/", "layout");
 }
 
 /** 問い合わせを削除。 */
@@ -347,6 +348,7 @@ export async function setContactRequestStatusAction(formData: FormData): Promise
   if (!c) return;
   await contactRequestRepo.upsert({ ...c, status });
   revalidatePath("/admin/contact-requests");
+  revalidatePath("/", "layout");
 }
 
 /** 一般お問い合わせ(/contact)を削除。 */

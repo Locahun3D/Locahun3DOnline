@@ -14,12 +14,15 @@ function fmtDate(iso: string) {
 export default async function AdminInquiriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ purpose?: string }>;
+  searchParams: Promise<{ purpose?: string; box?: string }>;
 }) {
   await requireAdmin();
 
-  const { purpose: purposeFilter } = await searchParams;
-  const all = await inquiryRepo.list();
+  const { purpose: purposeFilter, box } = await searchParams;
+  const showArchived = box === "archive";
+  const records = await inquiryRepo.list();
+  const all = records.filter(i => (i.status === "archived") === showArchived);
+  const hrefFor = (purpose?: string) => `/admin/inquiries?${new URLSearchParams({ ...(showArchived ? { box: "archive" } : {}), ...(purpose ? { purpose } : {}) })}`;
   const newCount = all.filter((i) => i.status === "new").length;
   const purposes = [...new Set(all.map((i) => i.purpose).filter(Boolean))].sort();
   const inquiries = purposeFilter ? all.filter((i) => i.purpose === purposeFilter) : all;
@@ -42,11 +45,15 @@ export default async function AdminInquiriesPage({
         </p>
       </div>
 
+      <nav aria-label="問い合わせの保存先" className="flex gap-3 mb-4 text-sm">
+        <Link href="/admin/inquiries" aria-current={!showArchived ? "page" : undefined} className={!showArchived ? "text-accent" : "text-muted"}>受信箱（{records.filter(i => i.status !== "archived").length}）</Link>
+        <Link href="/admin/inquiries?box=archive" aria-current={showArchived ? "page" : undefined} className={showArchived ? "text-accent" : "text-muted"}>アーカイブ（{records.filter(i => i.status === "archived").length}）</Link>
+      </nav>
       {purposes.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.18em] uppercase">
           <span className="text-muted mr-1">種別</span>
           <Link
-            href="/admin/inquiries"
+            href={hrefFor()}
             className={`px-3 py-1.5 border rounded-sm transition ${
               !purposeFilter
                 ? "border-accent text-accent"
@@ -58,7 +65,7 @@ export default async function AdminInquiriesPage({
           {purposes.map((p) => (
             <Link
               key={p}
-              href={`/admin/inquiries?purpose=${encodeURIComponent(p)}`}
+              href={hrefFor(p)}
               className={`px-3 py-1.5 border rounded-sm transition ${
                 purposeFilter === p
                   ? "border-accent text-accent"
@@ -80,6 +87,7 @@ export default async function AdminInquiriesPage({
           {inquiries.map((i) => (
             <div
               key={i.id}
+              id={i.id}
               className={`border rounded-md p-5 ${
                 i.status === "new" ? "border-accent/60 bg-[#1a1a1a]" : "border-line"
               }`}
@@ -170,7 +178,7 @@ export default async function AdminInquiriesPage({
 
               <div className="flex flex-wrap items-start gap-2">
                 <InquiryReplyForm inquiryId={i.id} toEmail={i.email} />
-                {i.status !== "read" && (
+                {i.status === "new" && (
                   <form action={setInquiryStatusAction}>
                     <input type="hidden" name="id" value={i.id} />
                     <input type="hidden" name="status" value="read" />
@@ -179,13 +187,19 @@ export default async function AdminInquiriesPage({
                     </button>
                   </form>
                 )}
-                {i.status !== "archived" && (
+                {i.status !== "archived" ? (
                   <form action={setInquiryStatusAction}>
                     <input type="hidden" name="id" value={i.id} />
                     <input type="hidden" name="status" value="archived" />
                     <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
                       アーカイブ
                     </button>
+                  </form>
+                ) : (
+                  <form action={setInquiryStatusAction}>
+                    <input type="hidden" name="id" value={i.id} />
+                    <input type="hidden" name="status" value="read" />
+                    <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">受信箱に戻す</button>
                   </form>
                 )}
                 <form action={deleteInquiryAction}>
