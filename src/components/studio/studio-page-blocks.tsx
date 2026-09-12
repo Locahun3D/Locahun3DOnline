@@ -13,6 +13,8 @@ export default function StudioPageBlocks({
   blocks,
   property,
   freeAccess = false,
+  displaySimulation = false,
+  freeViewer = false,
   canViewRestricted = false,
   canViewNdaOnly = false,
   hasViewerAccess = false,
@@ -24,6 +26,8 @@ export default function StudioPageBlocks({
   blocks: PageBlock[];
   property: Property;
   freeAccess?: boolean;
+  displaySimulation?: boolean;
+  freeViewer?: boolean;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
@@ -35,7 +39,7 @@ export default function StudioPageBlocks({
   return (
     <div className="space-y-12">
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} previewToken={previewToken} unlockedItemIds={unlockedItemIds} locale={locale} />
+        <BlockView key={b.id} block={b} property={property} freeAccess={freeAccess} displaySimulation={displaySimulation} freeViewer={freeViewer} canViewRestricted={canViewRestricted} canViewNdaOnly={canViewNdaOnly} hasViewerAccess={hasViewerAccess} signedIn={signedIn} previewToken={previewToken} unlockedItemIds={unlockedItemIds} locale={locale} />
       ))}
     </div>
   );
@@ -45,6 +49,8 @@ function BlockView({
   block,
   property,
   freeAccess,
+  displaySimulation = false,
+  freeViewer = false,
   canViewRestricted = false,
   canViewNdaOnly = false,
   hasViewerAccess = false,
@@ -56,6 +62,8 @@ function BlockView({
   block: PageBlock;
   property: Property;
   freeAccess: boolean;
+  displaySimulation?: boolean;
+  freeViewer?: boolean;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
   hasViewerAccess?: boolean;
@@ -135,6 +143,8 @@ function BlockView({
                 previewVideoUrl={item.previewVideoUrl}
                 tokenCost={property.tokenCost}
                 freeAccess={freeAccess}
+                displaySimulation={displaySimulation}
+                freeViewer={freeViewer}
                 hasSubscription={hasViewerAccess}
                 signedIn={signedIn}
                 previewToken={previewToken}
@@ -190,7 +200,9 @@ function BlockView({
       return (
         <div className="border border-line p-8 text-center">
           <Link
-            href={block.href || "/pricing"}
+            href={displaySimulation ? "#" : block.href || "/pricing"}
+            aria-disabled={displaySimulation || undefined}
+            tabIndex={displaySimulation ? -1 : undefined}
             className="inline-block px-8 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
           >
             {block.label || (en ? "Request a quote" : "見積もり依頼")}

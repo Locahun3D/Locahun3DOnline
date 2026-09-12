@@ -52,8 +52,8 @@ const HUB_CARDS: { type: ContactType; desc: string; descEn: string; go: string; 
   // 汎用の「ご相談」窓口は 2026-07-30 に廃止（内容別の窓口へ寄せた）。
   {
     type: "license",
-    desc: "データの再配布・AI学習利用・API/データ連携のご相談はこちら。案件ごとに条件が異なるため、まずはお気軽に。",
-    descEn: "Redistribution, AI-training use, API / data partnerships — terms vary by case, so just ask.",
+    desc: "データの再配布・AI学習利用・API/データ連携のご相談はこちら。",
+    descEn: "Contact us about redistribution, AI-training use, or API and data partnerships.",
     go: "相談フォームへ",
     goEn: "Go to consultation form",
   },
@@ -76,7 +76,7 @@ export default async function ContactHubPage() {
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
 
       <header className="text-center max-w-[60ch] mx-auto mb-6">
-        <h1 className="serif text-[clamp(1.5rem,4.5vw,3rem)] font-bold leading-[1.3]">
+        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold leading-[1.3]">
           {en ? "Contact" : "お問い合わせ"}
         </h1>
       </header>
@@ -84,13 +84,10 @@ export default async function ContactHubPage() {
       {/* ピックアップ — 掲載依頼（無料キャンペーン中）を優先訴求 */}
       <Link
         href={lh("/contact/listing")}
-        className="block max-w-[760px] mx-auto mb-6 bg-white border-2 border-accent px-7 py-7 hover:bg-accent/[0.04] transition relative overflow-hidden"
+        className="block max-w-[1040px] mx-auto mb-4 bg-white border-2 border-accent px-6 py-6 hover:bg-accent/[0.04] transition relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 mono text-[9.5px] tracking-[0.2em] uppercase bg-accent text-white px-3 py-1">
           {en ? "Featured" : "ピックアップ"}
-        </div>
-        <div className="mono text-[10px] tracking-[0.3em] uppercase text-accent mb-3">
-          /contact/listing
         </div>
         <div className="flex flex-wrap items-center gap-2.5 mb-2">
           <div className="text-[18px] font-bold">
@@ -117,25 +114,22 @@ export default async function ContactHubPage() {
       {/* ⚠ 列数は残っている窓口の数に合わせる。「ご相談」を廃止した際に
           sm:grid-cols-3 のままだったので、2枚が細いまま右1枠が空いていた。
           2026-08-16 に「制作側スキャン依頼」を追加して3枚になったので3列へ戻した。 */}
-      <div className="grid sm:grid-cols-3 gap-4 max-w-[760px] mx-auto">
+      <div data-contact-options className="grid sm:grid-cols-3 gap-4 max-w-[1040px] mx-auto">
         {CONTACT_TYPES.filter((type) => type !== "listing").map((type) => {
           const card = HUB_CARDS.find((c) => c.type === type)!;
           return (
             <Link
               key={type}
               href={lh(`/contact/${type}`)}
-              className="block bg-white border border-line px-6 py-6 hover:border-accent transition"
+              className="flex flex-col bg-white border border-line px-6 py-6 hover:border-accent transition"
             >
-              <div className="mono text-[10px] tracking-[0.3em] uppercase text-accent mb-3">
-                /contact/{type}
-              </div>
               <div className="text-[16px] font-bold mb-2">
                 {en ? CONTACT_TYPE_LABEL_EN[type] : CONTACT_TYPE_LABEL[type]}
               </div>
               <p className="text-[12px] text-muted leading-[1.8] mb-3">
                 {sentenceBreaks(en ? card.descEn : card.desc)}
               </p>
-              <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
+              <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mt-auto pt-1">
                 {(en ? card.goEn : card.go)} →
               </div>
             </Link>
@@ -146,11 +140,8 @@ export default async function ContactHubPage() {
       {/* 持ち込みスキャン導線 — 問い合わせ種別ではなく専用申請フォームへ誘導 */}
       <Link
         href={lh("/submit-scan")}
-        className="block max-w-[760px] mx-auto mt-6 bg-white border border-line px-7 py-6 hover:border-accent transition"
+        className="block max-w-[1040px] mx-auto mt-4 bg-white border border-line px-6 py-6 hover:border-accent transition"
       >
-        <div className="mono text-[10px] tracking-[0.3em] uppercase text-accent mb-3">
-          /submit-scan
-        </div>
         <div className="text-[16px] font-bold mb-2">
           {en ? "Bring your own scan" : "持ち込みスキャン"}
         </div>

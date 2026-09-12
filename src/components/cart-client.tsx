@@ -176,7 +176,7 @@ export default function CartClient() {
 
   if (items.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="w-full max-w-[960px] space-y-4">
         {noticeBanner}
         {undoNotice}
         <div className="border border-line p-10 text-center">
@@ -194,7 +194,7 @@ export default function CartClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-[960px] space-y-6">
       {noticeBanner}
       {undoNotice}
       <div className="space-y-3">
@@ -202,11 +202,12 @@ export default function CartClient() {
           const detail = details[`${i.propertyId}:${i.splatItemIndex}`];
           const selectedLicense = detail?.license ?? i.license;
           return (
-          <div
+          <section
             key={`${i.propertyId}:${i.splatItemIndex}`}
-            className="border border-line flex flex-wrap items-center gap-4 p-4"
+            aria-label={en ? "Cart item" : "カートの商品"}
+            className="border border-accent/40 bg-accent/5 p-5 space-y-4"
           >
-            <div className="flex-1 min-w-0 max-[720px]:basis-full">
+            <div className="min-w-0 break-words">
               <Link
                 href={lh(`/properties/${i.propertyId}`)}
                 className="text-sm font-medium hover:text-accent transition"
@@ -226,7 +227,7 @@ export default function CartClient() {
                   ここまで名称だけで来ると、買った後で「使えない用途だった」に
                   なりかねない。 */}
               {selectedLicense && (
-                <p className="mt-1 text-[10.5px] leading-relaxed text-muted max-w-[52ch]">
+                <p className="mt-1 text-[12px] leading-relaxed text-muted">
                   {dataLicenseDesc(selectedLicense, en ? "en" : "ja")}
                 </p>
               )}
@@ -234,24 +235,26 @@ export default function CartClient() {
                 <p className="mt-3 text-[13px] text-muted">{en ? "Download details are being checked. If they do not appear, check the property page before purchasing." : "ダウンロード内容を確認中です。"}{!en && <br />}{!en && "表示されない場合は、購入前に物件ページで確認してください。"}</p>
               )}
             </div>
-            <div className="mono text-[12px] tracking-[0.14em] whitespace-nowrap">
+            <div className="flex flex-wrap items-center gap-4">
+            <div className="mono text-[15px] tracking-[0.08em] whitespace-nowrap">
               ¥{i.price.toLocaleString(en ? "en-US" : "ja-JP")}
             </div>
             <button
               type="button"
               onClick={() => removeItem(i)}
-              className="mono text-[10px] uppercase border border-line px-2 py-1 text-muted hover:border-red-400 hover:text-red-400 transition"
+              className="mono text-[11px] uppercase border border-line px-3 py-2 min-h-[44px] text-muted hover:border-red-400 hover:text-red-400 transition"
             >
               {en ? "Remove" : "削除"}
             </button>
-          </div>
+            </div>
+          </section>
         ); })}
       </div>
 
       {usageLink}
 
-      <div className="border border-accent/40 bg-[#0a0906] p-5 flex flex-wrap items-center gap-4">
-        <div className="flex-1">
+      <section aria-label={en ? "Order total and checkout" : "合計と購入手続き"} className="border border-line bg-white p-5 space-y-5">
+        <div>
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
             {en ? `${items.length} item(s) total` : `合計 ${items.length} 点`}
           </div>
@@ -260,13 +263,14 @@ export default function CartClient() {
             <span className="mono text-[10px] opacity-40">{en ? "tax incl." : "税込"}</span>
           </div>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer text-[11px] opacity-70">
+        <label className="flex items-start gap-2 cursor-pointer text-[13px] text-muted">
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="w-4 h-4 accent-accent"
+            className="w-4 h-4 mt-0.5 accent-accent shrink-0"
           />
+          <span>
           {en ? (
             <>
               I agree to the{" "}
@@ -282,6 +286,7 @@ export default function CartClient() {
               に同意
             </>
           )}
+          </span>
         </label>
         <button
           type="button"
@@ -291,7 +296,7 @@ export default function CartClient() {
         >
           {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy all" : "まとめて購入"}
         </button>
-      </div>
+      </section>
     </div>
   );
 }

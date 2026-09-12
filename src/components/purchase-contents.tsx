@@ -14,7 +14,7 @@ export default function PurchaseContents({ files, en }: { files: PurchaseContent
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-muted">{en ? "Only the files listed above are included. Viewer preview data is listed separately." : "購入に含まれるのは上記のファイルです。"}{!en && <br />}{!en && "閲覧用プレビューのデータとは区別して表示しています。"}</p>
+          <p className="mt-2 text-muted">{en ? "Only the files listed above are included. This is the same data as the property’s 3D scene." : "購入に含まれるのは上記のファイルです。物件の3Dシーンと同様のデータです。"}</p>
         </>
       ) : (
         <p className="text-muted">{en ? "Download files are not registered. Preview availability does not confirm included purchase formats." : "購入用ファイルは未登録です。"}{!en && <br />}{!en && "プレビューがあっても、購入に含まれる形式は確認できません。"}</p>

@@ -1,5 +1,13 @@
 # ヘッダー設計ルール（両サイト共通・2026-07-28 制定）
 
+## 2026-09-12 スクロール時の描画境界
+
+- 共通ヘッダーは全幅で不透明。1024px以上をPC扱いする例外は横iPadにも当たり、半透明・ぼかしが復活するため禁止。
+- `.works-root` は `isolation:isolate` で記事内の重なり順を隔離する。記事の固定プログレスバー `z-index:50` が、同じ値で先に出現する共通ヘッダーの上へ描画されていた。記事内ライトボックス等も共通ヘッダーより下の同一境界に収める。
+- 検証は `node scripts/verify-header-scroll.mjs`。`WEBKIT=1` でWebKit、`BASE_URL` / `PATHS` でホスト・対象変更。`DIAGNOSE=1` は現状記録のみで合格判定ではない。矩形だけでなく上端ピクセルとホイールスクロール各フレームを検査する。
+- root/body は `overflow-x:clip`（独立スクロールコンテナを作らない）、headerはbody直下。祖先にtransform/filter/contain指定なし。root zoomとheader逆zoom、56px寸法、左右gutterは変更しない。works-scaleのzoomはheaderの祖先ではない。
+- viewport-fit=coverやsafe-area上余白は指定していない。Windows Chrome/WebKitではSafari実機のブラウザ上部伸縮・ノッチ・バウンスを検証できない。通常スクロールで隙間が出ないことを、それらの実機症状の解消と混同しない。
+
 ヘッダーは10回以上修正して「1端末を直すと別端末が崩れる」を繰り返した。
 原因は個々の実装ミスではなく**構造そのもの**だったので、ここにルールを固定する。
 ヘッダーを触る前に必ず読むこと。

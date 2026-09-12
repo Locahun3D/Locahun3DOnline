@@ -151,7 +151,7 @@ export default async function SiteHeader() {
         letterSpacing: "normal",
         ["--color-accent" as string]: "#1ea0c4",
       }}
-      // ⚠ 1024px未満は **すりガラス禁止・完全不透明**（bg-bg のみ）。
+      // ⚠ 全幅で **すりガラス禁止・完全不透明**（bg-bg のみ）。
       //    backdrop-filter を sticky ヘッダーに載せると、iOS実機のモーメンタム
       //    スクロール中に再描画が遅れてヘッダーが透け、本文が貫通して見える
       //    （報告 2026-08-12 と 2026-09-03。エミュ・Playwright WebKit では再現しない）。
@@ -159,10 +159,10 @@ export default async function SiteHeader() {
       //    backdrop-filter を持つ要素は fixed 子孫の containing block になるため
       //    （CSS Filter Effects L2）、「画面に固定」のつもりのレイヤーがヘッダーに
       //    追従して一緒に遅延し、何も守っていなかった。よってバックストップは廃止し、
-      //    原因の backdrop-filter 自体をモバイル/タブレットから除いた。
-      //    1024px以上（PC・問題未報告）だけ、すりガラス表現を維持する。
-      //    ここに blur を復活させないこと。
-      className="sticky top-0 z-50 border-b border-line bg-bg min-[1024px]:bg-bg/95 min-[1024px]:backdrop-blur-sm"
+      //    2026-09-12: 1024px以上をPC扱いした例外が横iPadにも適用され、
+      //    半透明＋blurが再び有効になっていた。幅・入力方式では端末を判別せず、
+      //    全幅で背景を不透明にする。高さ・中央配置・zoomは変更しない。
+      className="sticky top-0 z-50 border-b border-line bg-bg"
     >
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに

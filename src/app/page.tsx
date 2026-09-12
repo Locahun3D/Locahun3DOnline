@@ -25,6 +25,11 @@ import { ABOUT07_CSS } from "@/lib/design/about07-css";
 
 /** トップ固有の追加分（値は 07 の語彙に合わせてある）。 */
 const EXTRA_CSS = `
+.about07 #service .segment img{
+  aspect-ratio:4 / 3;
+  object-fit:contain;
+  background:#f5f8fa;
+}
 /* 日本語の本文は文節で折る。about07 は 07 と字送りを合わせるため body の
    word-break:auto-phrase を normal に戻しているが、それだと狭い幅で
    「…をアシ / ストする。」のように語中で割れる（実測 390px）。
@@ -481,11 +486,6 @@ export default async function HomePage() {
           → 機能の詳細9行）。文言・画像・リンクは変えていない。 */}
       <section id="service" className="hero">
         <div className="wrap">
-          <div className="chapter-rule">
-            <span className="opacity-60">ABOUT</span>
-            <span>{en ? "Service" : "サービスについて"}</span>
-            <span className="flex-1 h-px bg-current opacity-25" />
-          </div>
           <div className="center">
             <h1>
               {en ? (
@@ -672,23 +672,6 @@ export default async function HomePage() {
                 </>
               )}
             </h2>
-            <p>
-              {/* ⚠ 2026-09-04: 旧「スキャン自体は別サービス…web.locahun3d.com」は
-                  2サイト分岐の名残で、統合後は行き先が存在しない。本人指示
-                  「問い合わせページに繋がるように」→ /contact へ。 */}
-              {en ? (
-                <>
-                  To request a scan,{" "}
-                  <Link href={lh("/contact")}>contact us</Link>.
-                </>
-              ) : (
-                <>
-                  スキャン（撮影）のご依頼は{" "}
-                  <Link href={lh("/contact")}>お問い合わせ</Link>
-                  {" "}から。
-                </>
-              )}
-            </p>
           </div>
           <div className="segments">
             {STEPS.map((s) => (
@@ -720,7 +703,7 @@ export default async function HomePage() {
             <span className="flex-1 h-px bg-current opacity-25" />
           </div>
           <div className="section-head solo">
-            <h2 className="section-title">{en ? "Everything, in detail." : "機能の詳細。"}</h2>
+            <h2 className="section-title">{en ? "Everything, in detail" : "機能の詳細"}</h2>
           </div>
           <div className="feature-list">
             {DETAILS.map((d) => (

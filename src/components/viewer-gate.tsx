@@ -48,6 +48,9 @@ interface Props {
   tokenCost?: 1 | 2 | 3 | 5;
   hasSubscription?: boolean;
   freeAccess?: boolean;
+  displaySimulation?: boolean;
+  /** 表示専用。実際の無料視聴権限は API が検証する。 */
+  freeViewer?: boolean;
   /** 現在未使用。呼び出し側が渡しているため型は残す（外すと呼び出し側が壊れる）。 */
   signedIn?: boolean;
   /** 先方スタジオ共有用の限定プレビュートークン。あればログイン/課金なしで視聴可
@@ -69,6 +72,8 @@ export default function ViewerGate({
   tokenCost = 1,
   hasSubscription = false,
   freeAccess = false,
+  displaySimulation = false,
+  freeViewer = false,
   previewToken,
   embedToken,
   alreadyUnlocked = false,
@@ -90,7 +95,7 @@ export default function ViewerGate({
   // （window.open は必ずユーザー操作イベントの同期内で呼ぶ必要がある）。
   const [showSizeWarning, setShowSizeWarning] = useState(false);
   const LARGE_SCENE_MB = 500;
-  const devBypass = process.env.NODE_ENV !== "production";
+  const devBypass = !displaySimulation && process.env.NODE_ENV !== "production";
   // 共有プレビュートークンがあれば課金ゲートを外す（サーバ側で検証）。
   const effectiveSubscription =
     hasSubscription || devBypass || freeAccess || !!previewToken || !!embedToken;
@@ -118,6 +123,7 @@ export default function ViewerGate({
         <button
           type="button"
           onClick={() => setShowAuthModal(true)}
+          disabled={displaySimulation}
           className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-6 cursor-pointer backdrop-blur-md bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         >
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
@@ -272,6 +278,8 @@ export default function ViewerGate({
    */
   const doOpenViewer = async (e: React.MouseEvent) => {
     e.preventDefault();
+    // GET /api/viewer-asset も残高・視聴履歴を書き換えるため、計測より前に止める。
+    if (displaySimulation) return;
     setTokenError(null);
     // 共有プレビューは匿名アクセスなので閲覧計測は行わない（分析を汚さない）。
     if (!previewToken) trackOpen();
@@ -341,6 +349,7 @@ export default function ViewerGate({
 
   /** 通常のクリック経路。大容量シーン×タッチ端末なら先に警告を出して止める。 */
   const openViewer = (e: React.MouseEvent) => {
+    if (displaySimulation) { e.preventDefault(); return; }
     if (
       sizeMb >= LARGE_SCENE_MB &&
       typeof window !== "undefined" &&
@@ -378,7 +387,7 @@ export default function ViewerGate({
           （未ログイン側の実装＝この上の <button> と構造・クラスを揃えてあるので、
             片方を触るときはもう片方も合わせること） */}
       <a
-        href={fullViewerUrl}
+        href={displaySimulation ? undefined : fullViewerUrl}
         target="_blank"
         rel="noopener"
         onClick={openViewer}
@@ -386,7 +395,7 @@ export default function ViewerGate({
       >
         <div
           className={`mono text-[11px] font-semibold tracking-[0.3em] uppercase mb-4 drop-shadow ${
-            previewToken || embedToken || freeAccess || alreadyUnlocked
+            previewToken || embedToken || freeAccess || freeViewer || alreadyUnlocked
               ? "text-green-400"
               : "text-accent"
           }`}
@@ -395,6 +404,8 @@ export default function ViewerGate({
             ? en ? "● Shared preview · no tokens used" : "● 共有プレビュー · トークン消費なし"
             : embedToken
               ? en ? "● 3D tour · free to view" : "● 3Dツアー · 無料で閲覧できます"
+              : freeViewer
+                ? en ? "● Administrator · no tokens used" : "● 管理者 · トークン消費なし"
               : freeAccess
                 ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
                 : alreadyUnlocked
@@ -404,7 +415,7 @@ export default function ViewerGate({
                     : `● ${tokenCost} トークン消費`}
         </div>
         <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
-          {previewToken || embedToken
+          {previewToken || embedToken || freeViewer
             ? en ? (<>Open the 3DGS<br />walkthrough.</>) : (<>3DGS ウォークスルーを<br />開きます。</>)
             : freeAccess
               ? en ? (<>Watch the 3DGS walkthrough<br />free of charge.</>) : (<>無料で 3DGS<br />ウォークスルーが見られます。</>)

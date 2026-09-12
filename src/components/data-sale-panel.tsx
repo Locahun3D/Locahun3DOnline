@@ -36,6 +36,7 @@ interface DataSalePanelProps {
   purchaseContents: PurchaseContent[];
   captureDevice?: string;
   alreadyPurchased?: boolean;
+  displaySimulation?: boolean;
   /** エディトリアルライセンス選択時に表示する権利者クレジット表記。 */
   editorialRightsCredit?: string;
 }
@@ -52,6 +53,7 @@ export default function DataSalePanel({
   purchaseContents,
   captureDevice,
   alreadyPurchased = false,
+  displaySimulation = false,
   editorialRightsCredit,
 }: DataSalePanelProps) {
   const en = useLocale() === "en";
@@ -70,12 +72,14 @@ export default function DataSalePanel({
   const license = selectedOption?.license ?? "standard";
 
   useEffect(() => {
+    if (displaySimulation) return;
     const sync = () => setInCart(isInCart(propertyId, splatItemIndex));
     sync();
     return onCartChange(sync);
-  }, [propertyId, splatItemIndex]);
+  }, [propertyId, splatItemIndex, displaySimulation]);
 
   const toggleCart = () => {
+    if (displaySimulation) return;
     if (inCart) removeFromCart(propertyId, splatItemIndex);
     // 規約に同意していない状態ではカートに入れられない（2026-08-14 本人指示。
     // 「購入する」は元から同意必須だったが、カート経由だと同意なしで決済まで
@@ -92,6 +96,7 @@ export default function DataSalePanel({
   };
 
   const handlePurchase = async () => {
+    if (displaySimulation) return;
     if (!agreedTerms) {
       alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
@@ -129,8 +134,8 @@ export default function DataSalePanel({
   ].filter(Boolean).join(" / ");
 
   return (
-    <div className="mt-4 border border-accent/30 bg-[#0a0906] px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-      <div className="flex-1 min-w-[200px]">
+    <div className="mt-4 min-w-0 space-y-3">
+      <div className="min-w-0 border border-accent/30 bg-accent/5 p-4">
         <div className="flex items-baseline gap-2">
           <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">DATA</span>
           <span className="text-[13px] font-medium">
@@ -143,6 +148,9 @@ export default function DataSalePanel({
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
         <p className="text-[13px] text-muted mt-2">{en ? "Captured: " : "撮影日："}{scannedAt || (en ? "Not registered" : "未登録")}</p>
         <PurchaseContents files={purchaseContents} en={en} />
+      </div>
+      <section aria-label={en ? "Purchase options" : "ライセンスと購入手続き"} className="min-w-0 border border-accent/30 bg-accent/5 p-4 space-y-4">
+      <div className="min-w-0">
         {licenseOptions.length > 1 ? (
           <div className="mt-1.5">
             <div className="mono text-[9px] tracking-[0.18em] uppercase text-muted mb-1">
@@ -198,7 +206,8 @@ export default function DataSalePanel({
             {en ? "✓ Purchased" : "✓ 購入済み"}
           </span>
           <Link
-            href={en ? "/en/dashboard/purchases" : "/dashboard/purchases"}
+            href={displaySimulation ? "#" : en ? "/en/dashboard/purchases" : "/dashboard/purchases"}
+            onClick={displaySimulation ? (event) => event.preventDefault() : undefined}
             className="px-4 py-1.5 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
           >
             {en ? "To downloads →" : "ダウンロードへ →"}
@@ -206,7 +215,7 @@ export default function DataSalePanel({
         </div>
       ) : (
         <>
-          <div className="text-right shrink-0">
+          <div>
             {price === 0 ? (
               <span className="serif text-lg text-accent">{en ? "Free" : "無料"}</span>
             ) : (
@@ -217,7 +226,7 @@ export default function DataSalePanel({
             )}
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 max-[720px]:flex-wrap max-[720px]:gap-x-3 max-[720px]:gap-y-2 max-[720px]:w-full max-[720px]:shrink">
+          <div className="flex flex-wrap items-center gap-3 min-w-0">
             <label className="flex items-center gap-1.5 cursor-pointer text-[10px] max-[720px]:text-[12px] max-[720px]:gap-2 max-[720px]:min-h-[44px] opacity-60 hover:opacity-80 transition">
               <input
                 type="checkbox"
@@ -229,12 +238,13 @@ export default function DataSalePanel({
                 {en ? "Agree to terms" : "規約同意"}
               </Link>
             </label>
-            {inCart ? (
+            {/* プラン切替では再マウントされない。実カート状態が残っても表示には使わない。 */}
+            {inCart && !displaySimulation ? (
               <Link
                 href={en ? "/en/cart" : "/cart"}
-                className="px-3 py-1.5 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
+                className="w-[152px] shrink-0 flex items-center justify-center px-3 py-2 min-h-[44px] text-[12px] border border-accent text-ink bg-accent/10 hover:bg-accent/20 transition whitespace-nowrap"
               >
-                {en ? "✓ Cart → view" : "✓ カート → 見る"}
+                {en ? "View cart" : "カートを見る"}
               </Link>
             ) : (
               <button
@@ -248,9 +258,9 @@ export default function DataSalePanel({
                       : "先に規約に同意してください"
                     : undefined
                 }
-                className="px-3 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
+                className="w-[152px] shrink-0 flex items-center justify-center px-3 py-2 min-h-[44px] text-[12px] border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
               >
-                {en ? "+ Cart" : "+ カート"}
+                {en ? "Add to cart" : "カートに入れる"}
               </button>
             )}
             <button
@@ -274,6 +284,7 @@ export default function DataSalePanel({
       {/* 「自分の用途で使えるのか」を比較表の直下でそのまま聞ける。
           ⚠ LicenseDifference は区分が1つだと null を返すので、問い合わせ導線は
              その中に入れず必ずここに置く（1区分の物件でも聞けるようにする）。 */}
+      <div inert={displaySimulation || undefined} className="w-full basis-full">
       <DataInquiry
         propertyId={propertyId}
         propertyTitle={propertyTitle}
@@ -281,6 +292,8 @@ export default function DataSalePanel({
         licenseLabel={dataLicenseLabel(license, lc)}
         en={en}
       />
+      </div>
+      </section>
     </div>
   );
 }

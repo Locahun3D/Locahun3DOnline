@@ -97,6 +97,7 @@ export default function PropertyDetailView({
   property,
   others,
   preview = false,
+  displaySimulation = false,
   sharePreview = false,
   previewToken,
   previewExpiresAt,
@@ -120,6 +121,8 @@ export default function PropertyDetailView({
   property: Property;
   others: Property[];
   preview?: boolean;
+  /** Admin-only visual simulation: no real viewing, checkout, or cart mutations. */
+  displaySimulation?: boolean;
   /** 先方スタジオ共有用の限定プレビュー(ログイン不要)。掲示板/購入/関連を抑制し、
    *  3DGS は previewToken 経由で課金ゲートを外して閲覧可能にする。 */
   sharePreview?: boolean;
@@ -810,6 +813,8 @@ export default function PropertyDetailView({
               hasViewerAccess={hasViewerAccess}
               signedIn={signedIn}
               previewToken={previewToken}
+              displaySimulation={displaySimulation}
+              freeViewer={isAdminUser}
               unlockedItemIds={unlockedItemIds}
               locale={locale}
             />
@@ -875,6 +880,8 @@ export default function PropertyDetailView({
                     hasSubscription={hasViewerAccess}
                     signedIn={signedIn}
                     previewToken={previewToken}
+                    displaySimulation={displaySimulation}
+                    freeViewer={isAdminUser}
                     alreadyUnlocked={unlockedItemIds.includes(item.id)}
                   />
                   {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
@@ -902,6 +909,7 @@ export default function PropertyDetailView({
                       purchaseContents={resolvePurchaseContents(item)}
                       captureDevice={item.captureDevice}
                       alreadyPurchased={purchasedItemIds.includes(item.id)}
+                      displaySimulation={displaySimulation}
                       editorialRightsCredit={item.editorialRightsCredit}
                     />
                   )}

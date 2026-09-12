@@ -75,11 +75,11 @@ CHECKS = [
     # ⚠ 2026-09-03「スマホでスクロールするとヘッダーが貫通する」（2026-08-12にも同報告）。
     #   原因は sticky ヘッダーの backdrop-filter（iOS実機のみ再描画遅延で透ける。
     #   さらに fixed バックストップは backdrop-filter が containing block になり無効だった）。
-    #   1024px未満は必ず不透明 bg-bg・blur無し。blur系は min-[1024px]: 接頭辞のみ許可。
-    ("ヘッダーのすりガラスは1024px以上限定（スマホ貫通の原因。素の backdrop-blur 禁止）",
-     "src/components/site-header.tsx", r'className="[^"]*(?<!min-\[1024px\]:)backdrop-blur', False),
-    ("ヘッダー地は不透明 bg-bg（素の bg-bg/95 をベースに戻さない）",
-     "src/components/site-header.tsx", r'className="[^"]*(?<!min-\[1024px\]:)bg-bg/95', False),
+    #   横iPadも1024pxを超える。幅による例外を作らず全幅で不透明・blur無し。
+    ("ヘッダーは全幅すりガラス禁止（横iPadにもPC用blurを適用しない）",
+     "src/components/site-header.tsx", r'className="[^"]*backdrop-blur', False),
+    ("ヘッダー地は全幅不透明 bg-bg（半透明の幅別例外を作らない）",
+     "src/components/site-header.tsx", r'className="[^"]*bg-bg/', False),
 ]
 
 ok = fail = 0

@@ -1,0 +1,50 @@
+import { chromium } from 'playwright';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+const root=new URL('../',import.meta.url).pathname.replace(/^\/(\w:)/,'$1');
+const out=`${root}artifacts/purchase-card-layout`;
+await mkdir(out,{recursive:true});
+const data=JSON.parse(await readFile(`${root}data/properties.json`,'utf8'));
+const property=data.properties.find(p=>p.id==='wh-002');
+const cart=property.splatItems.map((i,index)=>({propertyId:property.id,splatItemIndex:index,title:property.title,label:i.label,price:i.salePrice,license:i.license}));
+const browser=await chromium.launch({channel:'chrome',headless:false});
+const results=[];
+try {
+ for(const en of [false,true]) for(const width of [1440,820,390,2300]){
+  const page=await browser.newPage({viewport:{width,height:1000}});
+  await page.goto(`http://localhost:3032/${en?'en/':''}properties/wh-002`,{waitUntil:'networkidle'});
+  const options=page.getByRole('region',{name:en?'Purchase options':'ライセンスと購入手続き'}).first();
+  if(await options.count()!==1)throw Error('License selection and checkout must have their own card');
+  const contents=page.getByRole('region',{name:en?'Included downloads':'購入に含まれるデータ'}).first();
+  if(await options.getByRole('region',{name:en?'Included downloads':'購入に含まれるデータ'}).count())throw Error('Data contents are not separated');
+  if(!(await contents.innerText()).includes(en?'This is the same data as the property’s 3D scene.':'物件の3Dシーンと同様のデータです。'))throw Error('Data note has not changed');
+  await options.scrollIntoViewIfNeeded();
+  await options.getByRole('checkbox').check();
+  const add=options.getByRole('button',{name:en?'Add to cart':'カートに入れる',exact:true});
+  const before=await add.boundingBox();await add.click();
+  const view=options.getByRole('link',{name:en?'View cart':'カートを見る',exact:true});
+  const after=await view.boundingBox();
+  if(Math.abs(before.width-after.width)>1)throw Error('Cart label changed reserved width');
+  const overflow=await options.evaluate(el=>el.scrollWidth>el.clientWidth+1);
+  if(overflow)throw Error('Purchase card overflow');
+  await page.screenshot({path:`${out}/property-${en?'en':'ja'}-${width}.png`});
+  await page.evaluate(cart=>localStorage.setItem('locahun3d:cart:v1',JSON.stringify(cart)),cart);
+  await page.goto(`http://localhost:3032/${en?'en/':''}cart`,{waitUntil:'networkidle'});
+  const cards=page.getByRole('region',{name:en?'Cart item':'カートの商品',exact:true});
+  if(await cards.count()!==cart.length)throw Error('Each cart item needs a separate card');
+  const checkout=page.getByRole('region',{name:en?'Order total and checkout':'合計と購入手続き',exact:true});
+  const itemBox=await cards.last().boundingBox(),checkoutBox=await checkout.boundingBox();
+  if(checkoutBox.y<itemBox.y+itemBox.height)throw Error('Checkout must be below items');
+  if(width>2048&&itemBox.width>1200)throw Error('Cart information stretches too wide');
+  const tone=await cards.first().evaluate(el=>getComputedStyle(el).backgroundColor);
+  if(tone==='rgba(0, 0, 0, 0)'||tone==='rgb(255, 255, 255)')throw Error('Item card needs blue background');
+  await page.screenshot({path:`${out}/cart-${en?'en':'ja'}-${width}.png`,fullPage:true});
+  const remove=page.getByRole('button',{name:en?'Remove':'削除',exact:true});
+  await remove.first().click();await remove.first().click();
+  const undo=page.getByRole('button',{name:en?'Undo':'元に戻す',exact:true});
+  await undo.click();await undo.click();
+  if(await remove.count()!==cart.length)throw Error('Undo regression');
+  results.push({en,width,reservedWidth:after.width,itemWidth:itemBox.width,undo:true});
+  await page.close();
+ }
+}finally{await browser.close();await writeFile(`${out}/results.json`,JSON.stringify(results,null,2));}
+console.log(JSON.stringify(results));

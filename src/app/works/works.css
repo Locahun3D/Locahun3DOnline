@@ -30,6 +30,10 @@
 }
 .works-root {
   --z: 1;
+  /* Imported articles own fixed progress bars/lightboxes with local z-index
+     values. Keep that ordering inside the article: otherwise z-index:50
+     (later in DOM) paints over the shared sticky header at the same level. */
+  isolation: isolate;
 }
 
 /* ── アンカー着地 ─────────────────────────────────────────────────
