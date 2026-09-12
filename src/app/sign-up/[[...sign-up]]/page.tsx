@@ -51,8 +51,9 @@ export default async function SignUpPage({
     <div className="frame ui-page-shell pb-10 sm:pb-20">
       <InAppBrowserWarning locale={locale} />
       {/* 2カラムは 1200px 以上のみ（理由は /sign-in と同じ。両ページ同時に変更すること） */}
-      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
-        <div className="order-2 mx-auto w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
+      {/* Let the single column shrink below Clerk's 400px intrinsic width. */}
+      <div className="mx-auto grid w-full max-w-[880px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
+        <div className="order-2 mx-auto min-w-0 w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
           <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase mb-2">Get started</p>
           <h1 className="ui-page-title">
             {en ? (
@@ -91,9 +92,14 @@ export default async function SignUpPage({
             ))}
           </ul>
         </div>
-        <div className="flex flex-col items-center gap-4 justify-self-center min-[1200px]:justify-self-end">
+        <div className="flex min-w-0 w-full max-w-[400px] flex-col items-center gap-4 justify-self-center min-[1200px]:justify-self-end">
       {/* New sign-ups go to /onboarding to pick account type + accept NDA. */}
-      <SignUp signInUrl="/sign-in" forceRedirectUrl={onboardingUrl} fallback={<CardSkeleton h={570} />} />
+      <SignUp
+        signInUrl="/sign-in"
+        forceRedirectUrl={onboardingUrl}
+        appearance={{ elements: { rootBox: "w-full! max-w-full!", cardBox: "w-full! max-w-full!", card: "w-full! max-w-full!" } }}
+        fallback={<CardSkeleton h={570} />}
+      />
       {/* 明示的な同意チェックボックスは Clerk ウィジェット内には差し込めないため、
           多くの SaaS と同じ「続行=同意」形式の告知文をウィジェット直下に表示する。 */}
       <p className="max-w-sm text-center text-[12px] text-muted leading-relaxed">

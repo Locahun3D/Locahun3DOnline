@@ -69,8 +69,9 @@ export default async function SignInPage({
           警告バナー＋見出し＋要点3行が先に来て、スマホでは肝心のログイン
           フォームが画面外に押し出されていた（X内ブラウザの実機報告）。
           見出し・要点はカードの下に回して補足として読ませる。 */}
-      <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
-        <div className="order-2 mx-auto w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
+      {/* Let the single column shrink below Clerk's 400px intrinsic width. */}
+      <div className="mx-auto grid w-full max-w-[880px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
+        <div className="order-2 mx-auto min-w-0 w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
           <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase mb-2">Account</p>
           <h1 className="ui-page-title">
             {en ? (
@@ -109,8 +110,12 @@ export default async function SignInPage({
             ))}
           </ul>
         </div>
-        <div className="order-1 justify-self-center min-[1200px]:order-2 min-[1200px]:justify-self-end">
-          <SignIn signUpUrl="/sign-up" fallback={<CardSkeleton h={488} />} />
+        <div className="order-1 min-w-0 w-full max-w-[400px] justify-self-center min-[1200px]:order-2 min-[1200px]:justify-self-end">
+          <SignIn
+            signUpUrl="/sign-up"
+            appearance={{ elements: { rootBox: "w-full! max-w-full!", cardBox: "w-full! max-w-full!", card: "w-full! max-w-full!" } }}
+            fallback={<CardSkeleton h={488} />}
+          />
         </div>
       </div>
     </div>
