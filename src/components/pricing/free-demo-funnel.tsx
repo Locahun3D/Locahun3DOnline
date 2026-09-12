@@ -19,9 +19,9 @@ export default function FreeDemoFunnel({
 }) {
   return (
     <section className="mb-16">
-      <div className="grid md:grid-cols-2 border border-line bg-white">
+      <div className="grid grid-cols-1 md:grid-cols-2 border border-line bg-white">
         {/* 左: コピー + CTA */}
-        <div className="p-8 sm:p-9 flex flex-col justify-center order-2 md:order-1">
+        <div className="p-8 max-[360px]:px-5 sm:p-9 flex flex-col justify-center order-2 md:order-1">
           <h2 className="ui-section-title mb-2.5">
             {en ? (
               <>Try walking through it first.</>

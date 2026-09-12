@@ -160,7 +160,6 @@ export default async function ContactHubPage() {
       {/* よくある疑問（Q&A）— 2026-07-25に /about から移設 */}
       <section className="max-w-[760px] mx-auto mt-16">
         <div className="chapter-rule">
-          <span className="opacity-60">Q&amp;A</span>
           <span>{en ? "Common questions" : "よくある疑問"}</span>
           <span className="flex-1 h-px bg-current opacity-25" />
         </div>

@@ -3,6 +3,7 @@
  * レイアウト崩れを機械検出する。
  *
  *   node scripts/ui-audit.mjs                          # 本番（両サイト）を監査
+ *   node scripts/ui-audit.mjs --chrome                 # インストール済み実Chromeで監査
  *   node scripts/ui-audit.mjs --local                  # localhost:3000 + :8830 を監査
  *   node scripts/ui-audit.mjs --online https://...     # オンライン側のベースURLを指定
  *   node scripts/ui-audit.mjs --scan   https://...     # スキャン側のベースURLを指定
@@ -103,7 +104,10 @@ const DRAWER_AUDIT = () => {
   return out;
 };
 
-const browser = await chromium.launch();
+// Use the installed, visible Chrome for visual review without a Playwright download.
+const browser = await chromium.launch(args.includes("--chrome")
+  ? { channel: "chrome", headless: false }
+  : {});
 const page = await browser.newPage();
 mkdirSync(".ui-audit", { recursive: true });
 const issues = [];

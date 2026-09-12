@@ -54,7 +54,6 @@ export default async function SignUpPage({
       {/* Let the single column shrink below Clerk's 400px intrinsic width. */}
       <div className="mx-auto grid w-full max-w-[880px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
         <div className="order-2 mx-auto min-w-0 w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
-          <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase mb-2">Get started</p>
           <h1 className="ui-page-title">
             {en ? (
               <>
