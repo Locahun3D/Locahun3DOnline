@@ -71,9 +71,6 @@ export default async function AdminReportsPage() {
   return (
     <div className="theme-online p-8">
       <div className="mb-6">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mb-1">
-          Reports
-        </div>
         <h1 className="serif text-3xl">
           通報管理
           {hiddenCount > 0 && (

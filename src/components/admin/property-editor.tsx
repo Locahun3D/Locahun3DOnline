@@ -50,6 +50,9 @@ import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness } from "@/lib/publish-readiness";
+import { createPropertyWriteQueue } from "@/lib/property-write-queue";
+import { publishedEnglishUpdates } from "@/lib/published-english-updates";
+import { applyExtendedLicensePricing } from "@/lib/license-options";
 
 /**
  * 入力ステップ。⚠ 並び順 = 実際に埋める順番。ここを変えたら本文側の
@@ -175,6 +178,12 @@ export default function PropertyEditor({
   // 直列化すれば expectedUpdatedAt は常に直前の保存が返した最新値になる。
   const saveInFlightRef = useRef(false);
   const pendingSaveRef = useRef(false);
+  const writeQueueRef = useRef(createPropertyWriteQueue());
+  const statusWriteInFlightRef = useRef(false);
+  const stopForConflict = useCallback(() => {
+    conflictRef.current = true;
+    setSaveError("別のタブ（または別の端末）でこの物件が更新されています。上書き事故を防ぐため自動保存を停止しました。ページを再読み込みしてから編集を続けてください。");
+  }, []);
 
   // 下書き保存はフォーム全体のバリデーションでゲートしない（下書きは不完全でも
   // 保存できるべき）。getValues() を直接サーバーへ送り、サーバー側の寛容な
@@ -189,17 +198,16 @@ export default function PropertyEditor({
     }
     saveInFlightRef.current = true;
     setSaveError(null);
-    const data = getValues();
     startSave(async () => {
       try {
+        await writeQueueRef.current(async () => {
+        if (conflictRef.current) return;
+        const data = getValues();
         const res = await saveDraftAction(data, {
           expectedUpdatedAt: baseUpdatedAtRef.current,
         });
         if (!res.ok) {
-          conflictRef.current = true;
-          setSaveError(
-            "別のタブ（または別の端末）でこの物件が更新されています。上書き事故を防ぐため自動保存を停止しました。ページを再読み込みしてから編集を続けてください。",
-          );
+          stopForConflict();
           return;
         }
         baseUpdatedAtRef.current = res.updatedAt;
@@ -215,6 +223,7 @@ export default function PropertyEditor({
         //   他ページ（物件一覧など）は次に開いた時点で最新になる。
         //   この画面の表示の正はフォーム(RHF)側の値で、savedAt/baseUpdatedAt も
         //   ここで更新しているため RSC の再取得は不要。
+        });
       } catch (e) {
         console.error(e);
         setSaveError(
@@ -231,7 +240,7 @@ export default function PropertyEditor({
         }
       }
     });
-  }, [getValues, startSave]);
+  }, [getValues, startSave, stopForConflict]);
   // onSaveDraft を finally から自己参照するための ref（宣言順の循環を避ける）。
   const onSaveDraftRef = useRef<typeof onSaveDraft>(onSaveDraft);
   useEffect(() => { onSaveDraftRef.current = onSaveDraft; }, [onSaveDraft]);
@@ -263,14 +272,20 @@ export default function PropertyEditor({
   //   （実測: 入力 300ms 後に離脱 → 保存されず / 3 秒待って離脱 → 保存される）。
   //   打合せで挙がった「開くを押して戻るとデータが消えることがある」の正体。
   //   startSave(useTransition) はアンマウント済みコンポーネントの state 更新に
-  //   なるため使わず、サーバーアクションを直接叩く（結果の表示先はもう無い）。
+  //   なるため使わず、同じ保存キュー経由で送る（結果の表示先はもう無い）。
   useEffect(() => {
+    const enqueue = writeQueueRef.current;
     return () => {
       clearTimeout(autoSaveTimer.current);
       if (!autoSavePendingRef.current || conflictRef.current) return;
       autoSavePendingRef.current = false;
-      void saveDraftAction(getValues(), {
-        expectedUpdatedAt: baseUpdatedAtRef.current,
+      void enqueue(async () => {
+        if (conflictRef.current) return;
+        const res = await saveDraftAction(getValues(), {
+          expectedUpdatedAt: baseUpdatedAtRef.current,
+        });
+        if (res.ok) baseUpdatedAtRef.current = res.updatedAt;
+        else conflictRef.current = true;
       }).catch(() => {});
     };
   }, [getValues]);
@@ -280,7 +295,7 @@ export default function PropertyEditor({
   // ブラウザ標準の離脱確認を出す。待機は最大1.5秒なので通常は一切出ない。
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!autoSavePendingRef.current) return;
+      if (!autoSavePendingRef.current && !saveInFlightRef.current && !statusWriteInFlightRef.current) return;
       e.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
@@ -330,6 +345,7 @@ export default function PropertyEditor({
   }, [watch, triggerAutoSave]);
 
   const onPublish = () => {
+    if (conflictRef.current || statusWriteInFlightRef.current) return;
     setPublishError(null);
     const data = getValues();
     const result = publishablePropertySchema.safeParse(data);
@@ -341,22 +357,57 @@ export default function PropertyEditor({
       setPublishError(msgs.join(" / "));
       return;
     }
+    statusWriteInFlightRef.current = true;
     startPublish(async () => {
       try {
-        await publishAction(result.data);
-        setSavedAt(new Date().toISOString());
-        router.refresh();
+        await writeQueueRef.current(async () => {
+          if (conflictRef.current) return;
+          // Read after earlier saves finish; edits typed while waiting belong
+          // to this publication too. Never reset the rest of the live form.
+          const data = publishablePropertySchema.parse(getValues());
+          const res = await publishAction(data, { expectedUpdatedAt: baseUpdatedAtRef.current });
+          if (!res.ok) { stopForConflict(); return; }
+          baseUpdatedAtRef.current = res.updatedAt;
+          // Publication generates EN fields on the server. Reconcile those
+          // before autosave resumes without resetting edits made in flight.
+          for (const update of publishedEnglishUpdates(data, getValues(), res.property)) {
+            setValue(update.path, update.value);
+          }
+          setValue("status", res.status);
+          setSavedAt(new Date().toISOString());
+        });
       } catch (e) {
         console.error(e);
         setPublishError(String(e));
+      } finally {
+        statusWriteInFlightRef.current = false;
       }
     });
   };
 
   const onUnpublish = () => {
+    if (conflictRef.current || statusWriteInFlightRef.current) return;
+    statusWriteInFlightRef.current = true;
+    setPublishError(null);
     startPublish(async () => {
-      await unpublishAction(initial.id);
-      router.refresh();
+      try {
+        await writeQueueRef.current(async () => {
+          if (conflictRef.current) return;
+          const res = await unpublishAction(initial.id, { expectedUpdatedAt: baseUpdatedAtRef.current });
+          if (!res.ok) {
+            if ("conflict" in res) stopForConflict();
+            else throw new Error("物件が見つかりません");
+            return;
+          }
+          baseUpdatedAtRef.current = res.updatedAt;
+          setValue("status", res.status);
+          setSavedAt(new Date().toISOString());
+        });
+      } catch (e) {
+        setPublishError(String(e));
+      } finally {
+        statusWriteInFlightRef.current = false;
+      }
     });
   };
 
@@ -3180,7 +3231,7 @@ const SALE_PRICE_PRESETS = [0, 50000, 100000, 150000, 200000, 250000, 300000, 50
 
 /**
  * 販売ライセンスの複数選択エディタ。ライセンス区分ごとにチェックボックスで
- * 有効/無効、有効な区分には価格入力(SalePriceInput)を表示する。
+ * 有効/無効を選び、拡張価格は標準価格の2倍として表示する。
  * downloadFiles(マルチ形式ダウンロード)と同じ「配列を直接 setValue で
  * 追加/削除」パターン。空配列のまま保存すると、購入APIは resolveLicenseOptions()
  * によりレガシー単一フィールド(splatItems.${idx}.license/salePrice)へ自動
@@ -3196,19 +3247,20 @@ function LicenseOptionsEditor({
   watch: UseFormWatch<Property>;
   setValue: UseFormSetValue<Property>;
 }) {
-  const options = watch(`splatItems.${idx}.licenseOptions`) || [];
+  const options = applyExtendedLicensePricing(watch(`splatItems.${idx}.licenseOptions`) || []);
+  const hasStandard = options.some((o) => o.license === "standard");
 
   const toggle = (license: DataLicense, checked: boolean) => {
     const next = checked
       ? [...options, { license, price: 0 }]
       : options.filter((o) => o.license !== license);
-    setValue(`splatItems.${idx}.licenseOptions`, next, { shouldDirty: true });
+    setValue(`splatItems.${idx}.licenseOptions`, applyExtendedLicensePricing(next), { shouldDirty: true });
   };
 
   const setPrice = (license: DataLicense, price: number) => {
     setValue(
       `splatItems.${idx}.licenseOptions`,
-      options.map((o) => (o.license === license ? { ...o, price } : o)),
+      applyExtendedLicensePricing(options.map((o) => (o.license === license ? { ...o, price } : o))),
       { shouldDirty: true },
     );
   };
@@ -3246,7 +3298,14 @@ function LicenseOptionsEditor({
                 <span className="text-[10.5px] text-muted">{DATA_LICENSE_DESC[license]}</span>
               </span>
             </label>
-            {opt && (
+            {opt && license === "extended" ? (
+              <div className="text-right text-[12px]">
+                <span className="mono">¥{opt.price.toLocaleString("ja-JP")}</span>
+                <p className="text-[11px] text-muted">
+                  {hasStandard ? "標準価格の2倍（自動）" : "標準ライセンスを選ぶと価格の2倍に自動設定"}
+                </p>
+              </div>
+            ) : opt && (
               <SalePriceInput
                 value={opt.price}
                 onChange={(v) => setPrice(license, v)}

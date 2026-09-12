@@ -35,9 +35,6 @@ export default async function AdminUserSessionsPage({
         >
           ← アカウント一覧に戻る
         </Link>
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mt-3 mb-1">
-          Active sessions
-        </div>
         <h1 className="serif text-3xl">
           {user.name}
           <span className="mono text-[13px] text-muted ml-3">{user.email}</span>

@@ -24,9 +24,6 @@ export default async function ProductionUpgradePage() {
   return (
     <div className="theme-online frame min-h-[calc(72vh/var(--z))] flex items-center justify-center py-16">
       <div className="border border-line bg-[#222] p-10 w-full max-w-md">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-          TEAM PLAN
-        </div>
         <h1 className="serif text-3xl mb-2">
           {en ? "Apply for a Production account" : "制作会社アカウントを申請"}
         </h1>

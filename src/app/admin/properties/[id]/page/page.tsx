@@ -35,9 +35,6 @@ export default async function StudioPageEditPage({
       </nav>
 
       <div className="mb-6">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mb-1">
-          Studio Page Builder
-        </div>
         <h1 className="serif text-3xl">{property.title || "（無題のスタジオ）"}</h1>
       </div>
 

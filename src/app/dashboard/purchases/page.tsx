@@ -4,6 +4,7 @@ import { purchaseRepo, resolvePurchasedItem } from "@/lib/purchases";
 import { repo as propertyRepo } from "@/lib/store";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveDownloadVersions } from "@/lib/download-versions";
+import { individualPurchaseDownloads } from "@/lib/purchase-contents";
 import { redirect } from "next/navigation";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
@@ -120,8 +121,9 @@ export default async function UserPurchasesPage() {
             const item = prop ? resolvePurchasedItem(prop.splatItems, p) : null;
             const files = item ? resolveDownloadFiles(item) : [];
             const versions = item ? resolveDownloadVersions(item, prop?.scannedAt) : [];
-            // 一括DL（全形式まとめZip）= 日付別バージョンの最新、無ければバンドル downloadFileUrl、無ければ先頭形式。
+            // 既定DLは最新の日付版、無ければ旧単一ファイル、無ければ先頭形式。
             const bundled = versions[0]?.url || item?.downloadFileUrl || files[0]?.url || "";
+            const individualFiles = individualPurchaseDownloads(files, bundled);
 
             return (
               <div key={p.id} className="border border-line hover:border-line/80 transition">
@@ -166,17 +168,17 @@ export default async function UserPurchasesPage() {
                           <a
                             href={`/api/purchase/${p.id}/download`}
                             className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/50 bg-green-400/10 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
-                            title={en ? "Download all formats together (ZIP)" : "全形式まとめてダウンロード（ZIP）"}
+                            title={en ? "Download the default file" : "既定のファイルをダウンロード"}
                           >
-                            {en ? "↓ Download all (ZIP)" : "↓ 一括ダウンロード (ZIP)"}
+                            {en ? "↓ Download" : "↓ ダウンロード"}
                           </a>
                         )}
-                        {files.length > 1 && (
+                        {individualFiles.length > 0 && (
                           <>
                             <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-30 mx-1">
                               {en ? "each" : "個別"}
                             </span>
-                            {files.map((f, fi) => (
+                            {individualFiles.map((f, fi) => (
                               <a
                                 key={fi}
                                 href={`/api/purchase/${p.id}/download?format=${encodeURIComponent(f.format)}`}

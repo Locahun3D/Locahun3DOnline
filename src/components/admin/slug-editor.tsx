@@ -32,7 +32,7 @@ export default function SlugEditor({
   isAdmin?: boolean;
   /** 公開URLを確認・変更済みか（publishablePropertySchemaの必須項目）。 */
   urlConfirmedAt?: string;
-  /** 「このURLでよい」確認後、親フォームのRHF状態を即時更新するコールバック。 */
+  /** 親フォームに確認時刻を渡す。この場合の永続化は親の直列化autosaveが担当する。 */
   onConfirmed?: (confirmedAt: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -75,8 +75,8 @@ export default function SlugEditor({
             {/* ⚠ 公開申請には「公開URLを確認したこと」が必須（publishablePropertySchema
                 の urlConfirmedAt）。URLを変更すれば renamePropertyAction が自動で
                 立てるが、自動生成IDのままでよい場合に確認する手段が無かった。
-                このボタンは confirmPropertySlugAction を直接呼び、リダイレクトせず
-                onConfirmed で親フォームのRHF状態をその場で更新する。 */}
+                親フォームがある場合は onConfirmed で状態を更新し、親の自動保存に
+                合流する。単独表示の場合のみ confirmPropertySlugAction で保存する。 */}
             {urlConfirmedAt ? (
               <span className="mono text-[10px] tracking-[0.12em] uppercase text-green-700 shrink-0">
                 ✓ 確認済み
@@ -86,9 +86,15 @@ export default function SlugEditor({
                 type="button"
                 disabled={confirming}
                 onClick={() => {
+                  // The parent editor owns the serialized autosave/version.
+                  // An independent write here makes its next save conflict
+                  // with this same user's URL confirmation.
+                  if (onConfirmed) {
+                    onConfirmed(new Date().toISOString());
+                    return;
+                  }
                   startConfirm(async () => {
-                    const res = await confirmPropertySlugAction(id);
-                    if (res.ok && res.confirmedAt) onConfirmed?.(res.confirmedAt);
+                    await confirmPropertySlugAction(id);
                   });
                 }}
                 className="mono text-[10px] tracking-[0.12em] uppercase text-accent border border-accent/50 px-2.5 py-1 rounded-md hover:bg-accent hover:text-white transition disabled:opacity-50 shrink-0"

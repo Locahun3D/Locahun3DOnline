@@ -268,6 +268,14 @@ export default function CatalogClient({
     label: presetLabel(DEFAULT_REF.id, en ? "en" : "ja") ?? DEFAULT_REF.label,
   }));
   const [geoMsg, setGeoMsg] = useState("");
+  const [showMap, setShowMap] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1200px) and (hover: hover) and (pointer: fine)');
+    const update = () => setShowMap(media.matches && !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   // Filters (dual ranges where it makes sense)
   const [q, setQ] = useState("");
@@ -280,7 +288,7 @@ export default function CatalogClient({
   const [maxDailyPrice, setMaxDailyPrice] = useState<number | "">("");
   const [minCeiling, setMinCeiling] = useState<number | "">("");
   const [maxCeiling, setMaxCeiling] = useState<number | "">("");
-  const [maxKmFromRef, setMaxKmFromRef] = useState<number | "">("");
+  const [maxKmFromRef, setMaxKmFromRef] = useState<number | "">(200);
   const [requiresDaily, setRequiresDaily] = useState(false);
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
@@ -300,7 +308,7 @@ export default function CatalogClient({
     setMinPrice(""); setMaxPrice("");
     setMinDailyPrice(""); setMaxDailyPrice("");
     setMinCeiling(""); setMaxCeiling("");
-    setMaxKmFromRef("");
+    setMaxKmFromRef(200);
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false); setRequires3D(false);
     setFacilities([]);
     setHoursFrom(""); setHoursTo("");
@@ -480,19 +488,11 @@ export default function CatalogClient({
     //    2026-08-13 に撤去（運用判断）。キーワード検索と物件リストを1画面でも
     //    多く見せるため、空いた分は詰めて検索UIを最上部に置く。
     <div className="frame-wide pt-3 sm:pt-5 pb-12 sm:pb-32">
-      {/* ══ タブレット縦(720–1023px)だけ「左=絞り込み+件数/ソート+カード / 右=地図sticky」
-          の2カラムにする ══
-          理由: 縦積みのままだと 1画面をほぼ地図が占有するのに情報が無く（実測
-          820x1180 で地図が y230–582、カードは y660 から＝初期表示に1件も入らない）、
-          絞り込みも折りたたみ1行で使いにくかった。
-          実装: このラッパだけを帯限定でグリッドにし、中の「上段バンド」を
-          display:contents にして filters/map を直接このグリッドの子に昇格させる
-          （DOMを二重に持たない＝<720 と ≥1024 のマークアップを一切変えないため）。
-          左57% / 右43%。地図は row-span-3 + sticky でビューポート内に収める。 */}
-      <div className="min-[720px]:max-[1024px]:grid min-[720px]:max-[1024px]:grid-cols-[57fr_43fr] min-[720px]:max-[1024px]:gap-x-4 min-[720px]:max-[1024px]:items-start">
+      {/* 地図はPCのみ。タブレット・スマホは検索と一覧に全幅を使う。 */}
+      <div>
       {/* Top band: search panel (left) + map (right), flush to the same height.
           モバイルは縦積みなので gap を詰めて結果カードを早く見せる（見開き優先）。 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)] gap-3 sm:gap-5 lg:gap-6 min-[720px]:max-[1024px]:contents">
+      <div className={`grid grid-cols-1 ${showMap ? 'grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)]' : ''} gap-3 sm:gap-5 lg:gap-6`}>
         <div className="min-w-0 min-[720px]:max-[1024px]:col-start-1 min-[720px]:max-[1024px]:row-start-1">
           <FiltersPanel
             q={q} setQ={setQ}
@@ -541,7 +541,7 @@ export default function CatalogClient({
             row-span を外して self-stretch にすると、行の高さ＝絞り込みパネルの
             高さになるので、固定px を置かずに常に一致する（パネルの中身が
             増減しても追従する）。sticky は不要になったので外した。 */}
-        <div className="h-[calc(24vh/var(--z))] sm:max-[720px]:h-[calc(40vh/var(--z))] lg:h-auto
+        {showMap && <div data-catalog-map className="h-[calc(24vh/var(--z))] sm:max-[720px]:h-[calc(40vh/var(--z))] lg:h-auto
           min-[720px]:max-[1024px]:h-auto
           min-[720px]:max-[1024px]:col-start-2 min-[720px]:max-[1024px]:row-start-1
           min-[720px]:max-[1024px]:self-stretch">
@@ -552,7 +552,7 @@ export default function CatalogClient({
             onMarkerHover={(id) => setHoveredId(id)}
             onMarkerClick={(id) => router.push(`/properties/${id}`)}
           />
-        </div>
+        </div>}
       </div>
 
       <SortBar
@@ -578,7 +578,7 @@ export default function CatalogClient({
              重ねると出力順で勝敗が不定になる）。720–1023px は左カラム内なので1列。
              〜639:1 / 640–719:2 / 720–1023:1 / 1024–1279:3 / 1280–1535:4 /
              1536–2199:5 / 2200以上:6（720–1023 以外は従来と同じ列数）。 */
-          <ul className="grid grid-cols-1 sm:max-[720px]:grid-cols-2 min-[1024px]:max-[1280px]:grid-cols-3 min-[1280px]:max-[1536px]:grid-cols-4 min-[1536px]:max-[2200px]:grid-cols-5 min-[2200px]:grid-cols-6 gap-5 min-[720px]:max-[1024px]:gap-3">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 min-[1024px]:max-[1280px]:grid-cols-3 min-[1280px]:max-[1536px]:grid-cols-4 min-[1536px]:max-[2200px]:grid-cols-5 min-[2200px]:grid-cols-6 gap-5 min-[720px]:max-[1024px]:gap-3">
             {computed.map((p) => (
               <li
                 key={p.id}
@@ -866,7 +866,8 @@ function FiltersPanel(p: FiltersProps) {
       <Divider />
 
       {/* Additional conditions */}
-      <Row label={en ? "Extra filters" : "追加条件"}>
+      <details className="border border-line px-3 py-2">
+        <summary className="cursor-pointer text-[13px]">{en ? "Extra filters" : "追加条件"}</summary>
         <div className="space-y-2">
           {/* 1段目: 主要トグル + 主要設備タグ */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -907,7 +908,7 @@ function FiltersPanel(p: FiltersProps) {
             ))}
           </div>
         </div>
-      </Row>
+      </details>
       </div>
     </div>
   );
@@ -1180,12 +1181,14 @@ function ReferencePicker({
 
   return (
     <div className="relative">
-      <div className="flex gap-1">
+      <div className="relative z-30 flex gap-1">
         <input
           type="text"
+          aria-label={en ? "Reference location" : "参照地点"}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
           onKeyDown={(e) => {
             if (e.key === "Enter") { e.preventDefault(); tryResolve(); }
             else if (e.key === "Escape") setOpen(false);
@@ -1202,7 +1205,8 @@ function ReferencePicker({
           📍
         </button>
       </div>
-      <div className="flex flex-wrap gap-1 mt-0.5">
+      {open && <div className="absolute z-30 left-0 right-0 top-full mt-1 border border-line bg-bg p-2 shadow-xl max-h-[300px] overflow-auto">
+      <div className="flex flex-wrap gap-1">
         {REFERENCE_PRESETS.map((pr) => {
           const lbl = en ? pr.labelEn : pr.label;
           return (
@@ -1221,8 +1225,8 @@ function ReferencePicker({
           );
         })}
       </div>
-      {open && (results.length > 0 || resolving || error) && (
-        <div className="absolute z-30 left-0 right-0 top-full mt-1 border border-line bg-bg shadow-2xl max-h-[260px] overflow-auto">
+      {(results.length > 0 || resolving || error) && (
+        <div className="mt-2 border-t border-line">
           {resolving && <div className="px-3 py-2 mono text-[10px] text-muted">{en ? "Searching…" : "検索中…"}</div>}
           {error && <div className="px-3 py-2 mono text-[10px] text-accent">{error}</div>}
           {results.map((r, i) => (
@@ -1243,6 +1247,7 @@ function ReferencePicker({
           ))}
         </div>
       )}
+      </div>}
       {open && <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} aria-hidden />}
     </div>
   );

@@ -37,9 +37,6 @@ export default async function AdminScanSubmissionsPage({
   return (
     <div className="theme-online p-8">
       <div className="mb-6">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mb-1">
-          Scan submissions
-        </div>
         <h1 className="serif text-3xl">持ち込みスキャン</h1>
         <p className="text-[13px] text-muted mt-2 leading-relaxed">
           撮影者から届いた持ち込みスキャン申請。成立するまでは非公開で預かります。

@@ -17,6 +17,16 @@ interface LicenseSource {
   salePrice?: number;
 }
 
+/** 標準価格がある商品は、拡張価格を常にその2倍にする。入力配列は変更しない。 */
+export function applyExtendedLicensePricing(options: LicenseOption[]): LicenseOption[] {
+  const standard = options.find((option) => option.license === "standard");
+  return options.map((option) =>
+    option.license === "extended" && standard
+      ? { ...option, price: standard.price * 2 }
+      : { ...option },
+  );
+}
+
 export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
   // エディトリアル限定は新規販売不可（方針転換）。過去にチェック/設定された
   // 物件データが残っていても、買い手側には一切見せず購入もできないよう
@@ -28,7 +38,7 @@ export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
     // 追加(チェックした)順ではなく、常に DATA_LICENSES のグレード順
     // (editorial → standard → extended → custom) で並べる。管理画面の
     // チェックボックス一覧・買い手のライセンス選択チップ双方で表示順を揃える。
-    return [...multi].sort(
+    return applyExtendedLicensePricing(multi).sort(
       (a, b) => DATA_LICENSES.indexOf(a.license) - DATA_LICENSES.indexOf(b.license),
     );
   }

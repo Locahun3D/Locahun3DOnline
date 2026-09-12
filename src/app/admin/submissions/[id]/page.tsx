@@ -37,9 +37,6 @@ export default async function AdminScanSubmissionDetailPage({
         <Link href="/admin/submissions" className="text-[12px] text-muted hover:text-accent transition">
           ← 一覧に戻る
         </Link>
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mt-4 mb-1">
-          Scan submission
-        </div>
         <h1 className="serif text-2xl">
           {submission.locationName || "（無題）"}
           <span className="ml-3 align-middle mono text-[11px] tracking-[0.12em] uppercase text-accent border border-accent/40 rounded-full px-2.5 py-0.5">

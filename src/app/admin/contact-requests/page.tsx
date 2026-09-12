@@ -46,9 +46,6 @@ export default async function AdminContactRequestsPage({
   return (
     <div className="theme-online p-8">
       <div className="mb-6">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mb-1">
-          Contact requests
-        </div>
         <h1 className="serif text-3xl">
           お問い合わせ（サイト全体）
           {newCount > 0 && (

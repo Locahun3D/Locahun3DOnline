@@ -17,6 +17,8 @@ import type { LicenseOption } from "@/lib/license-options";
 import LicenseDifference, { LicenseDescription } from "@/components/license-difference";
 import DataInquiry from "@/components/data-inquiry";
 import { useLocale } from "@/components/locale-provider";
+import PurchaseContents from "@/components/purchase-contents";
+import type { PurchaseContent } from "@/lib/purchase-contents";
 
 interface DataSalePanelProps {
   propertyId: string;
@@ -31,8 +33,7 @@ interface DataSalePanelProps {
   zipSizeMb: number;
   splatItemCount: number;
   tokenCost: 1 | 2 | 3 | 5;
-  downloadFileFormat?: string;
-  downloadFileSizeMb?: number;
+  purchaseContents: PurchaseContent[];
   captureDevice?: string;
   alreadyPurchased?: boolean;
   /** エディトリアルライセンス選択時に表示する権利者クレジット表記。 */
@@ -48,8 +49,7 @@ export default function DataSalePanel({
   description,
   scannedAt,
   splatSizeMb,
-  downloadFileFormat,
-  downloadFileSizeMb,
+  purchaseContents,
   captureDevice,
   alreadyPurchased = false,
   editorialRightsCredit,
@@ -122,17 +122,9 @@ export default function DataSalePanel({
   };
 
   const yen = price.toLocaleString(en ? "en-US" : "ja-JP");
-  const dlFormat = downloadFileFormat || "PLY / RAD / OBJ";
-  const dlSize = downloadFileSizeMb ?? 0;
-  // 点群数（旧仕様）は「あっても参考にならない」との判断で撤去。実際の容量が
-  // 分かる方が買い手にとって意味があるため、DL用ファイルと3DGS本体それぞれの
-  // 容量を出す（両者が同じ/近い値でも「ダウンロードされる実体」がどちらか
-  // 分かるよう区別して表示する）。
+  // 閲覧用の容量は、購入に含まれるファイル一覧と分ける。
   const meta = [
-    scannedAt && `${scannedAt}`,
-    `${dlFormat}`,
-    dlSize > 0 && `DL ${dlSize} MB`,
-    splatSizeMb > 0 && `3DGS ${splatSizeMb} MB`,
+    splatSizeMb > 0 && `${en ? "Viewer preview" : "閲覧用プレビュー"} ${splatSizeMb} MB`,
     captureDevice || "",
   ].filter(Boolean).join(" / ");
 
@@ -149,6 +141,8 @@ export default function DataSalePanel({
           <p className="text-[11px] max-[720px]:text-[12px] opacity-60 mt-0.5 max-[720px]:line-clamp-none line-clamp-1">{description}</p>
         )}
         <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
+        <p className="text-[13px] text-muted mt-2">{en ? "Captured: " : "撮影日："}{scannedAt || (en ? "Not registered" : "未登録")}</p>
+        <PurchaseContents files={purchaseContents} en={en} />
         {licenseOptions.length > 1 ? (
           <div className="mt-1.5">
             <div className="mono text-[9px] tracking-[0.18em] uppercase text-muted mb-1">

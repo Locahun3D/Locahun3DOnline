@@ -48,11 +48,6 @@ export default async function SharedBookmarkFolderPage({
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">SHARED</span>
-        <span>{folder.name}</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       <header className="mb-10">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">

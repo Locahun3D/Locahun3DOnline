@@ -6,6 +6,8 @@ import {
 } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { resolveDownloadFiles } from "@/lib/downloads";
+import { resolvePurchaseContents } from "@/lib/purchase-contents";
+import PurchaseContents from "@/components/purchase-contents";
 import { resolveLicenseOptions } from "@/lib/license-options";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { fmtDateLongJST } from "@/lib/date-format";
@@ -271,7 +273,6 @@ export default function PropertyDetailView({
   if (property.restroom) specRows.push(["RESTROOM ／ トイレ", en ? "Yes" : "あり"]);
   if (property.smokingArea) specRows.push(["SMOKING ／ 喫煙所", en ? "Yes" : "あり"]);
   if (property.fireAllowed) specRows.push(["OPEN FLAME ／ 火気使用", en ? "Allowed" : "可"]);
-  specRows.push(["SCAN DATE ／ スキャン日", property.scannedAt || "—"]);
 
   // ── Pricing / Rules セクションの表示可否（横並び2カラム化の判定に使う） ──
   const showPricing =
@@ -321,7 +322,7 @@ export default function PropertyDetailView({
       <div className="frame pt-6">
         <nav className="mono text-[10.5px] tracking-[0.24em] uppercase text-muted flex gap-2 items-center">
           <Link href={lh("/properties")} className="text-accent hover:opacity-75 transition font-medium max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]">
-            CATALOG
+            {en ? "Properties" : "物件を探す"}
           </Link>
           <span>/</span>
           <span>{categoryLabel(property.category, locale)}</span>
@@ -807,6 +808,7 @@ export default function PropertyDetailView({
       <div className="frame pt-14">
         {property.pageBlocks && property.pageBlocks.length > 0 ? (
           <section className="mb-16">
+            {visibleSplatItems.length > 0 && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>}
             <StudioPageBlocks
               blocks={property.pageBlocks}
               property={property}
@@ -832,6 +834,7 @@ export default function PropertyDetailView({
         ) : (
           <section className="mb-16">
             <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
+            <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>
             {/* ⚠ 件数に関わらず常に2カラムのグリッドに置く（2026-08-13）。
                 以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
                 `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
@@ -904,12 +907,14 @@ export default function PropertyDetailView({
                       zipSizeMb={property.zipSizeMb}
                       splatItemCount={property.splatItems.length}
                       tokenCost={property.tokenCost as 1 | 2 | 3 | 5}
-                      downloadFileFormat={item.downloadFileFormat}
-                      downloadFileSizeMb={item.downloadFileSizeMb}
+                      purchaseContents={resolvePurchaseContents(item)}
                       captureDevice={item.captureDevice}
                       alreadyPurchased={purchasedItemIds.includes(item.id)}
                       editorialRightsCredit={item.editorialRightsCredit}
                     />
+                  )}
+                  {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length === 0 && (
+                    <PurchaseContents files={resolvePurchaseContents(item)} en={en} />
                   )}
                 </section>
                 );

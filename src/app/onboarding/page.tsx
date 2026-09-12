@@ -27,9 +27,6 @@ export default async function OnboardingPage({
   return (
     <div className="theme-online frame min-h-[calc(72vh/var(--z))] flex items-center justify-center py-16">
       <div className="border border-line bg-[#222] p-10 w-full max-w-md">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-2">
-          WELCOME
-        </div>
         <h1 className="serif text-3xl mb-2">{en ? "Choose your account type" : "アカウント種別を選択"}</h1>
         {/* 掲載側として来た人には、なぜ撮影スタジオが選ばれているかを明示する。 */}
         {isStudioIntent(intent) && (

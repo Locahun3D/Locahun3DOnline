@@ -10,7 +10,9 @@ import {
   reconcileCart,
   type CartItem,
 } from "@/lib/cart";
-import { dataLicenseLabel, dataLicenseDesc } from "@/lib/schemas";
+import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
+import PurchaseContents from "@/components/purchase-contents";
+import type { PurchaseContent } from "@/lib/purchase-contents";
 import { useLocale, useHref } from "@/components/locale-provider";
 
 export default function CartClient() {
@@ -20,6 +22,7 @@ export default function CartClient() {
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [details, setDetails] = useState<Record<string, { license?: DataLicense; purchaseContents: PurchaseContent[] }>>({});
   // 価格変更/販売終了の再検証結果（マウント時の1回だけ表示するバナー）。
   const [notice, setNotice] = useState<{ removedCount: number; priceChangedCount: number } | null>(null);
 
@@ -56,8 +59,9 @@ export default function CartClient() {
         });
         if (!res.ok) return;
         const data = (await res.json()) as {
-          items: { propertyId: string; splatItemIndex: number; price: number; available: boolean }[];
+          items: { propertyId: string; splatItemIndex: number; price: number; available: boolean; license?: DataLicense; purchaseContents: PurchaseContent[] }[];
         };
+        setDetails(Object.fromEntries(data.items.map((item) => [`${item.propertyId}:${item.splatItemIndex}`, item])));
         const { changed, removed, priceChanged } = reconcileCart(data.items);
         if (changed) {
           setItems(getCart());
@@ -157,12 +161,15 @@ export default function CartClient() {
     <div className="space-y-6">
       {noticeBanner}
       <div className="space-y-3">
-        {items.map((i) => (
+        {items.map((i) => {
+          const detail = details[`${i.propertyId}:${i.splatItemIndex}`];
+          const selectedLicense = detail?.license ?? i.license;
+          return (
           <div
             key={`${i.propertyId}:${i.splatItemIndex}`}
-            className="border border-line flex items-center gap-4 p-4"
+            className="border border-line flex flex-wrap items-center gap-4 p-4"
           >
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 max-[720px]:basis-full">
               <Link
                 href={lh(`/properties/${i.propertyId}`)}
                 className="text-sm font-medium hover:text-accent transition"
@@ -174,17 +181,20 @@ export default function CartClient() {
                   {i.label}
                 </span>
               )}
-              <div className="mono text-[10px] opacity-40 mt-1">
-                {en ? "3DGS data" : "3DGS データ"}
-                {i.license && ` ・ ${dataLicenseLabel(i.license, en ? "en" : "ja")}`}
+              <div className="text-[13px] mt-2">
+                {en ? "Selected license: " : "選択ライセンス："}
+                {selectedLicense ? dataLicenseLabel(selectedLicense, en ? "en" : "ja") : (en ? "Checking…" : "確認中…")}
               </div>
               {/* 決済直前にも、そのライセンスで何ができるのかを明示する。
                   ここまで名称だけで来ると、買った後で「使えない用途だった」に
                   なりかねない。 */}
-              {i.license && (
+              {selectedLicense && (
                 <p className="mt-1 text-[10.5px] leading-relaxed text-muted max-w-[52ch]">
-                  {dataLicenseDesc(i.license, en ? "en" : "ja")}
+                  {dataLicenseDesc(selectedLicense, en ? "en" : "ja")}
                 </p>
+              )}
+              {detail ? <PurchaseContents files={detail.purchaseContents} en={en} /> : (
+                <p className="mt-3 text-[13px] text-muted">{en ? "Download details are being checked. If they do not appear, check the property page before purchasing." : "ダウンロード内容を確認中です。"}{!en && <br />}{!en && "表示されない場合は、購入前に物件ページで確認してください。"}</p>
               )}
             </div>
             <div className="mono text-[12px] tracking-[0.14em] whitespace-nowrap">
@@ -198,7 +208,7 @@ export default function CartClient() {
               {en ? "Remove" : "削除"}
             </button>
           </div>
-        ))}
+        ); })}
       </div>
 
       <div className="border border-accent/40 bg-[#0a0906] p-5 flex flex-wrap items-center gap-4">

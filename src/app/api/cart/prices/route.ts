@@ -5,6 +5,8 @@ import { resolveLicenseOptions } from "@/lib/license-options";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
+import { resolvePurchaseContents } from "@/lib/purchase-contents";
+import type { DataLicense } from "@/lib/schemas";
 
 export const runtime = "nodejs";
 
@@ -50,11 +52,13 @@ export async function POST(req: Request) {
       }
 
       let price = 0;
+      let license: DataLicense | undefined;
       if (available && item) {
         const licenseOptions = resolveLicenseOptions(item);
         const matched =
           licenseOptions.find((o) => o.license === line.license) ?? licenseOptions[0];
         price = isDataSaleFree(item.freePeriod, nowIso) ? 0 : matched.price;
+        license = matched.license;
       }
 
       return {
@@ -62,6 +66,8 @@ export async function POST(req: Request) {
         splatItemIndex: idx,
         price,
         available,
+        license,
+        purchaseContents: available && item ? resolvePurchaseContents(item) : [],
       };
     }),
   );

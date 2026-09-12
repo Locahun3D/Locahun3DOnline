@@ -35,11 +35,6 @@ export default async function ContactScanPage() {
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">CONTACT</span>
-        <span>{en ? "Scan request" : CONTACT_TYPE_LABEL.scan}</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       {/* シミュレーターは移設元と同じ 1000px。他の /contact/* （620/760px）より
           広いのは、選択欄が2列＋見積カードが横並びになるため。 */}
@@ -51,9 +46,6 @@ export default async function ContactScanPage() {
           {en ? "← Back to contact" : "← お問い合わせ一覧に戻る"}
         </Link>
 
-        <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mt-5 mb-2">
-          Contact / scan
-        </div>
         <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-3">
           {en ? "Scan request" : CONTACT_TYPE_LABEL.scan}
         </h1>

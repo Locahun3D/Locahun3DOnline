@@ -31,11 +31,6 @@ export default async function BookmarksPage() {
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">ACCOUNT</span>
-        <span>Saved Properties</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       <header className="mb-10">
         <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">

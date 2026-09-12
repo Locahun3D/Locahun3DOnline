@@ -51,16 +51,8 @@ export default async function SubmitScanPage() {
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">SCAN</span>
-        <span>{en ? "Bring your own scan" : "持ち込みスキャン"}</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       <header className="max-w-[620px] mx-auto mb-10">
-        <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mb-3">
-          LOCAHUN 3D / SCAN
-        </div>
         <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-4">
           {en ? "Bring your own scan" : "持ち込みスキャン"}
         </h1>

@@ -198,8 +198,9 @@ class PropertyRepoImpl implements PropertyRepo {
       ...p,
       splatItems: p.splatItems.map((it) => (it.id ? it : { ...it, id: crypto.randomUUID() })),
     };
-    await this.upsert(fixed);
-    return fixed;
+    // upsert also advances updatedAt. Return that persisted version so opening
+    // a legacy record cannot immediately conflict with its own ID backfill.
+    return this.upsert(fixed);
   }
 
   async upsert(p: Property): Promise<Property> {

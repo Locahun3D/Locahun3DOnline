@@ -27,9 +27,6 @@ export default async function AdminInquiriesPage({
   return (
     <div className="theme-online p-8">
       <div className="mb-6">
-        <div className="mono text-[10px] tracking-[0.32em] uppercase opacity-50 mb-1">
-          Inquiries
-        </div>
         <h1 className="serif text-3xl">
           問い合わせ
           {newCount > 0 && (

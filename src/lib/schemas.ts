@@ -495,7 +495,10 @@ export const propertySchema = z.object({
     // (resolveLicenseOptions() を参照)。買い手は購入時にこの中から1つ選ぶ。
     licenseOptions: z.array(z.object({
       license: z.enum(DATA_LICENSES),
-      price: z.number().int().min(0).max(99999999),
+      price: z.number().int().min(0).max(199999998),
+    }).refine((option) => option.license === "extended" || option.price <= 99999999, {
+      message: "価格は99,999,999円以下で入力してください",
+      path: ["price"],
     })).max(4).default([]),
     // エディトリアル(報道・教育限定)ライセンスで販売する場合に必須の権利者
     // クレジット表記。公開ページ・購入時のライセンステキストに表示する。

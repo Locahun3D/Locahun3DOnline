@@ -110,11 +110,6 @@ export default async function AccountPage({
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">ACCOUNT</span>
-        <span>Profile</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       {welcome && (
         <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">

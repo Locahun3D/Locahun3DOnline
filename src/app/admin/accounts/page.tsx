@@ -37,10 +37,8 @@ export default async function AdminAccountsPage({
 
   return (
     <div className="p-6 md:p-10">
-      <div className="chapter-rule">
-        <span className="opacity-60">ADMIN</span>
-        <span>アカウント管理</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="serif text-3xl">アカウント管理</h1>
         <span className="opacity-60">{users.length} 件</span>
       </div>
 

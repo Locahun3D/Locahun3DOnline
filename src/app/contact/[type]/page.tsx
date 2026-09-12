@@ -195,11 +195,6 @@ export default async function ContactTypePage({
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">CONTACT</span>
-        <span>{en ? copy.titleEn : copy.title}</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       {/* 掲載依頼は費用カード・流れ・登録条件と横並びの情報が多く、620px だと
           どのブロックも2〜3行に折り返して「細々」して見えた。この種別だけ
@@ -212,9 +207,6 @@ export default async function ContactTypePage({
           {en ? "← Back to contact" : "← お問い合わせ一覧に戻る"}
         </Link>
 
-        <div className="mono text-[10px] tracking-[0.4em] uppercase text-accent mt-5 mb-2">
-          Contact / {t}
-        </div>
         <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-3">
           {en ? copy.titleEn : copy.title}
         </h1>

@@ -272,12 +272,15 @@ export async function saveDraftAction(
   return { ok: true as const, id: parsed.id, updatedAt: saved.updatedAt };
 }
 
-export async function publishAction(input: unknown) {
+export async function publishAction(input: unknown, opts?: { expectedUpdatedAt?: string }) {
   const parsed = publishablePropertySchema.parse(input);
   // 公開は運営の審査を通す（studio は requestPublishAction で申請のみ）。
   // 未審査の物件が公開されるとカタログ品質＝商品価値を毀損するため。
   await requireAdmin();
   const existing = await repo.get(parsed.id);
+  if (opts?.expectedUpdatedAt && existing?.updatedAt && existing.updatedAt !== opts.expectedUpdatedAt) {
+    return { ok: false as const, conflict: true as const, serverUpdatedAt: existing.updatedAt };
+  }
   let toPublish: Property = stampPublishedAt({
     ...mergeManaged(parsed, existing),
     status: "published",
@@ -290,7 +293,15 @@ export async function publishAction(input: unknown) {
   } catch {
     /* 翻訳できなくても公開は継続 */
   }
-  await repo.upsert(toPublish);
+  // Translation may take seconds. Recheck before writing so another editor's
+  // update during that wait is not replaced by this earlier snapshot.
+  if (opts?.expectedUpdatedAt) {
+    const current = await repo.get(parsed.id);
+    if (current?.updatedAt && current.updatedAt !== opts.expectedUpdatedAt) {
+      return { ok: false as const, conflict: true as const, serverUpdatedAt: current.updatedAt };
+    }
+  }
+  const saved = await repo.upsert(toPublish);
   // 直接掲載スタジオの分配自動設定。受取者が未登録なら何もしない設計なので
   // 失敗しても公開自体は止めない（翻訳フォールバックと同じ扱い）。
   try {
@@ -303,7 +314,7 @@ export async function publishAction(input: unknown) {
   revalidatePath("/properties");
   revalidatePath(`/properties/${parsed.id}`);
   revalidatePath("/");
-  return { ok: true as const, id: parsed.id };
+  return { ok: true as const, id: parsed.id, updatedAt: saved.updatedAt, status: saved.status, property: saved };
 }
 
 /**
@@ -427,17 +438,20 @@ export async function publishByIdAction(id: string) {
  *   公開     = admin のみ（publishAction / publishByIdAction は requireAdmin のまま）
  * つまり「いつでも引っ込められるが、出す時は必ず審査を通る」。
  */
-export async function unpublishAction(id: string) {
+export async function unpublishAction(id: string, opts?: { expectedUpdatedAt?: string }) {
   await assertPropertyAccess(id);
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
+  if (opts?.expectedUpdatedAt && existing.updatedAt && existing.updatedAt !== opts.expectedUpdatedAt) {
+    return { ok: false as const, conflict: true as const, serverUpdatedAt: existing.updatedAt };
+  }
   // 取り下げたら過去の公開申請は無効。残すと再公開時に審査済みに見えてしまう。
-  await repo.upsert({ ...existing, status: "draft", publishRequestedAt: null });
+  const saved = await repo.upsert({ ...existing, status: "draft", publishRequestedAt: null });
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${id}/edit`);
   revalidatePath("/properties");
   revalidatePath(`/properties/${id}`);
-  return { ok: true as const };
+  return { ok: true as const, updatedAt: saved.updatedAt, status: saved.status };
 }
 
 /**

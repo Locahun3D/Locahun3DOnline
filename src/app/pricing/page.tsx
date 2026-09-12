@@ -67,11 +67,6 @@ export default async function PricingPage({
 
   return (
     <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <div className="chapter-rule">
-        <span className="opacity-60">PRICING</span>
-        <span>Plans</span>
-        <span className="flex-1 h-px bg-current opacity-25" />
-      </div>
 
       {checkout === "team_role_required" && (
         <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
