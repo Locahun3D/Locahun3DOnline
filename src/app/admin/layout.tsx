@@ -1,5 +1,8 @@
 import { requireAdminOrStudioOwner } from "@/lib/dal";
 import AdminNav, { type AdminNavItem } from "@/components/admin/admin-nav";
+import { getNotificationSummary } from "@/lib/notifications";
+import { getLocale } from "@/lib/i18n/server";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export const metadata = {
   title: { default: "Admin", template: "%s｜Admin" },
@@ -13,6 +16,8 @@ export default async function AdminLayout({
 }) {
   const user = await requireAdminOrStudioOwner();
   const isAdmin = user.role === "admin";
+  const locale = await getLocale();
+  const adminUnread = isAdmin ? (await getNotificationSummary(user.id, "admin", 0)).unreadCount : 0;
 
   const navItems: AdminNavItem[] = [
     { href: "/admin/properties", label: "物件" },
@@ -20,6 +25,7 @@ export default async function AdminLayout({
       ? ([
           { href: "/admin/properties?status=draft", label: "↳ 下書きのみ", sub: true },
           { href: "/admin/properties?status=published", label: "↳ 公開中のみ", sub: true },
+          { href: localizedHref("/admin/notifications", locale), label: `${locale === "en" ? "Admin notifications" : "管理者向け通知"}${adminUnread > 0 ? ` (${adminUnread})` : ""}` },
           { href: "/admin/accounts", label: "アカウント" },
           { href: "/admin/accounts?status=pending", label: "↳ 承認待ちのみ", sub: true },
           { href: "/admin/analytics", label: "アナリティクス" },
@@ -47,7 +53,7 @@ export default async function AdminLayout({
 
   return (
     <div className="theme-online min-h-screen grid grid-cols-1 md:grid-cols-[220px_1fr] border-t border-line">
-      <aside className="border-r border-line p-6 bg-[#141414] sticky top-[calc(var(--header-h)/var(--z))] self-start">
+      <aside className="border-r border-line p-6 bg-[#141414] md:sticky md:top-[calc(var(--header-h)/var(--z))] self-start">
         <div className="serif text-lg mb-6">
           {isAdmin ? "Admin" : "Studio"}
         </div>

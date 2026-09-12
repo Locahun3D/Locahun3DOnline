@@ -24,7 +24,7 @@ export default async function ListingRevenueSharePage() {
   const en = locale === "en";
   if (en) return <ListingRevenueShareEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
+    <div className="theme-online w-full max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
       <header className="ui-page-header">
         <h1 className="ui-page-title">
@@ -125,7 +125,7 @@ export default async function ListingRevenueSharePage() {
 
 function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
+    <div className="theme-online w-full max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
       <header className="ui-page-header">
         <h1 className="ui-page-title">

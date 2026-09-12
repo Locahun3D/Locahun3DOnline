@@ -33,7 +33,7 @@ try{
      return{path:a.path,namespace:'stub',suffix:'?'+encodeURIComponent(a.importer),pluginData:{names:[...new Set(names)]}};
     });
     b.onLoad({filter:/.*/,namespace:'stub'},a=>{
-     const value=n=>/Repo$/.test(n)||n==='repo'?'fixtureRepo':/getCurrentUser|requireAdmin|requireOnboarded/.test(n)?'async()=>user':n==='filterAdminPurchases'?'x=>x':n==='getLocale'?'async()=>window.fixtureLocale':n==='withLiveDisplayNames'?'async x=>x':n==='stripeConfigStatus'?'()=>({enabled:false})':n==='useRouter'?'()=>({refresh(){},push(){},replace(){}})':n==='usePathname'?"()=>'/account'":n==='emailEnabled'?'()=>false':n==='getPublishedProperties'?'async()=>[]':/^[A-Z_]+$/.test(n)?'[]':'()=>[]';
+     const value=n=>/Repo$/.test(n)||n==='repo'?'fixtureRepo':/getCurrentUser|requireAdmin|requireOnboarded/.test(n)?'async()=>user':n==='filterAdminPurchases'?'x=>x':n==='getLocale'?'async()=>window.fixtureLocale':n==='withLiveDisplayNames'?'async x=>x':n==='stripeConfigStatus'?'()=>({enabled:false})':n==='useRouter'?'()=>({refresh(){},push(){},replace(){}})':n==='usePathname'?"()=>'/account'":n==='emailEnabled'?'()=>false':n==='getPublishedProperties'||n==='listActiveSessions'?'async()=>[]':/^[A-Z_]+$/.test(n)?'[]':'()=>[]';
      return{loader:'jsx',resolveDir:process.cwd(),contents:`const user=${JSON.stringify(user)};const fixtureRepo={list:async()=>[],listAll:async()=>[],get:async()=>({...user,locationName:'表示確認用の申請',status:'submitted',title:'表示確認用のスタジオ',category:'studio',gallery:[],splatItems:[],pageBlocks:[],attachments:[],sampleImages:[]})};export default function Empty({children,...props}){return ${a.path==='next/link'?'<a {...props}>{children}</a>':'null'}};${a.pluginData.names.map(n=>`export const ${n}=${value(n)};`).join('\n')}`};
     });
    }}]});
@@ -52,4 +52,4 @@ try{
  }
 }finally{await browser.close();fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(results,null,2));}
 console.log(JSON.stringify(results));
-if(results.some(r=>r.error||r.overflow||r.size!==(r.width===1440?'40px':'28px')))throw Error('Page rhythm fixture failed; inspect results.json');
+if(results.some(r=>r.error||r.overflow||r.size!==(r.width===1440?'60px':'42px')))throw Error('Page rhythm fixture failed; inspect results.json');

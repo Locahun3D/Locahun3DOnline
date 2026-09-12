@@ -35,6 +35,7 @@ export default function AccountDashboard({
   lastUnlockSceneLabel,
   unlockedCount,
   notifications = [],
+  notificationUnreadCount,
   billing = null,
   nowIso,
 }: {
@@ -49,6 +50,7 @@ export default function AccountDashboard({
   unlockedCount: number;
   /** 問い合わせ返信等のアプリ内通知（新しい順）。 */
   notifications?: Notification[];
+  notificationUnreadCount?: number;
   /** Stripe から取得した実際の請求間隔と次回更新日。未契約・未設定・取得失敗は null
    *  （その場合は tokenRefillAt を次回更新の近似として表示する）。 */
   billing?: { interval: "monthly" | "annual"; periodEnd: string | null } | null;
@@ -140,7 +142,7 @@ export default function AccountDashboard({
         </div>
       </div>
 
-      <NotificationList notifications={notifications} en={en} locale={locale} />
+      <NotificationList notifications={notifications} unreadCount={notificationUnreadCount} en={en} locale={locale} />
 
       {/* ── 上段: ステータス3枚（トークン / プラン / 請求書＋配信設定） ──
           ⚠ 配信設定（新着ロケ地の先行案内）は独立カードにせず、請求書カードの

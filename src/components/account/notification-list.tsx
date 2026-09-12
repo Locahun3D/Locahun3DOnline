@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { markNotificationsReadAction } from "@/lib/notification-actions";
 import type { Notification } from "@/lib/notifications";
+import type { NotificationScope } from "@/lib/notification-scope";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
@@ -19,22 +20,27 @@ export default function NotificationList({
   notifications,
   en,
   locale,
+  scope = "user",
+  unreadCount: totalUnread,
 }: {
   notifications: Notification[];
   en: boolean;
   locale: Locale;
+  scope?: NotificationScope;
+  unreadCount?: number;
 }) {
   const lh = (href: string) => localizedHref(href, locale);
   const [pending, startTransition] = useTransition();
-  if (notifications.length === 0) return null;
+  const [readError, setReadError] = useState(false);
+  if (notifications.length === 0 && scope === "user") return null;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = totalUnread ?? notifications.filter((n) => !n.read).length;
 
   return (
-    <div id="notifications" className="bg-white border border-[#e2e7ec] p-5 scroll-mt-20">
+    <div id={scope === "admin" ? "admin-notifications" : "notifications"} className="bg-white border border-[#e2e7ec] p-5 scroll-mt-20">
       <div className="flex items-center justify-between mb-3">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794]">
-          {en ? "Notifications" : "お知らせ"}
+          {scope === "admin" ? (en ? "Admin notifications" : "管理者向け通知") : (en ? "Notifications" : "お知らせ")}
           {unreadCount > 0 && (
             <span className="ml-2 inline-block bg-[#1ea0c4] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
               {unreadCount}
@@ -45,15 +51,22 @@ export default function NotificationList({
           <button
             type="button"
             disabled={pending}
-            onClick={() => startTransition(() => markNotificationsReadAction())}
+            onClick={() => {
+              setReadError(false);
+              startTransition(async () => {
+                try { await markNotificationsReadAction(scope); }
+                catch { setReadError(true); }
+              });
+            }}
             className="mono text-[10px] tracking-[0.18em] uppercase text-[#1ea0c4] hover:underline disabled:opacity-50"
           >
             {en ? "Mark all read" : "すべて既読にする"}
           </button>
         )}
       </div>
+      {readError && <p role="alert" className="mb-3 text-xs text-red-600">{en ? "Could not mark as read. Please try again." : "既読にできませんでした。もう一度お試しください。"}</p>}
       <ul className="divide-y divide-[#e2e7ec]">
-        {notifications.slice(0, 8).map((n) => (
+        {(scope === "admin" ? notifications : notifications.slice(0, 8)).map((n) => (
           <li key={n.id} className="py-3 first:pt-0 last:pb-0">
             <Link href={lh(n.link)} className="block group">
               <div className="flex items-start gap-2">
@@ -77,6 +90,9 @@ export default function NotificationList({
           </li>
         ))}
       </ul>
+      {notifications.length === 0 && (
+        <p className="text-sm text-muted">{en ? "No admin notifications." : "管理者向け通知はありません。"}</p>
+      )}
     </div>
   );
 }

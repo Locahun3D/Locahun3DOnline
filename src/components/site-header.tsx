@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { Show, UserButton } from "@clerk/nextjs";
 import { getCurrentUser } from "@/lib/dal";
-import { listNotifications } from "@/lib/notifications";
+import { getNotificationSummary } from "@/lib/notifications";
 import HeaderMark from "@/components/header-mark";
 import CartLink from "@/components/cart-link";
 import NotificationBell from "@/components/notification-bell";
@@ -36,10 +36,10 @@ export default async function SiteHeader() {
   // 通知はこれまで /account に来ないと存在に気づけなかった。ヘッダーのベルで
   // 未読件数を常時見せ、押せばその場で最近の通知一覧をドロップダウン表示する
   // （マイページへ飛ばさずに読める）。集計・取得はサインイン時のみサーバー側。
-  const notifications = user ? await listNotifications(user.id) : [];
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const summary = user ? await getNotificationSummary(user.id, "user", 12) : { notifications: [], unreadCount: 0 };
+  const unreadCount = summary.unreadCount;
   // ドロップダウンには最近分のみ渡す（全件はマイページの一覧で。payload を絞る）。
-  const recentNotifications = notifications.slice(0, 12);
+  const recentNotifications = summary.notifications;
   const locale = await getLocale();
   const t = (k: DictKey) => translate(locale, k);
   /* works ホスト（web.locahun3d.com）で描いているか。

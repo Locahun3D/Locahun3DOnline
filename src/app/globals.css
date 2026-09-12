@@ -192,7 +192,7 @@ body::before {
 /* Shared page rhythm: opt in explicitly so hero/print/viewer layouts are not
    changed by a blanket h1 selector. Keep gap and typography values together. */
 :root {
-  --ui-page-title-size: clamp(28px, 3.2vw, 40px);
+  --ui-page-title-size: clamp(42px, 4.8vw, 60px);
   --ui-section-title-size: clamp(20px, 2vw, 24px);
 }
 .ui-page-shell {

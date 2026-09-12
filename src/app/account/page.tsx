@@ -12,7 +12,7 @@ import { viewUnlockRepo } from "@/lib/view-unlocks";
 import { getPublishedProperties } from "@/lib/properties";
 import { repo as propertyRepo } from "@/lib/store";
 import { getSubscriptionBilling } from "@/lib/stripe";
-import { listNotifications } from "@/lib/notifications";
+import { getNotificationSummary } from "@/lib/notifications";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -51,7 +51,7 @@ export default async function AccountPage({
       : null;
   const allUnlocks = await viewUnlockRepo.list({ userId: user.id });
   const unlockedCount = allUnlocks.filter((u) => u.expiresAt > nowIso).length;
-  const notifications = await listNotifications(user.id);
+  const { notifications, unreadCount: notificationUnreadCount } = await getNotificationSummary(user.id, "user");
 
   // ── ログイン端末（Clerkのアクティブセッション）— マイページから自己管理 ──
   // Clerk API 障害でマイページ全体を落とさないよう空配列にフォールバック。
@@ -318,6 +318,7 @@ export default async function AccountPage({
         lastUnlockSceneLabel={lastUnlockSceneLabel}
         unlockedCount={unlockedCount}
         notifications={notifications}
+        notificationUnreadCount={notificationUnreadCount}
         billing={billing}
         nowIso={nowIso}
       />

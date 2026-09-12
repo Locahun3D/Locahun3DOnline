@@ -12,6 +12,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { getD1 } from "./d1";
+import { notificationScope, type NotificationScope } from "./notification-scope";
 
 export interface Notification {
   id: string;
@@ -104,7 +105,7 @@ export async function createNotification(
     .run();
 }
 
-export async function listNotifications(userId: string, limit = 30): Promise<Notification[]> {
+export async function listNotifications(userId: string, limit = 30, scope?: NotificationScope): Promise<Notification[]> {
   let notifications: Notification[];
   if (canAccessLocalFs()) {
     const s = await readStore();
@@ -122,6 +123,9 @@ export async function listNotifications(userId: string, limit = 30): Promise<Not
   const rows = ((res?.results ?? []) as Record<string, any>[]);
   notifications = rows.map(rowToNotification);
   }
+  // Scope filtering precedes source lookups and display limits. Omitted scope
+  // retains the legacy repository API used for policy-notice deduplication.
+  if (scope) notifications = notifications.filter(n => notificationScope(n) === scope);
   // Derive visibility from the source so already archived historical notices also
   // disappear. Do not delete notifications: restoring an inquiry restores its notice.
   const [contacts, inquiries] = await Promise.all([
@@ -144,12 +148,23 @@ export async function listNotifications(userId: string, limit = 30): Promise<Not
   }).slice(0, limit);
 }
 
-export async function markAllRead(userId: string): Promise<void> {
+export async function getNotificationSummary(userId: string, scope: NotificationScope, limit = 30) {
+  const visible = await listNotifications(userId, Infinity, scope);
+  return { notifications: visible.slice(0, limit), unreadCount: visible.filter(n => !n.read).length };
+}
+
+export async function markAllRead(userId: string, scope: NotificationScope): Promise<void> {
+  if (scope !== "user" && scope !== "admin") throw new Error("Invalid notification scope");
+  // Update a visible snapshot only. Archived notices stay unread if restored,
+  // and arrivals after this snapshot do not get silently marked as read.
+  const ids = (await listNotifications(userId, Infinity, scope)).filter(n => !n.read).map(n => n.id);
+  if (!ids.length) return;
+  const selected = new Set(ids);
   if (canAccessLocalFs()) {
     const s = await readStore();
     let changed = false;
     for (const n of s.notifications) {
-      if (n.userId === userId && !n.read) {
+      if (n.userId === userId && !n.read && selected.has(n.id) && notificationScope(n) === scope) {
         n.read = true;
         changed = true;
       }
@@ -159,5 +174,12 @@ export async function markAllRead(userId: string): Promise<void> {
   }
   const db = await getD1();
   if (!db) return;
-  await db.prepare(`UPDATE ${TABLE} SET read = 1 WHERE user_id = ? AND read = 0`).bind(userId).run();
+  const statements = [];
+  for (let offset = 0; offset < ids.length; offset += 90) {
+    const batch = ids.slice(offset, offset + 90);
+    statements.push(db.prepare(`UPDATE ${TABLE} SET read = 1 WHERE user_id = ? AND read = 0 AND id IN (${batch.map(() => "?").join(",")})`).bind(userId, ...batch));
+  }
+  // D1 batch is transactional: a later chunk failing must not partially mark
+  // earlier chunks as read while the UI reports that the operation failed.
+  await db.batch(statements);
 }

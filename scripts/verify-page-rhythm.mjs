@@ -13,6 +13,7 @@ try{for(const width of [1440,820,390])for(const lang of ['','en/']){
   const h=page.locator('h1').first();
   const m=await h.evaluate(el=>{const s=getComputedStyle(el),header=el.closest('header'),shell=header.parentElement;return {size:s.fontSize,line:s.lineHeight,weight:s.fontWeight,above:getComputedStyle(shell).paddingTop,below:getComputedStyle(header).marginBottom}});
   seen.push(m);
+  assert.equal(m.size,width===1440?'60px':'42px','Page title must use the requested 1.5x scale');
   await page.screenshot({path:`${out}/${lang?'en':'ja'}-${path}-${width}.png`});
  }
  assert.equal(new Set(seen.map(m=>m.size)).size,1,`Inconsistent title sizes ${width}: ${JSON.stringify(seen)}`);

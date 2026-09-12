@@ -36,12 +36,11 @@ export default function NotificationBell({
 }) {
   const lh = (href: string) => onlineHref(localizedHref(href, locale), absolute);
   const [open, setOpen] = useState(false);
-  // 既読化はサーバー再取得を待たず即バッジを消す（楽観更新）。
-  const [locallyRead, setLocallyRead] = useState(false);
+  const [readError, setReadError] = useState(false);
   const [pending, startTransition] = useTransition();
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const effUnread = locallyRead ? 0 : unreadCount;
+  const effUnread = unreadCount;
   const recent = notifications.slice(0, 6);
 
   // 外側クリック・Esc で閉じる。
@@ -62,8 +61,11 @@ export default function NotificationBell({
   }, [open]);
 
   const markRead = () => {
-    setLocallyRead(true);
-    startTransition(() => markNotificationsReadAction());
+    setReadError(false);
+    startTransition(async () => {
+      try { await markNotificationsReadAction("user"); }
+      catch { setReadError(true); }
+    });
   };
 
   return (
@@ -119,6 +121,7 @@ export default function NotificationBell({
             )}
           </div>
 
+          {readError && <p role="alert" className="px-4 py-2 text-xs text-red-600">{en ? "Could not mark as read. Please try again." : "既読にできませんでした。もう一度お試しください。"}</p>}
           {recent.length === 0 ? (
             <div className="px-4 py-7 text-center text-[12px] text-[#7b8794] leading-[1.7]">
               {en ? "No notifications yet" : "新しいお知らせはありません"}
@@ -133,7 +136,7 @@ export default function NotificationBell({
                     className="block px-4 py-3 hover:bg-[#f5f8fa] transition group"
                   >
                     <div className="flex items-start gap-2">
-                      {!n.read && !locallyRead && (
+                      {!n.read && (
                         <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#1ea0c4] shrink-0" />
                       )}
                       <div className="min-w-0">

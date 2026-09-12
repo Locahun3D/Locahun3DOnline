@@ -194,10 +194,11 @@ export default function CartClient() {
   }
 
   return (
-    <div className="w-full max-w-[960px] space-y-6">
+    <div className="w-full max-w-[1240px] space-y-6">
       {noticeBanner}
       {undoNotice}
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="min-w-0 space-y-4">
         {items.map((i) => {
           const detail = details[`${i.propertyId}:${i.splatItemIndex}`];
           const selectedLicense = detail?.license ?? i.license;
@@ -205,21 +206,23 @@ export default function CartClient() {
           <section
             key={`${i.propertyId}:${i.splatItemIndex}`}
             aria-label={en ? "Cart item" : "カートの商品"}
-            className="border border-accent/40 bg-accent/5 p-5 space-y-4"
+            className="grid min-w-0 grid-cols-1 sm:grid-cols-[minmax(130px,0.36fr)_minmax(0,1fr)] border border-line bg-card text-ink"
           >
-            <div className="min-w-0 break-words">
-              <Link
-                href={lh(`/properties/${i.propertyId}`)}
-                className="text-sm font-medium hover:text-accent transition"
-              >
-                {i.title || i.propertyId}
-              </Link>
+            <div data-cart-identifier className="min-w-0 border-b border-accent/30 bg-accent/10 p-5 sm:border-b-0 sm:border-r flex flex-col items-start gap-3">
               {i.label?.trim() && i.label.trim() !== i.title?.trim() && (
-                <span className="ml-2 mono text-[10px] tracking-[0.14em] uppercase border border-line px-1.5 py-0.5 opacity-60">
+                <span className="max-w-full border border-accent/30 bg-card px-2 py-1 text-[12px] font-medium leading-relaxed text-accent break-words">
                   {i.label}
                 </span>
               )}
-              <div className="text-[13px] mt-2">
+              <Link
+                href={lh(`/properties/${i.propertyId}`)}
+                className="min-w-0 text-sm font-medium leading-[1.8] break-words hover:text-accent transition"
+              >
+                {i.title || i.propertyId}
+              </Link>
+            </div>
+            <div data-cart-details className="min-w-0 p-5 sm:p-6 break-words">
+              <div className="text-[13px] font-medium leading-relaxed">
                 {en ? "Selected license: " : "選択ライセンス："}
                 {selectedLicense ? dataLicenseLabel(selectedLicense, en ? "en" : "ja") : (en ? "Checking…" : "確認中…")}
               </div>
@@ -234,10 +237,10 @@ export default function CartClient() {
               {detail ? <PurchaseContents files={detail.purchaseContents} en={en} /> : (
                 <p className="mt-3 text-[13px] text-muted">{en ? "Download details are being checked. If they do not appear, check the property page before purchasing." : "ダウンロード内容を確認中です。"}{!en && <br />}{!en && "表示されない場合は、購入前に物件ページで確認してください。"}</p>
               )}
-            </div>
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <div className="mono text-[15px] tracking-[0.08em] whitespace-nowrap">
               ¥{i.price.toLocaleString(en ? "en-US" : "ja-JP")}
+              <span className="ml-2 text-[10px] tracking-normal text-muted">{en ? "tax excl." : "税抜"}</span>
             </div>
             <button
               type="button"
@@ -247,13 +250,13 @@ export default function CartClient() {
               {en ? "Remove" : "削除"}
             </button>
             </div>
+            </div>
           </section>
         ); })}
+      {usageLink}
       </div>
 
-      {usageLink}
-
-      <section aria-label={en ? "Order total and checkout" : "合計と購入手続き"} className="border border-line bg-white p-5 space-y-5">
+      <section aria-label={en ? "Order total and checkout" : "合計と購入手続き"} className="min-w-0 border border-line bg-card p-5 space-y-5 xl:sticky xl:top-24">
         <div>
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
             {en ? `${items.length} item(s) total` : `合計 ${items.length} 点`}
@@ -292,11 +295,12 @@ export default function CartClient() {
           type="button"
           onClick={checkout}
           disabled={loading || !agreed}
-          className="px-6 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
+          className="w-full min-h-[48px] px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
         >
           {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy all" : "まとめて購入"}
         </button>
       </section>
+      </div>
     </div>
   );
 }

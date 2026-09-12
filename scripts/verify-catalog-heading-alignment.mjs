@@ -22,7 +22,7 @@ try {
       results.push({ locale, width, path, ...metrics });
       await page.screenshot({ path: `${out}/${locale}-${width}-${path.replaceAll('/', '-')}.png`, fullPage: true });
       assert.equal(metrics.overflow, false, `${path} horizontal overflow`);
-      if (path === 'works/index.html') assert.ok(parseFloat(metrics.headings[0]?.size) <= 40, 'Standard works index heading must be <=40px');
+      if (path === 'works/index.html') assert.equal(metrics.headings[0]?.size, width === 1440 ? '60px' : '42px', 'Standard works index heading must use the enlarged page scale');
       for (const heading of metrics.headings) assert.ok(heading.scroll <= heading.width + 1, 'Heading overflow');
     }
   }
