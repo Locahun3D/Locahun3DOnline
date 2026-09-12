@@ -44,9 +44,9 @@ export default async function AdminContactRequestsPage({
   const threads = groupMessagesByCounterpart(await contactMessageRepo.list());
 
   return (
-    <div className="theme-online p-8">
-      <div className="mb-6">
-        <h1 className="serif text-3xl">
+    <div className="theme-online ui-page-shell px-8 pb-8">
+      <div className="ui-page-header">
+        <h1 className="ui-page-title">
           お問い合わせ（サイト全体）
           {newCount > 0 && (
             <span className="ml-3 align-middle inline-block bg-accent text-white text-[12px] font-bold px-2 py-0.5 rounded-full">
@@ -54,7 +54,7 @@ export default async function AdminContactRequestsPage({
             </span>
           )}
         </h1>
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+        <p className="ui-page-lead text-[13px] text-muted">
           サイト全体の /contact フォーム（バグ報告・ほしい物件追加・掲載依頼・ご相談）から届いた内容。運営メールへ自動転送されます。
           <br />
           メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。クリックで各行の詳細・返信フォームが開きます。

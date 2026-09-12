@@ -35,14 +35,16 @@ export default async function AdminWorksPage() {
   const kvAvailable = Object.keys(stored).length > 0 || (await hasKv());
 
   return (
-    <div className="p-6 md:p-10 max-w-[1000px]">
-      <h1 className="serif text-2xl mb-2">実績＆技術ブログ</h1>
-      <p className="text-sm text-muted mb-6 leading-[1.9]">
+    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10 max-w-[1000px]">
+      <header className="ui-page-header">
+      <h1 className="ui-page-title">実績＆技術ブログ</h1>
+      <p className="ui-page-lead text-muted text-[13px]">
         記事の公開状態を切り替えます。
         <br />
         記事の追加・修正は <code className="mono">digiroke3d_Web/works</code> で行い、
         <code className="mono">node scripts/import-works.mjs</code> で取り込んでください。
       </p>
+      </header>
 
       {!kvAvailable && (
         <p className="mb-6 border border-line bg-[#1c1c1c] p-4 text-sm text-muted">

@@ -69,9 +69,9 @@ export default async function AdminReportsPage() {
   const hiddenCount = items.filter((i) => i.hiddenByReports).length;
 
   return (
-    <div className="theme-online p-8">
-      <div className="mb-6">
-        <h1 className="serif text-3xl">
+    <div className="theme-online ui-page-shell px-8 pb-8">
+      <div className="ui-page-header">
+        <h1 className="ui-page-title">
           通報管理
           {hiddenCount > 0 && (
             <span className="ml-3 align-middle inline-block bg-red-900/40 text-red-300 text-[12px] font-bold px-2 py-0.5 rounded-full">
@@ -79,7 +79,7 @@ export default async function AdminReportsPage() {
             </span>
           )}
         </h1>
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+        <p className="ui-page-lead text-[13px] text-muted">
           掲示板への通報を全物件横断で一覧します。1件でも通報があれば表示され、3件で自動的に非表示になります。
         </p>
       </div>

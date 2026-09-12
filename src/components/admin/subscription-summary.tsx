@@ -25,9 +25,11 @@ function yen(n: number) {
 
 export default async function SubscriptionSummary({
   heading = "サブスク売上",
+  embedded = false,
 }: {
   /** 見出し文字列。アナリティクスのタブ内では文脈が違うので差し替えられる。 */
   heading?: string;
+  embedded?: boolean;
 }) {
   const users = await userRepo.list();
   // 内部の管理者アカウントは有料会員数・MRRの見込みから除外する（実収益ではない）。
@@ -69,8 +71,8 @@ export default async function SubscriptionSummary({
 
   return (
     <div className="space-y-8">
-      <header className="flex items-baseline gap-4 flex-wrap">
-        <h1 className="serif text-2xl tracking-wider">{heading}</h1>
+      <header className="ui-page-header flex items-baseline gap-4 flex-wrap">
+        {embedded ? <h2 className="ui-section-title">{heading}</h2> : <h1 className="ui-page-title">{heading}</h1>}
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
           {paid.length} paid accounts
         </span>

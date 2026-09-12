@@ -47,14 +47,14 @@ export default async function SharedBookmarkFolderPage({
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-10">
+      <header className="ui-page-header">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent mb-2">
           {en ? "Shared board" : "共有ボード"}
         </div>
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">{folder.name}</h1>
-        <p className="text-[14px] text-muted mt-2">
+        <h1 className="ui-page-title">{folder.name}</h1>
+        <p className="ui-page-lead text-[14px] text-muted">
           {en
             ? `${properties.length} location(s) shared via a read-only link.`
             : `読み取り専用の共有リンクで公開された ${properties.length} 件の物件です。`}

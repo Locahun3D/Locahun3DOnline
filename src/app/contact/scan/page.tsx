@@ -34,22 +34,23 @@ export default async function ContactScanPage() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
       {/* シミュレーターは移設元と同じ 1000px。他の /contact/* （620/760px）より
           広いのは、選択欄が2列＋見積カードが横並びになるため。 */}
       <div className="max-w-[1000px] mx-auto">
         <Link
           href={lh("/contact")}
-          className="text-[12px] text-muted hover:text-accent transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
+          className="inline-flex items-center min-h-[44px] mb-2 text-[12px] text-muted hover:text-accent transition"
         >
           {en ? "← Back to contact" : "← お問い合わせ一覧に戻る"}
         </Link>
 
-        <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-3">
+        <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? "Scan request" : CONTACT_TYPE_LABEL.scan}
         </h1>
-        <p className="text-[14px] text-muted leading-[1.9] mb-10">
+        <p className="ui-page-lead text-[14px] text-muted">
           {en ? (
             "Request a 3D scan of a location or facility for your shoot. Pick a shoot date and a few options for an instant ballpark — for a detailed quote, send it with the form below."
           ) : (
@@ -64,6 +65,7 @@ export default async function ContactScanPage() {
           )}
         </p>
 
+        </header>
         <ScanRequest en={en} />
       </div>
     </div>

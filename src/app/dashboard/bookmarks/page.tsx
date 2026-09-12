@@ -30,13 +30,13 @@ export default async function BookmarksPage() {
     .map((p) => localizeProperty(p, locale));
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? "Saved locations" : "保存した物件"}
         </h1>
-        <p className="text-[14px] text-muted mt-2">
+        <p className="ui-page-lead text-[14px] text-muted">
           {en
             ? `Locations you saved with ★. ${saved.length} item(s).`
             : `★ で保存した物件の一覧です。${saved.length} 件。`}

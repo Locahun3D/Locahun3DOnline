@@ -38,33 +38,35 @@ export default async function UnsubscribePage({
   }
 
   return (
-    <div className="theme-online frame min-h-[calc(60vh/var(--z))] flex items-center justify-center py-16">
+    <div className="theme-online frame ui-page-shell min-h-[calc(60vh/var(--z))] flex items-start justify-center pb-16">
       <div className="max-w-md text-center px-6">
-        <h1 className="serif text-2xl font-bold mb-4">
+        <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? "Email preferences" : "配信設定"}
         </h1>
         {result === "done" && (
-          <p className="text-[14px] text-muted leading-[1.85]">
+          <p className="ui-page-lead text-[14px] text-muted">
             {en
               ? "You've been unsubscribed from marketing emails. You won't receive any more unless you opt back in from your account page."
             : "お知らせメールの配信を停止しました。再度受け取りたい場合はマイページから設定を変更してください。"}
           </p>
         )}
         {result === "already" && (
-          <p className="text-[14px] text-muted leading-[1.85]">
+          <p className="ui-page-lead text-[14px] text-muted">
             {en ? "You're already unsubscribed." : "既に配信停止済みです。"}
           </p>
         )}
         {result === "invalid" && (
-          <p className="text-[14px] text-muted leading-[1.85]">
+          <p className="ui-page-lead text-[14px] text-muted">
             {en
               ? "This link is invalid or has expired."
               : "このリンクは無効です。"}
           </p>
         )}
+        </header>
         <Link
           href={lh("/")}
-          className="inline-block mt-8 mono text-[11px] tracking-[0.22em] uppercase border border-line px-5 py-2.5 hover:border-accent hover:text-accent transition"
+          className="inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-5 py-2.5 hover:border-accent hover:text-accent transition"
         >
           {en ? "← Back to top" : "← トップに戻る"}
         </Link>

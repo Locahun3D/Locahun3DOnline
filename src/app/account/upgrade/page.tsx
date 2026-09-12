@@ -22,16 +22,18 @@ export default async function ProductionUpgradePage() {
   }
 
   return (
-    <div className="theme-online frame min-h-[calc(72vh/var(--z))] flex items-center justify-center py-16">
+    <div className="theme-online frame ui-page-shell min-h-[calc(72vh/var(--z))] flex items-start justify-center pb-16">
       <div className="border border-line bg-[#222] p-10 w-full max-w-md">
-        <h1 className="serif text-3xl mb-2">
+        <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? "Apply for a Production account" : "制作会社アカウントを申請"}
         </h1>
-        <p className="text-[12px] text-muted leading-[1.85] mb-7">
+        <p className="ui-page-lead text-[12px] text-muted">
           {en
             ? "Team's NDA / restricted-scene viewing is available only to Production accounts. Submit your company details and NDA agreement below — our team reviews and approves requests."
             : "TeamプランのNDA / 制限あり閲覧は「制作会社」アカウント限定です。会社情報とNDA同意を送信してください。運営が確認のうえ承認します。"}
         </p>
+        </header>
 
         {user.status === "pending" ? (
           <div className="border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-amber-300">

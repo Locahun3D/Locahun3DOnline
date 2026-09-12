@@ -21,10 +21,10 @@ export default async function AdminMarketingPage() {
   const consentedCount = users.filter((u) => u.marketingConsent && u.status === "active").length;
 
   return (
-    <div className="p-8 max-w-5xl space-y-8">
-      <header>
-        <h1 className="serif text-3xl font-bold">マーケティング</h1>
-        <p className="text-[13px] text-muted mt-2 leading-[1.8] max-w-[60ch]">
+    <div className="ui-page-shell px-8 pb-8 max-w-5xl space-y-8">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">マーケティング</h1>
+        <p className="ui-page-lead text-[13px] text-muted max-w-[60ch]">
           配信に同意している会員へ一斉メールを送信します。特定電子メール法により、
           広告メールは<strong className="text-ink">オプトイン同意した相手のみ</strong>に、
           配信停止の手段を明記して送る必要があります（本ツールは自動で配信停止リンクを
@@ -50,8 +50,8 @@ export default async function AdminMarketingPage() {
 
       <section id="gift-codes" className="border-t border-line pt-10 scroll-mt-24">
         <header className="mb-8">
-          <h2 className="serif text-2xl font-bold">ギフトコード</h2>
-          <p className="text-[13px] text-muted mt-2 leading-[1.8] max-w-[60ch]">
+          <h2 className="ui-section-title">ギフトコード</h2>
+          <p className="ui-page-lead text-[13px] text-muted max-w-[60ch]">
             トークン数を設定したコードを発行し、ユーザーに渡せます。受け取った人は
             マイページの「ギフトコードを引き換え」から入力してトークンを受け取ります。
           </p>

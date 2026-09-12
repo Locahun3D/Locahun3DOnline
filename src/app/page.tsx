@@ -25,6 +25,18 @@ import { ABOUT07_CSS } from "@/lib/design/about07-css";
 
 /** トップ固有の追加分（値は 07 の語彙に合わせてある）。 */
 const EXTRA_CSS = `
+/* Preserve the home composition, but use the same heading scale and rhythm. */
+.about07 #service.hero{ padding-top:32px; padding-bottom:48px; }
+.about07 #service .center{ margin-bottom:32px; }
+.about07 #service h1{ margin:0 0 8px; font-size:var(--ui-page-title-size); line-height:1.35; }
+.about07 .segment h2,.about07 .feature h3{ font-size:18px; line-height:1.5; }
+.about07 h2.section-title{ font-size:var(--ui-section-title-size); line-height:1.4; }
+.about07 section:not(#service){ padding-block:48px; }
+@media(max-width:719px){
+  .about07 #service.hero{ padding-top:24px; padding-bottom:32px; }
+  .about07 #service .center{ margin-bottom:24px; }
+  .about07 section:not(#service){ padding-block:32px; }
+}
 .about07 #service .segment img{
   aspect-ratio:4 / 3;
   object-fit:contain;

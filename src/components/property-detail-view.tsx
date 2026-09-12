@@ -77,7 +77,7 @@ function renderOverview(text: string) {
         .map((s, i) => (
           <div key={i}>
             {s.heading && (
-              <h3 className="text-[16px] font-bold text-ink mb-2.5 flex items-center gap-2.5">
+              <h3 className="ui-card-title text-ink mb-2.5 flex items-center gap-2.5">
                 <span className="inline-block w-1 h-4 bg-accent rounded-sm shrink-0" />
                 {s.heading}
               </h3>
@@ -1062,7 +1062,7 @@ export default function PropertyDetailView({
                     className="w-full aspect-[2.39/1] object-cover"
                   />
                   <div>
-                    <h3 className="font-bold text-[15px] leading-snug group-hover:text-accent transition">
+                    <h3 className="ui-card-title group-hover:text-accent transition">
                       {p.title}
                     </h3>
                     <p className="text-[12px] text-muted mt-0.5">

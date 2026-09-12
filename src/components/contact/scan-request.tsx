@@ -27,7 +27,7 @@ export default function ScanRequest({ en }: { en: boolean }) {
       <EstimateSimulator en={en} ctaHref="#scan-form" onEstimate={handleEstimate} />
 
       <section id="scan-form" className="mt-14 sm:mt-20 scroll-mt-20">
-        <h2 className="serif text-[clamp(1.15rem,2vw,1.44rem)] font-bold leading-[1.35] mb-3">
+        <h2 className="ui-section-title mb-3">
           {en ? "Send us your request" : "この内容で依頼する"}
         </h2>
         <p className="text-[13px] text-muted leading-[1.9] mb-6">

@@ -73,10 +73,10 @@ export default async function ContactHubPage() {
   const lh = (href: string) => localizedHref(href, locale);
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
-      <header className="text-center max-w-[60ch] mx-auto mb-6">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold leading-[1.3]">
+      <header className="ui-page-header text-center max-w-[1040px] mx-auto">
+        <h1 className="serif ui-page-title">
           {en ? "Contact" : "お問い合わせ"}
         </h1>
       </header>
@@ -90,7 +90,7 @@ export default async function ContactHubPage() {
           {en ? "Featured" : "ピックアップ"}
         </div>
         <div className="flex flex-wrap items-center gap-2.5 mb-2">
-          <div className="text-[18px] font-bold">
+          <div className="ui-card-title">
             {en ? CONTACT_TYPE_LABEL_EN.listing : CONTACT_TYPE_LABEL.listing}
           </div>
           <span className="mono text-[9.5px] tracking-[0.16em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
@@ -123,7 +123,7 @@ export default async function ContactHubPage() {
               href={lh(`/contact/${type}`)}
               className="flex flex-col bg-white border border-line px-6 py-6 hover:border-accent transition"
             >
-              <div className="text-[16px] font-bold mb-2">
+              <div className="ui-card-title mb-2">
                 {en ? CONTACT_TYPE_LABEL_EN[type] : CONTACT_TYPE_LABEL[type]}
               </div>
               <p className="text-[12px] text-muted leading-[1.8] mb-3">
@@ -142,7 +142,7 @@ export default async function ContactHubPage() {
         href={lh("/submit-scan")}
         className="block max-w-[1040px] mx-auto mt-4 bg-white border border-line px-6 py-6 hover:border-accent transition"
       >
-        <div className="text-[16px] font-bold mb-2">
+        <div className="ui-card-title mb-2">
           {en ? "Bring your own scan" : "持ち込みスキャン"}
         </div>
         <p className="text-[12px] text-muted leading-[1.8] mb-3 max-w-[56ch]">

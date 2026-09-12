@@ -109,7 +109,7 @@ export default async function AccountPage({
   }
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
       {welcome && (
         <div className="mb-6 border border-accent/40 bg-accent/10 px-4 py-3 text-[13px]">

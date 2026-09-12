@@ -32,12 +32,12 @@ export default async function AdminScanSubmissionDetailPage({
     : null;
 
   return (
-    <div className="theme-online p-8 max-w-[900px]">
-      <div className="mb-6">
+    <div className="theme-online ui-page-shell px-8 pb-8 max-w-[900px]">
+      <div className="ui-page-header">
         <Link href="/admin/submissions" className="text-[12px] text-muted hover:text-accent transition">
           ← 一覧に戻る
         </Link>
-        <h1 className="serif text-2xl">
+        <h1 className="ui-page-title">
           {submission.locationName || "（無題）"}
           <span className="ml-3 align-middle mono text-[11px] tracking-[0.12em] uppercase text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
             {scanStatusLabel(submission.status)}

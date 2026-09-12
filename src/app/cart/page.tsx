@@ -9,10 +9,10 @@ export async function generateMetadata() {
 export default async function CartPage() {
   const en = (await getLocale()) === "en";
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
-      <header className="mb-8">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">{en ? "Cart" : "カート"}</h1>
-        <p className="text-[14px] text-muted mt-2">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
+      <header className="ui-page-header">
+        <h1 className="serif ui-page-title">{en ? "Cart" : "カート"}</h1>
+        <p className="ui-page-lead text-[14px] text-muted">
           {en
             ? "Buy multiple 3DGS data sets together."
             : "複数の 3DGS データをまとめて購入できます。"}

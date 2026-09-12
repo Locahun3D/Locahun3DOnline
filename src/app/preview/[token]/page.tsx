@@ -19,21 +19,23 @@ export async function generateMetadata() {
 /** 期限切れ／失効済みリンク用の案内画面。 */
 function ExpiredView() {
   return (
-    <div className="frame py-24 text-center">
+    <div className="frame ui-page-shell pb-24 text-center">
       <div className="mono text-[11px] tracking-[0.3em] uppercase text-muted mb-4">
         Preview link expired
       </div>
-      <h1 className="serif text-2xl sm:text-3xl font-bold mb-4">
+      <header className="ui-page-header">
+      <h1 className="ui-page-title">
         このプレビューリンクは無効です
       </h1>
-      <p className="text-[14px] text-muted leading-[1.9] max-w-[40ch] mx-auto">
+      <p className="ui-page-lead text-[14px] text-muted max-w-[40ch] mx-auto">
         リンクの有効期限が切れたか、発行元によって失効されています。
         <br />
         お手数ですが、共有元の担当者に新しいリンクの発行をご依頼ください。
       </p>
+      </header>
       <Link
         href="/"
-        className="mt-8 inline-block px-6 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-muted hover:border-ink hover:text-ink transition"
+        className="inline-block px-6 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-muted hover:border-ink hover:text-ink transition"
       >
         ロケハン3D トップへ
       </Link>

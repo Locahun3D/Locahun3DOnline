@@ -27,19 +27,19 @@ export default async function AdminUserSessionsPage({
   const overLimit = limit !== null && sessions.length > limit;
 
   return (
-    <div className="theme-online p-8">
-      <div className="mb-6">
+    <div className="theme-online ui-page-shell px-8 pb-8">
+      <div className="ui-page-header">
         <Link
           href="/admin/accounts"
           className="mono text-[10px] tracking-[0.2em] uppercase text-muted hover:text-accent transition"
         >
           ← アカウント一覧に戻る
         </Link>
-        <h1 className="serif text-3xl">
+        <h1 className="ui-page-title">
           {user.name}
           <span className="mono text-[13px] text-muted ml-3">{user.email}</span>
         </h1>
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+        <p className="ui-page-lead text-[13px] text-muted">
           プラン <span className="text-accent font-bold">{user.plan.toUpperCase()}</span>
           {limit !== null ? (
             <>

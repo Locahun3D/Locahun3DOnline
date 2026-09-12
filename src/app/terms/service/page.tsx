@@ -14,27 +14,27 @@ export default async function TermsServicePage() {
   const en = locale === "en";
   if (en) return <TermsServiceEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-12">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           利用規約
         </h1>
-        <p className="text-[14px] text-muted mt-3">
+        <p className="ui-page-lead text-[14px] text-muted">
           本規約は、KWI株式会社（以下「当社」）が提供する「ロケハン3D オンライン」（以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することにより本規約に同意したものとみなします。3Dデータの購入に関する条件は別途<Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">3Dデータ購入規約</Link>に定めます。
         </p>
       </header>
 
       <div className="prose-terms space-y-10 text-[14px] leading-[1.85]">
         <section>
-          <h2 className="serif text-lg mb-4">第1条（適用）</h2>
+          <h2 className="ui-section-title mb-4">第1条（適用）</h2>
           <p className="opacity-80">
             本規約は、本サービスの利用に関する当社と利用者との間の一切の関係に適用されます。当社が本サービス上で掲示する個別のガイドライン等は、本規約の一部を構成します。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第2条（アカウント登録）</h2>
+          <h2 className="ui-section-title mb-4">第2条（アカウント登録）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>利用者は、真実かつ正確な情報を登録するものとします。</li>
             <li>アカウントは登録者本人のみが利用でき、第三者への譲渡・貸与はできません。</li>
@@ -46,7 +46,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第3条（料金・トークン）</h2>
+          <h2 className="ui-section-title mb-4">第3条（料金・トークン）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本サービスの一部機能は有料プラン（サブスクリプション）への加入を要します。料金は<Link href={localizedHref("/pricing", locale)} className="text-accent hover:underline">料金ページ</Link>に表示する金額（税込）とします。</li>
             <li>3DGSウォークスルーの閲覧はトークン消費制です。トークンの付与・失効条件は料金ページおよびアカウント画面の表示に従います。</li>
@@ -56,7 +56,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第4条（禁止事項）</h2>
+          <h2 className="ui-section-title mb-4">第4条（禁止事項）</h2>
           <p className="opacity-80 mb-3">利用者は、本サービスの利用にあたり、以下の行為をしてはなりません。</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>法令または公序良俗に違反する行為</li>
@@ -70,7 +70,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第5条（知的財産権）</h2>
+          <h2 className="ui-section-title mb-4">第5条（知的財産権）</h2>
           <p className="opacity-80 mb-3">
             本サービスに関する著作権・商標権その他の知的財産権は、当社または正当な権利を有する第三者に帰属します。利用者が投稿した掲示板の著作権は投稿者に留保されますが、利用者は当社に対し、本サービスの提供・運営・宣伝に必要な範囲で当該投稿を利用（複製・表示等）する権利を許諾するものとします。
           </p>
@@ -95,7 +95,7 @@ export default async function TermsServicePage() {
             一切の説明が無く、買い手が分類の存在に気付けなかったため概要を置く。
             条文の詳細はデータ購入規約が正であることを明記し、重複定義を避ける。 */}
         <section>
-          <h2 className="serif text-lg mb-4">第6条（3Dデータのライセンス分類）</h2>
+          <h2 className="ui-section-title mb-4">第6条（3Dデータのライセンス分類）</h2>
           <p className="opacity-80 mb-3">
             本サービスで販売する3Dデータには、利用できる範囲の異なる次のライセンス分類があります。購入時に分類を選択いただきます。
           </p>
@@ -124,7 +124,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第7条（ホスティング商品）</h2>
+          <h2 className="ui-section-title mb-4">第7条（ホスティング商品）</h2>
           {/* ⚠ 2026-08-10に価格モデルを変更（本人判断）。旧: 一括の「スキャン代金10万円＋交通費」
               → 新: データ販売価格の20%/年（従価）＋ホスティング契約時はスキャン費用無料。
               初期費用という決裁ハードルを消して継続収益へ振り替える設計（D-008の
@@ -138,21 +138,21 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第8条（投稿コンテンツの管理）</h2>
+          <h2 className="ui-section-title mb-4">第8条（投稿コンテンツの管理）</h2>
           <p className="opacity-80">
             当社は、利用者の投稿が第4条各号に該当すると判断した場合、事前の通知なく当該投稿の削除、非表示化、またはアカウントの利用制限を行うことができます。通報が一定件数に達した投稿は自動的に非表示となる場合があります。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第9条（サービスの停止・変更）</h2>
+          <h2 className="ui-section-title mb-4">第9条（サービスの停止・変更）</h2>
           <p className="opacity-80">
             当社は、システムの保守・点検、天災その他やむを得ない事由がある場合、利用者への事前告知なく本サービスの全部または一部の提供を停止・変更することがあります。当社は、これにより利用者に生じた損害について、当社の故意または重過失による場合を除き、責任を負いません。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第10条（退会・利用制限・登録抹消）</h2>
+          <h2 className="ui-section-title mb-4">第10条（退会・利用制限・登録抹消）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>利用者は、当社所定の方法により、いつでもアカウントの削除（退会）を申し出ることができます。退会後の個人情報の取扱いは<Link href={localizedHref("/privacy", locale)} className="text-accent hover:underline">プライバシーポリシー</Link>によります。</li>
             <li>当社は、利用者が本規約に違反した場合、事前の通知なく当該利用者に対する本サービスの利用を制限し、またはアカウント登録を抹消することができます。</li>
@@ -160,7 +160,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第11条（免責事項）</h2>
+          <h2 className="ui-section-title mb-4">第11条（免責事項）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>当社は、本サービスに掲載される物件情報・3Dスキャンデータの正確性・完全性を保証するものではありません。実際の撮影可否・許可要件は、利用者ご自身で各物件の管理者・関係機関にご確認ください。</li>
             <li>当社は、利用者間または利用者と第三者との間で生じたトラブルについて、一切の責任を負いません。</li>
@@ -172,7 +172,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第12条（規約の変更）</h2>
+          <h2 className="ui-section-title mb-4">第12条（規約の変更）</h2>
           {/* ⚠ 旧文言「通知なく変更できる」は民法548条の4（定型約款の変更）の
               周知要件を満たさず無効リスクがあった（2026-08-04リーガル点検）。
               事前周知＋効力発生時期の明示＋不同意時の退会導線に改めた。 */}
@@ -182,7 +182,7 @@ export default async function TermsServicePage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第13条（準拠法・管轄裁判所）</h2>
+          <h2 className="ui-section-title mb-4">第13条（準拠法・管轄裁判所）</h2>
           <p className="opacity-80">
             本規約の解釈にあたっては日本法を準拠法とします。本サービスに関して紛争が生じた場合には、東京地方裁判所を第一審の専属的合意管轄裁判所とします。
           </p>
@@ -214,17 +214,17 @@ export default async function TermsServicePage() {
 
 function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-12">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           Terms of Service
         </h1>
         <p className="text-[14px] text-amber-400/80 mt-3 border border-amber-400/30 bg-amber-400/5 px-3 py-2 rounded">
           This English text is a reference translation. The Japanese version is the
           legally binding document and prevails in case of any discrepancy.
         </p>
-        <p className="text-[14px] text-muted mt-3">
+        <p className="ui-page-lead text-[14px] text-muted">
           These Terms of Service (&quot;Terms&quot;) set out the conditions for using &quot;Locahun 3D
           Online&quot; (the &quot;Service&quot;) provided by KWI Inc. (&quot;we&quot;, &quot;us&quot;). By
           using the Service, you are deemed to have agreed to these Terms. Terms specific
@@ -238,14 +238,14 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
 
       <div className="prose-terms space-y-10 text-[14px] leading-[1.85]">
         <section>
-          <h2 className="serif text-lg mb-4">Article 1 (Application)</h2>
+          <h2 className="ui-section-title mb-4">Article 1 (Application)</h2>
           <p className="opacity-80">
             These Terms apply to all relationships between us and users regarding use of the Service. Any individual guidelines we post on the Service form part of these Terms.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 2 (Account Registration)</h2>
+          <h2 className="ui-section-title mb-4">Article 2 (Account Registration)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Users must register true and accurate information.</li>
             <li>Accounts may only be used by the registered individual and may not be transferred or lent to third parties.</li>
@@ -257,7 +257,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 3 (Fees &amp; Tokens)</h2>
+          <h2 className="ui-section-title mb-4">Article 3 (Fees &amp; Tokens)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Some features require a paid subscription plan. Fees are as shown (tax included) on the <Link href={localizedHref("/pricing", locale)} className="text-accent hover:underline">Pricing page</Link>.</li>
             <li>Viewing 3DGS walkthroughs consumes tokens. Token grants and expiry follow the terms shown on the Pricing page and account screen.</li>
@@ -267,7 +267,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 4 (Prohibited Conduct)</h2>
+          <h2 className="ui-section-title mb-4">Article 4 (Prohibited Conduct)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Acts that violate laws or public order and morals.</li>
             <li>Infringing our, other users&apos;, or third parties&apos; intellectual property, portrait, or privacy rights.</li>
@@ -280,7 +280,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 5 (Intellectual Property)</h2>
+          <h2 className="ui-section-title mb-4">Article 5 (Intellectual Property)</h2>
           <p className="opacity-80 mb-3">
             Copyrights, trademarks, and other intellectual property rights relating to the Service belong to us or to third parties with legitimate rights. Copyright in board posts and reviews submitted by users remains with the user, but the user grants us a license to use (reproduce, display, etc.) such content to the extent necessary to provide, operate, and promote the Service.
           </p>
@@ -290,7 +290,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 6 (3D Data License Categories)</h2>
+          <h2 className="ui-section-title mb-4">Article 6 (3D Data License Categories)</h2>
           <p className="opacity-80 mb-3">
             3D data sold on the Service is offered under license categories with different permitted scopes. You select a category at the time of purchase.
           </p>
@@ -318,7 +318,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 7 (Hosting Product)</h2>
+          <h2 className="ui-section-title mb-4">Article 7 (Hosting Product)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We provide a feature that lets you embed a property&apos;s 3D tour on your own website or elsewhere, together with access analytics (the &quot;Hosting Product&quot;), via embed code we issue.</li>
             <li>The Hosting Product is provided free of charge through the end of 2026. From 2027 onward, the annual fee is <strong>20% of the 3D data sale price</strong> for the property. We set the sale price; where the property&apos;s 3D data is not offered for sale, the annual fee is calculated against a reference sale price we determine.</li>
@@ -328,21 +328,21 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 8 (Content Moderation)</h2>
+          <h2 className="ui-section-title mb-4">Article 8 (Content Moderation)</h2>
           <p className="opacity-80">
             If we determine that a post violates Article 4, we may remove or hide it, or restrict the user&apos;s account, without prior notice. Posts that receive a certain number of reports may be automatically hidden.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 9 (Suspension &amp; Changes)</h2>
+          <h2 className="ui-section-title mb-4">Article 9 (Suspension &amp; Changes)</h2>
           <p className="opacity-80">
             We may suspend or change all or part of the Service without prior notice for maintenance, inspection, force majeure, or other unavoidable reasons. We are not liable for any resulting damages except where caused by our willful misconduct or gross negligence.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 10 (Withdrawal, Restriction &amp; Termination)</h2>
+          <h2 className="ui-section-title mb-4">Article 10 (Withdrawal, Restriction &amp; Termination)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Users may request deletion of their account (withdrawal) at any time by the method we designate. Handling of personal information after withdrawal is governed by the <Link href={localizedHref("/privacy", locale)} className="text-accent hover:underline">Privacy Policy</Link>.</li>
             <li>We may restrict a user&apos;s access to the Service or terminate their account without prior notice if the user violates these Terms.</li>
@@ -350,7 +350,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 11 (Disclaimer)</h2>
+          <h2 className="ui-section-title mb-4">Article 11 (Disclaimer)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We do not guarantee the accuracy or completeness of listing information or 3D scan data on the Service. Users should confirm actual filming permission requirements directly with each location&apos;s manager or the relevant authorities.</li>
             <li>We are not liable for disputes arising between users or between a user and a third party.</li>
@@ -359,14 +359,14 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 12 (Changes to these Terms)</h2>
+          <h2 className="ui-section-title mb-4">Article 12 (Changes to these Terms)</h2>
           <p className="opacity-80">
             We may change these Terms pursuant to Article 548-4 of the Civil Code of Japan. When making changes, we will announce the revised Terms and their effective date a reasonable period in advance by posting on the Service or by other appropriate means. If you do not agree to the revised Terms, you may withdraw your account under Article 10 before they take effect.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 13 (Governing Law &amp; Jurisdiction)</h2>
+          <h2 className="ui-section-title mb-4">Article 13 (Governing Law &amp; Jurisdiction)</h2>
           <p className="opacity-80">
             These Terms are governed by the laws of Japan. The Tokyo District Court shall have exclusive jurisdiction as the court of first instance for any disputes relating to the Service.
           </p>

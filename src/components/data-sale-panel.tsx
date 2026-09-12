@@ -221,7 +221,7 @@ export default function DataSalePanel({
             ) : (
               <>
                 <span className="serif text-lg text-accent">¥{yen}</span>
-                <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax incl." : "税込"}</span>
+                <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax excl." : "税抜"}</span>
               </>
             )}
           </div>

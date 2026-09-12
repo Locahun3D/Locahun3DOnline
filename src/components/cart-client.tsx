@@ -260,7 +260,7 @@ export default function CartClient() {
           </div>
           <div className="serif text-2xl text-accent">
             ¥{total.toLocaleString(en ? "en-US" : "ja-JP")}{" "}
-            <span className="mono text-[10px] opacity-40">{en ? "tax incl." : "税込"}</span>
+            <span className="mono text-[10px] opacity-40">{en ? "tax excl." : "税抜"}</span>
           </div>
         </div>
         <label className="flex items-start gap-2 cursor-pointer text-[13px] text-muted">

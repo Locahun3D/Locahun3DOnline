@@ -110,6 +110,7 @@ export default async function WorksArticlePage({ params, searchParams }: Props) 
           抑止しないと毎ページ hydration mismatch を出す（実害は無いが dev
           オーバーレイが常時エラー表示になり、本物の不具合を隠す）。 */}
       <div
+        className={slug === "index" ? "works-index-page" : undefined}
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
       />

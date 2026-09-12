@@ -14,10 +14,10 @@ export default async function TokushohoPage() {
   const en = locale === "en";
   if (en) return <TokushohoEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-12">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           特定商取引法に基づく表記
         </h1>
       </header>
@@ -86,10 +86,10 @@ export default async function TokushohoPage() {
 
 function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-12">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           Notation Based on the Specified Commercial Transactions Act
         </h1>
         <p className="text-[12px] text-amber-400/80 mt-3 border border-amber-400/30 bg-amber-400/5 px-3 py-2 rounded">

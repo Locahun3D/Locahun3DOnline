@@ -19,12 +19,14 @@ export default async function AssetsPage() {
     cover: p.cover?.src || "",
   }));
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-serif mb-1">アセットライブラリ</h1>
-      <p className="text-muted text-[13px] mb-5">
+    <div className="ui-page-shell px-6 pb-6">
+      <header className="ui-page-header">
+      <h1 className="ui-page-title">アセットライブラリ</h1>
+      <p className="ui-page-lead text-muted text-[13px]">
         物件フォルダごとにアセットを管理します。フォルダ内はさらに画像・3DGS等の種別で整理。
         物件編集では「ライブラリから選択」で紐付け。
       </p>
+      </header>
       <AssetLibrary initialAssets={assets} usage={usage} properties={folderProperties} />
     </div>
   );

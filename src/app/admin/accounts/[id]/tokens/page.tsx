@@ -50,9 +50,9 @@ export default async function AdminAccountTokensPage({
   });
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="serif text-3xl">トークン使用履歴</h1>
+    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
+      <div className="ui-page-header flex flex-wrap items-center justify-between gap-3">
+        <h1 className="ui-page-title">トークン使用履歴</h1>
         <Link href="/admin/accounts" className="mono text-[10px] tracking-[0.18em] uppercase opacity-60 hover:opacity-100">
           ← アカウント一覧
         </Link>

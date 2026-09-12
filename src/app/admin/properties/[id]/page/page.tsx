@@ -21,7 +21,7 @@ export default async function StudioPageEditPage({
   if (!property) notFound();
 
   return (
-    <div className="p-8">
+    <div className="ui-page-shell px-8 pb-8">
       <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4 flex items-center gap-2 flex-wrap">
         <Link href="/admin/properties" className="hover:text-accent">
           ← Properties
@@ -34,8 +34,8 @@ export default async function StudioPageEditPage({
         <span className="opacity-50">ページ構成</span>
       </nav>
 
-      <div className="mb-6">
-        <h1 className="serif text-3xl">{property.title || "（無題のスタジオ）"}</h1>
+      <div className="ui-page-header">
+        <h1 className="ui-page-title">{property.title || "（無題のスタジオ）"}</h1>
       </div>
 
       <StudioPageBuilder property={property} />

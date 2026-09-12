@@ -66,7 +66,7 @@ export default async function PricingPage({
   };
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
       {checkout === "team_role_required" && (
         <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
@@ -96,8 +96,8 @@ export default async function PricingPage({
         </div>
       )}
 
-      <header className="text-center mb-12">
-        <h1 className="serif text-[clamp(1.55rem,4.5vw,3.6rem)] font-bold leading-[1.3] max-w-[26ch] mx-auto">
+      <header className="ui-page-header text-center">
+        <h1 className="serif ui-page-title">
           {en ? (
             <>
               Every site visit,

@@ -11,7 +11,7 @@ export const metadata = { title: "サブスク売上" };
 export default async function SubscriptionsPage() {
   await requireAdmin();
   return (
-    <div className="p-6 md:p-10">
+    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
       <SubscriptionSummary />
     </div>
   );

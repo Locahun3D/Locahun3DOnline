@@ -48,13 +48,13 @@ export default async function SignUpPage({
     // ログイン側と同じ2カラム。カードだけを中央に浮かせると、広い画面で
     // 真っ黒な余白に小さなカードが1枚あるだけの画面になり、登録する理由が
     // 何も伝わらない（実機で確認して作り直した）。
-    <div className="frame py-10 sm:py-20">
+    <div className="frame ui-page-shell pb-10 sm:pb-20">
       <InAppBrowserWarning locale={locale} />
       {/* 2カラムは 1200px 以上のみ（理由は /sign-in と同じ。両ページ同時に変更すること） */}
       <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
         <div className="order-2 mx-auto w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
-          <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase">Get started</p>
-          <h1 className="mt-3 text-2xl sm:text-3xl leading-snug font-bold">
+          <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase mb-2">Get started</p>
+          <h1 className="ui-page-title">
             {en ? (
               <>
                 Scout the location

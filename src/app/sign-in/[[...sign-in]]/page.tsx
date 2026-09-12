@@ -58,7 +58,7 @@ export default async function SignInPage({
     // 「真っ黒な余白に小さなカードが1枚浮いている」状態になり、
     // ブランドも入会理由も何も伝わらない画面になっていた。
     // 見出し＋要点を左に置いた2カラムにして、カードに文脈を与える。
-    <div className="frame py-10 sm:py-20">
+    <div className="frame ui-page-shell pb-10 sm:pb-20">
       <InAppBrowserWarning locale={locale} />
       {/* 2カラムに割るのは 1200px 以上だけ。768–1199px(iPad帯)は html の zoom が
           0.8 のため実効幅は広いが、Clerk カードは固定幅なので 2カラムにすると
@@ -71,8 +71,8 @@ export default async function SignInPage({
           見出し・要点はカードの下に回して補足として読ませる。 */}
       <div className="mx-auto grid w-full max-w-[880px] items-center gap-10 min-[1200px]:grid-cols-[1fr_auto] min-[1200px]:gap-16">
         <div className="order-2 mx-auto w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
-          <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase">Account</p>
-          <h1 className="mt-3 text-2xl sm:text-3xl leading-snug font-bold">
+          <p className="mono text-[11px] tracking-[0.24em] text-muted uppercase mb-2">Account</p>
+          <h1 className="ui-page-title">
             {en ? (
               <>
                 Walk the location

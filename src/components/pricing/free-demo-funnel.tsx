@@ -22,7 +22,7 @@ export default function FreeDemoFunnel({
       <div className="grid md:grid-cols-2 border border-line bg-white">
         {/* 左: コピー + CTA */}
         <div className="p-8 sm:p-9 flex flex-col justify-center order-2 md:order-1">
-          <h2 className="text-[22px] sm:text-[23px] font-bold leading-[1.5] mb-2.5">
+          <h2 className="ui-section-title mb-2.5">
             {en ? (
               <>Try walking through it first.</>
             ) : (

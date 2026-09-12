@@ -35,10 +35,10 @@ export default async function AdminScanSubmissionsPage({
   const emailById = new Map(users.map((u) => [u.id, u.email] as const));
 
   return (
-    <div className="theme-online p-8">
-      <div className="mb-6">
-        <h1 className="serif text-3xl">持ち込みスキャン</h1>
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+    <div className="theme-online ui-page-shell px-8 pb-8">
+      <div className="ui-page-header">
+        <h1 className="ui-page-title">持ち込みスキャン</h1>
+        <p className="ui-page-lead text-[13px] text-muted">
           撮影者から届いた持ち込みスキャン申請。成立するまでは非公開で預かります。
         </p>
       </div>

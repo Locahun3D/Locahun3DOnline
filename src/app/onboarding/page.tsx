@@ -25,22 +25,24 @@ export default async function OnboardingPage({
   const en = (await getLocale()) === "en";
 
   return (
-    <div className="theme-online frame min-h-[calc(72vh/var(--z))] flex items-center justify-center py-16">
+    <div className="theme-online frame ui-page-shell min-h-[calc(72vh/var(--z))] flex items-start justify-center pb-16">
       <div className="border border-line bg-[#222] p-10 w-full max-w-md">
-        <h1 className="serif text-3xl mb-2">{en ? "Choose your account type" : "アカウント種別を選択"}</h1>
+        <header className="ui-page-header">
+        <h1 className="ui-page-title">{en ? "Choose your account type" : "アカウント種別を選択"}</h1>
         {/* 掲載側として来た人には、なぜ撮影スタジオが選ばれているかを明示する。 */}
         {isStudioIntent(intent) && (
-          <p className="border border-accent/40 bg-accent/10 px-3 py-2 text-[12px] text-accent leading-[1.7] mb-4">
+          <p className="ui-page-lead border border-accent/40 bg-accent/10 px-3 py-2 text-[12px] text-accent">
             {en
               ? "You came from the listing flow, so “Filming studio” is preselected. Change it if that's not right."
               : "掲載のご依頼から来られたので「撮影スタジオ」を選んであります。違う場合は変更してください。"}
           </p>
         )}
-        <p className="text-[12px] text-muted leading-[1.85] mb-7">
+        <p className="ui-page-lead text-[12px] text-muted">
           {en
             ? `Welcome, ${user.name}. Pick the type that matches how you'll use the service. You can change it later by contacting our team.`
             : `ようこそ、${user.name} さん。利用形態に合わせて種別を選んでください。後から運営に相談して変更も可能です。`}
         </p>
+        </header>
         <OnboardingForm defaultRole={defaultOnboardingRole(intent)} />
       </div>
     </div>

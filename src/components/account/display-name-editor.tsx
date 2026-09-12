@@ -39,7 +39,7 @@ export default function DisplayNameEditor({
   if (!editing) {
     return (
       <div className="flex items-center gap-2 min-w-0">
-        <h1 className="text-[clamp(1.4rem,2.6vw,2rem)] font-bold leading-tight truncate">
+        <h1 className="ui-page-title min-w-0 break-words">
           {name}
         </h1>
         <button

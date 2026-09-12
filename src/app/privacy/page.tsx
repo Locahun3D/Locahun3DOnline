@@ -12,20 +12,20 @@ export default async function PrivacyPage() {
   const en = locale === "en";
   if (en) return <PrivacyEN locale={locale} />;
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-12">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           プライバシーポリシー
         </h1>
-        <p className="text-[14px] text-muted mt-3">
+        <p className="ui-page-lead text-[14px] text-muted">
           KWI株式会社（以下「当社」）は、当社が提供する「ロケハン3D オンライン」（以下「本サービス」）における利用者の個人情報の取扱いについて、以下のとおりプライバシーポリシー（以下「本ポリシー」）を定めます。
         </p>
       </header>
 
       <div className="prose-terms space-y-10 text-[14px] leading-[1.85]">
         <section>
-          <h2 className="serif text-lg mb-4">第1条（取得する情報）</h2>
+          <h2 className="ui-section-title mb-4">第1条（取得する情報）</h2>
           <p className="opacity-80 mb-3">当社は本サービスの提供にあたり、以下の情報を取得します。</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>アカウント情報: 氏名（表示名）、メールアドレス、認証情報（認証基盤 Clerk を経由して取得）</li>
@@ -42,7 +42,7 @@ export default async function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第2条（利用目的）</h2>
+          <h2 className="ui-section-title mb-4">第2条（利用目的）</h2>
           <p className="opacity-80 mb-3">取得した情報は、以下の目的で利用します。</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本人確認・ログイン認証のため</li>
@@ -57,7 +57,7 @@ export default async function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第3条（第三者提供・委託）</h2>
+          <h2 className="ui-section-title mb-4">第3条（第三者提供・委託）</h2>
           <p className="opacity-80 mb-3">当社は、以下の外部サービスに業務を委託し、その範囲で必要な情報を提供します。法令に基づく場合を除き、これら以外の第三者へ個人情報を提供することはありません。</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Clerk（認証基盤）— アカウント登録・ログイン処理</li>
@@ -69,28 +69,28 @@ export default async function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第4条（保存期間）</h2>
+          <h2 className="ui-section-title mb-4">第4条（保存期間）</h2>
           <p className="opacity-80">
             アカウント情報は、退会または削除の申し出があるまで保存します。購入履歴は関連法令に基づく保存義務期間、お問い合わせ情報は対応完了後合理的な期間、それぞれ保存の上で削除します。分配金の振込先情報（個人番号を含む場合はこれも同様）は、関連法令が定める保存期間（国税関係書類は原則7年間）を経過した後、速やかに廃棄します。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第5条（開示・訂正・削除の請求）</h2>
+          <h2 className="ui-section-title mb-4">第5条（開示・訂正・削除の請求）</h2>
           <p className="opacity-80">
             利用者は、当社が保有する自己の個人情報について、開示・訂正・削除・利用停止を請求できます。アカウント設定画面から直接変更できる項目のほか、第7条のお問い合わせ窓口までご連絡ください。本人確認の上、法令に従い合理的な期間内に対応します。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第6条（本ポリシーの改定）</h2>
+          <h2 className="ui-section-title mb-4">第6条（本ポリシーの改定）</h2>
           <p className="opacity-80">
             当社は、必要に応じて本ポリシーを改定することがあります。重要な変更を行う場合は、本サービス上での掲示その他適切な方法により利用者に周知します。
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">第7条（お問い合わせ窓口）</h2>
+          <h2 className="ui-section-title mb-4">第7条（お問い合わせ窓口）</h2>
           <p className="opacity-80">
             本ポリシーに関するお問い合わせは、以下までご連絡ください。
           </p>
@@ -129,17 +129,17 @@ export default async function PrivacyPage() {
 
 function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
   return (
-    <div className="theme-online max-w-3xl mx-auto px-6 pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online max-w-3xl mx-auto px-6 ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-12">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           Privacy Policy
         </h1>
         <p className="text-[14px] text-amber-400/80 mt-3 border border-amber-400/30 bg-amber-400/5 px-3 py-2 rounded">
           This English text is a reference translation. The Japanese version is the
           legally binding document and prevails in case of any discrepancy.
         </p>
-        <p className="text-[14px] text-muted mt-3">
+        <p className="ui-page-lead text-[14px] text-muted">
           KWI Inc. (&quot;we&quot;, &quot;us&quot;) sets out this Privacy Policy regarding
           the handling of users&apos; personal information in &quot;Locahun 3D Online&quot; (the &quot;Service&quot;).
         </p>
@@ -147,7 +147,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
 
       <div className="prose-terms space-y-10 text-[14px] leading-[1.85]">
         <section>
-          <h2 className="serif text-lg mb-4">Article 1 (Information We Collect)</h2>
+          <h2 className="ui-section-title mb-4">Article 1 (Information We Collect)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Account information: name (display name), email address, and authentication data (via our authentication provider, Clerk).</li>
             <li>Registration details: account type (individual / photo studio / production company), company name and phone number (optional).</li>
@@ -163,7 +163,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 2 (Purpose of Use)</h2>
+          <h2 className="ui-section-title mb-4">Article 2 (Purpose of Use)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Identity verification and login authentication.</li>
             <li>Providing the Service, including 3DGS walkthroughs, the board, and reviews.</li>
@@ -177,7 +177,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 3 (Third-Party Sharing &amp; Subprocessors)</h2>
+          <h2 className="ui-section-title mb-4">Article 3 (Third-Party Sharing &amp; Subprocessors)</h2>
           <p className="opacity-80 mb-3">We use the following external services and share the minimum necessary information with them. We do not share personal information with any other third party except as required by law.</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Clerk — account registration and sign-in.</li>
@@ -189,28 +189,28 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 4 (Retention Period)</h2>
+          <h2 className="ui-section-title mb-4">Article 4 (Retention Period)</h2>
           <p className="opacity-80">
             Account information is retained until you request account deletion. Purchase history is retained for the period required by applicable law, and inquiry information is retained for a reasonable period after resolution before deletion. Payout bank details (and My Number where collected) are retained for the period required by applicable law (generally 7 years for tax-related records in Japan) and promptly destroyed thereafter.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 5 (Access, Correction &amp; Deletion Requests)</h2>
+          <h2 className="ui-section-title mb-4">Article 5 (Access, Correction &amp; Deletion Requests)</h2>
           <p className="opacity-80">
             You may request disclosure, correction, deletion, or suspension of use of your personal information that we hold. Some items can be changed directly from your account settings; otherwise, contact us at the address in Article 7. We will respond within a reasonable period after identity verification, in accordance with applicable law.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 6 (Changes to this Policy)</h2>
+          <h2 className="ui-section-title mb-4">Article 6 (Changes to this Policy)</h2>
           <p className="opacity-80">
             We may revise this Policy as necessary. Material changes will be announced on the Service or through other appropriate means.
           </p>
         </section>
 
         <section>
-          <h2 className="serif text-lg mb-4">Article 7 (Contact)</h2>
+          <h2 className="ui-section-title mb-4">Article 7 (Contact)</h2>
           <div className="mt-4 border-t border-line/30 pt-4 space-y-2 opacity-80">
             <p>KWI Inc.</p>
             <p>THE GATE Shinjuku Gyoen 1F, 1-24-12 Shinjuku, Shinjuku-ku, Tokyo 160-0022, Japan</p>

@@ -52,18 +52,18 @@ export default async function UserPurchasesPage() {
   const propMap = new Map(allProps.map((p) => [p.id, p]));
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
       <div className="chapter-rule">
         <span className="opacity-60">ACCOUNT</span>
         <span>Purchase History</span>
         <span className="flex-1 h-px bg-current opacity-25" />
       </div>
 
-      <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? "Purchase history" : "購入履歴"}
         </h1>
-        <p className="text-[14px] text-muted mt-2">
+        <p className="ui-page-lead text-[14px] text-muted">
           {en
             ? "Manage your 3DGS data purchases, downloads and receipts."
             : "3DGSデータの購入履歴・ダウンロード・領収書の管理ができます。"}

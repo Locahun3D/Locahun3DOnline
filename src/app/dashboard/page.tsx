@@ -33,29 +33,29 @@ export default async function DashboardPage() {
     : user.plan.toUpperCase();
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? `Welcome, ${user.name}` : `ようこそ、${user.name}`}
         </h1>
-        <p className="text-[14px] text-muted mt-2">
+        <p className="ui-page-lead text-[14px] text-muted">
           {en ? "Your account overview." : "アカウントの概要です。"}
         </p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <section className="border border-line p-6">
+        <section className="border border-line p-6 flex flex-col items-start">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Plan</div>
           <div className="serif text-2xl">{planLabel}</div>
-          <p className="text-[12px] text-muted mt-2 leading-[1.7]">
+          <p className="text-[12px] text-muted mt-2 mb-4 leading-[1.7]">
             {en
               ? "Manage your plan and token balance."
               : "プランとトークン残高はこちら。"}
           </p>
           <Link
             href={lh(user.plan === "free" ? "/pricing" : "/account")}
-            className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
+            className="mt-auto inline-block mono text-[11px] tracking-[0.22em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition"
           >
             {user.plan === "free"
               ? en ? "Upgrade" : "アップグレード"
@@ -63,43 +63,43 @@ export default async function DashboardPage() {
           </Link>
         </section>
 
-        <section className="border border-line p-6">
+        <section className="border border-line p-6 flex flex-col items-start">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Unlocked scenes</div>
           <div className="serif text-2xl">{unlockedCount}</div>
-          <p className="text-[12px] text-muted mt-2 leading-[1.7]">
+          <p className="text-[12px] text-muted mt-2 mb-4 leading-[1.7]">
             {en ? "3DGS scenes you can re-view free (1 year)." : "無償で再視聴できる3DGSシーン(1年間)。"}
           </p>
           <Link
             href={lh("/dashboard/unlocked")}
-            className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
+            className="mt-auto inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
           >
             {en ? "Viewing history →" : "閲覧履歴 →"}
           </Link>
         </section>
 
-        <section className="border border-line p-6">
+        <section className="border border-line p-6 flex flex-col items-start">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Bookmarks</div>
           <div className="serif text-2xl">{user.bookmarks?.length ?? 0}</div>
-          <p className="text-[12px] text-muted mt-2 leading-[1.7]">
+          <p className="text-[12px] text-muted mt-2 mb-4 leading-[1.7]">
             {en ? "Save locations you like with ★." : "気になる物件は ★ で保存できます。"}
           </p>
           <Link
             href={lh("/dashboard/bookmarks")}
-            className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
+            className="mt-auto inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
           >
             {en ? "Saved locations →" : "保存した物件 →"}
           </Link>
         </section>
 
-        <section className="border border-line p-6">
+        <section className="border border-line p-6 flex flex-col items-start">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-50 mb-3">Purchases</div>
           <div className="serif text-2xl">{purchaseCount}</div>
-          <p className="text-[12px] text-muted mt-2 leading-[1.7]">
+          <p className="text-[12px] text-muted mt-2 mb-4 leading-[1.7]">
             {en ? "Your 3DGS data purchases & receipts." : "3DGSデータの購入履歴・領収書はこちら。"}
           </p>
           <Link
             href={lh("/dashboard/purchases")}
-            className="mt-4 inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
+            className="mt-auto inline-block mono text-[11px] tracking-[0.22em] uppercase border border-line px-4 py-2 hover:border-ink transition"
           >
             {en ? "Purchase history →" : "購入履歴 →"}
           </Link>

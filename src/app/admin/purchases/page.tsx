@@ -84,9 +84,9 @@ export default async function PurchasesPage({
   ).length;
 
   return (
-    <div className="p-6 md:p-10 space-y-8">
-      <header className="flex items-baseline gap-4 flex-wrap">
-        <h1 className="serif text-2xl tracking-wider">データ販売管理</h1>
+    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10 space-y-8">
+      <header className="ui-page-header flex items-baseline gap-4 flex-wrap">
+        <h1 className="ui-page-title">データ販売管理</h1>
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
           全履歴 {allPurchases.length} 件
         </span>

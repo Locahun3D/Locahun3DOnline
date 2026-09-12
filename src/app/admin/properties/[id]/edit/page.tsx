@@ -21,7 +21,7 @@ export default async function EditPropertyPage({
   const currentUser = await getCurrentUser();
 
   return (
-    <div className="p-8">
+    <div className="ui-page-shell px-8 pb-8">
       <nav className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4 flex items-center gap-2 flex-wrap">
         <Link href="/admin/properties" className="hover:text-accent">
           ← Properties

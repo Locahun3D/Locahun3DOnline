@@ -188,6 +188,44 @@ body::before {
   /* Balance multi-line headings so no single trailing word dangles. */
   text-wrap: balance;
 }
+
+/* Shared page rhythm: opt in explicitly so hero/print/viewer layouts are not
+   changed by a blanket h1 selector. Keep gap and typography values together. */
+:root {
+  --ui-page-title-size: clamp(28px, 3.2vw, 40px);
+  --ui-section-title-size: clamp(20px, 2vw, 24px);
+}
+.ui-page-shell {
+  padding-top: 24px;
+}
+.ui-page-header {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+.ui-page-title {
+  margin: 0;
+  font-size: var(--ui-page-title-size);
+  line-height: 1.35;
+  font-weight: 700;
+}
+.ui-page-lead {
+  margin-top: 8px;
+  line-height: 1.7;
+}
+.ui-section-title {
+  font-size: var(--ui-section-title-size);
+  line-height: 1.4;
+  font-weight: 700;
+}
+.ui-card-title {
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+@media (min-width: 720px) {
+  .ui-page-shell { padding-top: 32px; }
+  .ui-page-header { margin-bottom: 32px; }
+}
 @utility mono {
   /* JetBrains Mono has no Japanese glyphs, and Next.js's font loader
      overrides --font-mono at runtime to drop the ui-monospace/Consolas

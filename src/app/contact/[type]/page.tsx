@@ -103,7 +103,7 @@ function ListingSteps({ en, current }: { en: boolean; current: 1 | 2 | 3 }) {
       ];
   return (
     <section className="mb-8">
-      <h2 className="text-[17px] font-bold mb-4">
+      <h2 className="ui-section-title mb-4">
         {en ? "How it works" : "掲載までの流れ"}
       </h2>
       <ol className="grid sm:grid-cols-3 gap-3">
@@ -126,7 +126,7 @@ function ListingSteps({ en, current }: { en: boolean; current: 1 | 2 | 3 }) {
                 {done ? `✓ 0${n}` : `0${n}`}
               </div>
               <div
-                className={`text-[14px] font-bold leading-[1.6] mb-1 ${
+                className={`ui-card-title mb-1 ${
                   active ? "text-accent" : ""
                 }`}
               >
@@ -194,7 +194,7 @@ export default async function ContactTypePage({
   const listingStep: 1 | 2 | 3 = prefill ? 3 : canOwn ? 2 : 1;
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
       {/* 掲載依頼は費用カード・流れ・登録条件と横並びの情報が多く、620px だと
           どのブロックも2〜3行に折り返して「細々」して見えた。この種別だけ
@@ -202,22 +202,24 @@ export default async function ContactTypePage({
       <div className={`${t === "listing" ? "max-w-[760px]" : "max-w-[620px]"} mx-auto`}>
         <Link
           href={lh("/contact")}
-          className="text-[12px] text-muted hover:text-accent transition max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]"
+          className="inline-flex items-center min-h-[44px] mb-2 text-[12px] text-muted hover:text-accent transition"
         >
           {en ? "← Back to contact" : "← お問い合わせ一覧に戻る"}
         </Link>
 
-        <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-3">
+        <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? copy.titleEn : copy.title}
         </h1>
         {t === "listing" && (
-          <div className="inline-block mono text-[10px] tracking-[0.2em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-3 py-1 mb-4">
+          <div className="inline-block mono text-[10px] tracking-[0.2em] uppercase bg-accent/10 text-accent border border-accent/40 rounded-full px-3 py-1 mt-2">
             {en ? "Listing is always free" : "掲載費はずっと無料"}
           </div>
         )}
-        <p className="text-[14px] text-muted leading-[1.9] mb-10">
+        <p className="ui-page-lead text-[14px] text-muted">
           {sentenceBreaks(en ? copy.ledeEn : copy.lede)}
         </p>
+        </header>
 
         {/* ══ 掲載依頼の導線 ══
             「まずスタジオ用アカウントを作る → 物件ページを作る → 3DGS以外を書いたら
@@ -238,7 +240,7 @@ export default async function ContactTypePage({
           <div className="mb-10 border border-accent/40 bg-white p-6 sm:p-7">
             {!user ? (
               <>
-                <h2 className="text-[18px] font-bold mb-2.5">
+                <h2 className="ui-card-title mb-2.5">
                   {en ? "Create a studio account" : "まずスタジオ用アカウントを作成"}
                 </h2>
                 <p className="text-[13.5px] leading-[1.9] text-muted">
@@ -258,7 +260,7 @@ export default async function ContactTypePage({
               </>
             ) : canOwn ? (
               <>
-                <h2 className="text-[18px] font-bold mb-2.5">
+                <h2 className="ui-card-title mb-2.5">
                   {en ? "Create the listing page" : "物件の掲載ページを作成"}
                 </h2>
                 <p className="text-[13.5px] leading-[1.9] text-muted">
@@ -280,7 +282,7 @@ export default async function ContactTypePage({
                 {/* 会社ドメインのメールでログイン済み。新規登録に送っても Clerk が
                     サインアップ画面を出さずマイページへ弾くうえ、撮影スタジオは
                     元々自己申告で選べる種別なので、このまま切り替える。 */}
-                <h2 className="text-[18px] font-bold mb-2.5">
+                <h2 className="ui-card-title mb-2.5">
                   {en ? "Switch this account to a studio account" : "このアカウントをスタジオアカウントにする"}
                 </h2>
                 <p className="text-[13.5px] leading-[1.9] text-muted">
@@ -303,7 +305,7 @@ export default async function ContactTypePage({
               </>
             ) : (
               <>
-                <h2 className="text-[18px] font-bold mb-2.5">
+                <h2 className="ui-card-title mb-2.5">
                   {en ? "A studio account is required" : "スタジオ用アカウントが必要です"}
                 </h2>
                 <p className="text-[13.5px] leading-[1.9] text-muted">
@@ -331,7 +333,7 @@ export default async function ContactTypePage({
         {/* 公開申請モード: エディターから物件を持って来た場合 */}
         {prefill && (
           <div className="mb-8 border border-accent/40 bg-accent/5 p-6 sm:p-7">
-            <h2 className="text-[18px] font-bold mb-2.5 leading-[1.5]">
+            <h2 className="ui-card-title mb-2.5">
               {en ? `Request publication: ${prefill.propertyName}` : `公開を申請: ${prefill.propertyName}`}
             </h2>
             <p className="text-[13.5px] leading-[1.9] text-muted">

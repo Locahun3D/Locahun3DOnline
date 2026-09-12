@@ -532,9 +532,9 @@ export default function PropertyEditor({
           <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-baseline gap-3 min-w-0">
             <StatusPill status={currentStatus} />
-            <div className="serif text-xl truncate">
+            <h1 className="ui-page-title min-w-0 break-words">
               {currentTitle || "(無題)"}
-            </div>
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             {/* mounted 前は空文字（SSR/初回クライアントとも同一）。マウント後に
@@ -2948,7 +2948,7 @@ function StepCard({
         <div className="mono text-[10px] tracking-[0.32em] uppercase text-accent mb-1">
           STEP {n}
         </div>
-        <h2 className="serif text-2xl">{title}</h2>
+        <h2 className="ui-section-title">{title}</h2>
         {desc && (
           <p className="text-[12px] text-muted mt-1 leading-[1.75]">{desc}</p>
         )}
@@ -2982,7 +2982,7 @@ function StatusPill({ status }: { status: Property["status"] }) {
         : "bg-[#111] text-muted";
   return (
     <span
-      className={`inline-block px-2 py-1 mono text-[9px] tracking-[0.22em] uppercase ${cls}`}
+      className={`inline-block shrink-0 whitespace-nowrap px-2 py-1 mono text-[9px] tracking-[0.22em] uppercase ${cls}`}
     >
       {STATUS_LABEL[status]}
     </span>

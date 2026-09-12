@@ -73,9 +73,9 @@ export default async function AdminPayoutsPage({
   }
 
   return (
-    <div className="p-6 md:p-10 space-y-8">
-      <header className="flex items-baseline gap-4 flex-wrap">
-        <h1 className="serif text-2xl tracking-wider">収益分配・精算</h1>
+    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10 space-y-8">
+      <header className="ui-page-header flex items-baseline gap-4 flex-wrap">
+        <h1 className="ui-page-title">収益分配・精算</h1>
         <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
           {payees.length} payees / {accrued.length} accrued rows
         </span>

@@ -36,6 +36,32 @@
   isolation: isolate;
 }
 
+/* The index is a standard listing, while individual article heroes retain
+   their editorial typography. Scope overrides to the explicit index wrapper. */
+.works-root .works-index-page .hero {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+.works-root .works-index-page .hero h1.big,
+.works-root .works-index-page .section-head h2.big {
+  font-size: var(--ui-page-title-size);
+  line-height: 1.35;
+  font-weight: 700;
+  margin: 0;
+}
+.works-root .works-index-page .card h2,
+.works-root .works-index-page .card h3 {
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+@media (min-width: 720px) {
+  .works-root .works-index-page .hero {
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+}
+
 /* ── アンカー着地 ─────────────────────────────────────────────────
  * 記事CSSの `html{scroll-padding-top:72px}` は取り込みで `.works-root` へ
  * 移ってしまう（スコープ化の副作用）が、実際にスクロールするのは html なので

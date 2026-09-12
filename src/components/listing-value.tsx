@@ -103,7 +103,7 @@ export default function ListingValue({ en }: { en: boolean }) {
     <div className="mb-12 space-y-10">
       {/* ── 費用 ─────────────────────────────────────────── */}
       <section>
-        <h2 className="text-[17px] font-bold mb-1.5">
+        <h2 className="ui-section-title mb-1.5">
           {en ? "What it costs" : "掲載にかかる費用"}
         </h2>
         <p className="text-[13px] text-muted leading-[1.8] mb-4">
@@ -146,7 +146,7 @@ export default function ListingValue({ en }: { en: boolean }) {
 
       {/* ── メリット ─────────────────────────────────────── */}
       <section>
-        <h2 className="text-[17px] font-bold mb-1.5">
+        <h2 className="ui-section-title mb-1.5">
           {en ? "What listing does for you" : "掲載するとどうなるか"}
         </h2>
         <p className="text-[13px] text-muted leading-[1.8] mb-4">
@@ -161,7 +161,7 @@ export default function ListingValue({ en }: { en: boolean }) {
           {benefits.map((b) => (
             <div key={b.no} className="border border-line bg-white px-6 py-5">
               <div className="mono text-[10px] tracking-[0.24em] text-accent mb-2">{b.no}</div>
-              <div className="text-[14px] font-bold leading-[1.6] mb-1.5">{b.title}</div>
+              <div className="ui-card-title mb-1.5">{b.title}</div>
               <p className="text-[13px] text-muted leading-[1.9]">{sentenceBreaks(b.body)}</p>
             </div>
           ))}

@@ -91,7 +91,7 @@ export default function StudioPageBuilder({ property }: { property: Property }) 
       {/* ── Editor column ── */}
       <div>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h2 className="serif text-xl">ページ構成</h2>
+          <h2 className="ui-section-title">ページ構成</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"

@@ -112,11 +112,11 @@ export default function AccountDashboard({
   return (
     <div className="space-y-6 mb-10">
       {/* ── ユーザーヘッダー ── */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="ui-page-header flex flex-wrap items-center gap-4">
         <div className="w-14 h-14 shrink-0 grid place-items-center bg-[#1ea0c4] text-white text-[18px] font-bold">
           {initials}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <DisplayNameEditor initialName={shownName} en={en} />
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             {isAdmin && (

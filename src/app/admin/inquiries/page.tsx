@@ -28,9 +28,9 @@ export default async function AdminInquiriesPage({
   const inquiries = purposeFilter ? all.filter((i) => i.purpose === purposeFilter) : all;
 
   return (
-    <div className="theme-online p-8">
-      <div className="mb-6">
-        <h1 className="serif text-3xl">
+    <div className="theme-online ui-page-shell px-8 pb-8">
+      <div className="ui-page-header">
+        <h1 className="ui-page-title">
           問い合わせ
           {newCount > 0 && (
             <span className="ml-3 align-middle inline-block bg-accent text-white text-[12px] font-bold px-2 py-0.5 rounded-full">
@@ -38,7 +38,7 @@ export default async function AdminInquiriesPage({
             </span>
           )}
         </h1>
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+        <p className="ui-page-lead text-[13px] text-muted">
           公開フォームから届いたスタジオへの問い合わせ。各物件の「スタジオ連絡先メール」へ自動転送されます。
           <br />
           メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。

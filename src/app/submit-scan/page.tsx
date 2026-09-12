@@ -50,13 +50,13 @@ export default async function SubmitScanPage() {
   const mySubmissions = user ? await scanSubmissionRepo.list({ userId: user.id }) : [];
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
-      <header className="max-w-[620px] mx-auto mb-10">
-        <h1 className="serif text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-[1.4] mb-4">
+      <header className="ui-page-header max-w-[620px] mx-auto">
+        <h1 className="ui-page-title">
           {en ? "Bring your own scan" : "持ち込みスキャン"}
         </h1>
-        <p className="text-[13.5px] text-muted leading-[1.9] mb-5">
+        <p className="ui-page-lead text-[13.5px] text-muted mb-5">
           {en
             ? "This program lets you bring in a scan you captured yourself, and lets Locahun 3D negotiate rights with the facility before selling it."
             : "あなたが撮影したスキャンデータを、ロケハン3Dが施設と権利調整のうえ販売する持ち込みプログラムです。"}

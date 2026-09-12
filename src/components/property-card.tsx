@@ -30,9 +30,9 @@ export default function PropertyCard({
   return (
     <Link
       href={localizedHref(`/properties/${property.id}`, locale)}
-      className="group block border border-line bg-bg overflow-hidden hover:border-accent transition"
+      className="group flex h-full flex-col border border-line bg-bg overflow-hidden hover:border-accent transition"
     >
-      <div className="relative aspect-[16/10] bg-[#141414] overflow-hidden">
+      <div className="relative aspect-[16/10] shrink-0 bg-[#141414] overflow-hidden">
         {/* Using img instead of next/image to skip remote domain config for the mock data */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -85,11 +85,11 @@ export default function PropertyCard({
         )}
       </div>
 
-      <div className="p-5 flex flex-col gap-3">
+      <div className="p-5 flex flex-1 flex-col gap-3">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {property.prefecture} / {property.city}
         </div>
-        <h3 className="serif text-[1.15rem] leading-[1.5] group-hover:text-accent transition whitespace-pre-wrap [overflow-wrap:anywhere]">
+        <h3 className="ui-card-title serif group-hover:text-accent transition whitespace-pre-wrap [overflow-wrap:anywhere]">
           {property.title}
         </h3>
         <p className="text-[13px] leading-[1.7] text-muted line-clamp-2">
@@ -113,7 +113,7 @@ export default function PropertyCard({
           </div>
         </div>
 
-        <div className="flex items-baseline justify-between pt-3 border-t border-line">
+        <div className="mt-auto flex items-baseline justify-between pt-3 border-t border-line">
           <div>
             {property.priceType === "free" ? (
               <span className="serif text-2xl text-accent">{en ? "Free" : "無料"}</span>

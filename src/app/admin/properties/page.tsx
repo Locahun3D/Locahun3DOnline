@@ -37,10 +37,10 @@ export default async function AdminPropertiesList() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
+    <div className="ui-page-shell px-8 pb-8">
+      <div className="ui-page-header flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="serif text-3xl font-bold">物件管理</h1>
+          <h1 className="ui-page-title">物件管理</h1>
           <div className="mt-2 mono text-[11px] text-muted">
             合計 {all.length} 件 ／ 公開 {counts.published} ／ 下書き{" "}
             {counts.draft} ／ アーカイブ {counts.archived}

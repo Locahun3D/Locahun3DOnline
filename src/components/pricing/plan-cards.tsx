@@ -168,7 +168,7 @@ export default function PlanCards({
                 >
                   {p.code}
                 </div>
-                <div className="serif text-base sm:text-2xl mt-0.5 sm:mt-1">{p.name}</div>
+                <div className="serif ui-card-title mt-1">{p.name}</div>
               </div>
 
               <div className="border-y border-line py-2.5 sm:py-4 min-h-[76px] sm:min-h-[110px]">

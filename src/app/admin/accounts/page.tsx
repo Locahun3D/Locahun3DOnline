@@ -36,9 +36,9 @@ export default async function AdminAccountsPage({
       : "all";
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h1 className="serif text-3xl">アカウント管理</h1>
+    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
+      <div className="ui-page-header flex flex-wrap items-center justify-between gap-3">
+        <h1 className="ui-page-title">アカウント管理</h1>
         <span className="opacity-60">{users.length} 件</span>
       </div>
 

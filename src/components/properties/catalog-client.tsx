@@ -1390,11 +1390,11 @@ function PropertyCardLite({
         </div>
       </div>
 
-      <div className="p-4 space-y-3 flex flex-col flex-1">
+      <div className="p-4 gap-3 flex flex-col flex-1">
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {property.prefecture} / {property.city}
         </div>
-        <h3 className="serif text-[1.05rem] leading-[1.45] line-clamp-2 min-h-[3.05rem] whitespace-pre-wrap [overflow-wrap:anywhere]">
+        <h3 className="ui-card-title serif min-h-[3em] whitespace-pre-wrap [overflow-wrap:anywhere]">
           {property.title}
         </h3>
         <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">

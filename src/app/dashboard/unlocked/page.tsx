@@ -49,13 +49,13 @@ export default async function UnlockedScenesPage() {
   });
 
   return (
-    <div className="theme-online frame pt-6 sm:pt-12 pb-12 sm:pb-32">
+    <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
 
-      <header className="mb-10">
-        <h1 className="serif text-[clamp(1.8rem,3.4vw,2.8rem)] font-bold">
+      <header className="ui-page-header">
+        <h1 className="ui-page-title">
           {en ? "Viewing history" : "閲覧履歴・解除済みシーン"}
         </h1>
-        <p className="text-[14px] text-muted mt-2 max-w-[60ch] leading-[1.85]">
+        <p className="ui-page-lead text-[14px] text-muted max-w-[60ch]">
           {en
             ? `Scenes you've unlocked with tokens. Each stays free to re-view for 1 year from the unlock date. ${rows.length} item(s).`
             : `トークンで解除した3DGSシーンの一覧です。解除日から1年間は無償で再視聴できます。${rows.length} 件。`}
