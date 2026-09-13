@@ -139,6 +139,10 @@ function r2ObjectUrl(endpoint: string, bucket: string, key: string): string {
 }
 
 /** Workflow objects are write-once and carry a storage-validated transport digest. */
+export async function getWorkflowStorageOrigin(){
+  return (await r2Client()).endpoint;
+}
+
 export async function createWorkflowUpload(input: {r2Key: string; md5: string}) {
   if (!/^assets\/splat\/wf_[a-f0-9]{64}-project\.zip$/.test(input.r2Key) || !/^[a-f0-9]{32}$/.test(input.md5)) throw new Error('Invalid workflow object');
   const {client,endpoint,bucket}=await r2Client();

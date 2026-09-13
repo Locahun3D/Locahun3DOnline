@@ -31,6 +31,7 @@ export default async function AdminLayout({
           { href: "/admin/analytics", label: "アナリティクス" },
           { href: "/admin/subscriptions", label: "↳ サブスク売上", sub: true },
           { href: "/admin/assets", label: "アセット" },
+          { href: "/admin/workflow", label: "下書きデータ転送" },
           { href: "/admin/inquiries", label: "スタジオへのお問い合わせ" },
           { href: "/admin/contact-requests", label: "お問い合わせ（サイト全体）" },
           { href: "/admin/reports", label: "↳ 通報管理", sub: true },
