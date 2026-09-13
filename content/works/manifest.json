@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-09-13T19:24:40.657Z",
+ "generatedAt": "2026-09-13T20:22:30.435Z",
  "pages": {
   "3dgs-blender-workflow": {
    "locales": [
@@ -35,6 +35,13 @@
     "en"
    ],
    "title": "3DGSを扱えるソフト・ツール比較｜ロケハン3D 技術ブログ"
+  },
+  "blender-lcc2-vfx": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "LCC2をそのままBlenderへ。3DGSをVFXの素材として使う｜ロケハン3D"
   },
   "blog": {
    "locales": [
