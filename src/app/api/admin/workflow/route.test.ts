@@ -5,7 +5,7 @@ const mocks=vi.hoisted(()=>({admin:vi.fn(),db:vi.fn(),head:vi.fn(),put:vi.fn(),g
 vi.mock('@/lib/dal',()=>({requireAdmin:mocks.admin}));
 vi.mock('@/lib/d1',()=>({getD1:mocks.db}));
 vi.mock('@/lib/uploads',()=>({getUploadMode:async()=> 'r2',createWorkflowUpload:mocks.put,statWorkflowUpload:mocks.head,createPresignedGet:mocks.get}));
-import {POST} from './route';
+import {GET,POST} from './route';
 const {DatabaseSync}=createRequire(import.meta.url)('node:sqlite');
 let sqlite: InstanceType<typeof DatabaseSync>;
 const binding={propertyId:'p',sceneId:'s',expectedUpdatedAt:'2026-09-14T00:00:00.000Z',previousUrl:'old',revision:2,projectSha256:'a'.repeat(64),archiveSha256:'b'.repeat(64),archiveMd5:'c'.repeat(32),archiveBytes:123};
@@ -23,6 +23,11 @@ beforeEach(()=>{
  mocks.get.mockResolvedValue('https://storage.test/get');
 });
 afterEach(()=>sqlite.close());
+it('authenticated readiness check does not create any property or upload',async()=>{
+ expect((await GET()).status).toBe(200);
+ expect(mocks.admin).toHaveBeenCalled();
+ expect(sqlite.prepare('SELECT count(*) n FROM assets').get().n).toBe(0);
+});
 it('HTTP reservation, verification and attachment roundtrip is repeatable and scoped',async()=>{
  const reserve=async()=> (await POST(request({action:'reserve',binding}))).json();
  const one=await reserve(),two=await reserve(); expect(one.key).toBe(two.key);

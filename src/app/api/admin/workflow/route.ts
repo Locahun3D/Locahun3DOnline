@@ -22,6 +22,20 @@ const requestSchema=z.discriminatedUnion('action',[
 ]);
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 
+// Read-only production smoke check; never returns credentials or signed URLs.
+export async function GET() {
+ await requireAdmin();
+ try {
+  const db=await getD1();
+  if(!db || await getUploadMode()!=='r2')throw new Error('storage');
+  const key='0'.repeat(64),r2Key='assets/splat/wf_'+key+'-project.zip';
+  await db.prepare('SELECT job_key FROM workflow_uploads WHERE job_key=?').bind(key).first();
+  await statWorkflowUpload(r2Key);
+  await createWorkflowUpload({r2Key,md5:'0'.repeat(32)});
+  return reply({ready:true,storage:'r2',reservationSchema:1});
+ }catch{return reply({ready:false,error:'workflow_storage_unavailable'},503);}
+}
+
 export async function POST(req:Request) {
  const origin=req.headers.get('origin');
  if ((origin && origin!==new URL(req.url).origin) || req.headers.get('sec-fetch-site')==='cross-site') return reply({error:'origin'},403);
