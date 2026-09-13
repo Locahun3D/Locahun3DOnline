@@ -23,6 +23,26 @@ beforeEach(()=>{
  mocks.get.mockResolvedValue('https://storage.test/get');
 });
 afterEach(()=>sqlite.close());
+it('resolves only the exact draft scene without creating uploads',async()=>{
+ const result=await POST(request({action:'target',propertyId:'p',sceneId:'s'}));
+ expect(result.status).toBe(200);
+ expect(await result.json()).toEqual({propertyId:'p',sceneId:'s',expectedUpdatedAt:binding.expectedUpdatedAt,previousUrl:'old'});
+ expect(sqlite.prepare('SELECT count(*) n FROM assets').get().n).toBe(0);
+ expect(mocks.put).not.toHaveBeenCalled();
+ for(const sceneId of ['missing','S'])expect((await POST(request({action:'target',propertyId:'p',sceneId}))).status).toBe(409);
+ sqlite.prepare("UPDATE properties SET status='published'").run();
+ expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(409);
+});
+it('target rejects duplicate scene IDs and inconsistent row snapshots',async()=>{
+ const row=sqlite.prepare('SELECT data FROM properties').get();const property=JSON.parse(row.data);
+ property.splatItems.push({...property.splatItems[0]});
+ sqlite.prepare('UPDATE properties SET data=?').run(JSON.stringify(property));
+ expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(409);
+ property.splatItems.pop();property.updatedAt='2026-09-15T00:00:00.000Z';
+ sqlite.prepare('UPDATE properties SET data=?').run(JSON.stringify(property));
+ expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(409);
+ expect(sqlite.prepare('SELECT count(*) n FROM assets').get().n).toBe(0);
+});
 it('authenticated readiness check does not create any property or upload',async()=>{
  expect((await GET()).status).toBe(200);
  expect(mocks.admin).toHaveBeenCalled();

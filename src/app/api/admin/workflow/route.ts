@@ -16,6 +16,7 @@ const bindingSchema=z.object({
  archiveMd5:z.string().regex(/^[a-f0-9]{32}$/),archiveBytes:z.number().int().min(1).max(2*1024**3),
 }).strict();
 const requestSchema=z.discriminatedUnion('action',[
+ z.object({action:z.literal('target'),propertyId:z.string().min(1).max(200),sceneId:z.string().min(1).max(200)}).strict(),
  z.object({action:z.literal('reserve'),binding:bindingSchema}).strict(),
  z.object({action:z.literal('verify'),key:hex}).strict(),
  z.object({action:z.literal('attach'),key:hex,verifiedSha256:hex}).strict(),
@@ -53,6 +54,16 @@ export async function POST(req:Request) {
  const db=await getD1();
  if (!db || await getUploadMode()!=='r2') return reply({error:'workflow_storage_unavailable'},503);
  try {
+  if(input.action==='target'){
+   const row=await db.prepare('SELECT data,status,updated_at FROM properties WHERE id=?').bind(input.propertyId).first();
+   if(!row||row.status!=='draft')throw new Error('draft');
+   const property=JSON.parse(row.data);
+   const scenes=property.splatItems?.filter((s:{id?:string})=>s?.id===input.sceneId);
+   if(property.id!==input.propertyId||property.status!=='draft'||property.updatedAt!==row.updated_at||scenes?.length!==1)throw new Error('scene');
+   const expectedUpdatedAt=z.string().datetime().parse(row.updated_at);
+   const previousUrl=z.string().max(2048).parse(scenes[0].splatUrl||'');
+   return reply({propertyId:input.propertyId,sceneId:input.sceneId,expectedUpdatedAt,previousUrl});
+  }
   let key:string,binding:z.infer<typeof bindingSchema>;
   if(input.action==='reserve') {
    binding=input.binding;
