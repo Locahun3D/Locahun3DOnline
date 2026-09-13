@@ -278,6 +278,7 @@ export async function deleteInquiryAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   await inquiryRepo.remove(id);
   revalidatePath("/admin/inquiries");
+  revalidatePath("/", "layout");
 }
 
 export type ReplyInquiryState =
@@ -357,6 +358,7 @@ export async function deleteContactRequestAction(formData: FormData): Promise<vo
   const id = String(formData.get("id") ?? "");
   await contactRequestRepo.remove(id);
   revalidatePath("/admin/contact-requests");
+  revalidatePath("/", "layout");
 }
 
 /**

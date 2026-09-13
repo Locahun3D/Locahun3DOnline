@@ -4,9 +4,13 @@ vi.mock("node:fs", () => ({ promises: { readFile: async () => JSON.stringify({ n
 vi.mock("./fs-safe", () => ({ canAccessLocalFs: () => true, safeWriteFile: vi.fn() }));
 vi.mock("./contact-requests", () => ({ contactRequestRepo: { list: async () => state.contacts } }));
 vi.mock("./inquiries", () => ({ inquiryRepo: { list: async () => state.inquiries } }));
-import { listNotifications } from "./notifications";
+import { listNotifications, getNotificationSummary } from "./notifications";
 const notice = (id: string, link: string, type = "contact_request") => ({ id, userId: "admin", type, title: "new", body: "A さん: hello", link, read: false, createdAt: "2026-09-12T01:00:00Z" });
 beforeEach(() => { state.notifications = []; state.contacts = []; state.inquiries = []; });
+it("excludes deleted legacy sources from both the list and unread count", async () => {
+  state.notifications = [notice("deleted", "/admin/contact-requests"), notice("inquiry", "/admin/inquiries", "inquiry_new")];
+  expect(await getNotificationSummary("admin", "admin")).toEqual({ notifications: [], unreadCount: 0 });
+});
 it("hides archived source notifications before applying the display limit", async () => {
   state.contacts = [{ id: "a", status: "archived", name: "A", message: "hello" }, { id: "b", status: "new", name: "B", message: "active" }];
   state.notifications = [notice("1", "/admin/contact-requests#a"), notice("2", "/admin/contact-requests#b")];

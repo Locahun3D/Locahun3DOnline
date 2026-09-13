@@ -6,6 +6,13 @@
 .titleMeta,.titleActions { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
 .titleActions { margin-top:12px; }
 .titleActions p { margin:0; }
+@media(min-width:1100px) {
+  .titleBody { display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,34%);align-items:center;gap:12px 24px; }
+  .title h1 { margin:0; }
+  .titleMeta { justify-content:flex-end; }
+  .titleMeta > div { justify-content:flex-end; }
+  .titleActions { grid-column:1/-1;margin-top:0; }
+}
 .top { display:grid; grid-template-columns:minmax(0,1.72fr) minmax(0,1fr); gap:28px; align-items:start; }
 .top > * { min-width:0; }
 .top:not(:has(.purchase)) { grid-template-columns:minmax(0,1fr); }

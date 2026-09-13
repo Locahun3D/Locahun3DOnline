@@ -39,7 +39,7 @@
 /* The index is a standard listing, while individual article heroes retain
    their editorial typography. Scope overrides to the explicit index wrapper. */
 .works-root .works-index-page .hero {
-  padding-top: 24px;
+  padding-top: 28.8px;
   padding-bottom: 0;
 }
 .works-root .works-index-page .hero h1.big,
@@ -57,7 +57,7 @@
 }
 @media (min-width: 720px) {
   .works-root .works-index-page .hero {
-    padding-top: 32px;
+    padding-top: 38.4px;
     padding-bottom: 0;
   }
 }

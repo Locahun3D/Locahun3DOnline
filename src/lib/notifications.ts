@@ -139,12 +139,12 @@ export async function listNotifications(userId: string, limit = 30, scope?: Noti
     const rows = n.type === "contact_request" ? contacts : inquiries;
     const id = n.link.split("#")[1];
     if (id) return rows.some(row => row.id === id && row.status !== "archived");
-    // Older notices had no source ID. Only hide an unambiguous archived match;
-    // a similarly worded active request must never lose its notification.
+    // Legacy notices lack IDs. A matching active source is required: deleted
+    // sources must not leave orphan notices or unread badges behind.
     const matches = rows.filter(row => n.body === ("propertyTitle" in row
       ? `${row.name || "匿名"} さん（${row.propertyTitle}）: ${row.message.slice(0, 120)}`
       : `${row.name || "匿名"} さん: ${row.message.slice(0, 120)}`));
-    return matches.length === 0 || matches.some(row => row.status !== "archived");
+    return matches.some(row => row.status !== "archived");
   }).slice(0, limit);
 }
 
