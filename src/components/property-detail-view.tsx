@@ -1,4 +1,8 @@
 import Link from "next/link";
+import PropertySceneWorkspace, { PropertySceneProvider } from "./property-scene-workspace";
+import PropertyPhotoGallery from "./property-photo-gallery";
+import PropertyLicenseDetails from "./property-license-details";
+import styles from "./property-detail-view.module.css";
 import {
   categoryLabel,
   isNewProperty,
@@ -16,14 +20,9 @@ import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
-import ZoomableImage from "@/components/zoomable-image";
 import { googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
 import PropertyComments, { type CommentItem } from "@/components/property-comments";
 
-/**
- * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
- * rule line, used throughout the SLATE BOARD (pattern-07) restyle.
- */
 /** 見出し付きの縦積みキー・バリュー行（SPECS 以外の詳細ブロック用）。 */
 function KeyVal({ k, children }: { k: string; children: React.ReactNode }) {
   return (
@@ -38,12 +37,10 @@ function KeyVal({ k, children }: { k: string; children: React.ReactNode }) {
   );
 }
 
-function Eyebrow({ en, jp }: { en: string; jp: string }) {
+function Eyebrow({ jp }: { en: string; jp: string }) {
   return (
-    <h2 className="flex items-center gap-4 mono text-[10.5px] tracking-[0.26em] uppercase text-muted mb-6">
-      <span className="text-accent font-medium">{en}</span>
-      <span>—— {jp}</span>
-      <span className="flex-1 h-px bg-current opacity-30" />
+    <h2 className="ui-section-title text-ink mb-4">
+      {jp}
     </h2>
   );
 }
@@ -177,46 +174,17 @@ export default function PropertyDetailView({
       return true;
     });
 
-  // ── ギャラリー: カバー画像はヒーローに出るので除外、重複 src も除外 ──
-  const seen = new Set<string>([property.cover.src]);
-  const galleryPhotos = property.gallery.filter((p) => {
+  // 写真は3DGSと独立したギャラリーにまとめる。カバーを含め重複srcは除外。
+  const seen = new Set<string>();
+  const galleryPhotos = [property.cover, ...property.gallery].filter((p) => {
     if (!p?.src || seen.has(p.src)) return false;
     seen.add(p.src);
     return true;
   });
 
-  // ── スレート・データ行（実データのみ。無ければ行ごと省略） ──
-  // 撮影メタ情報（PROD./SCENE/DATE/LOC.）ではなく、すぐ使える連絡先を
-  // 同じ「スレート・データシート」の見た目のまま表示する。
-  const slateRows: { k: string; v: string; href?: string }[] = [];
+  // 公開用連絡先と、実際の住所・座標に基づくアクセスリンク。
   const displayedEmail = publicPropertyEmail(property.id, property.contactEmail);
   const mapsUrl = googleMapsUrl(property.coords, property.address);
-  if (property.contactPhone) {
-    slateRows.push({ k: "TEL", v: property.contactPhone, href: `tel:${property.contactPhone}` });
-  }
-  if (displayedEmail) {
-    slateRows.push({
-      k: "MAIL",
-      v: displayedEmail,
-      href: `mailto:${displayedEmail}`,
-    });
-  }
-  if (property.contactWebsite) {
-    slateRows.push({
-      k: "HP",
-      v: property.contactWebsite,
-      href: /^https?:\/\//.test(property.contactWebsite)
-        ? property.contactWebsite
-        : `https://${property.contactWebsite}`,
-    });
-  }
-  // 連絡先が一切無ければ、SCENE / LOC. の最小フォールバックに戻す。
-  if (slateRows.length === 0) {
-    slateRows.push({ k: "SCENE", v: property.id.toUpperCase() });
-    if (property.prefecture || property.city) {
-      slateRows.push({ k: "LOC.", v: `${property.prefecture} ${property.city}`.trim() });
-    }
-  }
 
   // ── SPECS 行 ──
   // 屋外（公道・公園等）はスタジオ向け設備（電源/駐車場/搬入口/防音/ネット）が
@@ -289,7 +257,7 @@ export default function PropertyDetailView({
     property.attendanceRequired;
 
   return (
-    <article className="theme-online">
+    <PropertySceneProvider><article className={`theme-online ${styles.page}`}>
       {preview && sharePreview && (
         <div className="frame mb-0 sticky top-[calc(var(--header-h)/var(--z))] z-40 border border-[#5ec8e8]/40 bg-[#0c1b22] backdrop-blur-sm px-4 py-3 text-[13px] mono tracking-[0.08em] text-[#8fdcf0] flex flex-wrap items-center justify-between gap-3">
           <span>
@@ -324,8 +292,8 @@ export default function PropertyDetailView({
       {/* ══════════════════════════════════════════════════
        *  Breadcrumb — mono uppercase tracked, accent first segment
        * ══════════════════════════════════════════════════ */}
-      <div className="frame pt-6">
-        <nav className="mono text-[10.5px] tracking-[0.24em] uppercase text-muted flex gap-2 items-center">
+      <div className="frame pt-4">
+        <nav className="mono text-[10.5px] tracking-[0.24em] uppercase text-muted flex flex-wrap gap-2 items-center">
           <Link href={lh("/properties")} className="text-accent hover:opacity-75 transition font-medium max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]">
             {en ? "Properties" : "物件を探す"}
           </Link>
@@ -337,55 +305,21 @@ export default function PropertyDetailView({
       </div>
 
       {/* ══════════════════════════════════════════════════
-       *  Slate hero — dark clapperboard panel (left) + cover photo (right)
+       *  Property heading and location actions, separate from photos and 3DGS.
        * ══════════════════════════════════════════════════ */}
-      <div className="frame pt-4">
-        <header className="grid lg:grid-cols-[420px_1fr] border-x border-b border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.05)]">
-          {/* ── slate panel ── */}
-          <div className="bg-[#14181c] text-[#fafaf6] flex flex-col">
-            <div
-              className="h-[34px]"
-              style={{
-                /* 斜めの繰り返しグラデーションはハードな色境界だとブラウザが
-                   アンチエイリアスをかけずギザギザに描画される。各境界に
-                   0.75px だけぼかしを挟んで滑らかにする（縞の見た目・幅は不変）。 */
-                background:
-                  "repeating-linear-gradient(-55deg, #fafaf6 0, #fafaf6 25.25px, #14181c 26.75px, #14181c 51.25px, #fafaf6 52.75px)",
-              }}
-            />
-            <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1">
-              <div className="mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.18em] max-[720px]:tracking-[0.05em] uppercase text-white/55">
-                {slateRows.map((row) => (
-                  <div
-                    key={row.k}
-                    className="flex justify-between max-[720px]:items-center gap-3 py-2.5 border-b border-dashed border-white/[0.16]"
-                  >
-                    <span>{row.k}</span>
-                    {row.href ? (
-                      <a
-                        href={row.href}
-                        target={row.href.startsWith("http") ? "_blank" : undefined}
-                        rel={row.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                        className="font-normal text-right text-[#fafaf6] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-end max-[720px]:min-h-[44px] hover:text-accent transition break-all"
-                      >
-                        {row.v}
-                      </a>
-                    ) : (
-                      <b className="font-normal text-right text-[#fafaf6]">{row.v}</b>
-                    )}
-                  </div>
-                ))}
-              </div>
-
+      <div className="frame">
+        <header className={styles.title}>
+          <div className={styles.titleBody}>
               <h1 className="text-[24px] lg:text-[32px] font-bold leading-[1.34] mt-6 mb-1.5 whitespace-pre-wrap [overflow-wrap:anywhere]">
                 {propertyTitleSegments(property.title || (en ? "(Untitled location)" : "（無題の物件）")).map((part, index) => (
                   part.includes("\n") ? <br key={index} /> : <span key={index} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
                 ))}
               </h1>
-              <p className="text-[13px] text-white/55">
+              <div className={styles.titleMeta}>
+              <p className="text-[13px] text-muted">
                 {property.prefecture} {property.city}
               </p>
-              <div className="flex flex-wrap gap-1.5 mt-4">
+              <div className="flex flex-wrap gap-1.5">
                 {isNewProperty(property) && (
                   <span className="text-[11px] font-bold px-3 py-1 bg-[#e8443a] border border-[#e8443a] text-white mono tracking-[0.18em] uppercase">
                     New
@@ -415,30 +349,32 @@ export default function PropertyDetailView({
                   return rest.map((t) => (
                     <span
                       key={t}
-                      className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]"
+                      className="text-[11px] font-bold px-3 py-1 border border-line text-muted"
                     >
                       {t}
                     </span>
                   ));
                 })()}
               </div>
+              </div>
 
-              <div className="mt-auto pt-6">
+              <div className={styles.titleActions}>
+                {!preview && <BookmarkButton propertyId={property.id} initialBookmarked={bookmarked} signedIn={signedIn} revalidate={`/properties/${property.id}`} />}
                 {!(property.permitRequired && property.priceType === "flat" && property.hourlyPrice === 0) && <p className="mono text-[24px] mb-3.5">
                   {property.priceType === "free" ? (
-                    <small className="text-[13px] text-white/55 tracking-[0.1em]">
+                    <small className="text-[13px] text-muted tracking-[0.1em]">
                       {en ? "Free" : "無料"}
                     </small>
                   ) : property.priceType === "flat" ? (
                     property.hourlyPrice > 0 ? (
                       <>
                         ¥{yen}{" "}
-                        <small className="text-[11px] text-white/55 tracking-[0.16em]">
+                        <small className="text-[11px] text-muted tracking-[0.16em]">
                           {en ? "(permit fee)" : "（撮影許可）"}
                         </small>
                       </>
                     ) : (
-                      <small className="text-[13px] text-white/55 tracking-[0.1em]">
+                      <small className="text-[13px] text-muted tracking-[0.1em]">
                         {en
                           ? `${property.permitType || "Filming permit"} required`
                           : `${property.permitType || "撮影許可"}の申請が必要です`}
@@ -447,23 +383,23 @@ export default function PropertyDetailView({
                   ) : property.hourlyPrice > 0 ? (
                     <>
                       ¥{yen}{" "}
-                      <small className="text-[11px] text-white/55 tracking-[0.16em]">/HR</small>
+                      <small className="text-[11px] text-muted tracking-[0.16em]">/HR</small>
                     </>
                   ) : (
-                    <small className="text-[13px] text-white/55 tracking-[0.1em]">
+                    <small className="text-[13px] text-muted tracking-[0.1em]">
                       {en ? "Contact for pricing" : "お問い合わせください"}
                     </small>
                   )}
                 </p>}
                 {property.priceType === "hourly" && property.dailyPrice > 0 && (
-                  <p className="mono text-[11px] text-white/50 mb-4 -mt-2">
+                  <p className="mono text-[11px] text-muted mb-4 -mt-2">
                     {en ? "Daily" : "日貸し"} ¥
                     {property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}/day
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   <a
-                    href={property.permitRequired ? (property.permitNotes ? "#permit-notice" : undefined) : "#inquiry"}
+                    href={property.permitRequired ? "#permit-notice" : "#inquiry"}
                     className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 bg-accent border border-accent text-[#0a2a35] hover:brightness-[1.06] transition"
                   >
                     {property.permitRequired
@@ -476,118 +412,65 @@ export default function PropertyDetailView({
                   </a>
                 </div>
               </div>
-            </div>
           </div>
 
-          {/* ── cover photo ── */}
-          <div className="relative min-h-[280px] max-[720px]:min-h-0 max-[720px]:aspect-[16/9] lg:min-h-[440px] bg-[#14181c]">
-            {property.cover.src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={property.cover.src}
-                alt={property.cover.alt}
-                width={property.cover.width || undefined}
-                height={property.cover.height || undefined}
-                fetchPriority="high"
-                decoding="async"
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ objectPosition: property.cover.focus || "center" }}
-              />
-            ) : (
-              // カバー未設定の下書きは真っ白な空洞に見えるため、テクスチャ付き
-              // プレースホルダで「準備中」と分かるようにする。
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  backgroundImage:
-                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 14px)",
-                }}
-              >
-                <span className="mono text-[10px] tracking-[0.28em] uppercase text-white/35">
-                  {en ? "Cover coming soon" : "カバー画像 準備中"}
-                </span>
-              </div>
-            )}
-            {!preview && (
-              <div className="absolute top-3 right-3 z-[3]">
-                <BookmarkButton
-                  propertyId={property.id}
-                  initialBookmarked={bookmarked}
-                  signedIn={signedIn}
-                  revalidate={`/properties/${property.id}`}
-                  variant="overlay"
-                />
-              </div>
-            )}
-            <span className="absolute bottom-3.5 right-4 z-[2] mono text-[10px] tracking-[0.22em] uppercase text-[#fafaf6] bg-[#14181c]/72 px-3 py-1.5">
-              TAKE 01 — EXT.
-            </span>
-          </div>
         </header>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-       *  Overview + Specs — side-by-side white cards
-       * ══════════════════════════════════════════════════ */}
-      <section className="frame pt-14">
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-            <Eyebrow en="OVERVIEW" jp={en ? "Overview" : "概要"} />
-            <div className="max-w-[36em]">
-              {renderOverview(property.description) || (
-                <p className="text-[15px] text-ink/60">
-                  {en ? "No description yet." : "紹介文は準備中です。"}
-                </p>
-              )}
-            </div>
-
-            {/* mini metric grid, folded into the Overview card */}
-            {/* 屋外は天井の概念がなく「自然光あり/なし」も常に自明（=矛盾して見える）
-                ため、天井高セルだけを全幅表示にして自然光セルは出さない。 */}
-            <div className="grid grid-cols-2 gap-3 mt-7">
-              {property.category === "outdoor" ? (
-                <div className="border border-line px-3 py-3 col-span-2">
-                  <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
-                    {en ? "Ceiling" : "天井高"}
+      <section data-property-top className={`frame ${styles.top}`}>
+        <PropertyPhotoGallery photos={galleryPhotos} en={en} scannedAt={property.scannedAt} />
+        {!(property.pageBlocks && property.pageBlocks.length > 0) && <div><PropertySceneWorkspace en={en} labels={visibleSplatItems.map(({ it }, index) => it.label || `${en ? "Scene" : "シーン"} ${index + 1}`)}>
+          {visibleSplatItems.map(({it:item,origIndex}) => {
+            const itemDataSaleFree = isDataSaleFree(item.freePeriod, nowIso);
+            const itemDataSaleDisabled = sharePreview || isDataSaleDisabled(item.freePeriod, nowIso);
+            return <div key={origIndex}>                  {item.forSale && !itemDataSaleDisabled && (
+                  <div data-property-purchase className={styles.purchase}>
+                  {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
+                      出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。
+                      salePrice===0 は「無料配布」として許可する（api/purchase 側で
+                      Stripe を経由せず即時完了する）。itemDataSaleDisabled は
+                      このアイテムの限定無料期間終了後に「販売停止」を選んだ場合、
+                      またはsharePreview時に、パネル自体を出さない。 */}
+                  {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length > 0 && (
+                    <DataSalePanel
+                      propertyPresentation
+                      propertyId={property.id}
+                      propertyTitle={property.title}
+                      splatItemIndex={origIndex}
+                      itemLabel={item.label}
+                      licenseOptions={resolveLicenseOptions(item).map((o) => ({
+                        ...o,
+                        price: itemDataSaleFree ? 0 : o.price,
+                      }))}
+                      description={item.saleDescription}
+                      scannedAt={property.scannedAt}
+                      splatSizeMb={item.sizeMb}
+                      zipSizeMb={property.zipSizeMb}
+                      splatItemCount={property.splatItems.length}
+                      tokenCost={property.tokenCost as 1 | 2 | 3 | 5}
+                      purchaseContents={resolvePurchaseContents(item)}
+                      captureDevice={item.captureDevice}
+                      alreadyPurchased={purchasedItemIds.includes(item.id)}
+                      displaySimulation={displaySimulation}
+                      editorialRightsCredit={item.editorialRightsCredit}
+                    />
+                  )}
+                  {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length === 0 && (
+                    <PurchaseContents files={resolvePurchaseContents(item)} en={en} />
+                  )}
                   </div>
-                  <span className="text-[22px] leading-none font-bold">
-                    {en ? "Outdoor" : "屋外"}
-                  </span>
-                </div>
-              ) : (
-                [
-                  [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", property.ceilingHeightM ? "m" : ""],
-                  [
-                    en ? "Natural light" : "自然光",
-                    property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-                    "",
-                  ],
-                ].map(([label, value, unit]) => (
-                  <div key={label as string} className="border border-line px-3 py-3">
-                    <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
-                      {label}
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[22px] leading-none font-bold">{value}</span>
-                      {unit && <span className="text-[12px] text-ink/60">{unit}</span>}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                  )}
 
-            {property.permitRequired && property.permitNotes && (
-              <div id="permit-notice" className="mt-6 border border-accent/60 bg-accent/5 px-4 py-3 scroll-mt-20">
-                  <p className="text-[12px] text-ink leading-relaxed whitespace-pre-wrap">
-                    {property.permitNotes}
-                  </p>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8 flex flex-col">
-            <Eyebrow en="SPECS" jp={en ? "Specs" : "仕様"} />
-            <table className="w-full text-[14px]">
+              {(!item.forSale || itemDataSaleDisabled) && <div className={styles.purchase}><h2>{en ? "3D scene" : "3Dシーン"}</h2><p>{en ? "Data purchase is not available for this scene." : "このシーンのデータ販売は行っていません。"}</p><a href="#walkthrough">{en ? "View walkthrough ↓" : "ウォークスルーを見る ↓"}</a></div>}
+            </div>;
+          })}
+        </PropertySceneWorkspace></div>}
+      </section>
+      <section data-property-facts className={`frame ${styles.facts}`}>
+        <div data-property-access className={styles.info}>
+          <h2>{en ? "Access and facilities" : "アクセス・施設情報"}</h2>
+          {renderOverview(property.description)}
+                      <table className="w-full text-[14px]">
               <tbody>
                 {specRows.map(([label, value], i) => (
                   <tr key={label as string}>
@@ -597,7 +480,7 @@ export default function PropertyDetailView({
                       }`}
                     >
                       {/* ラベルは「POWER ／ 電源」のバイリンガル書式。EN版は英語部分のみ表示。 */}
-                      {en ? (label as string).split(" ／ ")[0] : label}
+                      {(label as string).split(" ／ ")[en ? 0 : 1] || label}
                     </th>
                     <td
                       className={`text-left py-3.5 font-bold border-b border-line ${
@@ -644,296 +527,16 @@ export default function PropertyDetailView({
                 </div>
               )}
 
-            {/* ── mobile-only CTA fallback so #inquiry / bookmark are reachable
-                 without needing to scroll all the way to Contact ── */}
-          </div>
+
+          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer">{en ? "Open in Google Maps →" : "Google Maps で開く →"}</a>}
+          <p className="text-[13px] text-muted mt-4">{en ? "Ceiling: " : "天井高："}{isOutdoorProperty ? (en ? "Outdoor" : "屋外") : property.ceilingHeightM ? `${property.ceilingHeightM} m` : "—"}{!isOutdoorProperty && ` / ${en ? "Natural light: " : "自然光："}${property.hasNaturalLight ? (en ? "Yes" : "あり") : (en ? "No" : "なし")}`}</p>
         </div>
-      </section>
+        <div data-property-contact id="inquiry" className={styles.info}>
+          <h2>{en ? "Filming permits and inquiries" : "撮影許可・お問い合わせ"}</h2>
+          {property.permitRequired && <div id="permit-notice" className={styles.permit}><p>{property.permitNotes || (en ? `${property.permitType || "Filming permit"} required` : `${property.permitType || "撮影許可"}の申請が必要です`)}</p></div>}
+          {!preview && <>            <div>
 
-      {/* ══════════════════════════════════════════════════
-       *  Access — single-marker map + address / station
-       * ══════════════════════════════════════════════════ */}
-      {mapsUrl && (
-        <section className="frame pt-12">
-          <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-            <Eyebrow en="ACCESS" jp={en ? "Access" : "アクセス"} />
-            <div>
-              <div className="flex flex-col">
-                <div className="space-y-3 text-[14px] flex-1">
-                  {property.address && (
-                    <div>
-                      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted mb-1">
-                        {en ? "Address" : "住所"}
-                      </div>
-                      <div className="font-medium">{property.address}</div>
-                    </div>
-                  )}
-                  {property.nearestStation && (
-                    <div>
-                      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted mb-1">
-                        {en ? "Nearest station" : "最寄り駅"}
-                      </div>
-                      <div>{property.nearestStation}</div>
-                    </div>
-                  )}
-                </div>
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] mono text-[11px] tracking-[0.15em] uppercase text-accent hover:underline"
-                >
-                  {en ? "Open in Google Maps →" : "Google Maps で開く →"}
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════
-       *  Pricing details + Rules & policy
-       *  両方あれば横並び2カラムにして、片方だけの時のスカスカな全幅白カードを防ぐ。
-       * ══════════════════════════════════════════════════ */}
-      {(showPricing || showRules) && (
-        <section className="frame pt-12">
-          <div className={`grid gap-6 ${showPricing && showRules ? "lg:grid-cols-2" : ""}`}>
-            {showPricing && (
-              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-                <Eyebrow en="PRICING" jp={en ? "Pricing details" : "料金・利用条件"} />
-                <div className="max-w-[46em]">
-                  {property.minUsageHours > 0 && (
-                    <KeyVal k={en ? "Min. booking" : "最低利用時間"}>
-                      {en ? `${property.minUsageHours} h~` : `${property.minUsageHours}時間〜`}
-                    </KeyVal>
-                  )}
-                  <KeyVal k={en ? "Tax" : "税"}>
-                    {property.taxIncluded
-                      ? en
-                        ? "Tax included"
-                        : "表示は税込"
-                      : en
-                        ? "Before tax"
-                        : "表示は税別"}
-                  </KeyVal>
-                  {property.scoutingFee && (
-                    <KeyVal k={en ? "Scout fee" : "ロケハン費"}>{property.scoutingFee}</KeyVal>
-                  )}
-                  {property.extraFees && (
-                    <KeyVal k={en ? "Extra fees" : "追加費用"}>{property.extraFees}</KeyVal>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {showRules && (
-              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
-                <Eyebrow en="RULES" jp={en ? "Rules & policy" : "ルール・規程"} />
-                <div className="max-w-[46em]">
-                  {property.prohibitedItems && (
-                    <KeyVal k={en ? "Prohibited" : "禁止事項"}>{property.prohibitedItems}</KeyVal>
-                  )}
-                  {property.cancellationPolicy && (
-                    <KeyVal k={en ? "Cancellation" : "キャンセル"}>
-                      {property.cancellationPolicy}
-                    </KeyVal>
-                  )}
-                  {(property.insuranceRequired || property.attendanceRequired) && (
-                    <KeyVal k={en ? "Requirements" : "必須事項"}>
-                      <div className="flex flex-wrap gap-2">
-                        {property.insuranceRequired && (
-                          <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
-                            {en ? "Insurance required" : "保険加入 必須"}
-                          </span>
-                        )}
-                        {property.attendanceRequired && (
-                          <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
-                            {en ? "Attendance required" : "立ち会い 必須"}
-                          </span>
-                        )}
-                      </div>
-                    </KeyVal>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════
-       *  Gallery — "contact sheet" band, white print frames
-       * ══════════════════════════════════════════════════ */}
-      {galleryPhotos.length > 0 && (
-        <section className="mt-14 py-14 bg-[#e9edf1] border-y border-line">
-          <div className="frame">
-            <Eyebrow en="CONTACT SHEET" jp={en ? "Gallery" : "ギャラリー"} />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {galleryPhotos.map((p, i) => (
-                <figure
-                  key={i}
-                  className="bg-white p-2 pb-7 relative shadow-[0_2px_8px_rgba(20,24,28,0.09)]"
-                  style={{
-                    transform:
-                      i % 3 === 0 ? "rotate(-0.6deg)" : i % 3 === 2 ? "rotate(0.5deg)" : undefined,
-                  }}
-                >
-                  <div className="aspect-[4/3] overflow-hidden">
-                    <ZoomableImage
-                      src={p.src}
-                      alt={p.alt}
-                      focus={p.focus}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <figcaption className="absolute bottom-2 left-2.5 right-2.5 flex justify-between mono text-[9px] tracking-[0.2em] uppercase text-muted">
-                    <span>FRAME {String(i + 1).padStart(2, "0")}</span>
-                    <span className="truncate max-w-[50%] text-right">{p.alt}</span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════
-       *  3DGS — GS-xx mono chrome around untouched ViewerGate
-       * ══════════════════════════════════════════════════ */}
-      <div className="frame pt-14">
-        {property.pageBlocks && property.pageBlocks.length > 0 ? (
-          <section className="mb-16">
-            {visibleSplatItems.length > 0 && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>}
-            <StudioPageBlocks
-              blocks={property.pageBlocks}
-              property={property}
-              freeAccess={freeAccess}
-              canViewRestricted={canViewRestricted}
-              canViewNdaOnly={canViewNdaOnly}
-              hasViewerAccess={hasViewerAccess}
-              signedIn={signedIn}
-              previewToken={previewToken}
-              displaySimulation={displaySimulation}
-              freeViewer={isAdminUser}
-              unlockedItemIds={unlockedItemIds}
-              locale={locale}
-            />
-          </section>
-        ) : visibleSplatItems.length === 0 ? (
-          <section className="mb-16">
-            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
-            <div className="border border-dashed border-line py-16 text-center bg-white">
-              <p className="text-ink/40 text-[14px]">
-                {en ? "3DGS data is coming soon." : "3DGSデータは準備中です。"}
-              </p>
-            </div>
-          </section>
-        ) : (
-          <section className="mb-16">
-            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
-            <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>
-            {/* ⚠ 件数に関わらず常に2カラムのグリッドに置く（2026-08-13）。
-                以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
-                `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
-                大きさになっていた（実測 PC1440 で高さ 760px 超）。複数件のときの
-                「左右2分割でちょうどいい」大きさを1件のときの基準にする。
-                ただし1件だけを2カラムのまま置くと左半分に寄って右半分が丸ごと
-                空くので、その時だけ「1カラム分の幅(= (100% - gap)/2)」を保った
-                まま中央へ寄せる。gap-x-8 = 2rem を引いてから半分にしている。 */}
-            <div
-              className={
-                visibleSplatItems.length > 1
-                  ? "grid lg:grid-cols-2 gap-x-8 gap-y-10"
-                  : "space-y-10 lg:max-w-[calc((100%-2rem)/2)] lg:mx-auto"
-              }
-            >
-              {visibleSplatItems.map(({ it: item, origIndex }, i) => {
-                // 限定無料期間はアイテム単位(item.freePeriod)。sharePreview(先方
-                // 共有プレビュー)は購入導線自体を出さない仕様のためここで force。
-                const itemDataSaleFree = isDataSaleFree(item.freePeriod, nowIso);
-                const itemDataSaleDisabled = sharePreview || isDataSaleDisabled(item.freePeriod, nowIso);
-                return (
-                /* 縦の上限をビューポート高で縛る。ビューアーは aspect-video なので
-                   「高さの上限」は幅の上限として書くしかない（max-h では中の
-                   aspect-video が縮まずはみ出す）。--z は html の zoom なので
-                   実画面基準の vh は必ず var(--z) で割る（CLAUDE.md の規約）。
-                   高さ 45vh 相当 → 幅 45vh × 16/9。 */
-                <section key={origIndex} className="max-w-[calc(45vh/var(--z)*16/9)]">
-                  <div className="flex items-baseline gap-3 mb-4 mono text-[11px] tracking-[0.16em] uppercase">
-                    <span className="text-accent font-medium">
-                      GS-{String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="text-ink/80 normal-case tracking-[0.02em] font-sans text-[13px] font-bold">
-                      {item.label || (en ? "Virtual Walkthrough" : "3Dウォークスルー")}
-                    </span>
-                    <span className="flex-1 h-px bg-current opacity-20" />
-                    <span className="text-muted">{item.sizeMb} MB</span>
-                  </div>
-                  <ViewerGate
-                    splatUrl={item.splatUrl}
-                    propertyId={property.id}
-                    label={item.label || `#${origIndex + 1}`}
-                    sizeMb={item.sizeMb}
-                    previewVideoUrl={item.previewVideoUrl}
-                    tokenCost={property.tokenCost}
-                    freeAccess={freeAccess}
-                    hasSubscription={hasViewerAccess}
-                    signedIn={signedIn}
-                    previewToken={previewToken}
-                    displaySimulation={displaySimulation}
-                    freeViewer={isAdminUser}
-                    alreadyUnlocked={unlockedItemIds.includes(item.id)}
-                  />
-                  {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
-                      出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。
-                      salePrice===0 は「無料配布」として許可する（api/purchase 側で
-                      Stripe を経由せず即時完了する）。itemDataSaleDisabled は
-                      このアイテムの限定無料期間終了後に「販売停止」を選んだ場合、
-                      またはsharePreview時に、パネル自体を出さない。 */}
-                  {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length > 0 && (
-                    <DataSalePanel
-                      propertyId={property.id}
-                      propertyTitle={property.title}
-                      splatItemIndex={origIndex}
-                      itemLabel={item.label}
-                      licenseOptions={resolveLicenseOptions(item).map((o) => ({
-                        ...o,
-                        price: itemDataSaleFree ? 0 : o.price,
-                      }))}
-                      description={item.saleDescription}
-                      scannedAt={property.scannedAt}
-                      splatSizeMb={item.sizeMb}
-                      zipSizeMb={property.zipSizeMb}
-                      splatItemCount={property.splatItems.length}
-                      tokenCost={property.tokenCost as 1 | 2 | 3 | 5}
-                      purchaseContents={resolvePurchaseContents(item)}
-                      captureDevice={item.captureDevice}
-                      alreadyPurchased={purchasedItemIds.includes(item.id)}
-                      displaySimulation={displaySimulation}
-                      editorialRightsCredit={item.editorialRightsCredit}
-                    />
-                  )}
-                  {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length === 0 && (
-                    <PurchaseContents files={resolvePurchaseContents(item)} en={en} />
-                  )}
-                </section>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════
-         *  Community — CONTACT（常設）＋ 掲示板
-         *  常設の黒アクションバー（保存・問い合わせボタンだけの帯）は不要と
-         *  判断され撤去。CONTACTカードは元通り常時表示に戻し、問い合わせ先が
-         *  無い物件はカード内に「受け付けていません」の文言＋★保存だけ出す。
-         * ══════════════════════════════════════════════════ */}
-        {!preview && (
-          <section id="inquiry" className="mb-14">
-            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9 mb-4">
-              <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
-              <div className="grid lg:grid-cols-2 gap-8 items-start">
+              <div className="space-y-4">
                 <div className="text-[14px]">
                   {property.contactPhone && (
                     <div className="flex gap-5 py-3 border-b border-line">
@@ -1009,6 +612,164 @@ export default function PropertyDetailView({
               </div>
             </div>
 
+</>}
+        </div>
+      </section>
+      <section id="walkthrough" data-property-3dgs data-property-workspace className={`frame ${styles.workspace}`} aria-label={en ? "3DGS viewing and data purchase" : "3DGS表示とデータ購入"}>
+        {property.pageBlocks && property.pageBlocks.length > 0 ? (
+          <section className="mb-7">
+            {visibleSplatItems.length > 0 && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>}
+            <StudioPageBlocks
+              blocks={property.pageBlocks}
+              property={property}
+              freeAccess={freeAccess}
+              canViewRestricted={canViewRestricted}
+              canViewNdaOnly={canViewNdaOnly}
+              hasViewerAccess={hasViewerAccess}
+              signedIn={signedIn}
+              previewToken={previewToken}
+              displaySimulation={displaySimulation}
+              freeViewer={isAdminUser}
+              unlockedItemIds={unlockedItemIds}
+              locale={locale}
+            />
+          </section>
+        ) : visibleSplatItems.length === 0 ? (
+          <section className="mb-7">
+            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
+            <div className="border border-dashed border-line py-16 text-center bg-white">
+              <p className="text-ink/40 text-[14px]">
+                {en ? "3DGS data is coming soon." : "3DGSデータは準備中です。"}
+              </p>
+            </div>
+          </section>
+        ) : (
+          <section className="mb-7">
+            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
+            <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>
+            <PropertySceneWorkspace en={en} labels={visibleSplatItems.map(({ it }, index) => it.label || `${en ? "Scene" : "シーン"} ${index + 1}`)}>
+              {visibleSplatItems.map(({ it: item, origIndex }) => {
+                return (
+                <section key={origIndex} data-property-scene className={styles.scene}>
+                  <div data-property-viewing className={styles.viewing}>
+                  <div className={styles.viewingHeader}>
+                    <h3>{item.label || (en ? "3DGS walkthrough" : "3DGSウォークスルー")}</h3>
+                    <span>{item.sizeMb} MB</span>
+                  </div>
+                  <div className={styles.viewport} data-has-preview={!!item.previewVideoUrl}>
+                  <ViewerGate
+                    splatUrl={item.splatUrl}
+                    propertyId={property.id}
+                    label={item.label || `#${origIndex + 1}`}
+                    sizeMb={item.sizeMb}
+                    previewVideoUrl={item.previewVideoUrl}
+                    tokenCost={property.tokenCost}
+                    freeAccess={freeAccess}
+                    hasSubscription={hasViewerAccess}
+                    signedIn={signedIn}
+                    previewToken={previewToken}
+                    displaySimulation={displaySimulation}
+                    freeViewer={isAdminUser}
+                    alreadyUnlocked={unlockedItemIds.includes(item.id)}
+                  />
+                  </div>
+                  </div>
+                </section>
+                );
+              })}
+            </PropertySceneWorkspace>
+          </section>
+        )}
+      </section>
+
+
+      <section id="license-details" data-property-license-details data-property-license className={`frame ${styles.licenseSection}`}>
+        {!(property.pageBlocks && property.pageBlocks.length > 0) && <PropertySceneWorkspace en={en} showPicker={false} labels={visibleSplatItems.map(({ it }, index) => it.label || `${en ? "Scene" : "シーン"} ${index + 1}`)}>
+          {visibleSplatItems.map(({it:item,origIndex}) => <div key={origIndex}>{item.forSale && !sharePreview && !isDataSaleDisabled(item.freePeriod, nowIso) && <PropertyLicenseDetails options={resolveLicenseOptions(item)} en={en}/>}</div>)}
+        </PropertySceneWorkspace>}
+      </section>
+
+      {/* ══════════════════════════════════════════════════
+       *  Pricing details + Rules & policy
+       *  両方あれば横並び2カラムにして、片方だけの時のスカスカな全幅白カードを防ぐ。
+       * ══════════════════════════════════════════════════ */}
+      {(showPricing || showRules) && (
+        <section className="frame pt-12">
+          <div className={`grid gap-6 ${showPricing && showRules ? "lg:grid-cols-2" : ""}`}>
+            {showPricing && (
+              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+                <Eyebrow en="PRICING" jp={en ? "Pricing details" : "料金・利用条件"} />
+                <div className="max-w-[46em]">
+                  {property.minUsageHours > 0 && (
+                    <KeyVal k={en ? "Min. booking" : "最低利用時間"}>
+                      {en ? `${property.minUsageHours} h~` : `${property.minUsageHours}時間〜`}
+                    </KeyVal>
+                  )}
+                  <KeyVal k={en ? "Tax" : "税"}>
+                    {property.taxIncluded
+                      ? en
+                        ? "Tax included"
+                        : "表示は税込"
+                      : en
+                        ? "Before tax"
+                        : "表示は税別"}
+                  </KeyVal>
+                  {property.scoutingFee && (
+                    <KeyVal k={en ? "Scout fee" : "ロケハン費"}>{property.scoutingFee}</KeyVal>
+                  )}
+                  {property.extraFees && (
+                    <KeyVal k={en ? "Extra fees" : "追加費用"}>{property.extraFees}</KeyVal>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showRules && (
+              <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
+                <Eyebrow en="RULES" jp={en ? "Rules & policy" : "ルール・規程"} />
+                <div className="max-w-[46em]">
+                  {property.prohibitedItems && (
+                    <KeyVal k={en ? "Prohibited" : "禁止事項"}>{property.prohibitedItems}</KeyVal>
+                  )}
+                  {property.cancellationPolicy && (
+                    <KeyVal k={en ? "Cancellation" : "キャンセル"}>
+                      {property.cancellationPolicy}
+                    </KeyVal>
+                  )}
+                  {(property.insuranceRequired || property.attendanceRequired) && (
+                    <KeyVal k={en ? "Requirements" : "必須事項"}>
+                      <div className="flex flex-wrap gap-2">
+                        {property.insuranceRequired && (
+                          <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
+                            {en ? "Insurance required" : "保険加入 必須"}
+                          </span>
+                        )}
+                        {property.attendanceRequired && (
+                          <span className="text-[11px] font-bold px-2.5 py-1 border border-amber-400/60 bg-amber-50 text-amber-800">
+                            {en ? "Attendance required" : "立ち会い 必須"}
+                          </span>
+                        )}
+                      </div>
+                    </KeyVal>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      <div className="frame pt-8">
+
+
+        {/* ══════════════════════════════════════════════════
+         *  Community — CONTACT（常設）＋ 掲示板
+         *  常設の黒アクションバー（保存・問い合わせボタンだけの帯）は不要と
+         *  判断され撤去。CONTACTカードは元通り常時表示に戻し、問い合わせ先が
+         *  無い物件はカード内に「受け付けていません」の文言＋★保存だけ出す。
+         * ══════════════════════════════════════════════════ */}
+        {!preview && (
+          <section className="mb-14">
             {/* 掲示板 */}
             <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
               <Eyebrow
@@ -1098,6 +859,6 @@ export default function PropertyDetailView({
        *  themed filler up into exactly that margin with a matching negative
        *  margin — scoped to this component only. */}
       <div className="theme-online h-32 -mb-32" aria-hidden />
-    </article>
+    </article></PropertySceneProvider>
   );
 }

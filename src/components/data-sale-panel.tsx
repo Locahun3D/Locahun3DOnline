@@ -21,6 +21,7 @@ import PurchaseContents from "@/components/purchase-contents";
 import type { PurchaseContent } from "@/lib/purchase-contents";
 
 interface DataSalePanelProps {
+  propertyPresentation?: boolean;
   propertyId: string;
   propertyTitle: string;
   splatItemIndex: number;
@@ -42,6 +43,7 @@ interface DataSalePanelProps {
 }
 
 export default function DataSalePanel({
+  propertyPresentation = false,
   propertyId,
   propertyTitle,
   splatItemIndex,
@@ -134,14 +136,15 @@ export default function DataSalePanel({
   ].filter(Boolean).join(" / ");
 
   return (
-    <div className="mt-4 min-w-0 space-y-3">
+    <div data-property-presentation={propertyPresentation || undefined} className="mt-4 min-w-0 space-y-3">
       <div className="min-w-0 border border-accent/30 bg-accent/5 p-4">
         <div className="flex items-baseline gap-2">
-          <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">DATA</span>
+          {!propertyPresentation && <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-50">DATA</span>}
           <span className="text-[13px] font-medium">
-            {en ? "Buy 3D data" : "3Dデータ購入"}{itemLabel && ` — ${itemLabel}`}
+            {en ? "Buy 3D data" : "3Dデータ購入"}{!propertyPresentation && itemLabel && ` — ${itemLabel}`}
           </span>
         </div>
+        {propertyPresentation && itemLabel && <p className="text-[12px] text-muted mt-1">{itemLabel}</p>}
         {description && (
           <p className="text-[11px] max-[720px]:text-[12px] opacity-60 mt-0.5 max-[720px]:line-clamp-none line-clamp-1">{description}</p>
         )}
@@ -151,7 +154,12 @@ export default function DataSalePanel({
       </div>
       <section aria-label={en ? "Purchase options" : "ライセンスと購入手続き"} className="min-w-0 border border-accent/30 bg-accent/5 p-4 space-y-4">
       <div className="min-w-0">
-        {licenseOptions.length > 1 ? (
+        {propertyPresentation ? (<div className="space-y-2">{licenseOptions.map((o) => <label key={o.license} data-property-license-card data-selected={selectedLicense === o.license}>
+<input type="radio" name={`license-${propertyId}-${splatItemIndex}`} checked={selectedLicense === o.license} onChange={() => setSelectedLicense(o.license)} />
+<strong>{dataLicenseLabel(o.license, lc)}</strong>
+<div data-property-license-price>{o.price === 0 ? (en ? "Free" : "無料") : `¥${o.price.toLocaleString(en ? "en-US" : "ja-JP")}`} <small>{en ? "tax excl." : "税抜"}</small></div>
+<p>{dataLicenseDesc(o.license, lc)}</p>
+</label>)}</div>) : licenseOptions.length > 1 ? (
           <div className="mt-1.5">
             <div className="mono text-[9px] tracking-[0.18em] uppercase text-muted mb-1">
               {en ? "Select license" : "ライセンスを選択"}
@@ -191,7 +199,7 @@ export default function DataSalePanel({
           </div>
         )}
         {/* 違いはツールチップに隠さず常時表示する（スマホではホバーできない） */}
-        <LicenseDescription selected={license} locale={lc} />
+        {!propertyPresentation && <LicenseDescription selected={license} locale={lc} />}
         {license === "editorial" && editorialRightsCredit && (
           <p className="text-[10px] text-amber-500/90 mt-1 leading-snug">
             {en ? "Publishing requires this credit: " : "公開時は権利表記が必要です："}
@@ -215,7 +223,7 @@ export default function DataSalePanel({
         </div>
       ) : (
         <>
-          <div>
+          <div hidden={propertyPresentation}>
             {price === 0 ? (
               <span className="serif text-lg text-accent">{en ? "Free" : "無料"}</span>
             ) : (
@@ -279,7 +287,7 @@ export default function DataSalePanel({
       )}
       {/* 比較表は basis-full で1行を占有させる。狭いテキスト列に入れると
           横スクロールが出て右端の列が切れる（実機で確認して移動した）。 */}
-      <LicenseDifference options={licenseOptions} selected={license} locale={lc} />
+      {propertyPresentation ? <a href="#license-details" className="text-[13px] text-accent underline">{en ? "Compare licenses and conditions ↓" : "ライセンスの違い・注意事項を見る ↓"}</a> : <LicenseDifference options={licenseOptions} selected={license} locale={lc} />}
 
       {/* 「自分の用途で使えるのか」を比較表の直下でそのまま聞ける。
           ⚠ LicenseDifference は区分が1つだと null を返すので、問い合わせ導線は

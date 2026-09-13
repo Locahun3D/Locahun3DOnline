@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
+import styles from "./account-dashboard.module.css";
 import type { PublicUser } from "@/lib/account-schema";
 import { totalTokens, publicDisplayName } from "@/lib/account-schema";
 import DisplayNameEditor from "@/components/account/display-name-editor";
@@ -38,6 +40,8 @@ export default function AccountDashboard({
   notificationUnreadCount,
   billing = null,
   nowIso,
+  loginDevices,
+  adminNotificationUnreadCount = 0,
 }: {
   user: PublicUser;
   locale: Locale;
@@ -58,6 +62,8 @@ export default function AccountDashboard({
    *  (レンダー中に Date.now() を直接呼ばないため、Server Component でも
    *  純粋関数のルールに沿わせる)。 */
   nowIso: string;
+  loginDevices?: ReactNode;
+  adminNotificationUnreadCount?: number;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
@@ -112,13 +118,13 @@ export default function AccountDashboard({
   const invoiceAutoSend = !planFree; // 有料プランは全て毎月請求書自動送付（pricing 表と一致）
 
   return (
-    <div className="space-y-6 mb-10">
+    <div className={styles.dashboard}>
       {/* ── ユーザーヘッダー ── */}
-      <div className="ui-page-header flex flex-wrap items-center gap-4">
+      <div className={styles.profile} data-account-region="profile">
         <div className="w-14 h-14 shrink-0 grid place-items-center bg-[#1ea0c4] text-white text-[18px] font-bold">
           {initials}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className={styles.profileInfo}>
           <DisplayNameEditor initialName={shownName} en={en} />
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             {isAdmin && (
@@ -135,25 +141,163 @@ export default function AccountDashboard({
               {en ? `Joined ${joinedDate}` : `登録日 ${joinedDate}`}
             </span>
           </div>
-          <div className="mono text-[11px] text-[#7b8794] mt-1.5">
+          <div className={`${styles.profileMeta} text-[12px] text-[#7b8794] mt-1.5`}>
             {user.email}
             {user.company && <span className="ml-2">・{user.company}</span>}
           </div>
         </div>
+        {isAdmin && (
+          <Link href={lh("/admin/notifications")} className={styles.adminEntry}>
+            {en ? "Admin notifications" : "管理者向け通知"}
+            <span className={styles.adminCount}>{adminNotificationUnreadCount}</span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+        )}
       </div>
 
-      <NotificationList notifications={notifications} unreadCount={notificationUnreadCount} en={en} locale={locale} />
+      {notifications.length > 0 && (
+        <details className={styles.notifications} data-account-region="notifications">
+          <summary>
+            <strong>{en ? "Notifications" : "お知らせ"}</strong>
+            <span className={styles.unreadCount}>{notificationUnreadCount ?? notifications.filter((n) => !n.read).length}</span>
+            <span className={styles.noticeHint}>{en ? "View your notifications" : "ご自身へのお知らせを確認"}</span>
+            <span className={styles.noticeToggle}>{en ? "Open / close" : "開く・閉じる"}</span>
+          </summary>
+          <NotificationList notifications={notifications} unreadCount={notificationUnreadCount} en={en} locale={locale} />
+        </details>
+      )}
 
+      <div className={styles.columns}>
+      {/* ── 中段: 保存した物件 / 閲覧履歴 ── */}
+      <div className={styles.workColumn} data-account-region="work">
+        {/* 保存した物件 */}
+        <div data-account-slot="saved" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
+          <div className={styles.cardTitle}>
+            {en ? "Saved properties" : "保存した物件"}
+          </div>
+          {boardTiles.length > 0 ? (
+            <div className={styles.boards}>
+              {boardTiles.slice(0, 3).map((t, i) => (
+                <div key={i} className={styles.board}>
+                  <span className={styles.boardName}>
+                    {t.name}
+                  </span>
+                  <div className="border border-[#e2e7ec] p-1">
+                    <div className={styles.boardImage}>
+                      {t.cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={t.cover} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center mono text-[8px] opacity-40">
+                          {en ? "empty" : "空"}
+                        </div>
+                      )}
+                      <span className="absolute bottom-1 right-1 mono text-[8px] leading-[13px] text-white bg-black/55 px-1">
+                        {t.count}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-[#f6f8fa] p-8 text-center mb-3">
+              <p className="text-[12px] text-[#7b8794]">
+                {en ? "No saved properties yet." : "まだ保存した物件はありません。"}
+              </p>
+            </div>
+          )}
+          <div className="flex items-center justify-between mt-auto pt-1">
+            <span className="mono text-[10px] text-[#7b8794]">
+              {en
+                ? `Saved ${user.bookmarks.length} · Boards ${totalBoardCount}`
+                : `保存した物件 ${user.bookmarks.length}件・ボード${totalBoardCount}`}
+            </span>
+            <Link
+              href={lh("/dashboard/bookmarks")}
+              className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline"
+            >
+              {en ? "Organize →" : "整理する →"}
+            </Link>
+          </div>
+        </div>
+
+        {/* 閲覧履歴 */}
+        <div data-account-slot="history" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div className={styles.cardTitle}>
+              {en ? "Browsing history" : "閲覧履歴"}
+            </div>
+            {/* 直近1件のプレビューだけでは全件一覧に辿り着けなかった
+                （実機フィードバック「閲覧履歴、一覧できない」）ため、状態に
+                関わらず常に /dashboard/unlocked への導線を出す。 */}
+            <Link
+              href={lh("/dashboard/unlocked")}
+              className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline shrink-0"
+            >
+              {en ? `All (${unlockedCount}) →` : `全${unlockedCount}件 →`}
+            </Link>
+          </div>
+          {lastUnlock && lastUnlockProperty ? (
+            <>
+              <div className={styles.recentScene}>
+                {lastUnlockProperty.cover?.src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={lastUnlockProperty.cover.src}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#eef2f5]" />
+                )}
+                <div className={styles.recentTime}>
+                  {relativeTime(lastUnlock.unlockedAt, now, en)}
+                </div>
+                <div className={styles.recentLabel}>
+                  {en ? "Recently walked scene" : "最近歩いたシーン"}
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-auto pt-1">
+                <span className={styles.historyDescription}>
+                  {en
+                    ? `${lastUnlockProperty.title}${lastUnlockSceneLabel ? ` (${lastUnlockSceneLabel})` : ""} · re-view ${daysRemainingLabel(lastUnlock.expiresAt, now, en)}`
+                    : `閲覧履歴 ${lastUnlockProperty.title}${lastUnlockSceneLabel ? `（${lastUnlockSceneLabel}）` : ""}・無償再視聴 ${daysRemainingLabel(lastUnlock.expiresAt, now, en)}`}
+                </span>
+                <Link
+                  href={lh(`/properties/${lastUnlockProperty.id}`)}
+                  className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline shrink-0"
+                >
+                  {en ? "Revisit →" : "再訪 →"}
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="bg-[#f6f8fa] p-8 text-center flex-1 flex flex-col items-center justify-center gap-3">
+              <p className="text-[12px] text-[#7b8794]">
+                {en ? "No walked scenes yet." : "まだ歩いたシーンがありません"}
+              </p>
+              <Link
+                href={lh("/properties")}
+                className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline"
+              >
+                {en ? "Browse properties →" : "物件を探す →"}
+              </Link>
+            </div>
+          )}
+        </div>
+        <div className={styles.devices} data-account-region="devices" data-account-slot="devices">{loginDevices}</div>
+      </div>
       {/* ── 上段: ステータス3枚（トークン / プラン / 請求書＋配信設定） ──
           ⚠ 配信設定（新着ロケ地の先行案内）は独立カードにせず、請求書カードの
             中に入れる。以前は同意前だけページ上部に全幅バナー、同意後はページ
             最下部、と場所が変わっていた。4枚目の独立カードにした版も試したが、
             「請求書のタブの中に説明付きで」というご指定に合わせて中へ移した
             （2026-07-30）。 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
+      <aside className={styles.subscriptionColumn} data-account-region="subscription" aria-label={en ? "Subscription and balance" : "契約と残高"}>
         {/* TOKENS */}
-        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
+        <div data-account-slot="tokens" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
+          <div className={styles.cardTitle}>
             {en ? "Tokens" : "トークン"}
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-[#1ea0c4]">{tokens}</div>
@@ -165,8 +309,8 @@ export default function AccountDashboard({
         </div>
 
         {/* PLAN */}
-        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
+        <div data-account-slot="plan" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
+          <div className={styles.cardTitle}>
             {en ? "Plan" : "プラン"}
           </div>
           <div className="text-xl sm:text-2xl font-bold">
@@ -209,8 +353,8 @@ export default function AccountDashboard({
         </div>
 
         {/* 請求書・購入履歴 */}
-        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-2">
+        <div data-account-slot="invoices" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
+          <div className={styles.cardTitle}>
             {en ? "Invoices & purchases" : "請求書・購入履歴"}
           </div>
           <div className="flex items-center gap-3 mb-2">
@@ -249,134 +393,14 @@ export default function AccountDashboard({
           {/* 配信設定はこのカードの中。枠を二重にしないため inline で描く。 */}
           <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} inline />
         </div>
-      </div>
-
-      {/* ── 中段: 保存した物件 / 閲覧履歴 ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
-        {/* 保存した物件 */}
-        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
-            {en ? "Saved properties" : "保存した物件"}
-          </div>
-          {boardTiles.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2.5 mb-3">
-              {boardTiles.slice(0, 3).map((t, i) => (
-                <div key={i} className="relative pt-[16px]">
-                  <span className="absolute top-0 left-0 z-10 h-[16px] max-w-[90%] flex items-center px-1.5 text-[9px] font-bold truncate bg-[#eef2f5] text-[#14181c]/70 [clip-path:polygon(0_0,85%_0,100%_100%,0_100%)]">
-                    {t.name}
-                  </span>
-                  <div className="border border-[#e2e7ec] p-1">
-                    <div className="relative aspect-[16/10] bg-[#eef2f5] overflow-hidden">
-                      {t.cover ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={t.cover} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full grid place-items-center mono text-[8px] opacity-40">
-                          {en ? "empty" : "空"}
-                        </div>
-                      )}
-                      <span className="absolute bottom-1 right-1 mono text-[8px] leading-[13px] text-white bg-black/55 px-1">
-                        {t.count}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-[#f6f8fa] p-8 text-center mb-3">
-              <p className="text-[12px] text-[#7b8794]">
-                {en ? "No saved properties yet." : "まだ保存した物件はありません。"}
-              </p>
-            </div>
-          )}
-          <div className="flex items-center justify-between mt-auto pt-1">
-            <span className="mono text-[10px] text-[#7b8794]">
-              {en
-                ? `Saved ${user.bookmarks.length} · Boards ${totalBoardCount}`
-                : `保存した物件 ${user.bookmarks.length}件・ボード${totalBoardCount}`}
-            </span>
-            <Link
-              href={lh("/dashboard/bookmarks")}
-              className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline"
-            >
-              {en ? "Organize →" : "整理する →"}
-            </Link>
-          </div>
-        </div>
-
-        {/* 閲覧履歴 */}
-        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
-            <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794]">
-              {en ? "Browsing history" : "閲覧履歴"}
-            </div>
-            {/* 直近1件のプレビューだけでは全件一覧に辿り着けなかった
-                （実機フィードバック「閲覧履歴、一覧できない」）ため、状態に
-                関わらず常に /dashboard/unlocked への導線を出す。 */}
-            <Link
-              href={lh("/dashboard/unlocked")}
-              className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline shrink-0"
-            >
-              {en ? `All (${unlockedCount}) →` : `全${unlockedCount}件 →`}
-            </Link>
-          </div>
-          {lastUnlock && lastUnlockProperty ? (
-            <>
-              <div className="relative aspect-video overflow-hidden mb-3">
-                {lastUnlockProperty.cover?.src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={lastUnlockProperty.cover.src}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-[#eef2f5]" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <div className="absolute top-2 right-2 mono text-[9px] tracking-[0.1em] text-white/90 bg-black/40 px-1.5 py-0.5">
-                  {relativeTime(lastUnlock.unlockedAt, now, en)}
-                </div>
-                <div className="absolute bottom-2 left-2.5 text-white text-[13px] font-bold">
-                  {en ? "Recently walked scene" : "最近歩いたシーン"}
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-auto pt-1">
-                <span className="mono text-[10px] text-[#7b8794] truncate pr-2">
-                  {en
-                    ? `${lastUnlockProperty.title}${lastUnlockSceneLabel ? ` (${lastUnlockSceneLabel})` : ""} · re-view ${daysRemainingLabel(lastUnlock.expiresAt, now, en)}`
-                    : `閲覧履歴 ${lastUnlockProperty.title}${lastUnlockSceneLabel ? `（${lastUnlockSceneLabel}）` : ""}・無償再視聴 ${daysRemainingLabel(lastUnlock.expiresAt, now, en)}`}
-                </span>
-                <Link
-                  href={lh(`/properties/${lastUnlockProperty.id}`)}
-                  className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline shrink-0"
-                >
-                  {en ? "Revisit →" : "再訪 →"}
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="bg-[#f6f8fa] p-8 text-center flex-1 flex flex-col items-center justify-center gap-3">
-              <p className="text-[12px] text-[#7b8794]">
-                {en ? "No walked scenes yet." : "まだ歩いたシーンがありません"}
-              </p>
-              <Link
-                href={lh("/properties")}
-                className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline"
-              >
-                {en ? "Browse properties →" : "物件を探す →"}
-              </Link>
-            </div>
-          )}
-        </div>
+      </aside>
       </div>
 
       {/* ── 下段: NDA / ギフトコード ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4">
+      <div className={styles.contracts} data-account-region="contracts">
         {/* NDA */}
-        <div className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
-          <div className="mono text-[10px] tracking-[0.24em] uppercase text-[#7b8794] mb-3">
+        <div data-account-slot="nda" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
+          <div className={styles.cardTitle}>
             NDA
           </div>
           {ndaAccepted ? (
@@ -435,7 +459,7 @@ export default function AccountDashboard({
         </div>
 
         {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード） */}
-        <RedeemGift />
+        <div data-account-slot="gift"><RedeemGift /></div>
 
         {/* トークン追加購入（5枚 ¥3,000）のカードは 2026-08-13 に廃止。
             トークンは月額プランの付与のみで、買い足す導線は持たない。

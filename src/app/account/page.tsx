@@ -52,6 +52,9 @@ export default async function AccountPage({
   const allUnlocks = await viewUnlockRepo.list({ userId: user.id });
   const unlockedCount = allUnlocks.filter((u) => u.expiresAt > nowIso).length;
   const { notifications, unreadCount: notificationUnreadCount } = await getNotificationSummary(user.id, "user");
+  const adminNotificationUnreadCount = user.role === "admin"
+    ? (await getNotificationSummary(user.id, "admin", 0)).unreadCount
+    : 0;
 
   // ── ログイン端末（Clerkのアクティブセッション）— マイページから自己管理 ──
   // Clerk API 障害でマイページ全体を落とさないよう空配列にフォールバック。
@@ -253,11 +256,6 @@ export default async function AccountPage({
               月次トークンを付与しました。
             </>
           )}
-          <span className="block mono text-[10px] text-muted mt-1">
-            {en
-              ? "※ Payment integration in progress (changes apply instantly for now)"
-              : "※ 決済連携は準備中（現在は即時反映）"}
-          </span>
         </div>
       )}
 
@@ -319,18 +317,18 @@ export default async function AccountPage({
         unlockedCount={unlockedCount}
         notifications={notifications}
         notificationUnreadCount={notificationUnreadCount}
+        adminNotificationUnreadCount={adminNotificationUnreadCount}
         billing={billing}
         nowIso={nowIso}
+        loginDevices={
+          <LoginDevices
+            sessions={loginSessions}
+            currentSessionId={currentSessionId ?? null}
+            limit={deviceLimit}
+            locale={locale}
+          />
+        }
       />
-
-      <div className="mt-6">
-        <LoginDevices
-          sessions={loginSessions}
-          currentSessionId={currentSessionId ?? null}
-          limit={deviceLimit}
-          locale={locale}
-        />
-      </div>
 
       {user.status !== "active" && (
         <div className="mb-6 -mt-4">
