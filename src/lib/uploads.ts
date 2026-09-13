@@ -138,6 +138,25 @@ function r2ObjectUrl(endpoint: string, bucket: string, key: string): string {
   return `${endpoint}/${bucket}/${encodedKey}`;
 }
 
+/** Workflow objects are write-once and carry a storage-validated transport digest. */
+export async function createWorkflowUpload(input: {r2Key: string; md5: string}) {
+  if (!/^assets\/splat\/wf_[a-f0-9]{64}-project\.zip$/.test(input.r2Key) || !/^[a-f0-9]{32}$/.test(input.md5)) throw new Error('Invalid workflow object');
+  const {client,endpoint,bucket}=await r2Client();
+  const url=new URL(r2ObjectUrl(endpoint,bucket,input.r2Key));
+  url.searchParams.set('X-Amz-Expires','600');
+  const headers={'Content-MD5':Buffer.from(input.md5,'hex').toString('base64'),'If-None-Match':'*'};
+  const signed=await client.sign(url.toString(),{method:'PUT',headers,aws:{signQuery:true,allHeaders:true}});
+  return {putUrl:signed.url,headers};
+}
+
+export async function statWorkflowUpload(r2Key: string): Promise<{size:number;md5:string}|null> {
+  const {env}=await getCloudflareContext();
+  const bucket=(env as unknown as {R2_ASSETS?:{head(key:string):Promise<{size:number;checksums:{md5?:ArrayBuffer}}|null>}}).R2_ASSETS;
+  if(!bucket)throw new Error('R2 binding unavailable');
+  const object=await bucket.head(r2Key);
+  return object ? {size:object.size,md5:object.checksums.md5?Buffer.from(object.checksums.md5).toString('hex'):''} : null;
+}
+
 /** Presigned PUT URL the browser uploads to directly. */
 export async function createPresignedUpload(input: {
   r2Key: string;
