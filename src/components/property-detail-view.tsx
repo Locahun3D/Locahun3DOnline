@@ -1,7 +1,8 @@
 import Link from "next/link";
 import PropertySceneWorkspace, { PropertySceneProvider } from "./property-scene-workspace";
+import { sceneIndexForId } from "@/lib/scene-selection";
 import PropertyPhotoGallery from "./property-photo-gallery";
-import PropertyLicenseDetails from "./property-license-details";
+import PropertySpecSummary from "./property-spec-summary";
 import styles from "./property-detail-view.module.css";
 import {
   categoryLabel,
@@ -102,6 +103,7 @@ export default function PropertyDetailView({
   nowIso = new Date().toISOString(),
   canViewRestricted = false,
   canViewNdaOnly = false,
+  initialSceneId,
   purchasedItemIds = [],
   unlockedItemIds = [],
   hasViewerAccess = false,
@@ -135,6 +137,7 @@ export default function PropertyDetailView({
   nowIso?: string;
   canViewRestricted?: boolean;
   canViewNdaOnly?: boolean;
+  initialSceneId?: string;
   /** 購入済みシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
   purchasedItemIds?: string[];
   /** 1年以内にアンロック済みのシーンの splatItem.id 群（並び替え・差し替えに強い）。 */
@@ -173,6 +176,7 @@ export default function PropertyDetailView({
       if (it.accessLevel === "nda_only" && !canViewNdaOnly) return false;
       return true;
     });
+  const initialSceneIndex = sceneIndexForId(visibleSplatItems.map(({ it }) => it.id), initialSceneId);
 
   // 写真は3DGSと独立したギャラリーにまとめる。カバーを含め重複srcは除外。
   const seen = new Set<string>();
@@ -257,7 +261,7 @@ export default function PropertyDetailView({
     property.attendanceRequired;
 
   return (
-    <PropertySceneProvider><article className={`theme-online ${styles.page}`}>
+    <PropertySceneProvider key={`${property.id}:${initialSceneIndex}`} initialSelected={initialSceneIndex}><article className={`theme-online ${styles.page}`}>
       {preview && sharePreview && (
         <div className="frame mb-0 sticky top-[calc(var(--header-h)/var(--z))] z-40 border border-[#5ec8e8]/40 bg-[#0c1b22] backdrop-blur-sm px-4 py-3 text-[13px] mono tracking-[0.08em] text-[#8fdcf0] flex flex-wrap items-center justify-between gap-3">
           <span>
@@ -418,7 +422,7 @@ export default function PropertyDetailView({
       </div>
 
       <section data-property-top className={`frame ${styles.top}`}>
-        <PropertyPhotoGallery photos={galleryPhotos} en={en} scannedAt={property.scannedAt} />
+        <PropertyPhotoGallery photos={galleryPhotos} en={en} scannedAt={property.scannedAt} propertyTitle={property.title} />
         {!(property.pageBlocks && property.pageBlocks.length > 0) && <div><PropertySceneWorkspace en={en} labels={visibleSplatItems.map(({ it }, index) => it.label || `${en ? "Scene" : "シーン"} ${index + 1}`)}>
           {visibleSplatItems.map(({it:item,origIndex}) => {
             const itemDataSaleFree = isDataSaleFree(item.freePeriod, nowIso);
@@ -683,10 +687,8 @@ export default function PropertyDetailView({
       </section>
 
 
-      <section id="license-details" data-property-license-details data-property-license className={`frame ${styles.licenseSection}`}>
-        {!(property.pageBlocks && property.pageBlocks.length > 0) && <PropertySceneWorkspace en={en} showPicker={false} labels={visibleSplatItems.map(({ it }, index) => it.label || `${en ? "Scene" : "シーン"} ${index + 1}`)}>
-          {visibleSplatItems.map(({it:item,origIndex}) => <div key={origIndex}>{item.forSale && !sharePreview && !isDataSaleDisabled(item.freePeriod, nowIso) && <PropertyLicenseDetails options={resolveLicenseOptions(item)} en={en}/>}</div>)}
-        </PropertySceneWorkspace>}
+      <section id="property-specs" data-property-specs className={`frame ${styles.specSection}`}>
+        <PropertySpecSummary property={property} en={en} />
       </section>
 
       {/* ══════════════════════════════════════════════════

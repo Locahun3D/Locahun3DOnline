@@ -1270,7 +1270,7 @@ function SortBar({
             <div className="mono text-[9px] tracking-[0.22em] uppercase opacity-50">
               {en ? c.labelEn : c.label}
             </div>
-            <div className="flex">
+            <div className="flex items-center">
               <button
                 type="button"
                 onClick={() => setSort(c.ascKey)}

@@ -59,10 +59,13 @@ export async function generateMetadata({
 
 export default async function PropertyDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ scene?: string | string[] }>;
 }) {
   const { id } = await params;
+  const { scene } = await searchParams;
   const rawProperty = await getPublishedProperty(id);
   if (!rawProperty) notFound();
 
@@ -148,6 +151,7 @@ export default async function PropertyDetailPage({
       <TrackView propertyId={property.id} />
       <PropertyDetailView
         property={property}
+        initialSceneId={typeof scene === "string" ? scene : undefined}
         others={others}
         freeAccess={freeAccess}
         nowIso={nowIso}

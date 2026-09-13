@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import styles from "./account-dashboard.module.css";
 import type { PublicUser } from "@/lib/account-schema";
 import { totalTokens, publicDisplayName } from "@/lib/account-schema";
@@ -15,6 +15,10 @@ import NotificationList from "@/components/account/notification-list";
 import { openBillingPortalAction } from "@/lib/subscribe-actions";
 import type { Notification } from "@/lib/notifications";
 import { fmtDateOnlyJST } from "@/lib/date-format";
+
+// User-defined board names can contain long compound nouns. Word boundaries
+// offer finer wrap points than sentence segmentation without truncating labels.
+const boardNameSegmenter = new Intl.Segmenter("ja", { granularity: "word" });
 
 type BoardTile = { name: string; count: number; cover?: string };
 
@@ -180,7 +184,9 @@ export default function AccountDashboard({
               {boardTiles.slice(0, 3).map((t, i) => (
                 <div key={i} className={styles.board}>
                   <span className={styles.boardName}>
-                    {t.name}
+                    <span className="jp">{Array.from(boardNameSegmenter.segment(t.name), ({ segment }, index) => (
+                      <Fragment key={index}>{index > 0 && <wbr />}{segment}</Fragment>
+                    ))}</span>
                   </span>
                   <div className="border border-[#e2e7ec] p-1">
                     <div className={styles.boardImage}>

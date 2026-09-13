@@ -16,6 +16,11 @@ export async function generateMetadata() {
    最終文の後には入れない。全端末共通の意図改行なので素の <br />。
    英語は句点が無いので素通りする（EN は自然折り返しのまま）。文言は変えない。 */
 function sentenceBreaks(text: string) {
+  const keepDatesTogether = (sentence: string) => sentence.split(/(\d{4}年\d{1,2}月\d{1,2}日)/).map((part, index) => (
+    /^\d{4}年\d{1,2}月\d{1,2}日$/.test(part)
+      ? <span key={index} className="whitespace-nowrap">{part}</span>
+      : part
+  ));
   const parts = text.split("。");
   const tail = parts.pop() ?? "";
   if (parts.length === 0) return text;
@@ -23,11 +28,11 @@ function sentenceBreaks(text: string) {
     <>
       {parts.map((s, i) => (
         <Fragment key={i}>
-          {s}。
+          {keepDatesTogether(s)}。
           {i < parts.length - 1 || tail !== "" ? <br /> : null}
         </Fragment>
       ))}
-      {tail}
+      {keepDatesTogether(tail)}
     </>
   );
 }

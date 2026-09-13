@@ -25,7 +25,7 @@ export default function CartClient() {
   const [agreed, setAgreed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [removedItems, setRemovedItems] = useState<RemovedCartItem[]>([]);
-  const [details, setDetails] = useState<Record<string, { license?: DataLicense; purchaseContents: PurchaseContent[] }>>({});
+  const [details, setDetails] = useState<Record<string, { license?: DataLicense; purchaseContents: PurchaseContent[]; viewerHref?: string | null }>>({});
   // 価格変更/販売終了の再検証結果（マウント時の1回だけ表示するバナー）。
   const [notice, setNotice] = useState<{ removedCount: number; priceChangedCount: number } | null>(null);
   const cartRequestKey = JSON.stringify(items.map(i => [i.propertyId, i.splatItemIndex, i.license]));
@@ -64,7 +64,7 @@ export default function CartClient() {
         });
         if (!res.ok || !active) return;
         const data = (await res.json()) as {
-          items: { propertyId: string; splatItemIndex: number; price: number; available: boolean; license?: DataLicense; purchaseContents: PurchaseContent[] }[];
+          items: { propertyId: string; splatItemIndex: number; price: number; available: boolean; license?: DataLicense; purchaseContents: PurchaseContent[]; viewerHref?: string | null }[];
         };
         if (!active) return;
         setDetails(Object.fromEntries(data.items.map((item) => [`${item.propertyId}:${item.splatItemIndex}`, item])));
@@ -220,6 +220,13 @@ export default function CartClient() {
               >
                 {i.title || i.propertyId}
               </Link>
+              {detail?.viewerHref && (
+                <Link data-cart-viewer-link href={lh(detail.viewerHref)} prefetch={false}
+                  style={{ minHeight: "calc(44px / var(--z, 1))" }}
+                  className="inline-flex min-h-[44px] max-w-full items-center border border-accent/40 bg-card px-3 py-2 text-[13px] font-medium leading-relaxed text-accent">
+                  {en ? "View 3DGS →" : "3DGSを見る →"}
+                </Link>
+              )}
             </div>
             <div data-cart-details className="min-w-0 p-5 sm:p-6 break-words">
               <div className="text-[13px] font-medium leading-relaxed">

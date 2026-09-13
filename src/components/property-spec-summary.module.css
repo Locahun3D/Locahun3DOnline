@@ -1,0 +1,11 @@
+.section{min-width:0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+.card{min-width:0;background:#fff;border:1px solid var(--color-line,#d5e2e9);border-radius:10px;padding:24px}
+.heading{margin:0 0 18px;font-size:18px;font-weight:700;line-height:1.5;color:var(--color-ink,#14181c)}
+.fields{margin:0;display:grid;gap:16px}
+.field{min-width:0}
+.label{font-size:15px;font-weight:600;line-height:1.65;color:var(--color-ink,#14181c)}
+.value{margin:4px 0 0;font-size:14px;line-height:1.8;color:#536c78;white-space:pre-line;overflow-wrap:break-word}
+.empty{color:#657380;font-size:14px;line-height:1.8}
+.card:only-child{grid-column:1/-1}
+@media(max-width:700px){.grid{grid-template-columns:minmax(0,1fr);gap:12px}.card{padding:20px}.heading{margin-bottom:16px}.fields{gap:14px}}

@@ -11,7 +11,7 @@ vi.mock('@/components/property-comments',()=>({default:()=>null}));
 import PropertyDetailView from './property-detail-view';
 import ViewerGate from './viewer-gate';
 import DataSalePanel from './data-sale-panel';
-import PropertySceneWorkspace from './property-scene-workspace';
+import PropertySceneWorkspace, { PropertySceneProvider } from './property-scene-workspace';
 function elements(n:ReactNode):ReactElement<Record<string,unknown>>[]{
  if(Array.isArray(n))return n.flatMap(elements);
  if(!isValidElement<Record<string,unknown>>(n))return [];
@@ -22,13 +22,13 @@ const property=propertySchema.parse({id:'fixture',category:'studio',title:'Scene
  {id:'private',label:'Private',splatUrl:'/b.rad',accessLevel:'restricted'},
  {id:'nda',label:'NDA',splatUrl:'/c.rad',accessLevel:'nda_only'},
 ]});
-it('keeps photos beside purchase, then location facts, then independent 3DGS, then license details',()=>{
+it('keeps photos beside purchase, then location facts, independent 3DGS and property information',()=>{
  const tree=elements(PropertyDetailView({property,others:[]}));
  const top=tree.find(n=>n.props['data-property-top']!==undefined);
  expect(top).toBeDefined();
  expect(elements(top).some(n=>n.type===DataSalePanel)).toBe(true);
  expect(elements(top).some(n=>n.type===ViewerGate)).toBe(false);
- const positions=['data-property-top','data-property-facts','data-property-3dgs','data-property-license-details'].map(key=>tree.findIndex(n=>n.props[key]!==undefined));
+ const positions=['data-property-top','data-property-facts','data-property-3dgs','data-property-specs'].map(key=>tree.findIndex(n=>n.props[key]!==undefined));
  expect(positions.every(x=>x>=0)).toBe(true);
  expect(positions[0]).toBeLessThan(positions[1]);
  expect(positions[1]).toBeLessThan(positions[2]);
@@ -53,7 +53,7 @@ it('retains a non-sale scene slot in every shared workspace before a later purch
  const mixed={...property,splatItems:[property.splatItems[1],{...property.splatItems[0],id:'view-only',forSale:false},property.splatItems[0]]};
  const tree=elements(PropertyDetailView({property:mixed,others:[],purchasedItemIds:['public'],unlockedItemIds:['public']}));
  const workspaces=tree.filter(n=>n.type===PropertySceneWorkspace);
- expect(workspaces).toHaveLength(3);
+ expect(workspaces).toHaveLength(2);
  for(const workspace of workspaces){
   const slots=workspace.props.children as ReactElement[];
   expect(slots).toHaveLength(2);
@@ -61,4 +61,13 @@ it('retains a non-sale scene slot in every shared workspace before a later purch
  }
  expect(tree.find(n=>n.type===DataSalePanel)?.props).toMatchObject({splatItemIndex:2,alreadyPurchased:true,propertyPresentation:true});
  expect(tree.filter(n=>n.type===ViewerGate).map(n=>n.props.alreadyUnlocked)).toEqual([false,true]);
+});
+it('selects the requested cart scene only after permission filtering',()=>{
+ const second={...property.splatItems[0],id:'second'};
+ const p={...property,splatItems:[...property.splatItems,second]};
+ const selected=elements(PropertyDetailView({property:p,others:[],initialSceneId:'second'}));
+ expect(selected.find(n=>n.type===PropertySceneProvider)?.props.initialSelected).toBe(1);
+ const hidden=elements(PropertyDetailView({property:p,others:[],initialSceneId:'private'}));
+ expect(hidden.find(n=>n.type===PropertySceneProvider)?.props.initialSelected).toBe(0);
+ expect(hidden.filter(n=>n.type===ViewerGate).map(n=>n.props.splatUrl)).toEqual(['/a.rad','/a.rad']);
 });

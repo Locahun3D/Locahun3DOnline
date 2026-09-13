@@ -5,8 +5,8 @@ import styles from "./property-detail-view.module.css";
 
 /** Changes display only; server-filtered scene nodes retain their own gates. */
 const SceneContext = createContext<{selected: number; setSelected: (value: number) => void} | null>(null);
-export function PropertySceneProvider({ children }: { children: ReactNode }) {
-  const [selected, setSelected] = useState(0);
+export function PropertySceneProvider({ children, initialSelected = 0 }: { children: ReactNode; initialSelected?: number }) {
+  const [selected, setSelected] = useState(initialSelected);
   return <SceneContext.Provider value={{selected, setSelected}}>{children}</SceneContext.Provider>;
 }
 export default function PropertySceneWorkspace({ labels, children, en, showPicker = true }: { labels: string[]; children: ReactNode; en: boolean; showPicker?: boolean }) {

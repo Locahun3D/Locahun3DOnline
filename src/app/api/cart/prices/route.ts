@@ -6,6 +6,7 @@ import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { resolvePurchaseContents } from "@/lib/purchase-contents";
+import { canViewBackyard, canViewConfidential, canViewNdaOnly } from "@/lib/account-schema";
 import type { DataLicense } from "@/lib/schemas";
 
 export const runtime = "nodejs";
@@ -40,6 +41,18 @@ export async function POST(req: Request) {
       const property = propertyId ? await propertyRepo.get(propertyId) : null;
       const item = property?.splatItems[idx];
 
+      // This is a link to the existing page gate, not a viewer unlock or a storage URL.
+      // Custom pages render scenes only when they contain a splat block.
+      const canReachViewer = !!property && !!item &&
+        property.status === "published" && !!item.splatUrl?.trim() &&
+        (property.visibility !== "confidential" || canViewConfidential(user)) &&
+        (item.accessLevel !== "restricted" || canViewBackyard(user)) &&
+        (item.accessLevel !== "nda_only" || canViewNdaOnly(user)) &&
+        (!property.pageBlocks.length || property.pageBlocks.some((block) => block.kind === "splat"));
+      const viewerHref = canReachViewer
+        ? `/properties/${encodeURIComponent(property!.id)}?scene=${encodeURIComponent(item!.id)}#walkthrough`
+        : null;
+
       // 限定無料期間/販売停止はアイテム単位(item.freePeriod)で判定する。
       let available =
         !!property && !!item && item.forSale &&
@@ -67,6 +80,7 @@ export async function POST(req: Request) {
         price,
         available,
         license,
+        viewerHref,
         purchaseContents: available && item ? resolvePurchaseContents(item) : [],
       };
     }),

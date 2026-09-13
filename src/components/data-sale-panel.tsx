@@ -15,10 +15,12 @@ import {
 } from "@/lib/schemas";
 import type { LicenseOption } from "@/lib/license-options";
 import LicenseDifference, { LicenseDescription } from "@/components/license-difference";
+import PropertyLicenseDetails from "@/components/property-license-details";
 import DataInquiry from "@/components/data-inquiry";
 import { useLocale } from "@/components/locale-provider";
 import PurchaseContents from "@/components/purchase-contents";
 import type { PurchaseContent } from "@/lib/purchase-contents";
+import Jp from "@/components/jp";
 
 interface DataSalePanelProps {
   propertyPresentation?: boolean;
@@ -158,7 +160,7 @@ export default function DataSalePanel({
 <input type="radio" name={`license-${propertyId}-${splatItemIndex}`} checked={selectedLicense === o.license} onChange={() => setSelectedLicense(o.license)} />
 <strong>{dataLicenseLabel(o.license, lc)}</strong>
 <div data-property-license-price>{o.price === 0 ? (en ? "Free" : "無料") : `¥${o.price.toLocaleString(en ? "en-US" : "ja-JP")}`} <small>{en ? "tax excl." : "税抜"}</small></div>
-<p>{dataLicenseDesc(o.license, lc)}</p>
+<p>{en ? dataLicenseDesc(o.license, lc) : <Jp>{dataLicenseDesc(o.license, lc)}</Jp>}</p>
 </label>)}</div>) : licenseOptions.length > 1 ? (
           <div className="mt-1.5">
             <div className="mono text-[9px] tracking-[0.18em] uppercase text-muted mb-1">
@@ -285,9 +287,11 @@ export default function DataSalePanel({
           </div>
         </>
       )}
-      {/* 比較表は basis-full で1行を占有させる。狭いテキスト列に入れると
-          横スクロールが出て右端の列が切れる（実機で確認して移動した）。 */}
-      {propertyPresentation ? <a href="#license-details" className="text-[13px] text-accent underline">{en ? "Compare licenses and conditions ↓" : "ライセンスの違い・注意事項を見る ↓"}</a> : <LicenseDifference options={licenseOptions} selected={license} locale={lc} />}
+      {/* 物件の比較表は購入欄で展開する。他の購入画面は既存の表示を維持。 */}
+      {propertyPresentation ? <details data-property-license-comparison className="w-full min-w-0 basis-full">
+        <summary className="cursor-pointer py-3 min-h-[44px] text-[13px] text-accent underline">{en ? "Compare licenses and conditions" : "ライセンスの違い・注意事項を見る"}</summary>
+        <PropertyLicenseDetails options={licenseOptions} en={en} />
+      </details> : <LicenseDifference options={licenseOptions} selected={license} locale={lc} />}
 
       {/* 「自分の用途で使えるのか」を比較表の直下でそのまま聞ける。
           ⚠ LicenseDifference は区分が1つだと null を返すので、問い合わせ導線は

@@ -1,10 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { Fragment, useActionState, useState } from "react";
 import {
   updateDisplayNameAction,
   type DisplayNameState,
 } from "@/lib/auth-actions";
+
+const nameSegmenter = new Intl.Segmenter("ja", { granularity: "word" });
+// Intl separates occupational suffix 者 (担当 / 者); it belongs to the prior word.
 
 /**
  * マイページ・ユーザーヘッダーの氏名をインライン編集する（公開表示名）。
@@ -39,8 +42,10 @@ export default function DisplayNameEditor({
   if (!editing) {
     return (
       <div className="flex items-center gap-2 min-w-0">
-        <h1 className="ui-page-title min-w-0 break-words">
-          {name}
+        <h1 className="ui-page-title min-w-0 break-words" style={en ? undefined : { textWrap: "balance" }}>
+          {en ? name : <span className="jp">{Array.from(nameSegmenter.segment(name), ({ segment }, index) => (
+            <Fragment key={index}>{index > 0 && segment !== "者" && <wbr />}{segment}</Fragment>
+          ))}</span>}
         </h1>
         <button
           type="button"
