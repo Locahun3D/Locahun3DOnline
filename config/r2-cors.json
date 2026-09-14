@@ -1,0 +1,31 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": ["https://viewer.locahun3d.com", "https://web.locahun3d.com", "https://locahun3d.com", "https://locahun3d.nakamurakou1108.workers.dev", "http://localhost:8765", "http://127.0.0.1:8765"],
+        "methods": ["GET", "HEAD"],
+        "headers": ["range", "if-range", "if-match", "if-modified-since"]
+      },
+      "exposeHeaders": ["content-length", "content-range", "accept-ranges", "etag", "last-modified"],
+      "maxAgeSeconds": 86400
+    },
+    {
+      "allowed": {
+        "origins": ["https://locahun3d.com", "https://www.locahun3d.com", "http://localhost:3000"],
+        "methods": ["PUT"],
+        "headers": ["content-type"]
+      },
+      "exposeHeaders": ["etag"],
+      "maxAgeSeconds": 3600
+    },
+    {
+      "allowed": {
+        "origins": ["https://locahun3d.com"],
+        "methods": ["PUT"],
+        "headers": ["content-type", "content-md5", "if-none-match"]
+      },
+      "exposeHeaders": ["etag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}
