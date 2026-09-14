@@ -53,6 +53,7 @@ import { publishReadiness } from "@/lib/publish-readiness";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
 import { applyExtendedLicensePricing } from "@/lib/license-options";
+import styles from "./property-editor.module.css";
 
 /**
  * 入力ステップ。⚠ 並び順 = 実際に埋める順番。ここを変えたら本文側の
@@ -467,10 +468,10 @@ export default function PropertyEditor({
         e.preventDefault();
         onSaveDraft();
       }}
-      className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8"
+      className={`${styles.editor} grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8`}
     >
       {/* Step navigation */}
-      <aside className="lg:sticky lg:top-24 self-start space-y-2">
+      <aside className={`${styles.navigation} lg:sticky lg:top-24 self-start space-y-2`}>
         {/* 申請に必要な残り。どのステップにいても「あと何を埋めればいいか」が見える。
             判定は lib/publish-readiness.ts（申請アクションと同じ関数）。
             以前は申請ボタンを押すまで不足が分からなかった。 */}
@@ -528,7 +529,7 @@ export default function PropertyEditor({
       {/* Form pane */}
       <div className="min-w-0">
         {/* Sticky header（公開URL も同じ枠に統合） */}
-        <div className="sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 space-y-3">
+        <div className={`${styles.toolbar} sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 space-y-3`}>
           <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-baseline gap-3 min-w-0">
             <StatusPill status={currentStatus} />
@@ -536,7 +537,7 @@ export default function PropertyEditor({
               {currentTitle || "(無題)"}
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className={`${styles.actions} flex items-center gap-2`}>
             {/* mounted 前は空文字（SSR/初回クライアントとも同一）。マウント後に
                 ローカル(JST)時刻を出す。savedAt/updatedAt は共にローカル整形のため
                 SSR(UTC)と食い違い hydration mismatch を起こすので mounted でゲート。 */}
@@ -1925,7 +1926,7 @@ export default function PropertyEditor({
                       title={rowState}
                       className={`border p-4 space-y-3 transition-colors ${rowClass}`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className={`${styles.sceneHeader} flex items-center gap-3`}>
                         <span className="mono text-[10px] text-accent opacity-60 w-5 shrink-0">
                           {String(idx + 1).padStart(2, "0")}
                         </span>

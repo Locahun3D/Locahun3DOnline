@@ -102,3 +102,11 @@
 @media(min-width:720px) and (max-width:1199px) {
   .purchase [data-property-license-card] p { font-size:calc(12px / var(--z)); }
 }
+.legacy { min-width:0; }
+.legacy table td { color:var(--color-ink);overflow-wrap:break-word; }
+.legacySceneGrid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start; }
+.legacyScene,.legacySingleScene { min-width:0;max-width:100%; }
+.legacyScene { scroll-margin-top:90px; }
+.legacySingleScene { width:min(100%,640px);margin-inline:auto; }
+.legacyScene :global(button),.legacyScene :global(a) { overflow-wrap:break-word; }
+@media(max-width:900px) { .legacySceneGrid { grid-template-columns:minmax(0,1fr);gap:28px; } }

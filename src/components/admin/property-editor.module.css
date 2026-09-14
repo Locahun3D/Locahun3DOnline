@@ -1,0 +1,25 @@
+.editor { min-width:0 }
+.actions { flex-wrap:wrap }
+.sceneHeader { min-width:0 }
+@media(max-width:1279px){
+ .editor { grid-template-columns:minmax(0,1fr);gap:24px }
+ .navigation { position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px }
+ .navigation > :first-child { grid-column:1 / -1;margin-bottom:4px }
+ .navigation > :nth-child(2) { display:none }
+ .navigation > button { margin:0;min-height:calc(44px / var(--z,1));padding:10px }
+ .toolbar { position:static;background:var(--color-bg,#f5f7f9) }
+ .toolbar h1 { font-size:28px;line-height:1.5 }
+ .actions { width:100% }
+ .actions button,.actions a { min-height:calc(44px / var(--z,1));display:inline-flex;align-items:center;justify-content:center;white-space:nowrap }
+ .editor button { touch-action:manipulation }
+ .sceneHeader button { min-height:calc(44px / var(--z,1)) }
+}
+@media(max-width:599px){
+ .navigation { grid-template-columns:repeat(2,minmax(0,1fr)) }
+ .toolbar h1 { font-size:24px }
+ .actions { gap:8px }
+ .actions button,.actions a { flex:1 1 auto }
+ .sceneHeader { display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px }
+ .sceneHeader input { grid-column:2 / -1;min-width:0 }
+ .sceneHeader button:nth-last-child(2) { grid-column:2;justify-self:end }
+}

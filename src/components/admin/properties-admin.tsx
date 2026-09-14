@@ -12,6 +12,7 @@ import {
 import PropertyRowActions from "@/components/admin/property-row-actions";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import { bulkSetStatusAction, bulkDeleteAction } from "@/app/admin/_actions";
+import styles from "./properties-admin.module.css";
 
 export type PropertyListItem = {
   id: string;
@@ -133,7 +134,7 @@ export default function PropertiesAdmin({
     k === "all" ? items.length : counts[k];
 
   return (
-    <div className="space-y-4">
+    <div className={`${styles.root} space-y-4`}>
       {/* Search + status filter */}
       <div className="flex flex-wrap items-center gap-3">
         <input
@@ -210,8 +211,8 @@ export default function PropertiesAdmin({
         </div>
       )}
 
-      <div className="border border-line overflow-x-auto">
-        <div className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60 min-w-[892px]`}>
+      <div className={`${styles.list} border border-line`}>
+        <div className={`${styles.header} grid ${GRID} gap-3 px-4 py-3 border-b border-line bg-[#222] mono text-[10px] tracking-[0.28em] uppercase opacity-60`}>
           <div className="flex items-center">
             {/* 全選択チェックボックスは一括操作(admin専用)のためのUI。studioには出さない。 */}
             {isAdmin && (
@@ -240,7 +241,7 @@ export default function PropertiesAdmin({
           filtered.map((p) => (
             <div
               key={p.id}
-              className={`grid ${GRID} gap-3 px-4 py-3 border-b border-line items-center transition min-w-[892px] ${
+              className={`${styles.row} grid ${GRID} gap-3 px-4 py-3 border-b border-line items-center transition ${
                 selected.has(p.id) ? "bg-accent/10" : "hover:bg-neutral-100"
               }`}
             >
