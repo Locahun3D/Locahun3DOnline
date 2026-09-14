@@ -5,10 +5,30 @@ const targetSchema=z.object({propertyId:z.string().min(1).max(200),sceneId:z.str
 export type WorkflowTarget=z.infer<typeof targetSchema>;
 const receiptSchema=z.object({schema:z.literal(1),roundtripVerified:z.literal(true),input:z.object({revision:z.number().int().nonnegative(),projectSha256:hex}),archive:z.object({bytes:z.number().int().min(1).max(2*1024**3),sha256:hex})});
 export const parseWorkflowReceipt=(value:unknown)=>receiptSchema.parse(value);
+
+// Never surface arbitrary SDK, storage or server messages (which can contain signed URLs).
+export function workflowFailureCode(error:unknown){
+ const message=error instanceof Error?error.message:'';
+ const http=/^Administrative request failed \(HTTP (\d{3})\)$/.exec(message);
+ if(http)return 'http_'+http[1];
+ const codes:Record<string,string>={
+  'Invalid upload binding':'upload_binding','Invalid reservation':'reservation',
+  'Invalid reservation status':'reservation_status','Invalid storage origin':'storage_origin',
+  'Upload failed':'upload','Failed to fetch':'network','Administrative session unavailable':'session',
+  'Administrative session changed':'session_changed','Administrative request timeout':'api_timeout',
+  'Archive length mismatch':'archive_length','Archive digest mismatch':'archive_digest',
+  'Verification worker failed':'hash_worker','Verification worker unavailable':'hash_worker',
+  'Invalid verification response':'hash_response','Verification timeout':'hash_timeout',
+  'Verification binding mismatch':'verification_binding','Downloaded digest mismatch':'download_digest',
+  'Attachment readback mismatch':'attachment','Target resolution mismatch':'target',
+ };
+ return Object.hasOwn(codes,message)?codes[message]:'unexpected';
+}
 type Options={origin:string;storageOrigin:string;actorId:string;ids:{propertyId:string;sceneId:string};archive:File;receipt:unknown;signal:AbortSignal;snapshot?:WorkflowTarget;onTarget:(target:WorkflowTarget)=>void;session:(signal:AbortSignal)=>Promise<{actorId:string;token:string|null}>;hash?:(input:WorkflowHashInput,signal:AbortSignal)=>Promise<WorkflowDigest>;fetch?:typeof fetch;onProgress?:(phase:string)=>void};
 function trusted(value:string,origin:string){const u=new URL(value);if(u.protocol!=='https:'||u.origin!==origin||u.username||u.password||u.hash)throw Error('Invalid storage origin');return u.href;}
 async function json(response:Response){
- if(!response.ok||!response.headers.get('content-type')?.includes('application/json')||!response.body)throw Error('Administrative request failed');
+ if(!response.ok)throw Error(`Administrative request failed (HTTP ${response.status})`);
+ if(!response.headers.get('content-type')?.includes('application/json')||!response.body)throw Error('Administrative request failed');
  const reader=response.body.getReader(),chunks:Uint8Array[]=[];let bytes=0;
  try{for(;;){const {done,value}=await reader.read();if(done)break;bytes+=value.length;if(bytes>65536)throw Error('Administrative response too large');chunks.push(value);}const all=new Uint8Array(bytes);let offset=0;for(const chunk of chunks){all.set(chunk,offset);offset+=chunk.length;}return JSON.parse(new TextDecoder().decode(all));}
  finally{void reader.cancel().catch(()=>{});reader.releaseLock();}

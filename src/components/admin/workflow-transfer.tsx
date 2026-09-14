@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {useClerk} from '@clerk/nextjs';
-import {parseWorkflowReceipt,transferWorkflowArchive,type WorkflowTarget} from '@/lib/workflow-browser-transfer';
+import {parseWorkflowReceipt,transferWorkflowArchive,workflowFailureCode,type WorkflowTarget} from '@/lib/workflow-browser-transfer';
 
 export type WorkflowDestination={id:string;title:string;scenes:{id:string;label:string}[]};
 type Props={actorId:string;storageOrigin:string;destinations:WorkflowDestination[]};
@@ -17,6 +17,7 @@ export function WorkflowTransferPanel({actorId,storageOrigin,destinations,sessio
  async function transfer(){
   if(active.current||!archive||!receiptFile||!property||!property.scenes.some(s=>s.id===sceneId))return;
   const controller=new AbortController();active.current=controller;setBusy(true);setError('');setPhase('');
+  let stage='hashing';
   try{
    if(receiptFile.size>32768)throw Error('検証情報のサイズが不正です。');
    const receipt=parseWorkflowReceipt(JSON.parse(await receiptFile.text()));
@@ -27,9 +28,9 @@ export function WorkflowTransferPanel({actorId,storageOrigin,destinations,sessio
     if(saved&&saved.length>8192)throw Error('保存された転送情報が不正です。');
     const snapshot=saved?JSON.parse(saved) as WorkflowTarget:undefined;
     await transferWorkflowArchive({origin:location.origin,storageOrigin,actorId,ids:{propertyId,sceneId},archive,receipt,signal:controller.signal,snapshot,session,
-     onTarget:target=>localStorage.setItem(key,JSON.stringify(target)),onProgress:setPhase});
+     onTarget:target=>localStorage.setItem(key,JSON.stringify(target)),onProgress:value=>{stage=value;setPhase(value);}});
    });
-  }catch{setPhase('');setError(controller.signal.aborted?'転送を中止しました。':'転送を完了できませんでした。ログイン状態・転送先・選択ファイルを確認してください。');}
+  }catch(error){setPhase('');setError(controller.signal.aborted?'転送を中止しました。':`転送を完了できませんでした。${labels[stage]||'準備中'} / ${workflowFailureCode(error)}`);}
   finally{active.current=null;setBusy(false);}
  }
  const field='w-full min-w-0 border border-line bg-bg px-3 py-3 text-sm';

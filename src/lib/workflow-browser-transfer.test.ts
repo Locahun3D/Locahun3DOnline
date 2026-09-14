@@ -1,7 +1,16 @@
 import {it,expect,vi,afterEach} from 'vitest';
 afterEach(()=>vi.useRealTimers());
-import {transferWorkflowArchive} from './workflow-browser-transfer';
+import {transferWorkflowArchive,workflowFailureCode} from './workflow-browser-transfer';
 const sha='a'.repeat(64),key='b'.repeat(64),md5='c'.repeat(32);
+it('exposes only allowlisted failure codes, never signed URLs or session errors',()=>{
+ expect(workflowFailureCode(Error('Invalid upload binding'))).toBe('upload_binding');
+ expect(workflowFailureCode(Error('Administrative request failed (HTTP 409)'))).toBe('http_409');
+ expect(workflowFailureCode(Error('secret token https://storage.test/?signature=secret'))).toBe('unexpected');
+});
+it('reports HTTP status without exposing the administrative response',async()=>{
+ const {options}=fixture();options.fetch.mockResolvedValue(Response.json({secret:'private'},{status:409}));
+ await expect(transferWorkflowArchive(options)).rejects.toThrow('Administrative request failed (HTTP 409)');
+});
 function fixture(){
  const calls:string[]=[];
  const options={origin:'https://app.test',storageOrigin:'https://storage.test',actorId:'admin',ids:{propertyId:'p',sceneId:'s'},archive:new File(['abc'],'project.zip'),receipt:{schema:1,input:{revision:1,projectSha256:sha},archive:{bytes:3,sha256:sha},roundtripVerified:true},signal:new AbortController().signal,
