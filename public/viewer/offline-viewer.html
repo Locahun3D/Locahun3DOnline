@@ -2984,7 +2984,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="64be9018b9e43d2553a43611e61d176955eaa5596940b2dc671b032eacb40aea";
+window.__locahunBuildRelease="08a3db2b57ecf162bb14962635ab9b0b9d86ef06ae9e434f7fbab465dfbb973c";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -15438,9 +15438,14 @@ function _walkUpdateCameraReadiness(){
   }
 }
 globalThis.setCameraCollision=function(enabled){
+  const wasEnabled=cameraCollisionEnabled;
   cameraCollisionEnabled=!!enabled;
   _walkUpdateCameraReadiness();
   markDirty(2);
+  // Explicit re-enabling retries saved geometry; background failures stay throttled.
+  if(cameraCollisionEnabled&&!wasEnabled)return globalThis.prepareCameraCollision().catch(error=>{
+    _walkStatus(error.message);_walkUpdateCameraReadiness();return false;
+  });
 };
 globalThis.toggleCameraCollision=()=>globalThis.setCameraCollision(!cameraCollisionEnabled);
 globalThis.prepareCameraCollision=async()=>{
