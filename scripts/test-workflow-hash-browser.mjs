@@ -3,6 +3,12 @@ import http from 'node:http';
 import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 import {chromium} from 'playwright';
+import {mkdtemp,open,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+
+const large=process.argv.includes('--large');
+let fixtureDirectory;
 
 const result=await build({entryPoints:['src/lib/workflow-hash.worker.ts'],bundle:true,platform:'browser',format:'esm',write:false});
 const worker=result.outputFiles[0].text;
@@ -16,6 +22,25 @@ let browser;
 try{
  browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage();
  await page.goto('http://127.0.0.1:'+server.address().port);
+ if(large){
+  fixtureDirectory=await mkdtemp(join(tmpdir(),'workflow-large-hash-'));
+  const path=join(fixtureDirectory,'project.zip');
+  const file=await open(path,'w');try{await file.truncate(2*1024**3);}finally{await file.close();}
+  await page.setContent('<input type="file" id="archive">');
+  await page.locator('#archive').setInputFiles(path);
+  const started=Date.now();
+  const actual=await page.evaluate(async()=>{
+   const {runWorkflowHash}=await import('/client.js');let ticks=0;
+   const interval=setInterval(()=>ticks++,10);
+   try{return {digest:await runWorkflowHash({file:document.querySelector('#archive').files[0]},new AbortController().signal,()=>new Worker('/worker.js',{type:'module'})),ticks};}
+   finally{clearInterval(interval);}
+  });
+  const sha=createHash('sha256'),md5=createHash('md5'),chunk=Buffer.alloc(1024**2);
+  for(let i=0;i<2048;i++){sha.update(chunk);md5.update(chunk);}
+  assert.deepEqual(actual.digest,{bytes:2*1024**3,sha256:sha.digest('hex'),md5:md5.digest('hex')});
+  assert.ok(actual.ticks>0,'2GiB hashing must not block the UI thread');
+  console.log(JSON.stringify({test:'2GiB real browser File hashing',milliseconds:Date.now()-started,ticks:actual.ticks,...actual.digest}));
+ }
  const result=await page.evaluate(async()=>{
   const {runWorkflowHash}=await import('/client.js');let ticks=0;
   const interval=setInterval(()=>ticks++,1);
@@ -34,4 +59,4 @@ try{
  });
  assert.equal(cancelled,true);
  console.log('Browser worker SHA256/MD5 matches Node; main thread remained responsive.');
-}finally{await browser?.close();await new Promise(r=>server.close(r));}
+}finally{await browser?.close();await new Promise(r=>server.close(r));if(fixtureDirectory)await rm(fixtureDirectory,{recursive:true,force:true});}

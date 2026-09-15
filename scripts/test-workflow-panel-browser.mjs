@@ -18,6 +18,7 @@ try{
   const context=await browser.newContext({viewport:{width,height:900}});let puts=0,attachments=0,targets=0,stored=false,corrupt=false,corsFailure=false,slow=false;
   const exceptions=[];
   let holdMethod=null,releaseHeld,enteredHeld;
+  let expiredAction=null;
   await context.route('**/*',async route=>{
    const req=route.request(),url=new URL(req.url());
    const cors={'access-control-allow-origin':'https://workflow.fixture.test','access-control-allow-methods':'PUT,GET,OPTIONS','access-control-allow-headers':'content-md5,if-none-match'};
@@ -39,6 +40,7 @@ try{
    if(url.pathname==='/style.css')return route.fulfill({contentType:'text/css',body:css});
    if(url.pathname==='/api/admin/workflow'){
     assert.equal(req.headers().authorization,'Bearer fixture-only');const body=req.postDataJSON();
+    if(body.action===expiredAction)return route.fulfill({status:401,json:{error:'Unauthorized'}});
     if(body.action==='target'){targets++;return route.fulfill({json:{propertyId:'fixture-property',sceneId:'fixture-scene',expectedUpdatedAt:'2026-09-14T00:00:00.000Z',previousUrl:''}});}
     if(body.action==='reserve')return route.fulfill({json:{key,id:'wf_'+key,status:stored?'ready':'uploading',putUrl:'https://storage.fixture.test/object',headers:{'Content-MD5':md5,'If-None-Match':'*'}}});
     if(body.action==='verify'){if(slow)await new Promise(r=>setTimeout(r,500));return route.fulfill({json:{bytes:bytes.length,sha256:sha,downloadUrl:'https://storage.fixture.test/object'}}).catch(()=>{});}
@@ -79,8 +81,19 @@ try{
    await page.getByRole('status').filter({hasText:'下書きへの登録完了'}).waitFor();
    assert.equal(attachments,before+1,'Retry after cancellation must recover');
   }
+  for(const action of ['reserve','verify','attach']){
+   expiredAction=action;const before=attachments,uploads=puts;
+   await page.getByRole('button',{name:'下書きへ転送'}).click();
+   await page.getByRole('alert').waitFor();
+   assert.equal(attachments,before,'Expired authentication must not attach');
+   await page.screenshot({path:`artifacts/workflow-panel/${width}-expired-${action}.png`,fullPage:true});
+   expiredAction=null;
+   await page.getByRole('button',{name:'下書きへ転送'}).click();
+   await page.getByRole('status').filter({hasText:'下書きへの登録完了'}).waitFor();
+   assert.equal(attachments,before+1);assert.equal(puts,uploads,'Auth recovery must reuse verified upload');
+  }
   assert.deepEqual(exceptions,[]);
   await context.close();
  }
- console.log('Panel: three widths, actual worker, upload/retry/readback, corrupt download rejection, held PUT/GET cancellation and recovery passed.');
+ console.log('Panel: three widths, actual worker, upload/retry/readback, corrupt download rejection, held PUT/GET cancellation, HTTP401 at reserve/verify/attach and recovery passed.');
 }finally{await browser.close();}
