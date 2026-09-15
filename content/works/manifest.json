@@ -1,6 +1,13 @@
 {
- "generatedAt": "2026-09-13T20:22:30.435Z",
+ "generatedAt": "2026-09-15T11:23:16.238Z",
  "pages": {
+  "3dgs-ai-video-camera-comparison": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "3DGSをAIで写真調に仕上げる。 静止画と動画入力で、回り込みはどう変わる？ | LOCAHUN 3D"
+  },
   "3dgs-blender-workflow": {
    "locales": [
     "ja",
