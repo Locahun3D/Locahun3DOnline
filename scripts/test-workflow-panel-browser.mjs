@@ -17,12 +17,18 @@ try{
  for(const width of [1440,820,390]){
   const context=await browser.newContext({viewport:{width,height:900}});let puts=0,attachments=0,targets=0,stored=false,corrupt=false,corsFailure=false,slow=false;
   const exceptions=[];
+  let holdMethod=null,releaseHeld,enteredHeld;
   await context.route('**/*',async route=>{
    const req=route.request(),url=new URL(req.url());
    const cors={'access-control-allow-origin':'https://workflow.fixture.test','access-control-allow-methods':'PUT,GET,OPTIONS','access-control-allow-headers':'content-md5,if-none-match'};
    if(url.origin==='https://storage.fixture.test'){
     assert.equal(req.headers().authorization,undefined);
     if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+    if(req.method()===holdMethod){
+     await new Promise(resolve=>{releaseHeld=resolve;enteredHeld();});
+     if(req.method()==='PUT')stored=true;
+     return route.fulfill({status:200,headers:cors,body:req.method()==='PUT'?'':bytes}).catch(()=>{});
+    }
     if(req.method()==='PUT'){puts++;assert.deepEqual(req.postDataBuffer(),bytes);stored=true;return route.fulfill({status:200,headers:cors});}
     return route.fulfill({status:200,headers:corsFailure?{'access-control-allow-origin':'https://wrong.fixture.test'}:cors,body:corrupt?Buffer.alloc(bytes.length):bytes});
    }
@@ -55,7 +61,26 @@ try{
   corrupt=false;corsFailure=true;await page.getByRole('button',{name:'下書きへ転送'}).click();await page.getByRole('alert').waitFor();assert.equal(attachments,2);
   corsFailure=false;slow=true;await page.getByRole('button',{name:'下書きへ転送'}).click();await page.getByRole('button',{name:'中止',exact:true}).click();
   await page.getByRole('alert').filter({hasText:'転送を中止しました'}).waitFor();await page.waitForTimeout(650);assert.equal(attachments,2);
+  slow=false;
+  for(const method of ['PUT','GET']){
+   stored=method==='GET';holdMethod=method;
+   const entered=new Promise(resolve=>{enteredHeld=resolve;});
+   const before=attachments;
+   await page.getByRole('button',{name:'下書きへ転送'}).click();
+   let timer;
+   try{await Promise.race([entered,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Transfer phase not reached: '+method)),15000);})]);}
+   finally{clearTimeout(timer);}
+   await page.getByRole('button',{name:'中止',exact:true}).click();
+   await page.getByRole('alert').filter({hasText:'転送を中止しました'}).waitFor();
+   releaseHeld();holdMethod=null;
+   await page.waitForTimeout(300);assert.equal(attachments,before,'Cancelled phase must never attach');
+   await page.screenshot({path:`artifacts/workflow-panel/${width}-cancel-${method}.png`,fullPage:true});
+   await page.getByRole('button',{name:'下書きへ転送'}).click();
+   await page.getByRole('status').filter({hasText:'下書きへの登録完了'}).waitFor();
+   assert.equal(attachments,before+1,'Retry after cancellation must recover');
+  }
+  assert.deepEqual(exceptions,[]);
   await context.close();
  }
- console.log('Panel: three widths, actual worker, upload/retry/readback and corrupt download rejection passed.');
+ console.log('Panel: three widths, actual worker, upload/retry/readback, corrupt download rejection, held PUT/GET cancellation and recovery passed.');
 }finally{await browser.close();}
