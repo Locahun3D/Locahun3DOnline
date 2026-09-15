@@ -8,10 +8,18 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
 const large=process.argv.includes('--large');
+const publicWorker=process.argv.find(value=>value.startsWith('--worker-url='))?.slice('--worker-url='.length);
 let fixtureDirectory;
 
 const result=await build({entryPoints:['src/lib/workflow-hash.worker.ts'],bundle:true,platform:'browser',format:'esm',write:false});
-const worker=result.outputFiles[0].text;
+let worker=result.outputFiles[0].text;
+if(publicWorker){
+ const url=new URL(publicWorker);
+ assert.equal(url.origin,'https://locahun3d.com');assert.ok(url.pathname.startsWith('/_next/static/'));
+ const response=await fetch(url,{redirect:'error'});assert.equal(response.status,200);
+ worker=await response.text();assert.ok(worker.includes('Archive verification failed or cancelled'));
+ console.log(JSON.stringify({publicWorker,sha256:createHash('sha256').update(worker).digest('hex')}));
+}
 const client=(await build({entryPoints:['src/lib/workflow-hash-client.ts'],bundle:true,platform:'browser',format:'esm',write:false})).outputFiles[0].text;
 const server=http.createServer((req,res)=>{
  res.setHeader('Content-Type',req.url?.endsWith('.js')?'text/javascript':'text/html');
@@ -21,6 +29,8 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser;
 try{
  browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage();
+ // Next webpack emits a classic Worker even though the source uses a module Worker.
+ await page.addInitScript(type=>{globalThis.fixtureWorkerOptions={type};},publicWorker?'classic':'module');
  await page.goto('http://127.0.0.1:'+server.address().port);
  if(large){
   fixtureDirectory=await mkdtemp(join(tmpdir(),'workflow-large-hash-'));
@@ -32,7 +42,7 @@ try{
   const actual=await page.evaluate(async()=>{
    const {runWorkflowHash}=await import('/client.js');let ticks=0;
    const interval=setInterval(()=>ticks++,10);
-   try{return {digest:await runWorkflowHash({file:document.querySelector('#archive').files[0]},new AbortController().signal,()=>new Worker('/worker.js',{type:'module'})),ticks};}
+   try{return {digest:await runWorkflowHash({file:document.querySelector('#archive').files[0]},new AbortController().signal,()=>new Worker('/worker.js',globalThis.fixtureWorkerOptions)),ticks};}
    finally{clearInterval(interval);}
   });
   const sha=createHash('sha256'),md5=createHash('md5'),chunk=Buffer.alloc(1024**2);
@@ -45,7 +55,7 @@ try{
   const {runWorkflowHash}=await import('/client.js');let ticks=0;
   const interval=setInterval(()=>ticks++,1);
   try{
-   const result=await runWorkflowHash({file:new File([new Uint8Array(16*1024**2).fill(1)],'project.zip')},new AbortController().signal,()=>new Worker('/worker.js',{type:'module'}));
+   const result=await runWorkflowHash({file:new File([new Uint8Array(16*1024**2).fill(1)],'project.zip')},new AbortController().signal,()=>new Worker('/worker.js',globalThis.fixtureWorkerOptions));
    return {response:{ok:true,result},ticks};
   }finally{clearInterval(interval);}
  });
@@ -54,7 +64,7 @@ try{
  assert.ok(result.ticks>0,'Main thread must remain responsive');
  const cancelled=await page.evaluate(async()=>{
   const {runWorkflowHash}=await import('/client.js');const controller=new AbortController();
-  const pending=runWorkflowHash({file:new File([new Uint8Array(1024**2)],'project.zip')},controller.signal,()=>new Worker('/worker.js',{type:'module'}));
+  const pending=runWorkflowHash({file:new File([new Uint8Array(1024**2)],'project.zip')},controller.signal,()=>new Worker('/worker.js',globalThis.fixtureWorkerOptions));
   controller.abort();try{await pending;return false;}catch(e){return /cancel/i.test(String(e));}
  });
  assert.equal(cancelled,true);

@@ -13,4 +13,11 @@
 
 - 2GiB network upload/readback against live storage has not been performed. The previous 128MiB live test remains separate evidence.
 - Physical iPhone/iPad and a second PC are not accessible from this environment. Browser fixture results do not establish physical-device success.
-- This commit requires online deployment and public hash Worker verification. Record those results after publication.
+- Runtime commit 408cde2 pushed and deployed; Actions34955504203 completed successfully. Public home and health endpoint returned200.
+- Downloaded public Worker /_next/static/chunks/8764.80973de6aa9873f1.js matched the local production build SHA25624b0b7fb5904f9a84c77f115bc8a04f6311608318b13d83026ba97f89e9bef27. Executed its unmodified bytes in Chrome using the classic Worker mode emitted by Next webpack. 2GiB SHA256/MD5 passed again:33411ms including reference hashing,3112 UI ticks. Ordinary16MiB and cancellation also passed. This verifies the shipped hashing program, not an authenticated2GiB network transfer.
+- npm run build exited0 with existing optional canvas and recommended local environment warnings. Expired-attach390px screenshot inspected; controls and feedback fit. No layout changes.
+- Anonymous admin/workflow is not an authenticated operator check. A locally built admin page chunk name was not present publicly (500); do not equate environment-dependent page chunk names with CI output. Public Worker name and bytes above were independently verified.
+
+## Separate saved collision inspection
+
+- Read-only inspection of the available Dropbox2FStudio project revision2: saved collision decoded correctly,152 tiles,16890 boxes,0.25m cells; two tiles intersect the saved spawn neighborhood. Original project unchanged. This does not identify or resolve the user's unspecified unready scene.
