@@ -13,6 +13,15 @@ export const PROPERTY_CATEGORIES = [
 
 export const PROPERTY_STATUSES = ["draft", "published", "archived"] as const;
 
+/**
+ * 1 件視聴で消費するトークン数。規模区分そのものとしても使われ、
+ * TOKEN_COST_LABEL / DATA_SALE_PRICE のキーを兼ねる。
+ * 段を増減するときはここだけ直せば型が全箇所に伝播する
+ * （propertySchema の z.union は zod の都合でリテラルを並べているので合わせること）。
+ */
+export const TOKEN_COST_VALUES = [1, 2, 3, 10, 20] as const;
+export type TokenCost = (typeof TOKEN_COST_VALUES)[number];
+
 
 /**
  * Listing visibility:
@@ -525,15 +534,30 @@ export const propertySchema = z.object({
     .default(""),
   splatDataUpdatedAt: z.string().datetime().or(z.literal("")).default(""),
   /**
-   * Token cost for one 3DGS walkthrough viewing.
-   *   1 = ハウススタジオ / 小規模 (≤ 150㎡ 目安)
-   *   2 = 中規模スタジオ (150-400㎡ 目安)
-   *   3 = ドーム / 大規模 / 屋外 (400㎡ 超 or 複雑な空間)
-   *   5 = 大型ドーム・複合施設 (複数区画/複数シーン規模)
+   * Token cost for one 3DGS walkthrough viewing. See TOKEN_COST_VALUES.
+   *    1 = ハウススタジオ / 小規模 (≤ 150㎡ 目安)
+   *    2 = 中規模スタジオ (150-400㎡ 目安)
+   *    3 = 広大なシーン (屋外・大敷地・400㎡ 超 or 複雑な空間)
+   *   10 = Zepp級 / アリーナ
+   *   20 = 大型ドーム・複合施設 (複数区画/複数シーン規模)
+   *
+   * 会場クラスは 2026-09-17 に 3/5 から 10/20 へ引き上げた。individual(16) では
+   * 大型ドームを 1 度も視聴できず、studio(32) で月 1 件、team(120) で月 6 件。
+   * 会場を見たい閲覧者を上位プランへ寄せるのが狙い。付与数は据え置き。
+   *
    * Subscription plans grant a monthly token budget; Free gives 1 walk-through
    * irrespective of cost.
    */
-  tokenCost: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(5)]).default(1),
+  tokenCost: z
+    .preprocess(
+      // 旧スケールの 5（大型ドーム）は 20 へ読み替える。保存済みレコードを
+      // 移行しなくても list() で null 落ちしないための後方互換。
+      // ⚠ 旧 3 は「ドーム/大規模」で新 3「広大なシーン」とは意味が違うが、
+      // 値としては有効なので自動変換できない。既存の 3 は個別に見直すこと。
+      (v) => (v === 5 ? 20 : v),
+      z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(10), z.literal(20)]),
+    )
+    .default(1),
   /**
    * 空間の複雑さ（DECISION_LOG D-008 の検証用・非公開の分析タグ）。
    *
@@ -880,21 +904,23 @@ export const AREA_SUGGESTIONS = [
 ] as const;
 
 /** Token cost labels and per-plan monthly budgets. */
-export const TOKEN_COST_LABEL: Record<1 | 2 | 3 | 5, string> = {
+export const TOKEN_COST_LABEL: Record<TokenCost, string> = {
   1: "ハウス / 小規模",
   2: "中規模スタジオ",
-  3: "ドーム / 大規模",
-  5: "大型ドーム / 複合施設",
+  3: "広大なシーン",
+  10: "Zepp級 / アリーナ",
+  20: "大型ドーム / 複合施設",
 };
 
-export const TOKEN_COST_LABEL_EN: Record<1 | 2 | 3 | 5, string> = {
+export const TOKEN_COST_LABEL_EN: Record<TokenCost, string> = {
   1: "House / small",
   2: "Mid-size studio",
-  3: "Dome / large",
-  5: "Large dome / multi-venue complex",
+  3: "Expansive scene",
+  10: "Arena / Zepp-class venue",
+  20: "Large dome / multi-venue complex",
 };
 
-export function tokenCostLabel(t: 1 | 2 | 3 | 5, locale?: string): string {
+export function tokenCostLabel(t: TokenCost, locale?: string): string {
   return locale === "en" ? TOKEN_COST_LABEL_EN[t] : TOKEN_COST_LABEL[t];
 }
 
@@ -951,15 +977,16 @@ export const SIGNUP_BONUS_TOKENS = 6;
  * 標準ライセンスの下限。DECISION_LOG D-010 (2026-07-20) の改定ラダーに準拠。
  * 拡張ライセンス（放送・複数制作・商用）は applyExtendedLicensePricing が標準の2倍を適用する。
  *
- * ⚠ キーは tokenCost (1|2|3|5) と同じスケールを流用している。D-010 が新設した
- * 「大規模/特殊内装スタジオ ¥400,000」は tokenCost に対応する区分が無いため
- * この表には持たせず、SALE_PRICE_PRESETS の選択肢としてのみ用意している。
+ * キーは tokenCost (TOKEN_COST_VALUES) と同じ規模スケールを兼ねる。
+ * D-010 の「大規模/特殊内装スタジオ ¥400,000」は、3 を「広大なシーン」に
+ * 定義し直したことで段が合うようになり、この表に収まっている。
  */
-export const DATA_SALE_PRICE: Record<1 | 2 | 3 | 5, number> = {
+export const DATA_SALE_PRICE: Record<TokenCost, number> = {
   1: 100_000,
   2: 250_000,
-  3: 800_000, // per 区画
-  5: 1_200_000,
+  3: 400_000,
+  10: 800_000, // per 区画
+  20: 1_200_000,
 };
 
 /** Reference location presets for the catalog "from X km" feature. */

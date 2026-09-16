@@ -12,6 +12,7 @@ import {
   dataLicenseLabel,
   dataLicenseDesc,
   type DataLicense,
+  type TokenCost,
 } from "@/lib/schemas";
 import type { LicenseOption } from "@/lib/license-options";
 import LicenseDifference, { LicenseDescription } from "@/components/license-difference";
@@ -35,7 +36,7 @@ interface DataSalePanelProps {
   splatSizeMb: number;
   zipSizeMb: number;
   splatItemCount: number;
-  tokenCost: 1 | 2 | 3 | 5;
+  tokenCost: TokenCost;
   purchaseContents: PurchaseContent[];
   captureDevice?: string;
   alreadyPurchased?: boolean;

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
+import type { TokenCost } from "@/lib/schemas";
 import { useLocale, useHref } from "@/components/locale-provider";
 
 /**
@@ -45,7 +46,7 @@ interface Props {
   label: string;
   sizeMb: number;
   previewVideoUrl?: string;
-  tokenCost?: 1 | 2 | 3 | 5;
+  tokenCost?: TokenCost;
   hasSubscription?: boolean;
   freeAccess?: boolean;
   displaySimulation?: boolean;

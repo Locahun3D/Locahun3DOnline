@@ -5,6 +5,7 @@ import {
   categoryLabel,
   isNewProperty,
   type Property,
+  type TokenCost,
 } from "@/lib/schemas";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { resolveDownloadFiles } from "@/lib/downloads";
@@ -904,7 +905,7 @@ export default function PropertyDetailView({
                       splatSizeMb={item.sizeMb}
                       zipSizeMb={property.zipSizeMb}
                       splatItemCount={property.splatItems.length}
-                      tokenCost={property.tokenCost as 1 | 2 | 3 | 5}
+                      tokenCost={property.tokenCost as TokenCost}
                       purchaseContents={resolvePurchaseContents(item)}
                       captureDevice={item.captureDevice}
                       alreadyPurchased={purchasedItemIds.includes(item.id)}

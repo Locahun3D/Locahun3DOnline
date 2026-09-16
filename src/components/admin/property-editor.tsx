@@ -22,6 +22,7 @@ import {
   STUDIO_TYPE_SUGGESTIONS,
   AREA_SUGGESTIONS,
   TOKEN_COST_LABEL,
+  TOKEN_COST_VALUES,
   DATA_LICENSES,
   DATA_LICENSE_LABEL,
   DATA_LICENSE_DESC,
@@ -2392,7 +2393,7 @@ export default function PropertyEditor({
                     {...register("tokenCost", { valueAsNumber: true })}
                     className={inputClass}
                   >
-                    {([1, 2, 3, 5] as const).map((n) => (
+                    {TOKEN_COST_VALUES.map((n) => (
                       <option key={n} value={n} className="bg-bg">
                         {n} トークン — {TOKEN_COST_LABEL[n]}
                       </option>
