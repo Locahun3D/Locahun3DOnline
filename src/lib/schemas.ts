@@ -946,12 +946,20 @@ export const PLAN_LIST_PRICE_JPY = {
 /** One-time bonus tokens granted at account creation. Currently only used by Free. */
 export const SIGNUP_BONUS_TOKENS = 6;
 
-/** 3DGS data resale price by size class (per scan; "ドーム" is per zone/区画). */
+/**
+ * 3DGS data resale price by size class (per scan; "ドーム" is per zone/区画).
+ * 標準ライセンスの下限。DECISION_LOG D-010 (2026-07-20) の改定ラダーに準拠。
+ * 拡張ライセンス（放送・複数制作・商用）は applyExtendedLicensePricing が標準の2倍を適用する。
+ *
+ * ⚠ キーは tokenCost (1|2|3|5) と同じスケールを流用している。D-010 が新設した
+ * 「大規模/特殊内装スタジオ ¥400,000」は tokenCost に対応する区分が無いため
+ * この表には持たせず、SALE_PRICE_PRESETS の選択肢としてのみ用意している。
+ */
 export const DATA_SALE_PRICE: Record<1 | 2 | 3 | 5, number> = {
   1: 100_000,
   2: 250_000,
-  3: 300_000, // per 区画
-  5: 500_000,
+  3: 800_000, // per 区画
+  5: 1_200_000,
 };
 
 /** Reference location presets for the catalog "from X km" feature. */
