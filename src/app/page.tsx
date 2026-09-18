@@ -462,8 +462,8 @@ const DETAILS: Array<{
     key: "ai",
     label: ["AI・産業活用", "AI & industrial use"],
     desc: [
-      "AIモデルの学習データ、工場・商業施設のデジタルツイン、防災・研修シミュレーションなど、プリビズ以外の産業活用にもご利用いただけます。AI学習目的の利用は拡張ライセンスで可能です。大規模な利用などはご相談ください。まずはお気軽にお問い合わせください。",
-      "The data also supports uses beyond previz — AI model training sets, digital twins for factories and commercial facilities, and disaster-prevention or training simulations. AI-training use is permitted under the Extended license; for larger-scale use, reach out and let's talk.",
+      "AIモデルの学習データ、工場・商業施設のデジタルツイン、防災・研修シミュレーションなど、プリビズ以外の産業活用にもご利用いただけます。AI学習目的の利用は事前のご相談・個別合意が必要ですが、当社としても前向きに取り組みたい分野です。まずはお気軽にお問い合わせください。",
+      "The data also supports uses beyond previz — AI model training sets, digital twins for factories and commercial facilities, and disaster-prevention or training simulations. AI-training use needs prior consultation and a separate agreement, but it's an area we're genuinely excited about — reach out and let's talk.",
     ],
     link: { href: "/contact/license", text: ["活用について相談する →", "Ask about use cases →"] },
     // 2026-08-16 本人指示「技術ブログにも誘導して」。works は外部(URL不変)なので extLink。

@@ -33,5 +33,5 @@ it("leaves the default panel presentation and inline comparison unchanged", () =
 it("provides Japanese phrase boundaries without splitting the inclusion term", () => {
   const html = renderToStaticMarkup(createElement(DataSalePanel, { ...props, propertyPresentation: true }));
   const paragraphs = [...html.matchAll(/<p>(.*?)<\/p>/g)].map(match => match[1].replace(/<\/?span[^>]*>/g, "").split(/<wbr\s*\/?\s*>/));
-  expect(paragraphs.some(parts => parts.includes("同梱・改変配布、"))).toBe(true);
+  expect(paragraphs.some(parts => parts.includes("同梱・改変配布を"))).toBe(true);
 });

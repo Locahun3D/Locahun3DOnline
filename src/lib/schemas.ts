@@ -65,7 +65,7 @@ export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   standard: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
   editorial: "無料。報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。",
-  extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布、機械学習・生成AIの学習への利用を許諾。",
+  extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
 
@@ -79,7 +79,7 @@ export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   standard: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
   editorial: "Free. Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.",
-  extended: "Commercial use plus bundling into templates / embedded products, modified redistribution, and use as training data for machine learning / generative AI.",
+  extended: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
 
@@ -129,20 +129,21 @@ export const DATA_LICENSE_MATRIX: {
     by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask" },
   },
   {
-    // 2026-09-19: AI学習利用は拡張ライセンスで可（施設契約 第5条5項・別紙2と一致）。
-    // 標準/エディトリアル/カスタムは規約どおり事前の書面許諾（要相談）。
+    // 規約 第4条:「機械学習・生成AIモデルの学習データとして利用する行為
+    // （本サービスの事前の書面による許諾がある場合を除く）」＝原則禁止だが、
+    // 事前の書面許諾があれば可能（一律禁止ではなく要相談）。
     key: "aiTraining",
     labelJa: "機械学習・生成AIの学習データとして使う",
     labelEn: "Using as training data for machine learning / generative AI",
-    by: { standard: "ask", extended: "yes", custom: "ask", editorial: "ask" },
+    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask" },
   },
 ];
 
 /** 可否表の下に出す補足。ライセンスを問わず効く条件を明示する。 */
 export const DATA_LICENSE_MATRIX_NOTE_JA =
-  "AI学習利用は拡張ライセンスで可能です（2026年9月19日改定）。再配布・転売・貸与は、いずれのライセンスも事前のご相談・個別合意が必要です。ご希望の場合はお気軽にお問い合わせください。本データには撮影対象の空間に写り込んだ第三者の看板・広告・ロゴ・美術品等が含まれる場合があります。制作物として公開・納品・配布する際は、ライセンス区分によらず、それらを削除・加工したうえでご利用ください（詳細はデータ購入規約第3条）。";
+  "再配布・転売・貸与、AI学習利用は、いずれのライセンスも事前のご相談・個別合意が必要です。ご希望の場合はお気軽にお問い合わせください。本データには撮影対象の空間に写り込んだ第三者の看板・広告・ロゴ・美術品等が含まれる場合があります。制作物として公開・納品・配布する際は、ライセンス区分によらず、それらを削除・加工したうえでご利用ください（詳細はデータ購入規約第3条）。";
 export const DATA_LICENSE_MATRIX_NOTE_EN =
-  "AI-training use is permitted under the Extended license (amended September 19, 2026). Redistribution/resale requires prior consultation and a separate agreement under every license. Please contact us if you're interested. The data may include third-party signage, advertisements, logos, or artwork captured within the scanned space. Before publishing, delivering, or distributing any work you create, please remove or edit out such material — this applies to every license tier (see Article 3 of the data purchase terms for details).";
+  "Redistribution/resale and AI-training use require prior consultation and a separate agreement, regardless of license. Please contact us if you're interested. The data may include third-party signage, advertisements, logos, or artwork captured within the scanned space. Before publishing, delivering, or distributing any work you create, please remove or edit out such material — this applies to every license tier (see Article 3 of the data purchase terms for details).";
 
 export function dataLicenseLabel(l: DataLicense, locale?: string): string {
   return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];

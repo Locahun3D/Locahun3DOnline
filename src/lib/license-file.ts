@@ -106,8 +106,8 @@ damages arising from a failure to do so.
 - Publishing confidential Studio information (backyards, loading docks,
   control rooms, etc.) on social media without permission
 - Using the Data or derivatives as training data for machine-learning
-  or generative-AI models (except under the Extended license, or with
-  the Service's prior written permission)
+  or generative-AI models (except with the Service's prior written
+  permission)
 - Publishing, delivering or distributing a work without removing
   Third-Party Material as required above
 
@@ -195,8 +195,8 @@ ${p.editorialRightsCredit ? `
 ・本データに含まれる機密情報（バックヤード・搬入口・制御室等）を
   SNS等で無許可公開する行為
 ・本データおよびその改変物を、機械学習・生成AIモデルの学習データ
-  として利用する行為（拡張ライセンスの場合、及び本サービスの
-  事前の書面による許諾がある場合を除く。用途によって条件が異なるため、ご希望の場合は
+  として利用する行為（本サービスの事前の書面による許諾がある
+  場合を除く。用途によって条件が異なるため、ご希望の場合は
   お問い合わせください）
 ・第三者権利物を除去せずに制作物を公開・納品・配布する行為
 

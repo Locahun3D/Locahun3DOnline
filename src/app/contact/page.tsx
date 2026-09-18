@@ -281,7 +281,7 @@ export default async function ContactHubPage() {
                   標準は映像・画像などの制作物を作る利用まで。データ自体をソフトウェアに
                   組み込んで配布する利用（VRChatワールドの公開など）は拡張の範囲です。
                   <br />
-                  AI学習利用は拡張ライセンスで可能です。それ以外は個別にご相談ください。
+                  AI学習利用も禁止ではなく個別のご相談です。
                   <Link href={lh("/contact/license")} className="text-accent hover:underline">
                     お問い合わせ
                   </Link>
@@ -293,7 +293,7 @@ export default async function ContactHubPage() {
                   itself into software for distribution (e.g. publishing a VRChat world) needs
                   the extended license.
                   <br />
-                  AI-training use is permitted under the Extended license; otherwise we work it out case by case.{" "}
+                  AI-training use isn&apos;t a flat no either — we work it out case by case.{" "}
                   <Link href={lh("/contact/license")} className="text-accent hover:underline">
                     Just ask
                   </Link>
