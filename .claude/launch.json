@@ -6,7 +6,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
-      "cwd": "Htlml/3DGS/locahun3d_online",
+      "cwd": ".",
       "autoPort": true
     }
   ]

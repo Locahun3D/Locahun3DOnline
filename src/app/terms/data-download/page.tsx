@@ -48,9 +48,7 @@ export default async function DataDownloadTermsPage() {
               {/* schemas.ts の DATA_LICENSE_LABEL/DATA_LICENSE_DESC と内容を一致させること */}
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li><strong>標準ライセンス</strong> — 商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。</li>
-                {/* エディトリアル限定は新規販売を停止済み（2026-07 実装変更）。過去購入分の
-                    利用条件として定義は残す — 規約から消すと過去の領収書記載区分が宙に浮く。 */}
-                <li><strong>エディトリアル限定</strong> — 報道・教育・個人利用に限定。広告等の商用利用は不可。<span className="opacity-70">※現在、新規販売でのご選択は停止しています。過去に本区分で提供されたデータには引き続き適用されます。</span></li>
+                <li><strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。</li>
                 <li><strong>拡張ライセンス</strong> — 商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。</li>
                 <li><strong>カスタム（要相談）</strong> — 利用範囲を個別に取り決め。購入前にお問い合わせください。</li>
               </ul>
@@ -153,6 +151,7 @@ export default async function DataDownloadTermsPage() {
             制定日: 2026年6月23日<br />
             改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ／第2条に対価・契約成立時点、第8条にスタジオ運営者からの許諾取得努力義務を追記／第2条にゲーム等ソフトウェア製品への組込利用は拡張ライセンスが必要である旨、第4条に組込利用時のデータ抽出可能性についての取り扱いを追記）<br />
             改定日: 2026年8月4日（第1条に契約当事者がKWI株式会社である旨を明記／第2条5項にエディトリアル限定区分の新規販売停止を注記／第5条3項の免責を賠償上限方式（支払対価・故意重過失を除く）に変更／第9条の規約変更手続きを事前周知方式に変更し、購入済み分への不遡及を明記）<br />
+            改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -211,7 +210,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               The specific scope of use depends on the license tier selected at purchase. The tier is shown on the purchase receipt.
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li><strong>Standard license</strong> — Use in commercial &amp; non-commercial productions. Redistribution or resale of the data itself is not permitted.</li>
-                <li><strong>Editorial only</strong> — Limited to news, education and personal use. Commercial use such as advertising is not permitted. <span className="opacity-70">*This tier is no longer offered for new purchases; it continues to apply to Data previously provided under it.</span></li>
+                <li><strong>Editorial only</strong> (free) — Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.</li>
                 <li><strong>Extended license</strong> — Commercial use plus bundling into templates / embedded products and modified redistribution.</li>
                 <li><strong>Custom (by arrangement)</strong> — Scope arranged individually. Please contact us before purchasing.</li>
               </ul>
@@ -309,6 +308,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             Established: June 23, 2026<br />
             Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8; clarified in Articles 2 and 4 that embedding into games/software requires the extended license, with the treatment of incidental data extractability)<br />
             Amended: August 4, 2026 (named KWI Inc. as the contracting party in Article 1; noted in Article 2.5 that the Editorial tier is closed to new purchases; replaced the blanket disclaimer in Article 5.3 with a liability cap equal to the price paid, excluding willful misconduct/gross negligence; changed Article 9 to an advance-notice amendment procedure with non-retroactivity for purchased Data)<br />
+            Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

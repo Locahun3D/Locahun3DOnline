@@ -101,6 +101,9 @@ export default async function TermsServicePage() {
           </p>
           <ul className="opacity-80 space-y-1.5 list-disc pl-5 mb-3">
             <li>
+              <strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限ります。広告等の商用利用はできません。公開時に権利表記が必要です。
+            </li>
+            <li>
               <strong>標準ライセンス</strong> — 商用・非商用の制作物（映像・画像等の制作）に利用できます。データ自体の再配布・再販はできません。
             </li>
             <li>
@@ -195,6 +198,7 @@ export default async function TermsServicePage() {
             改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ／第5条に、閲覧を通じて取得した画像・スクリーンショットおよび技術的手段により取得しうる3Dデータ自体について、購入データと同様の再配布・AI学習利用制限を追記）<br />
             改定日: 2026年8月4日（第10条に利用者からの退会手続きを追記／第11条3項の賠償上限に故意・重過失の除外と無償利用時の下限額を明記／第12条の規約変更手続きを事前周知方式に変更）<br />
             改定日: 2026年8月10日（第7条のホスティング商品の料金を、2027年以降は3Dデータ販売価格の20%の年額とする従価方式に変更。あわせてホスティング商品をお申し込みの場合のスキャン費用の無償化と、3年未満での解約時の精算を追記）<br />
+            改定日: 2026年9月19日（第6条にエディトリアル限定のライセンス分類を追記）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -295,6 +299,9 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             3D data sold on the Service is offered under license categories with different permitted scopes. You select a category at the time of purchase.
           </p>
           <ul className="opacity-80 space-y-1.5 list-disc pl-5 mb-3">
+            <li>
+              <strong>Editorial only</strong> (free) — limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.
+            </li>
             <li>
               <strong>Standard license</strong> — use in commercial and non-commercial productions (film, imagery, etc.). Redistribution or resale of the data itself is not permitted.
             </li>

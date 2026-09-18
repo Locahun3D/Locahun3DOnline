@@ -17,23 +17,24 @@ interface LicenseSource {
   salePrice?: number;
 }
 
-/** 標準価格がある商品は、拡張価格を常にその2倍にする。入力配列は変更しない。 */
+/**
+ * 区分ごとの価格ルールを当てる。入力配列は変更しない。
+ * - エディトリアルは常に無料（2026-09-19 本人決定）
+ * - 標準価格がある商品は、拡張価格を常にその2倍にする
+ */
 export function applyExtendedLicensePricing(options: LicenseOption[]): LicenseOption[] {
   const standard = options.find((option) => option.license === "standard");
-  return options.map((option) =>
-    option.license === "extended" && standard
-      ? { ...option, price: standard.price * 2 }
-      : { ...option },
-  );
+  return options.map((option) => {
+    if (option.license === "editorial") return { ...option, price: 0 };
+    if (option.license === "extended" && standard) return { ...option, price: standard.price * 2 };
+    return { ...option };
+  });
 }
 
 export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
-  // エディトリアル限定は新規販売不可（方針転換）。過去にチェック/設定された
-  // 物件データが残っていても、買い手側には一切見せず購入もできないよう
-  // ここで一律に除外する（管理画面側の選択不可化と二重の防御）。
-  const multi = (item.licenseOptions ?? []).filter(
-    (o) => o.license && o.license !== "editorial",
-  );
+  // エディトリアルは 2026-09-19 に販売再開（施設契約で「エディトリアルのみ許諾」を
+  // 選べるようにしたため）。どの区分を売るかは物件エディターの設定に従う。
+  const multi = (item.licenseOptions ?? []).filter((o) => o.license);
   if (multi.length > 0) {
     // 追加(チェックした)順ではなく、常に DATA_LICENSES のグレード順
     // (editorial → standard → extended → custom) で並べる。管理画面の
@@ -42,8 +43,8 @@ export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
       (a, b) => DATA_LICENSES.indexOf(a.license) - DATA_LICENSES.indexOf(b.license),
     );
   }
-  const fallback = item.license && item.license !== "editorial" ? item.license : "standard";
-  return [{ license: fallback, price: item.salePrice ?? 0 }];
+  const fallback = item.license || "standard";
+  return applyExtendedLicensePricing([{ license: fallback, price: item.salePrice ?? 0 }]);
 }
 
 /** 指定したライセンス区分に対応する価格を取得（見つからなければ null）。 */

@@ -64,7 +64,7 @@ export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
 
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   standard: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
-  editorial: "報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。",
+  editorial: "無料。報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。",
   extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
@@ -78,7 +78,7 @@ export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
 
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   standard: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
-  editorial: "Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.",
+  editorial: "Free. Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.",
   extended: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
