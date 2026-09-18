@@ -100,15 +100,14 @@ damages arising from a failure to do so.
 ----------------------------------------------------------------
 - Redistributing, reselling or lending the Data to third parties
 - Reproducing or imitating the Studio facility without permission
-- Providing the Studio's internal structure/equipment info to competitors
 - Publishing a modified version in a way that could be mistaken for the
   original Studio
 - Selling the Data as an NFT or digital asset
 - Publishing confidential Studio information (backyards, loading docks,
   control rooms, etc.) on social media without permission
 - Using the Data or derivatives as training data for machine-learning
-  or generative-AI models (except with the Service's prior written
-  permission)
+  or generative-AI models (except under the Extended license, or with
+  the Service's prior written permission)
 - Publishing, delivering or distributing a work without removing
   Third-Party Material as required above
 
@@ -191,14 +190,13 @@ ${p.editorialRightsCredit ? `
 ・本データの第三者への再配布・転売・貸与（本サービスの事前の書面に
   よる許諾がある場合を除く。ご希望の場合はお問い合わせください）
 ・本データを用いたスタジオ施設の無断複製・模倣
-・スタジオの内部構造・設備情報を競合施設に提供する行為
 ・本データの改変物を、元のスタジオと誤認させる形で公開する行為
 ・本データをNFT・デジタルアセットとして販売する行為
 ・本データに含まれる機密情報（バックヤード・搬入口・制御室等）を
   SNS等で無許可公開する行為
 ・本データおよびその改変物を、機械学習・生成AIモデルの学習データ
-  として利用する行為（本サービスの事前の書面による許諾がある
-  場合を除く。用途によって条件が異なるため、ご希望の場合は
+  として利用する行為（拡張ライセンスの場合、及び本サービスの
+  事前の書面による許諾がある場合を除く。用途によって条件が異なるため、ご希望の場合は
   お問い合わせください）
 ・第三者権利物を除去せずに制作物を公開・納品・配布する行為
 

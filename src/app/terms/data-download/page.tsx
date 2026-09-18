@@ -49,7 +49,7 @@ export default async function DataDownloadTermsPage() {
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li><strong>標準ライセンス</strong> — 商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。</li>
                 <li><strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。</li>
-                <li><strong>拡張ライセンス</strong> — 商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。</li>
+                <li><strong>拡張ライセンス</strong> — 商用利用に加え、テンプレート/組込製品への同梱・改変配布、機械学習・生成AIの学習データとしての利用を許諾。</li>
                 <li><strong>カスタム（要相談）</strong> — 利用範囲を個別に取り決め。購入前にお問い合わせください。</li>
               </ul>
             </li>
@@ -82,11 +82,10 @@ export default async function DataDownloadTermsPage() {
               拡張ライセンスに基づき組込利用を行う場合、当該ソフトウェア製品の利用者が技術的な解析等により本データを抽出しうる状態にあること自体は、前号の禁止事項に該当しません。ただし、抽出されたデータを本データそのものとして別途配布・転売・貸与する行為は、前号の禁止事項に該当します。
             </li>
             <li>本データを用いたスタジオ施設の無断複製・模倣</li>
-            <li>スタジオの内部構造・設備情報を競合施設に提供する行為</li>
-            <li>本データの改変物を、元のスタジオと誤認させる形で公開する行為</li>
+                        <li>本データの改変物を、元のスタジオと誤認させる形で公開する行為</li>
             <li>本データをNFT・デジタルアセットとして販売する行為</li>
             <li>本データに含まれるスタジオの機密情報（バックヤード・搬入口・制御室等）をSNS等で無許可公開する行為</li>
-            <li>本データおよびその改変物を、<strong>機械学習・生成AIモデルの学習データとして利用する行為</strong>（本サービスの事前の書面による許諾がある場合を除く。用途によって条件が異なるため、ご希望の場合はお問い合わせください）</li>
+            <li>本データおよびその改変物を、<strong>機械学習・生成AIモデルの学習データとして利用する行為</strong>（拡張ライセンスで購入した場合、及び本サービスの事前の書面による許諾がある場合を除く。用途によって条件が異なるため、ご希望の場合はお問い合わせください）</li>
             <li>第3条に定める第三者権利物を除去せずに制作物を公開・納品・配布する行為</li>
           </ol>
         </section>
@@ -151,7 +150,7 @@ export default async function DataDownloadTermsPage() {
             制定日: 2026年6月23日<br />
             改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ／第2条に対価・契約成立時点、第8条にスタジオ運営者からの許諾取得努力義務を追記／第2条にゲーム等ソフトウェア製品への組込利用は拡張ライセンスが必要である旨、第4条に組込利用時のデータ抽出可能性についての取り扱いを追記）<br />
             改定日: 2026年8月4日（第1条に契約当事者がKWI株式会社である旨を明記／第2条5項にエディトリアル限定区分の新規販売停止を注記／第5条3項の免責を賠償上限方式（支払対価・故意重過失を除く）に変更／第9条の規約変更手続きを事前周知方式に変更し、購入済み分への不遡及を明記）<br />
-            改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開）<br />
+            改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開／拡張ライセンスで機械学習・生成AIの学習データとしての利用を許諾／第4条から競合施設への情報提供の禁止を削除）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -211,7 +210,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li><strong>Standard license</strong> — Use in commercial &amp; non-commercial productions. Redistribution or resale of the data itself is not permitted.</li>
                 <li><strong>Editorial only</strong> (free) — Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.</li>
-                <li><strong>Extended license</strong> — Commercial use plus bundling into templates / embedded products and modified redistribution.</li>
+                <li><strong>Extended license</strong> — Commercial use plus bundling into templates / embedded products, modified redistribution, and use as training data for machine learning / generative AI.</li>
                 <li><strong>Custom (by arrangement)</strong> — Scope arranged individually. Please contact us before purchasing.</li>
               </ul>
             </li>
@@ -242,11 +241,10 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               (Where Embedded Use is made under the extended license, the mere fact that users of the software product could extract the Data through technical analysis does not itself constitute a breach of the preceding item. However, separately distributing, reselling or lending the extracted Data as the Data itself does constitute such a breach.)
             </li>
             <li>reproduce or imitate the Studio facility without permission using the Data;</li>
-            <li>provide the Studio&apos;s internal structure or equipment information to competing facilities;</li>
-            <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
+                        <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
             <li>sell the Data as an NFT or digital asset;</li>
             <li>publish confidential Studio information contained in the Data (backyards, loading docks, control rooms, etc.) on social media or elsewhere without permission;</li>
-            <li>use the Data or derivatives thereof as <strong>training data for machine-learning or generative-AI models</strong> (except with the Service&apos;s prior written permission);</li>
+            <li>use the Data or derivatives thereof as <strong>training data for machine-learning or generative-AI models</strong> (except when purchased under the Extended license, or with the Service&apos;s prior written permission);</li>
             <li>publish, deliver or distribute a work without removing Third-Party Material as required under Article 3.</li>
           </ol>
         </section>
@@ -308,7 +306,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             Established: June 23, 2026<br />
             Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8; clarified in Articles 2 and 4 that embedding into games/software requires the extended license, with the treatment of incidental data extractability)<br />
             Amended: August 4, 2026 (named KWI Inc. as the contracting party in Article 1; noted in Article 2.5 that the Editorial tier is closed to new purchases; replaced the blanket disclaimer in Article 5.3 with a liability cap equal to the price paid, excluding willful misconduct/gross negligence; changed Article 9 to an advance-notice amendment procedure with non-retroactivity for purchased Data)<br />
-            Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5)<br />
+            Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5; the Extended license now permits use as machine-learning / generative-AI training data; removed the prohibition on providing information to competing facilities from Article 4)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

@@ -107,15 +107,15 @@ export default async function TermsServicePage() {
               <strong>標準ライセンス</strong> — 商用・非商用の制作物（映像・画像等の制作）に利用できます。データ自体の再配布・再販はできません。
             </li>
             <li>
-              <strong>拡張ライセンス</strong> — 標準の範囲に加え、テンプレートやソフトウェア製品への同梱・改変配布ができます。ゲーム・アプリケーション等に組み込む場合はこの分類が必要です。
+              <strong>拡張ライセンス</strong> — 標準の範囲に加え、テンプレートやソフトウェア製品への同梱・改変配布、機械学習・生成AIモデルの学習データとしての利用ができます。ゲーム・アプリケーション等に組み込む場合、及びAIの学習に利用する場合はこの分類が必要です。
             </li>
             <li>
               <strong>カスタム</strong> — 上記に当てはまらない利用範囲を個別に取り決めます。購入前にお問い合わせください。
             </li>
           </ul>
           <p className="opacity-80 mb-3">
-            <strong>いずれの分類においても</strong>、データ自体の再配布・転売・貸与、および
-            <strong>機械学習・生成AIモデルの学習データとしての利用</strong>には、当社との事前のご相談・個別の書面合意が必要です。用途によって条件が異なるため、ご希望の場合はお気軽にお問い合わせください。
+            <strong>いずれの分類においても</strong>、データ自体の再配布・転売・貸与には、当社との事前のご相談・個別の書面合意が必要です。
+            <strong>機械学習・生成AIモデルの学習データとしての利用</strong>は、拡張ライセンスで購入した場合に限り可能です（それ以外は事前のご相談・個別の書面合意が必要です）。用途によって条件が異なるため、ご希望の場合はお気軽にお問い合わせください。
           </p>
           <p className="opacity-80">
             各分類の詳細な条件・禁止事項は
@@ -198,7 +198,7 @@ export default async function TermsServicePage() {
             改定日: 2026年8月2日（第2条に撮影スタジオ・ゲスト区分の利用条件を追記／第7条としてホスティング商品を新設し、以降の条項を繰り下げ／第5条に、閲覧を通じて取得した画像・スクリーンショットおよび技術的手段により取得しうる3Dデータ自体について、購入データと同様の再配布・AI学習利用制限を追記）<br />
             改定日: 2026年8月4日（第10条に利用者からの退会手続きを追記／第11条3項の賠償上限に故意・重過失の除外と無償利用時の下限額を明記／第12条の規約変更手続きを事前周知方式に変更）<br />
             改定日: 2026年8月10日（第7条のホスティング商品の料金を、2027年以降は3Dデータ販売価格の20%の年額とする従価方式に変更。あわせてホスティング商品をお申し込みの場合のスキャン費用の無償化と、3年未満での解約時の精算を追記）<br />
-            改定日: 2026年9月19日（第6条にエディトリアル限定のライセンス分類を追記）<br />
+            改定日: 2026年9月19日（第6条にエディトリアル限定のライセンス分類を追記／拡張ライセンスで機械学習・生成AIの学習データとしての利用を可能とした）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -306,14 +306,14 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
               <strong>Standard license</strong> — use in commercial and non-commercial productions (film, imagery, etc.). Redistribution or resale of the data itself is not permitted.
             </li>
             <li>
-              <strong>Extended license</strong> — in addition to the Standard scope, bundling into templates or software products and modified redistribution. Embedding into games, applications, and similar products requires this category.
+              <strong>Extended license</strong> — in addition to the Standard scope, bundling into templates or software products, modified redistribution, and use as training data for machine-learning or generative-AI models. Embedding into games, applications, and similar products, and AI training, require this category.
             </li>
             <li>
               <strong>Custom</strong> — scopes not covered above are arranged individually. Please contact us before purchasing.
             </li>
           </ul>
           <p className="opacity-80 mb-3">
-            <strong>Under every category</strong>, redistributing, reselling, or lending the data itself, and <strong>using the data as training data for machine-learning or generative-AI models</strong>, require our prior consultation and individual written agreement. Terms vary by intended use, so please feel free to contact us if you are interested.
+            <strong>Under every category</strong>, redistributing, reselling, or lending the data itself requires our prior consultation and individual written agreement. <strong>Using the data as training data for machine-learning or generative-AI models</strong> is permitted only when purchased under the Extended license (otherwise it requires prior consultation and an individual written agreement). Terms vary by intended use, so please feel free to contact us if you are interested.
           </p>
           <p className="opacity-80">
             Detailed conditions and prohibited acts for each category are set out in the{" "}

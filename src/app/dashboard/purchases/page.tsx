@@ -76,9 +76,9 @@ export default async function UserPurchasesPage() {
         {en ? (
           <>
             Please use purchased data within the scope of its license. Using it as
-            training data for machine learning or generative AI needs prior
-            consultation and a separate agreement, regardless of license tier —
-            we&rsquo;re happy to talk, terms just vary by case. See the{" "}
+            training data for machine learning or generative AI is permitted under
+            the Extended license; other tiers need prior consultation and a
+            separate agreement — we&rsquo;re happy to talk. See the{" "}
             <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
               data purchase terms
             </Link>{" "}
@@ -90,7 +90,7 @@ export default async function UserPurchasesPage() {
           </>
         ) : (
           <>
-            購入データはライセンスの範囲内でご利用ください。機械学習・生成AIの学習データとしての利用は、ライセンスを問わず事前のご相談・個別合意が必要です（案件により条件が変わるだけで、前向きにご相談に応じます）。詳細は{" "}
+            購入データはライセンスの範囲内でご利用ください。機械学習・生成AIの学習データとしての利用は、拡張ライセンスで可能です。それ以外のライセンスでは事前のご相談・個別合意が必要です（前向きにご相談に応じます）。詳細は{" "}
             <Link href={lh("/terms/data-download")} target="_blank" className="underline hover:text-accent transition">
               データ購入規約
             </Link>
