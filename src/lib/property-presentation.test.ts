@@ -70,3 +70,12 @@ it("keeps titles without a separator on one line and honours explicit newlines",
   expect(propertyTitleLines("Warehouse A\n横浜の倉庫")).toEqual({ name: "Warehouse A", lines: ["横浜の倉庫"] });
   expect(propertyTitleLines("")).toEqual({ name: "", lines: [] });
 });
+
+it("can exclude Saturdays from a Sunday-and-holiday surcharge", () => {
+  const sunHol = { label: "日祝", percent: 20, fromHour: 0, toHour: 0, holidays: true, includeSaturday: false };
+  const base = { hourlyPrice: 10000, startHour: 10, hours: 2, holiday: false, surcharges: [sunHol] };
+  expect(simulatePrice({ ...base, day: "saturday" }).total).toBe(20000);
+  expect(simulatePrice({ ...base, day: "sunday" }).total).toBe(24000);
+  expect(simulatePrice({ ...base, day: "holiday" }).total).toBe(24000);
+  expect(simulatePrice({ ...base, day: "saturday", surcharges: [{ ...sunHol, includeSaturday: true }] }).total).toBe(24000);
+});

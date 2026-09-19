@@ -46,6 +46,16 @@ export function jpHolidayName(y: number, m: number, d: number): string | null {
   return null;
 }
 
+/** "YYYY-MM-DD" の日の種類（祝日は曜日より優先）。不正な日付は平日扱い。 */
+export function jpDayKind(iso: string): "weekday" | "saturday" | "sunday" | "holiday" {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return "weekday";
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (jpHolidayName(y, mo, d)) return "holiday";
+  const w = dow(y, mo, d);
+  return w === 0 ? "sunday" : w === 6 ? "saturday" : "weekday";
+}
+
 /** "YYYY-MM-DD" が土日または祝日か。 */
 export function isJpDayOff(iso: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);

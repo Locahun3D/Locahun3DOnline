@@ -1664,17 +1664,18 @@ export default function PropertyEditor({
               <Field label="割増（時間帯・土日祝）" hint="例: 夜間 20時〜8時 +20%。「土日祝」にチェックすると曜日の割増（時間帯は無視）。重なる時間は高い方だけ適用されます。">
                 <div className="space-y-2">
                   {rateSurchargesArray.fields.map((f, idx) => (
-                    <div key={f.id} className="grid grid-cols-[1fr_80px_70px_70px_auto_auto] gap-2 items-center">
+                    <div key={f.id} className="grid grid-cols-[1fr_80px_70px_70px_auto_auto_auto] gap-2 items-center">
                       <input type="text" {...register(`rateSurcharges.${idx}.label`)} className={inputClass} placeholder="例: 夜間" maxLength={40} />
                       <input type="number" {...register(`rateSurcharges.${idx}.percent`, { valueAsNumber: true })} className={inputClass} placeholder="+%" />
                       <input type="number" min={0} max={24} {...register(`rateSurcharges.${idx}.fromHour`, { valueAsNumber: true })} className={inputClass} placeholder="開始時" />
                       <input type="number" min={0} max={24} {...register(`rateSurcharges.${idx}.toHour`, { valueAsNumber: true })} className={inputClass} placeholder="終了時" />
                       <label className="flex items-center gap-1.5 text-[12px] whitespace-nowrap"><input type="checkbox" {...register(`rateSurcharges.${idx}.holidays`)} className="accent-[#5ec8e8]" />土日祝</label>
+                      <label className="flex items-center gap-1.5 text-[12px] whitespace-nowrap" title="「日曜・祝日のみ割増」の場合は外す"><input type="checkbox" {...register(`rateSurcharges.${idx}.includeSaturday`)} className="accent-[#5ec8e8]" />土曜も</label>
                       <button type="button" onClick={() => rateSurchargesArray.remove(idx)} className="mono text-[10px] text-muted hover:text-red-500 px-2">削除</button>
                     </div>
                   ))}
                   {rateSurchargesArray.fields.length < 4 && (
-                    <button type="button" onClick={() => rateSurchargesArray.append({ label: "", labelEn: "", percent: 20, fromHour: 20, toHour: 8, holidays: false })} className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition">＋ 割増を追加</button>
+                    <button type="button" onClick={() => rateSurchargesArray.append({ label: "", labelEn: "", percent: 20, fromHour: 20, toHour: 8, holidays: false, includeSaturday: true })} className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition">＋ 割増を追加</button>
                   )}
                 </div>
               </Field>

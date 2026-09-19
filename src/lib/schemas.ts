@@ -420,6 +420,8 @@ export const propertySchema = z.object({
     fromHour: z.number().int().min(0).max(24).default(0),
     toHour: z.number().int().min(0).max(24).default(0),
     holidays: z.boolean().default(false),
+    /** holidays=true のとき土曜も対象にするか（「日曜・祝日のみ割増」のスタジオは false）。 */
+    includeSaturday: z.boolean().default(true),
   })).max(4).default([]),
   /** 表示金額が税込なら true（false = 税別）。 */
   taxIncluded: z.boolean().default(false),

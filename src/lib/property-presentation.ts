@@ -53,16 +53,20 @@ export function usageEstimates(p: { priceType: string; hourlyPrice: number; minU
  * スタジオの料金表は「夜間・土日祝は20%UP」のようにどちらか一方の扱いが一般的）。
  * fromHour > toHour は日をまたぐ時間帯（20→8）。holidays=true の割増は「土日祝」を選んだ時に全時間へ掛かる。
  */
-export type RateSurcharge = { label: string; percent: number; fromHour: number; toHour: number; holidays: boolean };
+export type RateSurcharge = { label: string; percent: number; fromHour: number; toHour: number; holidays: boolean; includeSaturday?: boolean };
+/** 利用日の種類。土曜だけ対象外にする割増（日曜・祝日のみ）があるため、土曜を分けて持つ。 */
+export type DayKind = "weekday" | "saturday" | "sunday" | "holiday";
 export type PriceLine = { label: string; hours: number; rate: number };
-export function simulatePrice(input: { hourlyPrice: number; startHour: number; hours: number; holiday: boolean; surcharges: RateSurcharge[] }): { total: number; lines: PriceLine[] } {
+export function simulatePrice(input: { hourlyPrice: number; startHour: number; hours: number; holiday: boolean; day?: DayKind; surcharges: RateSurcharge[] }): { total: number; lines: PriceLine[] } {
   const lines: PriceLine[] = [];
   for (let i = 0; i < input.hours; i++) {
     const h = (input.startHour + i) % 24;
     let best: RateSurcharge | null = null;
     for (const s of input.surcharges) {
       const inWindow = s.fromHour === s.toHour ? false : s.fromHour < s.toHour ? h >= s.fromHour && h < s.toHour : h >= s.fromHour || h < s.toHour;
-      if ((s.holidays ? input.holiday : inWindow) && (!best || s.percent > best.percent)) best = s;
+      const day: DayKind = input.day ?? (input.holiday ? "holiday" : "weekday");
+      const dayOff = day === "sunday" || day === "holiday" || (day === "saturday" && s.includeSaturday !== false);
+      if ((s.holidays ? dayOff : inWindow) && (!best || s.percent > best.percent)) best = s;
     }
     const label = best ? best.label : "通常";
     const rate = best ? Math.round(input.hourlyPrice * (1 + best.percent / 100)) : input.hourlyPrice;

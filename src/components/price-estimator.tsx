@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { isJpDayOff, jpHolidayName } from "@/lib/jp-holidays";
+import { isJpDayOff, jpDayKind, jpHolidayName } from "@/lib/jp-holidays";
 import { simulatePrice, usageEstimates, type RateSurcharge } from "@/lib/property-presentation";
 
 type RatePlan = { label: string; labelEn: string; hourlyPrice: number; minHours: number };
@@ -44,7 +44,7 @@ export default function PriceEstimator({
     return m ? jpHolidayName(Number(m[1]), Number(m[2]), Number(m[3])) : null;
   })();
   const dayOff = isJpDayOff(date);
-  const sim = simulatePrice({ hourlyPrice: rate, startHour, hours, holiday: dayOff, surcharges });
+  const sim = simulatePrice({ hourlyPrice: rate, startHour, hours, holiday: dayOff, day: jpDayKind(date), surcharges });
   const hasHolidayRule = surcharges.some((s) => s.holidays);
   const chip = "min-h-[40px] px-3.5 border text-[13px] font-medium transition";
 
@@ -116,7 +116,7 @@ export default function PriceEstimator({
         {date && (
           <p className="text-[12px] mt-2.5">
             {dayOff
-              ? <span className="text-accent font-bold">{holidayName ? (en ? `Holiday (${holidayName})` : `祝日（${holidayName}）`) : en ? "Weekend" : "土日"}{hasHolidayRule ? (en ? " — holiday rate applies" : " — 土日祝の料金で計算") : ""}</span>
+              ? <span className="text-accent font-bold">{holidayName ? (en ? `Holiday (${holidayName})` : `祝日（${holidayName}）`) : jpDayKind(date) === "saturday" ? (en ? "Saturday" : "土曜") : en ? "Sunday" : "日曜"}{hasHolidayRule && sim.lines.some((l) => l.label !== "通常") ? (en ? " — surcharge applies" : " — 割増料金で計算") : ""}</span>
               : <span className="text-muted">{en ? "Weekday" : "平日"}</span>}
           </p>
         )}
@@ -145,7 +145,7 @@ export default function PriceEstimator({
         {surcharges.length > 0 && (
           <>
             <br />
-            {surcharges.map((s) => `${s.label} ${s.percent > 0 ? "+" : ""}${s.percent}%${s.holidays ? "" : `（${s.fromHour}:00〜${s.toHour}:00）`}`).join(" ／ ")}
+            {surcharges.map((s) => `${s.label} ${s.percent > 0 ? "+" : ""}${s.percent}%${s.holidays ? (s.includeSaturday === false ? "（土曜は対象外）" : "") : `（${s.fromHour}:00〜${s.toHour}:00）`}`).join(" ／ ")}
           </>
         )}
       </p>
