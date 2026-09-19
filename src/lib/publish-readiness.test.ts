@@ -19,6 +19,7 @@ const filled = (over: Record<string, unknown> = {}) =>
     hourlyPrice: 15000,
     cover: { src: "/uploads/st-001/cover.jpg", alt: "スタジオ全景", width: 1600, height: 1000 },
     urlConfirmedAt: "2026-08-01T00:00:00.000Z",
+    gallery: Array.from({ length: 6 }, (_, i) => ({ src: `/g${i}.jpg`, alt: `写真${i}`, width: 1600, height: 1000 })), contactEmail: "info@example.com",
     ...over,
   });
 
@@ -64,5 +65,16 @@ describe("publishReadiness — 3DGS以外が揃っているか", () => {
     expect(publishReadiness(null).ready).toBe(false);
     expect(publishReadiness(undefined).ready).toBe(false);
     expect(publishReadiness({}).ready).toBe(false);
+  });
+
+  it("問い合わせ先が無い・ギャラリーが6枚未満なら申請できない（2026-09-19）", () => {
+    const r = publishReadiness(filled({ contactEmail: "", contactWebsite: "", gallery: [] }));
+    expect(r.ready).toBe(false);
+    expect(r.missing).toContain("問い合わせ先（メール or 公式サイト）");
+    expect(r.missing).toContain("ギャラリー写真（カバー以外6枚以上）");
+  });
+
+  it("公式サイトだけでも問い合わせ先として認める", () => {
+    expect(publishReadiness(filled({ contactEmail: "", contactWebsite: "https://example.com/contact" })).ready).toBe(true);
   });
 });

@@ -6,7 +6,14 @@ import styles from './scene-editor.module.css';
 
 const messages:Record<string,string>={loading:'3DGSを読み込んでいます',ready:'編集できます',exporting:'編集内容をまとめています',hashing:'保存データを確認しています',reserving:'保存先を準備しています',uploading:'アップロードしています',verifying:'保存した内容を照合しています',attaching:'シーンへ反映しています',saved:'保存しました',savedSessionError:'保存しました。次の編集を保存する前に、接続を再確認してください。',error:'保存できませんでした。編集内容はこの画面に残っています。もう一度保存してください。',expired:'認証または編集セッションの期限が切れました。この画面を閉じずにログイン状態を確認してください。',conflict:'他の画面で物件が更新されました。上書きせず停止しました。',cancelled:'保存を中断しました。反映済みか不明な場合は物件を別画面で確認してください。',loadError:'読み込みが完了しなかったため保存できません。物件編集から開き直してください。',tooLarge:'この3DGSはオンライン編集できるサイズ（1GB）を超えています。ファイルを軽くしてから差し替えるか、管理者に相談してください。',publishedAdminOnly:'公開中の物件は管理者のみ編集・保存できます。下書きに戻すか、管理者に依頼してください。'};
 
-export default function SceneEditor({propertyId,sceneId,label,published}:{propertyId:string;sceneId:string;label:string;published:boolean}) {
+export type SceneAttached={propertyId:string;sceneId:string;key:string;updatedAt:string};
+
+/**
+ * 3DGSのオンライン編集。物件編集の中にそのまま埋め込む（inline）か、単独ページで開く。
+ * 2026-09-19: 専用ページは表示域が狭く見づらいとの指摘で、物件編集内の埋め込みを標準にした。
+ * 読み込み完了時にビューアーへ入力フォーカスを移す（移さないと WASD の移動が効かない）。
+ */
+export default function SceneEditor({propertyId,sceneId,label,published,inline=false,onClose,onAttached}:{propertyId:string;sceneId:string;label:string;published:boolean;inline?:boolean;onClose?:()=>void;onAttached?:(data:SceneAttached)=>void}) {
  const frame=useRef<HTMLIFrameElement>(null);
  const session=useRef<SceneSession|null>(null);
  const controller=useRef<AbortController|null>(null);
@@ -32,6 +39,7 @@ export default function SceneEditor({propertyId,sceneId,label,published}:{proper
    if(data?.type==='locahun:scene-editor-ready'){transportReady.current=true;load();}
    if(['locahun:scene-ready','locahun:scene-load-error'].includes(data?.type)&&loadReply(event)){
     clearTimeout(loadTimer);validRef.current=data.type==='locahun:scene-ready';setReady(validRef.current);setPhase(validRef.current?'ready':'loadError');
+    if(validRef.current){frame.current?.focus();frame.current?.contentWindow?.focus();}
    }
    if(data?.type==='locahun:scene-dirty'){dirty.current=true;generation.current++;if(!busyRef.current)setPhase(previous=>['ready','saved','edited'].includes(previous)?'edited':previous);}
    if(data?.type==='locahun:scene-invalid'){dirty.current=true;generation.current++;validRef.current=false;setReady(false);setPhase('loadError');}
@@ -67,7 +75,8 @@ export default function SceneEditor({propertyId,sceneId,label,published}:{proper
    setPhase(result.phase);
    if(result.attached){
     if(atExport===generation.current){dirty.current=false;frame.current?.contentWindow?.postMessage({type:'locahun:scene-saved',requestId},location.origin);}
-    window.opener?.postMessage({type:'locahun:scene-attached',propertyId,sceneId,key:result.key,updatedAt:result.updatedAt},location.origin);
+    if(onAttached)onAttached({propertyId,sceneId,key:result.key,updatedAt:result.updatedAt});
+    else window.opener?.postMessage({type:'locahun:scene-attached',propertyId,sceneId,key:result.key,updatedAt:result.updatedAt},location.origin);
     // Obtain a fresh session bound to the new revision, without discarding the live scene.
     session.current={...session.current,target:{...session.current.target,expectedUpdatedAt:result.updatedAt,previousUrl:result.url}};
     try {
@@ -89,14 +98,22 @@ export default function SceneEditor({propertyId,sceneId,label,published}:{proper
    session.current=next;setReady(true);setPhase('ready');
   }catch{setPhase('expired');}finally{busyRef.current=false;setBusy(false);}
  };
- return <section className={`theme-online ${styles.root}`}>
-  <header className={styles.header}>
-   <div><a href={`/admin/properties/${encodeURIComponent(propertyId)}/edit`} onClick={event=>{if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。物件編集へ戻りますか？'))event.preventDefault();}}>← 物件編集に戻る</a><h1>{label||'3DGS'}の編集</h1></div>
-   <div className={styles.actions}><button type="button" onClick={()=>void save()} disabled={!ready||busy}>このシーンに保存</button>{['expired','savedSessionError'].includes(phase)&&<button type="button" disabled={busy} onClick={()=>void reconnect()}>接続を再確認</button>}{busy&&phase!=='attaching'&&<button type="button" onClick={()=>controller.current?.abort()}>中断</button>}</div>
-   <p role="status" aria-live="polite">{phase==='edited'?'未保存の変更があります':messages[phase]||phase}</p>
-   {published&&<p className={styles.notice}>公開中の物件です。保存に成功すると、以後の閲覧に変更が反映されます。</p>}
-   <p className={styles.notice}>この編集はビューアーの表示だけに反映されます。販売用データ（ダウンロード販売ファイル）は変わりません。販売データから消す必要がある場合は、販売ファイルを別途差し替えてください。</p>
+ const status=phase==='edited'?'未保存の変更があります':messages[phase]||phase;
+ const close=()=>{if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。閉じますか？'))return;onClose?.();};
+ return <section className={`${inline?'':'theme-online '}${styles.root} ${inline?styles.inline:''}`}>
+  <header className={styles.bar}>
+   {inline
+    ? <button type="button" className={styles.back} onClick={close}>× 閉じる</button>
+    : <a className={styles.back} href={`/admin/properties/${encodeURIComponent(propertyId)}/edit`} onClick={event=>{if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。物件編集へ戻りますか？'))event.preventDefault();}}>← 物件編集に戻る</a>}
+   <strong className={styles.title}>{label||'3DGS'}の編集</strong>
+   <span className={styles.status} role="status" aria-live="polite">{status}</span>
+   <span className={styles.actions}>
+    {['expired','savedSessionError'].includes(phase)&&<button type="button" disabled={busy} onClick={()=>void reconnect()}>接続を再確認</button>}
+    {busy&&phase!=='attaching'&&<button type="button" onClick={()=>controller.current?.abort()}>中断</button>}
+    <button type="button" className={styles.primary} onClick={()=>void save()} disabled={!ready||busy}>このシーンに保存</button>
+   </span>
   </header>
-  <iframe ref={frame} title={`${label||'3DGS'} 編集ビューアー`} src="/viewer/scene-editor.html?onlineSceneEdit=1" className={styles.viewer} allow="fullscreen" />
+  <p className={styles.hint}>視点: 右ドラッグで回転／W・A・S・Dで移動／Q・Eで上下／ホイールで画角（Shift＋ホイールで速度）。うまく動かない時はビューアーを一度クリック。{published&&' 公開中の物件です。保存すると閲覧に反映されます。'} 販売用データは変わりません。</p>
+  <iframe ref={frame} title={`${label||'3DGS'} 編集ビューアー`} src="/viewer/scene-editor.html?onlineSceneEdit=1" className={styles.viewer} allow="fullscreen" tabIndex={0} />
  </section>;
 }

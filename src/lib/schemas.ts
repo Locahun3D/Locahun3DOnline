@@ -633,6 +633,9 @@ export function isNewProperty(
  * Schema used when publishing — re-validates with stricter rules.
  * All "required for publish" fields are enforced here, not in the draft schema.
  */
+/** 公開に必要なギャラリー枚数（カバーを除く）。2026-09-19 会議で「最低6枚」。 */
+export const MIN_PUBLISH_GALLERY = 6;
+
 export const publishablePropertySchema = propertySchema.extend({
   urlConfirmedAt: z.string().min(1, "公開URLを確認してください"),
   title: z
@@ -656,6 +659,28 @@ export const publishablePropertySchema = propertySchema.extend({
     alt: z.string().min(1, "カバー画像の代替テキストを入力してください"),
   }),
 }).superRefine((data, ctx) => {
+  // 2026-09-19 UI改善会議: 公開前に必ず揃えるもの。
+  // ① 問い合わせの送り先（メール or 公式サイト）。contactEmail が空だと
+  //    問い合わせフォームが施設に転送されない（inquiry-actions.ts）。
+  if (!data.permitRequired && !data.contactEmail.trim() && !data.contactWebsite.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["contactEmail"],
+      message: "問い合わせ先のメールアドレス（なければ公式サイトの問い合わせページURL）を入力してください",
+    });
+  }
+  // ② ギャラリーはカバーと重複しない写真を6枚以上（公式サイトの写真を使う）。
+  const galleryCount = new Set(
+    data.gallery.map((g) => g.src).filter((src) => src && src !== data.cover.src),
+  ).size;
+  if (galleryCount < MIN_PUBLISH_GALLERY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["gallery"],
+      message: `ギャラリーはカバー以外の写真を${MIN_PUBLISH_GALLERY}枚以上登録してください（現在${galleryCount}枚）`,
+    });
+  }
+
   // 3DGS データは公開の必須条件ではない（都のロケーションボックス等の写真のみ
   // カタログと同様、スキャン前でも掲載できるようにする）。3DGS が無い物件は
   // 詳細ページ側で「3DGSデータは準備中です」の空表示にフォールバックする

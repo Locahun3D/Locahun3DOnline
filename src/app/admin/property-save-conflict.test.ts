@@ -48,7 +48,7 @@ it("returns the new version for the next serialized autosave", async () => {
 });
 
 function publishable() {
-  return { ...storage.property, area: "東京", prefecture: "東京都", city: "渋谷区", summary: "テスト用の紹介文を入力しています。", hourlyPrice: 1000, urlConfirmedAt: "2026-09-12T00:00:00.000Z", cover: { src: "/test.jpg", alt: "全景" } };
+  return { ...storage.property, area: "東京", prefecture: "東京都", city: "渋谷区", summary: "テスト用の紹介文を入力しています。", hourlyPrice: 1000, urlConfirmedAt: "2026-09-12T00:00:00.000Z", cover: { src: "/test.jpg", alt: "全景" }, gallery: Array.from({ length: 6 }, (_, i) => ({ src: `/g${i}.jpg`, alt: `写真${i}`, width: 1600, height: 1000 })), contactEmail: "info@example.com" };
 }
 
 it("publishing rejects another editor's newer version without overwriting it", async () => {

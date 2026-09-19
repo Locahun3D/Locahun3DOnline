@@ -28,6 +28,8 @@ const FIELD_LABEL: Record<string, string> = {
   hourlyPrice: "時間料金",
   category: "カテゴリ",
   urlConfirmedAt: "公開URLの確認",
+  contactEmail: "問い合わせ先（メール or 公式サイト）",
+  gallery: "ギャラリー写真（カバー以外6枚以上）",
 };
 
 export interface PublishReadiness {

@@ -56,6 +56,7 @@ import { publishedEnglishUpdates } from "@/lib/published-english-updates";
 import { applyExtendedLicensePricing } from "@/lib/license-options";
 import { receiveSceneAttachment, sceneRefreshDecision, sceneRequest, SceneHttpError, sourceRefreshDecision, type SceneSession } from "@/lib/scene-edit-client";
 import styles from "./property-editor.module.css";
+import SceneEditor, { type SceneAttached } from "./scene-editor";
 
 /**
  * 入力ステップ。⚠ 並び順 = 実際に埋める順番。ここを変えたら本文側の
@@ -253,6 +254,9 @@ export default function PropertyEditor({
   // タイマーID(autoSaveTimer)は発火後も残るため、待機中かどうかの判定には使えない。
   const autoSavePendingRef = useRef(false);
   const sceneEditWindowsRef = useRef(new Map<Window, string>());
+  // 物件編集の中に埋め込んで開いている3DGS編集（シーンID）。null なら閉じている。
+  const [inlineSceneId, setInlineSceneId] = useState<string | null>(null);
+  const inlineSceneKeysRef = useRef(new Set<string>());
   const sceneMessagesRef = useRef(new Set<string>());
   const sceneRefreshExpectedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -312,20 +316,17 @@ export default function PropertyEditor({
     // RHF's field-array key is not the persisted scene ID.
     const scene = getValues(`splatItems.${idx}`);
     if (!scene?.id || !scene.splatUrl) return;
-    const child = window.open("about:blank", "_blank");
-    if (!child) { setSaveError("編集画面を開けませんでした。ポップアップを許可してください。"); return; }
     try {
       const result: SceneSession = await sceneRequest({ action: "target", propertyId: initial.id, sceneId: scene.id }, new AbortController().signal);
       const currentScene = getValues("splatItems").find(item => item.id === scene.id);
       if (hasPendingPropertyChanges() || result.target.propertyId !== initial.id || result.target.sceneId !== scene.id || result.target.expectedUpdatedAt !== baseUpdatedAtRef.current || result.target.previousUrl !== currentScene?.splatUrl) {
-        child.close();
         stopForConflict();
         return;
       }
-      sceneEditWindowsRef.current.set(child, scene.id);
-      child.location.href = `/scene-edit/${encodeURIComponent(initial.id)}/${encodeURIComponent(scene.id)}`;
+      // 別タブの専用ページではなく、このシーン欄の中に編集ビューアーを開く（2026-09-19）。
+      setPreviewItemIdx(null);
+      setInlineSceneId(scene.id);
     } catch (error) {
-      child.close();
       const code = error instanceof SceneHttpError ? error.code : "";
       setSaveError(
         code === "published_admin_only" ? "公開中の物件は管理者のみ3DGSを編集できます。下書きに戻すか、管理者に依頼してください。"
@@ -333,6 +334,19 @@ export default function PropertyEditor({
         : "保存済みのシーンを確認できませんでした。物件を保存し、ログイン状態を確認してから開き直してください。",
       );
     }
+  };
+  const onInlineSceneAttached = (data: SceneAttached) => {
+    if (data.propertyId !== initial.id || inlineSceneKeysRef.current.has(data.key)) return;
+    inlineSceneKeysRef.current.add(data.key);
+    const pending = hasPendingPropertyChanges();
+    // Freeze before refresh: an old debounce/unmount save must never restore the old scene URL.
+    conflictRef.current = true;
+    clearTimeout(autoSaveTimer.current);
+    if (pending) { stopForConflict(); return; }
+    autoSavePendingRef.current = false;
+    pendingSaveRef.current = false;
+    sceneRefreshExpectedRef.current = data.updatedAt;
+    router.refresh();
   };
   const revertSceneVersion = async (idx: number, versionKey: string) => {
     if (hasPendingPropertyChanges()) {
@@ -2105,6 +2119,17 @@ export default function PropertyEditor({
                       <div className="mono text-[9px] tracking-[0.2em] uppercase text-accent/60">
                         ① ビューアー用 3DGS ファイル
                       </div>
+                      {inlineSceneId && inlineSceneId === watch(`splatItems.${idx}.id`) && (
+                        <SceneEditor
+                          inline
+                          propertyId={initial.id}
+                          sceneId={inlineSceneId}
+                          label={watch(`splatItems.${idx}.label`)}
+                          published={initial.status === "published"}
+                          onClose={() => setInlineSceneId(null)}
+                          onAttached={onInlineSceneAttached}
+                        />
+                      )}
                       {watch(`splatItems.${idx}.splatUrl`) ? (
                         <div className="flex items-center gap-3">
                           <div className="mono text-[18px] text-accent">●</div>
@@ -2128,7 +2153,7 @@ export default function PropertyEditor({
                             onClick={() => void openSceneEditor(idx)}
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
                           >
-                            編集 ↗
+                            {inlineSceneId === watch(`splatItems.${idx}.id`) ? "編集中" : "編集"}
                           </button>
                           {/* 再撮影/動画生成ボタンの表示条件は「行ごと」に判定する。
                               以前は `capture.state === "idle"` というグローバル状態で

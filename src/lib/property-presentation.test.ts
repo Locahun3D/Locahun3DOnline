@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "./property-presentation";
+import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "./property-presentation";
 
 it("keeps the crossing name in word-sized chunks without losing original title text", () => {
   const title = "渋谷スクランブル交差点";
@@ -17,7 +17,9 @@ it("removes only Shibuya's public email presentation, not another listing's emai
   expect(publicPropertyEmail("studio", "studio@example.test")).toBe("studio@example.test");
 });
 it("builds Google Maps from real coordinates, with address as fallback only", () => {
-  expect(googleMapsUrl({ lat: 35.659, lng: 139.7 }, "東京都渋谷区")).toBe("https://www.google.com/maps/search/?api=1&query=35.659%2C139.7");
+  expect(googleMapsUrl({ lat: 35.659, lng: 139.7 }, "")).toBe("https://www.google.com/maps/search/?api=1&query=35.659%2C139.7");
+  expect(googleMapsUrl({ lat: 35.659, lng: 139.7 }, "東京都渋谷区", "有明\n教育芸術大学")).toBe("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("有明 教育芸術大学 東京都渋谷区"));
+  expect(googleMapsEmbedUrl(null, "東京都渋谷区", "スタジオA")).toBe("https://www.google.com/maps?q=" + encodeURIComponent("スタジオA 東京都渋谷区") + "&output=embed");
   expect(googleMapsUrl(null, "東京都渋谷区")).toBe("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("東京都渋谷区"));
   expect(googleMapsUrl(null, "")).toBe("");
 });

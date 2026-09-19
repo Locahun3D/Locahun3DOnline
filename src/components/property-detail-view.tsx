@@ -19,8 +19,9 @@ import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
-import ZoomableImage from "@/components/zoomable-image";
-import { googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
+import GalleryLightbox from "@/components/gallery-lightbox";
+import PropertyAmenities from "@/components/property-amenities";
+import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
 import PropertyComments, { type CommentItem } from "@/components/property-comments";
 
 /**
@@ -193,7 +194,13 @@ export default function PropertyDetailView({
   // 同じ「スレート・データシート」の見た目のまま表示する。
   const slateRows: { k: string; v: string; href?: string }[] = [];
   const displayedEmail = publicPropertyEmail(property.id, property.contactEmail);
-  const mapsUrl = googleMapsUrl(property.coords, property.address);
+  const mapsUrl = googleMapsUrl(property.coords, property.address, property.title);
+  const mapsEmbedUrl = googleMapsEmbedUrl(property.coords, property.address, property.title);
+  const websiteHref = property.contactWebsite
+    ? /^https?:\/\//.test(property.contactWebsite)
+      ? property.contactWebsite
+      : `https://${property.contactWebsite}`
+    : "";
   if (property.contactPhone) {
     slateRows.push({ k: "TEL", v: property.contactPhone, href: `tel:${property.contactPhone}` });
   }
@@ -207,10 +214,8 @@ export default function PropertyDetailView({
   if (property.contactWebsite) {
     slateRows.push({
       k: "HP",
-      v: property.contactWebsite,
-      href: /^https?:\/\//.test(property.contactWebsite)
-        ? property.contactWebsite
-        : `https://${property.contactWebsite}`,
+      v: en ? "Official site →" : "公式サイト →",
+      href: websiteHref,
     });
   }
   // 連絡先が一切無ければ、SCENE / LOC. の最小フォールバックに戻す。
@@ -226,17 +231,6 @@ export default function PropertyDetailView({
   // 軒並み「なし・—・通常」の無意味な羅列になりがちなので、値がある時だけ
   // 出す。一般のスタジオ等は従来どおり常時表示（「なし」も検索軸として意味がある）。
   const isOutdoorProperty = property.category === "outdoor";
-  const parkingValue = property.parking
-    ? property.parkingCapacity > 0
-      ? en
-        ? `Available (${property.parkingCapacity} cars)`
-        : `利用可（${property.parkingCapacity}台）`
-      : en
-        ? "Available"
-        : "利用可"
-    : en
-      ? "None"
-      : "なし";
   const specRows: [string, string][] = [];
   if (property.address) specRows.push(["ADDRESS ／ 住所", property.address]);
   if (property.nearestStation) specRows.push(["STATION ／ 最寄り駅", property.nearestStation]);
@@ -254,33 +248,21 @@ export default function PropertyDetailView({
   }
   if (property.availableDays) specRows.push(["DAYS ／ 撮影可能日", property.availableDays]);
   if (property.bookingDeadline) specRows.push(["LEAD TIME ／ 申込期限", property.bookingDeadline]);
-  if (isOutdoorProperty) {
-    if (property.powerVoltage) specRows.push(["POWER ／ 電源", property.powerVoltage]);
-    if (property.parking) specRows.push(["PARKING ／ 駐車場", parkingValue]);
-    if (property.loadingDock) specRows.push(["LOAD-IN ／ 搬入口", en ? "Large OK" : "大型搬入可"]);
-    if (property.soundproofing) specRows.push(["SOUNDPROOF ／ 防音", en ? "Yes" : "あり"]);
-    if (property.hasInternet) specRows.push(["INTERNET ／ ネット", en ? "Yes" : "あり"]);
-  } else {
-    specRows.push(["POWER ／ 電源", property.powerVoltage || "—"]);
-    specRows.push(["PARKING ／ 駐車場", parkingValue]);
-    specRows.push([
-      "LOAD-IN ／ 搬入口",
-      property.loadingDock ? (en ? "Large OK" : "大型搬入可") : en ? "Standard" : "通常",
-    ]);
-    specRows.push([
-      "SOUNDPROOF ／ 防音",
-      property.soundproofing ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-    ]);
-    specRows.push([
-      "INTERNET ／ ネット",
-      property.hasInternet ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-    ]);
+  // 駐車場・搬入・防音などの有無は表ではなくアイコン欄（PropertyAmenities）で見せる。
+  // 駐車場の台数は出さない（HPとの食い違い・オーナー事情のリスク — 2026-09-19 会議）。
+  if (property.floorAreaSqm > 0) specRows.push(["AREA ／ 面積", `${property.floorAreaSqm} ㎡`]);
+  if (property.capacity > 0) {
+    specRows.push(["CAPACITY ／ 収容", en ? `${property.capacity} people` : `${property.capacity} 名`]);
   }
-  if (property.airConditioning) specRows.push(["AIR-CON ／ 空調", en ? "Yes" : "あり"]);
-  if (property.greenRoom) specRows.push(["GREEN ROOM ／ 控室", en ? "Yes" : "あり"]);
-  if (property.restroom) specRows.push(["RESTROOM ／ トイレ", en ? "Yes" : "あり"]);
-  if (property.smokingArea) specRows.push(["SMOKING ／ 喫煙所", en ? "Yes" : "あり"]);
-  if (property.fireAllowed) specRows.push(["OPEN FLAME ／ 火気使用", en ? "Allowed" : "可"]);
+  if (!isOutdoorProperty || property.powerVoltage) {
+    specRows.push(["POWER ／ 電源", property.powerVoltage || "—"]);
+  }
+
+  // ── 検索用タグ（種別＋タグ、カテゴリと重複するものは除く） ──
+  const categoryNames = new Set([categoryLabel(property.category, locale), categoryLabel(property.category, "ja")]);
+  const searchTags = [...new Set([property.studioType, ...property.tags].filter((t): t is string => !!t))].filter(
+    (t) => !categoryNames.has(t),
+  );
 
   // ── Pricing / Rules セクションの表示可否（横並び2カラム化の判定に使う） ──
   const showPricing =
@@ -369,7 +351,9 @@ export default function PropertyDetailView({
                         href={row.href}
                         target={row.href.startsWith("http") ? "_blank" : undefined}
                         rel={row.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                        className="font-normal text-right text-[#fafaf6] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-end max-[720px]:min-h-[44px] hover:text-accent transition break-all"
+                        className={`text-right text-[#fafaf6] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-end max-[720px]:min-h-[44px] hover:text-accent transition break-all ${
+                          row.k === "TEL" ? "text-[18px] font-bold tracking-[0.04em] normal-case" : "font-normal"
+                        }`}
                       >
                         {row.v}
                       </a>
@@ -397,33 +381,8 @@ export default function PropertyDetailView({
                 <span className="text-[11px] font-bold px-3 py-1 bg-accent border border-accent text-[#0a2a35]">
                   {categoryLabel(property.category, locale)}
                 </span>
-                {/* カテゴリ・種別・タグは実データ上で重複しがち（例: カテゴリ=学校、
-                    タグにも「学校」）なので、既に表示したラベルと同名のものは出さない。 */}
-                {(() => {
-                  const shown = new Set([
-                    categoryLabel(property.category, locale),
-                    categoryLabel(property.category, "ja"),
-                  ]);
-                  const rest: string[] = [];
-                  if (property.studioType && !shown.has(property.studioType)) {
-                    shown.add(property.studioType);
-                    rest.push(property.studioType);
-                  }
-                  for (const t of property.tags) {
-                    if (rest.length >= 4) break;
-                    if (shown.has(t)) continue;
-                    shown.add(t);
-                    rest.push(t);
-                  }
-                  return rest.map((t) => (
-                    <span
-                      key={t}
-                      className="text-[11px] font-bold px-3 py-1 border border-white/30 text-[#fafaf6]"
-                    >
-                      {t}
-                    </span>
-                  ));
-                })()}
+                {/* 種別・タグは検索用なので、ヒーローではなくアクセス欄の下に
+                    #タグ で並べる（2026-09-19 会議）。 */}
               </div>
 
               <div className="mt-auto pt-6">
@@ -435,7 +394,7 @@ export default function PropertyDetailView({
                   ) : property.priceType === "flat" ? (
                     property.hourlyPrice > 0 ? (
                       <>
-                        ¥{yen}{" "}
+                        <span className="text-accent">¥{yen}</span>{" "}
                         <small className="text-[11px] text-white/55 tracking-[0.16em]">
                           {en ? "(permit fee)" : "（撮影許可）"}
                         </small>
@@ -449,7 +408,7 @@ export default function PropertyDetailView({
                     )
                   ) : property.hourlyPrice > 0 ? (
                     <>
-                      ¥{yen}{" "}
+                      <span className="text-accent">¥{yen}</span>{" "}
                       <small className="text-[11px] text-white/55 tracking-[0.16em]">/HR</small>
                     </>
                   ) : (
@@ -460,8 +419,8 @@ export default function PropertyDetailView({
                 </p>}
                 {property.priceType === "hourly" && property.dailyPrice > 0 && (
                   <p className="mono text-[11px] text-white/50 mb-4 -mt-2">
-                    {en ? "Daily" : "日貸し"} ¥
-                    {property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}/day
+                    {en ? "Daily" : "日貸し"}{" "}
+                    <span className="text-accent">¥{property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}</span>/day
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
@@ -477,6 +436,14 @@ export default function PropertyDetailView({
                         ? "Contact us"
                         : "お問い合わせ"}
                   </a>
+                  {property.contactPhone && !property.permitRequired && (
+                    <a
+                      href={`tel:${property.contactPhone}`}
+                      className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 border border-white/40 text-[#fafaf6] hover:border-accent hover:text-accent transition"
+                    >
+                      {en ? "Call" : "電話する"} {property.contactPhone}
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -542,9 +509,9 @@ export default function PropertyDetailView({
             </div>
 
             {/* mini metric grid, folded into the Overview card */}
-            {/* 屋外は天井の概念がなく「自然光あり/なし」も常に自明（=矛盾して見える）
-                ため、天井高セルだけを全幅表示にして自然光セルは出さない。 */}
-            <div className="grid grid-cols-2 gap-3 mt-7">
+            {/* 自然光は判定が曖昧で他社も出していないため表示しない（2026-09-19 会議）。
+                屋外は天井の概念がないので「屋外」の1セルだけ出す。 */}
+            <div className="grid grid-cols-2 gap-3 mt-5">
               {property.category === "outdoor" ? (
                 <div className="border border-line px-3 py-3 col-span-2">
                   <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
@@ -557,11 +524,7 @@ export default function PropertyDetailView({
               ) : (
                 [
                   [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", property.ceilingHeightM ? "m" : ""],
-                  [
-                    en ? "Natural light" : "自然光",
-                    property.hasNaturalLight ? (en ? "Yes" : "あり") : en ? "No" : "なし",
-                    "",
-                  ],
+                  [en ? "Floor area" : "面積", property.floorAreaSqm || "—", property.floorAreaSqm ? "㎡" : ""],
                 ].map(([label, value, unit]) => (
                   <div key={label as string} className="border border-line px-3 py-3">
                     <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
@@ -611,13 +574,24 @@ export default function PropertyDetailView({
               </tbody>
             </table>
 
+            <PropertyAmenities property={property} en={en} />
+            {websiteHref && (
+              <p className="mt-4 text-[12.5px] text-ink/60">
+                {en ? "For the latest details, see the " : "最新の情報は"}
+                <a href={websiteHref} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                  {en ? "official website" : "公式サイト"}
+                </a>
+                {en ? "." : "をご確認ください。"}
+              </p>
+            )}
+
             {/* ── Blueprints ── */}
             {property.blueprints &&
               property.blueprints.length > 0 &&
               property.blueprints.some((b) => b.url) && (
                 <div className="mt-6 pt-6 border-t border-line">
                   <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
-                    {en ? "Floor plans" : "図面 ／ フロアプラン"}
+                    {en ? "Floor plans" : "平面図"}
                   </div>
                   <div className="space-y-2">
                     {property.blueprints
@@ -635,8 +609,8 @@ export default function PropertyDetailView({
                           <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">
                             {b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}
                           </span>
-                          <span className="mono text-[10px] tracking-[0.12em] uppercase text-ink/55 font-semibold">
-                            DL
+                          <span className="text-[12px] text-ink/70 font-bold">
+                            {en ? "Download" : "ダウンロード"}
                           </span>
                         </a>
                       ))}
@@ -657,15 +631,15 @@ export default function PropertyDetailView({
         <section className="frame pt-12">
           <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
             <Eyebrow en="ACCESS" jp={en ? "Access" : "アクセス"} />
-            <div>
+            <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6">
               <div className="flex flex-col">
-                <div className="space-y-3 text-[14px] flex-1">
+                <div className="space-y-4 text-[15px] flex-1">
                   {property.address && (
                     <div>
                       <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted mb-1">
                         {en ? "Address" : "住所"}
                       </div>
-                      <div className="font-medium">{property.address}</div>
+                      <div className="text-[17px] font-bold leading-[1.6]">{property.address}</div>
                     </div>
                   )}
                   {property.nearestStation && (
@@ -673,7 +647,7 @@ export default function PropertyDetailView({
                       <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted mb-1">
                         {en ? "Nearest station" : "最寄り駅"}
                       </div>
-                      <div>{property.nearestStation}</div>
+                      <div className="text-[15px] font-medium">{property.nearestStation}</div>
                     </div>
                   )}
                 </div>
@@ -681,12 +655,29 @@ export default function PropertyDetailView({
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-block max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] mono text-[11px] tracking-[0.15em] uppercase text-accent hover:underline"
+                  className="mt-5 self-start inline-flex items-center min-h-[44px] px-5 font-bold text-[14px] border border-accent text-accent hover:bg-accent hover:text-[#0a2a35] transition"
                 >
-                  {en ? "Open in Google Maps →" : "Google Maps で開く →"}
+                  {en ? "Open in Google Maps →" : "Google マップで開く →"}
                 </a>
               </div>
+              {mapsEmbedUrl && (
+                <iframe
+                  data-property-map
+                  src={mapsEmbedUrl}
+                  title={en ? "Map" : "地図"}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="w-full h-[280px] lg:h-full lg:min-h-[280px] border border-line"
+                />
+              )}
             </div>
+            {searchTags.length > 0 && (
+              <ul data-property-tags className="flex flex-wrap gap-x-3 gap-y-1.5 mt-6 pt-5 border-t border-line">
+                {searchTags.map((t) => (
+                  <li key={t} className="text-[13px] text-ink/60">#{t}</li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
       )}
@@ -768,31 +759,7 @@ export default function PropertyDetailView({
         <section className="mt-14 py-14 bg-[#e9edf1] border-y border-line">
           <div className="frame">
             <Eyebrow en="CONTACT SHEET" jp={en ? "Gallery" : "ギャラリー"} />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {galleryPhotos.map((p, i) => (
-                <figure
-                  key={i}
-                  className="bg-white p-2 pb-7 relative shadow-[0_2px_8px_rgba(20,24,28,0.09)]"
-                  style={{
-                    transform:
-                      i % 3 === 0 ? "rotate(-0.6deg)" : i % 3 === 2 ? "rotate(0.5deg)" : undefined,
-                  }}
-                >
-                  <div className="aspect-[4/3] overflow-hidden">
-                    <ZoomableImage
-                      src={p.src}
-                      alt={p.alt}
-                      focus={p.focus}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <figcaption className="absolute bottom-2 left-2.5 right-2.5 flex justify-between mono text-[9px] tracking-[0.2em] uppercase text-muted">
-                    <span>FRAME {String(i + 1).padStart(2, "0")}</span>
-                    <span className="truncate max-w-[50%] text-right">{p.alt}</span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
+            <GalleryLightbox photos={galleryPhotos} en={en} />
           </div>
         </section>
       )}
@@ -977,7 +944,7 @@ export default function PropertyDetailView({
                         rel="noopener noreferrer"
                         className="font-bold border-b border-ink/30 max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px] hover:text-accent hover:border-accent transition break-all"
                       >
-                        {property.contactWebsite}
+                        {en ? "Official site →" : "公式サイト →"}
                       </a>
                     </div>
                   )}
