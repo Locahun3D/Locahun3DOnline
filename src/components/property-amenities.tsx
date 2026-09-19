@@ -5,7 +5,7 @@ import type { Property } from "@/lib/schemas";
  * 設備欄のように「絵で誰でもわかる」形にする）。あり＝濃色、なし＝薄色＋取り消し線。
  * 屋外物件はスタジオ向け設備が軒並み「なし」になるため、ありの項目だけ出す。
  */
-type Amenity = { key: string; ja: string; en: string; on: boolean; icon: React.ReactNode };
+type Amenity = { key: string; ja: string; en: string; on: boolean; icon: React.ReactNode; note: string };
 
 const S = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
@@ -39,30 +39,33 @@ const icons = {
   ),
 };
 
-export function propertyAmenities(p: Property): Amenity[] {
+export function propertyAmenities(p: Property, en = false): Amenity[] {
+  const n = p.amenityNotes;
+  // 駐車場のメモが空なら台数フィールドを代用（旧データ互換）
+  const parkingNote = n.parking || (p.parkingCapacity > 0 ? (en ? `${p.parkingCapacity} cars` : `${p.parkingCapacity}台`) : "");
   return [
-    { key: "parking", ja: "駐車場", en: "Parking", on: p.parking, icon: icons.parking },
-    { key: "loadIn", ja: "大型搬入", en: "Large load-in", on: p.loadingDock, icon: icons.loadIn },
-    { key: "soundproof", ja: "防音", en: "Soundproof", on: p.soundproofing, icon: icons.soundproof },
-    { key: "internet", ja: "ネット", en: "Internet", on: p.hasInternet, icon: icons.internet },
-    { key: "aircon", ja: "空調", en: "Air-con", on: p.airConditioning, icon: icons.aircon },
-    { key: "greenRoom", ja: "控室", en: "Green room", on: p.greenRoom, icon: icons.greenRoom },
-    { key: "restroom", ja: "トイレ", en: "Restroom", on: p.restroom, icon: icons.restroom },
-    { key: "smoking", ja: "喫煙所", en: "Smoking area", on: p.smokingArea, icon: icons.smoking },
-    { key: "fire", ja: "火気使用", en: "Open flame", on: p.fireAllowed, icon: icons.fire },
+    { key: "parking", ja: "駐車場", en: "Parking", on: p.parking, icon: icons.parking, note: parkingNote },
+    { key: "loadIn", ja: "大型搬入", en: "Large load-in", on: p.loadingDock, icon: icons.loadIn, note: n.loadingDock },
+    { key: "soundproof", ja: "防音", en: "Soundproof", on: p.soundproofing, icon: icons.soundproof, note: n.soundproofing },
+    { key: "internet", ja: "ネット", en: "Internet", on: p.hasInternet, icon: icons.internet, note: n.hasInternet },
+    { key: "aircon", ja: "空調", en: "Air-con", on: p.airConditioning, icon: icons.aircon, note: n.airConditioning },
+    { key: "greenRoom", ja: "控室", en: "Green room", on: p.greenRoom, icon: icons.greenRoom, note: n.greenRoom },
+    { key: "restroom", ja: "トイレ", en: "Restroom", on: p.restroom, icon: icons.restroom, note: n.restroom },
+    { key: "smoking", ja: "喫煙所", en: "Smoking area", on: p.smokingArea, icon: icons.smoking, note: n.smokingArea },
+    { key: "fire", ja: "火気使用", en: "Open flame", on: p.fireAllowed, icon: icons.fire, note: n.fireAllowed },
   ];
 }
 
 export default function PropertyAmenities({ property, en }: { property: Property; en: boolean }) {
   const outdoor = property.category === "outdoor";
-  const items = propertyAmenities(property).filter((a) => a.on || !outdoor);
+  const items = propertyAmenities(property, en).filter((a) => a.on || !outdoor);
   if (items.length === 0) return null;
   return (
     <ul data-property-amenities className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-6">
       {items.map((a) => (
         <li
           key={a.key}
-          aria-label={`${en ? a.en : a.ja}: ${a.on ? (en ? "available" : "あり") : en ? "not available" : "なし"}`}
+          aria-label={`${en ? a.en : a.ja}: ${a.on ? (en ? "available" : "あり") : en ? "not available" : "なし"}${a.on && a.note ? ` (${a.note})` : ""}`}
           className={`flex flex-col items-center gap-1.5 border px-1 py-3 text-center ${
             a.on ? "border-ink/25 text-ink" : "border-line text-ink/30"
           }`}
@@ -71,6 +74,10 @@ export default function PropertyAmenities({ property, en }: { property: Property
           <span className={`text-[12px] font-bold leading-tight ${a.on ? "" : "line-through"}`}>
             {en ? a.en : a.ja}
           </span>
+          {/* 1行メモ（台数・回線速度など）。ありの項目だけ */}
+          {a.on && a.note && (
+            <span className="text-[11px] leading-tight text-ink/65 break-words max-w-full">{a.note}</span>
+          )}
         </li>
       ))}
     </ul>

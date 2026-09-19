@@ -1218,10 +1218,10 @@ export default function PropertyEditor({
 
                   <div className="grid md:grid-cols-3 gap-5">
                     <Toggle label="自然光あり" register={register("hasNaturalLight")} />
-                    <Toggle label="駐車可" register={register("parking")} />
-                    <Toggle label="搬入口 大" register={register("loadingDock")} />
-                    <Toggle label="防音あり" register={register("soundproofing")} />
-                    <Toggle label="インターネット" register={register("hasInternet")} />
+                    <Toggle label="駐車可" register={register("parking")} note={register("amenityNotes.parking")} notePlaceholder="例: 3台・大型不可" />
+                    <Toggle label="搬入口 大" register={register("loadingDock")} note={register("amenityNotes.loadingDock")} notePlaceholder="例: 2t車まで・EVあり" />
+                    <Toggle label="防音あり" register={register("soundproofing")} note={register("amenityNotes.soundproofing")} notePlaceholder="例: 楽器可・深夜は不可" />
+                    <Toggle label="インターネット" register={register("hasInternet")} note={register("amenityNotes.hasInternet")} notePlaceholder="例: 光 1Gbps・Wi-Fi" />
                   </div>
 
                   <Field
@@ -1486,11 +1486,11 @@ export default function PropertyEditor({
               {/* ── 撮影条件（設備の有無） ── */}
               <SectionHead title="撮影条件（設備の有無）" hint="あるものだけチェック。無いものは空のままで構いません。" />
               <div className="grid md:grid-cols-3 gap-5">
-                <Toggle label="火気使用 可" register={register("fireAllowed")} />
-                <Toggle label="控室 あり" register={register("greenRoom")} />
-                <Toggle label="トイレ あり" register={register("restroom")} />
-                <Toggle label="空調 あり" register={register("airConditioning")} />
-                <Toggle label="喫煙所 あり" register={register("smokingArea")} />
+                <Toggle label="火気使用 可" register={register("fireAllowed")} note={register("amenityNotes.fireAllowed")} notePlaceholder="例: 要事前申請" />
+                <Toggle label="控室 あり" register={register("greenRoom")} note={register("amenityNotes.greenRoom")} notePlaceholder="例: 8畳・鏡台2" />
+                <Toggle label="トイレ あり" register={register("restroom")} note={register("amenityNotes.restroom")} notePlaceholder="例: 男女別・2か所" />
+                <Toggle label="空調 あり" register={register("airConditioning")} note={register("amenityNotes.airConditioning")} notePlaceholder="例: 各部屋・無音運転可" />
+                <Toggle label="喫煙所 あり" register={register("smokingArea")} note={register("amenityNotes.smokingArea")} notePlaceholder="例: 屋外・1F裏口" />
               </div>
 
               {/* ── ルール・規程 ── */}
@@ -3174,15 +3174,31 @@ function StepCard({
 function Toggle({
   label,
   register,
+  note,
+  notePlaceholder,
 }: {
   label: string;
   register: ReturnType<ReturnType<typeof useForm<Property>>["register"]>;
+  /** 設備の1行メモ（台数・回線速度など）。物件ページのアイコンの下に出る。 */
+  note?: ReturnType<ReturnType<typeof useForm<Property>>["register"]>;
+  notePlaceholder?: string;
 }) {
   return (
-    <label className="flex items-center gap-3 border border-line px-4 py-3 cursor-pointer hover:border-ink transition">
-      <input type="checkbox" {...register} className="accent-[#5ec8e8]" />
-      <span className="text-[13px]">{label}</span>
-    </label>
+    <div className="border border-line hover:border-ink transition">
+      <label className="flex items-center gap-3 px-4 py-3 cursor-pointer">
+        <input type="checkbox" {...register} className="accent-[#5ec8e8]" />
+        <span className="text-[13px]">{label}</span>
+      </label>
+      {note && (
+        <input
+          type="text"
+          maxLength={40}
+          placeholder={notePlaceholder ?? "補足（1行）"}
+          {...note}
+          className="w-full border-t border-line bg-transparent px-4 py-2 text-[12px] placeholder:text-ink/35 focus:outline-none focus:bg-accent/5"
+        />
+      )}
+    </div>
   );
 }
 
