@@ -9,6 +9,7 @@ import p_ja_3dgs_codex_hall_modeling from "../../content/works/ja/3dgs-codex-hal
 import p_ja_3dgs_file_formats from "../../content/works/ja/3dgs-file-formats.json";
 import p_ja_3dgs_lidar_denoise from "../../content/works/ja/3dgs-lidar-denoise.json";
 import p_ja_3dgs_software_comparison from "../../content/works/ja/3dgs-software-comparison.json";
+import p_ja_blender_53_native_3dgs from "../../content/works/ja/blender-53-native-3dgs.json";
 import p_ja_blender_lcc2_vfx from "../../content/works/ja/blender-lcc2-vfx.json";
 import p_ja_blog from "../../content/works/ja/blog.json";
 import p_ja_chevron_rokunowa_mv from "../../content/works/ja/chevron-rokunowa-mv.json";
@@ -27,6 +28,7 @@ import p_en_3dgs_codex_hall_modeling from "../../content/works/en/3dgs-codex-hal
 import p_en_3dgs_file_formats from "../../content/works/en/3dgs-file-formats.json";
 import p_en_3dgs_lidar_denoise from "../../content/works/en/3dgs-lidar-denoise.json";
 import p_en_3dgs_software_comparison from "../../content/works/en/3dgs-software-comparison.json";
+import p_en_blender_53_native_3dgs from "../../content/works/en/blender-53-native-3dgs.json";
 import p_en_blender_lcc2_vfx from "../../content/works/en/blender-lcc2-vfx.json";
 import p_en_blog from "../../content/works/en/blog.json";
 import p_en_chevron_rokunowa_mv from "../../content/works/en/chevron-rokunowa-mv.json";
@@ -48,6 +50,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "3dgs-file-formats": p_ja_3dgs_file_formats as WorksPage,
   "3dgs-lidar-denoise": p_ja_3dgs_lidar_denoise as WorksPage,
   "3dgs-software-comparison": p_ja_3dgs_software_comparison as WorksPage,
+  "blender-53-native-3dgs": p_ja_blender_53_native_3dgs as WorksPage,
   "blender-lcc2-vfx": p_ja_blender_lcc2_vfx as WorksPage,
   "blog": p_ja_blog as WorksPage,
   "chevron-rokunowa-mv": p_ja_chevron_rokunowa_mv as WorksPage,
@@ -68,6 +71,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "3dgs-file-formats": p_en_3dgs_file_formats as WorksPage,
   "3dgs-lidar-denoise": p_en_3dgs_lidar_denoise as WorksPage,
   "3dgs-software-comparison": p_en_3dgs_software_comparison as WorksPage,
+  "blender-53-native-3dgs": p_en_blender_53_native_3dgs as WorksPage,
   "blender-lcc2-vfx": p_en_blender_lcc2_vfx as WorksPage,
   "blog": p_en_blog as WorksPage,
   "chevron-rokunowa-mv": p_en_chevron_rokunowa_mv as WorksPage,
