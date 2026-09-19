@@ -111,3 +111,4 @@ public/viewer/*.bak
 /.ui-audit/
 .claude/settings.local.json
 data/scan-submissions.json
+/.worktrees/
