@@ -46,3 +46,42 @@ export function usageEstimates(p: { priceType: string; hourlyPrice: number; minU
   const day = p.dailyPrice > 0 ? { ...row("movie-day", 9), total: p.dailyPrice, daily: true } : row("movie-day", 9);
   return [row("still-small", 3), row("still-half", 5), day];
 }
+
+/**
+ * 料金シミュレーション（2026-09-20 本人要望: 時間帯で料金が変わる／用途で変わる）。
+ * 1時間ごとに、その時刻に当てはまる割増のうち最も高い率を1つだけ掛ける（夜間と土日祝が重なっても二重にしない —
+ * スタジオの料金表は「夜間・土日祝は20%UP」のようにどちらか一方の扱いが一般的）。
+ * fromHour > toHour は日をまたぐ時間帯（20→8）。holidays=true の割増は「土日祝」を選んだ時に全時間へ掛かる。
+ */
+export type RateSurcharge = { label: string; percent: number; fromHour: number; toHour: number; holidays: boolean };
+export type PriceLine = { label: string; hours: number; rate: number };
+export function simulatePrice(input: { hourlyPrice: number; startHour: number; hours: number; holiday: boolean; surcharges: RateSurcharge[] }): { total: number; lines: PriceLine[] } {
+  const lines: PriceLine[] = [];
+  for (let i = 0; i < input.hours; i++) {
+    const h = (input.startHour + i) % 24;
+    let best: RateSurcharge | null = null;
+    for (const s of input.surcharges) {
+      const inWindow = s.fromHour === s.toHour ? false : s.fromHour < s.toHour ? h >= s.fromHour && h < s.toHour : h >= s.fromHour || h < s.toHour;
+      if ((s.holidays ? input.holiday : inWindow) && (!best || s.percent > best.percent)) best = s;
+    }
+    const label = best ? best.label : "通常";
+    const rate = best ? Math.round(input.hourlyPrice * (1 + best.percent / 100)) : input.hourlyPrice;
+    const last = lines[lines.length - 1];
+    if (last && last.label === label && last.rate === rate) last.hours++;
+    else lines.push({ label, hours: 1, rate });
+  }
+  return { total: lines.reduce((sum, l) => sum + l.rate * l.hours, 0), lines };
+}
+
+/**
+ * 物件タイトルを「スタジオ名」と「意味のまとまりごとの行」に分ける（2026-09-20 本人指示）。
+ *   "Studio Union｜世田谷若林 自然光ハウススタジオ" → name "Studio Union" / lines ["世田谷若林", "自然光ハウススタジオ"]
+ * 区切りは「｜」「|」と改行。区切りより後ろは空白（全角含む）でまとまりに分ける。
+ * 区切りが無いタイトル（"新宿西口 思い出横丁" 等の地名）は1行のまま — 空白で勝手に割らない。
+ */
+export function propertyTitleLines(title: string): { name: string; lines: string[] } {
+  const parts = (title || "").split(/\s*[｜|\n]\s*/).map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) return { name: "", lines: [] };
+  const [name, ...rest] = parts;
+  return { name, lines: rest.flatMap((r) => r.split(/[\s　]+/).filter(Boolean)) };
+}

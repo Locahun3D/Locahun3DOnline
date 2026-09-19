@@ -399,6 +399,28 @@ export const propertySchema = z.object({
   // ── 料金の内訳 ──
   /** 最低利用時間（h）。0 = 設定なし。 */
   minUsageHours: z.number().int().min(0).max(999).default(0),
+  /**
+   * 用途別の時間料金（例: スチール 16,500 / ムービー 18,700）。空なら hourlyPrice だけを使う。
+   * 物件ページの料金シミュレーションで用途を切り替える（2026-09-20）。
+   */
+  ratePlans: z.array(z.object({
+    label: z.string().max(40).default(""),
+    labelEn: z.string().max(80).default(""),
+    hourlyPrice: z.number().int().min(0).max(9999999).default(0),
+    minHours: z.number().int().min(0).max(999).default(0),
+  })).max(6).default([]),
+  /**
+   * 割増（例: 夜間 20:00〜8:00 +20% / 土日祝 +20%）。holidays=true は曜日の割増で時間帯は見ない。
+   * 同じ1時間に複数当てはまる場合は高い率を1つだけ掛ける（simulatePrice）。
+   */
+  rateSurcharges: z.array(z.object({
+    label: z.string().max(40).default(""),
+    labelEn: z.string().max(80).default(""),
+    percent: z.number().int().min(-100).max(300).default(0),
+    fromHour: z.number().int().min(0).max(24).default(0),
+    toHour: z.number().int().min(0).max(24).default(0),
+    holidays: z.boolean().default(false),
+  })).max(4).default([]),
   /** 表示金額が税込なら true（false = 税別）。 */
   taxIncluded: z.boolean().default(false),
   /** ロケハン費（例: 1.5hまで無料）。 */

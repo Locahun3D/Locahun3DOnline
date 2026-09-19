@@ -23,7 +23,7 @@ import { Fragment } from "react";
 import GalleryLightbox from "@/components/gallery-lightbox";
 import PriceEstimator from "@/components/price-estimator";
 import PropertyAmenities from "@/components/property-amenities";
-import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
+import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleLines, propertyTitleSegments } from "@/lib/property-presentation";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
@@ -167,6 +167,7 @@ export default function PropertyDetailView({
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
   const floorPlans = (property.blueprints ?? []).filter((b) => b.url);
+  const heroTitle = propertyTitleLines(property.title);
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
   // 問い合わせ先（電話/メール/HP）が1つも無い物件は問い合わせを受け付けられない
   const hasContact = !!(
@@ -208,9 +209,7 @@ export default function PropertyDetailView({
       ? property.contactWebsite
       : `https://${property.contactWebsite}`
     : "";
-  if (property.contactPhone) {
-    slateRows.push({ k: "TEL", v: property.contactPhone, href: `tel:${property.contactPhone}` });
-  }
+  // TEL 行は出さない（2026-09-20 本人指示: 大きすぎる。すぐ下に「電話する」ボタンがある）
   if (displayedEmail) {
     slateRows.push({
       k: "MAIL",
@@ -258,6 +257,8 @@ export default function PropertyDetailView({
   // 駐車場・搬入・防音などの有無は表ではなくアイコン欄（PropertyAmenities）で見せる。
   // 駐車場の台数は出さない（HPとの食い違い・オーナー事情のリスク — 2026-09-19 会議）。
   if (property.floorAreaSqm > 0) specRows.push(["AREA ／ 面積", `${property.floorAreaSqm} ㎡`]);
+  // 天井高は概要カードの枠をやめて仕様の行に出す（屋外は天井の概念がないので出さない）
+  if (property.ceilingHeightM > 0 && property.category !== "outdoor") specRows.push(["CEILING ／ 天井高", `${property.ceilingHeightM} m`]);
   if (property.capacity > 0) {
     specRows.push(["CAPACITY ／ 収容", en ? `${property.capacity} people` : `${property.capacity} 名`]);
   }
@@ -371,9 +372,20 @@ export default function PropertyDetailView({
                 ))}
               </div>
 
-              <h1 className="text-[24px] lg:text-[32px] font-bold leading-[1.34] mt-6 mb-1.5 whitespace-pre-wrap [overflow-wrap:anywhere]">
-                {propertyTitleSegments(property.title || (en ? "(Untitled location)" : "（無題の物件）")).map((part, index) => (
-                  part.includes("\n") ? <br key={index} /> : <span key={index} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
+              {/* スタジオ名を1行目に独立させ、残りは意味のまとまりごとに改行する（2026-09-20 本人指示）。
+                  長い1語は従来どおり語単位で折り返す。 */}
+              <h1 className="mt-6 mb-1.5 font-bold whitespace-pre-wrap [overflow-wrap:anywhere]">
+                <span className="block text-[26px] lg:text-[34px] leading-[1.3]">
+                  {propertyTitleSegments(heroTitle.name || (en ? "(Untitled location)" : "（無題の物件）")).map((part, index) => (
+                    <span key={index} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
+                  ))}
+                </span>
+                {heroTitle.lines.map((line, i) => (
+                  <span key={i} className="block text-[17px] lg:text-[20px] leading-[1.55] text-white/85 first-of-type:mt-0 mt-0.5">
+                    {propertyTitleSegments(line).map((part, index) => (
+                      <span key={index} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
+                    ))}
+                  </span>
                 ))}
               </h1>
               <p className="text-[13px] text-white/55">
@@ -515,67 +527,6 @@ export default function PropertyDetailView({
               )}
             </div>
 
-            {/* ── 平面図: 概要カードの空きに画像で見せる（2026-09-19 本人指示）。
-                 PDF はブラウザ内プレビューが端末差で不安定なため、ダウンロード札のまま ── */}
-            {floorPlans.length > 0 && (
-              <div className="mt-6">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
-                  {en ? "Floor plan" : "平面図"}
-                </div>
-                <div className="space-y-3">
-                  {floorPlans.map((b, i) =>
-                    /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(b.url) ? (
-                      <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block border border-line bg-white p-2 hover:border-accent transition">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- R2配信の相対パスは next/image 最適化が404になる */}
-                        <img src={b.url} alt={b.label || (en ? "Floor plan" : "平面図")} className="block w-full h-auto max-h-[420px] object-contain" loading="lazy" />
-                        <div className="flex items-center justify-between mt-2 px-1 text-[12px] text-ink/70">
-                          <span>{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
-                          <span className="font-bold">{en ? "Open full size" : "拡大 ↗"}</span>
-                        </div>
-                      </a>
-                    ) : (
-                      <a key={i} href={b.url} download target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition">
-                        <span className="text-accent">⬇</span>
-                        <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
-                        <span className="text-[12px] text-ink/70 font-bold">{en ? "Download PDF" : "PDFをダウンロード"}</span>
-                      </a>
-                    ),
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* mini metric grid, folded into the Overview card */}
-            {/* 自然光は判定が曖昧で他社も出していないため表示しない（2026-09-19 会議）。
-                屋外は天井の概念がないので「屋外」の1セルだけ出す。 */}
-            <div className="grid grid-cols-2 gap-3 mt-5">
-              {property.category === "outdoor" ? (
-                <div className="border border-line px-3 py-3 col-span-2">
-                  <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
-                    {en ? "Ceiling" : "天井高"}
-                  </div>
-                  <span className="text-[22px] leading-none font-bold">
-                    {en ? "Outdoor" : "屋外"}
-                  </span>
-                </div>
-              ) : (
-                [
-                  [en ? "Ceiling" : "天井高", property.ceilingHeightM || "—", property.ceilingHeightM ? "m" : ""],
-                  [en ? "Floor area" : "面積", property.floorAreaSqm || "—", property.floorAreaSqm ? "㎡" : ""],
-                ].map(([label, value, unit]) => (
-                  <div key={label as string} className="border border-line px-3 py-3">
-                    <div className="mono text-[10px] tracking-[0.14em] uppercase text-muted mb-1.5">
-                      {label}
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[22px] leading-none font-bold">{value}</span>
-                      {unit && <span className="text-[12px] text-ink/60">{unit}</span>}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
             {/* 撮影別の目安＋料金シミュレーション（時間貸しのみ。2026-09-19 本人採用） */}
             {!displaySimulation && (
               <PriceEstimator
@@ -583,6 +534,10 @@ export default function PropertyDetailView({
                 minUsageHours={property.minUsageHours}
                 dailyPrice={property.dailyPrice}
                 priceType={property.priceType}
+                ratePlans={property.ratePlans}
+                rateSurcharges={property.rateSurcharges}
+                taxIncluded={property.taxIncluded}
+                openHours={[property.customHoursStart, property.customHoursEnd]}
                 en={en}
               />
             )}
@@ -631,6 +586,36 @@ export default function PropertyDetailView({
                 </a>
                 {en ? "." : "をご確認ください。"}
               </p>
+            )}
+
+            {/* ── 平面図: 仕様カードにまとめる（2026-09-20 本人指示。概要カードは紹介文と料金だけ）。
+                 PDF はブラウザ内プレビューが端末差で不安定なため、ダウンロード札のまま ── */}
+            {floorPlans.length > 0 && (
+              <div className="mt-6">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
+                  {en ? "Floor plan" : "平面図"}
+                </div>
+                <div className="space-y-3">
+                  {floorPlans.map((b, i) =>
+                    /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(b.url) ? (
+                      <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block border border-line bg-white p-2 hover:border-accent transition">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- R2配信の相対パスは next/image 最適化が404になる */}
+                        <img src={b.url} alt={b.label || (en ? "Floor plan" : "平面図")} className="block w-full h-auto max-h-[420px] object-contain" loading="lazy" />
+                        <div className="flex items-center justify-between mt-2 px-1 text-[12px] text-ink/70">
+                          <span>{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
+                          <span className="font-bold">{en ? "Open full size" : "拡大 ↗"}</span>
+                        </div>
+                      </a>
+                    ) : (
+                      <a key={i} href={b.url} download target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition">
+                        <span className="text-accent">⬇</span>
+                        <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
+                        <span className="text-[12px] text-ink/70 font-bold">{en ? "Download PDF" : "PDFをダウンロード"}</span>
+                      </a>
+                    ),
+                  )}
+                </div>
+              </div>
             )}
 
             {/* ── mobile-only CTA fallback so #inquiry / bookmark are reachable
@@ -788,7 +773,8 @@ export default function PropertyDetailView({
       <div className="frame pt-14">
         {property.pageBlocks && property.pageBlocks.length > 0 ? (
           <section className="mb-16">
-            {visibleSplatItems.length > 0 && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>}
+            {/* 撮影日は登録がある時だけ出す（「未登録」と出さない。2026-09-20 本人指摘） */}
+            {visibleSplatItems.length > 0 && property.scannedAt && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt}</p>}
             <StudioPageBlocks
               blocks={property.pageBlocks}
               property={property}
@@ -816,7 +802,7 @@ export default function PropertyDetailView({
         ) : (
           <section className="mb-16">
             <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
-            <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt || (en ? "Not registered" : "未登録")}</p>
+            {property.scannedAt && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt}</p>}
             {/* ⚠ 件数に関わらず常に2カラムのグリッドに置く（2026-08-13）。
                 以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
                 `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
@@ -915,8 +901,10 @@ export default function PropertyDetailView({
          *  判断され撤去。CONTACTカードは元通り常時表示に戻し、問い合わせ先が
          *  無い物件はカード内に「受け付けていません」の文言＋★保存だけ出す。
          * ══════════════════════════════════════════════════ */}
-        {!preview && (
-          <section id="inquiry" className="mb-14">
+        {/* 管理プレビューでも欄は出す（ヒーローの「お問い合わせ」の飛び先が無くなるため。2026-09-20）。
+            ただし実データを作らないよう、フォームと保存ボタンはプレビューでは動かさない。 */}
+        {(
+          <section id="inquiry" className="mb-14 scroll-mt-24">
             <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
               <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
               <div className="grid lg:grid-cols-2 gap-8 items-start">
@@ -976,21 +964,29 @@ export default function PropertyDetailView({
                 </div>
 
                 <div className="space-y-2.5">
-                  {hasContact && (
-                    <InquiryPanel
-                      propertyId={property.id}
-                      propertyTitle={property.title}
-                      locale={locale}
-                    />
+                  {preview ? (
+                    <div className="border border-dashed border-line text-[13px] text-muted text-center py-4 px-3 rounded-md">
+                      {en ? "Inquiry form and save button appear here (disabled in preview)." : "ここに問い合わせフォームと保存ボタンが出ます（プレビューでは動きません）"}
+                    </div>
+                  ) : (
+                    <>
+                      {hasContact && (
+                        <InquiryPanel
+                          propertyId={property.id}
+                          propertyTitle={property.title}
+                          locale={locale}
+                        />
+                      )}
+                      <div className="[&>button]:w-full [&>button]:justify-center">
+                        <BookmarkButton
+                          propertyId={property.id}
+                          initialBookmarked={bookmarked}
+                          signedIn={signedIn}
+                          revalidate={`/properties/${property.id}`}
+                        />
+                      </div>
+                    </>
                   )}
-                  <div className="[&>button]:w-full [&>button]:justify-center">
-                    <BookmarkButton
-                      propertyId={property.id}
-                      initialBookmarked={bookmarked}
-                      signedIn={signedIn}
-                      revalidate={`/properties/${property.id}`}
-                    />
-                  </div>
                 </div>
               </div>
             </div>

@@ -164,6 +164,8 @@ export default function PropertyEditor({
     control,
     name: "blueprints",
   });
+  const ratePlansArray = useFieldArray({ control, name: "ratePlans" });
+  const rateSurchargesArray = useFieldArray({ control, name: "rateSurcharges" });
 
   // ── マルチタブ楽観ロック（クライアント側）──
   // 最後にサーバーで確定した updatedAt を保持し、保存のたびにサーバーへ渡す。
@@ -1643,6 +1645,39 @@ export default function PropertyEditor({
                   <input type="text" {...register("scoutingFee")} className={inputClass} placeholder="例: 1.5hまで無料" />
                 </Field>
               </div>
+              {/* ── 用途別料金・割増（物件ページの料金シミュレーションに使う。2026-09-20）── */}
+              <Field label="用途別の時間料金" hint="スチール／ムービーなど用途で料金が違う場合だけ。空なら上の時間料金を使います。">
+                <div className="space-y-2">
+                  {ratePlansArray.fields.map((f, idx) => (
+                    <div key={f.id} className="grid grid-cols-[1fr_130px_90px_auto] gap-2 items-center">
+                      <input type="text" {...register(`ratePlans.${idx}.label`)} className={inputClass} placeholder="例: スチール" maxLength={40} />
+                      <input type="number" min={0} {...register(`ratePlans.${idx}.hourlyPrice`, { valueAsNumber: true })} className={inputClass} placeholder="円 / 時間" />
+                      <input type="number" min={0} {...register(`ratePlans.${idx}.minHours`, { valueAsNumber: true })} className={inputClass} placeholder="最低h" />
+                      <button type="button" onClick={() => ratePlansArray.remove(idx)} className="mono text-[10px] text-muted hover:text-red-500 px-2">削除</button>
+                    </div>
+                  ))}
+                  {ratePlansArray.fields.length < 6 && (
+                    <button type="button" onClick={() => ratePlansArray.append({ label: "", labelEn: "", hourlyPrice: 0, minHours: 0 })} className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition">＋ 用途を追加</button>
+                  )}
+                </div>
+              </Field>
+              <Field label="割増（時間帯・土日祝）" hint="例: 夜間 20時〜8時 +20%。「土日祝」にチェックすると曜日の割増（時間帯は無視）。重なる時間は高い方だけ適用されます。">
+                <div className="space-y-2">
+                  {rateSurchargesArray.fields.map((f, idx) => (
+                    <div key={f.id} className="grid grid-cols-[1fr_80px_70px_70px_auto_auto] gap-2 items-center">
+                      <input type="text" {...register(`rateSurcharges.${idx}.label`)} className={inputClass} placeholder="例: 夜間" maxLength={40} />
+                      <input type="number" {...register(`rateSurcharges.${idx}.percent`, { valueAsNumber: true })} className={inputClass} placeholder="+%" />
+                      <input type="number" min={0} max={24} {...register(`rateSurcharges.${idx}.fromHour`, { valueAsNumber: true })} className={inputClass} placeholder="開始時" />
+                      <input type="number" min={0} max={24} {...register(`rateSurcharges.${idx}.toHour`, { valueAsNumber: true })} className={inputClass} placeholder="終了時" />
+                      <label className="flex items-center gap-1.5 text-[12px] whitespace-nowrap"><input type="checkbox" {...register(`rateSurcharges.${idx}.holidays`)} className="accent-[#5ec8e8]" />土日祝</label>
+                      <button type="button" onClick={() => rateSurchargesArray.remove(idx)} className="mono text-[10px] text-muted hover:text-red-500 px-2">削除</button>
+                    </div>
+                  ))}
+                  {rateSurchargesArray.fields.length < 4 && (
+                    <button type="button" onClick={() => rateSurchargesArray.append({ label: "", labelEn: "", percent: 20, fromHour: 20, toHour: 8, holidays: false })} className="mono text-[10px] tracking-[0.2em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition">＋ 割増を追加</button>
+                  )}
+                </div>
+              </Field>
               <Toggle label="表示金額は税込（オフ = 税別）" register={register("taxIncluded")} />
               <Field label="追加費用" hint="照明・音響・機材・ピアノ使用など別途かかる費用（複数行可）">
                 <textarea {...register("extraFees")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: ホール照明・音響 別途／ピアノ使用 別途" />
