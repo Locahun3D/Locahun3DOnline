@@ -34,7 +34,6 @@ export default async function AdminLayout({
           { href: "/admin/workflow", label: "下書きデータ転送" },
           { href: "/admin/inquiries", label: "スタジオへのお問い合わせ" },
           { href: "/admin/contact-requests", label: "お問い合わせ（サイト全体）" },
-          { href: "/admin/reports", label: "↳ 通報管理", sub: true },
           { href: "/admin/marketing", label: "マーケティング" },
           // ギフトコードは専用ページ(/admin/gift-codes)を廃止しマーケティング配下へ統合。
           // 全物件共通の「限定無料期間」UIも同時に廃止（無料化は3DGSデータごとに

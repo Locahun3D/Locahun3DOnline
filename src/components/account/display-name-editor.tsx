@@ -11,8 +11,7 @@ const nameSegmenter = new Intl.Segmenter("ja", { granularity: "word" });
 
 /**
  * マイページ・ユーザーヘッダーの氏名をインライン編集する（公開表示名）。
- * 保存先はユーザーレコードの displayName。掲示板は表示時に常に現在の値へ
- * 解決し直す（src/lib/live-names.ts）ため、過去の投稿の表示名にも反映される。
+ * 保存先はユーザーレコードの displayName。
  */
 export default function DisplayNameEditor({
   initialName,
@@ -101,8 +100,8 @@ export default function DisplayNameEditor({
       </div>
       <p className="text-[10.5px] text-[#7b8794] mt-1.5 leading-relaxed">
         {en
-          ? "This name is shown on the board — including your past posts."
-          : "掲示板に表示される名前です。過去の投稿にも反映されます。"}
+          ? "This is the name shown on the site."
+          : "サイト上に表示される名前です。"}
       </p>
       {state && !state.ok && (
         <p className="text-[11px] text-[#c0392b] mt-1">{state.error}</p>

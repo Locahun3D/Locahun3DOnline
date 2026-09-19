@@ -8,13 +8,9 @@ import {
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
 import { viewUnlockRepo } from "@/lib/view-unlocks";
-import { commentRepo } from "@/lib/comments";
-import { withLiveDisplayNames } from "@/lib/live-names";
 import {
   canViewBackyard,
   canViewNdaOnly,
-  canPostToBoard,
-  publicDisplayName,
 } from "@/lib/account-schema";
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
@@ -106,15 +102,7 @@ export default async function PropertyDetailPage({
   // splatItem.id で判定する（index だと並び替え/3DGS差し替えで対応がズレる）。
   // 旧レコード（splatItemId 未設定）は記録時の index から現在の id を逆引きする。
   const unlockedItemIds: string[] = [];
-  // 掲示板は閲覧: 全員（書き込みのみ有料プラン限定）。通報により非表示になった
-  // コメントは、admin 以外にはサーバー側で除外し HTML にも一切含めない
-  // （クライアント側フィルタだけでは不十分）。
   const isAdminUser = user?.role === "admin";
-  const comments = await withLiveDisplayNames(
-    (await commentRepo.list(property.id).catch(() => [])).filter(
-      (c) => isAdminUser || !c.hiddenByReports,
-    ),
-  );
   if (user) {
     try {
       const mine = await purchaseRepo.list({ userId: user.id, propertyId: property.id });
@@ -163,11 +151,7 @@ export default async function PropertyDetailPage({
         signedIn={signedIn}
         bookmarked={bookmarked}
         locale={locale}
-        comments={comments}
-        currentUserId={user?.id ?? null}
-        currentUserName={user ? publicDisplayName(user) : null}
         isAdminUser={isAdminUser}
-        canPostBoard={canPostToBoard(user)}
       />
     </>
   );

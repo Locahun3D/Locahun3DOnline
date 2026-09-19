@@ -95,10 +95,8 @@ export type DisplayNameState =
   | undefined;
 
 /**
- * 掲示板に表示する公開表示名の変更（マイページのインライン編集から呼ぶ）。
+ * サイト上に表示する公開表示名の変更（マイページのインライン編集から呼ぶ）。
  * 保存先はユーザーレコード（ndaAcceptedAt 等と同じ D1 users.data）。
- * コメント/レビューは表示時に src/lib/live-names.ts が常にこの値へ解決し
- * 直すため、過去の投稿の表示にも遡って反映される。
  */
 export async function updateDisplayNameAction(
   _prev: DisplayNameState,

@@ -132,7 +132,8 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
    * "Invalid header found" で落ちるため、値を持たせない。
    * 埋め込み以外のリクエストでは何も返さず Clerk の応答をそのまま通す
    * （NextResponse.next() を毎回返すと Clerk の認証ヘッダー装飾を壊しうる）。 */
-  if (basePath.startsWith("/embed/")) {
+  // 3DGS編集の別ウィンドウ(/scene-edit/*)もサイトのヘッダー/フッターを外し、画面全体を編集に使う。
+  if (basePath.startsWith("/embed/") || basePath.startsWith("/scene-edit/")) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-embed", "1");
     return NextResponse.next({ request: { headers: requestHeaders } });

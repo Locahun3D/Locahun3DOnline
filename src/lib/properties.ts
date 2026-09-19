@@ -109,8 +109,11 @@ export const getPublishedProperty = cache(async (
  * 除外する（0点フォールバックはしない）。
  */
 function relatedScore(base: Property, candidate: Property): number {
-  let score = 0;
-  if (candidate.category === base.category) score += 30;
+  // カテゴリ違い（ハウススタジオ ↔ 屋外ロケ地 など）は、料金形態や設備が
+  // 共通でも「類似」ではない。以前はそれだけで点が付き、雑司ヶ谷のスタジオに
+  // 渋谷スクランブル交差点が並んでいた（2026-09-19）。
+  if (candidate.category !== base.category) return 0;
+  let score = 30;
   if (base.studioType && candidate.studioType === base.studioType) score += 20;
   // 料金形態（時間貸し/撮影許可/無料）はレンタルスタジオか許可制ロケ地かという
   // スタジオ性質そのものの違いを表す。

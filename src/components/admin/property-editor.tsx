@@ -316,17 +316,29 @@ export default function PropertyEditor({
     // RHF's field-array key is not the persisted scene ID.
     const scene = getValues(`splatItems.${idx}`);
     if (!scene?.id || !scene.splatUrl) return;
+    // 2026-09-19: 物件編集内の埋め込みは狭くて編集しづらいとの指摘で、画面いっぱいの
+    // 別ウィンドウで開く。ポップアップはクリック直後（await 前）に開かないとブロックされる。
+    // ブロックされた場合だけ、従来どおりシーン欄の中に埋め込んで開く。
+    const width = Math.max(960, screen.availWidth), height = Math.max(640, screen.availHeight);
+    const child = window.open("about:blank", `scene-edit-${scene.id}`, `popup,width=${width},height=${height},left=0,top=0`);
     try {
       const result: SceneSession = await sceneRequest({ action: "target", propertyId: initial.id, sceneId: scene.id }, new AbortController().signal);
       const currentScene = getValues("splatItems").find(item => item.id === scene.id);
       if (hasPendingPropertyChanges() || result.target.propertyId !== initial.id || result.target.sceneId !== scene.id || result.target.expectedUpdatedAt !== baseUpdatedAtRef.current || result.target.previousUrl !== currentScene?.splatUrl) {
+        child?.close();
         stopForConflict();
         return;
       }
-      // 別タブの専用ページではなく、このシーン欄の中に編集ビューアーを開く（2026-09-19）。
       setPreviewItemIdx(null);
-      setInlineSceneId(scene.id);
+      if (child) {
+        sceneEditWindowsRef.current.set(child, scene.id);
+        child.location.href = `/scene-edit/${encodeURIComponent(initial.id)}/${encodeURIComponent(scene.id)}`;
+        child.focus();
+      } else {
+        setInlineSceneId(scene.id);
+      }
     } catch (error) {
+      child?.close();
       const code = error instanceof SceneHttpError ? error.code : "";
       setSaveError(
         code === "published_admin_only" ? "公開中の物件は管理者のみ3DGSを編集できます。下書きに戻すか、管理者に依頼してください。"
@@ -1498,12 +1510,12 @@ export default function PropertyEditor({
               <div className="border-t border-line pt-6 mt-8">
                 <SectionHead title="紹介文" hint="物件の紹介文です。" />
               </div>
-              <Field label="本文">
+              <Field label="本文" hint="概要＝フレーバーテキスト（雰囲気・特徴・撮れる画）。仕様欄と同じ情報（アクセス・寸法・時間・料金・設備）は重複するので書かない。1文ごとに改行して表示される。ルール: docs/property-overview-copy-rules-2026-09-19.md">
                 <textarea
                   rows={14}
                   {...register("description")}
                   className={inputClass + " font-sans leading-[1.85]"}
-                  placeholder="このスタジオの特徴、ロケーション、利用シーン、注意事項などをご記入ください。"
+                  placeholder="この場所の空気感・見どころを、公式サイトの紹介文をもとに3〜6文で。駅からの分数・広さ・天井高・営業時間・料金・駐車場は「仕様」に出るので書かない。"
                 />
               </Field>
               {showEn && (
@@ -2153,7 +2165,7 @@ export default function PropertyEditor({
                             onClick={() => void openSceneEditor(idx)}
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
                           >
-                            {inlineSceneId === watch(`splatItems.${idx}.id`) ? "編集中" : "編集"}
+                            {inlineSceneId === watch(`splatItems.${idx}.id`) ? "編集中" : "編集 ↗"}
                           </button>
                           {/* 再撮影/動画生成ボタンの表示条件は「行ごと」に判定する。
                               以前は `capture.state === "idle"` というグローバル状態で

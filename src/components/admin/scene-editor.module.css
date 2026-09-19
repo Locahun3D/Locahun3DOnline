@@ -1,4 +1,5 @@
 .root { display: flex; flex-direction: column; height: calc((100dvh - var(--header-h, 56px)) / var(--z, 1)); min-height: calc(480px / var(--z, 1)); background: var(--color-bg); color: var(--color-ink); }
+.window { height: calc(100dvh / var(--z, 1)); } /* 別ウィンドウ: サイトヘッダーなしで画面全体 */
 .inline { height: min(82vh, 900px); min-height: 520px; border: 1px solid var(--color-line, #333); margin: 12px 0; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 12px; border-bottom: 1px solid var(--color-line, #333); }
 .back { font-size: 12px; text-decoration: underline; background: none; border: 0; color: inherit; cursor: pointer; padding: 6px 0; }

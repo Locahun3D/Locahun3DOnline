@@ -19,10 +19,10 @@ import DataSalePanel from "@/components/data-sale-panel";
 import StudioPageBlocks from "@/components/studio/studio-page-blocks";
 import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
+import { Fragment } from "react";
 import GalleryLightbox from "@/components/gallery-lightbox";
 import PropertyAmenities from "@/components/property-amenities";
 import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
-import PropertyComments, { type CommentItem } from "@/components/property-comments";
 
 /**
  * Eyebrow header — mono tracked "OVERVIEW —— 概要" style with a flexing
@@ -52,6 +52,21 @@ function Eyebrow({ jp }: { en: string; jp: string }) {
  * 概要テキストを描画。`【見出し】` 行を見出しとして強調し、本文は読みやすい
  * 段落に整形する（項目ごとに見出しが立ち、文字が細い問題を解消）。
  */
+/**
+ * 日本語の段落は句点（。）ごとに改行して1文＝1行にする（サイト共通ルール、
+ * CLAUDE.md「説明文は句点ごとに改行」）。長い1文は文節単位で自然に折り返す
+ * （body の word-break: auto-phrase）。閉じ括弧の直前では切らない。
+ */
+function sentenceLines(body: string) {
+  const parts = body.split(/(?<=。)(?![」』）\)])/);
+  return parts.map((part, i) => (
+    <Fragment key={i}>
+      {part}
+      {i < parts.length - 1 && !part.endsWith("\n") && <br />}
+    </Fragment>
+  ));
+}
+
 function renderOverview(text: string) {
   if (!text || !text.trim()) return null;
   const lines = text.replace(/\r/g, "").split("\n");
@@ -84,7 +99,7 @@ function renderOverview(text: string) {
             )}
             {s.body && (
               <p className="text-[15px] leading-[1.95] text-ink/85 whitespace-pre-line">
-                {s.body}
+                {sentenceLines(s.body)}
               </p>
             )}
           </div>
@@ -113,11 +128,7 @@ export default function PropertyDetailView({
   bookmarked = false,
   locale = "ja",
   previewControls = null,
-  comments = [],
-  currentUserId = null,
-  currentUserName = null,
   isAdminUser = false,
-  canPostBoard = false,
 }: {
   initialSceneId?: string;
   property: Property;
@@ -125,7 +136,7 @@ export default function PropertyDetailView({
   preview?: boolean;
   /** Admin-only visual simulation: no real viewing, checkout, or cart mutations. */
   displaySimulation?: boolean;
-  /** 先方スタジオ共有用の限定プレビュー(ログイン不要)。掲示板/購入/関連を抑制し、
+  /** 先方スタジオ共有用の限定プレビュー(ログイン不要)。購入/関連を抑制し、
    *  3DGS は previewToken 経由で課金ゲートを外して閲覧可能にする。 */
   sharePreview?: boolean;
   /** 共有プレビュー時のアクセストークン。ViewerGate → /api/viewer-asset に渡す。 */
@@ -150,16 +161,11 @@ export default function PropertyDetailView({
   locale?: Locale;
   /** 管理プレビューのバナー内に差し込む追加コントロール（プラン切替等）。 */
   previewControls?: React.ReactNode;
-  /** 会員限定掲示板の初期コメント一覧。 */
-  comments?: CommentItem[];
-  currentUserId?: string | null;
-  currentUserName?: string | null;
   isAdminUser?: boolean;
-  /** 掲示板への書き込み権限（有料プラン: Individual / Studio / Team / admin）。閲覧は会員全員。 */
-  canPostBoard?: boolean;
 }) {
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
+  const floorPlans = (property.blueprints ?? []).filter((b) => b.url);
   const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
   // 問い合わせ先（電話/メール/HP）が1つも無い物件は問い合わせを受け付けられない
   const hasContact = !!(
@@ -508,6 +514,36 @@ export default function PropertyDetailView({
               )}
             </div>
 
+            {/* ── 平面図: 概要カードの空きに画像で見せる（2026-09-19 本人指示）。
+                 PDF はブラウザ内プレビューが端末差で不安定なため、ダウンロード札のまま ── */}
+            {floorPlans.length > 0 && (
+              <div className="mt-6">
+                <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
+                  {en ? "Floor plan" : "平面図"}
+                </div>
+                <div className="space-y-3">
+                  {floorPlans.map((b, i) =>
+                    /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(b.url) ? (
+                      <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block border border-line bg-white p-2 hover:border-accent transition">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- R2配信の相対パスは next/image 最適化が404になる */}
+                        <img src={b.url} alt={b.label || (en ? "Floor plan" : "平面図")} className="block w-full h-auto max-h-[420px] object-contain" loading="lazy" />
+                        <div className="flex items-center justify-between mt-2 px-1 text-[12px] text-ink/70">
+                          <span>{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
+                          <span className="font-bold">{en ? "Open full size" : "拡大 ↗"}</span>
+                        </div>
+                      </a>
+                    ) : (
+                      <a key={i} href={b.url} download target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition">
+                        <span className="text-accent">⬇</span>
+                        <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
+                        <span className="text-[12px] text-ink/70 font-bold">{en ? "Download PDF" : "PDFをダウンロード"}</span>
+                      </a>
+                    ),
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* mini metric grid, folded into the Overview card */}
             {/* 自然光は判定が曖昧で他社も出していないため表示しない（2026-09-19 会議）。
                 屋外は天井の概念がないので「屋外」の1セルだけ出す。 */}
@@ -585,39 +621,6 @@ export default function PropertyDetailView({
               </p>
             )}
 
-            {/* ── Blueprints ── */}
-            {property.blueprints &&
-              property.blueprints.length > 0 &&
-              property.blueprints.some((b) => b.url) && (
-                <div className="mt-6 pt-6 border-t border-line">
-                  <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
-                    {en ? "Floor plans" : "平面図"}
-                  </div>
-                  <div className="space-y-2">
-                    {property.blueprints
-                      .filter((b) => b.url)
-                      .map((b, i) => (
-                        <a
-                          key={i}
-                          href={b.url}
-                          download
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition"
-                        >
-                          <span className="text-accent">⬇</span>
-                          <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">
-                            {b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}
-                          </span>
-                          <span className="text-[12px] text-ink/70 font-bold">
-                            {en ? "Download" : "ダウンロード"}
-                          </span>
-                        </a>
-                      ))}
-                  </div>
-                </div>
-              )}
-
             {/* ── mobile-only CTA fallback so #inquiry / bookmark are reachable
                  without needing to scroll all the way to Contact ── */}
           </div>
@@ -651,14 +654,17 @@ export default function PropertyDetailView({
                     </div>
                   )}
                 </div>
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-5 self-start inline-flex items-center min-h-[44px] px-5 font-bold text-[14px] border border-accent text-accent hover:bg-accent hover:text-[#0a2a35] transition"
-                >
-                  {en ? "Open in Google Maps →" : "Google マップで開く →"}
-                </a>
+                {/* 埋め込み地図に「マップで開く」があるため、ボタンは地図を出せない時だけ（2026-09-19 本人指示で削除） */}
+                {!mapsEmbedUrl && (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 self-start inline-flex items-center min-h-[44px] px-5 font-bold text-[14px] border border-accent text-accent hover:bg-accent hover:text-[#0a2a35] transition"
+                  >
+                    {en ? "Open in Google Maps →" : "Google マップで開く →"}
+                  </a>
+                )}
               </div>
               {mapsEmbedUrl && (
                 <iframe
@@ -892,14 +898,14 @@ export default function PropertyDetailView({
         )}
 
         {/* ══════════════════════════════════════════════════
-         *  Community — CONTACT（常設）＋ 掲示板
+         *  Community — CONTACT（常設）。掲示板・通報は 2026-09-19 本人指示で廃止。
          *  常設の黒アクションバー（保存・問い合わせボタンだけの帯）は不要と
          *  判断され撤去。CONTACTカードは元通り常時表示に戻し、問い合わせ先が
          *  無い物件はカード内に「受け付けていません」の文言＋★保存だけ出す。
          * ══════════════════════════════════════════════════ */}
         {!preview && (
           <section id="inquiry" className="mb-14">
-            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9 mb-4">
+            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
               <Eyebrow en="CONTACT" jp={en ? "Contact" : "お問い合わせ"} />
               <div className="grid lg:grid-cols-2 gap-8 items-start">
                 <div className="text-[14px]">
@@ -977,31 +983,10 @@ export default function PropertyDetailView({
               </div>
             </div>
 
-            {/* 掲示板 */}
-            <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-9">
-              <Eyebrow
-                en="BOARD"
-                jp={
-                  en
-                    ? "Board (viewing: everyone / posting: paid plans)"
-                    : "掲示板（閲覧: 全員 / 書き込み: 有料プラン）"
-                }
-              />
-              <PropertyComments
-                propertyId={property.id}
-                comments={comments}
-                currentUserId={currentUserId}
-                currentUserName={currentUserName}
-                isAdmin={isAdminUser}
-                signedIn={signedIn}
-                canPost={canPostBoard}
-                locale={locale}
-              />
-            </div>
           </section>
         )}
 
-        {/* 管理プレビュー時はコミュニティ（アクションバー/掲示板）を
+        {/* 管理プレビュー時はコミュニティ（問い合わせ）を
             出さない（実データ・実操作を伴うため）。プレビューは物件情報の
             確認に専念させる。 */}
 

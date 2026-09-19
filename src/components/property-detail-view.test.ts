@@ -7,7 +7,6 @@ vi.mock('@/components/studio/studio-page-blocks',()=>({default:()=>null}));
 vi.mock('@/components/bookmark-button',()=>({default:()=>null}));
 vi.mock('@/components/inquiry-panel',()=>({default:()=>null}));
 vi.mock('@/components/zoomable-image',()=>({default:()=>null}));
-vi.mock('@/components/property-comments',()=>({default:()=>null}));
 import PropertyDetailView from './property-detail-view';
 import ViewerGate from './viewer-gate';
 import DataSalePanel from './data-sale-panel';

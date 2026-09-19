@@ -10,6 +10,8 @@ export default async function CartPage() {
   const en = (await getLocale()) === "en";
   return (
     <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
+      {/* 中身は最大1240pxで止まるため、左寄せだと広い画面で右が空く → 見出しごと中央に寄せる（2026-09-19） */}
+      <div className="mx-auto w-full max-w-[1240px]">
       <header className="ui-page-header">
         <h1 className="serif ui-page-title">{en ? "Cart" : "カート"}</h1>
         <p className="ui-page-lead text-[14px] text-muted">
@@ -20,6 +22,7 @@ export default async function CartPage() {
       </header>
 
       <CartClient />
+      </div>
     </div>
   );
 }

@@ -100,11 +100,15 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
  };
  const status=phase==='edited'?'未保存の変更があります':messages[phase]||phase;
  const close=()=>{if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。閉じますか？'))return;onClose?.();};
- return <section className={`${inline?'':'theme-online '}${styles.root} ${inline?styles.inline:''}`}>
+ return <section className={`${inline?'':'theme-online '}${styles.root} ${inline?styles.inline:styles.window}`}>
   <header className={styles.bar}>
    {inline
     ? <button type="button" className={styles.back} onClick={close}>× 閉じる</button>
-    : <a className={styles.back} href={`/admin/properties/${encodeURIComponent(propertyId)}/edit`} onClick={event=>{if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。物件編集へ戻りますか？'))event.preventDefault();}}>← 物件編集に戻る</a>}
+    : <a className={styles.back} href={`/admin/properties/${encodeURIComponent(propertyId)}/edit`} onClick={event=>{
+       if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。閉じますか？')){event.preventDefault();return;}
+       // 物件編集から別ウィンドウで開いた場合は、ウィンドウを閉じて元の物件編集へ戻す。
+       if(window.opener){event.preventDefault();dirty.current=false;busyRef.current=false;window.close();}
+      }}>× 閉じて物件編集に戻る</a>}
    <strong className={styles.title}>{label||'3DGS'}の編集</strong>
    <span className={styles.status} role="status" aria-live="polite">{status}</span>
    <span className={styles.actions}>

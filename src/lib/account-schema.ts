@@ -117,11 +117,9 @@ export const userSchema = z.object({
   email: z.email(),
   name: z.string().min(1).max(80),
   /**
-   * 掲示板等に表示する公開表示名（ユーザーが任意設定）。空文字 = 未設定で、
+   * サイト上に表示する公開表示名（ユーザーが任意設定）。空文字 = 未設定で、
    * その場合は従来どおり name（Clerk 由来の氏名）を表示に使う。
-   * comments.userName / reviews.userName は投稿時点のスナップショットとして
-   * 保存されるが、表示時は src/lib/live-names.ts が常に現在のこの値へ
-   * 解決し直すため、名前変更は過去の投稿の表示にも遡って反映される。
+   * （物件掲示板は 2026-09-19 に廃止。D1 の comments テーブルは残してある）
    */
   displayName: z.string().max(30).default(""),
   role: z.enum(ACCOUNT_ROLES).default("individual"),
@@ -263,18 +261,6 @@ export function canViewNdaOnly(u: PublicUser | null): boolean {
   if (!u || u.status !== "active") return false;
   if (u.role === "admin") return true;
   return u.role === "production" && u.plan === "team" && !!u.ndaAcceptedAt;
-}
-
-/**
- * 物件掲示板への書き込み（投稿・返信）権限。
- * 閲覧・いいねはサインイン会員全員、書き込みは有料プラン（Individual / Studio / Team）限定（admin は常に可）。
- */
-export function canPostToBoard(u: PublicUser | null): boolean {
-  if (!u) return false;
-  if (u.role === "admin") return true;
-  // 「課金ユーザーなら書き込み可」— 当初は Studio/Team 限定だったが、
-  // Individual も含む有料プラン全体に拡大（Free のみ閲覧限定のまま）。
-  return u.status === "active" && u.plan !== "free";
 }
 
 /** Captured on the /onboarding step after Clerk sign-up. */
