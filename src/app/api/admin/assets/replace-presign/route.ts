@@ -27,6 +27,9 @@ export async function POST(req: Request) {
 
   const asset = await assetRepo.get(id);
   if (!asset) return NextResponse.json({ error: "unknown_asset" }, { status: 404 });
+  if (/^assets\/splat\/wf_[a-f0-9]{64}-project\.zip$/.test(asset.r2Key)) {
+    return NextResponse.json({error:'immutable_project',message:'編集プロジェクトは上書きできません。シーンの編集画面から新しい版を保存してください。'},{status:409});
+  }
   if (!asset.r2Key) {
     return NextResponse.json(
       { error: "no_r2_key", message: "このアセットはローカルアップロードのため差し替えに対応していません。" },

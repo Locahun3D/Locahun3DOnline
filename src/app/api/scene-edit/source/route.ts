@@ -1,0 +1,51 @@
+import {getCloudflareContext} from '@opennextjs/cloudflare';
+import {getCurrentUser} from '@/lib/dal';
+import {getD1} from '@/lib/d1';
+import {sceneEditSourceKey} from '@/lib/scene-edit-contract';
+import {SceneEditError,loadSceneEditSession,sceneEditSnapshot,sceneEditMatches} from '@/lib/scene-edit-session';
+export const runtime='nodejs';
+export const dynamic='force-dynamic';
+type ObjectInfo={size:number;httpEtag:string;body?:ReadableStream;range?:{offset?:number;length?:number}};
+type Range={offset:number;length?:number}|{suffix:number};
+type Bucket={get(key:string,options?:{range:Range}):Promise<ObjectInfo|null>;head(key:string):Promise<ObjectInfo|null>};
+const error=(code:string,status:number)=>Response.json({error:code},{status,headers:{'Cache-Control':'no-store'}});
+function parseRange(value:string):Range{
+ const match=/^bytes=(\d*)-(\d*)$/.exec(value);
+ if(!match||(!match[1]&&!match[2]))throw new SceneEditError(416,'invalid_range');
+ const start=Number(match[1]),end=Number(match[2]);
+ if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end))throw new SceneEditError(416,'invalid_range');
+ if(!match[1]){if(end<1)throw new SceneEditError(416,'invalid_range');return {suffix:end};}
+ if(!match[2])return {offset:start};
+ if(end<start)throw new SceneEditError(416,'invalid_range');
+ return {offset:start,length:end-start+1};
+}
+export async function GET(req:Request){
+ const origin=req.headers.get('origin');
+ if((origin&&origin!==new URL(req.url).origin)||req.headers.get('sec-fetch-site')==='cross-site')return error('origin',403);
+ const params=new URL(req.url).searchParams;
+ if([...params.keys()].some(key=>key!=='sessionKey')||params.getAll('sessionKey').length!==1)return error('invalid_request',400);
+ const actor=await getCurrentUser();if(!actor)return error('unauthorized',401);
+ try{
+  const db=await getD1();if(!db)throw new SceneEditError(503,'storage_unavailable');
+  const target=await loadSceneEditSession(db,params.get('sessionKey')!,actor.id);
+  const snapshot=await sceneEditSnapshot(db,target.propertyId,target.sceneId);
+  if(!sceneEditMatches(snapshot,target))throw new SceneEditError(409,'scene_changed');
+  const key=sceneEditSourceKey(target.previousUrl)!;
+  const rangeHeader=req.headers.get('range'),range=rangeHeader?parseRange(rangeHeader):undefined;
+  const {env}=await getCloudflareContext();const bucket=(env as unknown as {R2_ASSETS?:Bucket}).R2_ASSETS;
+  if(!bucket)throw new SceneEditError(503,'storage_unavailable');
+  const object=await (req.method==='HEAD'?bucket.head(key):bucket.get(key,range?{range}:undefined));
+  if(!object)return error('source_missing',404);
+  const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':object.httpEtag,'X-Content-Type-Options':'nosniff'});
+  let status=200,length=object.size;
+  if(range&&req.method!=='HEAD'){
+   const offset=object.range?.offset,partLength=object.range?.length;
+   // Never call arrayBuffer as a metadata fallback: sources may be gigabytes.
+   if(!Number.isSafeInteger(offset)||!Number.isSafeInteger(partLength)||offset!<0||partLength!<1||offset!+partLength!>object.size){await object.body?.cancel();throw new SceneEditError(416,'invalid_range');}
+   length=partLength!;status=206;headers.set('Content-Range',`bytes ${offset}-${offset!+length-1}/${object.size}`);
+  }
+  headers.set('Content-Length',String(length));
+  return new Response(req.method==='HEAD'?null:object.body,{status,headers});
+ }catch(cause){if(cause instanceof SceneEditError)return error(cause.code,cause.status);return error('storage_unavailable',503);}
+}
+export async function HEAD(req:Request){const response=await GET(req);await response.body?.cancel();return new Response(null,{status:response.status,headers:response.headers});}

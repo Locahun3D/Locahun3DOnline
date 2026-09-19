@@ -3,6 +3,7 @@
  * No server-only import — testable in node env.
  */
 import type { Asset, Property } from "./schemas";
+import {sceneEditSourceKey} from './scene-edit-contract';
 
 /**
  * url → propertyId[] (only urls actually referenced are present).
@@ -18,21 +19,33 @@ export function computeAssetUsage(
     Property,
     "id" | "cover" | "gallery" | "splatUrl" | "zipUrl" | "blueprints" | "splatItems"
   >[],
-  assets: Pick<Asset, "url">[],
+  assets: (Pick<Asset, "url"> & Partial<Pick<Asset,"r2Key">>)[],
+  options: {historyOnly?:boolean} = {},
 ): Record<string, string[]> {
   const known = new Set(assets.map((a) => a.url).filter(Boolean));
+  const aliases = new Map<string,string[]>();
+  for(const asset of assets){
+    const key=asset.r2Key || sceneEditSourceKey(asset.url);
+    if(key&&asset.url)aliases.set(key,[...(aliases.get(key)??[]),asset.url]);
+  }
   const usage: Record<string, string[]> = {};
   const add = (url: string | undefined, pid: string) => {
-    if (!url || !known.has(url)) return;
-    (usage[url] ??= []).push(pid);
+    if (!url) return;
+    const key=sceneEditSourceKey(url);
+    const urls=new Set([...(known.has(url)?[url]:[]),...(key?aliases.get(key)??[]:[])]);
+    for(const matched of urls)(usage[matched]??=[]).push(pid);
   };
   for (const p of properties) {
+    if (!options.historyOnly) {
     add(p.cover?.src, p.id);
     for (const g of p.gallery ?? []) add(g.src, p.id);
     add(p.splatUrl, p.id); // レガシー1シーン物件
     add(p.zipUrl, p.id); // レガシー1シーン物件
     for (const b of p.blueprints ?? []) add(b.url, p.id);
+    }
     for (const item of p.splatItems ?? []) {
+      for (const version of item.editVersions ?? []) add(version.url, p.id);
+      if(options.historyOnly)continue;
       add(item.splatUrl, p.id);
       add(item.previewVideoUrl, p.id);
       add(item.downloadFileUrl, p.id);

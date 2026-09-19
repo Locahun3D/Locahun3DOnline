@@ -21,6 +21,7 @@ import {
   type Property,
 } from "@/lib/schemas";
 import { publishReadiness } from "@/lib/publish-readiness";
+import {sceneEditAssetProtection} from '@/lib/scene-edit-asset-protection';
 
 async function assertPropertyAccess(propertyId: string) {
   const user = await getCurrentUser();
@@ -77,6 +78,7 @@ async function countOtherUrlUsages(url: string, excludePropertyId?: string): Pro
  * （差し替え/保存自体をファイル削除の失敗で失敗させない）。
  */
 async function deleteFileAsset(url: string, assetsByUrl?: Map<string, { id: string }>): Promise<void> {
+  if(await sceneEditAssetProtection({id:'',url,r2Key:toR2Key(url)??''},()=>repo.list()))return;
   const byUrl = assetsByUrl ?? new Map((await assetRepo.list()).map((a) => [a.url, a] as const));
   const match = byUrl.get(url);
   if (match) {
@@ -681,6 +683,8 @@ export async function deleteAssetAction(id: string) {
   await requireAdmin();
   const a = await assetRepo.get(id);
   if (!a) return { ok: false as const, reason: "not_found" as const };
+  const protection=await sceneEditAssetProtection(a,()=>repo.list());
+  if(protection)return {ok:false as const,reason:protection};
   if ((await getUploadMode()) === "r2" && a.r2Key) {
     try {
       await deleteR2Object(a.r2Key);
