@@ -34,6 +34,7 @@ import type {
 const PAYEE_KIND_OPTIONS = [
   { value: "scanner", label: "撮影者" },
   { value: "venue", label: "施設" },
+  { value: "referrer", label: "紹介元" },
 ] as const;
 
 const ENTITY_TYPE_OPTIONS = [

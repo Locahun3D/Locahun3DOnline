@@ -87,6 +87,9 @@ export default async function DataDownloadTermsPage() {
             <li>本データに含まれるスタジオの機密情報（バックヤード・搬入口・制御室等）をSNS等で無許可公開する行為</li>
             <li>本データおよびその改変物を、<strong>機械学習・生成AIモデルの学習データとして利用する行為</strong>（本サービスの事前の書面による許諾がある場合を除く。用途によって条件が異なるため、ご希望の場合はお問い合わせください）</li>
             <li>第3条に定める第三者権利物を除去せずに制作物を公開・納品・配布する行為</li>
+            <li>撮影対象の施設又はその運営者の名誉・信用を傷つける目的での利用</li>
+            <li>撮影対象の施設が特定できる形で、犯罪・事故その他の実在の事件を表現する目的での利用</li>
+            <li>購入時に物件ページの「施設の利用条件」に表示された条件（改変・破壊表現の禁止、施設名のクレジット等）に反する利用</li>
           </ol>
         </section>
 
@@ -150,7 +153,7 @@ export default async function DataDownloadTermsPage() {
             制定日: 2026年6月23日<br />
             改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ／第2条に対価・契約成立時点、第8条にスタジオ運営者からの許諾取得努力義務を追記／第2条にゲーム等ソフトウェア製品への組込利用は拡張ライセンスが必要である旨、第4条に組込利用時のデータ抽出可能性についての取り扱いを追記）<br />
             改定日: 2026年8月4日（第1条に契約当事者がKWI株式会社である旨を明記／第2条5項にエディトリアル限定区分の新規販売停止を注記／第5条3項の免責を賠償上限方式（支払対価・故意重過失を除く）に変更／第9条の規約変更手続きを事前周知方式に変更し、購入済み分への不遡及を明記）<br />
-            改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開／第4条から競合施設への情報提供の禁止を削除）<br />
+            改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開／第4条から競合施設への情報提供の禁止を削除し、施設の名誉毀損・実在事件の表現・物件ごとの施設の利用条件への違反を禁止事項に追加）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -245,7 +248,10 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>sell the Data as an NFT or digital asset;</li>
             <li>publish confidential Studio information contained in the Data (backyards, loading docks, control rooms, etc.) on social media or elsewhere without permission;</li>
             <li>use the Data or derivatives thereof as <strong>training data for machine-learning or generative-AI models</strong> (except with the Service&apos;s prior written permission);</li>
-            <li>publish, deliver or distribute a work without removing Third-Party Material as required under Article 3.</li>
+            <li>publish, deliver or distribute a work without removing Third-Party Material as required under Article 3;</li>
+            <li>use the Data to damage the reputation or credibility of the scanned venue or its operator;</li>
+            <li>use the Data to depict real crimes, accidents or other actual incidents in a way that identifies the scanned venue;</li>
+            <li>use the Data in breach of the &ldquo;Venue conditions&rdquo; shown on the property page at the time of purchase (e.g. no alteration or destruction, venue credit).</li>
           </ol>
         </section>
 
@@ -306,7 +312,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             Established: June 23, 2026<br />
             Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8; clarified in Articles 2 and 4 that embedding into games/software requires the extended license, with the treatment of incidental data extractability)<br />
             Amended: August 4, 2026 (named KWI Inc. as the contracting party in Article 1; noted in Article 2.5 that the Editorial tier is closed to new purchases; replaced the blanket disclaimer in Article 5.3 with a liability cap equal to the price paid, excluding willful misconduct/gross negligence; changed Article 9 to an advance-notice amendment procedure with non-retroactivity for purchased Data)<br />
-            Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5; removed the prohibition on providing information to competing facilities from Article 4)<br />
+            Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5; removed the prohibition on providing information to competing facilities from Article 4, and added prohibitions on harming the venue&apos;s reputation, depicting real incidents at an identifiable venue, and breaching per-property venue conditions)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

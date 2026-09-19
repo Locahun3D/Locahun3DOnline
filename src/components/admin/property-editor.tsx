@@ -1854,7 +1854,7 @@ export default function PropertyEditor({
                       // ラベルは毎回イチから打ち直すのが手間なので「物件名＋半角スペース」
                       // を初期値にする（続けて「1F」「駐車場」等だけ打てば済む）。
                       const titleSeed = (getValues("title") || "").trim();
-                      splatItemsArray.append({ id: crypto.randomUUID(), label: titleSeed ? `${titleSeed} ` : "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", downloadVersions: [] });
+                      splatItemsArray.append({ id: crypto.randomUUID(), label: titleSeed ? `${titleSeed} ` : "", labelEn: "", splatUrl: "", previewVideoUrl: "", sizeMb: 0, notes: "", forSale: false, salePrice: 0, freePeriod: { enabled: false, startAt: null, endAt: null, note: "", afterEnd: "revert_to_price" as const }, saleDescription: "", saleDescriptionEn: "", accessLevel: "public" as const, downloadFileUrl: "", downloadFileSizeMb: 0, downloadFileFormat: "PLY & OBJ (ZIP)", downloadFiles: [], captureDevice: "Portalcam", license: "standard" as const, licenseOptions: [], editorialRightsCredit: "", usageRestrictions: { noAlteration: false, noDestruction: false, noDarkThemes: false, credit: "none" as const, creditText: "" }, downloadVersions: [] });
                       // 追加した行はすぐ入力するので開いておく。
                       const added = getValues("splatItems");
                       const last = added[added.length - 1];
@@ -2341,6 +2341,44 @@ export default function PropertyEditor({
                               hint="1つ以上チェックすると、購入者はここから選んで購入するようになります（上のデフォルト価格/区分より優先）。ライセンスごとに価格を変えられます。"
                             >
                               <LicenseOptionsEditor idx={idx} watch={watch} setValue={setValue} />
+                            </Field>
+
+                            {/* ── 施設の利用条件（施設契約の別紙どおりに設定） ── */}
+                            <Field
+                              label="施設の利用条件（任意）"
+                              hint="施設との契約で許可されていない表現にチェック。購入画面に表示され、購入者は購入規約により守る義務を負います。自社撮影など制限がない物件は空のままで構いません。"
+                            >
+                              <div className="space-y-2 text-[12.5px]">
+                                {([
+                                  ["noAlteration", "施設の改変（色・装飾・看板の変更など）を含む表現は不可"],
+                                  ["noDestruction", "施設が壊れる・燃える・廃墟化するなどの表現は不可"],
+                                  ["noDarkThemes", "ホラー・犯罪・暴力を扱う作品での利用は不可"],
+                                ] as const).map(([key, label]) => (
+                                  <label key={key} className="flex items-center gap-2.5 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      {...register(`splatItems.${idx}.usageRestrictions.${key}`)}
+                                      className="w-4 h-4 accent-accent shrink-0"
+                                    />
+                                    {label}
+                                  </label>
+                                ))}
+                                <select
+                                  {...register(`splatItems.${idx}.usageRestrictions.credit`)}
+                                  className={inputClass}
+                                >
+                                  <option value="none" className="bg-bg">作品での施設名クレジット：指定なし</option>
+                                  <option value="required" className="bg-bg">作品での施設名クレジット：必要</option>
+                                  <option value="hide_name" className="bg-bg">作品での施設名クレジット：施設名を出さない</option>
+                                </select>
+                                {watch(`splatItems.${idx}.usageRestrictions.credit`) === "required" && (
+                                  <input
+                                    {...register(`splatItems.${idx}.usageRestrictions.creditText`)}
+                                    className={inputClass}
+                                    placeholder="クレジット表記（例: 撮影協力 ○○スタジオ）"
+                                  />
+                                )}
+                              </div>
                             </Field>
                           </div>
                         )}

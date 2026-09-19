@@ -911,6 +911,7 @@ export default function PropertyDetailView({
                       alreadyPurchased={purchasedItemIds.includes(item.id)}
                       displaySimulation={displaySimulation}
                       editorialRightsCredit={item.editorialRightsCredit}
+                      usageRestrictions={item.usageRestrictions}
                     />
                   )}
                   {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length === 0 && (

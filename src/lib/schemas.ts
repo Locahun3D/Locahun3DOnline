@@ -512,6 +512,16 @@ export const propertySchema = z.object({
     // エディトリアル(報道・教育限定)ライセンスで販売する場合に必須の権利者
     // クレジット表記。公開ページ・購入時のライセンステキストに表示する。
     editorialRightsCredit: z.string().max(300).default(""),
+    // 施設との契約（別紙）で決めた、購入者に守らせる利用条件。既定は制限なし
+    // （自社撮影など施設の制限がない物件）。購入画面に表示し、データ購入規約で
+    // 購入者に遵守させる。2026-09-19 追加。
+    usageRestrictions: z.object({
+      noAlteration: z.boolean().default(false),
+      noDestruction: z.boolean().default(false),
+      noDarkThemes: z.boolean().default(false),
+      credit: z.enum(["none", "required", "hide_name"]).default("none"),
+      creditText: z.string().max(200).default(""),
+    }).default({ noAlteration: false, noDestruction: false, noDarkThemes: false, credit: "none", creditText: "" }),
     // 日付別バージョン管理: 再スキャン等で更新された一括ダウンロードZIPを
     // 日付ごとに保持する(downloadFiles と同じ「マルチ + 単一フォールバック」
     // パターン)。空なら上の downloadFileUrl/scannedAt を単一バージョン扱い
@@ -1034,3 +1044,23 @@ export const assetSchema = z.object({
 export type AssetKind = z.infer<typeof assetKindSchema>;
 export type AssetStatus = z.infer<typeof assetStatusSchema>;
 export type Asset = z.infer<typeof assetSchema>;
+
+export type UsageRestrictions = {
+  noAlteration: boolean;
+  noDestruction: boolean;
+  noDarkThemes: boolean;
+  credit: "none" | "required" | "hide_name";
+  creditText: string;
+};
+
+/** 施設の利用条件を、購入画面に出す文の配列にする（制限なしなら空配列）。 */
+export function usageRestrictionLines(r: UsageRestrictions | undefined, en = false): string[] {
+  if (!r) return [];
+  const out: string[] = [];
+  if (r.noAlteration) out.push(en ? "Do not alter the venue (colors, decor, signage, etc.)." : "施設の改変（色・装飾・看板の変更など）を含む表現は不可");
+  if (r.noDestruction) out.push(en ? "Do not depict the venue being destroyed, burned or ruined." : "施設が壊れる・燃える・廃墟化するなどの表現は不可");
+  if (r.noDarkThemes) out.push(en ? "Not for works dealing with horror, crime or violence." : "ホラー・犯罪・暴力を扱う作品での利用は不可");
+  if (r.credit === "required") out.push(en ? `Credit the venue in the work: ${r.creditText}` : `作品に施設名のクレジットが必要：${r.creditText}`);
+  if (r.credit === "hide_name") out.push(en ? "Do not name the venue in the work." : "作品で施設名を出すことは不可");
+  return out;
+}

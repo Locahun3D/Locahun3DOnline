@@ -45,11 +45,12 @@ import { purchaseRepo, type Purchase } from "./purchases";
 // 1. スキーマ + 定数
 // ──────────────────────────────────────────────────────────────────
 
-export const PAYEE_KINDS = ["scanner", "venue"] as const;
+export const PAYEE_KINDS = ["scanner", "venue", "referrer"] as const;
 export type PayeeKind = (typeof PAYEE_KINDS)[number];
 export const PAYEE_KIND_LABEL: Record<PayeeKind, string> = {
   scanner: "撮影者",
   venue: "施設",
+  referrer: "紹介元",
 };
 
 export const ENTITY_TYPES = ["individual", "corporation"] as const;
@@ -106,7 +107,8 @@ export function maskAccountNumber(accountNumber: string): string {
   return `••••${last4}`;
 }
 
-export const PAYOUT_ROLES = ["scanner", "venue"] as const;
+// referrer = 施設を紹介した提携先（例: ロケグー 販売額の10%）。2026-09-19 追加。
+export const PAYOUT_ROLES = ["scanner", "venue", "referrer"] as const;
 export type PayoutRole = (typeof PAYOUT_ROLES)[number];
 
 /** 当社取り分の下限（%）。分配率の合計はこれを超えて設定できない。 */

@@ -13,6 +13,8 @@ import {
   dataLicenseDesc,
   type DataLicense,
   type TokenCost,
+  usageRestrictionLines,
+  type UsageRestrictions,
 } from "@/lib/schemas";
 import type { LicenseOption } from "@/lib/license-options";
 import LicenseDifference, { LicenseDescription } from "@/components/license-difference";
@@ -43,6 +45,8 @@ interface DataSalePanelProps {
   displaySimulation?: boolean;
   /** エディトリアルライセンス選択時に表示する権利者クレジット表記。 */
   editorialRightsCredit?: string;
+  /** 施設契約に基づく利用条件（購入者が守る義務を負う）。 */
+  usageRestrictions?: UsageRestrictions;
 }
 
 export default function DataSalePanel({
@@ -60,7 +64,9 @@ export default function DataSalePanel({
   alreadyPurchased = false,
   displaySimulation = false,
   editorialRightsCredit,
+  usageRestrictions,
 }: DataSalePanelProps) {
+  const restrictionLines = usageRestrictionLines(usageRestrictions, useLocale() === "en");
   const en = useLocale() === "en";
   const lc = en ? "en" : "ja";
   const [loading, setLoading] = useState(false);
@@ -208,6 +214,14 @@ export default function DataSalePanel({
             {en ? "Publishing requires this credit: " : "公開時は権利表記が必要です："}
             {editorialRightsCredit}
           </p>
+        )}
+        {restrictionLines.length > 0 && (
+          <div data-usage-restrictions className="mt-2 border border-amber-500/40 px-3 py-2 text-[11px] leading-snug">
+            <p className="font-medium mb-1">{en ? "Venue conditions (binding on purchase)" : "施設の利用条件（購入者が守る必要があります）"}</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {restrictionLines.map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </div>
         )}
       </div>
 
