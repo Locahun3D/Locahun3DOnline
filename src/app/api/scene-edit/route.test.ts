@@ -24,7 +24,7 @@ beforeEach(()=>{
  sqlite.exec('CREATE TABLE properties(id TEXT PRIMARY KEY,status TEXT,updated_at TEXT,data TEXT); CREATE TABLE assets(id TEXT PRIMARY KEY,kind TEXT,status TEXT,uploaded_at TEXT,data TEXT)');
  sqlite.exec(readFileSync('migrations/0018_workflow_uploads.sql','utf8'));
  sqlite.prepare('INSERT INTO properties VALUES(?,?,?,?)').run('p',initial.status,initial.updatedAt,JSON.stringify(initial));
- mocks.user.mockResolvedValue({id:'owner'});mocks.access.mockResolvedValue({id:'owner'});
+ mocks.user.mockResolvedValue({id:'owner'});mocks.access.mockResolvedValue({id:'owner',role:'admin'});
  mocks.db.mockResolvedValue({prepare:(sql:string)=>({bind:(...args:unknown[])=>({first:async()=>sqlite.prepare(sql).get(...args)??null,run:async()=>({meta:{changes:sqlite.prepare(sql).run(...args).changes}})})})});
  mocks.head.mockResolvedValue({size:123,md5:digest.archiveMd5});mocks.put.mockResolvedValue({putUrl:'https://storage.test/put',headers:{'If-None-Match':'*'}});mocks.get.mockResolvedValue('https://storage.test/get');
 });
@@ -49,7 +49,7 @@ it('rejects foreign origin, unknown fields, oversized body and unauthenticated a
 });
 it('returns 403 for another property or revoked access and prevents actor replay',async()=>{
  const one=await reserve();mocks.access.mockRejectedValue(new Error('forbidden'));expect((await verify(one.key)).status).toBe(403);
- mocks.access.mockResolvedValue({id:'other'});mocks.user.mockResolvedValue({id:'other'});expect((await verify(one.key)).status).toBe(403);
+ mocks.access.mockResolvedValue({id:'other',role:'admin'});mocks.user.mockResolvedValue({id:'other'});expect((await verify(one.key)).status).toBe(403);
 });
 it('rejects missing, duplicate, archived and deleted targets',async()=>{
  for(const property of [{...initial,splatItems:[]},{...initial,splatItems:[initial.splatItems[0],initial.splatItems[0]]},{...initial,status:'archived'}]){
@@ -72,4 +72,26 @@ it('rejects mismatching bytes, MD5, downloaded SHA and storage failures without 
  mocks.head.mockResolvedValue({size:123,md5:'d'.repeat(32)});expect((await verify(one.key)).status).toBe(409);
  mocks.head.mockResolvedValue({size:123,md5:digest.archiveMd5});await verify(one.key);expect((await attach(one.key,'e'.repeat(64))).status).toBe(409);
  mocks.head.mockRejectedValue(new Error('offline'));expect((await attach(one.key)).status).toBe(503);expect(data()).toEqual(initial);
+});
+it('lets a property owner edit drafts but keeps published saves administrator-only',async()=>{
+ mocks.access.mockResolvedValue({id:'owner',role:'studio'});
+ const published=await POST(request({action:'target',propertyId:'p',sceneId:'s'}));expect(published.status).toBe(403);expect((await published.json()).error).toBe('published_admin_only');
+ replace({...initial,status:'draft'});expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(200);
+ mocks.access.mockResolvedValue({id:'owner',role:'admin'});const t=await target();replace({...initial,status:'published',updatedAt:initial.updatedAt});
+ mocks.access.mockResolvedValue({id:'owner',role:'studio'});expect((await POST(request({action:'reserve',target:t,digest}))).status).toBeGreaterThanOrEqual(403);
+});
+it('refuses to open sources above the editable size limit',async()=>{
+ mocks.head.mockResolvedValue({size:1024**3+1,md5:digest.archiveMd5});
+ const response=await POST(request({action:'target',propertyId:'p',sceneId:'s'}));expect(response.status).toBe(413);expect((await response.json()).error).toBe('source_too_large');
+});
+it('administrator can revert to a retained version; the replaced preview stays in history',async()=>{
+ const one=await reserve();await verify(one.key);await attach(one.key);
+ const edited=data();const version=edited.splatItems[0].editVersions[0];
+ mocks.access.mockResolvedValue({id:'owner',role:'studio'});
+ expect((await POST(request({action:'revert',propertyId:'p',sceneId:'s',versionKey:version.key,expectedUpdatedAt:edited.updatedAt}))).status).toBe(403);
+ mocks.access.mockResolvedValue({id:'owner',role:'admin'});
+ expect((await POST(request({action:'revert',propertyId:'p',sceneId:'s',versionKey:version.key,expectedUpdatedAt:'2020-01-01T00:00:00.000Z'}))).status).toBe(409);
+ const response=await POST(request({action:'revert',propertyId:'p',sceneId:'s',versionKey:version.key,expectedUpdatedAt:edited.updatedAt}));expect(response.status).toBe(200);
+ const after=data();expect(after.splatItems[0].splatUrl).toBe(old);expect(after.splatItems[0]).toMatchObject({salePrice:500,downloadFileUrl:'/sale.zip',accessLevel:'paid'});
+ expect(after.splatItems[0].editVersions.map((v:{url:string})=>v.url)).toContain(edited.splatItems[0].splatUrl);
 });

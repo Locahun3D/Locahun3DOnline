@@ -38,11 +38,11 @@ export function createSceneReplyGate(origin:string,source:unknown,requestId:stri
 export function sourceRefreshDecision(state:{pending:boolean;inFlight:boolean;statusInFlight:boolean;failed:boolean}) {
  return Object.values(state).some(Boolean)?'conflict':'reload';
 }
-class SceneHttpError extends Error { constructor(public status:number){super('Scene request failed');} }
+export class SceneHttpError extends Error { constructor(public status:number,public code=''){super('Scene request failed');} }
 export async function sceneRequest(body:unknown,signal:AbortSignal,fetcher:typeof fetch=fetch,origin?:string) {
  signal.throwIfAborted();
  const response=await fetcher(origin?new URL('/api/scene-edit',origin):'/api/scene-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'same-origin',redirect:'error',signal:AbortSignal.any([signal,AbortSignal.timeout(30000)])});
- if(!response.ok)throw new SceneHttpError(response.status);
+ if(!response.ok){let code='';try{code=String((await response.json())?.error??'');}catch{}throw new SceneHttpError(response.status,code);}
  return response.json();
 }
 function storageUrl(value:string,origin:string) {

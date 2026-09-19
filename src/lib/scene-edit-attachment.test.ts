@@ -28,3 +28,11 @@ it('uses raw preimage, status and timestamp to reject competing writes',async()=
 it('rejects duplicate/missing scenes and changed source before updating',async()=>{
  for(const splatItems of [[],[before.splatItems[0],before.splatItems[0]],[{...before.splatItems[0],splatUrl:'/other.zip'}]])await expect(attachSceneEditConditionally(db,{...input(),expectedJson:JSON.stringify({...before,splatItems})})).rejects.toThrow();
 });
+it('keeps the original upload plus the latest versions only',async()=>{
+ const versions=Array.from({length:5},(_,i)=>({url:`/api/r2/assets/splat/v${i}.zip`,sizeMb:1,savedAt:'2026-09-18T00:00:00.000Z',key:String(i).repeat(64)}));
+ const withHistory={...before,splatItems:[{...before.splatItems[0],editVersions:versions},before.splatItems[1]]};
+ sqlite.prepare('UPDATE properties SET data=?').run(JSON.stringify(withHistory));
+ expect(await attachSceneEditConditionally(db,{...input(),expectedJson:JSON.stringify(withHistory)})).toBe(true);
+ const urls=JSON.parse(sqlite.prepare('SELECT data FROM properties').get().data).splatItems[0].editVersions.map((v:{url:string})=>v.url);
+ expect(urls).toEqual(['/api/r2/assets/splat/v0.zip','/api/r2/assets/splat/v2.zip','/api/r2/assets/splat/v3.zip','/api/r2/assets/splat/v4.zip',old]);
+});

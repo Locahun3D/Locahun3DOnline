@@ -34,6 +34,10 @@ export async function loadSceneEditSession(db:D1,sessionKey:string,actorId:strin
  if(saved.actorId!==actorId)throw new SceneEditError(403,'forbidden');
  const target=sceneEditTargetSchema.parse(saved.target);
  if(target.sessionKey!==sessionKey||Date.parse(target.expiresAt)<=Date.now())throw new SceneEditError(409,'session_expired');
- await sceneEditAccess(target.propertyId);
+ sceneEditPublishPolicy(await sceneEditAccess(target.propertyId),target.status);
  return target;
+}
+/** Published scenes change what every viewer sees immediately; only administrators may save them. */
+export function sceneEditPublishPolicy(user:{role?:string}|null|undefined,status:string){
+ if(status==='published'&&user?.role!=='admin')throw new SceneEditError(403,'published_admin_only');
 }

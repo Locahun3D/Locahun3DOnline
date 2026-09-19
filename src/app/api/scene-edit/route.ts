@@ -4,9 +4,9 @@ import {getCurrentUser} from '@/lib/dal';
 import {getD1} from '@/lib/d1';
 import {getUploadMode,getWorkflowStorageOrigin,createWorkflowUpload,statWorkflowUpload,createPresignedGet} from '@/lib/uploads';
 import {reserveWorkflowUpload} from '@/lib/workflow-upload-reservation';
-import {sceneEditRequestSchema,sceneEditTargetSchema,sceneEditDigestSchema,sceneEditSourceKey,type SceneEditTarget,type SceneEditDigest,type SceneEditReceipt} from '@/lib/scene-edit-contract';
-import {attachSceneEditConditionally} from '@/lib/scene-edit-attachment';
-import {SCENE_EDIT_PURPOSE,SceneEditError,sceneEditAccess,sceneEditSnapshot,sceneEditMatches,sceneEditHash,loadSceneEditSession} from '@/lib/scene-edit-session';
+import {sceneEditMaxSourceBytes,sceneEditRequestSchema,sceneEditTargetSchema,sceneEditDigestSchema,sceneEditSourceKey,type SceneEditTarget,type SceneEditDigest,type SceneEditReceipt} from '@/lib/scene-edit-contract';
+import {attachSceneEditConditionally,revertSceneEditConditionally} from '@/lib/scene-edit-attachment';
+import {SCENE_EDIT_PURPOSE,SceneEditError,sceneEditPublishPolicy,sceneEditAccess,sceneEditSnapshot,sceneEditMatches,sceneEditHash,loadSceneEditSession} from '@/lib/scene-edit-session';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -28,14 +28,28 @@ export async function POST(req:Request){
  try{
   const db=await getD1();if(!db||await getUploadMode()!=='r2')throw new SceneEditError(503,'storage_unavailable');
   if(input.action==='target'){
-   await sceneEditAccess(input.propertyId);
+   const user=await sceneEditAccess(input.propertyId);
    const snapshot=await sceneEditSnapshot(db,input.propertyId,input.sceneId);
+   sceneEditPublishPolicy(user,snapshot.row.status);
    const sourceKey=sceneEditSourceKey(snapshot.scene.splatUrl)!;
-   if(!await statWorkflowUpload(sourceKey))conflict('source_missing');
+   const source=await statWorkflowUpload(sourceKey);
+   if(!source)conflict('source_missing');
+   if(source!.size>sceneEditMaxSourceBytes())throw new SceneEditError(413,'source_too_large');
    const target:SceneEditTarget=sceneEditTargetSchema.parse({propertyId:input.propertyId,sceneId:input.sceneId,expectedUpdatedAt:snapshot.row.updated_at,previousUrl:snapshot.scene.splatUrl,propertyRevision:sceneEditHash(snapshot.row.data),expiresAt:new Date(Date.now()+24*60*60*1000).toISOString(),sessionKey:randomBytes(32).toString('hex'),status:snapshot.row.status});
    const storageOrigin=new URL(await getWorkflowStorageOrigin()).origin;
    await db.prepare('INSERT INTO workflow_uploads(job_key,binding,asset_id) VALUES(?,?,?)').bind(target.sessionKey,JSON.stringify({purpose:SCENE_EDIT_PURPOSE,kind:'target',actorId:actor.id,target}),'se_target_'+target.sessionKey).run();
    return reply({target,sourceUrl:'/api/scene-edit/source?sessionKey='+target.sessionKey,fileName:sourceKey.split('/').at(-1),storageOrigin});
+  }
+  if(input.action==='revert'){
+   const user=await sceneEditAccess(input.propertyId);
+   if(user?.role!=='admin')throw new SceneEditError(403,'admin_only');
+   const snapshot=await sceneEditSnapshot(db,input.propertyId,input.sceneId);
+   if(snapshot.row.updated_at!==input.expectedUpdatedAt)conflict('scene_changed');
+   const newUpdatedAt=new Date(Math.max(Date.now(),Date.parse(input.expectedUpdatedAt)+1)).toISOString();
+   const result=await revertSceneEditConditionally(db,{propertyId:input.propertyId,sceneId:input.sceneId,expectedJson:snapshot.row.data,expectedUpdatedAt:input.expectedUpdatedAt,status:snapshot.row.status,versionKey:input.versionKey,newUpdatedAt,newKey:sceneEditHash('revert:'+snapshot.scene.splatUrl+':'+newUpdatedAt)});
+   if(!result.ok)conflict(result.reason==='unknown_version'?'unknown_version':'scene_changed');
+   for(const path of ['/properties','/en/properties','/properties/'+input.propertyId,'/en/properties/'+input.propertyId,'/admin/properties','/admin/properties/'+input.propertyId+'/edit','/dashboard'])revalidatePath(path);
+   return reply({status:'reverted',propertyId:input.propertyId,sceneId:input.sceneId,url:(result as {url:string}).url,updatedAt:newUpdatedAt});
   }
   let target:SceneEditTarget,digest:SceneEditDigest,key:string,binding:string;
   if(input.action==='reserve'){

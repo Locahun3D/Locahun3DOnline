@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
-import { assetRepo } from "@/lib/store";
+import { assetRepo, repo } from "@/lib/store";
+import { sceneEditAssetProtection } from "@/lib/scene-edit-asset-protection";
 import { getUploadMode, createPresignedUpload } from "@/lib/uploads";
 
 export const runtime = "nodejs";
@@ -29,6 +30,14 @@ export async function POST(req: Request) {
   if (!asset) return NextResponse.json({ error: "unknown_asset" }, { status: 404 });
   if (/^assets\/splat\/wf_[a-f0-9]{64}-project\.zip$/.test(asset.r2Key)) {
     return NextResponse.json({error:'immutable_project',message:'編集プロジェクトは上書きできません。シーンの編集画面から新しい版を保存してください。'},{status:409});
+  }
+  // 編集履歴に残した元ファイルを上書きすると「前の版に戻す」手段が消えるため拒否する。
+  const protection = await sceneEditAssetProtection(asset, () => repo.list());
+  if (protection) {
+    return NextResponse.json(
+      { error: protection, message: "オンライン編集の履歴として保持しているファイルのため差し替えできません。" },
+      { status: protection === "reservation_check_unavailable" ? 503 : 409 },
+    );
   }
   if (!asset.r2Key) {
     return NextResponse.json(

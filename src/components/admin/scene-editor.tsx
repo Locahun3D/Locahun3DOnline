@@ -1,10 +1,10 @@
 'use client';
 
 import {useEffect,useRef,useState} from 'react';
-import {createSceneReplyGate,parseSceneSession,saveSceneArchive,sceneRequest,type SceneSession} from '@/lib/scene-edit-client';
+import {createSceneReplyGate,parseSceneSession,saveSceneArchive,sceneRequest,SceneHttpError,type SceneSession} from '@/lib/scene-edit-client';
 import styles from './scene-editor.module.css';
 
-const messages:Record<string,string>={loading:'3DGSを読み込んでいます',ready:'編集できます',exporting:'編集内容をまとめています',hashing:'保存データを確認しています',reserving:'保存先を準備しています',uploading:'アップロードしています',verifying:'保存した内容を照合しています',attaching:'シーンへ反映しています',saved:'保存しました',savedSessionError:'保存しました。次の編集を保存する前に、接続を再確認してください。',error:'保存できませんでした。編集内容はこの画面に残っています。もう一度保存してください。',expired:'認証または編集セッションの期限が切れました。この画面を閉じずにログイン状態を確認してください。',conflict:'他の画面で物件が更新されました。上書きせず停止しました。',cancelled:'保存を中断しました。反映済みか不明な場合は物件を別画面で確認してください。',loadError:'読み込みが完了しなかったため保存できません。物件編集から開き直してください。'};
+const messages:Record<string,string>={loading:'3DGSを読み込んでいます',ready:'編集できます',exporting:'編集内容をまとめています',hashing:'保存データを確認しています',reserving:'保存先を準備しています',uploading:'アップロードしています',verifying:'保存した内容を照合しています',attaching:'シーンへ反映しています',saved:'保存しました',savedSessionError:'保存しました。次の編集を保存する前に、接続を再確認してください。',error:'保存できませんでした。編集内容はこの画面に残っています。もう一度保存してください。',expired:'認証または編集セッションの期限が切れました。この画面を閉じずにログイン状態を確認してください。',conflict:'他の画面で物件が更新されました。上書きせず停止しました。',cancelled:'保存を中断しました。反映済みか不明な場合は物件を別画面で確認してください。',loadError:'読み込みが完了しなかったため保存できません。物件編集から開き直してください。',tooLarge:'この3DGSはオンライン編集できるサイズ（1GB）を超えています。ファイルを軽くしてから差し替えるか、管理者に相談してください。',publishedAdminOnly:'公開中の物件は管理者のみ編集・保存できます。下書きに戻すか、管理者に依頼してください。'};
 
 export default function SceneEditor({propertyId,sceneId,label,published}:{propertyId:string;sceneId:string;label:string;published:boolean}) {
  const frame=useRef<HTMLIFrameElement>(null);
@@ -43,7 +43,7 @@ export default function SceneEditor({propertyId,sceneId,label,published}:{proper
    if(abort.signal.aborted)return;
    const result=parseSceneSession(value,{propertyId,sceneId});
    session.current=result;load();
-  }).catch(()=>{if(!abort.signal.aborted)setPhase('loadError');});
+  }).catch(error=>{if(abort.signal.aborted)return;setPhase(error instanceof SceneHttpError&&error.code==='source_too_large'?'tooLarge':error instanceof SceneHttpError&&error.code==='published_admin_only'?'publishedAdminOnly':'loadError');});
   return ()=>{abort.abort();controller.current?.abort();clearTimeout(loadTimer);window.removeEventListener('message',onMessage);window.removeEventListener('beforeunload',unload);};
  },[propertyId,sceneId]);
 
@@ -95,6 +95,7 @@ export default function SceneEditor({propertyId,sceneId,label,published}:{proper
    <div className={styles.actions}><button type="button" onClick={()=>void save()} disabled={!ready||busy}>このシーンに保存</button>{['expired','savedSessionError'].includes(phase)&&<button type="button" disabled={busy} onClick={()=>void reconnect()}>接続を再確認</button>}{busy&&phase!=='attaching'&&<button type="button" onClick={()=>controller.current?.abort()}>中断</button>}</div>
    <p role="status" aria-live="polite">{phase==='edited'?'未保存の変更があります':messages[phase]||phase}</p>
    {published&&<p className={styles.notice}>公開中の物件です。保存に成功すると、以後の閲覧に変更が反映されます。</p>}
+   <p className={styles.notice}>この編集はビューアーの表示だけに反映されます。販売用データ（ダウンロード販売ファイル）は変わりません。販売データから消す必要がある場合は、販売ファイルを別途差し替えてください。</p>
   </header>
   <iframe ref={frame} title={`${label||'3DGS'} 編集ビューアー`} src="/viewer/scene-editor.html?onlineSceneEdit=1" className={styles.viewer} allow="fullscreen" />
  </section>;

@@ -14,7 +14,10 @@ export const sceneEditRequestSchema=z.discriminatedUnion('action',[
  z.object({action:z.literal('reserve'),target:sceneEditTargetSchema,digest:sceneEditDigestSchema}).strict(),
  z.object({action:z.literal('verify'),key:hex}).strict(),
  z.object({action:z.literal('attach'),key:hex,verifiedSha256:hex}).strict(),
+ z.object({action:z.literal('revert'),propertyId:id,sceneId:id,versionKey:hex,expectedUpdatedAt:z.string().datetime()}).strict(),
 ]);
+/** Editing larger sources is refused: the browser must re-archive and re-download the whole project. */
+export const sceneEditMaxSourceBytes=()=>{const v=Number(process.env.SCENE_EDIT_MAX_SOURCE_BYTES);return Number.isSafeInteger(v)&&v>0?v:1024**3;};
 export type SceneEditTarget=z.infer<typeof sceneEditTargetSchema>;
 export type SceneEditDigest=z.infer<typeof sceneEditDigestSchema>;
 export type SceneEditReceipt={status:'attached'|'already_attached';key:string;propertyId:string;sceneId:string;url:string;updatedAt:string};

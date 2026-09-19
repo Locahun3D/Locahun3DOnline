@@ -54,7 +54,7 @@ import { publishReadiness } from "@/lib/publish-readiness";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
 import { applyExtendedLicensePricing } from "@/lib/license-options";
-import { receiveSceneAttachment, sceneRefreshDecision, sceneRequest, sourceRefreshDecision, type SceneSession } from "@/lib/scene-edit-client";
+import { receiveSceneAttachment, sceneRefreshDecision, sceneRequest, SceneHttpError, sourceRefreshDecision, type SceneSession } from "@/lib/scene-edit-client";
 import styles from "./property-editor.module.css";
 
 /**
@@ -324,9 +324,37 @@ export default function PropertyEditor({
       }
       sceneEditWindowsRef.current.set(child, scene.id);
       child.location.href = `/scene-edit/${encodeURIComponent(initial.id)}/${encodeURIComponent(scene.id)}`;
-    } catch {
+    } catch (error) {
       child.close();
-      setSaveError("保存済みのシーンを確認できませんでした。物件を保存し、ログイン状態を確認してから開き直してください。");
+      const code = error instanceof SceneHttpError ? error.code : "";
+      setSaveError(
+        code === "published_admin_only" ? "公開中の物件は管理者のみ3DGSを編集できます。下書きに戻すか、管理者に依頼してください。"
+        : code === "source_too_large" ? "この3DGSはオンライン編集できるサイズ（1GB）を超えています。"
+        : "保存済みのシーンを確認できませんでした。物件を保存し、ログイン状態を確認してから開き直してください。",
+      );
+    }
+  };
+  const revertSceneVersion = async (idx: number, versionKey: string) => {
+    if (hasPendingPropertyChanges()) {
+      setSaveError("物件の保存が完了してから、もう一度「この版に戻す」を押してください。");
+      if (!conflictRef.current) onSaveDraft();
+      return;
+    }
+    const scene = getValues(`splatItems.${idx}`);
+    if (!scene?.id || !baseUpdatedAtRef.current) return;
+    if (!confirm("この版のビューアー表示に戻します。公開中の物件では閲覧者にもすぐ反映されます。販売用データは変わりません。よろしいですか？")) return;
+    try {
+      const result = await sceneRequest({ action: "revert", propertyId: initial.id, sceneId: scene.id, versionKey, expectedUpdatedAt: baseUpdatedAtRef.current }, new AbortController().signal);
+      // Same refresh path as a scene save: freeze autosave, then reload server state.
+      conflictRef.current = true;
+      clearTimeout(autoSaveTimer.current);
+      autoSavePendingRef.current = false;
+      pendingSaveRef.current = false;
+      sceneRefreshExpectedRef.current = result.updatedAt;
+      router.refresh();
+    } catch (error) {
+      if (error instanceof SceneHttpError && error.status === 409) stopForConflict();
+      else setSaveError("前の版に戻せませんでした。ページを再読み込みしてから、もう一度お試しください。");
     }
   };
   const triggerAutoSave = useCallback(
@@ -2169,6 +2197,33 @@ export default function PropertyEditor({
                             capture.startCapture(uploadedUrl, initial.id, idx, captureWarmupMs);
                           }}
                         />
+                      )}
+
+                      {isAdmin && (watch(`splatItems.${idx}.editVersions`)?.length ?? 0) > 0 && (
+                        <details className="text-[11px]">
+                          <summary className="mono text-[10px] tracking-[0.2em] uppercase text-muted cursor-pointer">
+                            オンライン編集の履歴（{watch(`splatItems.${idx}.editVersions`)?.length}件）
+                          </summary>
+                          <ul className="mt-2 space-y-1.5">
+                            {[...(watch(`splatItems.${idx}.editVersions`) ?? [])].map((version, vIdx) => ({ version, vIdx })).reverse().map(({ version, vIdx }) => (
+                              <li key={version.key} className="flex items-center gap-3 flex-wrap">
+                                <span className="mono">{vIdx === 0 ? "最初の版" : `版 ${vIdx}`}</span>
+                                <span className="text-muted">{new Date(version.savedAt).toLocaleString("ja-JP")} まで表示</span>
+                                <span className="text-muted">{version.sizeMb} MB</span>
+                                <button
+                                  type="button"
+                                  onClick={() => void revertSceneVersion(idx, version.key)}
+                                  className="mono text-[10px] tracking-[0.2em] border border-line px-2 py-1 hover:border-accent hover:text-accent transition"
+                                >
+                                  この版に戻す
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-[10px] text-muted mt-2">
+                            最初の版と直近4版を保持します。それより古い版は履歴から外れ、未使用ファイルの整理で削除できるようになります。戻しても販売用データは変わりません。
+                          </p>
+                        </details>
                       )}
 
                       {capture.state !== "idle" && capture.state !== "done" && capture.capturedIdx === idx && (
