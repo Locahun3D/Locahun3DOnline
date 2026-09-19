@@ -55,6 +55,14 @@ const assets = [
 ] as never[];
 
 describe("computeAssetUsage", () => {
+  it("protects historical previews even when the library uses another URL for the same R2 key", () => {
+    const property = { id: 'p', splatItems: [{ splatUrl: '/api/r2/assets/splat/new.zip', editVersions: [{url:'/uploads/p/original.rad'}] }] } as never;
+    expect(computeAssetUsage([property], [{url:'https://old-cdn.example/uploads/p/original.rad',r2Key:'uploads/p/original.rad'}])['https://old-cdn.example/uploads/p/original.rad']).toEqual(['p']);
+  });
+  it('can isolate recovery references without protecting unrelated ordinary previews',()=>{
+    const property={id:'p',splatItems:[{splatUrl:'/api/r2/assets/splat/current.zip',editVersions:[{url:'/api/r2/assets/splat/old.zip'}]}]} as never;
+    expect(computeAssetUsage([property],[{url:'/api/r2/assets/splat/current.zip'},{url:'/api/r2/assets/splat/old.zip'}],{historyOnly:true})).toEqual({'/api/r2/assets/splat/old.zip':['p']});
+  });
   it("maps each asset url to the property ids that reference it", () => {
     const usage = computeAssetUsage(props, assets);
     expect(usage["https://cdn/x/cover.jpg"].sort()).toEqual(["p1", "p2"]);

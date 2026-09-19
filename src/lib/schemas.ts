@@ -458,6 +458,11 @@ export const propertySchema = z.object({
     /** EN版のシーン名（空なら label をそのまま使う）。自動翻訳で埋まる。 */
     labelEn: z.string().max(120).default(""),
     splatUrl: urlOrPath(),
+    // Immutable prior previews retained for recovery and asset-cleanup protection.
+    editVersions: z.array(z.object({
+      url: urlOrPath(), sizeMb: z.number().min(0), savedAt: z.string().datetime(),
+      key: z.string().regex(/^[a-f0-9]{64}$/),
+    })).optional(),
     previewVideoUrl: urlOrPath(),
     sizeMb: z.number().min(0).max(99999).default(0),
     notes: z.string().max(500).default(""),

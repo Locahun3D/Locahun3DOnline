@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/dal";
 import { assetRepo, repo } from "@/lib/store";
 import { computeAssetUsage } from "@/lib/asset-usage";
+import {sceneEditAssetProtection} from '@/lib/scene-edit-asset-protection';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,8 +52,10 @@ export async function POST(req: Request) {
   if (action === "delete") {
     const a = await assetRepo.get(id);
     if (!a) return NextResponse.json({ ok: false, reason: "not_found" });
+    const protection=await sceneEditAssetProtection(a,()=>repo.list());
+    if(protection)return NextResponse.json({ok:false,reason:protection,message:'オンライン編集の保存・復旧用アセットのため削除できません。'},{status:protection==='reservation_check_unavailable'?503:409});
+    const [properties, assets] = await Promise.all([repo.list(), assetRepo.list()]);
     if (body.unusedOnly === true) {
-      const [properties, assets] = await Promise.all([repo.list(), assetRepo.list()]);
       const usage = computeAssetUsage(properties, assets);
       if ((usage[a.url]?.length ?? 0) > 0) {
         return NextResponse.json({ ok: false, reason: "asset_in_use" }, { status: 409 });

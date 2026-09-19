@@ -14,7 +14,8 @@ export async function hashWorkflowStream(stream:ReadableStream<Uint8Array>,expec
    const {done,value}=await Promise.race([reader.read(),aborted]);
    if(done)break;
    bytes+=value.byteLength;
-   if(bytes>expectedBytes||value.byteLength>8*1024**2)throw Error('Archive length limit');
+   // Chunk size is decided by the browser/network (cached or proxied bodies can arrive as one large chunk); only the total is bounded.
+   if(bytes>expectedBytes)throw Error('Archive length limit');
    sha.update(value);md5.update(value);
   }
   if(bytes!==expectedBytes)throw Error('Archive length mismatch');

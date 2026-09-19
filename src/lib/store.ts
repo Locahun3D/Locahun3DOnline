@@ -10,6 +10,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { getR2Bucket, r2ColList } from "./r2-store";
+import {sceneEditAssetProtection} from './scene-edit-asset-protection';
 import {
   getD1,
   d1GetData,
@@ -350,6 +351,10 @@ export class AssetRepoImpl implements AssetRepo {
   async remove(id: string): Promise<void> {
     // 実体ファイル（R2 blob）も削除してストレージを解放する。
     const a = await this.get(id);
+    if(a){
+      const protection=await sceneEditAssetProtection(a,()=>repo.list());
+      if(protection)throw new Error(protection);
+    }
     if (a?.r2Key) {
       try {
         const bucket = await getR2Bucket();

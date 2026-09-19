@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach,vi } from "vitest";
+const protection=vi.hoisted(()=>vi.fn());
+vi.mock('./scene-edit-asset-protection',()=>({sceneEditAssetProtection:protection}));
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -27,6 +29,7 @@ const sample: Asset = {
 };
 
 beforeEach(async () => {
+  protection.mockResolvedValue(null);
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "assets-"));
   file = path.join(dir, "assets.json");
   repo = new JsonFileAssetRepo(file);
@@ -53,5 +56,10 @@ describe("JsonFileAssetRepo", () => {
     await repo.upsert(sample);
     await repo.remove("a1");
     expect(await repo.get("a1")).toBeNull();
+  });
+  it('refuses removing scene-edit recovery bytes or metadata through repository callers',async()=>{
+    await repo.upsert(sample);protection.mockResolvedValue('scene_edit_recovery_in_use');
+    await expect(repo.remove('a1')).rejects.toThrow('scene_edit_recovery_in_use');
+    expect(await repo.get('a1')).not.toBeNull();
   });
 });
