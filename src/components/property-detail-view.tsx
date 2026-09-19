@@ -21,6 +21,7 @@ import BookmarkButton from "@/components/bookmark-button";
 import InquiryPanel from "@/components/inquiry-panel";
 import { Fragment } from "react";
 import GalleryLightbox from "@/components/gallery-lightbox";
+import PriceEstimator from "@/components/price-estimator";
 import PropertyAmenities from "@/components/property-amenities";
 import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "@/lib/property-presentation";
 
@@ -574,6 +575,17 @@ export default function PropertyDetailView({
                 ))
               )}
             </div>
+
+            {/* 撮影別の目安＋料金シミュレーション（時間貸しのみ。2026-09-19 本人採用） */}
+            {!displaySimulation && (
+              <PriceEstimator
+                hourlyPrice={property.hourlyPrice}
+                minUsageHours={property.minUsageHours}
+                dailyPrice={property.dailyPrice}
+                priceType={property.priceType}
+                en={en}
+              />
+            )}
 
             {property.permitRequired && property.permitNotes && (
               <div id="permit-notice" className="mt-6 border border-accent/60 bg-accent/5 px-4 py-3 scroll-mt-20">

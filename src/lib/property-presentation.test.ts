@@ -23,3 +23,16 @@ it("builds Google Maps from real coordinates, with address as fallback only", ()
   expect(googleMapsUrl(null, "東京都渋谷区")).toBe("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("東京都渋谷区"));
   expect(googleMapsUrl(null, "")).toBe("");
 });
+
+import { usageEstimates } from "./property-presentation";
+it("builds usage estimates from the hourly rate, honouring the minimum hours and a daily rate", () => {
+  const rows = usageEstimates({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 2, dailyPrice: 0 });
+  expect(rows.map((r) => [r.hours, r.total])).toEqual([[3, 19800], [5, 33000], [9, 59400]]);
+  expect(usageEstimates({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 4, dailyPrice: 0 })[0]).toMatchObject({ hours: 4, total: 26400 });
+  expect(usageEstimates({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 0, dailyPrice: 45000 })[2]).toMatchObject({ total: 45000, daily: true });
+});
+it("has no estimates without an hourly price or for flat/free pricing", () => {
+  expect(usageEstimates({ priceType: "hourly", hourlyPrice: 0, minUsageHours: 0, dailyPrice: 0 })).toEqual([]);
+  expect(usageEstimates({ priceType: "flat", hourlyPrice: 30000, minUsageHours: 0, dailyPrice: 0 })).toEqual([]);
+  expect(usageEstimates({ priceType: "free", hourlyPrice: 0, minUsageHours: 0, dailyPrice: 0 })).toEqual([]);
+});

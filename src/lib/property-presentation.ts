@@ -28,3 +28,21 @@ export function googleMapsEmbedUrl(coords: { lat: number; lng: number } | null, 
   const query = googleMapsQuery(coords, address, name);
   return query ? `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed` : "";
 }
+
+/**
+ * 「用途別の目安」（物件ページ概要カード、2026-09-19 本人採用の案18）。
+ * 単価だけでは「結局いくら？」に答えないため、撮影の単位（スチール少人数／半日／ムービー1日）で
+ * 合計を出す。最低利用時間を下回る行は最低時間に切り上げる。日額があれば1日行はそれを使う。
+ * 時間貸し以外（定額・無料）や単価未設定では出さない。
+ */
+export type UsageEstimate = { key: "still-small" | "still-half" | "movie-day"; hours: number; total: number; daily: boolean };
+export function usageEstimates(p: { priceType: string; hourlyPrice: number; minUsageHours: number; dailyPrice: number }): UsageEstimate[] {
+  if (p.priceType !== "hourly" || !(p.hourlyPrice > 0)) return [];
+  const min = Math.max(0, p.minUsageHours | 0);
+  const row = (key: UsageEstimate["key"], base: number): UsageEstimate => {
+    const hours = Math.max(base, min);
+    return { key, hours, total: hours * p.hourlyPrice, daily: false };
+  };
+  const day = p.dailyPrice > 0 ? { ...row("movie-day", 9), total: p.dailyPrice, daily: true } : row("movie-day", 9);
+  return [row("still-small", 3), row("still-half", 5), day];
+}
