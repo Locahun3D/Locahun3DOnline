@@ -54,6 +54,7 @@ import { publishReadiness } from "@/lib/publish-readiness";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
 import { applyExtendedLicensePricing } from "@/lib/license-options";
+import { receiveSceneAttachment, sceneRefreshDecision, sceneRequest, sourceRefreshDecision, type SceneSession } from "@/lib/scene-edit-client";
 import styles from "./property-editor.module.css";
 
 /**
@@ -143,7 +144,7 @@ export default function PropertyEditor({
     mode: "onBlur",
   });
 
-  const { register, watch, control, getValues, setValue, formState } = form;
+  const { register, watch, control, getValues, setValue, reset, formState } = form;
 
   const galleryArray = useFieldArray({
     control,
@@ -251,6 +252,83 @@ export default function PropertyEditor({
   // 「1.5秒の待機中で、まだ保存に入っていない変更があるか」。
   // タイマーID(autoSaveTimer)は発火後も残るため、待機中かどうかの判定には使えない。
   const autoSavePendingRef = useRef(false);
+  const sceneEditWindowsRef = useRef(new Map<Window, string>());
+  const sceneMessagesRef = useRef(new Set<string>());
+  const sceneRefreshExpectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const expected = sceneRefreshExpectedRef.current;
+    const decision = sceneRefreshDecision(expected, baseUpdatedAtRef.current, initial.updatedAt,
+      autoSavePendingRef.current || pendingSaveRef.current || saveInFlightRef.current || statusWriteInFlightRef.current);
+    if (decision === "wait") return;
+    sceneRefreshExpectedRef.current = null;
+    // A user can type while server refresh is in flight. Never reset those new edits.
+    if (decision === "conflict") {
+      stopForConflict();
+      return;
+    }
+    reset(initial);
+    // reset notifies RHF watch synchronously; discard that programmatic debounce while frozen.
+    clearTimeout(autoSaveTimer.current);
+    autoSavePendingRef.current = false;
+    pendingSaveRef.current = false;
+    baseUpdatedAtRef.current = initial.updatedAt;
+    conflictRef.current = false;
+    setSaveError(null);
+    setSavedAt(initial.updatedAt ?? null);
+  }, [initial, reset, stopForConflict]);
+  const hasPendingPropertyChanges = useCallback(() => sourceRefreshDecision({
+    pending: autoSavePendingRef.current || pendingSaveRef.current,
+    inFlight: saveInFlightRef.current,
+    statusInFlight: statusWriteInFlightRef.current,
+    failed: Boolean(saveError) || conflictRef.current,
+  }) === "conflict", [saveError]);
+  useEffect(() => {
+    const onSceneSaved = (event: MessageEvent) => {
+      receiveSceneAttachment(event, {
+        origin: location.origin, propertyId: initial.id,
+        windows: sceneEditWindowsRef.current, seen: sceneMessagesRef.current,
+        hasPendingChanges: hasPendingPropertyChanges,
+        // Freeze before refresh: an old debounce/unmount save must never restore the old scene URL.
+        freeze: () => { conflictRef.current = true; clearTimeout(autoSaveTimer.current); },
+        conflict: stopForConflict,
+        reload: () => {
+          autoSavePendingRef.current = false;
+          pendingSaveRef.current = false;
+          sceneRefreshExpectedRef.current = event.data.updatedAt;
+          // Preserve exact child Window references for its second and later saves.
+          router.refresh();
+        },
+      });
+    };
+    window.addEventListener("message", onSceneSaved);
+    return () => window.removeEventListener("message", onSceneSaved);
+  }, [hasPendingPropertyChanges, initial.id, router, stopForConflict]);
+  const openSceneEditor = async (idx: number) => {
+    if (hasPendingPropertyChanges()) {
+      setSaveError("物件の保存が完了してから、もう一度「編集」を押してください。");
+      if (!conflictRef.current) onSaveDraft();
+      return;
+    }
+    // RHF's field-array key is not the persisted scene ID.
+    const scene = getValues(`splatItems.${idx}`);
+    if (!scene?.id || !scene.splatUrl) return;
+    const child = window.open("about:blank", "_blank");
+    if (!child) { setSaveError("編集画面を開けませんでした。ポップアップを許可してください。"); return; }
+    try {
+      const result: SceneSession = await sceneRequest({ action: "target", propertyId: initial.id, sceneId: scene.id }, new AbortController().signal);
+      const currentScene = getValues("splatItems").find(item => item.id === scene.id);
+      if (hasPendingPropertyChanges() || result.target.propertyId !== initial.id || result.target.sceneId !== scene.id || result.target.expectedUpdatedAt !== baseUpdatedAtRef.current || result.target.previousUrl !== currentScene?.splatUrl) {
+        child.close();
+        stopForConflict();
+        return;
+      }
+      sceneEditWindowsRef.current.set(child, scene.id);
+      child.location.href = `/scene-edit/${encodeURIComponent(initial.id)}/${encodeURIComponent(scene.id)}`;
+    } catch {
+      child.close();
+      setSaveError("保存済みのシーンを確認できませんでした。物件を保存し、ログイン状態を確認してから開き直してください。");
+    }
+  };
   const triggerAutoSave = useCallback(
     (delayMs = 0) => {
       clearTimeout(autoSaveTimer.current);
@@ -2016,6 +2094,13 @@ export default function PropertyEditor({
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
                           >
                             {previewItemIdx === idx ? "閉じる" : "プレビュー"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void openSceneEditor(idx)}
+                            className="mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent/10 transition"
+                          >
+                            編集 ↗
                           </button>
                           {/* 再撮影/動画生成ボタンの表示条件は「行ごと」に判定する。
                               以前は `capture.state === "idle"` というグローバル状態で
