@@ -108,6 +108,40 @@ it("daily simulation applies only the holiday surcharge, per day", () => {
   expect(dailyEstimates(0)).toEqual([]);
 });
 
+// 2026-09-21: 「N時間以上なら割増なし」（STUDIO MONTFORT の土日祝ルール）
+const montfort = { label: "土日祝", labelEn: "Weekends & holidays", percent: 50, fromHour: 0, toHour: 0, holidays: true, includeSaturday: true, waiveFromHours: 4 };
+it("waives a holiday surcharge once the booking reaches the waiver length", () => {
+  const base = { hourlyPrice: 6600, startHour: 10, holiday: false, surcharges: [montfort] };
+  // 土曜3時間 = 割増あり（6,600 の +50% = 9,900）
+  const short = simulatePrice({ ...base, hours: 3, day: "saturday" });
+  expect(short.total).toBe(9900 * 3);
+  expect(short.lines).toEqual([{ label: "土日祝", hours: 3, rate: 9900 }]);
+  // 土曜4時間 = 免除されて通常料金
+  const long = simulatePrice({ ...base, hours: 4, day: "saturday" });
+  expect(long.total).toBe(6600 * 4);
+  expect(long.lines).toEqual([{ label: "通常", hours: 4, rate: 6600 }]);
+  // 5時間以上も免除のまま
+  expect(simulatePrice({ ...base, hours: 8, day: "sunday" }).total).toBe(6600 * 8);
+  // 平日は元から割増が無いので影響なし
+  expect(simulatePrice({ ...base, hours: 3, day: "weekday" }).total).toBe(6600 * 3);
+  expect(simulatePrice({ ...base, hours: 4, day: "weekday" }).total).toBe(6600 * 4);
+});
+it("waives a time-window surcharge too, and leaves waiveFromHours 0 untouched", () => {
+  const nightWaived = { ...night, waiveFromHours: 4 };
+  // 18時から3時間 → 20時台に夜間割増
+  expect(simulatePrice({ hourlyPrice: 10000, startHour: 18, hours: 3, holiday: false, surcharges: [nightWaived] }).total).toBe(10000 * 2 + 12000);
+  // 4時間なら免除 → 全時間が通常
+  expect(simulatePrice({ hourlyPrice: 10000, startHour: 18, hours: 4, holiday: false, surcharges: [nightWaived] }).total).toBe(10000 * 4);
+  // waiveFromHours 0 / 未設定は従来どおり
+  expect(simulatePrice({ hourlyPrice: 10000, startHour: 18, hours: 4, holiday: false, surcharges: [{ ...night, waiveFromHours: 0 }] }).total).toBe(10000 * 2 + 12000 * 2);
+  expect(simulatePrice({ hourlyPrice: 10000, startHour: 18, hours: 4, holiday: false, surcharges: [night] }).total).toBe(10000 * 2 + 12000 * 2);
+});
+it("treats a full-day booking as long enough to waive the surcharge", () => {
+  // 1日貸しは1日まるごとなので「4時間以上」を常に満たす扱い（2026-09-21 の設計判断）
+  expect(simulateDailyPrice({ dailyPrice: 100000, days: ["saturday", "sunday"], surcharges: [montfort] }).total).toBe(200000);
+  expect(simulateDailyPrice({ dailyPrice: 100000, days: ["saturday"], surcharges: [{ ...montfort, waiveFromHours: 0 }] }).total).toBe(150000);
+});
+
 // 2026-09-20 追補: 目安の行を選ぶとシミュレーターが連動する
 import { applyEstimateRow, matchEstimateRow } from "./property-presentation";
 it("selecting an estimate row drives the simulator, and manual hours clear or re-match the row", () => {

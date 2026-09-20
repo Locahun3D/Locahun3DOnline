@@ -52,8 +52,14 @@ export function usageEstimates(p: { priceType: string; hourlyPrice: number; minU
  * 1時間ごとに、その時刻に当てはまる割増のうち最も高い率を1つだけ掛ける（夜間と土日祝が重なっても二重にしない —
  * スタジオの料金表は「夜間・土日祝は20%UP」のようにどちらか一方の扱いが一般的）。
  * fromHour > toHour は日をまたぐ時間帯（20→8）。holidays=true の割増は「土日祝」を選んだ時に全時間へ掛かる。
+ * 2026-09-21: waiveFromHours（N時間以上なら免除）に対応。STUDIO MONTFORT の「土日祝 +50%、ただし4時間以上は通常料金」型。
  */
-export type RateSurcharge = { label: string; percent: number; fromHour: number; toHour: number; holidays: boolean; includeSaturday?: boolean };
+export type RateSurcharge = { label: string; percent: number; fromHour: number; toHour: number; holidays: boolean; includeSaturday?: boolean; waiveFromHours?: number };
+/** その予約時間で割増が免除されるか（2026-09-21）。waiveFromHours=0 / 未設定は免除なし。 */
+export function surchargeWaived(s: RateSurcharge, hours: number): boolean {
+  const from = s.waiveFromHours ?? 0;
+  return from > 0 && hours >= from;
+}
 /** 利用日の種類。土曜だけ対象外にする割増（日曜・祝日のみ）があるため、土曜を分けて持つ。 */
 export type DayKind = "weekday" | "saturday" | "sunday" | "holiday";
 export type PriceLine = { label: string; hours: number; rate: number };
@@ -63,6 +69,8 @@ export function simulatePrice(input: { hourlyPrice: number; startHour: number; h
     const h = (input.startHour + i) % 24;
     let best: RateSurcharge | null = null;
     for (const s of input.surcharges) {
+      // 免除は予約全体の時間で判定する（1時間ごとではない）— 4時間以上の予約なら全時間が通常料金
+      if (surchargeWaived(s, input.hours)) continue;
       const inWindow = s.fromHour === s.toHour ? false : s.fromHour < s.toHour ? h >= s.fromHour && h < s.toHour : h >= s.fromHour || h < s.toHour;
       const day: DayKind = input.day ?? (input.holiday ? "holiday" : "weekday");
       const dayOff = day === "sunday" || day === "holiday" || (day === "saturday" && s.includeSaturday !== false);
@@ -108,6 +116,8 @@ export function priceChoices(p: {
  * 1日貸しの計算。時間帯の割増（夜間など）は日額に含まれる扱いで掛けない。
  * 土日祝の割増（holidays=true）だけを、日ごとの曜日種別に応じて掛ける（複数あれば最も高い率を1つ）。
  * days[i] は i 日目の種別。日付未選択なら全て "weekday" を渡す。
+ * 2026-09-21 waiveFromHours の扱い: 1日貸しは1日まるごと（通常は8時間以上）の利用なので、
+ * 「N時間以上で割増なし」は常に満たすものとして免除する（N は最大24なので 1日 = 24時間と見なす）。
  */
 export function simulateDailyPrice(input: { dailyPrice: number; days: DayKind[]; surcharges: RateSurcharge[] }): { total: number; lines: PriceLine[] } {
   const lines: PriceLine[] = [];
@@ -115,6 +125,7 @@ export function simulateDailyPrice(input: { dailyPrice: number; days: DayKind[];
     let best: RateSurcharge | null = null;
     for (const s of input.surcharges) {
       if (!s.holidays) continue;
+      if (surchargeWaived(s, 24)) continue;
       const dayOff = day === "sunday" || day === "holiday" || (day === "saturday" && s.includeSaturday !== false);
       if (dayOff && (!best || s.percent > best.percent)) best = s;
     }

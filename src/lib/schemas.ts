@@ -425,6 +425,12 @@ export const propertySchema = z.object({
     holidays: z.boolean().default(false),
     /** holidays=true のとき土曜も対象にするか（「日曜・祝日のみ割増」のスタジオは false）。 */
     includeSaturday: z.boolean().default(true),
+    /**
+     * N 時間以上の利用でこの割増を免除する（2026-09-21 STUDIO MONTFORT の土日祝ルール）。
+     * 0 = 免除なし。例: 土日祝 +50% / waiveFromHours=4 → 4時間以上の予約は通常料金。
+     * 既存データには無いフィールドなので default(0) で従来どおり解釈される。
+     */
+    waiveFromHours: z.number().int().min(0).max(24).default(0),
   })).max(4).default([]),
   /** 表示金額が税込なら true（false = 税別）。 */
   taxIncluded: z.boolean().default(false),
