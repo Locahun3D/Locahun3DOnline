@@ -1161,6 +1161,8 @@ export default function PropertyEditor({
                       />
                     </Field>
                   )}
+                  {/* 設備（近くの駐車場・トイレ・喫煙所など）は屋外の許可物件でも入力できるようにする */}
+                  <AmenityToggles register={register} />
                 </div>
               ) : (
                 <>
@@ -1218,13 +1220,7 @@ export default function PropertyEditor({
                     </div>
                   </Field>
 
-                  <div className="grid md:grid-cols-3 gap-5">
-                    <Toggle label="自然光あり" register={register("hasNaturalLight")} />
-                    <Toggle label="駐車可" register={register("parking")} note={register("amenityNotes.parking")} notePlaceholder="例: 3台・大型不可" />
-                    <Toggle label="搬入口 大" register={register("loadingDock")} note={register("amenityNotes.loadingDock")} notePlaceholder="例: 2t車まで・EVあり" />
-                    <Toggle label="防音あり" register={register("soundproofing")} note={register("amenityNotes.soundproofing")} notePlaceholder="例: 楽器可・深夜は不可" />
-                    <Toggle label="インターネット" register={register("hasInternet")} note={register("amenityNotes.hasInternet")} notePlaceholder="例: 光 1Gbps・Wi-Fi" />
-                  </div>
+                  <AmenityToggles register={register} />
 
                   <Field
                     label="駐車可能台数 (台)"
@@ -1483,17 +1479,6 @@ export default function PropertyEditor({
                     )}
                   </div>
                 </Field>
-              </div>
-
-              {/* ── 撮影条件（設備の有無） ── */}
-              <SectionHead title="撮影条件（設備の有無）" hint="あるものだけチェック。無いものは空のままで構いません。" />
-              <div className="grid md:grid-cols-3 gap-5">
-                <Toggle label="エレベーター あり" register={register("elevator")} note={register("amenityNotes.elevator")} notePlaceholder="例: 定員9名・間口80cm" />
-                <Toggle label="火気使用 可" register={register("fireAllowed")} note={register("amenityNotes.fireAllowed")} notePlaceholder="例: 要事前申請" />
-                <Toggle label="控室 あり" register={register("greenRoom")} note={register("amenityNotes.greenRoom")} notePlaceholder="例: 8畳・鏡台2" />
-                <Toggle label="トイレ あり" register={register("restroom")} note={register("amenityNotes.restroom")} notePlaceholder="例: 男女別・2か所" />
-                <Toggle label="空調 あり" register={register("airConditioning")} note={register("amenityNotes.airConditioning")} notePlaceholder="例: 各部屋・無音運転可" />
-                <Toggle label="喫煙所 あり" register={register("smokingArea")} note={register("amenityNotes.smokingArea")} notePlaceholder="例: 屋外・1F裏口" />
               </div>
 
               {/* ── ルール・規程 ── */}
@@ -3204,6 +3189,29 @@ function StepCard({
         )}
       </header>
       <div className="space-y-5">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * 設備の有無の入力（1か所に集約。2026-09-20）。以前は「仕様・設備」と「利用条件」に分かれていて、公開ページでは
+ * ひとつのアイコン欄なのに入力が2ステップにまたがり、抜け（トイレ・空調など）の原因になっていた。
+ * 並びは公開ページのアイコン（property-amenities.tsx）と同じ。物件の種別に関わらず必ず出す。
+ */
+function AmenityToggles({ register }: { register: UseFormRegister<Property> }) {
+  return (
+    <div className="grid md:grid-cols-3 gap-5">
+      <Toggle label="駐車可" register={register("parking")} note={register("amenityNotes.parking")} notePlaceholder="例: 3台・大型不可" />
+      <Toggle label="搬入口 大" register={register("loadingDock")} note={register("amenityNotes.loadingDock")} notePlaceholder="例: 2t車まで・EVあり" />
+      <Toggle label="エレベーター あり" register={register("elevator")} note={register("amenityNotes.elevator")} notePlaceholder="例: 定員9名・間口80cm" />
+      <Toggle label="防音あり" register={register("soundproofing")} note={register("amenityNotes.soundproofing")} notePlaceholder="例: 楽器可・深夜は不可" />
+      <Toggle label="インターネット" register={register("hasInternet")} note={register("amenityNotes.hasInternet")} notePlaceholder="例: 光 1Gbps・Wi-Fi" />
+      <Toggle label="空調 あり" register={register("airConditioning")} note={register("amenityNotes.airConditioning")} notePlaceholder="例: 各部屋・無音運転可" />
+      <Toggle label="控室 あり" register={register("greenRoom")} note={register("amenityNotes.greenRoom")} notePlaceholder="例: 8畳・鏡台2" />
+      <Toggle label="トイレ あり" register={register("restroom")} note={register("amenityNotes.restroom")} notePlaceholder="例: 男女別・2か所" />
+      <Toggle label="喫煙所 あり" register={register("smokingArea")} note={register("amenityNotes.smokingArea")} notePlaceholder="例: 屋外・1F裏口" />
+      <Toggle label="火気使用 可" register={register("fireAllowed")} note={register("amenityNotes.fireAllowed")} notePlaceholder="例: 要事前申請" />
+      <Toggle label="自然光あり" register={register("hasNaturalLight")} />
     </div>
   );
 }
