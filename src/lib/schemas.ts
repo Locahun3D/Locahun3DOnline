@@ -637,6 +637,29 @@ export const propertySchema = z.object({
    * 「申請中」を表現する（既存の status 遷移・一括操作・フィルタを壊さないため）。
    */
   publishRequestedAt: z.string().nullable().default(null),
+  /**
+   * 公開ワークフロー（下書き→公開申請→公開）の監査記録（2026-09-20）。
+   * サーバ管理フィールド: エディタ保存では書き換えず、専用アクションだけが更新する。
+   * 全欄 null 既定なので、旧レコードや Dropbox パイプラインが SQL で書く行
+   * （この欄を持たない）もそのまま parse できる。
+   * 遷移ロジックは lib/publish-flow.ts。設計: docs/property-publish-workflow-2026-09-20.md
+   */
+  publishFlow: z
+    .object({
+      /** 公開申請に入れた日時と操作者（運営のメール or 名前）。 */
+      requestedAt: z.string().nullable().default(null),
+      requestedBy: z.string().nullable().default(null),
+      /** スタジオへ確認メールを送った日時・宛先・送信モード。 */
+      studioNotifiedAt: z.string().nullable().default(null),
+      studioNotifiedTo: z.string().nullable().default(null),
+      /** sent=実送信 / dry-run=開発環境などで送信せずログのみ / skipped=送らずに申請中にした */
+      studioNotifyMode: z.enum(["sent", "dry-run", "skipped"]).nullable().default(null),
+      /** スタジオから「この内容でOK」の返事をもらった日時（運営が手動で記録）。 */
+      studioConfirmedAt: z.string().nullable().default(null),
+      /** このワークフローを経て公開した日時（直近の公開）。 */
+      publishedAt: z.string().nullable().default(null),
+    })
+    .prefault({}),
   annotations: z.array(annotationSchema).max(200).default([]),
 
   // Data sale fields moved to splatItems[].forSale/salePrice/saleDescription

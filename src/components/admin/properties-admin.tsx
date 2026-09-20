@@ -13,6 +13,13 @@ import PropertyRowActions from "@/components/admin/property-row-actions";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import { bulkSetStatusAction, bulkDeleteAction } from "@/app/admin/_actions";
 import styles from "./properties-admin.module.css";
+import {
+  publishStage,
+  PUBLISH_STAGE_LABEL,
+  REVIEW_SUBSTATE_LABEL,
+  type PublishStage,
+  type ReviewSubState,
+} from "@/lib/publish-flow";
 
 export type PropertyListItem = {
   id: string;
@@ -22,6 +29,8 @@ export type PropertyListItem = {
   status: PropertyStatus;
   updatedAt?: string;
   publishRequestedAt?: string | null;
+  /** 公開申請中の細かい状態（確認メール未送信 / スタジオ確認待ち / 確認済み）。 */
+  reviewState?: ReviewSubState;
   /** 一覧のサムネイル用（カバー写真のURLだけ渡す） */
   coverSrc?: string;
 };
@@ -29,12 +38,19 @@ export type PropertyListItem = {
 // ステータス列は 72px だとバッジ（大きくした）が収まらないので 104px に広げる。
 const GRID = "grid-cols-[34px_104px_1fr_96px_96px_140px_minmax(290px,320px)]";
 
-const STATUS_TABS: { key: PropertyStatus | "all"; label: string }[] = [
+// タブは公開ワークフローの段階で切る（2026-09-20）: 下書き → 公開申請中 → 公開。
+// 「公開申請中」は status=draft + publishRequestedAt（lib/publish-flow.ts の publishStage）。
+// 下書きタブには申請中を含めない（次に手を動かす対象が混ざらないように）。
+const STATUS_TABS: { key: PublishStage | "all"; label: string }[] = [
   { key: "all", label: "全て" },
-  { key: "published", label: "公開" },
   { key: "draft", label: "下書き" },
+  { key: "review", label: "公開申請中" },
+  { key: "published", label: "公開" },
   { key: "archived", label: "アーカイブ" },
 ];
+
+const stageOf = (p: PropertyListItem): PublishStage =>
+  publishStage({ status: p.status, publishRequestedAt: p.publishRequestedAt ?? null });
 
 export default function PropertiesAdmin({
   items,
@@ -44,7 +60,7 @@ export default function PropertiesAdmin({
   isAdmin?: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<PropertyStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<PublishStage | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
@@ -53,7 +69,7 @@ export default function PropertiesAdmin({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((p) => {
-      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (statusFilter !== "all" && stageOf(p) !== statusFilter) return false;
       if (q) {
         const hay = `${p.title} ${p.id} ${p.city}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -64,9 +80,10 @@ export default function PropertiesAdmin({
 
   const counts = useMemo(
     () => ({
-      published: items.filter((p) => p.status === "published").length,
-      draft: items.filter((p) => p.status === "draft").length,
-      archived: items.filter((p) => p.status === "archived").length,
+      published: items.filter((p) => stageOf(p) === "published").length,
+      draft: items.filter((p) => stageOf(p) === "draft").length,
+      review: items.filter((p) => stageOf(p) === "review").length,
+      archived: items.filter((p) => stageOf(p) === "archived").length,
     }),
     [items],
   );
@@ -132,7 +149,7 @@ export default function PropertiesAdmin({
     });
 
   const ids = [...selected];
-  const tabCount = (k: PropertyStatus | "all") =>
+  const tabCount = (k: PublishStage | "all") =>
     k === "all" ? items.length : counts[k];
 
   return (
@@ -260,11 +277,18 @@ export default function PropertiesAdmin({
                 )}
               </div>
               <div className="flex flex-col items-start gap-1">
-                <StatusBadge status={p.status} />
-                {p.publishRequestedAt && p.status !== "published" && (
-                  <span className="mono text-[9px] tracking-[0.2em] uppercase border border-accent text-accent px-1.5 py-0.5">
-                    申請中
-                  </span>
+                {stageOf(p) === "review" ? (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border text-[12px] font-bold leading-none whitespace-nowrap bg-[#fff1dc] text-[#7a4a00] border-[#ffb454]">
+                      <span aria-hidden="true">◑</span>
+                      {PUBLISH_STAGE_LABEL.review}
+                    </span>
+                    <span className="text-[10px] leading-tight text-muted">
+                      {REVIEW_SUBSTATE_LABEL[p.reviewState ?? "mail-unsent"]}
+                    </span>
+                  </>
+                ) : (
+                  <StatusBadge status={p.status} />
                 )}
               </div>
               {/* サムネイル（2026-09-20 本人指示「物件一覧でサムネ見えるように」）。グリッドの列は増やさず、

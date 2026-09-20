@@ -21,6 +21,21 @@ import {
   type Property,
 } from "@/lib/schemas";
 import { publishReadiness } from "@/lib/publish-readiness";
+import {
+  canRequestReview,
+  canResendStudioMail,
+  canReusePreview,
+  enterReview,
+  markPublished,
+  recordStudioNotified,
+  resetReview,
+  setStudioConfirmed,
+  translationGuard,
+  publishStage,
+  type MailOutcome,
+} from "@/lib/publish-flow";
+import { propertyPreviewRepo, type PropertyPreview } from "@/lib/property-previews";
+import { sendStudioReviewMail } from "@/lib/email";
 import {sceneEditAssetProtection} from '@/lib/scene-edit-asset-protection';
 
 async function assertPropertyAccess(propertyId: string) {
@@ -170,6 +185,9 @@ function mergeManaged<T extends Property>(incoming: T, existing: Property | null
     // ※ publishAction は mergeManaged の展開後に publishRequestedAt: null を
     //   明示指定しているので、公開時のクリアはこの保全より優先される。
     publishRequestedAt: existing.publishRequestedAt ?? incoming.publishRequestedAt,
+    // 公開ワークフローの監査記録も同じくサーバ管理（2026-09-20）。フォームは古い値を
+    // 持ち回るだけなので、常に既存値を正とする（専用アクションは展開後に上書きする）。
+    publishFlow: existing.publishFlow ?? incoming.publishFlow,
   };
 }
 
@@ -283,11 +301,9 @@ export async function publishAction(input: unknown, opts?: { expectedUpdatedAt?:
   if (opts?.expectedUpdatedAt && existing?.updatedAt && existing.updatedAt !== opts.expectedUpdatedAt) {
     return { ok: false as const, conflict: true as const, serverUpdatedAt: existing.updatedAt };
   }
-  let toPublish: Property = stampPublishedAt({
-    ...mergeManaged(parsed, existing),
-    status: "published",
-    publishRequestedAt: null,
-  });
+  let toPublish: Property = stampPublishedAt(
+    markPublished(mergeManaged(parsed, existing), new Date().toISOString()),
+  );
   // 公開時に英語(EN欄)が空のフィールドを自動翻訳で埋める。
   // 翻訳失敗・キー未設定でも公開は必ず通す（日本語表示にフォールバック）。
   try {
@@ -380,7 +396,12 @@ export async function requestPublishAction(id: string) {
     };
   }
 
-  await repo.upsert({ ...existing, publishRequestedAt: new Date().toISOString() });
+  const requestedAt = new Date().toISOString();
+  await repo.upsert({
+    ...existing,
+    publishRequestedAt: requestedAt,
+    publishFlow: { ...existing.publishFlow, requestedAt, requestedBy: user.email || user.name },
+  });
 
   const admins = (await userRepo.list()).filter((u) => u.role === "admin");
   for (const a of admins) {
@@ -399,6 +420,185 @@ export async function requestPublishAction(id: string) {
   return { ok: true as const };
 }
 
+// ─── 公開ワークフロー（下書き → 公開申請 → 公開） 2026-09-20 ─────────────
+// 設計: docs/property-publish-workflow-2026-09-20.md ／ 判断ロジック: lib/publish-flow.ts
+//
+// ⚠ ここのアクションはスタジオへ**社外メールを送る**。呼び出し元は運営が押すボタンだけ
+//   （エディターの「公開申請する」「確認メールを再送」）。スクリプト・取り込み・ページ表示の
+//   副作用から呼ばないこと。RESEND_API_KEY の無い環境（開発・テスト）では送信せずログだけ
+//   出し、記録にも dry-run と残す（lib/email.ts の mailDryRun）。
+
+/** 既存のプレビューリンクの残りが十分ならそのまま使う（共有済みURLを壊さない）。足りなければ再発行。 */
+async function ensurePreview(propertyId: string): Promise<PropertyPreview> {
+  const current = await propertyPreviewRepo.findByProperty(propertyId);
+  if (current && canReusePreview(current)) return current;
+  return propertyPreviewRepo.create({ propertyId });
+}
+
+type FlowOk = {
+  ok: true;
+  updatedAt: string | undefined;
+  property: Property;
+  mailMode: "sent" | "dry-run" | "skipped";
+  mailTo: string | null;
+  previewExpiresAt: string | null;
+};
+type FlowErr = { ok: false; conflict?: true; error: string };
+
+/**
+ * 下書き → 公開申請。
+ *  1. 公開に必要な項目の検証  2. 英訳（自動翻訳。埋まらなければ中止）
+ *  3. プレビューリンクの確保  4. スタジオへ確認メール  5. 記録して保存（書き込みは1回）
+ * どこかで失敗したら何も保存せずエラーを返す（＝申請中にならない）。
+ */
+export async function requestReviewAction(
+  input: unknown,
+  opts?: { expectedUpdatedAt?: string; skipMail?: boolean },
+): Promise<FlowOk | FlowErr> {
+  const user = await requireAdmin();
+  const parsed = propertySchema.parse(input);
+  const existing = await repo.get(parsed.id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  if (opts?.expectedUpdatedAt && existing.updatedAt && existing.updatedAt !== opts.expectedUpdatedAt) {
+    return { ok: false, conflict: true, error: "別のタブでこの物件が更新されています。" };
+  }
+  const skipMail = !!opts?.skipMail;
+  const merged = mergeManaged(parsed, existing);
+
+  const guard = canRequestReview(merged, { skipMail });
+  if (!guard.ok) return { ok: false, error: guard.error };
+
+  // 翻訳は必須。fillPropertyEnglish は失敗しても例外を投げず元のまま返すので、
+  // 結果を translationGuard で検査して「埋まっていなければ止める」。
+  let translated: Property = merged;
+  try {
+    translated = await fillPropertyEnglish(merged);
+  } catch {
+    /* 下の translationGuard が未翻訳として弾く */
+  }
+  const tg = translationGuard(translated);
+  if (!tg.ok) return { ok: false, error: tg.error };
+
+  // 翻訳は数秒かかる。その間に別の保存が入っていたら上書きしない。
+  if (opts?.expectedUpdatedAt) {
+    const current = await repo.get(parsed.id);
+    if (current?.updatedAt && current.updatedAt !== opts.expectedUpdatedAt) {
+      return { ok: false, conflict: true, error: "別のタブでこの物件が更新されています。" };
+    }
+  }
+
+  let mail: MailOutcome = { mode: "skipped" };
+  let previewExpiresAt: string | null = null;
+  if (!skipMail) {
+    const preview = await ensurePreview(parsed.id);
+    previewExpiresAt = preview.expiresAt;
+    const sent = await sendStudioReviewMail({
+      to: translated.contactEmail,
+      studioName: translated.title,
+      previewPath: `/preview/${preview.token}`,
+      previewExpiresAt: preview.expiresAt,
+    });
+    if (sent.status === "failed") {
+      return { ok: false, error: `${sent.error} 公開申請にはしていません。時間をおいて再実行してください。` };
+    }
+    mail = { mode: sent.status, to: sent.to };
+  }
+
+  const saved = await repo.upsert(
+    enterReview(translated, {
+      by: user.email || user.name,
+      now: new Date().toISOString(),
+      mail,
+    }),
+  );
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${parsed.id}/edit`);
+  return {
+    ok: true,
+    updatedAt: saved.updatedAt,
+    property: saved,
+    mailMode: mail.mode,
+    mailTo: mail.mode === "skipped" ? null : mail.to,
+    previewExpiresAt,
+  };
+}
+
+/**
+ * 確認メールの再送。保存済みの内容（contactEmail）宛に送る。
+ * 二重送信の防止: クライアントの確認ダイアログ + サーバー側 60 秒クールダウン。
+ */
+export async function resendStudioReviewMailAction(id: string): Promise<FlowOk | FlowErr> {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  const guard = canResendStudioMail(existing);
+  if (!guard.ok) return { ok: false, error: guard.error };
+  // 再送でも「申請中＝英訳済み」を崩さない（申請後に日本語を足して EN が空のまま、を送らない）。
+  const tg = translationGuard(existing);
+  if (!tg.ok) return { ok: false, error: `${tg.error} いったん申請を取り下げ、「公開申請する」をやり直すと自動翻訳されます。` };
+  const preview = await ensurePreview(id);
+  const sent = await sendStudioReviewMail({
+    to: existing.contactEmail,
+    studioName: existing.title,
+    previewPath: `/preview/${preview.token}`,
+    previewExpiresAt: preview.expiresAt,
+    // 初回を「送らずに申請中」にしていた場合、これが1通目なので【再送】は付けない。
+    resend: !!existing.publishFlow.studioNotifiedAt,
+  });
+  if (sent.status === "failed") return { ok: false, error: sent.error };
+  const saved = await repo.upsert(
+    recordStudioNotified(existing, {
+      now: new Date().toISOString(),
+      mail: { mode: sent.status, to: sent.to },
+    }),
+  );
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return {
+    ok: true,
+    updatedAt: saved.updatedAt,
+    property: saved,
+    mailMode: sent.status,
+    mailTo: sent.to,
+    previewExpiresAt: preview.expiresAt,
+  };
+}
+
+/** 「スタジオ確認済みにする」の手動チェック（スタジオの返事はメールで来るため運営が記録する）。 */
+export async function setStudioConfirmedAction(
+  id: string,
+  confirmed: boolean,
+): Promise<{ ok: true; updatedAt: string | undefined; property: Property } | FlowErr> {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  if (publishStage(existing) !== "review") {
+    return { ok: false, error: "公開申請中の物件ではありません。" };
+  }
+  const saved = await repo.upsert(
+    setStudioConfirmed(existing, { confirmed, now: new Date().toISOString() }),
+  );
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return { ok: true, updatedAt: saved.updatedAt, property: saved };
+}
+
+/** 申請を取り下げて下書きへ戻す（メールは送らない。プレビューリンクは残す）。 */
+export async function withdrawReviewAction(
+  id: string,
+): Promise<{ ok: true; updatedAt: string | undefined; property: Property } | FlowErr> {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  if (publishStage(existing) !== "review") {
+    return { ok: false, error: "公開申請中の物件ではありません。" };
+  }
+  const saved = await repo.upsert(resetReview(existing));
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return { ok: true, updatedAt: saved.updatedAt, property: saved };
+}
+
 /** Publish straight from the list by id — validates the stored record first. */
 export async function publishByIdAction(id: string) {
   await requireAdmin();
@@ -413,9 +613,7 @@ export async function publishByIdAction(id: string) {
   }
   // 公開したら申請フラグを消す（publishAction と同じ扱い）。残したままだと
   // 後で下書きに戻した時に、新たな申請が無いのに「申請中」が復活してしまう。
-  await repo.upsert(
-    stampPublishedAt({ ...parsed.data, status: "published", publishRequestedAt: null }),
-  );
+  await repo.upsert(stampPublishedAt(markPublished(parsed.data, new Date().toISOString())));
   try {
     await autoCreateStudioVenueSplit(parsed.data.id, parsed.data.ownerId);
   } catch {
@@ -448,7 +646,7 @@ export async function unpublishAction(id: string, opts?: { expectedUpdatedAt?: s
     return { ok: false as const, conflict: true as const, serverUpdatedAt: existing.updatedAt };
   }
   // 取り下げたら過去の公開申請は無効。残すと再公開時に審査済みに見えてしまう。
-  const saved = await repo.upsert({ ...existing, status: "draft", publishRequestedAt: null });
+  const saved = await repo.upsert({ ...resetReview(existing), status: "draft" });
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${id}/edit`);
   revalidatePath("/properties");
@@ -472,7 +670,7 @@ export async function archiveAction(id: string) {
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
   // 取り下げ(unpublishAction)と同じ理由でクリアする: 残すと再公開時に審査済みに見えてしまう。
-  await repo.upsert({ ...existing, status: "archived", publishRequestedAt: null });
+  await repo.upsert({ ...resetReview(existing), status: "archived" });
   revalidatePath("/admin/properties");
   revalidatePath("/properties");
   return { ok: true as const };
@@ -509,9 +707,7 @@ export async function bulkSetStatusAction(
         continue;
       }
       // 公開時は申請フラグを消す（publishAction / publishByIdAction と同じ扱い）。
-      await repo.upsert(
-        stampPublishedAt({ ...parsed.data, status: "published", publishRequestedAt: null }),
-      );
+      await repo.upsert(stampPublishedAt(markPublished(parsed.data, new Date().toISOString())));
     } else {
       await repo.upsert({ ...existing, status });
     }

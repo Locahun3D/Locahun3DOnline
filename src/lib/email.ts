@@ -3,6 +3,7 @@ import { generateReceiptHtml } from "./receipt";
 import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC, PLAN_TOKEN_BUDGET, type DataLicense } from "./schemas";
 import type { AccountPlan } from "./account-schema";
 import type { Purchase } from "./purchases";
+import { buildStudioReviewMail } from "./studio-review-mail";
 
 const PLAN_LABEL: Record<AccountPlan, string> = {
   free: "Free",
@@ -433,4 +434,65 @@ export async function notifySubscription(opts: {
   } catch {
     return false;
   }
+}
+
+/**
+ * メールを「実送信しない」モードか（2026-09-20）。
+ *  - RESEND_API_KEY が無い（開発・テスト環境の通常状態）
+ *  - MAIL_DRY_RUN=1 を明示（本番鍵を持つ環境で手元検証するとき）
+ * 既存の sendEmail は鍵が無いと黙って false を返すだけなので、呼び出し側が
+ * 「送れなかった」と「送らない環境」を区別できなかった。区別が要る送信
+ * （スタジオ宛の確認メール）はこの関数で分岐する。
+ */
+export function mailDryRun(): boolean {
+  const flag = (process.env.MAIL_DRY_RUN || "").toLowerCase();
+  return !process.env.RESEND_API_KEY || flag === "1" || flag === "true";
+}
+
+export type StudioReviewMailResult =
+  | { status: "sent" | "dry-run"; to: string }
+  | { status: "failed"; to: string; error: string };
+
+/**
+ * 公開申請時にスタジオへ送る「掲載内容ご確認のお願い」。
+ *
+ * ⚠ 社外へ出るメール。呼んでよいのは運営がボタンを押した Server Action
+ *   （requestReviewAction / resendStudioReviewMailAction）だけ。スクリプト・取り込み・
+ *   ページ表示の副作用から呼ばないこと。
+ *  - 差出人・返信先は contact@（スタジオがそのまま返信できる窓口）。
+ *  - 運営へ BCC で控えを残す。
+ *  - ドライラン時は送らずにログへ出し、status="dry-run" を返す（記録にもそう残る）。
+ */
+export async function sendStudioReviewMail(opts: {
+  to: string;
+  studioName: string;
+  previewPath: string;
+  previewExpiresAt: string;
+  resend?: boolean;
+}): Promise<StudioReviewMailResult> {
+  const to = opts.to.trim();
+  const mail = buildStudioReviewMail({
+    studioName: opts.studioName,
+    previewUrl: appUrl(opts.previewPath),
+    previewExpiresAt: opts.previewExpiresAt,
+    resend: opts.resend,
+    contactAddress: operatorAddress(),
+  });
+  if (mailDryRun()) {
+    console.info(
+      `[mail:dry-run] studio review mail NOT sent. to=${to} subject=${mail.subject} preview=${appUrl(opts.previewPath)}`,
+    );
+    return { status: "dry-run", to };
+  }
+  const ok = await sendEmail({
+    to,
+    from: replyFromAddress(),
+    replyTo: operatorAddress(),
+    bcc: to === operatorAddress() ? undefined : operatorAddress(),
+    subject: mail.subject,
+    html: shell(mail.heading, mail.bodyHtml),
+  });
+  return ok
+    ? { status: "sent", to }
+    : { status: "failed", to, error: "メール送信に失敗しました（Resend がエラーを返しました）。" };
 }
