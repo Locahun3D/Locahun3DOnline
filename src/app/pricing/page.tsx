@@ -33,7 +33,8 @@ const COMPARE_ROWS: Array<{
 }> = [
   { label: ["物件カタログ閲覧", "Location catalog"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
   { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
-  { label: ["物件掲示板", "Location board"], free: ["閲覧のみ", "View only"], individual: ["閲覧のみ", "View only"], studio: ["書き込み可", "Post & reply"], team: ["書き込み可", "Post & reply"] },
+  // 物件掲示板は 2026-09-19 に機能ごと削除したので行も外した。3Dビューの共有URLは Team だけ（2026-09-20）。
+  { label: ["3Dビューの共有URL", "Share links for 3D views"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（ログイン不要・7日間）", "✓ (no sign-in, 7 days)"] },
   // 付与数は PLAN_TOKEN_BUDGET / SIGNUP_BONUS_TOKENS から導出する。以前ここは
   // 数値べた書きで、定数側を変更しても料金表が古い数字のまま残る状態だった。
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} トークン`, `${SIGNUP_BONUS_TOKENS} tokens at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} トークン`, `${PLAN_TOKEN_BUDGET.individual} tokens / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} トークン`, `${PLAN_TOKEN_BUDGET.studio} tokens / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} トークン`, `${PLAN_TOKEN_BUDGET.team} tokens / mo`] },

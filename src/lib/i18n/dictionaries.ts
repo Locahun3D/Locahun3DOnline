@@ -85,6 +85,8 @@ const ja = {
   "plan.team.f2": "3DGS ウォークスルー 月 120 トークン",
   "plan.team.f3": "30 端末まで同時ログイン",
   "plan.team.f4": "請求書を毎月自動送付＋一括 (電子帳簿対応)",
+  // 2026-09-20: ビューアーの共有URL（/share/<token>）は最上位プランの機能
+  "plan.team.f5": "3Dビューの共有URLを発行（ログイン不要・7日間）",
 } satisfies Dict;
 
 const en: Record<keyof typeof ja, string> = {
@@ -139,6 +141,7 @@ const en: Record<keyof typeof ja, string> = {
   "plan.team.f2": "3DGS walkthrough — 120 tokens / month",
   "plan.team.f3": "Up to 30 devices signed in",
   "plan.team.f4": "Monthly + batch invoices auto-sent (e-bookkeeping ready)",
+  "plan.team.f5": "Share links for 3D views (no sign-in, 7 days)",
 };
 
 export type DictKey = keyof typeof ja;
