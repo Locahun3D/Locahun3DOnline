@@ -166,7 +166,13 @@ export default async function SiteHeader() {
       //    全幅で背景を不透明にする。高さ・中央配置・zoomは変更しない。
       //    2026-09-20: スマホ横向き（高さ480px以下）だけ追従をやめる（画面の約2割を
       //    ヘッダーが占めるため）。globals.css の --header-h:0 とセット。
-      className="sticky [@media(max-height:480px)_and_(orientation:landscape)]:static top-0 z-50 border-b border-line bg-bg"
+      //    2026-09-20 根本対策（本人報告「スマホでスクロールするとヘッダーの上が抜ける。直しても再発する」）:
+      //    sticky の上端は、root の zoom と逆 zoom の端数丸め・iOS のアドレスバー伸縮・バウンスのどれでも
+      //    1px 前後ずれうる。ずれを無くす調整は端末ごとに再発するので、「ずれても見えない」構造にする:
+      //    ヘッダーの真上に、同じ色の帯（::before・高さ160px・レイアウト外）を常に貼っておく。
+      //    隙間が生じてもそこに見えるのは本文ではなくヘッダー色になる。寸法・配置・zoom は一切変えない。
+      //    ⚠ この before: 群を消さないこと。横向きの追従解除も static ではなく relative（::before の基準を保つ）。
+      className="sticky [@media(max-height:480px)_and_(orientation:landscape)]:relative top-0 z-50 border-b border-line bg-bg before:content-[''] before:absolute before:inset-x-0 before:bottom-full before:h-[160px] before:bg-bg before:pointer-events-none"
     >
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに

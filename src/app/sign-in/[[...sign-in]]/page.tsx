@@ -58,7 +58,7 @@ export default async function SignInPage({
     // 「真っ黒な余白に小さなカードが1枚浮いている」状態になり、
     // ブランドも入会理由も何も伝わらない画面になっていた。
     // 見出し＋要点を左に置いた2カラムにして、カードに文脈を与える。
-    <div className="frame ui-page-shell pb-10 sm:pb-20">
+    <div className="frame ui-page-shell pb-10 sm:pb-20 min-h-[calc((100dvh-var(--header-h)-160px)/var(--z,1))]">
       <InAppBrowserWarning locale={locale} />
       {/* 2カラムに割るのは 1200px 以上だけ。768–1199px(iPad帯)は html の zoom が
           0.8 のため実効幅は広いが、Clerk カードは固定幅なので 2カラムにすると
@@ -70,9 +70,10 @@ export default async function SignInPage({
           フォームが画面外に押し出されていた（X内ブラウザの実機報告）。
           見出し・要点はカードの下に回して補足として読ませる。 */}
       {/* Let the single column shrink below Clerk's 400px intrinsic width. */}
-      <div className="mx-auto grid w-full max-w-[880px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
-        <div className="order-2 mx-auto min-w-0 w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
-          <h1 className="ui-page-title">
+      <div className="mx-auto grid w-full max-w-[1040px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
+        <div className="order-2 mx-auto min-w-0 w-full max-w-[400px] min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-none">
+          {/* 左列の上限は見出しの字の大きさに合わせる（34ch は本文基準で、拡大後の見出しが2〜3文字で折れていた。2026-09-20） */}
+          <h1 className="ui-page-title min-[360px]:whitespace-nowrap">
             {en ? (
               <>
                 Walk the location

@@ -581,8 +581,9 @@ export default function CatalogClient({
             </p>
           </div>
         ) : (
-          /* 空の列も維持するauto-fillと幅上限で、少数結果でもカードを引き伸ばさない。 */
-          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] gap-5 min-[720px]:max-[1024px]:gap-3">
+          /* 空の列も維持するauto-fillと幅上限で、少数結果でもカードを引き伸ばさない。
+             スマホ（<640px）は1列いっぱいに広げる: 幅上限320pxのままだと左に寄って右が空く（2026-09-20 本人指摘）。 */
+          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 gap-5 min-[720px]:max-[1024px]:gap-3">
             {computed.map((p) => (
               <li
                 key={p.id}

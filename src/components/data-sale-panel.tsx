@@ -227,13 +227,13 @@ export default function DataSalePanel({
 
       {alreadyPurchased ? (
         <div className="flex items-center gap-3 shrink-0">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase text-green-400 border border-green-400/40 px-2 py-1">
+          <span className="mono text-[10px] max-[720px]:text-[11px] tracking-[0.18em] uppercase text-green-400 border border-green-400/40 px-3 py-1.5 max-[720px]:min-h-[44px] inline-flex items-center">
             {en ? "✓ Purchased" : "✓ 購入済み"}
           </span>
           <Link
             href={displaySimulation ? "#" : en ? "/en/dashboard/purchases" : "/dashboard/purchases"}
             onClick={displaySimulation ? (event) => event.preventDefault() : undefined}
-            className="px-4 py-1.5 max-[720px]:min-h-[44px] max-[720px]:inline-flex max-[720px]:items-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
+            className="px-3 py-1.5 max-[720px]:min-h-[44px] inline-flex items-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.18em] uppercase border border-green-400/50 text-green-400 hover:bg-green-400 hover:text-bg transition"
           >
             {en ? "To downloads →" : "ダウンロードへ →"}
           </Link>

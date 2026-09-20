@@ -48,13 +48,14 @@ export default async function SignUpPage({
     // ログイン側と同じ2カラム。カードだけを中央に浮かせると、広い画面で
     // 真っ黒な余白に小さなカードが1枚あるだけの画面になり、登録する理由が
     // 何も伝わらない（実機で確認して作り直した）。
-    <div className="frame ui-page-shell pb-10 sm:pb-20">
+    <div className="frame ui-page-shell pb-10 sm:pb-20 min-h-[calc((100dvh-var(--header-h)-160px)/var(--z,1))]">
       <InAppBrowserWarning locale={locale} />
       {/* 2カラムは 1200px 以上のみ（理由は /sign-in と同じ。両ページ同時に変更すること） */}
       {/* Let the single column shrink below Clerk's 400px intrinsic width. */}
-      <div className="mx-auto grid w-full max-w-[880px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
-        <div className="order-2 mx-auto min-w-0 w-full max-w-sm min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-[34ch]">
-          <h1 className="ui-page-title">
+      <div className="mx-auto grid w-full max-w-[1040px] grid-cols-[minmax(0,1fr)] items-center gap-10 min-[1200px]:grid-cols-[minmax(0,1fr)_400px] min-[1200px]:gap-16">
+        <div className="order-2 mx-auto min-w-0 w-full max-w-[400px] min-[1200px]:order-1 min-[1200px]:mx-0 min-[1200px]:max-w-none">
+          {/* 左列の上限は見出しの字の大きさに合わせる（34ch は本文基準で、拡大後の見出しが2〜3文字で折れていた。2026-09-20） */}
+          <h1 className="ui-page-title min-[360px]:whitespace-nowrap">
             {en ? (
               <>
                 Scout the location

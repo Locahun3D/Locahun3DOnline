@@ -392,18 +392,6 @@ export default function PropertyDetailView({
               <p className="text-[13px] text-white/55">
                 {property.prefecture} {property.city}
               </p>
-              <div className="flex flex-wrap gap-1.5 mt-4">
-                {isNewProperty(property) && (
-                  <span className="text-[11px] font-bold px-3 py-1 bg-[#e8443a] border border-[#e8443a] text-white mono tracking-[0.18em] uppercase">
-                    New
-                  </span>
-                )}
-                <span className="text-[11px] font-bold px-3 py-1 bg-accent border border-accent text-[#0a2a35]">
-                  {categoryLabel(property.category, locale)}
-                </span>
-                {/* 種別・タグは検索用なので、ヒーローではなくアクセス欄の下に
-                    #タグ で並べる（2026-09-19 会議）。 */}
-              </div>
               </div>
 
               <div className="mt-auto pt-6 max-lg:@sm:pt-0 max-lg:@sm:text-right">
@@ -557,6 +545,16 @@ export default function PropertyDetailView({
 
           <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8 flex flex-col">
             <Eyebrow en="SPECS" jp={en ? "Specs" : "仕様"} />
+            {/* タグ類は仕様カードにまとめる（2026-09-20 本人指示）。以前は NEW・カテゴリがヒーロー、#タグがアクセス欄の下と分かれていた。 */}
+            <ul data-property-tags className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mb-5">
+              {isNewProperty(property) && (
+                <li className="text-[11px] font-bold px-2.5 py-1 bg-[#e8443a] text-white mono tracking-[0.18em] uppercase">New</li>
+              )}
+              <li className="text-[12px] font-bold px-2.5 py-1 bg-accent text-[#0a2a35]">{categoryLabel(property.category, locale)}</li>
+              {searchTags.map((t) => (
+                <li key={t} className="text-[13px] text-ink/60">#{t}</li>
+              ))}
+            </ul>
             <table className="w-full text-[14px]">
               <tbody>
                 {specRows.map(([label, value], i) => (
@@ -678,13 +676,6 @@ export default function PropertyDetailView({
                 />
               )}
             </div>
-            {searchTags.length > 0 && (
-              <ul data-property-tags className="flex flex-wrap gap-x-3 gap-y-1.5 mt-6 pt-5 border-t border-line">
-                {searchTags.map((t) => (
-                  <li key={t} className="text-[13px] text-ink/60">#{t}</li>
-                ))}
-              </ul>
-            )}
           </div>
         </section>
       )}
