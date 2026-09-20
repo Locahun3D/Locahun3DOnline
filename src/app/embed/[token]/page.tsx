@@ -93,7 +93,8 @@ export default async function EmbedPage({
           rel="noopener noreferrer"
           className="mono text-[9.5px] tracking-[0.2em] uppercase text-muted hover:text-accent transition shrink-0"
         >
-          Powered by ロケハン3D
+          {/* 2026-09-20: 商標ロゴ統一。外部サイトに出るブランド表示は欧文ワードマーク */}
+          Powered by Locahun 3D
         </a>
       </div>
       {/* 埋め込みは外部サイトに露出するため、スクレイピング/AI学習への

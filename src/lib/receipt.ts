@@ -94,8 +94,9 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
 </head>
 <body>
   <header>
+    <!-- 2026-09-20: 商標ロゴ統一。ロゴ位置の表記は欧文ワードマークに（発行者欄の製品名は据え置き） -->
     <div class="logo">
-      ロケハン3D
+      Locahun 3D
       <small>locahun3d.com</small>
     </div>
     <div class="receipt-meta mono">

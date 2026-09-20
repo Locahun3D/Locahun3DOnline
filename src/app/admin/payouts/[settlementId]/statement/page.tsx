@@ -49,7 +49,8 @@ export default async function PayoutStatementPage({
       <div className="max-w-[800px] mx-auto px-10 py-12">
         <header className="flex justify-between items-start border-b-2 border-[#111] pb-6 mb-8">
           <div>
-            <div className="text-xl font-bold tracking-wider">ロケハン3D</div>
+            {/* 2026-09-20: 商標ロゴ統一。ロゴ位置は欧文ワードマーク（発行者欄の製品名は据え置き） */}
+            <div className="text-xl font-bold tracking-wider">Locahun 3D</div>
             <div className="text-[11px] opacity-50 tracking-[0.16em] uppercase mt-1">
               運営: KWI株式会社
             </div>

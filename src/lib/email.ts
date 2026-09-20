@@ -91,12 +91,15 @@ export async function sendEmail(opts: {
 
 const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
 
+// 2026-09-20: 商標ロゴ統一（本人ルール）。メール上部の帯はロゴ扱いなので、サイトヘッダーと
+//   同じ欧文ワードマーク「Locahun 3D」にする（marketingShell も同じ）。メールは従来どおり
+//   リモート画像を使わないテキスト表記。件名・差出人名・フッターの製品名「ロケハン3D」は本文扱いで据え置き。
 function shell(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"></head>
 <body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f4f4f2;margin:0;padding:24px;color:#111;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;">
     <div style="background:#111;color:#fff;padding:20px 28px;font-weight:700;letter-spacing:.06em;">
-      ロケハン3D <span style="opacity:.5;font-size:11px;font-weight:400;">locahun3d.com</span>
+      Locahun 3D <span style="opacity:.5;font-size:11px;font-weight:400;">locahun3d.com</span>
     </div>
     <div style="padding:28px;">
       <h1 style="font-size:18px;margin:0 0 16px;">${title}</h1>
@@ -120,7 +123,7 @@ export function marketingShell(title: string, bodyHtml: string, unsubscribeUrl: 
 <body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f4f4f2;margin:0;padding:24px;color:#111;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e5e5;">
     <div style="background:#111;color:#fff;padding:20px 28px;font-weight:700;letter-spacing:.06em;">
-      ロケハン3D <span style="opacity:.5;font-size:11px;font-weight:400;">locahun3d.com</span>
+      Locahun 3D <span style="opacity:.5;font-size:11px;font-weight:400;">locahun3d.com</span>
     </div>
     <div style="padding:28px;">
       <h1 style="font-size:18px;margin:0 0 16px;">${title}</h1>
