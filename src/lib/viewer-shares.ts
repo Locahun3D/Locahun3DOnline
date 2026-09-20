@@ -7,7 +7,7 @@ import { getD1, d1GetData, d1ListData, d1Upsert } from "./d1";
 
 /**
  * 3DGSビューアーの「共有URL」(token -> シーン)。2026-09-20 本人指示: 最上位プラン（Team）の機能。
- * 発行者が視聴できるシーンを、ログイン不要・期限付き（既定7日）で第三者に見せる。
+ * 発行者が視聴できるシーンを、ログイン不要・期限付き（既定2週間）で第三者に見せる。
  * property-previews と同型のトークン表だが、1シーン単位で発行者を持つ。
  * 同じ発行者×同じシーンで有効なリンクが残っていれば再利用する（押すたびに増やさない）。
  */
@@ -23,7 +23,7 @@ export interface ViewerShare {
 
 const DATA_FILE = path.join(process.cwd(), "data", "viewer-shares.json");
 const TABLE = "viewer_shares";
-export const VIEWER_SHARE_TTL_DAYS = 7;
+export const VIEWER_SHARE_TTL_DAYS = 14; // 2026-09-20 本人指示で 7日 → 2週間
 
 async function fileReadAll(): Promise<ViewerShare[]> {
   try {
@@ -76,7 +76,18 @@ export const viewerShareRepo = {
 
   async create(opts: Omit<ViewerShare, "token" | "createdAt" | "expiresAt">): Promise<ViewerShare> {
     const existing = await this.findActive(opts.createdBy, opts.assetKey);
-    if (existing) return existing;
+    if (existing) {
+      // 再発行のたびに期限を「今から2週間」へ延ばす（URL は変えない）。
+      const extended: ViewerShare = { ...existing, expiresAt: new Date(Date.now() + VIEWER_SHARE_TTL_DAYS * 86_400_000).toISOString() };
+      if (canAccessLocalFs()) {
+        const all = (await fileReadAll()).map((s) => (s.token === extended.token ? extended : s));
+        await safeWriteFile(DATA_FILE, JSON.stringify({ version: 1, shares: all }, null, 2));
+        return extended;
+      }
+      const db = await getD1();
+      if (db) await d1Upsert(db, TABLE, "token", cols(extended), extended);
+      return extended;
+    }
     const share: ViewerShare = {
       ...opts,
       token: nanoid(20),

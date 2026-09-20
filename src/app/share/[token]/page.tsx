@@ -16,7 +16,7 @@ export async function generateMetadata() {
 }
 
 /**
- * ビューアーの共有URL（ログイン不要・7日）。Team プランの利用者がビューアー左上の「共有」から発行する。
+ * ビューアーの共有URL（ログイン不要・2週間）。Team プランの利用者がビューアー左上の「共有」から発行する。
  * ここではトークンを検証し、物件名だけ見せてビューアーへ入る（署名URLの取得は launcher が
  * /api/viewer-asset?share=<token> で行う。トークン検証はサーバー側でもう一度行われる）。
  */
@@ -37,7 +37,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
               "Please ask the sender for a new link."
             ) : (
               <>
-                リンクの有効期限（発行から7日）が過ぎています。
+                リンクの有効期限（発行から2週間）が過ぎています。
                 <br />
                 お手数ですが、共有元の方に新しいリンクの発行をご依頼ください。
               </>

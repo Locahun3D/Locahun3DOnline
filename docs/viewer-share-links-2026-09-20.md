@@ -14,7 +14,7 @@
 | 発行の条件 | 発行者が、そのシーンを視聴できる状態であること。アンロック済み、管理者、自分の物件、限定無料期間のいずれか。 | `src/app/api/viewer-share/route.ts` |
 | 共有できないもの | アクセスレベルが「制限付き」「NDA限定」のシーン。 | 発行API（`src/app/api/viewer-share/route.ts`）と `viewer-asset` の両方 |
 | 受け取った人 | ログイン不要。トークン消費なし。`/share/<token>` から「3Dビューを開く」を押して視聴する。 | `src/app/share/[token]/` |
-| 期限 | 発行から7日。 | `src/lib/viewer-shares.ts` の `VIEWER_SHARE_TTL_DAYS` |
+| 期限 | 発行から2週間（2026-09-20 に7日から変更）。同じシーンを再発行すると、URLはそのままで期限が「今から2週間」に延びる。 | `src/lib/viewer-shares.ts` の `VIEWER_SHARE_TTL_DAYS` |
 | 同じシーンの再発行 | 同じ人が同じシーンを共有すると、期限が残っているリンクをそのまま返す。リンクは増えない。 | `src/lib/viewer-shares.ts` の `viewerShareRepo.create` |
 | 再共有 | 受け取った側のビューアーには、共有ボタンを出さない（`shared=1`）。 | `Locahun3D/src/js/433_online_share_link.js` |
 | 連続アクセスの制限 | トークン単位で、60秒に5回まで（既存の `allowAssetDownload`）。 | `viewer-asset` |
@@ -33,6 +33,6 @@
 
 ## 未実装（必要になったら）
 
-- 発行済みリンクの一覧と失効を行う画面。今は、7日の期限切れを待つか、D1 の該当行を削除して失効させる。
+- 発行済みリンクの一覧と失効を行う画面。今は、2週間の期限切れを待つか、D1 の該当行を削除して失効させる。
 - 共有リンクの閲覧回数の記録。
 - 発行時のカメラ位置を共有リンクに含めること。
