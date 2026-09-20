@@ -295,6 +295,8 @@ export default function CatalogClient({
   // 3DGSデータがある物件だけに絞る。写真のみ掲載枠(3DGSは公開必須ではない)を
   // 導入したため、3Dが要る利用者が明示的に絞り込めるようにする。
   const [requires3D, setRequires3D] = useState(false);
+  // 3Dデータ販売の有無で絞る（2026-09-20 本人指示。並び替えバーの右端）。"all" = 絞らない
+  const [dataSale, setDataSale] = useState<"all" | "yes" | "no">("all");
   const [facilities, setFacilities] = useState<string[]>([]);
   const [hoursFrom, setHoursFrom] = useState("");
   const [hoursTo, setHoursTo] = useState("");
@@ -309,7 +311,7 @@ export default function CatalogClient({
     setMinDailyPrice(""); setMaxDailyPrice("");
     setMinCeiling(""); setMaxCeiling("");
     setMaxKmFromRef(200);
-    setRequiresDaily(false); setRequiresParking(false); setRequires200V(false); setRequires3D(false);
+    setRequiresDaily(false); setRequiresParking(false); setRequires200V(false); setRequires3D(false); setDataSale("all");
     setFacilities([]);
     setHoursFrom(""); setHoursTo("");
     setSort("newest");
@@ -404,6 +406,10 @@ export default function CatalogClient({
         const has = !!p.splatUrl?.trim() || (p.splatItems ?? []).some((it) => !!it.splatUrl?.trim());
         if (!has) return false;
       }
+      if (dataSale !== "all") {
+        const sells = (p.splatItems ?? []).some((it) => it.forSale);
+        if (sells !== (dataSale === "yes")) return false;
+      }
       if (facilities.length) {
         const hay = `${p.title} ${p.summary} ${p.studioType} ${p.tags.join(" ")}`.toLowerCase();
         if (!facilities.every((f) => hay.includes(f.toLowerCase()))) return false;
@@ -450,7 +456,7 @@ export default function CatalogClient({
     minPrice, maxPrice, minDailyPrice, maxDailyPrice,
     minCeiling, maxCeiling,
     maxKmFromRef,
-    requiresDaily, requiresParking, requires200V, requires3D,
+    requiresDaily, requiresParking, requires200V, requires3D, dataSale,
     facilities,
     hoursFrom, hoursTo,
     q, sort,
@@ -557,6 +563,7 @@ export default function CatalogClient({
 
       <SortBar
         sort={sort} setSort={setSort} resultCount={computed.length} totalCount={items.length}
+        dataSale={dataSale} setDataSale={setDataSale}
         className="min-[720px]:max-[1024px]:col-start-1 min-[720px]:max-[1024px]:row-start-2"
       />
 
@@ -1247,9 +1254,10 @@ const SORT_COLS: Array<{
 ];
 
 function SortBar({
-  sort, setSort, resultCount, totalCount, className = "",
+  sort, setSort, resultCount, totalCount, dataSale, setDataSale, className = "",
 }: {
   sort: SortKey; setSort: (v: SortKey) => void;
+  dataSale: "all" | "yes" | "no"; setDataSale: (v: "all" | "yes" | "no") => void;
   resultCount: number; totalCount: number;
   // 呼び出し側から grid の配置クラスだけを足せるようにする（ラッパ div を挟むと
   // mt-3 のマージンが親へ抜けて余白が変わるため、根の要素に直接付ける）。
@@ -1297,6 +1305,27 @@ function SortBar({
             </div>
           </div>
         ))}
+        {/* データ販売の有無（絞り込み）。並び替えと同じ見た目で右端に置く。もう一度押すと解除。 */}
+        <div className="flex flex-col items-center pl-2 sm:pl-3 border-l border-white/10">
+          <div className="mono text-[9px] tracking-[0.22em] uppercase opacity-50">{en ? "Data sale" : "データ販売"}</div>
+          <div className="flex items-center" role="group" aria-label={en ? "Data sale" : "データ販売"}>
+            {(["yes", "no"] as const).map((v, i) => (
+              <span key={v} className="flex items-center">
+                {i > 0 && <span className="mono text-[10px] opacity-30 px-0.5">|</span>}
+                <button
+                  type="button"
+                  aria-pressed={dataSale === v}
+                  onClick={() => setDataSale(dataSale === v ? "all" : v)}
+                  className={`px-2 py-1 max-[720px]:min-h-[44px] max-[720px]:min-w-[44px] max-[720px]:inline-flex max-[720px]:items-center max-[720px]:justify-center mono text-[10px] max-[720px]:text-[11px] tracking-[0.1em] transition ${
+                    dataSale === v ? "bg-accent text-bg" : "text-muted hover:text-accent"
+                  }`}
+                >
+                  {v === "yes" ? (en ? "Yes" : "あり") : en ? "No" : "なし"}
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
