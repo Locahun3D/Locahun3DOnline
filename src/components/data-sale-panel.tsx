@@ -264,11 +264,12 @@ export default function DataSalePanel({
                 {en ? "Agree to terms" : "規約同意"}
               </Link>
             </label>
-            {/* プラン切替では再マウントされない。実カート状態が残っても表示には使わない。 */}
+            {/* プラン切替では再マウントされない。実カート状態が残っても表示には使わない。
+                2026-09-21: カートのボタンは隣の「購入する」と同じ寸法・書体に揃えた（固定幅152px・常時44pxだと1つだけ大きく見えた）。 */}
             {inCart && !displaySimulation ? (
               <Link
                 href={en ? "/en/cart" : "/cart"}
-                className="w-[152px] shrink-0 flex items-center justify-center px-3 py-2 min-h-[44px] text-[12px] border border-accent text-ink bg-accent/10 hover:bg-accent/20 transition whitespace-nowrap"
+                className="min-w-[116px] shrink-0 inline-flex items-center justify-center px-4 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border transition whitespace-nowrap border-accent text-ink bg-accent/10 hover:bg-accent/20"
               >
                 {en ? "View cart" : "カートを見る"}
               </Link>
@@ -284,7 +285,7 @@ export default function DataSalePanel({
                       : "先に規約に同意してください"
                     : undefined
                 }
-                className="w-[152px] shrink-0 flex items-center justify-center px-3 py-2 min-h-[44px] text-[12px] border border-line text-muted hover:border-accent hover:text-accent transition whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
+                className="min-w-[116px] shrink-0 inline-flex items-center justify-center px-4 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border transition whitespace-nowrap border-line text-muted hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
               >
                 {en ? "Add to cart" : "カートに入れる"}
               </button>
