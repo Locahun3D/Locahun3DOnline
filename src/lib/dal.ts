@@ -16,6 +16,20 @@ import {
 } from "./account-schema";
 import { SIGNUP_BONUS_TOKENS } from "./schemas";
 import { deviceLimitForPlan, enforceDeviceLimit } from "./device-limit";
+import { localizedHref } from "./i18n/dictionaries";
+import { getLocale } from "./i18n/server";
+
+/**
+ * ここからの redirect は必ずこれを通す（2026-09-21）。
+ *
+ * ⚠ 素の `redirect("/onboarding")` だと `/en/account` から飛んだ人が
+ *   **日本語の** /onboarding に着地していた（EN 側は 31 件まるごと日本語）。
+ *   リダイレクト先で `/en` が落ちる＝そのページ全部が未翻訳に見える、という
+ *   最も目立つ形の翻訳漏れになる。行き先は今いる言語に合わせること。
+ */
+async function localeRedirect(path: string): Promise<never> {
+  redirect(localizedHref(path, await getLocale()));
+}
 
 /** 端末数上限の再チェック間隔。毎リクエストでClerk APIを叩かないためのスロットル。 */
 const DEVICE_LIMIT_RECHECK_MS = 10 * 60 * 1000;
@@ -135,21 +149,23 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
 
 export async function requireUser(): Promise<PublicUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/sign-in");
+  // `return` で抜ける（`await localeRedirect(...)` だけだと TS が分岐の終端と
+  // 見なさず、この後の user が null 込みのままになる）。
+  if (!user) return localeRedirect("/sign-in");
   return user;
 }
 
 /** Signed in AND completed onboarding (role chosen). */
 export async function requireOnboarded(): Promise<PublicUser> {
   const user = await requireUser();
-  if (!user.onboarded && user.role !== "admin") redirect("/onboarding");
+  if (!user.onboarded && user.role !== "admin") return localeRedirect("/onboarding");
   return user;
 }
 
 export async function requireRole(roles: AccountRole[]): Promise<PublicUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/sign-in");
-  if (!roles.includes(user.role)) redirect("/");
+  if (!user) return localeRedirect("/sign-in");
+  if (!roles.includes(user.role)) return localeRedirect("/");
   return user;
 }
 

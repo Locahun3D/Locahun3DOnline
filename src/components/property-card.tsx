@@ -42,13 +42,16 @@ export default function PropertyCard({
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
-        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+        {/* ⚠ 左のバッジ群は右上の 3DGS / トークンバッジの手前で止める（2026-09-21）。
+            カードが細い場所（保存した物件のマルチカラム等）ではカテゴリ名が伸びて
+            「WAREHOUSE」が「3DGS」に重なっていた。幅を残して溢れは省略記号に逃がす。 */}
+        <div className={`absolute top-3 left-3 flex items-center gap-1.5 ${hasSplat ? "right-[5.5rem]" : "right-3"}`}>
           {isNewProperty(property) && (
-            <div className="mono text-[10px] tracking-[0.28em] uppercase bg-[#e8443a] text-white px-2 py-1 font-bold">
+            <div className="mono text-[10px] tracking-[0.28em] uppercase bg-[#e8443a] text-white px-2 py-1 font-bold shrink-0">
               New
             </div>
           )}
-          <div className="mono text-[10px] tracking-[0.28em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
+          <div className="mono text-[10px] tracking-[0.28em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line min-w-0 truncate">
             {categoryLabel(property.category, locale)}
           </div>
         </div>

@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/dal";
 import OnboardingForm from "@/components/onboarding-form";
 import { defaultOnboardingRole, isStudioIntent } from "@/lib/listing-funnel";
 import { getLocale } from "@/lib/i18n/server";
+import { localizedHref } from "@/lib/i18n/dictionaries";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -16,13 +17,16 @@ export default async function OnboardingPage({
 }) {
   const { intent } = await searchParams;
   const user = await requireUser();
+  const locale = await getLocale();
+  const en = locale === "en";
   // ⚠ 以前はここで無言に /account へ戻していたため、「スタジオアカウントを
   //   作ろうとしたのに、何も言われずマイページに戻される」という状態だった。
   //   必ず理由を渡す（/account 側の notice で文言を出す）。
+  // ⚠ 2026-09-21: 行き先も言語に合わせる。素の /account だと EN の人が
+  //   日本語のマイページに着地していた。
   if (user.onboarded || user.role === "admin") {
-    redirect("/account?notice=already-onboarded");
+    redirect(localizedHref("/account?notice=already-onboarded", locale));
   }
-  const en = (await getLocale()) === "en";
 
   return (
     <div className="theme-online frame ui-page-shell min-h-[calc(72vh/var(--z))] flex items-start justify-center pb-16">

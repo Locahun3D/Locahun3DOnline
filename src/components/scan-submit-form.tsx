@@ -279,7 +279,9 @@ function Field({
         {label}
         {required && <span className="text-red-500 text-[11px] ml-1">{en ? "required" : "必須"}</span>}
         {optional && <span className="text-muted text-[11px] ml-1">{en ? "optional" : "任意"}</span>}
-        {note && <span className="text-muted text-[11px] ml-1.5">（{note}）</span>}
+        {/* ⚠ 2026-09-21: 括弧も言語で切り替える。全角（）を固定で書いていたため
+            EN ページに全角の丸括弧だけが残っていた（contact-form.tsx と対）。 */}
+        {note && <span className="text-muted text-[11px] ml-1.5">{en ? `(${note})` : `（${note}）`}</span>}
       </span>
       {children}
     </label>

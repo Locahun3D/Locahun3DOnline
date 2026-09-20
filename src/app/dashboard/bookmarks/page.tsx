@@ -13,12 +13,15 @@ export async function generateMetadata() {
 }
 
 export default async function BookmarksPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/sign-in?redirect_url=/dashboard/bookmarks");
-
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
+
+  const user = await getCurrentUser();
+  // ⚠ 2026-09-21: サインイン画面も戻り先も今の言語のまま保つ。
+  //   素の "/sign-in?redirect_url=/dashboard/bookmarks" だと EN の人が
+  //   日本語のサインイン→日本語のダッシュボードに着地していた。
+  if (!user) redirect(lh(`/sign-in?redirect_url=${encodeURIComponent(lh("/dashboard/bookmarks"))}`));
 
   const ids = new Set(user.bookmarks ?? []);
   const all = await getPublishedProperties();
