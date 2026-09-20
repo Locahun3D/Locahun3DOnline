@@ -15,6 +15,7 @@ import { presignViewerAsset, presignConfigured } from "@/lib/r2-presign";
 import { allowAssetDownload } from "@/lib/asset-rate-limit";
 import { propertyPreviewRepo, isPreviewExpired } from "@/lib/property-previews";
 import { propertyEmbedRepo } from "@/lib/property-embeds";
+import { viewerShareRepo, isViewerShareExpired } from "@/lib/viewer-shares";
 
 export const runtime = "nodejs";
 
@@ -135,6 +136,33 @@ export async function GET(req: Request) {
         );
       }
       // 無効・停止中の埋め込みトークン → 通常の認証経路へフォールスルー。
+    }
+
+    /* ── ビューアー共有URL経路（ログイン不要・7日） ────────────────────
+     * Team プランの利用者が /api/viewer-share で発行した /share/[token] からの視聴。
+     * トークンは 1シーンに紐づく（asset_key 完全一致が必須）。制限付き／NDA 限定は発行時に弾いているが、
+     * 後から設定が変わった場合に備えてここでも通さない。 */
+    const shareTokenParam = new URL(req.url).searchParams.get("share") || "";
+    if (shareTokenParam) {
+      const share = await viewerShareRepo.get(shareTokenParam);
+      if (
+        share &&
+        !isViewerShareExpired(share) &&
+        share.assetKey === key &&
+        share.propertyId === matchedProperty.id &&
+        matchedItem.accessLevel !== "restricted" &&
+        matchedItem.accessLevel !== "nda_only"
+      ) {
+        if (!allowAssetDownload(`share:${shareTokenParam}`, key)) {
+          return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+        }
+        const signedShare = await presignViewerAsset(key, PRESIGN_TTL_SECONDS);
+        if (!signedShare) {
+          return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
+        }
+        return NextResponse.json({ url: signedShare }, { headers: { "Cache-Control": "no-store" } });
+      }
+      // 無効・期限切れの共有トークン → 通常の認証経路へフォールスルー。
     }
 
     const user = await getCurrentUser();

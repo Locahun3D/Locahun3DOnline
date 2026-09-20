@@ -253,6 +253,16 @@ export function canViewBackyard(u: PublicUser | null): boolean {
 }
 
 /**
+ * ビューアーの共有URLを発行できるか（2026-09-20 本人指示: 最上位プランの機能）。
+ * 最上位 = ACCOUNT_PLANS の末尾 "team"。役割は問わない。管理者は常に可。
+ */
+export function canShareViewerLink(u: PublicUser | null): boolean {
+  if (!u || u.status !== "active") return false;
+  if (u.role === "admin") return true;
+  return u.plan === "team";
+}
+
+/**
  * Whether this user can view NDA-only 3DGS files
  * (ドーム詳細構造・天井リギング・ライブ会場機密エリア等).
  * Requires: production account + Team plan + NDA accepted.

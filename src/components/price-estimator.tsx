@@ -144,6 +144,9 @@ export default function PriceEstimator({
         {en
           ? `Estimate only. ${min > 1 ? `${min} h minimum. ` : ""}Load-in to load-out counts as usage time.`
           : `目安の金額です。${min > 1 ? `最低${min}時間から。` : ""}搬入から完全撤去までが利用時間です。`}
+        {/* 2026-09-20 本人指示: 料金は変わりうるので、確認先を明記する */}
+        <br />
+        {en ? "Rates may change. Please confirm the details with the studio." : "料金は変動する可能性があります。詳しくはスタジオにご確認ください。"}
         {surcharges.length > 0 && (
           <>
             <br />
