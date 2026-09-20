@@ -40,6 +40,10 @@ import {
   saveDraftAction,
   publishAction,
   unpublishAction,
+  requestReviewAction,
+  resendStudioReviewMailAction,
+  setStudioConfirmedAction,
+  withdrawReviewAction,
   archiveAction,
   deleteAction,
   cleanupReplacedFileAction,
@@ -51,6 +55,9 @@ import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness } from "@/lib/publish-readiness";
+import PublishFlowPanel from "@/components/admin/publish-flow-panel";
+import { EMPTY_PUBLISH_FLOW, PUBLISH_STAGE_LABEL, publishStage, publishWarnings, type PublishStage } from "@/lib/publish-flow";
+import { missingEnglishFields } from "@/lib/property-english";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
 import { applyExtendedLicensePricing } from "@/lib/license-options";
@@ -107,6 +114,8 @@ export default function PropertyEditor({
   const [saving, startSave] = useTransition();
   const [publishing, startPublish] = useTransition();
   const [publishError, setPublishError] = useState<string | null>(null);
+  // 公開ワークフロー（公開申請・再送など）の結果メッセージ（2026-09-20）。
+  const [flowNotice, setFlowNotice] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [pickImageFor, setPickImageFor] = useState<null | "cover" | "gallery">(null);
   const [previewItemIdx, setPreviewItemIdx] = useState<number | null>(null);
@@ -493,6 +502,13 @@ export default function PropertyEditor({
       setPublishError(msgs.join(" / "));
       return;
     }
+    // 公開申請・スタジオ確認を経ていない公開は、止めはしないが必ず一度確認する（2026-09-20）。
+    const warnings = publishWarnings({
+      publishRequestedAt: getValues("publishRequestedAt"),
+      publishFlow: getValues("publishFlow"),
+    });
+    if (warnings.length > 0 && !confirm(`${warnings.join("\n")}\nこのまま公開しますか？`)) return;
+    setFlowNotice(null);
     statusWriteInFlightRef.current = true;
     startPublish(async () => {
       try {
@@ -510,6 +526,8 @@ export default function PropertyEditor({
             setValue(update.path, update.value);
           }
           setValue("status", res.status);
+          setValue("publishRequestedAt", res.property.publishRequestedAt);
+          setValue("publishFlow", res.property.publishFlow);
           setSavedAt(new Date().toISOString());
         });
       } catch (e) {
@@ -537,6 +555,9 @@ export default function PropertyEditor({
           }
           baseUpdatedAtRef.current = res.updatedAt;
           setValue("status", res.status);
+          // 公開停止で申請まわりはサーバー側で白紙に戻る（resetReview）。画面も合わせる。
+          setValue("publishRequestedAt", null);
+          setValue("publishFlow", { ...EMPTY_PUBLISH_FLOW, publishedAt: getValues("publishFlow")?.publishedAt ?? null });
           setSavedAt(new Date().toISOString());
         });
       } catch (e) {
@@ -546,6 +567,82 @@ export default function PropertyEditor({
       }
     });
   };
+
+  // ─── 公開ワークフロー（2026-09-20）─────────────────────────────
+  // 公開申請・再送・確認済み・取り下げは、どれも「サーバーで物件を書き換えて updatedAt が進む」
+  // 操作。autosave と順序が前後すると楽観ロックが誤衝突するので、公開と同じ書き込みキューに
+  // 直列化し、結果の updatedAt とサーバ管理フィールドだけをフォームへ反映する。
+  type FlowResult =
+    | { ok: true; updatedAt: string | undefined; property: Property }
+    | { ok: false; conflict?: true; error: string };
+  const runFlow = (
+    fn: () => Promise<FlowResult>,
+    onDone: (saved: Property, before: Property) => string,
+  ) => {
+    if (conflictRef.current || statusWriteInFlightRef.current) return;
+    statusWriteInFlightRef.current = true;
+    setPublishError(null);
+    setFlowNotice(null);
+    startPublish(async () => {
+      try {
+        await writeQueueRef.current(async () => {
+          if (conflictRef.current) return;
+          const before = getValues();
+          const res = await fn();
+          if (!res.ok) {
+            if (res.conflict) stopForConflict();
+            else setPublishError(res.error);
+            return;
+          }
+          baseUpdatedAtRef.current = res.updatedAt;
+          setValue("publishRequestedAt", res.property.publishRequestedAt);
+          setValue("publishFlow", res.property.publishFlow);
+          setFlowNotice(onDone(res.property, before));
+          setSavedAt(new Date().toISOString());
+        });
+      } catch (e) {
+        console.error(e);
+        setPublishError(String(e));
+      } finally {
+        statusWriteInFlightRef.current = false;
+      }
+    });
+  };
+
+  const onRequestReview = ({ skipMail }: { skipMail: boolean }) =>
+    runFlow(
+      // フォームの最新値ごと送る（publishAction と同じ。未保存の編集も申請内容に含める）。
+      () => requestReviewAction(getValues(), { expectedUpdatedAt: baseUpdatedAtRef.current, skipMail }),
+      (saved, before) => {
+        // サーバーで自動翻訳された EN 欄をフォームへ取り込む（入力中の編集は潰さない）。
+        for (const update of publishedEnglishUpdates(before, getValues(), saved)) {
+          setValue(update.path, update.value);
+        }
+        const f = saved.publishFlow;
+        if (f.studioNotifyMode === "sent") return `公開申請中にしました。確認メールを ${f.studioNotifiedTo} へ送信しました。`;
+        if (f.studioNotifyMode === "dry-run")
+          return `公開申請中にしました。この環境はメールのドライランのため、${f.studioNotifiedTo} へは実際には送信していません（ログに出力）。`;
+        return "公開申請中にしました（確認メールは送っていません）。";
+      },
+    );
+  const onResendStudioMail = () =>
+    runFlow(
+      () => resendStudioReviewMailAction(initial.id),
+      (saved) =>
+        saved.publishFlow.studioNotifyMode === "dry-run"
+          ? "ドライランのため実際には送信していません（ログに出力）。"
+          : `確認メールを ${saved.publishFlow.studioNotifiedTo} へ送信しました。`,
+    );
+  const onSetStudioConfirmed = (confirmed: boolean) =>
+    runFlow(
+      () => setStudioConfirmedAction(initial.id, confirmed),
+      () => (confirmed ? "スタジオ確認済みとして記録しました。" : "スタジオ確認済みの記録を外しました。"),
+    );
+  const onWithdrawReview = () =>
+    runFlow(
+      () => withdrawReviewAction(initial.id),
+      () => "公開申請を取り下げ、下書きに戻しました。",
+    );
 
   // ⚠ 呼び出し元の「Danger zone」ブロックは 2026-08-13 に非表示化した（本人指示）。
   //    復活させるときにそのまま使えるよう、ハンドラ本体は残してある。
@@ -581,6 +678,11 @@ export default function PropertyEditor({
 
   const currentTitle = watch("title");
   const currentStatus = watch("status");
+  // 画面に出す段階（下書き / 公開申請中 / 公開中）。申請中は draft + publishRequestedAt。
+  const currentStage = publishStage({
+    status: currentStatus,
+    publishRequestedAt: watch("publishRequestedAt") ?? null,
+  });
   // 申請できる状態か（3DGS以外が揃っているか）。編集中の値をそのまま見るので、
   // 入力すると即座にボタンが有効になる。判定の正本は lib/publish-readiness.ts で、
   // サーバー側 requestPublishAction も同じ関数を使う。
@@ -667,7 +769,7 @@ export default function PropertyEditor({
         <div className={`${styles.toolbar} sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-2.5 bg-bg/95 backdrop-blur border-b border-line mb-5 space-y-2`}>
           <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <StatusPill status={currentStatus} />
+            <StatusPill status={currentStatus} stage={currentStage} />
             {/* 編集画面の見出しは小さく1行で（2026-09-20 本人指摘「このスペース無駄」）。共通の ui-page-title は 42〜60px あり、
                 追従ツールバーの中では上に大きな空きができ、入力欄が下へ押し出されていた。 */}
             <h1 className="min-w-0 truncate text-[19px] lg:text-[22px] font-bold leading-tight" title={currentTitle || undefined}>
@@ -722,14 +824,30 @@ export default function PropertyEditor({
               </button>
             ) : (
               <>
-                {isAdmin && (
+                {/* 運営の導線は 下書き→公開申請→公開（2026-09-20）。下書きのうちは「公開申請へ」で
+                    公開設定ステップ（確認メールの宛先・オプションがある）へ案内し、申請中になって
+                    初めて「公開する」を主ボタンにする。申請を経ない直接公開は公開設定ステップ内に残した。 */}
+                {isAdmin && currentStage === "review" && (
                   <button
                     type="button"
                     onClick={onPublish}
                     disabled={publishing}
                     className="px-5 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-50"
                   >
-                    {publishing ? "公開中…" : "公開する"}
+                    {publishing ? "処理中…" : "公開する"}
+                  </button>
+                )}
+                {isAdmin && currentStage !== "review" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("publish");
+                      window.scrollTo({ top: 0 });
+                    }}
+                    disabled={publishing}
+                    className="px-5 py-2 mono text-[10px] tracking-[0.22em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                  >
+                    公開申請へ
                   </button>
                 )}
                 {!isAdmin && (
@@ -2661,15 +2779,30 @@ export default function PropertyEditor({
             <StepCard
               n={stepNo("publish")}
               title="公開設定"
-              desc="必須欄が揃っていれば「公開する」ボタンで反映されます。"
+              desc="下書き → 公開申請（英訳・スタジオへ確認メール）→ 公開 の順に進めます。"
             >
+              <PublishFlowPanel
+                stage={currentStage}
+                flow={watch("publishFlow") ?? EMPTY_PUBLISH_FLOW}
+                contactEmail={watch("contactEmail") ?? ""}
+                missingRequired={requestReadiness.missing}
+                missingEnglish={missingEnglishFields(watch())}
+                busy={publishing}
+                mounted={mounted}
+                notice={flowNotice}
+                onRequest={onRequestReview}
+                onResend={onResendStudioMail}
+                onSetConfirmed={onSetStudioConfirmed}
+                onWithdraw={onWithdrawReview}
+                onPublish={onPublish}
+              />
               <div className="border border-line p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-1">
                       Current status
                     </div>
-                    <StatusPill status={currentStatus} />
+                    <StatusPill status={currentStatus} stage={currentStage} />
                   </div>
                   <div className="mono text-[10px] text-muted">
                     ID: {initial.id}
@@ -3249,9 +3382,11 @@ function Toggle({
   );
 }
 
-function StatusPill({ status }: { status: Property["status"] }) {
+function StatusPill({ status, stage }: { status: Property["status"]; stage?: PublishStage }) {
   const cls =
-    status === "published"
+    stage === "review"
+      ? "border border-accent text-accent"
+      : status === "published"
       ? "bg-accent text-bg"
       : status === "draft"
         ? "bg-[#222] text-ink"
@@ -3260,7 +3395,7 @@ function StatusPill({ status }: { status: Property["status"] }) {
     <span
       className={`inline-block shrink-0 whitespace-nowrap px-2 py-1 mono text-[9px] tracking-[0.22em] uppercase ${cls}`}
     >
-      {STATUS_LABEL[status]}
+      {stage === "review" ? PUBLISH_STAGE_LABEL.review : STATUS_LABEL[status]}
     </span>
   );
 }

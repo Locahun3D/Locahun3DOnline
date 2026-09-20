@@ -1,5 +1,6 @@
 import type { Property } from "./schemas";
 import type { AccountRole } from "./account-schema";
+import { EMPTY_PUBLISH_FLOW } from "./publish-flow";
 
 /**
  * studio ロールが保存できない「運営管理フィールド」を、既存値へ強制的に戻す。
@@ -11,7 +12,7 @@ import type { AccountRole } from "./account-schema";
  *
  * 対象:
  *  - 3DGS 一式（運営がスキャン後に差し込む）
- *  - status / publishRequestedAt（公開は admin 限定、申請は専用アクション経由）
+ *  - status / publishRequestedAt / publishFlow（公開は admin 限定、申請は専用アクション経由）
  */
 export function protectStudioManagedFields<T extends Property>(
   incoming: T,
@@ -28,5 +29,7 @@ export function protectStudioManagedFields<T extends Property>(
     splatItems: existing?.splatItems ?? [],
     status: existing?.status ?? "draft",
     publishRequestedAt: existing?.publishRequestedAt ?? null,
+    // 公開ワークフローの監査記録（2026-09-20）も運営管理。studio に「確認済み」等を書かせない。
+    publishFlow: existing?.publishFlow ?? EMPTY_PUBLISH_FLOW,
   };
 }

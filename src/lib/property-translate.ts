@@ -1,29 +1,13 @@
 import "server-only";
 import type { Property } from "./schemas";
 import { translateProperty } from "./ai-translate";
+import { needsEnglish } from "./property-english";
 
 /**
- * 物件の自由記述フィールドで「日本語はあるが英語(EN欄)が空」のものを検出する。
- * バルク翻訳で既訳をスキップする判定に使う。
+ * 「日本語はあるが英語(EN欄)が空」の判定。正本は lib/property-english.ts（純関数・
+ * client からも使う）へ移した（2026-09-20）。既存の import 元を壊さないよう再エクスポートする。
  */
-export function needsEnglish(p: Property): boolean {
-  if (p.title.trim() && !p.titleEn.trim()) return true;
-  if (p.summary.trim() && !p.summaryEn.trim()) return true;
-  if (p.description.trim() && !p.descriptionEn.trim()) return true;
-  if (p.city.trim() && !p.cityEn.trim()) return true;
-  if (p.address.trim() && !p.addressEn.trim()) return true;
-  if (p.nearestStation.trim() && !p.nearestStationEn.trim()) return true;
-  if (p.availableHours.trim() && !p.availableHoursEn.trim()) return true;
-  if (p.permitType.trim() && !p.permitTypeEn.trim()) return true;
-  if (p.permitNotes.trim() && !p.permitNotesEn.trim()) return true;
-  if (p.cover.alt.trim() && !p.cover.altEn.trim()) return true;
-  if (p.gallery.some((g) => g.alt.trim() && !g.altEn.trim())) return true;
-  return p.splatItems.some(
-    (it) =>
-      (it.label.trim() && !it.labelEn.trim()) ||
-      (it.saleDescription.trim() && !it.saleDescriptionEn.trim()),
-  );
-}
+export { needsEnglish };
 
 /**
  * 空の EN 欄だけを自動翻訳で埋めた新しい Property を返す。

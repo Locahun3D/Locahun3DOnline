@@ -5,6 +5,7 @@ import PropertiesAdmin, {
   type PropertyListItem,
 } from "@/components/admin/properties-admin";
 import TranslateMissingButton from "@/components/admin/translate-missing-button";
+import { publishStage, reviewSubState } from "@/lib/publish-flow";
 
 export const metadata = { title: "物件管理" };
 
@@ -28,12 +29,15 @@ export default async function AdminPropertiesList() {
     status: p.status,
     updatedAt: p.updatedAt,
     publishRequestedAt: p.publishRequestedAt ?? null,
+    reviewState: reviewSubState(p.publishFlow),
     coverSrc: p.cover?.src || undefined,
   }));
 
   const counts = {
     published: all.filter((p) => p.status === "published").length,
-    draft: all.filter((p) => p.status === "draft").length,
+    // 下書きと公開申請中は分けて数える（一覧のタブと同じ区切り。2026-09-20）。
+    draft: all.filter((p) => publishStage(p) === "draft").length,
+    review: all.filter((p) => publishStage(p) === "review").length,
     archived: all.filter((p) => p.status === "archived").length,
   };
 
@@ -43,7 +47,7 @@ export default async function AdminPropertiesList() {
         <div>
           <h1 className="ui-page-title">物件管理</h1>
           <div className="mt-2 mono text-[11px] text-muted">
-            合計 {all.length} 件 ／ 公開 {counts.published} ／ 下書き{" "}
+            合計 {all.length} 件 ／ 公開 {counts.published} ／ 公開申請中 {counts.review} ／ 下書き{" "}
             {counts.draft} ／ アーカイブ {counts.archived}
           </div>
         </div>
