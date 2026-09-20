@@ -78,6 +78,77 @@ export function simulatePrice(input: { hourlyPrice: number; startHour: number; h
 }
 
 /**
+ * 料金は必ず「選択制」にする（2026-09-20 本人指示「全て選択制になるように」）。
+ * 用途別プラン（ratePlans）が無い物件でも、持っている単価から選択肢を作る:
+ *   時間単価あり → 「時間貸し」、日額あり → 「1日貸し」。プランがある物件はプラン＋（日額があれば）1日貸し。
+ * 時間貸し以外（定額・無料）や、単価が1つも無い物件は空配列（シミュレーター自体を出さない）。
+ */
+export type PriceChoice = { key: string; kind: "hourly" | "daily"; label: string; labelEn: string; price: number; minHours: number; fromPlan: boolean };
+export function priceChoices(p: {
+  priceType: string; hourlyPrice: number; minUsageHours: number; dailyPrice: number;
+  ratePlans?: { label: string; labelEn?: string; hourlyPrice: number; minHours?: number }[];
+}): PriceChoice[] {
+  if (p.priceType !== "hourly") return [];
+  const baseMin = Math.max(1, p.minUsageHours | 0);
+  const plans = (p.ratePlans ?? []).filter((r) => r.label && r.hourlyPrice > 0);
+  const out: PriceChoice[] = plans.map((r, i) => ({
+    key: `plan-${i}`, kind: "hourly", label: r.label, labelEn: r.labelEn || "", price: r.hourlyPrice,
+    minHours: Math.max(1, (r.minHours || baseMin) | 0), fromPlan: true,
+  }));
+  if (out.length === 0 && p.hourlyPrice > 0) {
+    out.push({ key: "hourly", kind: "hourly", label: "時間貸し", labelEn: "Hourly", price: p.hourlyPrice, minHours: baseMin, fromPlan: false });
+  }
+  if (p.dailyPrice > 0) {
+    out.push({ key: "daily", kind: "daily", label: "1日貸し", labelEn: "Full day", price: p.dailyPrice, minHours: 0, fromPlan: false });
+  }
+  return out;
+}
+
+/**
+ * 1日貸しの計算。時間帯の割増（夜間など）は日額に含まれる扱いで掛けない。
+ * 土日祝の割増（holidays=true）だけを、日ごとの曜日種別に応じて掛ける（複数あれば最も高い率を1つ）。
+ * days[i] は i 日目の種別。日付未選択なら全て "weekday" を渡す。
+ */
+export function simulateDailyPrice(input: { dailyPrice: number; days: DayKind[]; surcharges: RateSurcharge[] }): { total: number; lines: PriceLine[] } {
+  const lines: PriceLine[] = [];
+  for (const day of input.days) {
+    let best: RateSurcharge | null = null;
+    for (const s of input.surcharges) {
+      if (!s.holidays) continue;
+      const dayOff = day === "sunday" || day === "holiday" || (day === "saturday" && s.includeSaturday !== false);
+      if (dayOff && (!best || s.percent > best.percent)) best = s;
+    }
+    const label = best ? best.label : "通常";
+    const rate = best ? Math.round(input.dailyPrice * (1 + best.percent / 100)) : input.dailyPrice;
+    const last = lines[lines.length - 1];
+    if (last && last.label === label && last.rate === rate) last.hours++;
+    else lines.push({ label, hours: 1, rate });
+  }
+  return { total: lines.reduce((sum, l) => sum + l.rate * l.hours, 0), lines };
+}
+
+/** 1日貸しを選んだ時の目安表（1〜3日）。PriceLine と違い割増なしの素の合計。 */
+export function dailyEstimates(dailyPrice: number): { days: number; total: number }[] {
+  return dailyPrice > 0 ? [1, 2, 3].map((days) => ({ days, total: days * dailyPrice })) : [];
+}
+
+/**
+ * 目安の行を「選べる」ようにする（2026-09-20 本人指示の追補: 単価1つの物件でも「用途を選ぶ → 金額が出る」）。
+ * 行を選ぶとシミュレーターの時間（日額の行なら1日貸し）が切り替わる。利用者が時間を手で変えたら、
+ * その時間に合う行だけを選択中として見せる（合う行が無ければ選択なし）。
+ * 最低利用時間の切り上げで複数の行が同じ時間になる時は、直前に選んだ行（preferred）を優先する。
+ */
+export type EstimateApply = { kind: "hours"; hours: number } | { kind: "day" };
+export function applyEstimateRow(row: UsageEstimate): EstimateApply {
+  return row.daily ? { kind: "day" } : { kind: "hours", hours: row.hours };
+}
+export function matchEstimateRow(rows: UsageEstimate[], hours: number, preferred?: UsageEstimate["key"] | null): UsageEstimate["key"] | null {
+  const hit = rows.filter((r) => !r.daily && r.hours === hours);
+  if (hit.length === 0) return null;
+  return (hit.find((r) => r.key === preferred) ?? hit[0]).key;
+}
+
+/**
  * 物件タイトルを「スタジオ名」と「意味のまとまりごとの行」に分ける（2026-09-20 本人指示）。
  *   "Studio Union｜世田谷若林 自然光ハウススタジオ" → name "Studio Union" / lines ["世田谷若林", "自然光ハウススタジオ"]
  * 区切りは「｜」「|」と改行。区切りより後ろは空白（全角含む）でまとまりに分ける。

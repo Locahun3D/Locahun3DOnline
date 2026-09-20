@@ -15,7 +15,8 @@ import {
 import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
 import PurchaseContents from "@/components/purchase-contents";
 import type { PurchaseContent } from "@/lib/purchase-contents";
-import { useLocale, useHref } from "@/components/locale-provider";
+import { useLocale, useHref } from "@/components/locale-provider";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 export default function CartClient() {
   const en = useLocale() === "en";
@@ -133,7 +134,7 @@ export default function CartClient() {
         clearCart();
         window.location.href = lh("/dashboard/purchases");
       } else {
-        alert(data.error || (en ? "Purchase failed" : "購入処理に失敗しました"));
+        alert(localizeActionError(data.error, en) || (en ? "Purchase failed" : "購入処理に失敗しました"));
       }
     } catch {
       alert(en ? "A network error occurred" : "通信エラーが発生しました");

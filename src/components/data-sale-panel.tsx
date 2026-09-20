@@ -23,7 +23,8 @@ import DataInquiry from "@/components/data-inquiry";
 import { useLocale } from "@/components/locale-provider";
 import PurchaseContents from "@/components/purchase-contents";
 import type { PurchaseContent } from "@/lib/purchase-contents";
-import Jp from "@/components/jp";
+import Jp from "@/components/jp";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 interface DataSalePanelProps {
   propertyPresentation?: boolean;
@@ -128,7 +129,7 @@ export default function DataSalePanel({
       } else if (data.ok) {
         window.location.reload();
       } else {
-        alert(data.error || (en ? "Purchase failed" : "購入処理に失敗しました"));
+        alert(localizeActionError(data.error, en) || (en ? "Purchase failed" : "購入処理に失敗しました"));
       }
     } catch {
       alert(en ? "A network error occurred" : "通信エラーが発生しました");

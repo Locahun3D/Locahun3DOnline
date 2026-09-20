@@ -221,7 +221,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               <strong>Embedding the Data into a software product — such as a game (web, PC or any other platform) or application — that is provided to third parties as part of that product</strong> (&quot;Embedded Use&quot;) requires the extended license. The standard license covers using the Data to produce works such as video and images only; it does not cover distributing the Data itself bundled inside a software product.
             </li>
             <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
-            <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the #ロケハン3D tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>
+            <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the <span data-i18n-audit-ignore>#ロケハン3D</span> tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>
           </ol>
         </section>
 

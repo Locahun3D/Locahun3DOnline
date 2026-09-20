@@ -21,6 +21,7 @@ type Folder = { id: string; name: string };
  * ポップオーバーはカードの overflow に切られないよう body ポータルへ fixed 描画する。
  * variant="overlay" はカード上のアイコンボタン、"inline" は詳細ページのラベル付き、
  * "hero" は暗いヒーロー画像上の強調ボタン。
+ * "slate" は物件ページ上部の黒い板（スレート）用。隣の「公式サイト」ボタンと同じ寸法（2026-09-20）。
  */
 export default function BookmarkButton({
   propertyId,
@@ -33,7 +34,7 @@ export default function BookmarkButton({
   initialBookmarked: boolean;
   signedIn: boolean;
   revalidate?: string;
-  variant?: "overlay" | "inline" | "hero";
+  variant?: "overlay" | "inline" | "hero" | "slate";
 }) {
   const router = useRouter();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
@@ -147,6 +148,28 @@ export default function BookmarkButton({
           } ${pending ? "opacity-60" : ""}`}
         >
           <span className="text-[16px] leading-none">{star}</span>
+          {label}
+        </button>
+      );
+    }
+    if (variant === "slate") {
+      return (
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={onClick}
+          disabled={pending}
+          aria-pressed={bookmarked}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          data-slate-save
+          className={`inline-flex items-center justify-center gap-2 font-bold text-[13px] min-w-[108px] max-[340px]:min-w-0 max-[340px]:flex-1 px-4 max-[720px]:px-3 py-2.5 max-[720px]:min-h-[44px] border transition ${
+            bookmarked
+              ? "border-accent bg-accent/15 text-accent"
+              : "border-white/40 text-[#fafaf6] hover:border-accent hover:text-accent"
+          } ${pending ? "opacity-60" : ""}`}
+        >
+          <span className="text-[15px] leading-none">{star}</span>
           {label}
         </button>
       );
