@@ -34,7 +34,8 @@ export function WorkflowTransferPanel({actorId,storageOrigin,destinations,sessio
   finally{active.current=null;setBusy(false);}
  }
  const field='w-full min-w-0 border border-line bg-bg px-3 py-3 text-sm';
- return <section className="max-w-3xl space-y-6" aria-label="下書きデータ転送">
+ // 2026-09-20: フォーム幅は 960px まで、ボタンは高さ 40px 以上を維持。
+ return <section className="max-w-[960px] space-y-5" aria-label="下書きデータ転送">
   <fieldset disabled={busy} className="grid grid-cols-1 sm:grid-cols-2 gap-5 min-w-0">
    <label className="min-w-0 space-y-2"><span>物件</span><select className={field} value={propertyId} onChange={e=>{setProperty(e.target.value);setScene('');setPhase('');}}><option value="">選択してください</option>{destinations.map(p=><option key={p.id} value={p.id}>{p.title} / {p.id}</option>)}</select></label>
    <label className="min-w-0 space-y-2"><span>シーン</span><select className={field} value={sceneId} onChange={e=>{setScene(e.target.value);setPhase('');}} disabled={!property||busy}><option value="">選択してください</option>{property?.scenes.map(s=><option key={s.id} value={s.id}>{s.label||s.id} / {s.id}</option>)}</select></label>

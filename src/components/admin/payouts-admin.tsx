@@ -67,7 +67,7 @@ function fmtYen(n: number): string {
 }
 
 const inputCls =
-  "bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition";
+  "min-h-[40px] bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition";
 
 type AccruedSummary = {
   count: number;
@@ -120,14 +120,15 @@ export default function PayoutsAdmin({
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-1 border-b border-line">
+    <div className="space-y-4">
+      {/* 2026-09-20: タブ・ボタンは iPad 用に高さ 40px、等幅大文字のラベル装飾は読みやすい 12px に統一。 */}
+      <div className="flex flex-wrap gap-1 border-b border-line">
         {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`mono text-[11px] tracking-[0.2em] uppercase px-4 py-2.5 border-b-2 -mb-px transition ${
+            className={`inline-flex min-h-[40px] items-center justify-center text-[12px] px-4 py-2.5 border-b-2 -mb-px transition ${
               tab === t.key
                 ? "border-accent text-accent"
                 : "border-transparent text-muted hover:text-ink"
@@ -174,70 +175,68 @@ function PayeesTab({
   const [showForm, setShowForm] = useState(!!prefill);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60">
-          受取者一覧
-        </div>
+        <div className="text-[13px] font-bold">受取者一覧</div>
         <button
           type="button"
           onClick={() => {
             setEditing(null);
             setShowForm(true);
           }}
-          className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition"
         >
           ＋ 受取者を追加
         </button>
       </div>
 
       {payees.length === 0 ? (
-        <p className="text-[13px] text-muted border border-line p-6 text-center">
+        <p className="text-[13px] text-muted border border-line px-4 py-3">
           まだ受取者が登録されていません。
         </p>
       ) : (
         <div className="border border-line overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="mono text-[10px] tracking-[0.2em] uppercase text-left opacity-40 border-b border-line">
-                <th className="px-4 py-3 font-normal">種別</th>
-                <th className="px-4 py-3 font-normal">名称</th>
-                <th className="px-4 py-3 font-normal">区分</th>
-                <th className="px-4 py-3 font-normal">口座</th>
-                <th className="px-4 py-3 font-normal">インボイス番号</th>
-                <th className="px-4 py-3 font-normal">マイナンバー</th>
-                <th className="px-4 py-3 font-normal text-center">操作</th>
+              <tr className="text-[12px] text-left text-muted border-b border-line">
+                <th className="px-3 py-2 font-normal">種別</th>
+                <th className="px-3 py-2 font-normal">名称</th>
+                <th className="px-3 py-2 font-normal">区分</th>
+                <th className="px-3 py-2 font-normal">口座</th>
+                <th className="px-3 py-2 font-normal">インボイス番号</th>
+                <th className="px-3 py-2 font-normal">マイナンバー</th>
+                <th className="px-3 py-2 font-normal text-center">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/50">
               {payees.map((p) => (
                 <tr key={p.id} className="hover:bg-neutral-100 transition">
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <span className="mono text-[9px] tracking-[0.14em] uppercase border border-line px-1.5 py-0.5">
                       {kindLabel(p.kind)}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{p.name}</td>
-                  <td className="px-4 py-3 mono text-[11px] opacity-60">
+                  <td className="px-3 py-2">{p.name}</td>
+                  <td className="px-3 py-2 mono text-[11px] opacity-60">
                     {entityTypeLabel(p.entityType)}
                   </td>
-                  <td className="px-4 py-3 mono text-[11px] opacity-60">
+                  <td className="px-3 py-2 mono text-[11px] opacity-60">
                     {p.bank.bankName} {p.bank.branchName} / {maskAccountNumber(p.bank.accountNumber)}
                   </td>
-                  <td className="px-4 py-3 mono text-[11px] opacity-60">
+                  <td className="px-3 py-2 mono text-[11px] opacity-60">
                     {p.invoiceRegNumber || "—"}
                   </td>
-                  <td className="px-4 py-3 mono text-[11px] opacity-60">
+                  <td className="px-3 py-2 mono text-[11px] opacity-60">
                     {maskMyNumber(!!p.myNumberEncrypted)}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-2 text-center">
                     <button
                       type="button"
                       onClick={() => {
                         setEditing(p);
                         setShowForm(true);
                       }}
-                      className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-2 py-1 hover:border-accent hover:text-accent transition"
+                      className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1 hover:border-accent hover:text-accent transition"
                     >
                       編集
                     </button>
@@ -296,7 +295,7 @@ function PayeeForm({
         <input type="hidden" name="id" value={payee?.id ?? ""} />
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">種別</span>
+          <span className="text-[12px] text-muted">種別</span>
           <select name="kind" defaultValue={payee?.kind ?? "scanner"} className={inputCls}>
             {PAYEE_KIND_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -305,7 +304,7 @@ function PayeeForm({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">個人/法人</span>
+          <span className="text-[12px] text-muted">個人/法人</span>
           <select name="entityType" defaultValue={payee?.entityType ?? "individual"} className={inputCls}>
             {ENTITY_TYPE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -314,17 +313,17 @@ function PayeeForm({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">氏名/名称</span>
+          <span className="text-[12px] text-muted">氏名/名称</span>
           <input name="name" defaultValue={payee?.name ?? prefill?.name ?? ""} required className={inputCls} />
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">連絡先メール（任意）</span>
+          <span className="text-[12px] text-muted">連絡先メール（任意）</span>
           <input name="contactEmail" type="email" defaultValue={payee?.contactEmail ?? prefill?.contactEmail ?? ""} className={inputCls} />
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+          <span className="text-[12px] text-muted">
             インボイス登録番号（任意）
           </span>
           <input
@@ -336,12 +335,12 @@ function PayeeForm({
         </label>
 
         <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">メモ（任意）</span>
+          <span className="text-[12px] text-muted">メモ（任意）</span>
           <input name="note" defaultValue={payee?.note ?? prefill?.note ?? ""} maxLength={500} className={inputCls} />
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+          <span className="text-[12px] text-muted">
             紐づくスタジオアカウント（任意）
           </span>
           <select name="userId" defaultValue={payee?.userId ?? ""} className={inputCls}>
@@ -356,7 +355,7 @@ function PayeeForm({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+          <span className="text-[12px] text-muted">
             マイナンバー（{payee?.myNumberEncrypted ? "登録済み・再入力で上書き" : "任意・数字12桁"}）
           </span>
           <input
@@ -380,15 +379,15 @@ function PayeeForm({
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <label className="flex flex-col gap-1">
-              <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">銀行名</span>
+              <span className="text-[12px] text-muted">銀行名</span>
               <input name="bankName" defaultValue={payee?.bank.bankName ?? ""} required className={inputCls} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">支店名</span>
+              <span className="text-[12px] text-muted">支店名</span>
               <input name="branchName" defaultValue={payee?.bank.branchName ?? ""} required className={inputCls} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">預金種別</span>
+              <span className="text-[12px] text-muted">預金種別</span>
               <select name="accountType" defaultValue={payee?.bank.accountType ?? "普通"} className={inputCls}>
                 {BANK_ACCOUNT_TYPE_OPTIONS.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -396,11 +395,11 @@ function PayeeForm({
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">口座番号</span>
+              <span className="text-[12px] text-muted">口座番号</span>
               <input name="accountNumber" defaultValue={payee?.bank.accountNumber ?? ""} required className={inputCls} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">口座名義（カナ）</span>
+              <span className="text-[12px] text-muted">口座名義（カナ）</span>
               <input name="accountHolder" defaultValue={payee?.bank.accountHolder ?? ""} required className={inputCls} />
             </label>
           </div>
@@ -415,7 +414,7 @@ function PayeeForm({
           <button
             type="submit"
             disabled={pending}
-            className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+            className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
           >
             {pending ? "保存中…" : "保存"}
           </button>
@@ -515,9 +514,9 @@ function SplitsTab({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <label className="flex flex-col gap-1 max-w-md">
-        <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">物件を選択</span>
+        <span className="text-[12px] text-muted">物件を選択</span>
         <select
           value={selectedPropertyId}
           onChange={(e) => selectProperty(e.target.value)}
@@ -535,7 +534,7 @@ function SplitsTab({
       </label>
 
       {!selectedPropertyId ? (
-        <p className="text-[13px] text-muted border border-line p-6 text-center">
+        <p className="text-[13px] text-muted border border-line px-4 py-3">
           物件を選択すると分配設定を編集できます。
         </p>
       ) : !loaded ? (
@@ -586,7 +585,7 @@ function SplitsTab({
                       <button
                         type="button"
                         onClick={() => removeLine(idx)}
-                        className="mono text-[10px] uppercase text-red-400 border border-red-500/40 px-2 py-1 hover:bg-red-500/10 transition"
+                        className="inline-flex min-h-[40px] items-center justify-center text-[12px] text-red-400 border border-red-500/40 px-2 py-1 hover:bg-red-500/10 transition"
                       >
                         削除
                       </button>
@@ -599,7 +598,7 @@ function SplitsTab({
                 <button
                   type="button"
                   onClick={addLine}
-                  className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
+                  className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                 >
                   ＋ 行を追加
                 </button>
@@ -620,7 +619,7 @@ function SplitsTab({
                 type="button"
                 onClick={save}
                 disabled={pending}
-                className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
               >
                 {pending ? "保存中…" : "分配設定を保存"}
               </button>
@@ -681,7 +680,7 @@ function SettlementsTab({
 
   if (payees.length === 0) {
     return (
-      <p className="text-[13px] text-muted border border-line p-6 text-center">
+      <p className="text-[13px] text-muted border border-line px-4 py-3">
         受取者を先に登録してください。
       </p>
     );
@@ -732,7 +731,7 @@ function SettlementsTab({
                   type="button"
                   onClick={() => createSettlement(payee.id)}
                   disabled={pendingPayeeId === payee.id}
-                  className="mono text-[10px] tracking-[0.18em] uppercase border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                  className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition disabled:opacity-50"
                 >
                   {pendingPayeeId === payee.id ? "作成中…" : "精算を作成"}
                 </button>
@@ -773,7 +772,7 @@ function SettlementsTab({
                         type="button"
                         onClick={() => markPaid(s.id)}
                         disabled={pendingSettlementId === s.id}
-                        className="mono text-[10px] uppercase border border-line px-2 py-1 hover:border-accent hover:text-accent transition disabled:opacity-50 ml-auto"
+                        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1 hover:border-accent hover:text-accent transition disabled:opacity-50 ml-auto"
                       >
                         {pendingSettlementId === s.id ? "処理中…" : "振込済にする"}
                       </button>
@@ -863,21 +862,25 @@ function ReconcileTab({ properties }: { properties: { id: string; title: string 
   }
 
   return (
-    <div className="space-y-6">
-      <p className="text-[13px] text-muted leading-[1.8] max-w-[70ch]">
-        台帳の自動起票フックは、購入完了処理を巻き込まないよう台帳側の障害を
-        握り潰すフェイルセーフになっています。そのため、まれに起票の
-        とりこぼしが静かに発生し得ます（例: 本番DBにマイグレーション適用前の
-        デプロイ期間）。ここで purchases と台帳を突合し、欠落があれば
-        手動で再起票できます。
-      </p>
+    <div className="space-y-4">
+      {/* 2026-09-20: 内部実装の説明は折りたたみへ。普段は1行だけ見せる。 */}
+      <div className="text-[13px] text-muted">
+        購入と台帳を突き合わせ、計上もれがあれば手動で起票します。
+        <details className="mt-1 text-[12px]">
+          <summary className="inline-flex min-h-[32px] cursor-pointer items-center hover:text-ink">使い方</summary>
+          <p className="max-w-[80ch] leading-[1.8]">
+            台帳への自動計上は、購入完了の処理を止めないよう、失敗しても購入側には影響しない作りになっています。
+            そのため、まれに計上もれが静かに起きることがあります（例: データベース更新前のデプロイ期間）。
+          </p>
+        </details>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={runCheck}
           disabled={running}
-          className="mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
         >
           {running ? "確認中…" : "突合を実行"}
         </button>
@@ -886,7 +889,7 @@ function ReconcileTab({ properties }: { properties: { id: string; title: string 
             type="button"
             onClick={recordAll}
             disabled={recordingAll || recordingId !== null}
-            className="mono text-[11px] tracking-[0.2em] uppercase border border-line px-4 py-2 hover:border-accent hover:text-accent transition disabled:opacity-50"
+            className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-4 py-2 hover:border-accent hover:text-accent transition disabled:opacity-50"
           >
             {recordingAll ? "起票中…" : "すべて起票"}
           </button>
@@ -895,41 +898,40 @@ function ReconcileTab({ properties }: { properties: { id: string; title: string 
       </div>
 
       {missing === null ? (
-        <p className="text-[13px] text-muted border border-line p-6 text-center">
-          「突合を実行」を押すと、分配設定はあるのに台帳に起票されていない
-          購入がないか確認します。
+        <p className="text-[13px] text-muted border border-line px-4 py-3">
+          「突合を実行」で、計上もれの購入がないか確認します。
         </p>
       ) : missing.length === 0 ? (
-        <p className="text-[13px] text-muted border border-line p-6 text-center">
+        <p className="text-[13px] text-muted border border-line px-4 py-3">
           取りこぼしはありません。
         </p>
       ) : (
         <div className="border border-line overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="mono text-[10px] tracking-[0.2em] uppercase text-left opacity-40 border-b border-line">
-                <th className="px-4 py-3 font-normal">購入日時</th>
-                <th className="px-4 py-3 font-normal">物件</th>
-                <th className="px-4 py-3 font-normal">購入ID</th>
-                <th className="px-4 py-3 font-normal text-right">金額</th>
-                <th className="px-4 py-3 font-normal text-center">操作</th>
+              <tr className="text-[12px] text-left text-muted border-b border-line">
+                <th className="px-3 py-2 font-normal">購入日時</th>
+                <th className="px-3 py-2 font-normal">物件</th>
+                <th className="px-3 py-2 font-normal">購入ID</th>
+                <th className="px-3 py-2 font-normal text-right">金額</th>
+                <th className="px-3 py-2 font-normal text-center">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/50">
               {missing.map((m) => (
                 <tr key={m.purchaseId} className="hover:bg-neutral-100 transition">
-                  <td className="px-4 py-3 mono text-[11px] opacity-60">
+                  <td className="px-3 py-2 mono text-[11px] opacity-60">
                     {fmtDateTime(m.purchasedAt)}
                   </td>
-                  <td className="px-4 py-3">{titleById.get(m.propertyId) ?? m.propertyId}</td>
-                  <td className="px-4 py-3 mono text-[11px] opacity-60">{m.purchaseId}</td>
-                  <td className="px-4 py-3 text-right mono text-[12px]">{fmtYen(m.priceYen)}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-2">{titleById.get(m.propertyId) ?? m.propertyId}</td>
+                  <td className="px-3 py-2 mono text-[11px] opacity-60">{m.purchaseId}</td>
+                  <td className="px-3 py-2 text-right mono text-[12px]">{fmtYen(m.priceYen)}</td>
+                  <td className="px-3 py-2 text-center">
                     <button
                       type="button"
                       onClick={() => recordOne(m.purchaseId)}
                       disabled={recordingId === m.purchaseId || recordingAll}
-                      className="mono text-[10px] tracking-[0.18em] uppercase border border-accent text-accent px-2.5 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                      className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-2.5 py-1 hover:bg-accent hover:text-bg transition disabled:opacity-50"
                     >
                       {recordingId === m.purchaseId ? "起票中…" : "起票する"}
                     </button>

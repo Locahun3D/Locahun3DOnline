@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/dal";
 import { userRepo } from "@/lib/users";
 import { ACCOUNT_STATUSES, type AccountStatus } from "@/lib/account-schema";
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import AccountsAdmin from "@/components/admin/accounts-admin";
 import { deletedAccountRepo } from "@/lib/deleted-accounts";
 
@@ -36,11 +37,9 @@ export default async function AdminAccountsPage({
       : "all";
 
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
-      <div className="ui-page-header flex flex-wrap items-center justify-between gap-3">
-        <h1 className="ui-page-title">アカウント管理</h1>
-        <span className="opacity-60">{users.length} 件</span>
-      </div>
+    <AdminPageShell>
+      {/* 2026-09-20: 管理画面共通の小型ヘッダー */}
+      <AdminPageHeader title="アカウント" count={`${users.length} 件`} />
 
       <AccountsAdmin
         key={initialStatus}
@@ -49,6 +48,6 @@ export default async function AdminAccountsPage({
         initialStatus={initialStatus}
         archived={archived}
       />
-    </div>
+    </AdminPageShell>
   );
 }

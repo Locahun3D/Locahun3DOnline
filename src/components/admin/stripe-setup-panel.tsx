@@ -23,11 +23,12 @@ export default function StripeSetupPanel() {
   const mail = emailEnabled();
   const dataSaleReady = s.secretKey; // データ販売は戻りルートで確定するため最低限SECRET_KEYでOK
 
+  // 2026-09-20: 下余白は親の space-y に任せる。見出しは読みやすい 13px に。
   return (
-    <details className="border border-line bg-[#141414] mb-6">
-      <summary className="cursor-pointer px-4 py-3 mono text-[11px] tracking-[0.2em] uppercase flex items-center gap-2 select-none">
+    <details className="border border-line bg-[#141414]">
+      <summary className="cursor-pointer min-h-[40px] px-4 py-2 text-[13px] flex items-center gap-2 select-none">
         <span className={s.enabled ? "text-green-400" : "text-amber-400"}>●</span>
-        決済設定（Stripe 本番化）
+        決済設定（Stripe）
         <span className="opacity-50 ml-auto">
           {s.enabled ? (s.live ? "本番キー" : "テストキー") : "未接続"}
         </span>

@@ -1,3 +1,4 @@
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/dal";
@@ -50,28 +51,31 @@ export default async function AdminAccountTokensPage({
   });
 
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
-      <div className="ui-page-header flex flex-wrap items-center justify-between gap-3">
-        <h1 className="ui-page-title">トークン使用履歴</h1>
-        <Link href="/admin/accounts" className="mono text-[10px] tracking-[0.18em] uppercase opacity-60 hover:opacity-100">
-          ← アカウント一覧
-        </Link>
-      </div>
+    <AdminPageShell>
+      {/* 2026-09-20: 管理画面共通の小型ヘッダー */}
+      <AdminPageHeader
+        back={
+          <Link href="/admin/accounts" className="inline-flex min-h-[32px] items-center text-muted hover:text-accent transition">
+            ← アカウント一覧に戻る
+          </Link>
+        }
+        title="トークン使用履歴"
+      />
 
       {/* サマリー */}
-      <div className="border border-line p-5 mb-8 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <div className="border border-line px-4 py-3 mb-5 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         <div>
-          <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">アカウント</div>
+          <div className="text-[12px] text-muted">アカウント</div>
           <div className="text-[14px]">{user.name || user.email}</div>
           <div className="mono text-[11px] opacity-60">{user.email}</div>
         </div>
         <div>
-          <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">プラン / 登録日</div>
+          <div className="text-[12px] text-muted">プラン / 登録日</div>
           <div className="text-[14px]">{user.plan.toUpperCase()}</div>
           <div className="mono text-[11px] opacity-60">{user.createdAt ? fmtDateOnlyJST(user.createdAt) : ""}</div>
         </div>
         <div>
-          <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">現在の残高</div>
+          <div className="text-[12px] text-muted">現在の残高</div>
           <div className="text-[14px]">
             {totalTokens(user)} トークン
             {user.bonusTokens > 0 && (
@@ -83,7 +87,7 @@ export default async function AdminAccountTokensPage({
           )}
         </div>
         <div>
-          <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">累計消費</div>
+          <div className="text-[12px] text-muted">累計消費</div>
           <div className="text-[14px]">{totalSpent} トークン（{unlocks.length} 件の視聴解除）</div>
         </div>
       </div>
@@ -128,6 +132,6 @@ export default async function AdminAccountTokensPage({
           </table>
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

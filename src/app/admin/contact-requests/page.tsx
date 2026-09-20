@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/dal";
 import { contactRequestRepo, CONTACT_TYPE_LABEL, type ContactType } from "@/lib/contact-requests";
 import { contactMessageRepo, groupMessagesByCounterpart } from "@/lib/contact-messages";
+import AdminPageHeader, { AdminPageShell, AdminEmpty, adminChip } from "@/components/admin/admin-page-header";
 import ContactRequestRow from "@/components/admin/contact-request-row";
 
 export const metadata = { title: "お問い合わせ（サイト全体）" };
@@ -44,73 +45,38 @@ export default async function AdminContactRequestsPage({
   const threads = groupMessagesByCounterpart(await contactMessageRepo.list());
 
   return (
-    <div className="theme-online ui-page-shell px-8 pb-8">
-      <div className="ui-page-header">
-        <h1 className="ui-page-title">
-          お問い合わせ（サイト全体）
-          {newCount > 0 && (
-            <span className="ml-3 align-middle inline-block bg-accent text-white text-[12px] font-bold px-2 py-0.5 rounded-full">
-              未読 {newCount}
-            </span>
-          )}
-        </h1>
-        <p className="ui-page-lead text-[13px] text-muted">
-          サイト全体の /contact フォーム（バグ報告・ほしい物件追加・掲載依頼・ご相談）から届いた内容。運営メールへ自動転送されます。
-          <br />
-          メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。クリックで各行の詳細・返信フォームが開きます。
-          <br />
-          <span className="text-accent">お客様からの返信メールはこの画面には出ません。</span>
-          {" "}
-          <code className="text-accent">contact@locahun3d.com</code>（Gmail）でご確認ください。ここに出るのは、フォームからの受信と、この画面から送った返信だけです。
-        </p>
-      </div>
+    <AdminPageShell className="theme-online">
+      {/* 2026-09-20: 小型ヘッダーへ。3行あった説明は「返信メールはここに出ない」の1点だけ残し、残りは「使い方」に畳んだ。 */}
+      <AdminPageHeader
+        title="サイトへの問い合わせ"
+        count={newCount > 0 ? <span className="inline-block bg-accent text-white text-[12px] font-bold px-2 py-0.5 rounded-full">未読 {newCount}</span> : undefined}
+        description={<>お客様からの返信メールはここに出ません。contact@locahun3d.com（Gmail）で確認してください。</>}
+        help="サイトのお問い合わせフォーム（バグ報告・ほしい物件追加・掲載依頼・ご相談）から届いた内容で、運営メールへも自動転送されます。行をクリックすると詳細と返信フォームが開きます。ここに出るのは、フォームからの受信と、この画面から送った返信だけです。"
+      />
 
-      <div className="flex flex-wrap items-center gap-2 mb-3 mono text-[10px] tracking-[0.18em] uppercase">
-        <Link
-          href={hrefFor(undefined, typeFilter)}
-          className={`px-3 py-1.5 border rounded-sm transition ${
-            !showArchived ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
-          }`}
-        >
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <Link href={hrefFor(undefined, typeFilter)} className={adminChip(!showArchived)}>
           受信箱（{inboxCount}）
         </Link>
-        <Link
-          href={hrefFor("archive", typeFilter)}
-          className={`px-3 py-1.5 border rounded-sm transition ${
-            showArchived ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
-          }`}
-        >
+        <Link href={hrefFor("archive", typeFilter)} className={adminChip(showArchived)}>
           アーカイブ（{archivedCount}）
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.18em] uppercase">
-        <span className="text-muted mr-1">種別</span>
-        <Link
-          href={hrefFor(box)}
-          className={`px-3 py-1.5 border rounded-sm transition ${
-            !typeFilter ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
-          }`}
-        >
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-muted text-[12px] mr-1">種別</span>
+        <Link href={hrefFor(box)} className={adminChip(!typeFilter)}>
           全て（{scoped.length}）
         </Link>
         {(Object.keys(CONTACT_TYPE_LABEL) as ContactType[]).map((t) => (
-          <Link
-            key={t}
-            href={hrefFor(box, t)}
-            className={`px-3 py-1.5 border rounded-sm transition ${
-              typeFilter === t ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
-          >
+          <Link key={t} href={hrefFor(box, t)} className={adminChip(typeFilter === t)}>
             {CONTACT_TYPE_LABEL[t]}（{scoped.filter((c) => c.type === t).length}）
           </Link>
         ))}
       </div>
 
       {requests.length === 0 ? (
-        <div className="border border-line rounded-md p-10 text-center text-muted text-[14px]">
-          {showArchived ? "アーカイブされたお問い合わせはありません。" : "まだお問い合わせはありません。"}
-        </div>
+        <AdminEmpty>{showArchived ? "アーカイブはありません。" : "問い合わせはありません。"}</AdminEmpty>
       ) : (
         <div className="flex flex-col gap-3">
           {requests.map((c) => (
@@ -122,6 +88,6 @@ export default async function AdminContactRequestsPage({
           ))}
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

@@ -69,6 +69,8 @@ const kindIcons: Record<AssetKind, string> = {
   document: "📄",
 };
 
+// 2026-09-20: 管理画面の整理 — 操作要素は iPad 用に高さ 40px、空状態は1行、
+// ホバーでしか出なかった「＋タグ」等はタッチ端末でも見えるよう常時表示(薄め)にした。
 export default function AssetLibrary({ initialAssets, usage, properties }: Props) {
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const propertyById = useMemo(
@@ -320,7 +322,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
         <div className="flex flex-wrap gap-2 items-center mb-4">
           <button
             onClick={() => fileRef.current?.click()}
-            className="bg-accent text-black px-3 py-1.5 text-[13px] font-medium"
+            className="min-h-[40px] bg-accent text-black px-4 text-[13px] font-medium"
           >
             ＋ アップロード（未整理へ）
           </button>
@@ -328,12 +330,12 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
             value={folderQuery}
             onChange={(e) => setFolderQuery(e.target.value)}
             placeholder="物件フォルダを検索…"
-            className="bg-[#222] border border-line px-2 py-1 text-[13px] w-52"
+            className="min-h-[40px] bg-[#222] border border-line px-2 py-1 text-[13px] w-52"
           />
           <button
             onClick={() => onBulkDeleteUnused(allUnused)}
             disabled={bulkDeleting || allUnused.length === 0}
-            className="text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-3 py-1.5 disabled:opacity-40"
+            className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-3 py-1.5 disabled:opacity-40"
             title="全フォルダの未使用アセットが対象です。使用中のアセットは削除しません。"
           >
             {bulkDeleting ? "削除中…" : `未使用アセットを削除（${allUnused.length}件）`}
@@ -354,7 +356,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
         ))}
 
         {visibleFolders.length === 0 ? (
-          <div className="text-muted text-[13px] py-10 text-center">
+          <div className="border border-line px-4 py-3 text-[13px] text-muted">
             {folderQuery ? "一致するフォルダがありません。" : "アセットがありません。"}
           </div>
         ) : (
@@ -403,8 +405,8 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
     <div>
       {hiddenInputs}
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-4 text-[13px]">
-        <button onClick={() => setOpenFolder(null)} className="text-muted hover:text-accent transition-colors">
+      <div className="flex items-center gap-2 mb-2 text-[13px]">
+        <button onClick={() => setOpenFolder(null)} className="min-h-[40px] text-muted hover:text-accent transition-colors">
           📁 フォルダ一覧
         </button>
         <span className="text-muted opacity-50">／</span>
@@ -414,7 +416,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
       <div className="flex flex-wrap gap-2 items-center mb-4">
         <button
           onClick={() => fileRef.current?.click()}
-          className="bg-accent text-black px-3 py-1.5 text-[13px] font-medium"
+          className="min-h-[40px] bg-accent text-black px-4 text-[13px] font-medium"
         >
           ＋ アップロード
         </button>
@@ -425,12 +427,12 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="検索（名前・タグ）"
-          className="bg-[#222] border border-line px-2 py-1 text-[13px] w-40"
+          className="min-h-[40px] bg-[#222] border border-line px-2 py-1 text-[13px] w-40"
         />
         <select
           value={kindFilter}
           onChange={(e) => setKindFilter(e.target.value as "all" | AssetKind)}
-          className="bg-[#222] border border-line px-2 py-1 text-[13px]"
+          className="min-h-[40px] bg-[#222] border border-line px-2 py-1 text-[13px]"
         >
           <option value="all">すべて</option>
           <option value="image">画像</option>
@@ -441,7 +443,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
         <select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
-          className="bg-[#222] border border-line px-2 py-1 text-[13px]"
+          className="min-h-[40px] bg-[#222] border border-line px-2 py-1 text-[13px]"
         >
           <option value="">タグ: すべて</option>
           {allTags.map((t) => (
@@ -456,7 +458,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
           <button
             onClick={() => onBulkDeleteUnused()}
             disabled={bulkDeleting}
-            className="text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-2.5 py-1 transition-colors disabled:opacity-40"
+            className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-900/50 text-red-400 hover:bg-red-900/20 px-2.5 py-1 transition-colors disabled:opacity-40"
             title="現在の検索・絞り込み条件に一致する未使用アセットのみを削除します（使用中のアセットは対象外）"
           >
             {bulkDeleting
@@ -475,7 +477,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
             onClick={() => setViewMode("list")}
             aria-pressed={viewMode === "list"}
             title="一覧表示"
-            className={`grid place-items-center w-7 h-7 transition-colors ${
+            className={`grid place-items-center w-10 h-10 transition-colors ${
               viewMode === "list" ? "bg-accent text-black" : "text-muted hover:text-accent"
             }`}
           >
@@ -488,7 +490,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
             onClick={() => setViewMode("grid")}
             aria-pressed={viewMode === "grid"}
             title="サムネ表示"
-            className={`grid place-items-center w-7 h-7 border-l border-line transition-colors ${
+            className={`grid place-items-center w-10 h-10 border-l border-line transition-colors ${
               viewMode === "grid" ? "bg-accent text-black" : "text-muted hover:text-accent"
             }`}
           >
@@ -500,7 +502,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
 
         {/* サムネサイズ（サムネ表示時のみ意味を持つ） */}
         {viewMode === "grid" && (
-          <div className="flex border border-line mono text-[10px] uppercase">
+          <div className="flex border border-line text-[12px]">
             {(["sm", "md", "lg"] as const).map((s, i) => (
               <button
                 key={s}
@@ -508,7 +510,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
                 onClick={() => setThumbSize(s)}
                 aria-pressed={thumbSize === s}
                 title={s === "sm" ? "小" : s === "md" ? "中" : "大"}
-                className={`px-2 py-1 transition-colors ${i > 0 ? "border-l border-line" : ""} ${
+                className={`min-h-[40px] px-3 transition-colors ${i > 0 ? "border-l border-line" : ""} ${
                   thumbSize === s ? "bg-accent text-black" : "text-muted hover:text-accent"
                 }`}
               >
@@ -528,12 +530,12 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
 
       {/* Grid */}
       {/* 形式（画像/3DGS/ZIP/書類）ごとのセクション */}
-      <div className="space-y-9">
+      <div className="space-y-6">
         {grouped.map(({ kind, items }) => (
           <section key={kind}>
             <div className="flex items-baseline gap-2 mb-3 border-b border-line pb-1.5">
               <span className="text-[13px] opacity-60">{kindIcons[kind]}</span>
-              <h2 className="mono text-[11px] tracking-[0.22em] uppercase">
+              <h2 className="text-[13px] font-bold">
                 {kindLabels[kind]}
               </h2>
               <span className="mono text-[10px] text-muted">
@@ -647,7 +649,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
                   {!isEditing && (
                     <button
                       onClick={() => { setEditingTags(a.id); setTagInput(""); }}
-                      className="text-[10px] text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-[10px] text-muted hover:text-accent opacity-60 group-hover:opacity-100 transition-opacity"
                     >
                       + タグ
                     </button>
@@ -695,20 +697,20 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-0.5 opacity-70 group-hover:opacity-100 transition-opacity flex-wrap">
-                  <button onClick={() => onRename(a)} className="text-[11px] hover:text-accent transition-colors">名前</button>
+                <div className="flex gap-x-2 opacity-80 group-hover:opacity-100 transition-opacity flex-wrap">
+                  <button onClick={() => onRename(a)} className="min-h-[40px] px-1 text-[12px] hover:text-accent transition-colors">名前</button>
                   {a.kind !== "image" && (
-                    <button onClick={() => onSetThumbnail(a)} className="text-[11px] hover:text-accent transition-colors">サムネ</button>
+                    <button onClick={() => onSetThumbnail(a)} className="min-h-[40px] px-1 text-[12px] hover:text-accent transition-colors">サムネ</button>
                   )}
                   <button
                     onClick={() => onReplaceClick(a)}
                     disabled={replaceProgress != null}
                     title="ファイルの中身だけを差し替え（URLは変わらないため、参照中の物件も自動的に新しい内容になります）"
-                    className="text-[11px] hover:text-accent transition-colors disabled:opacity-40"
+                    className="min-h-[40px] px-1 text-[12px] hover:text-accent transition-colors disabled:opacity-40"
                   >
                     差し替え
                   </button>
-                  <button onClick={() => onDelete(a)} className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors ml-auto">削除</button>
+                  <button onClick={() => onDelete(a)} className="min-h-[40px] px-1 text-[12px] text-red-400/70 hover:text-red-400 transition-colors ml-auto">削除</button>
                 </div>
               </div>
             </div>
@@ -720,7 +722,7 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
         ))}
       </div>
       {filtered.length === 0 && (
-        <div className="text-muted text-[13px] py-10 text-center">
+        <div className="border border-line px-4 py-3 text-[13px] text-muted">
           {folderAssets.length === 0 ? "このフォルダにアセットがありません。" : "条件に一致するアセットがありません。"}
         </div>
       )}
@@ -815,7 +817,7 @@ function AssetRow({
           ) : (
             <button
               onClick={() => { setEditingTags(a.id); setTagInput(""); }}
-              className="text-[9.5px] text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+              className="text-[9.5px] text-muted hover:text-accent opacity-60 group-hover:opacity-100 transition-opacity"
             >
               + タグ
             </button>
@@ -837,19 +839,19 @@ function AssetRow({
 
       {/* Actions */}
       <div className="flex gap-2 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onRename(a)} className="text-[11px] hover:text-accent transition-colors">名前</button>
+        <button onClick={() => onRename(a)} className="min-h-[40px] px-1 text-[12px] hover:text-accent transition-colors">名前</button>
         {a.kind !== "image" && (
-          <button onClick={() => onSetThumbnail(a)} className="text-[11px] hover:text-accent transition-colors">サムネ</button>
+          <button onClick={() => onSetThumbnail(a)} className="min-h-[40px] px-1 text-[12px] hover:text-accent transition-colors">サムネ</button>
         )}
         <button
           onClick={() => onReplaceClick(a)}
           disabled={replaceDisabled}
           title="ファイルの中身だけを差し替え（URLは変わらないため、参照中の物件も自動的に新しい内容になります）"
-          className="text-[11px] hover:text-accent transition-colors disabled:opacity-40"
+          className="min-h-[40px] px-1 text-[12px] hover:text-accent transition-colors disabled:opacity-40"
         >
           差し替え
         </button>
-        <button onClick={() => onDelete(a)} className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors">削除</button>
+        <button onClick={() => onDelete(a)} className="min-h-[40px] px-1 text-[12px] text-red-400/70 hover:text-red-400 transition-colors">削除</button>
       </div>
     </div>
   );

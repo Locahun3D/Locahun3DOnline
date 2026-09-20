@@ -21,7 +21,7 @@ export default function InquiryReplyForm({
 
   if (state?.ok) {
     return (
-      <div className="text-[12px] text-green-400 border border-green-900/50 bg-green-900/20 px-3 py-2 rounded-sm">
+      <div className="inline-flex min-h-[40px] items-center justify-center text-[12px] text-green-400 border border-green-900/50 bg-green-900/20 px-3 py-2 rounded-sm">
         返信を送信しました → {toEmail}
       </div>
     );
@@ -32,7 +32,7 @@ export default function InquiryReplyForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-[12px] border border-accent text-accent px-3 py-1.5 rounded-sm hover:bg-accent hover:text-bg transition"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-3 py-1.5 rounded-sm hover:bg-accent hover:text-bg transition"
       >
         返信する
       </button>
@@ -57,7 +57,7 @@ export default function InquiryReplyForm({
         <button
           type="submit"
           disabled={pending}
-          className="text-[12px] border border-accent bg-accent text-bg px-3 py-1.5 rounded-sm hover:brightness-95 transition disabled:opacity-50"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent bg-accent text-bg px-3 py-1.5 rounded-sm hover:brightness-95 transition disabled:opacity-50"
         >
           {pending ? "送信中…" : "送信"}
         </button>
@@ -65,7 +65,7 @@ export default function InquiryReplyForm({
           type="button"
           onClick={() => setOpen(false)}
           disabled={pending}
-          className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition"
         >
           キャンセル
         </button>

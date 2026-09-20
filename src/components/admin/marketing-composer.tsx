@@ -7,7 +7,7 @@ import {
 } from "@/lib/marketing-actions";
 
 const inputCls =
-  "w-full bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] focus:outline-none focus:border-accent transition";
+  "w-full min-h-[40px] bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] focus:outline-none focus:border-accent transition";
 
 export default function MarketingComposer({ disabled }: { disabled: boolean }) {
   const [state, formAction, pending] = useActionState<CampaignState, FormData>(
@@ -24,16 +24,17 @@ export default function MarketingComposer({ disabled }: { disabled: boolean }) {
     if (state !== undefined) setConfirmOpen(false);
   }
 
+  // 2026-09-20: ラベルを読みやすい 12px に、ボタンは iPad 用に高さ 40px。
   return (
-    <form action={formAction} className="border border-line bg-[#1c1c1c] p-5 space-y-4">
+    <form action={formAction} className="border border-line bg-[#1c1c1c] p-4 space-y-3">
       <div>
-        <label htmlFor="subject" className="mono text-[10px] tracking-[0.2em] uppercase opacity-60 mb-1.5 block">
+        <label htmlFor="subject" className="text-[12px] text-muted mb-1 block">
           件名
         </label>
         <input id="subject" name="subject" required maxLength={200} className={inputCls} placeholder="例: 新着ロケ地3件を追加しました" />
       </div>
       <div>
-        <label htmlFor="body" className="mono text-[10px] tracking-[0.2em] uppercase opacity-60 mb-1.5 block">
+        <label htmlFor="body" className="text-[12px] text-muted mb-1 block">
           本文（プレーンテキスト・空行で段落）
         </label>
         <textarea
@@ -41,16 +42,13 @@ export default function MarketingComposer({ disabled }: { disabled: boolean }) {
           name="body"
           required
           maxLength={20000}
-          rows={10}
+          rows={8}
           className={inputCls + " resize-y"}
           placeholder={"いつもロケハン3Dをご利用いただきありがとうございます。\n\n今週、新しいロケ地を3件追加しました。"}
         />
       </div>
 
-      <p className="text-[11px] text-muted leading-[1.7]">
-        配信停止リンク・送信者情報（KWI株式会社の名称・住所・連絡先）は
-        自動で本文末尾に追加されます。
-      </p>
+      <p className="text-[12px] text-muted">配信停止リンクと送信者情報は、本文の末尾に自動で入ります。</p>
 
       {state && !state.ok && (
         <p className="text-[12px] text-red-400 border border-red-400/40 bg-red-400/10 px-3 py-2">
@@ -70,7 +68,7 @@ export default function MarketingComposer({ disabled }: { disabled: boolean }) {
           name="testOnly"
           value="on"
           disabled={disabled || pending}
-          className="mono text-[11px] tracking-[0.18em] uppercase border border-line px-4 py-2 hover:border-accent hover:text-accent transition disabled:opacity-30"
+          className="min-h-[40px] text-[13px] border border-line px-4 hover:border-accent hover:text-accent transition disabled:opacity-30"
         >
           {pending ? "送信中…" : "テスト送信（自分にのみ）"}
         </button>
@@ -80,24 +78,24 @@ export default function MarketingComposer({ disabled }: { disabled: boolean }) {
             type="button"
             disabled={disabled || pending}
             onClick={() => setConfirmOpen(true)}
-            className="mono text-[11px] tracking-[0.18em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-30"
+            className="min-h-[40px] text-[13px] border border-accent text-accent px-4 hover:bg-accent hover:text-bg transition disabled:opacity-30"
           >
             会員全員に配信する
           </button>
         ) : (
-          <div className="flex items-center gap-2 border border-red-400/50 bg-red-400/10 px-3 py-1.5">
+          <div className="flex flex-wrap items-center gap-2 border border-red-400/50 bg-red-400/10 px-3 py-1.5">
             <span className="text-[11px] text-red-300">本当に配信しますか？取り消せません。</span>
             <button
               type="submit"
               disabled={pending}
-              className="mono text-[10px] tracking-[0.16em] uppercase bg-red-500 text-white px-3 py-1.5 hover:bg-red-600 transition disabled:opacity-30"
+              className="min-h-[40px] text-[12px] bg-red-500 text-white px-3 hover:bg-red-600 transition disabled:opacity-30"
             >
               {pending ? "送信中…" : "配信を実行"}
             </button>
             <button
               type="button"
               onClick={() => setConfirmOpen(false)}
-              className="mono text-[10px] tracking-[0.16em] uppercase text-muted px-2 py-1.5 hover:text-ink transition"
+              className="min-h-[40px] text-[12px] text-muted px-2 hover:text-ink transition"
             >
               キャンセル
             </button>

@@ -1,6 +1,7 @@
 import { repo } from "@/lib/store";
 import { getCurrentUser } from "@/lib/dal";
 import { createDraftAction } from "../_actions";
+import AdminPageHeader from "@/components/admin/admin-page-header";
 import PropertiesAdmin, {
   type PropertyListItem,
 } from "@/components/admin/properties-admin";
@@ -42,28 +43,26 @@ export default async function AdminPropertiesList() {
   };
 
   return (
-    <div className="ui-page-shell px-8 pb-8">
-      <div className="ui-page-header flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="ui-page-title">物件管理</h1>
-          <div className="mt-2 mono text-[11px] text-muted">
-            合計 {all.length} 件 ／ 公開 {counts.published} ／ 公開申請中 {counts.review} ／ 下書き{" "}
-            {counts.draft} ／ アーカイブ {counts.archived}
-          </div>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8 pt-5 pb-8">
+      {/* 2026-09-20: 管理画面共通の小さい見出しに統一（公開側の 42〜60px 見出しは一覧の1画面目を食うだけ）。 */}
+      <AdminPageHeader
+        title="物件管理"
+        count={`合計 ${all.length} 件（公開 ${counts.published}／公開申請中 ${counts.review}／下書き ${counts.draft}／アーカイブ ${counts.archived}）`}
+        actions={
+          <>
+            {isAdmin && <TranslateMissingButton />}
+            <form action={createDraftAction}>
+              <button
+                type="submit"
+                className="min-h-[40px] px-4 mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
+              >
+                ＋ 新規物件を作成
+              </button>
+            </form>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {isAdmin && <TranslateMissingButton />}
-          <form action={createDraftAction}>
-            <button
-              type="submit"
-              className="px-5 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition"
-            >
-              ＋ 新規物件を作成
-            </button>
-          </form>
-        </div>
-      </div>
 
       <PropertiesAdmin items={items} isAdmin={isAdmin} />
     </div>

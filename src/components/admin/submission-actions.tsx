@@ -77,7 +77,7 @@ export function SubmissionStatusForm({
         type="button"
         onClick={onSave}
         disabled={pending}
-        className="text-[12px] border border-accent text-accent px-4 py-2 rounded-sm hover:bg-accent hover:text-bg transition disabled:opacity-50"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-4 py-2 rounded-sm hover:bg-accent hover:text-bg transition disabled:opacity-50"
       >
         {pending ? "保存中…" : "保存する"}
       </button>
@@ -105,7 +105,7 @@ export function CreateDraftButton({ id }: { id: string }) {
         type="button"
         onClick={onClick}
         disabled={pending}
-        className="text-[12px] border border-accent bg-accent text-bg px-4 py-2 rounded-sm hover:bg-accent/85 transition disabled:opacity-50"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent bg-accent text-bg px-4 py-2 rounded-sm hover:bg-accent/85 transition disabled:opacity-50"
       >
         {pending ? "作成中…" : "物件下書きを作成"}
       </button>

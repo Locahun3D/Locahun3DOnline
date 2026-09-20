@@ -168,7 +168,7 @@ export default function ContactRequestRow({
               }`}
               title={c.forwardedTo || "転送先未設定"}
             >
-              {c.emailed ? `転送済 → ${c.forwardedTo}` : "メール未転送（要RESEND設定）"}
+              {c.emailed ? `転送済 → ${c.forwardedTo}` : "メール未転送"}
             </span>
           </div>
 
@@ -202,7 +202,7 @@ export default function ContactRequestRow({
                 メールスレッド（{thread.length}件）
                 {!c.replyEmailed && c.reply && (
                   <span className="ml-2 text-amber-600 normal-case tracking-normal">
-                    ⚠ 直近のUI返信はメール未送達（RESEND未設定時に保存のみ）
+                    ⚠ 直近の返信はメール未送達（保存のみ）
                   </span>
                 )}
               </div>
@@ -234,7 +234,7 @@ export default function ContactRequestRow({
                   返信済み{c.repliedAt ? `（${fmtDate(c.repliedAt)}）` : ""}
                   {!c.replyEmailed && (
                     <span className="ml-2 text-amber-600 normal-case tracking-normal">
-                      ⚠ メール未送達（RESEND未設定時に保存のみ）
+                      ⚠ メール未送達（保存のみ）
                     </span>
                   )}
                 </div>
@@ -250,7 +250,7 @@ export default function ContactRequestRow({
               <ContactReplyForm requestId={c.id} toEmail={c.email} />
             ) : (
               <span
-                className="text-[12px] border border-line text-muted/70 px-3 py-1.5 rounded-sm cursor-not-allowed"
+                className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted/70 px-3 py-1.5 rounded-sm cursor-not-allowed"
                 title="メールアドレスが未記入のため返信できません"
               >
                 返信不可（メール未記入）
@@ -260,7 +260,7 @@ export default function ContactRequestRow({
               <form action={setContactRequestStatusAction}>
                 <input type="hidden" name="id" value={c.id} />
                 <input type="hidden" name="status" value="read" />
-                <button className="text-[12px] border border-line text-ink px-3 py-1.5 rounded-sm hover:border-accent hover:text-accent transition">
+                <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-ink px-3 py-1.5 rounded-sm hover:border-accent hover:text-accent transition">
                   既読にする
                 </button>
               </form>
@@ -269,7 +269,7 @@ export default function ContactRequestRow({
               <form action={setContactRequestStatusAction}>
                 <input type="hidden" name="id" value={c.id} />
                 <input type="hidden" name="status" value="archived" />
-                <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
+                <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
                   アーカイブ
                 </button>
               </form>
@@ -278,14 +278,14 @@ export default function ContactRequestRow({
               <form action={setContactRequestStatusAction}>
                 <input type="hidden" name="id" value={c.id} />
                 <input type="hidden" name="status" value="read" />
-                <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
+                <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
                   アーカイブ解除
                 </button>
               </form>
             )}
             <form action={deleteContactRequestAction}>
               <input type="hidden" name="id" value={c.id} />
-              <button className="text-[12px] border border-red-900/50 text-red-400 px-3 py-1.5 rounded-sm hover:bg-red-900/20 transition">
+              <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-900/50 text-red-400 px-3 py-1.5 rounded-sm hover:bg-red-900/20 transition">
                 削除
               </button>
             </form>

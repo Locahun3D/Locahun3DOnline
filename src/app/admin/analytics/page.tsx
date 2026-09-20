@@ -6,6 +6,7 @@ import { listRecentEvents } from "@/lib/analytics-events";
 import { purchaseRepo } from "@/lib/purchases";
 import { CATEGORY_LABEL } from "@/lib/schemas";
 import { jstDayKey, fmtDateTimeJST } from "@/lib/date-format";
+import AdminPageHeader, { AdminPageShell, AdminEmpty, adminChip } from "@/components/admin/admin-page-header";
 import SubscriptionSummary from "@/components/admin/subscription-summary";
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
@@ -198,24 +199,21 @@ export default async function AdminAnalyticsPage({
   /** 期間セレクタ＋検索（閲覧・物件購入タブで共有）。 */
   const filters = (
     <>
-      <div className="flex flex-wrap items-center gap-2 mb-4 mono text-[10px] tracking-[0.22em] uppercase">
-        <span className="text-muted mr-1">期間</span>
+      {/* 2026-09-20: 期間・検索を詰め、押せる要素は高さ 40px に。 */}
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span className="text-muted text-[12px] mr-1">期間</span>
         {PERIODS.map((p) => (
           <Link
             key={p}
             href={qs({ days: p })}
-            className={`px-3 py-1.5 border transition ${
-              days === p
-                ? "border-accent text-accent"
-                : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
+            className={adminChip(days === p)}
           >
             {p}日
           </Link>
         ))}
       </div>
 
-      <form className="flex flex-wrap items-center gap-3 mb-8">
+      <form className="flex flex-wrap items-center gap-2 mb-4">
         <input type="hidden" name="tab" value={tab} />
         <input type="hidden" name="days" value={days} />
         <input
@@ -223,12 +221,12 @@ export default async function AdminAnalyticsPage({
           name="q"
           defaultValue={query}
           placeholder="スタジオ名で検索…"
-          className="bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-56 focus:outline-none focus:border-accent placeholder:text-black/40"
+          className="min-h-[40px] bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-56 focus:outline-none focus:border-accent placeholder:text-black/40"
         />
         <select
           name="studio"
           defaultValue={studioFilter}
-          className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
+          className="min-h-[40px] bg-bg border border-line text-[13px] px-2 py-2 text-ink"
         >
           <option value="">全スタジオ</option>
           {allStudios.map((s) => (
@@ -237,14 +235,14 @@ export default async function AdminAnalyticsPage({
         </select>
         <button
           type="submit"
-          className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-2 text-muted hover:text-accent hover:border-accent transition"
+          className="min-h-[40px] text-[13px] border border-line px-4 text-muted hover:text-accent hover:border-accent transition"
         >
           絞込
         </button>
         {(query || studioFilter) && (
           <Link
             href={`/admin/analytics?tab=${tab}&days=${days}`}
-            className="mono text-[10px] tracking-[0.18em] uppercase text-muted hover:text-ink transition"
+            className="inline-flex min-h-[40px] items-center text-[13px] text-muted hover:text-ink transition"
           >
             リセット
           </Link>
@@ -254,15 +252,13 @@ export default async function AdminAnalyticsPage({
   );
 
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
-      <div className="ui-page-header flex flex-wrap items-center justify-between gap-3">
-        <h1 className="ui-page-title">アナリティクス — 閲覧・購入・需要傾向</h1>
-        <span className="opacity-60">{rows.length} スタジオ</span>
-      </div>
+    <AdminPageShell>
+      {/* 2026-09-20: 管理画面共通の小型ヘッダー（長い副題は削除。内容はタブ名で分かる） */}
+      <AdminPageHeader title="アナリティクス" count={`${rows.length} スタジオ`} />
 
       {/* Tabs */}
       <nav
-        className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.22em] uppercase"
+        className="flex flex-wrap items-center gap-2 mb-3"
         aria-label="アナリティクスの表示切替"
       >
         {TABS.map((t) => (
@@ -270,11 +266,7 @@ export default async function AdminAnalyticsPage({
             key={t.key}
             href={qs({ tab: t.key })}
             aria-current={tab === t.key ? "page" : undefined}
-            className={`px-4 py-2 border transition ${
-              tab === t.key
-                ? "border-accent text-accent bg-accent/10"
-                : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
+            className={`${adminChip(tab === t.key)} ${tab === t.key ? "bg-accent/10" : ""}`}
           >
             {t.label}
           </Link>
@@ -288,13 +280,11 @@ export default async function AdminAnalyticsPage({
           {filters}
 
           {!hasAnyData ? (
-            <p className="text-[13px] text-muted">
-              まだ計測データがありません。公開中の物件詳細ページが閲覧されると、ここに集計されます。
-            </p>
+            <AdminEmpty>計測データはまだありません（公開中の物件ページが閲覧されると集計されます）。</AdminEmpty>
           ) : tab === "purchases" ? (
             <>
               {/* 期間内の購入サマリー */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 {[
                   { label: `購入（${days}日）`, value: String(totalPurchases), color: "text-green-400" },
                   { label: `売上（${days}日）`, value: fmtPrice(totalRevenue), color: "text-accent" },
@@ -315,7 +305,7 @@ export default async function AdminAnalyticsPage({
               </div>
 
               {/* All-time purchase summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 {[
                   { label: "累計購入件数", value: String(completedPurchases.length) },
                   { label: "累計売上", value: fmtPrice(allTimeRevenue) },
@@ -323,7 +313,7 @@ export default async function AdminAnalyticsPage({
                   { label: "返金総額", value: fmtPrice(allTimeRefunds) },
                 ].map((c) => (
                   <div key={c.label} className="border border-line bg-[#1a1a1a] p-3">
-                    <div className="mono text-[9px] tracking-[0.24em] uppercase text-muted mb-1">
+                    <div className="text-[12px] text-muted">
                       {c.label}
                     </div>
                     <div className="serif text-lg text-ink">{c.value}</div>
@@ -333,13 +323,13 @@ export default async function AdminAnalyticsPage({
 
               {/* 購入のあったスタジオ */}
               <div>
-                <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  ● 物件別の購入（{days}日・売上順）
+                <div className="text-[13px] font-bold mb-2">
+                  物件別の購入（{days}日・売上順）
                 </div>
                 <div className="border border-line overflow-x-auto">
                   <table className="w-full text-[12px]">
                     <thead>
-                      <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                      <tr className="bg-[#222] border-b border-line text-[12px] text-muted">
                         <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">スタジオ</th>
                         <th className="text-right px-3 py-2.5 font-normal">購入</th>
                         <th className="text-right px-3 py-2.5 font-normal">売上</th>
@@ -380,7 +370,7 @@ export default async function AdminAnalyticsPage({
           ) : (
             <>
               {/* Summary (period-scoped) */}
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-10">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
                 {[
                   { label: `閲覧数（${days}日）`, value: totalViews.toLocaleString("ja-JP"), color: "" },
                   { label: "3DGS 起動", value: totalOpens.toLocaleString("ja-JP"), color: "" },
@@ -399,9 +389,9 @@ export default async function AdminAnalyticsPage({
               </div>
 
               {/* Trend */}
-              <div className="mb-10">
-                <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                  ● 直近 {days} 日の閲覧推移{peak.v > 0 ? `（ピーク ${peak.d.slice(5)} / ${peak.v}）` : ""}
+              <div className="mb-5">
+                <div className="text-[13px] font-bold mb-2">
+                  直近 {days} 日の閲覧推移{peak.v > 0 ? `（ピーク ${peak.d.slice(5)} / ${peak.v}）` : ""}
                 </div>
                 <div className="border border-line p-5 flex items-end gap-1 h-40 overflow-x-auto">
                   {dailyViews.map(({ d, v, p }) => (
@@ -432,16 +422,16 @@ export default async function AdminAnalyticsPage({
                 </div>
               </div>
 
-              <div className="grid lg:grid-cols-[1fr_300px] gap-8">
+              <div className="grid xl:grid-cols-[1fr_300px] gap-5">
                 {/* Ranking (period-scoped) */}
                 <div>
-                  <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                    ● スタジオ別ランキング（{days}日・閲覧順）
+                  <div className="text-[13px] font-bold mb-2">
+                    スタジオ別ランキング（{days}日・閲覧順）
                   </div>
                   <div className="border border-line overflow-x-auto">
                     <table className="w-full text-[12px]">
                       <thead>
-                        <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                        <tr className="bg-[#222] border-b border-line text-[12px] text-muted">
                           <th className="text-left px-3 py-2.5 font-normal min-w-[180px]">スタジオ</th>
                           <th className="text-right px-3 py-2.5 font-normal">閲覧</th>
                           <th className="text-right px-3 py-2.5 font-normal">起動</th>
@@ -479,11 +469,11 @@ export default async function AdminAnalyticsPage({
                   </div>
                 </div>
 
-                <div className="space-y-8">
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1 content-start">
                   {/* Devices */}
                   <div>
-                    <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                      ● 端末別（{scopedIds ? "絞込中" : "全期間"}）
+                    <div className="text-[13px] font-bold mb-2">
+                      端末別（{scopedIds ? "絞込中" : "全期間"}）
                     </div>
                     <div className="border border-line p-4 space-y-3">
                       {devTotal === 0 ? (
@@ -512,8 +502,8 @@ export default async function AdminAnalyticsPage({
 
                   {/* Referrers */}
                   <div>
-                    <div className="mono text-[10px] tracking-[0.28em] uppercase text-muted mb-3">
-                      ● 流入元（{scopedIds ? "絞込中" : "全期間"}・閲覧ベース）
+                    <div className="text-[13px] font-bold mb-2">
+                      流入元（{scopedIds ? "絞込中" : "全期間"}・閲覧ベース）
                     </div>
                     <div className="border border-line p-4 space-y-3">
                       {refRows.length === 0 ? (
@@ -539,14 +529,14 @@ export default async function AdminAnalyticsPage({
               {/* 最近の閲覧者（個別イベントログ・サインイン済みのみ本人特定）。
                   100件が常時開いていて邪魔だという指摘のため、既定は閉じた
                   <details> にする（見たい時だけ開く）。 */}
-              <details className="mt-10 border border-line">
-                <summary className="mono text-[10px] tracking-[0.28em] uppercase text-muted px-4 py-3 cursor-pointer hover:text-ink transition list-none marker:hidden">
+              <details className="mt-5 border border-line">
+                <summary className="flex min-h-[40px] items-center text-[13px] text-muted px-4 cursor-pointer hover:text-ink transition list-none marker:hidden">
                   ▸ 最近の閲覧者{studioFilter ? "（絞込中）" : ""}（直近{recentEvents.length}件・クリックで展開）
                 </summary>
                 <div className="border-t border-line overflow-x-auto">
                   <table className="w-full text-[12px]">
                     <thead>
-                      <tr className="bg-[#222] border-b border-line mono text-[10px] tracking-[0.18em] uppercase text-muted">
+                      <tr className="bg-[#222] border-b border-line text-[12px] text-muted">
                         <th className="text-left px-3 py-2.5 font-normal min-w-[130px]">日時</th>
                         <th className="text-left px-3 py-2.5 font-normal min-w-[160px]">物件</th>
                         <th className="text-left px-3 py-2.5 font-normal">種別</th>
@@ -593,6 +583,6 @@ export default async function AdminAnalyticsPage({
           )}
         </>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

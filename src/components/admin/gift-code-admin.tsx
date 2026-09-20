@@ -28,7 +28,7 @@ function CopyButton({ value }: { value: string }) {
           /* clipboard blocked */
         }
       }}
-      className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-2 py-1 hover:border-accent hover:text-accent transition"
+      className="min-h-[40px] text-[12px] border border-line px-3 hover:border-accent hover:text-accent transition"
     >
       {copied ? "✓ コピー" : "コピー"}
     </button>
@@ -36,7 +36,7 @@ function CopyButton({ value }: { value: string }) {
 }
 
 const inputCls =
-  "bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition";
+  "min-h-[40px] bg-neutral-300 text-black border border-line px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent transition";
 
 export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
   const [state, formAction, pending] = useActionState<CreateGiftState, FormData>(
@@ -45,15 +45,14 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
   );
 
   return (
-    <div className="space-y-8">
+    // 2026-09-20: 余白を詰め、ラベルの等幅大文字装飾をやめて読みやすい 12px に。ボタン・入力は iPad 用に高さ 40px。
+    <div className="space-y-5">
       {/* Create */}
-      <section className="border border-line bg-[#1c1c1c] p-5">
-        <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-4">
-          ギフトコードを発行
-        </div>
-        <form action={formAction} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="border border-line bg-[#1c1c1c] p-4">
+        <div className="text-[13px] font-bold mb-3">コードを発行</div>
+        <form action={formAction} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <label className="flex flex-col gap-1">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               トークン数
             </span>
             <input
@@ -67,7 +66,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               トークンの種類
             </span>
             <select name="bucket" defaultValue="bonus" className={inputCls}>
@@ -80,7 +79,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               使用上限（人数）
             </span>
             <input
@@ -94,33 +93,32 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               有効期限（任意）
             </span>
             <input name="expiresAt" type="date" className={inputCls} />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               対象: アカウント作成日（以降・任意）
             </span>
             <input name="accountCreatedFrom" type="date" className={inputCls} />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               対象: アカウント作成日（まで・任意）
             </span>
             <input name="accountCreatedTo" type="date" className={inputCls} />
           </label>
 
-          <p className="text-[10.5px] text-muted sm:col-span-2 lg:col-span-4 -mt-1.5">
-            両方または片方を指定すると、その期間にアカウントを作成したユーザーだけが引き換えられるコードになります（例:
-            今月中に登録した人限定キャンペーン）。空欄なら誰でも引き換え可能です。
+          <p className="text-[12px] text-muted sm:col-span-2 lg:col-span-4 -mt-1.5">
+            作成日を指定すると、その期間に登録した人だけが引き換えられます。空欄なら誰でも引き換えられます。
           </p>
 
           <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
-            <span className="mono text-[10px] tracking-[0.18em] uppercase opacity-60">
+            <span className="text-[12px] text-muted">
               メモ（任意・用途など）
             </span>
             <input
@@ -136,7 +134,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
             <button
               type="submit"
               disabled={pending}
-              className="w-full mono text-[11px] tracking-[0.2em] uppercase border border-accent text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+              className="w-full min-h-[40px] text-[13px] border border-accent text-accent px-4 hover:bg-accent hover:text-bg transition disabled:opacity-50"
             >
               {pending ? "発行中…" : "＋ 発行する"}
             </button>
@@ -163,13 +161,9 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
 
       {/* List */}
       <section>
-        <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
-          発行済みコード（{codes.length}）
-        </div>
+        <div className="text-[13px] font-bold mb-2">発行済みコード（{codes.length}）</div>
         {codes.length === 0 ? (
-          <p className="text-[13px] text-muted border border-line p-6 text-center">
-            まだギフトコードはありません。上のフォームから発行してください。
-          </p>
+          <p className="text-[13px] text-muted border border-line px-4 py-3">発行済みのコードはありません。</p>
         ) : (
           <div className="space-y-2">
             {codes.map((c) => {
@@ -179,7 +173,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
               return (
                 <div
                   key={c.code}
-                  className="border border-line bg-[#1a1a1a] p-4 flex flex-wrap items-center gap-x-5 gap-y-2"
+                  className="border border-line bg-[#1a1a1a] px-4 py-2 flex flex-wrap items-center gap-x-5 gap-y-2"
                 >
                   <div className="flex items-center gap-2 min-w-[210px]">
                     <code
@@ -244,7 +238,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
                         name="status"
                         value={c.status === "active" ? "disabled" : "active"}
                       />
-                      <button className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-2 py-1 hover:border-ink transition">
+                      <button className="min-h-[40px] text-[12px] border border-line px-3 hover:border-ink transition">
                         {c.status === "active" ? "無効化" : "有効化"}
                       </button>
                     </form>
@@ -255,7 +249,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
                       }}
                     >
                       <input type="hidden" name="code" value={c.code} />
-                      <button className="mono text-[10px] tracking-[0.18em] uppercase border border-red-500/40 text-red-400 px-2 py-1 hover:bg-red-500/10 transition">
+                      <button className="min-h-[40px] text-[12px] border border-red-500/40 text-red-400 px-3 hover:bg-red-500/10 transition">
                         削除
                       </button>
                     </form>

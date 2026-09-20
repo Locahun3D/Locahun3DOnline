@@ -10,7 +10,7 @@ export default function RefundButton() {
   return (
     <button
       type="submit"
-      className="mono text-[10px] uppercase border border-purple-400/40 text-purple-400/80 px-2 py-1 hover:bg-purple-400 hover:text-bg transition"
+      className="min-h-[40px] text-[12px] border border-purple-400/40 text-purple-400/80 px-3 hover:bg-purple-400 hover:text-bg transition"
       onClick={(e) => {
         if (!confirm("この購入を返金しますか？")) e.preventDefault();
       }}

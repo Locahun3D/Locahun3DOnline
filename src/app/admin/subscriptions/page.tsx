@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/dal";
+import { AdminPageShell } from "@/components/admin/admin-page-header";
 import SubscriptionSummary from "@/components/admin/subscription-summary";
 
 export const metadata = { title: "サブスク売上" };
@@ -11,8 +12,8 @@ export const metadata = { title: "サブスク売上" };
 export default async function SubscriptionsPage() {
   await requireAdmin();
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10">
+    <AdminPageShell>
       <SubscriptionSummary />
-    </div>
+    </AdminPageShell>
   );
 }
