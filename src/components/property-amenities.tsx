@@ -34,6 +34,9 @@ const icons = {
   smoking: (
     <svg viewBox="0 0 24 24" {...S}><rect x="2.5" y="14" width="15" height="3.5" /><path d="M20 14v3.5M17 11c0-1.6 2-1.6 2-3.3S17 6 17 4.5M20.5 11c0-1.6 1.5-1.6 1.5-3" /></svg>
   ),
+  elevator: (
+    <svg viewBox="0 0 24 24" {...S}><rect x="4.5" y="3" width="15" height="18" rx="1.5" /><path d="M12 3v18M7 10.5 8.75 8l1.75 2.5M13.5 13.5 15.25 16 17 13.5" /></svg>
+  ),
   fire: (
     <svg viewBox="0 0 24 24" {...S}><path d="M12 21a6 6 0 0 0 6-6c0-3.5-2.5-5.5-3.5-9-1 2-2.5 3-3.5 3 0-2-1-3.5-2-5C8 8 6 10.5 6 15a6 6 0 0 0 6 6z" /><path d="M12 21a2.5 2.5 0 0 1-2.5-2.5c0-1.5 1.2-2.3 2.5-4 1.3 1.7 2.5 2.5 2.5 4A2.5 2.5 0 0 1 12 21z" /></svg>
   ),
@@ -46,6 +49,7 @@ export function propertyAmenities(p: Property, en = false): Amenity[] {
   return [
     { key: "parking", ja: "駐車場", en: "Parking", on: p.parking, icon: icons.parking, note: parkingNote },
     { key: "loadIn", ja: "大型搬入", en: "Large load-in", on: p.loadingDock, icon: icons.loadIn, note: n.loadingDock },
+    { key: "elevator", ja: "エレベーター", en: "Elevator", on: p.elevator, icon: icons.elevator, note: n.elevator },
     { key: "soundproof", ja: "防音", en: "Soundproof", on: p.soundproofing, icon: icons.soundproof, note: n.soundproofing },
     { key: "internet", ja: "ネット", en: "Internet", on: p.hasInternet, icon: icons.internet, note: n.hasInternet },
     { key: "aircon", ja: "空調", en: "Air-con", on: p.airConditioning, icon: icons.aircon, note: n.airConditioning },
@@ -60,7 +64,9 @@ export default function PropertyAmenities({ property, en }: { property: Property
   const outdoor = property.category === "outdoor";
   const items = propertyAmenities(property, en).filter((a) => a.on || !outdoor);
   if (items.length === 0) return null;
+  const noted = items.filter((a) => a.on && a.note);
   return (
+    <>
     <ul data-property-amenities className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-6">
       {items.map((a) => (
         <li
@@ -74,12 +80,20 @@ export default function PropertyAmenities({ property, en }: { property: Property
           <span className={`text-[12px] font-bold leading-tight ${a.on ? "" : "line-through"}`}>
             {en ? a.en : a.ja}
           </span>
-          {/* 1行メモ（台数・回線速度など）。ありの項目だけ */}
-          {a.on && a.note && (
-            <span className="text-[11px] leading-tight text-ink/65 break-words max-w-full">{a.note}</span>
-          )}
         </li>
       ))}
     </ul>
+    {/* 1行メモ（台数・回線速度など）。マスの中だと約120px幅で3〜4行に折れて読めないので、下に1行ずつ並べる（2026-09-20） */}
+    {noted.length > 0 && (
+      <dl data-property-amenity-notes className="mt-3 text-[13px] leading-relaxed">
+        {noted.map((a) => (
+          <div key={a.key} className="flex gap-3 py-1.5 border-t border-line first:border-t-0">
+            <dt className="shrink-0 w-[6.5em] font-bold">{en ? a.en : a.ja}</dt>
+            <dd className="min-w-0 text-ink/75 [overflow-wrap:anywhere]">{a.note}</dd>
+          </div>
+        ))}
+      </dl>
+    )}
+    </>
   );
 }

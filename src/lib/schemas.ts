@@ -380,6 +380,8 @@ export const propertySchema = z.object({
   restroom: z.boolean().default(false),
   airConditioning: z.boolean().default(false),
   smokingArea: z.boolean().default(false),
+  /** エレベーター（2026-09-20 追加。機材搬入の可否を左右する）。寸法・積載は amenityNotes.elevator に。 */
+  elevator: z.boolean().default(false),
   /**
    * 設備アイコンごとの1行メモ（2026-09-19 本人要望: 「何台駐車可能」「ネット速度」など）。
    * 物件ページの設備タイルの下に小さく出す。空なら何も出さない。駐車場は空のとき parkingCapacity を代用。
@@ -394,7 +396,8 @@ export const propertySchema = z.object({
     restroom: z.string().max(40).default(""),
     smokingArea: z.string().max(40).default(""),
     fireAllowed: z.string().max(40).default(""),
-  }).default({ parking: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", restroom: "", smokingArea: "", fireAllowed: "" }),
+    elevator: z.string().max(40).default(""),
+  }).default({ elevator: "", parking: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", restroom: "", smokingArea: "", fireAllowed: "" }),
 
   // ── 料金の内訳 ──
   /** 最低利用時間（h）。0 = 設定なし。 */

@@ -88,7 +88,8 @@ export default function PriceEstimator({
       {/* シミュレーション: 日付（土日祝を自動判定）・開始時刻・時間 → 1時間ごとに割増を計算 */}
       <div className="mt-4 border border-line px-4 py-4">
         <div className="text-[12px] text-muted mb-3">{en ? "Price simulator" : "料金シミュレーション"}</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* 列数は画面幅でなくカード幅で決める: iPad縦や2カラム時はカードが狭く、sm:3列だと日付欄が詰まる（2026-09-20） */}
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
           <label className="block">
             <span className="block text-[11px] text-muted mb-1">{en ? "Date" : "利用日"}</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
@@ -129,11 +130,11 @@ export default function PriceEstimator({
             </li>
           ))}
         </ul>
-        <div className="flex items-baseline justify-between gap-3 mt-2 pt-3 border-t border-ink/20">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mt-2 pt-3 border-t border-ink/20">
           <span className="text-[12px] text-muted">
             {String(startHour).padStart(2, "0")}:00〜{String((startHour + hours) % 24).padStart(2, "0")}:00{startHour + hours > 24 ? (en ? " (next day)" : "（翌日）") : ""}
           </span>
-          <span><span className="text-[11px] text-muted mr-2">{taxIncluded ? (en ? "incl. tax" : "税込") : en ? "excl. tax" : "税別"}</span>
+          <span className="ml-auto whitespace-nowrap"><span className="text-[11px] text-muted mr-2">{taxIncluded ? (en ? "incl. tax" : "税込") : en ? "excl. tax" : "税別"}</span>
             <span className="text-[24px] font-black text-accent tabular-nums" aria-live="polite">{yen(sim.total)}</span></span>
         </div>
       </div>

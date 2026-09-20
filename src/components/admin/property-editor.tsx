@@ -1488,6 +1488,7 @@ export default function PropertyEditor({
               {/* ── 撮影条件（設備の有無） ── */}
               <SectionHead title="撮影条件（設備の有無）" hint="あるものだけチェック。無いものは空のままで構いません。" />
               <div className="grid md:grid-cols-3 gap-5">
+                <Toggle label="エレベーター あり" register={register("elevator")} note={register("amenityNotes.elevator")} notePlaceholder="例: 定員9名・間口80cm" />
                 <Toggle label="火気使用 可" register={register("fireAllowed")} note={register("amenityNotes.fireAllowed")} notePlaceholder="例: 要事前申請" />
                 <Toggle label="控室 あり" register={register("greenRoom")} note={register("amenityNotes.greenRoom")} notePlaceholder="例: 8畳・鏡台2" />
                 <Toggle label="トイレ あり" register={register("restroom")} note={register("amenityNotes.restroom")} notePlaceholder="例: 男女別・2か所" />
