@@ -52,7 +52,9 @@ export default async function SiteHeader() {
   // ⚠ 表記はスキャンサイト scripts/sync_header.py の BRAND_TEXT と一字一句そろえること。
   //    以前ここだけ "Locahun3D"（スペース無し）で、EN版のブランド幅が
   //    両サイトで 131.2px / 131.5px と食い違っていた（2026-07-29 実測）。
-  const brandName = locale === "en" ? "Locahun 3D" : "ロケハン3D";
+  // 2026-09-20 本人指示: ロゴは商標登録版（欧文「Locahun 3D」＋マーク）に統一。日本語ページでも欧文表記にする。
+  //   原本: Dropbox「02_資料/ロゴデータ/Locahun3D_商標データ_透過.png」。文中の製品名「ロケハン3D」は従来どおり。
+  const brandName = "Locahun 3D";
 
   /**
    * 帯の構成（スキャンサイト assets/site-header.css と完全に同じ切り方）:
