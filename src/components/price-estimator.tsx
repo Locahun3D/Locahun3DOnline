@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { isJpDayOff, jpDayKind, jpHolidayName } from "@/lib/jp-holidays";
-import { applyEstimateRow, dailyEstimates, matchEstimateRow, priceChoices, simulateDailyPrice, simulatePrice, usageEstimates, type DayKind, type RateSurcharge, type UsageEstimate } from "@/lib/property-presentation";
+import { applyEstimateRow, dailyEstimates, matchEstimateRow, priceChoices, simulateDailyPrice, simulatePrice, surchargeWaived, usageEstimates, type DayKind, type RateSurcharge, type UsageEstimate } from "@/lib/property-presentation";
 
 type RatePlan = { label: string; labelEn: string; hourlyPrice: number; minHours: number };
 
@@ -66,6 +66,17 @@ export default function PriceEstimator({
     : simulatePrice({ hourlyPrice: rate, startHour, hours, holiday: dayOff, day: jpDayKind(date), surcharges });
   const hasHolidayRule = surcharges.some((s) => s.holidays);
   const surchargeLabel = (label: string) => (en && surcharges.find((s) => s.label === label)?.labelEn) || label;
+  /**
+   * 2026-09-21: 「N時間以上なら割増なし」の割増が、いま選んでいる日付・時間で免除されているか。
+   * 合計が安くなる理由を曜日の行で説明するため（例: 「土曜 — 4時間以上のため通常料金」）。
+   * 1日貸しは常に免除扱いなので出さない（時間帯の割増自体を出していない）。
+   */
+  const waivedNow = daily ? undefined : surcharges.find((s) => {
+    if (!surchargeWaived(s, hours)) return false;
+    if (!s.holidays) return true;
+    const k = jpDayKind(date);
+    return k === "sunday" || k === "holiday" || (k === "saturday" && s.includeSaturday !== false);
+  });
   // 1日貸しでは時間帯の割増を掛けないので、注記にも出さない
   const notedSurcharges = daily ? surcharges.filter((s) => s.holidays) : surcharges;
   const unit = daily ? (en ? "/day" : "/日") : en ? "/h" : "/時間";
@@ -189,11 +200,15 @@ export default function PriceEstimator({
           )}
         </div>
 
-        {date && (
+        {/* 2026-09-21: 免除が効いている時は「◯時間以上のため通常料金」と曜日の行で説明する（合計が安くなる理由） */}
+        {(date || waivedNow) && (
           <p className="text-[12px] mt-2.5">
-            {dayOff
+            {date && dayOff
               ? <span className="text-accent font-bold">{holidayName ? (en ? `Holiday (${holidayName})` : `祝日（${holidayName}）`) : jpDayKind(date) === "saturday" ? (en ? "Saturday" : "土曜") : en ? "Sunday" : "日曜"}{hasHolidayRule && sim.lines.some((l) => l.label !== "通常") ? (en ? " — surcharge applies" : " — 割増料金で計算") : ""}</span>
-              : <span className="text-muted">{en ? "Weekday" : "平日"}</span>}
+              : date ? <span className="text-muted">{en ? "Weekday" : "平日"}</span> : null}
+            {waivedNow && (
+              <span className="text-muted">{date ? (en ? " — " : " — ") : ""}{en ? `${waivedNow.waiveFromHours} h or more: standard rate (${(en && waivedNow.labelEn) || waivedNow.label} waived)` : `${waivedNow.waiveFromHours}時間以上のため通常料金（${waivedNow.label}なし）`}</span>
+            )}
           </p>
         )}
 
@@ -230,7 +245,14 @@ export default function PriceEstimator({
         {notedSurcharges.length > 0 && (
           <>
             <br />
-            {notedSurcharges.map((s) => `${surchargeLabel(s.label)} ${s.percent > 0 ? "+" : ""}${s.percent}%${s.holidays ? (s.includeSaturday === false ? (en ? " (not Saturdays)" : "（土曜は対象外）") : "") : en ? ` (${s.fromHour}:00–${s.toHour}:00)` : `（${s.fromHour}:00〜${s.toHour}:00）`}`).join(" ／ ")}
+            {/* 2026-09-21: 「N時間以上は通常料金」の例外も注記に出す（注記だけに残していた免除を計算と揃える） */}
+            {notedSurcharges.map((s) => {
+              const scope = s.holidays
+                ? (s.includeSaturday === false ? (en ? " (not Saturdays)" : "（土曜は対象外）") : "")
+                : en ? ` (${s.fromHour}:00–${s.toHour}:00)` : `（${s.fromHour}:00〜${s.toHour}:00）`;
+              const waive = (s.waiveFromHours ?? 0) > 0 ? (en ? ` (waived from ${s.waiveFromHours} h)` : `（${s.waiveFromHours}時間以上は通常料金）`) : "";
+              return `${surchargeLabel(s.label)} ${s.percent > 0 ? "+" : ""}${s.percent}%${scope}${waive}`;
+            }).join(" ／ ")}
           </>
         )}
       </p>
