@@ -28,6 +28,7 @@ export default async function AdminPropertiesList() {
     status: p.status,
     updatedAt: p.updatedAt,
     publishRequestedAt: p.publishRequestedAt ?? null,
+    coverSrc: p.cover?.src || undefined,
   }));
 
   const counts = {

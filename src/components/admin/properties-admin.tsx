@@ -22,6 +22,8 @@ export type PropertyListItem = {
   status: PropertyStatus;
   updatedAt?: string;
   publishRequestedAt?: string | null;
+  /** 一覧のサムネイル用（カバー写真のURLだけ渡す） */
+  coverSrc?: string;
 };
 
 // ステータス列は 72px だとバッジ（大きくした）が収まらないので 104px に広げる。
@@ -265,14 +267,26 @@ export default function PropertiesAdmin({
                   </span>
                 )}
               </div>
-              <div className="min-w-0">
-                <Link
-                  href={`/admin/properties/${p.id}/edit`}
-                  className="block truncate hover:text-accent transition"
-                >
-                  {p.title || "（無題）"}
+              {/* サムネイル（2026-09-20 本人指示「物件一覧でサムネ見えるように」）。グリッドの列は増やさず、
+                  タイトルのセルの中に置く（module.css の nth-child 指定を崩さないため）。 */}
+              <div className="min-w-0 flex items-center gap-3">
+                <Link href={`/admin/properties/${p.id}/edit`} tabIndex={-1} aria-hidden="true" className="flex-none !min-h-0">
+                  {p.coverSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Workers 構成では next/image の最適化が 404 になる（CLAUDE.md）
+                    <img src={p.coverSrc} alt="" loading="lazy" decoding="async" className="w-[84px] h-[56px] object-cover bg-[#ddd] border border-line" />
+                  ) : (
+                    <span className="w-[84px] h-[56px] flex items-center justify-center bg-neutral-200 border border-line mono text-[9px] tracking-[0.12em] text-muted">NO IMAGE</span>
+                  )}
                 </Link>
-                <div className="mono text-[10px] opacity-50 mt-0.5">{p.id}</div>
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={`/admin/properties/${p.id}/edit`}
+                    className="block truncate hover:text-accent transition"
+                  >
+                    {p.title || "（無題）"}
+                  </Link>
+                  <div className="mono text-[10px] opacity-50 mt-0.5">{p.id}</div>
+                </div>
               </div>
               <div className="text-[12px] text-muted">
                 {CATEGORY_LABEL[p.category]}
