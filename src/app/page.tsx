@@ -170,7 +170,7 @@ const SERVICE_SEGMENTS: Array<{
     points: [
       ["カタログ・地図で候補を検索", "Search the catalog & map"],
       ["ブラウザで歩いて下見", "Walk through in the browser"],
-      ["掲示板で現地の情報を確認", "Check the board for local notes"],
+      ["寸法と日当たりをその場で確認", "Measure and check sunlight on the spot"],
       ["現地確認は本命だけ", "Visit only the finalists"],
     ],
     actions: [
@@ -434,18 +434,8 @@ const DETAILS: Array<{
       alt: ["保存ボードと共有URL発行の画面", "Boards with a read-only share link"],
     },
   },
-  {
-    key: "inquiries",
-    label: ["掲示板・問い合わせ", "Board & inquiries"],
-    desc: [
-      "物件掲示板の閲覧は全員可、書き込みは有料プラン。問い合わせフォームの内容は掲載スタジオへ直接届きます。",
-      "Property boards are readable by everyone; posting requires a paid plan. Inquiry form messages reach the listing studio directly.",
-    ],
-    img: {
-      src: "/about/board.webp",
-      alt: ["物件ページの掲示板", "The property board"],
-    },
-  },
+  // 「掲示板・問い合わせ」は外した（2026-09-20）。物件掲示板は 2026-09-19 に機能ごと削除済みで、説明文も画像（/about/board.webp）も
+  // 無くなった機能を見せていた。問い合わせフォームは各物件ページの基本機能なので、ここでは紹介しない。
   {
     key: "invoices",
     label: ["請求書", "Invoices"],
