@@ -332,7 +332,10 @@ export default function PropertyDetailView({
         <header className="grid lg:grid-cols-[420px_1fr] border-x border-b border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.05)]">
           {/* ── slate panel ── */}
           {/* min-w-0: 長い欧文名でグリッド列が320px幅からはみ出さないように（2026-09-20） */}
-          <div className="bg-[#14181c] text-[#fafaf6] flex flex-col min-w-0">
+          {/* @container: 写真と縦積みになる幅（lg未満）では、料金とボタンをタイトルの右へ回して板を低くし、
+              カバー写真を大きく見せる（2026-09-20 本人指示「縦画面で右が空きすぎ」）。判定は画面幅でなく板の幅
+              （管理プレビューはサイドバーぶん狭い）。lg以上の横並びでは従来どおり下端に置く。 */}
+          <div className="@container bg-[#14181c] text-[#fafaf6] flex flex-col min-w-0">
             <div
               className="h-[34px]"
               style={{
@@ -343,8 +346,8 @@ export default function PropertyDetailView({
                   "repeating-linear-gradient(-55deg, #fafaf6 0, #fafaf6 25.25px, #14181c 26.75px, #14181c 51.25px, #fafaf6 52.75px)",
               }}
             />
-            <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1">
-              <div className="mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.18em] max-[720px]:tracking-[0.05em] uppercase text-white/55">
+            <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1 max-lg:@sm:grid max-lg:@sm:grid-cols-[minmax(0,1fr)_auto] max-lg:@sm:gap-x-5 max-lg:@2xl:gap-x-10 max-lg:@sm:items-end">
+              <div className="max-lg:@sm:col-span-2 mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.18em] max-[720px]:tracking-[0.05em] uppercase text-white/55">
                 {slateRows.map((row) => (
                   <div
                     key={row.k}
@@ -371,6 +374,7 @@ export default function PropertyDetailView({
 
               {/* スタジオ名を1行目に独立させ、残りは意味のまとまりごとに改行する（2026-09-20 本人指示）。
                   長い1語は従来どおり語単位で折り返す。 */}
+              <div className="min-w-0">
               <h1 className="mt-6 mb-1.5 min-w-0 font-bold whitespace-pre-wrap [overflow-wrap:anywhere]">
                 <span className="block text-[26px] lg:text-[34px] leading-[1.3]">
                   {propertyTitleSegments(heroTitle.name || (en ? "(Untitled location)" : "（無題の物件）")).map((part, index) => (
@@ -400,8 +404,9 @@ export default function PropertyDetailView({
                 {/* 種別・タグは検索用なので、ヒーローではなくアクセス欄の下に
                     #タグ で並べる（2026-09-19 会議）。 */}
               </div>
+              </div>
 
-              <div className="mt-auto pt-6">
+              <div className="mt-auto pt-6 max-lg:@sm:pt-0 max-lg:@sm:text-right">
                 {!(property.permitRequired && property.priceType === "flat" && property.hourlyPrice === 0) && <p className="mono text-[24px] mb-3.5">
                   {property.priceType === "free" ? (
                     <small className="text-[13px] text-white/55 tracking-[0.1em]">
@@ -439,7 +444,7 @@ export default function PropertyDetailView({
                     <span className="text-accent">¥{property.dailyPrice.toLocaleString(en ? "en-US" : "ja-JP")}</span>/day
                   </p>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-lg:@sm:flex-col max-lg:@sm:items-stretch max-lg:@sm:text-center max-lg:@sm:[&>a]:justify-center max-lg:@sm:[&>a]:px-3.5 max-lg:@2xl:flex-row max-lg:@2xl:justify-end max-lg:@2xl:[&>a]:px-5">
                   <a
                     href={property.permitRequired ? (property.permitNotes ? "#permit-notice" : undefined) : "#inquiry"}
                     className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 bg-accent border border-accent text-[#0a2a35] hover:brightness-[1.06] transition"
@@ -457,7 +462,9 @@ export default function PropertyDetailView({
                       href={`tel:${property.contactPhone}`}
                       className="inline-flex items-center gap-2 font-bold text-[13.5px] px-5 py-3 border border-white/40 text-[#fafaf6] hover:border-accent hover:text-accent transition"
                     >
-                      {en ? "Call" : "電話する"} {property.contactPhone}
+                      {en ? "Call" : "電話する"}{" "}
+                      {/* 板が狭い横並びでは番号を省いてタイトル側の幅を確保（tel: リンクなので押せば掛かる） */}
+                      <span className="max-lg:@sm:hidden max-lg:@md:inline">{property.contactPhone}</span>
                     </a>
                   )}
                 </div>
@@ -466,7 +473,7 @@ export default function PropertyDetailView({
           </div>
 
           {/* ── cover photo ── */}
-          <div className="relative min-h-[280px] max-[720px]:min-h-0 max-[720px]:aspect-[16/9] lg:min-h-[440px] bg-[#14181c]">
+          <div className="relative min-h-[280px] max-[720px]:min-h-0 max-[720px]:aspect-[16/9] min-[721px]:max-lg:min-h-[460px] lg:min-h-[440px] bg-[#14181c]">
             {property.cover.src ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
