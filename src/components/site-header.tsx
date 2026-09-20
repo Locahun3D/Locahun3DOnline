@@ -162,7 +162,9 @@ export default async function SiteHeader() {
       //    2026-09-12: 1024px以上をPC扱いした例外が横iPadにも適用され、
       //    半透明＋blurが再び有効になっていた。幅・入力方式では端末を判別せず、
       //    全幅で背景を不透明にする。高さ・中央配置・zoomは変更しない。
-      className="sticky top-0 z-50 border-b border-line bg-bg"
+      //    2026-09-20: スマホ横向き（高さ480px以下）だけ追従をやめる（画面の約2割を
+      //    ヘッダーが占めるため）。globals.css の --header-h:0 とセット。
+      className="sticky [@media(max-height:480px)_and_(orientation:landscape)]:static top-0 z-50 border-b border-line bg-bg"
     >
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに

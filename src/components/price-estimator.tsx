@@ -46,7 +46,8 @@ export default function PriceEstimator({
   const dayOff = isJpDayOff(date);
   const sim = simulatePrice({ hourlyPrice: rate, startHour, hours, holiday: dayOff, day: jpDayKind(date), surcharges });
   const hasHolidayRule = surcharges.some((s) => s.holidays);
-  const chip = "min-h-[40px] px-3.5 border text-[13px] font-medium transition";
+  // max-w-full + text-left: 長いプラン名でもカード幅を超えず、ラベルは折り返す（2026-09-20）
+  const chip = "min-h-[40px] max-w-full px-3.5 py-1.5 border text-[13px] font-medium text-left transition";
 
   return (
     <div className="mt-6 pt-6 border-t border-line" data-price-estimator>
@@ -60,7 +61,7 @@ export default function PriceEstimator({
             <button key={i} type="button" aria-pressed={i === planIdx} onClick={() => setPlanIdx(i)}
               className={`${chip} ${i === planIdx ? "bg-ink text-white border-ink" : "border-line hover:border-ink"}`}>
               {(en && p.labelEn) || p.label}
-              <span className={`ml-2 text-[12px] ${i === planIdx ? "text-white/70" : "text-muted"}`}>{yen(p.hourlyPrice)}{en ? "/h" : "/時間"}</span>
+              <span className={`ml-2 text-[12px] whitespace-nowrap ${i === planIdx ? "text-white/70" : "text-muted"}`}>{yen(p.hourlyPrice)}{en ? "/h" : "/時間"}</span>
             </button>
           ))}
         </div>

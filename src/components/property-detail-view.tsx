@@ -233,10 +233,7 @@ export default function PropertyDetailView({
   }
 
   // ── SPECS 行 ──
-  // 屋外（公道・公園等）はスタジオ向け設備（電源/駐車場/搬入口/防音/ネット）が
-  // 軒並み「なし・—・通常」の無意味な羅列になりがちなので、値がある時だけ
-  // 出す。一般のスタジオ等は従来どおり常時表示（「なし」も検索軸として意味がある）。
-  const isOutdoorProperty = property.category === "outdoor";
+  // どの行も値がある時だけ出す（空欄を「—」で埋めた行は情報にならない）。
   const specRows: [string, string][] = [];
   if (property.address) specRows.push(["ADDRESS ／ 住所", property.address]);
   if (property.nearestStation) specRows.push(["STATION ／ 最寄り駅", property.nearestStation]);
@@ -262,9 +259,8 @@ export default function PropertyDetailView({
   if (property.capacity > 0) {
     specRows.push(["CAPACITY ／ 収容", en ? `${property.capacity} people` : `${property.capacity} 名`]);
   }
-  if (!isOutdoorProperty || property.powerVoltage) {
-    specRows.push(["POWER ／ 電源", property.powerVoltage || "—"]);
-  }
+  // 2026-09-20: 値が空の行は「—」で埋めず、行ごと出さない。
+  if (property.powerVoltage) specRows.push(["POWER ／ 電源", property.powerVoltage]);
 
   // ── 検索用タグ（種別＋タグ、カテゴリと重複するものは除く） ──
   const categoryNames = new Set([categoryLabel(property.category, locale), categoryLabel(property.category, "ja")]);
@@ -335,7 +331,8 @@ export default function PropertyDetailView({
       <div className="frame pt-4">
         <header className="grid lg:grid-cols-[420px_1fr] border-x border-b border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.05)]">
           {/* ── slate panel ── */}
-          <div className="bg-[#14181c] text-[#fafaf6] flex flex-col">
+          {/* min-w-0: 長い欧文名でグリッド列が320px幅からはみ出さないように（2026-09-20） */}
+          <div className="bg-[#14181c] text-[#fafaf6] flex flex-col min-w-0">
             <div
               className="h-[34px]"
               style={{
@@ -374,7 +371,7 @@ export default function PropertyDetailView({
 
               {/* スタジオ名を1行目に独立させ、残りは意味のまとまりごとに改行する（2026-09-20 本人指示）。
                   長い1語は従来どおり語単位で折り返す。 */}
-              <h1 className="mt-6 mb-1.5 font-bold whitespace-pre-wrap [overflow-wrap:anywhere]">
+              <h1 className="mt-6 mb-1.5 min-w-0 font-bold whitespace-pre-wrap [overflow-wrap:anywhere]">
                 <span className="block text-[26px] lg:text-[34px] leading-[1.3]">
                   {propertyTitleSegments(heroTitle.name || (en ? "(Untitled location)" : "（無題の物件）")).map((part, index) => (
                     <span key={index} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
@@ -600,7 +597,7 @@ export default function PropertyDetailView({
                     /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(b.url) ? (
                       <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block border border-line bg-white p-2 hover:border-accent transition">
                         {/* eslint-disable-next-line @next/next/no-img-element -- R2配信の相対パスは next/image 最適化が404になる */}
-                        <img src={b.url} alt={b.label || (en ? "Floor plan" : "平面図")} className="block w-full h-auto max-h-[420px] object-contain" loading="lazy" />
+                        <img src={b.url} alt={b.label || (en ? "Floor plan" : "平面図")} className="block w-full h-auto max-h-[420px] object-contain bg-[#f4f5f6]" loading="lazy" />
                         <div className="flex items-center justify-between mt-2 px-1 text-[12px] text-ink/70">
                           <span>{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
                           <span className="font-bold">{en ? "Open full size" : "拡大 ↗"}</span>
