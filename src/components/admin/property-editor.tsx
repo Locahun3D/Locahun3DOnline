@@ -664,11 +664,13 @@ export default function PropertyEditor({
       {/* Form pane */}
       <div className="min-w-0">
         {/* Sticky header（公開URL も同じ枠に統合） */}
-        <div className={`${styles.toolbar} sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-4 bg-bg/95 backdrop-blur border-b border-line mb-6 space-y-3`}>
+        <div className={`${styles.toolbar} sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-2.5 bg-bg/95 backdrop-blur border-b border-line mb-5 space-y-2`}>
           <div className="flex flex-wrap items-center gap-3 justify-between">
-          <div className="flex items-baseline gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <StatusPill status={currentStatus} />
-            <h1 className="ui-page-title min-w-0 break-words">
+            {/* 編集画面の見出しは小さく1行で（2026-09-20 本人指摘「このスペース無駄」）。共通の ui-page-title は 42〜60px あり、
+                追従ツールバーの中では上に大きな空きができ、入力欄が下へ押し出されていた。 */}
+            <h1 className="min-w-0 truncate text-[19px] lg:text-[22px] font-bold leading-tight" title={currentTitle || undefined}>
               {currentTitle || "(無題)"}
             </h1>
           </div>

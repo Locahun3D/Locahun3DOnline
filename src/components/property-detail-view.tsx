@@ -22,6 +22,7 @@ import InquiryPanel from "@/components/inquiry-panel";
 import { Fragment } from "react";
 import GalleryLightbox from "@/components/gallery-lightbox";
 import PriceEstimator from "@/components/price-estimator";
+import FloorPlanViewer from "@/components/floor-plan-viewer";
 import PropertyAmenities from "@/components/property-amenities";
 import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleLines, propertyTitleSegments } from "@/lib/property-presentation";
 
@@ -519,6 +520,17 @@ export default function PropertyDetailView({
               )}
             </div>
 
+            {/* タグ類は概要カードの紹介文の下（2026-09-20 本人指示で仕様カードから移動。NEW・カテゴリ・#タグを1か所に）。 */}
+            <ul data-property-tags className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mt-5">
+              {isNewProperty(property) && (
+                <li className="text-[11px] font-bold px-2.5 py-1 bg-[#e8443a] text-white mono tracking-[0.18em] uppercase">New</li>
+              )}
+              <li className="text-[12px] font-bold px-2.5 py-1 bg-accent text-[#0a2a35]">{categoryLabel(property.category, locale)}</li>
+              {searchTags.map((t) => (
+                <li key={t} className="text-[13px] text-ink/60">#{t}</li>
+              ))}
+            </ul>
+
             {/* 撮影別の目安＋料金シミュレーション（時間貸しのみ。2026-09-19 本人採用） */}
             {!displaySimulation && (
               <PriceEstimator
@@ -545,16 +557,6 @@ export default function PropertyDetailView({
 
           <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8 flex flex-col">
             <Eyebrow en="SPECS" jp={en ? "Specs" : "仕様"} />
-            {/* タグ類は仕様カードにまとめる（2026-09-20 本人指示）。以前は NEW・カテゴリがヒーロー、#タグがアクセス欄の下と分かれていた。 */}
-            <ul data-property-tags className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mb-5">
-              {isNewProperty(property) && (
-                <li className="text-[11px] font-bold px-2.5 py-1 bg-[#e8443a] text-white mono tracking-[0.18em] uppercase">New</li>
-              )}
-              <li className="text-[12px] font-bold px-2.5 py-1 bg-accent text-[#0a2a35]">{categoryLabel(property.category, locale)}</li>
-              {searchTags.map((t) => (
-                <li key={t} className="text-[13px] text-ink/60">#{t}</li>
-              ))}
-            </ul>
             <table className="w-full text-[14px]">
               <tbody>
                 {specRows.map(([label, value], i) => (
@@ -592,33 +594,7 @@ export default function PropertyDetailView({
 
             {/* ── 平面図: 仕様カードにまとめる（2026-09-20 本人指示。概要カードは紹介文と料金だけ）。
                  PDF はブラウザ内プレビューが端末差で不安定なため、ダウンロード札のまま ── */}
-            {floorPlans.length > 0 && (
-              <div className="mt-6">
-                <div className="mono text-[10px] tracking-[0.22em] uppercase text-muted mb-3">
-                  {en ? "Floor plan" : "平面図"}
-                </div>
-                <div className="space-y-3">
-                  {floorPlans.map((b, i) =>
-                    /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(b.url) ? (
-                      <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className="block border border-line bg-white p-2 hover:border-accent transition">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- R2配信の相対パスは next/image 最適化が404になる */}
-                        <img src={b.url} alt={b.label || (en ? "Floor plan" : "平面図")} className="block w-full h-auto max-h-[420px] object-contain bg-[#f4f5f6]" loading="lazy" />
-                        <div className="flex items-center justify-between mt-2 px-1 text-[12px] text-ink/70">
-                          <span>{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
-                          <span className="font-bold">{en ? "Open full size" : "拡大 ↗"}</span>
-                        </div>
-                      </a>
-                    ) : (
-                      <a key={i} href={b.url} download target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition">
-                        <span className="text-accent">⬇</span>
-                        <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">{b.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`)}</span>
-                        <span className="text-[12px] text-ink/70 font-bold">{en ? "Download PDF" : "PDFをダウンロード"}</span>
-                      </a>
-                    ),
-                  )}
-                </div>
-              </div>
-            )}
+            {floorPlans.length > 0 && <FloorPlanViewer plans={floorPlans} en={en} />}
 
             {/* ── mobile-only CTA fallback so #inquiry / bookmark are reachable
                  without needing to scroll all the way to Contact ── */}
