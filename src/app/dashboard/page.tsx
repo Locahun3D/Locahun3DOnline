@@ -12,12 +12,13 @@ export async function generateMetadata() {
 }
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/sign-in?redirect_url=/dashboard");
-
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
+
+  const user = await getCurrentUser();
+  // ⚠ 2026-09-21: サインイン画面も戻り先も今の言語のまま保つ（EN が日本語に落ちていた）。
+  if (!user) redirect(lh(`/sign-in?redirect_url=${encodeURIComponent(lh("/dashboard"))}`));
 
   const purchaseCount = (
     await purchaseRepo.list({ userId: user.id })

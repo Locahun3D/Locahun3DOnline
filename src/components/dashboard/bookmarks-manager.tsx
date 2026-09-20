@@ -61,9 +61,15 @@ export default function BookmarksManager({
   // 一覧⇄サムネ表示の切替（デフォルトはサムネ＝従来のメイソンリー）。
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [thumbSize, setThumbSize] = useState<"sm" | "md" | "lg">("md");
+  // ⚠ スマホ(640px未満)は必ず1カラム（2026-09-21）。
+  //   既定の md は columns-2 だったので、390px では1枚 165px しか無く、
+  //   PropertyCard の中で「WAREHOUSE」バッジが 3DGS バッジに重なり、
+  //   価格と「VIEW DETAILS →」が切れ、タイトルが5行に折れていた（実測）。
+  //   カードは最低でも 260px 前後ないと成立しないので、S/M/L の密度切替は
+  //   sm 以上でだけ効かせる（下のトグル自体も sm 未満では出さない）。
   const MASONRY_COLS: Record<typeof thumbSize, string> = {
-    sm: "columns-3 sm:columns-4 xl:columns-5",
-    md: "columns-2 sm:columns-3 xl:columns-4",
+    sm: "columns-1 sm:columns-4 xl:columns-5",
+    md: "columns-1 sm:columns-3 xl:columns-4",
     lg: "columns-1 sm:columns-2 xl:columns-3",
   };
 
@@ -383,7 +389,9 @@ export default function BookmarksManager({
           <div className="pt-[18px]">
             <div className="border border-dashed border-line rounded-[2px] rounded-tr-[10px] p-1.5">
             <div className="grid place-items-center aspect-[16/10] text-muted text-2xl">＋</div>
-            <div className="pt-1.5 flex gap-1">
+            {/* ⚠ 390px ではタイル幅が約110pxしかなく、横並びだと入力欄に
+                プレースホルダが「New b」までしか出ない。スマホは縦積み（2026-09-21）。 */}
+            <div className="pt-1.5 flex flex-col sm:flex-row gap-1">
               <input
                 type="text"
                 value={newFolderName}
@@ -453,9 +461,11 @@ export default function BookmarksManager({
           </button>
         </div>
 
-        {/* サムネサイズ（サムネ表示時のみ意味を持つ） */}
+        {/* サムネサイズ（サムネ表示時のみ意味を持つ）。
+            ⚠ スマホは常に1カラム（MASONRY_COLS 参照）なので、押しても何も
+              変わらないトグルを置かない。sm 以上でだけ出す（2026-09-21）。 */}
         {viewMode === "grid" && (
-          <div className="flex border border-line mono text-[10px] uppercase shrink-0">
+          <div className="hidden sm:flex border border-line mono text-[10px] uppercase shrink-0">
             {(["sm", "md", "lg"] as const).map((s, i) => (
               <button
                 key={s}

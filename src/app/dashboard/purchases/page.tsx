@@ -39,11 +39,13 @@ function statusBadge(status: string, en: boolean) {
 }
 
 export default async function UserPurchasesPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/sign-in");
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
+
+  const user = await getCurrentUser();
+  // ⚠ 2026-09-21: サインイン画面も戻り先も今の言語のまま保つ（EN が日本語に落ちていた）。
+  if (!user) redirect(lh(`/sign-in?redirect_url=${encodeURIComponent(lh("/dashboard/purchases"))}`));
 
   const purchases = await purchaseRepo.list({ userId: user.id });
 

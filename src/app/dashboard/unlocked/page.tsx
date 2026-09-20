@@ -14,12 +14,13 @@ export async function generateMetadata() {
 }
 
 export default async function UnlockedScenesPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/sign-in?redirect_url=/dashboard/unlocked");
-
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
+
+  const user = await getCurrentUser();
+  // ⚠ 2026-09-21: サインイン画面も戻り先も今の言語のまま保つ（EN が日本語に落ちていた）。
+  if (!user) redirect(lh(`/sign-in?redirect_url=${encodeURIComponent(lh("/dashboard/unlocked"))}`));
 
   const unlocks = await viewUnlockRepo.list({ userId: user.id });
   const now = new Date().toISOString();
