@@ -218,15 +218,10 @@ export default function PropertyDetailView({
       href: `mailto:${displayedEmail}`,
     });
   }
-  if (property.contactWebsite) {
-    slateRows.push({
-      k: "HP",
-      v: en ? "Official site →" : "公式サイト →",
-      href: websiteHref,
-    });
-  }
+  // HP 行は廃止（2026-09-20 本人指示）: 公式サイトは行の右端リンクではなく、
+  // 行の下に左詰めのボタンとして出し、同じ寸法の「保存」ボタンを並べる。
   // 連絡先が一切無ければ、SCENE / LOC. の最小フォールバックに戻す。
-  if (slateRows.length === 0) {
+  if (slateRows.length === 0 && !websiteHref) {
     slateRows.push({ k: "SCENE", v: property.id.toUpperCase() });
     if (property.prefecture || property.city) {
       slateRows.push({ k: "LOC.", v: `${property.prefecture} ${property.city}`.trim() });
@@ -348,7 +343,7 @@ export default function PropertyDetailView({
               }}
             />
             <div className="px-7 py-7 sm:px-8 sm:py-8 flex flex-col flex-1 max-lg:@sm:grid max-lg:@sm:grid-cols-[minmax(0,1fr)_auto] max-lg:@sm:gap-x-5 max-lg:@2xl:gap-x-10 max-lg:@sm:items-end">
-              <div className="max-lg:@sm:col-span-2 mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.18em] max-[720px]:tracking-[0.05em] uppercase text-white/55">
+              <div className={`max-lg:@sm:col-span-2 mono text-[10.5px] max-[720px]:text-[11px] tracking-[0.18em] max-[720px]:tracking-[0.05em] uppercase text-white/55 ${slateRows.length === 0 ? "hidden" : ""}`}>
                 {slateRows.map((row) => (
                   <div
                     key={row.k}
@@ -371,6 +366,41 @@ export default function PropertyDetailView({
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* 公式サイト＋保存: 左詰め・同寸のボタン2つ（2026-09-20 本人指示）。
+                  板が横並び（@sm）の時も2列ぶち抜きで行の直下に置く。プレビューでは保存は動かさない。 */}
+              <div data-slate-actions className="max-lg:@sm:col-span-2 mt-4 flex flex-wrap justify-start gap-2">
+                {websiteHref && (
+                  <a
+                    href={websiteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 font-bold text-[13px] min-w-[108px] max-[340px]:min-w-0 max-[340px]:flex-1 px-4 max-[720px]:px-3 py-2.5 max-[720px]:min-h-[44px] border border-white/40 text-[#fafaf6] hover:border-accent hover:text-accent transition"
+                  >
+                    {en ? "Website" : "公式サイト"}
+                    <span aria-hidden className="text-[12px] leading-none">↗</span>
+                  </a>
+                )}
+                {preview ? (
+                  <button
+                    type="button"
+                    disabled
+                    title={en ? "Disabled in preview" : "プレビューでは動きません"}
+                    className="inline-flex items-center justify-center gap-2 font-bold text-[13px] min-w-[108px] max-[340px]:min-w-0 max-[340px]:flex-1 px-4 max-[720px]:px-3 py-2.5 max-[720px]:min-h-[44px] border border-dashed border-white/30 text-white/45 cursor-not-allowed"
+                  >
+                    <span className="text-[15px] leading-none">☆</span>
+                    {en ? "Save" : "保存する"}
+                  </button>
+                ) : (
+                  <BookmarkButton
+                    propertyId={property.id}
+                    initialBookmarked={bookmarked}
+                    signedIn={signedIn}
+                    revalidate={`/properties/${property.id}`}
+                    variant="slate"
+                  />
+                )}
               </div>
 
               {/* スタジオ名を1行目に独立させ、残りは意味のまとまりごとに改行する（2026-09-20 本人指示）。
@@ -490,17 +520,8 @@ export default function PropertyDetailView({
                 </span>
               </div>
             )}
-            {!preview && (
-              <div className="absolute top-3 right-3 z-[3]">
-                <BookmarkButton
-                  propertyId={property.id}
-                  initialBookmarked={bookmarked}
-                  signedIn={signedIn}
-                  revalidate={`/properties/${property.id}`}
-                  variant="overlay"
-                />
-              </div>
-            )}
+            {/* 写真右上の☆は廃止（2026-09-20）: 板の「保存」ボタンに置き換え。同じ状態を持つボタンが
+                ヒーロー内に2つあると、片方で保存してももう片方が古い表示のままになるため。 */}
           </div>
         </header>
       </div>
