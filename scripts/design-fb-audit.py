@@ -80,6 +80,10 @@ CHECKS = [
      "src/components/site-header.tsx", r'className="[^"]*backdrop-blur', False),
     ("ヘッダー地は全幅不透明 bg-bg（半透明の幅別例外を作らない）",
      "src/components/site-header.tsx", r'className="[^"]*bg-bg/', False),
+    # ⚠ 2026-09-20「スマホでスクロールするとヘッダーの上が抜ける。直しても再発する」の根本対策。
+    #   ヘッダーの真上に同色の帯（::before）を常に貼り、上端がずれても本文が見えない構造にした。消さないこと。
+    ("ヘッダーの真上に同色の帯（before:bottom-full + before:bg-bg）がある",
+     "src/components/site-header.tsx", r'className="[^"]*before:bottom-full[^"]*before:bg-bg', True),
 ]
 
 ok = fail = 0
