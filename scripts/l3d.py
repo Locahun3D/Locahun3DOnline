@@ -8,6 +8,7 @@
   python scripts/l3d.py prepare2 <slug> ...         # 料金・他社サイト補完・FC写真を反映用にまとめる（ローカルのみ）
   python scripts/l3d.py official <slug> ...         # result.json を下書き物件へ反映（--swap-cover / --rollback）
   python scripts/l3d.py check                       # 公開前チェック
+  python scripts/l3d.py documents <slug> --blueprint "ラベル=画像" ...   # 図面を平面図へ追加
 
 1行の単純なコマンドにしてあるのは、Claude Code の許可ルール（.claude/settings.local.json の
 `Bash(python scripts/l3d.py *)`）に一致させ、自動モードのまま最後まで通すため（2026-09-20）。
@@ -31,6 +32,7 @@ TOOLS = {
     "prepare2": "official_prepare2.py",    # 料金・他社サイト補完・FC写真 → result.json（ローカルのみ）
     "official": "import_official.py",
     "check": "publish_check.py",
+    "documents": "add_documents.py",       # 先方の図面などを下書き物件の平面図へ追加（既存は消さない）
 }
 R2_KEYS = ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_ENDPOINT", "R2_BUCKET")
 
