@@ -52,6 +52,8 @@ for (const path of PATHS) for (const [name, w, h] of VIEWPORTS) {
   try {
     await p.goto(BASE + path, { waitUntil: "domcontentloaded", timeout: 90000 });
     await p.waitForTimeout(2500);
+    // --click "文字": 撮る前に、その文字を含むボタンを押す（エディターのステップ切り替えなど）
+    if (arg("--click")) { await p.getByRole("button", { name: new RegExp(arg("--click")) }).first().click().catch(() => {}); await p.waitForTimeout(1200); }
     const r = await p.evaluate(() => {
       const vw = document.documentElement.clientWidth;
       const off = [...document.querySelectorAll("main *, body > div *")].filter((e) => {
