@@ -79,3 +79,31 @@ it("can exclude Saturdays from a Sunday-and-holiday surcharge", () => {
   expect(simulatePrice({ ...base, day: "holiday" }).total).toBe(24000);
   expect(simulatePrice({ ...base, day: "saturday", surcharges: [{ ...sunHol, includeSaturday: true }] }).total).toBe(24000);
 });
+
+// 2026-09-20: 料金は必ず選択制（プランが無い物件でも選択肢を合成する）
+import { dailyEstimates, priceChoices, simulateDailyPrice } from "./property-presentation";
+it("synthesises selectable price choices when a property has no rate plans", () => {
+  const base = { priceType: "hourly", hourlyPrice: 18000, minUsageHours: 3, dailyPrice: 120000 };
+  expect(priceChoices(base).map((c) => [c.key, c.kind, c.price, c.minHours])).toEqual([["hourly", "hourly", 18000, 3], ["daily", "daily", 120000, 0]]);
+  expect(priceChoices({ ...base, dailyPrice: 0 }).map((c) => c.key)).toEqual(["hourly"]);
+  expect(priceChoices({ ...base, hourlyPrice: 0 }).map((c) => c.key)).toEqual(["daily"]);
+  expect(priceChoices({ ...base, priceType: "flat" })).toEqual([]);
+  expect(priceChoices({ ...base, hourlyPrice: 0, dailyPrice: 0 })).toEqual([]);
+});
+it("keeps rate plans and appends the daily option", () => {
+  const plans = [{ label: "スチール", labelEn: "Stills", hourlyPrice: 6600, minHours: 2 }, { label: "ムービー", labelEn: "", hourlyPrice: 11000, minHours: 0 }, { label: "", labelEn: "", hourlyPrice: 5000, minHours: 0 }];
+  const c = priceChoices({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 4, dailyPrice: 80000, ratePlans: plans });
+  expect(c.map((x) => x.key)).toEqual(["plan-0", "plan-1", "daily"]);
+  expect(c[0]).toMatchObject({ label: "スチール", labelEn: "Stills", minHours: 2, fromPlan: true });
+  expect(c[1].minHours).toBe(4);
+});
+it("daily simulation applies only the holiday surcharge, per day", () => {
+  const night = { label: "夜間", percent: 20, fromHour: 20, toHour: 8, holidays: false };
+  const sunHol = { label: "日祝", percent: 10, fromHour: 0, toHour: 0, holidays: true, includeSaturday: false };
+  expect(simulateDailyPrice({ dailyPrice: 100000, days: ["weekday", "weekday"], surcharges: [night, sunHol] })).toEqual({ total: 200000, lines: [{ label: "通常", hours: 2, rate: 100000 }] });
+  const r = simulateDailyPrice({ dailyPrice: 100000, days: ["saturday", "sunday", "holiday"], surcharges: [night, sunHol] });
+  expect(r.lines).toEqual([{ label: "通常", hours: 1, rate: 100000 }, { label: "日祝", hours: 2, rate: 110000 }]);
+  expect(r.total).toBe(320000);
+  expect(dailyEstimates(120000)).toEqual([{ days: 1, total: 120000 }, { days: 2, total: 240000 }, { days: 3, total: 360000 }]);
+  expect(dailyEstimates(0)).toEqual([]);
+});
