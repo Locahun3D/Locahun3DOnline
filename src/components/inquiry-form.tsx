@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { submitInquiryAction, type InquiryState } from "@/lib/inquiry-actions";
 import { useLocale } from "@/components/locale-provider";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 // スパム対策で共有する隠しフィールド名（サーバ側 inquiry-guard と一致させる）。
 const HONEYPOT_FIELD = "website";
@@ -156,7 +157,7 @@ export default function InquiryForm({
 
       {state?.ok === false && (
         <p className="text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-md px-3.5 py-2.5">
-          {state.error}
+          {localizeActionError(state.error, en)}
         </p>
       )}
 

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { requestProductionUpgradeAction, type ProductionUpgradeState } from "@/lib/auth-actions";
 import { useLocale } from "@/components/locale-provider";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 const FIELD =
   "w-full bg-bg border border-line px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-accent focus:outline-none transition";
@@ -58,7 +59,7 @@ export default function ProductionUpgradeForm() {
           placeholder={en ? "ACME Inc." : "株式会社○○"}
         />
         {state?.errors?.company && (
-          <p className="text-[11px] text-red-400 mt-1.5">{state.errors.company.join(" / ")}</p>
+          <p className="text-[11px] text-red-400 mt-1.5">{state.errors.company.map((m) => localizeActionError(m, en)).join(" / ")}</p>
         )}
       </div>
 
@@ -88,7 +89,7 @@ export default function ProductionUpgradeForm() {
         </span>
       </label>
       {state?.errors?.nda && (
-        <p className="text-[11px] text-red-400">{state.errors.nda.join(" / ")}</p>
+        <p className="text-[11px] text-red-400">{state.errors.nda.map((m) => localizeActionError(m, en)).join(" / ")}</p>
       )}
 
       <p className="text-[11px] text-muted leading-[1.7] border-l-2 border-line pl-3">
@@ -98,7 +99,7 @@ export default function ProductionUpgradeForm() {
       </p>
 
       {state?.errors?.email && (
-        <p className="text-[11px] text-red-400">{state.errors.email.join(" / ")}</p>
+        <p className="text-[11px] text-red-400">{state.errors.email.map((m) => localizeActionError(m, en)).join(" / ")}</p>
       )}
 
       {state?.message && (

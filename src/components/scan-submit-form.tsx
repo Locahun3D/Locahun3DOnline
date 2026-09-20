@@ -5,6 +5,7 @@ import Link from "next/link";
 import { submitScanSubmissionAction, type ScanSubmitState } from "@/lib/scan-submission-actions";
 import { PROPERTY_CATEGORIES, categoryLabel } from "@/lib/schemas";
 import { useLocale, useHref } from "@/components/locale-provider";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 const MAX_SAMPLE_IMAGES = 5;
 const MAX_SAMPLE_IMAGE_BYTES = 25 * 1024 * 1024; // 25MB
@@ -238,7 +239,7 @@ export default function ScanSubmitForm() {
 
           {state?.ok === false && (
             <p className="mb-4 text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-md px-3.5 py-2.5">
-              {state.error}
+              {localizeActionError(state.error, en)}
             </p>
           )}
 

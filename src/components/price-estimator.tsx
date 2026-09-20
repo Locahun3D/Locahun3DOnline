@@ -178,7 +178,7 @@ export default function PriceEstimator({
           <span className="text-[12px] text-muted">
             {daily
               ? `${yen(rate)}${unit} × ${days}`
-              : <>{String(startHour).padStart(2, "0")}:00〜{String((startHour + hours) % 24).padStart(2, "0")}:00{startHour + hours > 24 ? (en ? " (next day)" : "（翌日）") : ""}</>}
+              : <>{String(startHour).padStart(2, "0")}:00{en ? "–" : "〜"}{String((startHour + hours) % 24).padStart(2, "0")}:00{startHour + hours > 24 ? (en ? " (next day)" : "（翌日）") : ""}</>}
           </span>
           <span className="ml-auto whitespace-nowrap"><span className="text-[11px] text-muted mr-2">{taxIncluded ? (en ? "incl. tax" : "税込") : en ? "excl. tax" : "税別"}</span>
             <span className="text-[24px] font-black text-accent tabular-nums" aria-live="polite">{yen(sim.total)}</span></span>

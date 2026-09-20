@@ -1,6 +1,10 @@
 import SignOutRedirect from "@/components/sign-out-redirect";
+import { getLocale } from "@/lib/i18n/server";
 
-export const metadata = { title: "サインアウト" };
+// 2026-09-20 翻訳監査: タイトルと待機文言が日本語固定だった
+export async function generateMetadata() {
+  return { title: (await getLocale()) === "en" ? "Signing out" : "サインアウト" };
+}
 
 /**
  * サインアウトしてから任意のページへ着地させる中継ページ。
@@ -20,10 +24,11 @@ export default async function SignOutPage({
   searchParams: Promise<{ redirect?: string }>;
 }) {
   const { redirect } = await searchParams;
+  const en = (await getLocale()) === "en";
   return (
     <div className="frame py-24 min-h-[50vh] flex items-center justify-center">
       <p className="mono text-[11px] tracking-[0.2em] uppercase text-muted">
-        サインアウトしています…
+        {en ? "Signing you out…" : "サインアウトしています…"}
       </p>
       <SignOutRedirect to={redirect ?? "/"} />
     </div>

@@ -235,12 +235,12 @@ export default function PropertyDetailView({
   if (property.nearestStation) specRows.push(["STATION ／ 最寄り駅", property.nearestStation]);
   const customHoursLabel =
     property.customHoursStart && property.customHoursEnd
-      ? `${property.customHoursStart}〜${property.customHoursEnd}`
+      ? `${property.customHoursStart}${en ? "–" : "〜"}${property.customHoursEnd}`
       : "";
   if (customHoursLabel) {
     specRows.push([
       en ? "TIME SLOTS ／ Available hours" : "TIME SLOTS ／ 利用可能な時間帯",
-      property.availableHours ? `${customHoursLabel}（${property.availableHours}）` : customHoursLabel,
+      property.availableHours ? (en ? `${customHoursLabel} (${property.availableHours})` : `${customHoursLabel}（${property.availableHours}）`) : customHoursLabel,
     ]);
   } else if (property.availableHours) {
     specRows.push(["HOURS ／ 利用可能時間", property.availableHours]);
@@ -277,14 +277,16 @@ export default function PropertyDetailView({
     <article data-property-legacy className={`theme-online ${styles.legacy}`}>
       {preview && sharePreview && (
         <div className="frame mb-0 sticky top-[calc(var(--header-h)/var(--z))] z-40 border border-[#5ec8e8]/40 bg-[#0c1b22] backdrop-blur-sm px-4 py-3 text-[13px] mono tracking-[0.08em] text-[#8fdcf0] flex flex-wrap items-center justify-between gap-3">
+          {/* 2026-09-20 翻訳監査: 共有プレビューは /en でも開けるので英語を用意（管理プレビューの帯は社内用のため日本語のまま） */}
           <span>
-            ● 限定プレビュー（共有用・非公開）—
-            公開前の物件を確認いただいています。
+            {en
+              ? "● Private preview (shared link) — you are viewing this location before it is published."
+              : "● 限定プレビュー（共有用・非公開）— 公開前の物件を確認いただいています。"}
           </span>
           {previewExpiresAt && (
             <span className="text-[#8fdcf0]/70 normal-case tracking-normal">
-              有効期限:{" "}
-              {fmtDateLongJST(previewExpiresAt)}
+              {en ? "Expires:" : "有効期限:"}{" "}
+              {fmtDateLongJST(previewExpiresAt, en ? "en-US" : "ja-JP")}
             </span>
           )}
         </div>

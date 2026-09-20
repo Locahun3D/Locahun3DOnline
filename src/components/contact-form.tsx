@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { submitContactRequestAction, type ContactState } from "@/lib/contact-actions";
 import type { ContactType } from "@/lib/contact-requests";
 import { useLocale } from "@/components/locale-provider";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 const HONEYPOT_FIELD = "website";
 const RENDERED_AT_FIELD = "_rt";
@@ -295,7 +296,7 @@ export default function ContactForm({
 
           {state?.ok === false && (
             <p className="text-[13px] text-red-600 bg-red-50 border border-red-200 rounded-md px-3.5 py-2.5">
-              {state.error}
+              {localizeActionError(state.error, en)}
             </p>
           )}
 
@@ -343,7 +344,7 @@ function Field({
         {label}
         {required && <span className="text-red-500 text-[11px] ml-1">{en ? "required" : "必須"}</span>}
         {optional && <span className="text-muted text-[11px] ml-1">{en ? "optional" : "任意"}</span>}
-        {note && <span className="text-muted text-[11px] ml-1.5">（{note}）</span>}
+        {note && <span className="text-muted text-[11px] ml-1.5">{en ? `(${note})` : `（${note}）`}</span>}
       </span>
       {children}
     </label>
