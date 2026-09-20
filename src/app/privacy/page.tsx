@@ -31,7 +31,7 @@ export default async function PrivacyPage() {
             <li>アカウント情報: 氏名（表示名）、メールアドレス、認証情報（認証基盤 Clerk を経由して取得）</li>
             <li>登録情報: アカウント種別（個人／撮影スタジオ／制作会社）、会社名・電話番号（任意入力）</li>
             <li>決済情報: 購入履歴、サブスクリプションプラン。クレジットカード番号そのものは当社では保持せず、決済代行会社 Stripe, Inc. が管理します。</li>
-            <li>投稿情報: 物件掲示板への投稿、ブックマーク、NDA（秘密保持契約）の同意記録</li>
+            <li>利用情報: ブックマーク、NDA（秘密保持契約）の同意記録</li>
             <li>お問い合わせ情報: お問い合わせフォームに入力された氏名・メールアドレス・電話番号（任意）・利用目的・メッセージ内容</li>
             <li>
               分配金の振込先情報: 掲載データ販売分配・持ち込みスキャンの分配対象となる方から、振込先の銀行口座情報（銀行名・支店名・口座種別・口座番号・口座名義）をお預かりします。源泉徴収の対象となる支払いについては、法令に基づき税務署への支払調書提出に必要な情報（個人番号を含みます）もあわせてお預かりする場合があります。
@@ -46,7 +46,7 @@ export default async function PrivacyPage() {
           <p className="opacity-80 mb-3">取得した情報は、以下の目的で利用します。</p>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本人確認・ログイン認証のため</li>
-            <li>3DGSウォークスルーの閲覧、掲示板・レビュー機能など本サービスの提供のため</li>
+            <li>3DGSウォークスルーの閲覧など本サービスの提供のため</li>
             <li>決済処理、請求書発行、購入履歴の管理のため</li>
             <li>お問い合わせへの対応、および掲載物件の連絡先への転送のため</li>
             <li>掲載データ販売分配・持ち込みスキャンの分配金精算、法令に基づく支払調書の作成・提出のため</li>
@@ -110,6 +110,7 @@ export default async function PrivacyPage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月11日<br />
             改定日: 2026年8月2日（分配金の振込先情報・支払調書対応に関する取得情報・利用目的・保存期間を追記）<br />
+            改定日: 2026年9月21日（物件掲示板・レビュー機能の廃止に伴い、取得する情報と利用目的の記載から当該機能を削除）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -152,7 +153,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
             <li>Account information: name (display name), email address, and authentication data (via our authentication provider, Clerk).</li>
             <li>Registration details: account type (individual / photo studio / production company), company name and phone number (optional).</li>
             <li>Payment information: purchase history and subscription plan. Credit card numbers are not held by us and are managed by our payment processor, Stripe, Inc.</li>
-            <li>Content you post: location board comments, reviews and ratings, bookmarks, and NDA (non-disclosure agreement) acceptance records.</li>
+            <li>Usage records: bookmarks and NDA (non-disclosure agreement) acceptance records.</li>
             <li>Inquiry information: name, email, phone number (optional), purpose, and message content submitted via contact forms.</li>
             <li>
               Payout bank details: for recipients of listing data revenue share or scan submission revenue share, we collect bank transfer details (bank name, branch, account type, account number, account holder). For payments subject to withholding tax, we may also collect information required by law to file a payment record statement with the tax office, including the individual&apos;s My Number.
@@ -166,7 +167,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
           <h2 className="ui-section-title mb-4">Article 2 (Purpose of Use)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Identity verification and login authentication.</li>
-            <li>Providing the Service, including 3DGS walkthroughs, the board, and reviews.</li>
+            <li>Providing the Service, including 3DGS walkthroughs.</li>
             <li>Payment processing, invoicing, and purchase history management.</li>
             <li>Responding to inquiries and forwarding them to the relevant listed location.</li>
             <li>Settling revenue share payments for listing data sales and scan submissions, and preparing/filing payment record statements as required by law.</li>
@@ -227,6 +228,7 @@ function PrivacyEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: July 11, 2026<br />
             Revised: August 2, 2026 (added payout bank details and payment-record-statement handling to the information we collect, purposes, and retention period)<br />
+            Revised: September 21, 2026 (the location board and review functions were discontinued; removed them from the information we collect and the purposes of use)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>

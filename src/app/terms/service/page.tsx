@@ -61,7 +61,7 @@ export default async function TermsServicePage() {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>法令または公序良俗に違反する行為</li>
             <li>当社、他の利用者、または第三者の知的財産権・肖像権・プライバシー等の権利を侵害する行為</li>
-            <li>掲示板機能への虚偽の投稿、誹謗中傷、スパム行為、または通報機能を悪用する行為</li>
+            <li>問い合わせフォーム等を通じた虚偽の内容の送信、誹謗中傷、スパム行為</li>
             <li>不正アクセス、リバースエンジニアリング、本サービスへの過度な負荷をかける行為</li>
             <li>3Dスキャンデータやアカウント情報を無断で第三者に提供・転売する行為</li>
             <li>複数アカウントの不正取得、または他人になりすます行為</li>
@@ -72,7 +72,7 @@ export default async function TermsServicePage() {
         <section>
           <h2 className="ui-section-title mb-4">第5条（知的財産権）</h2>
           <p className="opacity-80 mb-3">
-            本サービスに関する著作権・商標権その他の知的財産権は、当社または正当な権利を有する第三者に帰属します。利用者が投稿した掲示板の著作権は投稿者に留保されますが、利用者は当社に対し、本サービスの提供・運営・宣伝に必要な範囲で当該投稿を利用（複製・表示等）する権利を許諾するものとします。
+            本サービスに関する著作権・商標権その他の知的財産権は、当社または正当な権利を有する第三者に帰属します。利用者が本サービスに投稿・送信したコンテンツの著作権は当該利用者に留保されますが、利用者は当社に対し、本サービスの提供・運営・宣伝に必要な範囲で当該投稿を利用（複製・表示等）する権利を許諾するものとします。
           </p>
           {/* ⚠ 2段階の穴があった（2026-08-02指摘・対応）。
               ①3Dビューアーのカメラツールは、データを購入していない閲覧者
@@ -199,6 +199,7 @@ export default async function TermsServicePage() {
             改定日: 2026年8月4日（第10条に利用者からの退会手続きを追記／第11条3項の賠償上限に故意・重過失の除外と無償利用時の下限額を明記／第12条の規約変更手続きを事前周知方式に変更）<br />
             改定日: 2026年8月10日（第7条のホスティング商品の料金を、2027年以降は3Dデータ販売価格の20%の年額とする従価方式に変更。あわせてホスティング商品をお申し込みの場合のスキャン費用の無償化と、3年未満での解約時の精算を追記）<br />
             改定日: 2026年9月19日（第6条にエディトリアル限定のライセンス分類を追記）<br />
+            改定日: 2026年9月21日（物件掲示板・通報機能の廃止に伴い、第4条の禁止事項と第5条の投稿コンテンツの記載を整理）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -275,7 +276,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Acts that violate laws or public order and morals.</li>
             <li>Infringing our, other users&apos;, or third parties&apos; intellectual property, portrait, or privacy rights.</li>
-            <li>Posting false content, harassment, spam, or abusing the report function on the board or reviews.</li>
+            <li>Sending false content, harassment, or spam through the inquiry forms or other parts of the Service.</li>
             <li>Unauthorized access, reverse engineering, or placing excessive load on the Service.</li>
             <li>Redistributing or reselling 3D scan data or account information to third parties without authorization.</li>
             <li>Fraudulently obtaining multiple accounts or impersonating another person.</li>
@@ -286,7 +287,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 5 (Intellectual Property)</h2>
           <p className="opacity-80 mb-3">
-            Copyrights, trademarks, and other intellectual property rights relating to the Service belong to us or to third parties with legitimate rights. Copyright in board posts and reviews submitted by users remains with the user, but the user grants us a license to use (reproduce, display, etc.) such content to the extent necessary to provide, operate, and promote the Service.
+            Copyrights, trademarks, and other intellectual property rights relating to the Service belong to us or to third parties with legitimate rights. Copyright in content that users post or send to the Service remains with the user, but the user grants us a license to use (reproduce, display, etc.) such content to the extent necessary to provide, operate, and promote the Service.
           </p>
           <p className="opacity-80">
             Images and screenshots obtained by a user through viewing the Service (including JPEGs exported via the camera tool during a walkthrough), and any 3D scan data itself that may be obtainable through technical means during such viewing, are subject to the same restrictions as the 3D data license categories in Article 6 regardless of whether the data was purchased: <strong>redistributing or reselling the data itself, and using it as training data for machine-learning or generative-AI models</strong>, require our prior consultation and individual written agreement.
@@ -386,6 +387,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             Revised: August 2, 2026 (added studio/guest account terms to Article 2; added Article 7 on the Hosting Product, renumbering subsequent articles; added to Article 5 that images/screenshots obtained while viewing, and 3D data itself obtainable by technical means during viewing, are subject to the same redistribution/AI-training restrictions as purchased data)<br />
             Revised: August 4, 2026 (added user-initiated withdrawal to Article 10; added willful-misconduct/gross-negligence carve-out and a floor amount for free users to the liability cap in Article 11; changed Article 12 to an advance-notice amendment procedure)<br />
             Revised: August 10, 2026 (changed the Hosting Product fee in Article 7 to an ad valorem annual fee of 20% of the 3D data sale price from 2027 onward; added the scan-fee waiver for hosting subscribers and the settlement due on cancellation within three years)<br />
+            Revised: September 21, 2026 (the location board and report functions were discontinued; tidied the prohibited acts in Article 4 and the wording on user-submitted content in Article 5)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
