@@ -162,7 +162,7 @@ export default function AccountsAdmin({
             setPage(1);
           }}
           placeholder="名前・メール・所属で検索…"
-          className="bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-72 focus:outline-none focus:border-accent placeholder:text-black/40"
+          className="min-h-[40px] bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-72 focus:outline-none focus:border-accent placeholder:text-black/40"
         />
         <select
           value={roleFilter}
@@ -170,14 +170,15 @@ export default function AccountsAdmin({
             setRoleFilter(e.target.value as AccountRole | "all");
             setPage(1);
           }}
-          className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
+          className="bg-bg border border-line min-h-[40px] text-[12px] px-2 py-2 text-ink"
         >
           <option value="all">役割すべて</option>
           {ACCOUNT_ROLES.map((r) => (
             <option key={r} value={r}>{ROLE_LABEL[r]}</option>
           ))}
         </select>
-        <div className="flex flex-wrap gap-2 mono text-[10px] tracking-[0.22em] uppercase">
+        {/* 2026-09-20: 絞り込みは iPad 用に高さ 40px・読みやすい 12px に。 */}
+        <div className="flex flex-wrap gap-2 text-[12px]">
           {(["all", "pending", "active", "suspended"] as const).map((s) => (
             <button
               key={s}
@@ -187,7 +188,7 @@ export default function AccountsAdmin({
                 setShowArchived(false);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 border transition ${
+              className={`min-h-[40px] px-3 border transition ${
                 !showArchived && statusFilter === s
                   ? "border-accent text-accent"
                   : "border-line text-muted hover:border-ink hover:text-ink"
@@ -200,7 +201,7 @@ export default function AccountsAdmin({
           <button
             type="button"
             onClick={() => setShowArchived(true)}
-            className={`px-3 py-1.5 border transition ${
+            className={`min-h-[40px] px-3 border transition ${
               showArchived
                 ? "border-accent text-accent"
                 : "border-line text-muted hover:border-ink hover:text-ink"
@@ -235,7 +236,7 @@ export default function AccountsAdmin({
           min={1}
           value={freeGrantAmount}
           onChange={(e) => setFreeGrantAmount(Math.max(1, Math.trunc(Number(e.target.value) || 1)))}
-          className="w-16 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink"
+          className="w-16 bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink"
         />
         <BulkBtn
           label={`フリープラン全員に +${freeGrantAmount} トークン`}
@@ -249,7 +250,7 @@ export default function AccountsAdmin({
       </div>
 
       {notice && (
-        <div className="flex items-center justify-between gap-3 border border-line bg-ink/[0.04] px-3 py-2 text-[12px] text-ink/80">
+        <div className="flex items-center justify-between gap-3 border border-line bg-ink/[0.04] px-3 py-2 min-h-[40px] text-[12px] text-ink/80">
           <span>{notice}</span>
           <button type="button" onClick={() => setNotice(null)} className="mono text-[10px] text-muted hover:text-ink">✕</button>
         </div>
@@ -270,7 +271,7 @@ export default function AccountsAdmin({
                 min={1}
                 value={selectedGrantAmount}
                 onChange={(e) => setSelectedGrantAmount(Math.max(1, Math.trunc(Number(e.target.value) || 1)))}
-                className="w-14 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink"
+                className="w-14 bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink"
               />
               <BulkBtn
                 label={`+${selectedGrantAmount} トークン付与`}
@@ -293,16 +294,16 @@ export default function AccountsAdmin({
       )}
 
       {filtered.length === 0 ? (
-        <p className="text-[13px] text-muted">該当するアカウントはありません。</p>
+        <p className="border border-line px-4 py-3 text-[13px] text-muted">該当するアカウントはありません。</p>
       ) : (
         <div className="space-y-3">
           {/* select-all row */}
-          <label className="flex items-center gap-2 text-[11px] text-muted mono uppercase tracking-[0.18em] px-1">
+          <label className="flex min-h-[40px] items-center gap-2 text-[12px] text-muted px-1">
             <input
               type="checkbox"
               checked={allVisibleSelected}
               onChange={toggleAll}
-              className="w-4 h-4 accent-[#5ec8e8]"
+              className="w-5 h-5 accent-[#5ec8e8]"
             />
             表示中をすべて選択
           </label>
@@ -324,7 +325,7 @@ export default function AccountsAdmin({
                 checked={selected.has(u.id)}
                 onChange={() => toggle(u.id)}
                 aria-label={`${u.name} を選択`}
-                className="w-4 h-4 accent-[#5ec8e8] mt-1 md:mt-0"
+                className="w-5 h-5 accent-[#5ec8e8] mt-1 md:mt-0"
               />
 
               <div className="min-w-0">
@@ -377,7 +378,7 @@ export default function AccountsAdmin({
                   <>
                     <form action={approveAccountAction}>
                       <input type="hidden" name="id" value={u.id} />
-                      <button className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/50 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition">
+                      <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-green-400/50 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition">
                         承認
                       </button>
                     </form>
@@ -399,12 +400,12 @@ export default function AccountsAdmin({
                       }}
                     >
                       <input type="hidden" name="id" value={u.id} />
-                      <select name="reason" defaultValue="personal_email" className="bg-bg border border-line text-[11px] px-2 py-1.5 text-ink">
+                      <select name="reason" defaultValue="personal_email" className="bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink">
                         {REJECT_REASONS.map((r) => (
                           <option key={r} value={r}>{REJECT_REASON_LABEL[r]}</option>
                         ))}
                       </select>
-                      <button className="mono text-[10px] tracking-[0.18em] uppercase border border-red-400/50 text-red-400 px-3 py-1.5 hover:bg-red-400 hover:text-bg transition">
+                      <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-400/50 text-red-400 px-3 py-1.5 hover:bg-red-400 hover:text-bg transition">
                         却下
                       </button>
                     </form>
@@ -413,22 +414,22 @@ export default function AccountsAdmin({
 
                 <form action={setAccountStatusAction} className="flex items-center gap-1">
                   <input type="hidden" name="id" value={u.id} />
-                  <select name="status" defaultValue={u.status} className="bg-bg border border-line text-[11px] px-2 py-1.5 text-ink">
+                  <select name="status" defaultValue={u.status} className="bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink">
                     <option value="active">有効</option>
                     <option value="pending">承認待ち</option>
                     <option value="suspended">停止</option>
                   </select>
-                  <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">状態</button>
+                  <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">状態</button>
                 </form>
 
                 <form action={setAccountRoleAction} className="flex items-center gap-1">
                   <input type="hidden" name="id" value={u.id} />
-                  <select name="role" defaultValue={u.role} className="bg-bg border border-line text-[11px] px-2 py-1.5 text-ink">
+                  <select name="role" defaultValue={u.role} className="bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink">
                     {ACCOUNT_ROLES.map((r) => (
                       <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                     ))}
                   </select>
-                  <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">役割</button>
+                  <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">役割</button>
                 </form>
 
                 {/* これは加算(付与)ではなく残高そのものを置き換える「上書き」。
@@ -440,13 +441,13 @@ export default function AccountsAdmin({
                   title="現在の残高を、ここで指定した数値に置き換えます（加算ではありません）"
                 >
                   <input type="hidden" name="id" value={u.id} />
-                  <input type="number" name="balance" defaultValue={u.tokenBalance} min={0} className="w-16 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink" />
-                  <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">残高を上書き</button>
+                  <input type="number" name="balance" defaultValue={u.tokenBalance} min={0} className="w-16 bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink" />
+                  <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">残高を上書き</button>
                 </form>
 
                 <Link
                   href={`/admin/accounts/${u.id}/tokens`}
-                  className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition"
+                  className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition"
                 >
                   履歴
                 </Link>
@@ -459,15 +460,15 @@ export default function AccountsAdmin({
                       name="propertyIds"
                       defaultValue={(u.linkedPropertyIds ?? []).join(",")}
                       placeholder="物件ID（カンマ区切り）"
-                      className="w-40 bg-bg border border-line text-[11px] px-2 py-1.5 text-ink"
+                      className="w-40 bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink"
                     />
-                    <button className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">紐付</button>
+                    <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition">紐付</button>
                   </form>
                 )}
 
                 <Link
                   href={`/admin/accounts/${u.id}/sessions`}
-                  className="mono text-[10px] uppercase border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition"
+                  className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line px-2 py-1.5 text-muted hover:text-accent hover:border-accent transition"
                 >
                   端末
                 </Link>
@@ -551,7 +552,7 @@ function DeleteAccountControl({ user }: { user: User }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mono text-[10px] uppercase border border-red-400/40 text-red-400/80 px-2 py-1.5 hover:bg-red-400 hover:text-bg transition"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-400/40 text-red-400/80 px-2 py-1.5 hover:bg-red-400 hover:text-bg transition"
       >
         削除
       </button>
@@ -593,12 +594,12 @@ function DeleteAccountControl({ user }: { user: User }) {
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         placeholder="例: 本人からの退会希望 / 重複アカウント"
-        className="bg-bg border border-line text-ink px-2 py-1.5 text-[12px] w-full focus:outline-none focus:border-accent"
+        className="bg-bg border border-line text-ink px-2 py-1.5 min-h-[40px] text-[12px] w-full focus:outline-none focus:border-accent"
       />
       <button
         type="submit"
         disabled={!reason.trim()}
-        className="mono text-[10px] uppercase border border-red-600/50 text-red-600 px-2 py-1.5 hover:bg-red-600 hover:text-bg transition disabled:opacity-40 disabled:pointer-events-none"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-600/50 text-red-600 px-2 py-1.5 hover:bg-red-600 hover:text-bg transition disabled:opacity-40 disabled:pointer-events-none"
       >
         削除を実行
       </button>
@@ -608,7 +609,7 @@ function DeleteAccountControl({ user }: { user: User }) {
           setOpen(false);
           setReason("");
         }}
-        className="mono text-[10px] uppercase border border-line text-muted px-2 py-1.5 hover:text-ink transition"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-2 py-1.5 hover:text-ink transition"
       >
         取消
       </button>
@@ -631,7 +632,7 @@ function Pager({
     }
   }
   const btn =
-    "mono text-[11px] px-2.5 py-1.5 border transition disabled:opacity-40 disabled:pointer-events-none";
+    "inline-flex min-h-[40px] items-center justify-center text-[12px] px-2.5 py-1.5 border transition disabled:opacity-40 disabled:pointer-events-none";
   return (
     <nav className="flex flex-wrap items-center justify-center gap-1.5 pt-2" aria-label="ページ送り">
       <button
@@ -683,7 +684,7 @@ function BulkBtn({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`mono text-[10px] tracking-[0.18em] uppercase border px-2.5 py-1.5 transition disabled:opacity-50 ${
+      className={`inline-flex min-h-[40px] items-center justify-center text-[12px] border px-2.5 py-1.5 transition disabled:opacity-50 ${
         danger
           ? "border-red-500/40 text-red-400 hover:bg-red-500/10"
           : "border-line text-muted hover:border-accent hover:text-accent"

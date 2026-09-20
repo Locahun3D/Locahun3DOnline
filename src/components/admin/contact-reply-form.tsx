@@ -27,7 +27,7 @@ export default function ContactReplyForm({
 
   if (state?.ok) {
     return (
-      <div className="text-[12px] text-green-700 border border-green-300 bg-green-50 px-3 py-2 rounded-sm">
+      <div className="inline-flex min-h-[40px] items-center justify-center text-[12px] text-green-700 border border-green-300 bg-green-50 px-3 py-2 rounded-sm">
         返信を送信しました → {toEmail}（差出人: contact@locahun3d.com）
       </div>
     );
@@ -38,7 +38,7 @@ export default function ContactReplyForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-[12px] border border-accent text-accent px-3 py-1.5 rounded-sm hover:bg-accent hover:text-bg transition"
+        className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-3 py-1.5 rounded-sm hover:bg-accent hover:text-bg transition"
       >
         返信する
       </button>
@@ -64,7 +64,7 @@ export default function ContactReplyForm({
         <button
           type="submit"
           disabled={pending}
-          className="text-[12px] border border-accent bg-accent text-bg px-3 py-1.5 rounded-sm hover:brightness-95 transition disabled:opacity-50"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent bg-accent text-bg px-3 py-1.5 rounded-sm hover:brightness-95 transition disabled:opacity-50"
         >
           {pending ? "送信中…" : "送信"}
         </button>
@@ -72,7 +72,7 @@ export default function ContactReplyForm({
           type="button"
           onClick={() => setOpen(false)}
           disabled={pending}
-          className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition"
         >
           キャンセル
         </button>

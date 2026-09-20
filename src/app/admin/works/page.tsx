@@ -5,6 +5,7 @@ import {
   regenerateWorksTokenAction,
   setWorksStatusAction,
 } from "@/lib/works-admin-actions";
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 
 export const metadata = { title: "実績＆技術ブログ" };
 export const dynamic = "force-dynamic";
@@ -16,6 +17,12 @@ const LABEL: Record<WorksStatus, string> = {
 };
 
 const WORKS_ORIGIN = "https://web.locahun3d.com";
+
+/** 2026-09-20: 一覧では全記事に付く「｜ロケハン3D 技術ブログ」等のサイト名の尾を省く（見分けに不要）。 */
+function shortTitle(title: string) {
+  const t = title.replace(/\s*[｜|]\s*(ロケハン3D|LOCAHUN\s?3D)[^｜|]*$/i, "").trim();
+  return t || title;
+}
 
 /**
  * /admin/works — works 記事の公開状態。
@@ -35,30 +42,34 @@ export default async function AdminWorksPage() {
   const kvAvailable = Object.keys(stored).length > 0 || (await hasKv());
 
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10 max-w-[1000px]">
-      <header className="ui-page-header">
-      <h1 className="ui-page-title">実績＆技術ブログ</h1>
-      <p className="ui-page-lead text-muted text-[13px]">
-        記事の公開状態を切り替えます。
-        <br />
-        記事の追加・修正は <code className="mono">digiroke3d_Web/works</code> で行い、
-        <code className="mono">node scripts/import-works.mjs</code> で取り込んでください。
-      </p>
-      </header>
+    <AdminPageShell>
+      {/* 2026-09-20: 小型ヘッダーへ。記事の取り込み手順は「使い方」に畳んだ。表は横スクロール容器に入れ、
+          状態ボタンは iPad 用に高さ 40px。 */}
+      <AdminPageHeader
+        title="実績＆技術ブログ"
+        count={`${pages.length} 件`}
+        description="記事の公開状態を切り替えます。"
+        help={
+          <>
+            記事の追加・修正は <code className="mono">digiroke3d_Web/works</code> で行い、
+            <code className="mono">node scripts/import-works.mjs</code> で取り込みます。
+          </>
+        }
+      />
 
       {!kvAvailable && (
-        <p className="mb-6 border border-line bg-[#1c1c1c] p-4 text-sm text-muted">
-          KV バインディング（WORKS_KV）が見つかりません。ローカル開発では全記事が
-          「公開」として扱われ、ここでの変更は保存されません。
+        <p className="mb-4 border border-line bg-[#1c1c1c] px-4 py-2 text-[13px] text-muted">
+          この環境では公開状態を保存できません（全記事が「公開」として表示されます）。
         </p>
       )}
 
-      <table className="w-full text-sm border-collapse">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm border-collapse">
         <thead>
-          <tr className="text-left text-muted mono text-[11px] tracking-[0.14em] uppercase border-b border-line">
-            <th className="py-3 pr-3">記事</th>
-            <th className="py-3 pr-3 whitespace-nowrap">状態</th>
-            <th className="py-3">共有リンク</th>
+          <tr className="text-left text-muted text-[12px] border-b border-line">
+            <th className="py-2 pr-3 font-normal">記事</th>
+            <th className="py-2 pr-3 font-normal whitespace-nowrap">状態</th>
+            <th className="py-2 font-normal">共有リンク</th>
           </tr>
         </thead>
         <tbody>
@@ -66,21 +77,21 @@ export default async function AdminWorksPage() {
             const meta: WorksMeta = stored[slug] ?? { status: "published", shareToken: null };
             const ungated = UNGATED_SLUGS.has(slug);
             return (
-              <tr key={slug} className="border-b border-line align-top">
-                <td className="py-4 pr-3">
+              <tr key={slug} className="border-b border-line align-middle">
+                <td className="py-2 pr-3">
                   <a
                     href={`${WORKS_ORIGIN}/works/${slug}.html`}
                     className="hover:text-accent transition"
                     target="_blank"
                     rel="noopener"
                   >
-                    {title || slug}
+                    {shortTitle(title) || slug}
                   </a>
-                  <div className="mono text-[11px] text-muted mt-1">
+                  <div className="mono text-[11px] text-muted">
                     /works/{slug}.html{hasEn ? " ・ /en/works/" + slug + ".html" : "（EN なし）"}
                   </div>
                 </td>
-                <td className="py-4 pr-3 whitespace-nowrap">
+                <td className="py-2 pr-3 whitespace-nowrap">
                   {ungated ? (
                     <span className="text-muted text-[12px]">常時公開（一覧・転送）</span>
                   ) : (
@@ -92,7 +103,7 @@ export default async function AdminWorksPage() {
                           <button
                             type="submit"
                             disabled={!kvAvailable}
-                            className={`px-2 py-1 text-[11px] mono border transition disabled:opacity-40 ${
+                            className={`min-h-[40px] px-3 text-[12px] border transition disabled:opacity-40 ${
                               meta.status === s
                                 ? "border-accent text-accent"
                                 : "border-line text-muted hover:text-ink"
@@ -105,7 +116,7 @@ export default async function AdminWorksPage() {
                     </div>
                   )}
                 </td>
-                <td className="py-4">
+                <td className="py-2">
                   {!ungated && meta.status === "private" && meta.shareToken ? (
                     <div className="flex flex-col gap-2 min-w-0">
                       <code className="mono text-[11px] text-muted break-all">
@@ -116,7 +127,7 @@ export default async function AdminWorksPage() {
                         <button
                           type="submit"
                           disabled={!kvAvailable}
-                          className="px-2 py-1 text-[11px] mono border border-line text-muted hover:text-accent hover:border-accent transition disabled:opacity-40"
+                          className="min-h-[40px] px-3 text-[12px] border border-line text-muted hover:text-accent hover:border-accent transition disabled:opacity-40"
                         >
                           トークン再生成
                         </button>
@@ -131,7 +142,8 @@ export default async function AdminWorksPage() {
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </AdminPageShell>
   );
 }
 

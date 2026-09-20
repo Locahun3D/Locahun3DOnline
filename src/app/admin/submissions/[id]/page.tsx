@@ -9,6 +9,7 @@ import { payeeRepo } from "@/lib/payouts";
 import { getUploadMode } from "@/lib/uploads";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 import { SubmissionStatusForm, CreateDraftButton } from "@/components/admin/submission-actions";
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 
 export const metadata = { title: "持ち込みスキャン 詳細" };
 
@@ -32,20 +33,23 @@ export default async function AdminScanSubmissionDetailPage({
     : null;
 
   return (
-    <div className="theme-online ui-page-shell px-8 pb-8 max-w-[900px]">
-      <div className="ui-page-header">
-        <Link href="/admin/submissions" className="text-[12px] text-muted hover:text-accent transition">
-          ← 一覧に戻る
-        </Link>
-        <h1 className="ui-page-title">
-          {submission.locationName || "（無題）"}
-          <span className="ml-3 align-middle mono text-[11px] tracking-[0.12em] uppercase text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
+    <AdminPageShell className="theme-online max-w-[960px]">
+      {/* 2026-09-20: 管理画面共通の小型ヘッダー */}
+      <AdminPageHeader
+        back={
+          <Link href="/admin/submissions" className="inline-flex min-h-[32px] items-center text-muted hover:text-accent transition">
+            ← 一覧に戻る
+          </Link>
+        }
+        title={submission.locationName || "（無題）"}
+        count={
+          <span className="text-[11px] text-accent border border-accent/40 rounded-full px-2.5 py-0.5">
             {scanStatusLabel(submission.status)}
           </span>
-        </h1>
-      </div>
+        }
+      />
 
-      <div className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-[14px] mb-6 border border-line rounded-md p-5">
+      <div className="grid md:grid-cols-2 gap-x-8 gap-y-2 text-[14px] mb-4 border border-line rounded-md p-4">
         <Field label="申請者">{applicant?.email ?? submission.userId}</Field>
         <Field label="カテゴリ">{categoryLabel(submission.category)}</Field>
         <Field label="所在地">
@@ -111,7 +115,7 @@ export default async function AdminScanSubmissionDetailPage({
             </span>
           ) : (
             <span className="text-yellow-400">
-              ローカルモードのため、サンプル画像（public/uploads/scan-{submission.id}/）の手動削除が必要です。
+              ローカル環境のため、サンプル画像（public/uploads/scan-{submission.id}/）は手動で削除してください。
             </span>
           )}
         </div>
@@ -152,7 +156,7 @@ export default async function AdminScanSubmissionDetailPage({
                 </p>
                 <Link
                   href={`/admin/payouts?payeeName=${encodeURIComponent(applicant.displayName || applicant.name || applicant.email)}&payeeEmail=${encodeURIComponent(applicant.email)}&payeeNote=${encodeURIComponent(`持ち込み申請 ${submission.id}（${submission.locationName}）`)}`}
-                  className="inline-block text-[12px] border border-accent text-accent px-4 py-2 rounded-sm hover:bg-accent hover:text-bg transition"
+                  className="inline-block inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-4 py-2 rounded-sm hover:bg-accent hover:text-bg transition"
                 >
                   受取者として登録 →
                 </Link>
@@ -166,7 +170,7 @@ export default async function AdminScanSubmissionDetailPage({
           </div>
         )}
       </div>
-    </div>
+    </AdminPageShell>
   );
 }
 

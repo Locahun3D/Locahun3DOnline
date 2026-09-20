@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/dal";
 import { userRepo } from "@/lib/users";
 import { emailEnabled } from "@/lib/email";
 import { giftCodeRepo } from "@/lib/gift-codes";
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import MarketingComposer from "@/components/admin/marketing-composer";
 import GiftCodeAdmin from "@/components/admin/gift-code-admin";
 import StudioRevenueShareNotice from "@/components/admin/studio-revenue-share-notice";
@@ -21,44 +22,36 @@ export default async function AdminMarketingPage() {
   const consentedCount = users.filter((u) => u.marketingConsent && u.status === "active").length;
 
   return (
-    <div className="ui-page-shell px-8 pb-8 max-w-5xl space-y-8">
-      <header className="ui-page-header">
-        <h1 className="ui-page-title">マーケティング</h1>
-        <p className="ui-page-lead text-[13px] text-muted max-w-[60ch]">
-          配信に同意している会員へ一斉メールを送信します。特定電子メール法により、
-          広告メールは<strong className="text-ink">オプトイン同意した相手のみ</strong>に、
-          配信停止の手段を明記して送る必要があります（本ツールは自動で配信停止リンクを
-          全メールに挿入します）。
-        </p>
-      </header>
+    <AdminPageShell className="max-w-[960px] space-y-5">
+      {/* 2026-09-20: 小型ヘッダーへ。法令の説明は「使い方」に畳み、配信対象の人数は見出し横の1行にした
+          （以前は専用の大きな箱だった）。 */}
+      <AdminPageHeader
+        title="マーケティング"
+        count={`配信対象 ${consentedCount} 名`}
+        description="配信に同意している有効な会員へ一斉メールを送ります。"
+        help="特定電子メール法により、広告メールはオプトイン同意した相手のみに、配信停止の手段を明記して送る必要があります。配信停止リンクと送信者情報は、全メールの末尾に自動で入ります。"
+      />
 
       {!emailEnabled() && (
-        <div className="border border-red-400/40 bg-red-400/10 px-4 py-3 text-[12px] text-red-300">
-          RESEND_API_KEY が未設定のため、実際の送信はできません（テスト送信・一斉送信とも無効）。
+        <div className="border border-red-400/40 bg-red-400/10 px-4 py-2 text-[12px] text-red-700">
+          メール送信が未設定のため、テスト送信・一斉送信はできません。
         </div>
       )}
-
-      <div className="border border-line bg-[#1c1c1c] px-5 py-4">
-        <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">配信対象</div>
-        <div className="serif text-2xl text-accent">{consentedCount} 名</div>
-        <p className="text-[11px] text-muted mt-1">配信同意 かつ 有効アカウントの会員数。</p>
-      </div>
 
       <MarketingComposer disabled={!emailEnabled()} />
 
       <StudioRevenueShareNotice />
 
-      <section id="gift-codes" className="border-t border-line pt-10 scroll-mt-24">
-        <header className="mb-8">
-          <h2 className="ui-section-title">ギフトコード</h2>
-          <p className="ui-page-lead text-[13px] text-muted max-w-[60ch]">
-            トークン数を設定したコードを発行し、ユーザーに渡せます。受け取った人は
-            マイページの「ギフトコードを引き換え」から入力してトークンを受け取ります。
+      <section id="gift-codes" className="border-t border-line pt-5 scroll-mt-24">
+        <header className="mb-4">
+          <h2 className="text-[16px] font-bold">ギフトコード</h2>
+          <p className="mt-1 text-[13px] text-muted">
+            発行したコードは、受け取った人がマイページの「ギフトコードを引き換え」で使えます。
           </p>
         </header>
 
         <GiftCodeAdmin codes={codes} />
       </section>
-    </div>
+    </AdminPageShell>
   );
 }

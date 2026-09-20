@@ -9,6 +9,7 @@ import {
   computeSettlement,
   type PayoutSettlement,
 } from "@/lib/payouts";
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import PayoutsAdmin from "@/components/admin/payouts-admin";
 
 export const metadata = { title: "精算" };
@@ -73,21 +74,15 @@ export default async function AdminPayoutsPage({
   }
 
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10 space-y-8">
-      <header className="ui-page-header flex items-baseline gap-4 flex-wrap">
-        <h1 className="ui-page-title">収益分配・精算</h1>
-        <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
-          {payees.length} payees / {accrued.length} accrued rows
-        </span>
-      </header>
-
-      <p className="text-[13px] text-muted leading-[1.8] max-w-[70ch]">
-        撮影者・施設への支払いは、当社が売主として販売した代金からの
-        <strong className="text-ink">使用料の後払い</strong>です。物件ごとに分配率
-        （合計70%まで／当社取り分は最低30%）を設定すると、販売完了時に自動で
-        台帳へ計上されます。受取者ごとに未精算額が最低支払額(¥10,000)以上に
-        なったら精算を作成できます。
-      </p>
+    <AdminPageShell className="space-y-5">
+      {/* 2026-09-20: 小型ヘッダーへ。英語の内部用語カウンタ(payees / accrued rows)は日本語の件数に、
+          制度の説明は「使い方」に畳んだ。 */}
+      <AdminPageHeader
+        title="精算"
+        count={`受取者 ${payees.length} 名・未精算 ${accrued.length} 件`}
+        description="撮影者・施設への使用料の後払いを管理します。"
+        help="物件ごとに分配率（合計70%まで／当社取り分は最低30%）を設定すると、販売完了時に自動で台帳へ計上されます。受取者ごとの未精算額が最低支払額（¥10,000）以上になったら精算を作成できます。"
+      />
 
       <PayoutsAdmin
         payees={payees}
@@ -98,6 +93,6 @@ export default async function AdminPayoutsPage({
         prefill={prefill}
         studioUsers={studioUsers}
       />
-    </div>
+    </AdminPageShell>
   );
 }

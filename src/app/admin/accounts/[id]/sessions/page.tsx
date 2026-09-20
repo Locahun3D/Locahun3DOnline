@@ -1,3 +1,4 @@
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/dal";
@@ -27,37 +28,37 @@ export default async function AdminUserSessionsPage({
   const overLimit = limit !== null && sessions.length > limit;
 
   return (
-    <div className="theme-online ui-page-shell px-8 pb-8">
-      <div className="ui-page-header">
-        <Link
-          href="/admin/accounts"
-          className="mono text-[10px] tracking-[0.2em] uppercase text-muted hover:text-accent transition"
-        >
-          ← アカウント一覧に戻る
-        </Link>
-        <h1 className="ui-page-title">
-          {user.name}
-          <span className="mono text-[13px] text-muted ml-3">{user.email}</span>
-        </h1>
-        <p className="ui-page-lead text-[13px] text-muted">
-          プラン <span className="text-accent font-bold">{user.plan.toUpperCase()}</span>
-          {limit !== null ? (
-            <>
-              {" "}の上限は <strong>{limit} 端末</strong>。現在のアクティブセッションは{" "}
-              <strong>{sessions.length} 件</strong>
-              {overLimit && (
-                <span className="text-red-600 font-bold">
-                  {" "}
-                  — 上限超過（次回アクセス時に古い端末から自動失効します。今すぐ手動で失効させることもできます）
-                </span>
+    <AdminPageShell className="theme-online">
+      {/* 2026-09-20: 管理画面共通の小型ヘッダー */}
+      <AdminPageHeader
+        back={
+          <Link href="/admin/accounts" className="inline-flex min-h-[32px] items-center text-muted hover:text-accent transition">
+            ← アカウント一覧に戻る
+          </Link>
+        }
+        title={user.name}
+        count={<span className="mono text-[12px]">{user.email}</span>}
+        description={
+          <>
+              プラン <span className="text-accent font-bold">{user.plan.toUpperCase()}</span>
+              {limit !== null ? (
+                <>
+                  {" "}の上限は <strong>{limit} 端末</strong>。現在のアクティブセッションは{" "}
+                  <strong>{sessions.length} 件</strong>
+                  {overLimit && (
+                    <span className="text-red-600 font-bold">
+                      {" "}
+                      — 上限超過（次回アクセス時に古い端末から自動失効します。今すぐ手動で失効させることもできます）
+                    </span>
+                  )}
+                  。
+                </>
+              ) : (
+                <>（このプランは端末数の上限を設けていません）</>
               )}
-              。
-            </>
-          ) : (
-            <>（このプランは端末数の上限を設けていません）</>
-          )}
-        </p>
-      </div>
+          </>
+        }
+      />
 
       {sessions.length === 0 ? (
         <div className="border border-line rounded-md p-10 text-center text-muted text-[14px]">
@@ -99,6 +100,6 @@ export default async function AdminUserSessionsPage({
           ))}
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

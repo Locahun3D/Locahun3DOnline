@@ -6,7 +6,7 @@ import { refundPurchaseAction, deletePurchaseAction, bulkDeleteTestPurchasesActi
 import RefundButton from "@/components/admin/refund-button";
 import DeletePurchaseButton from "@/components/admin/delete-purchase-button";
 import BulkDeleteTestButton from "@/components/admin/bulk-delete-test-button";
-import { stripeConfigStatus } from "@/lib/stripe";
+import AdminPageHeader, { AdminPageShell, AdminEmpty } from "@/components/admin/admin-page-header";
 import StripeSetupPanel from "@/components/admin/stripe-setup-panel";
 import { fmtDateTimeJST } from "@/lib/date-format";
 import { filterAdminPurchases } from "@/lib/admin-purchase-filters";
@@ -84,66 +84,43 @@ export default async function PurchasesPage({
   ).length;
 
   return (
-    <div className="ui-page-shell px-6 pb-6 md:px-10 md:pb-10 space-y-8">
-      <header className="ui-page-header flex items-baseline gap-4 flex-wrap">
-        <h1 className="ui-page-title">データ販売管理</h1>
-        <span className="mono text-[10px] tracking-[0.28em] uppercase opacity-40">
-          全履歴 {allPurchases.length} 件
-        </span>
-        {(() => {
-          const s = stripeConfigStatus();
-          if (!s.enabled) {
-            return (
-              <span
-                className="mono text-[10px] tracking-[0.18em] uppercase border border-amber-400/40 text-amber-400 px-2 py-0.5"
-                title="STRIPE_SECRET_KEY 未設定。購入は即時完了の擬似決済（実入金なし）です。"
-              >
-                ● 決済 未接続（テスト即時完了・実入金なし）
-              </span>
-            );
-          }
-          return s.live ? (
-            <span className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/40 text-green-400 px-2 py-0.5">
-              ● 決済 Stripe 接続済み（本番 LIVE）
-            </span>
-          ) : (
-            <span
-              className="mono text-[10px] tracking-[0.18em] uppercase border border-blue-400/40 text-blue-400 px-2 py-0.5"
-              title="sk_test キー。テストモードで実課金なし。Liveキーで本番化。"
-            >
-              ● 決済 Stripe 接続済み（テストモード）
-            </span>
-          );
-        })()}
-        <form action={bulkDeleteTestPurchasesAction} className="ml-auto">
-          <BulkDeleteTestButton count={deletableCount} />
-        </form>
-      </header>
+    <AdminPageShell className="space-y-5">
+      {/* 2026-09-20: 小型ヘッダーへ。決済の接続状態は直下の「決済設定」パネルの見出しに同じ表示があるので、
+          見出し横のバッジ（重複）を外した。 */}
+      <AdminPageHeader
+        title="データ販売"
+        count={`全履歴 ${allPurchases.length} 件`}
+        actions={
+          <form action={bulkDeleteTestPurchasesAction}>
+            <BulkDeleteTestButton count={deletableCount} />
+          </form>
+        }
+      />
 
       <StripeSetupPanel />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="border border-line p-5 bg-[#141414]">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="border border-line px-4 py-3 bg-[#141414]">
+          <div className="text-[12px] text-muted">
             販売中の物件
           </div>
           <div className="text-2xl font-semibold">{saleProps.length}</div>
         </div>
-        <div className="border border-line p-5 bg-[#141414]">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
+        <div className="border border-line px-4 py-3 bg-[#141414]">
+          <div className="text-[12px] text-muted">
             購入完了件数
           </div>
           <div className="text-2xl font-semibold">{completedAll.length}</div>
         </div>
-        <div className="border border-line p-5 bg-[#141414]">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
+        <div className="border border-line px-4 py-3 bg-[#141414]">
+          <div className="text-[12px] text-muted">
             売上（完了分）
           </div>
           <div className="text-2xl font-semibold text-accent">{fmtPrice(totalRevenue)}</div>
         </div>
-        <div className="border border-line p-5 bg-[#141414]">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-40 mb-1">
+        <div className="border border-line px-4 py-3 bg-[#141414]">
+          <div className="text-[12px] text-muted">
             返金総額
           </div>
           <div className="text-2xl font-semibold text-purple-400">{fmtPrice(totalRefunded)}</div>
@@ -153,17 +130,17 @@ export default async function PurchasesPage({
       {/* Per-studio sales breakdown */}
       {studioStats.size > 0 && (
         <section>
-          <h2 className="mono text-[11px] tracking-[0.28em] uppercase opacity-60 mb-3">
+          <h2 className="text-[14px] font-bold mb-2">
             スタジオ別売上
           </h2>
           <div className="border border-line overflow-x-auto">
-            <table className="w-full text-sm text-ink">
+            <table className="w-full min-w-[760px] text-sm text-ink">
               <thead>
-                <tr className="mono text-[10px] tracking-[0.2em] uppercase text-left opacity-40 border-b border-line">
-                  <th className="px-4 py-3 font-normal">スタジオ</th>
-                  <th className="px-4 py-3 font-normal text-right">購入件数</th>
-                  <th className="px-4 py-3 font-normal text-right">売上</th>
-                  <th className="px-4 py-3 font-normal text-right">返金</th>
+                <tr className="text-[12px] text-left text-muted border-b border-line">
+                  <th className="px-3 py-2 font-normal">スタジオ</th>
+                  <th className="px-3 py-2 font-normal text-right">購入件数</th>
+                  <th className="px-3 py-2 font-normal text-right">売上</th>
+                  <th className="px-3 py-2 font-normal text-right">返金</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/50">
@@ -171,7 +148,7 @@ export default async function PurchasesPage({
                   .sort((a, b) => b[1].revenue - a[1].revenue)
                   .map(([propId, s]) => (
                     <tr key={propId} className="hover:bg-neutral-100 transition">
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <Link
                           href={`/admin/purchases?property=${propId}`}
                           className="hover:text-accent transition"
@@ -179,9 +156,9 @@ export default async function PurchasesPage({
                           {propTitleMap.get(propId) ?? propId}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-right mono text-[11px]">{s.count}</td>
-                      <td className="px-4 py-3 text-right mono text-[11px] text-accent">{fmtPrice(s.revenue)}</td>
-                      <td className="px-4 py-3 text-right mono text-[11px] text-purple-400">{s.refunds > 0 ? `${s.refunds} 件` : "—"}</td>
+                      <td className="px-3 py-2 text-right mono text-[11px]">{s.count}</td>
+                      <td className="px-3 py-2 text-right mono text-[11px] text-accent">{fmtPrice(s.revenue)}</td>
+                      <td className="px-3 py-2 text-right mono text-[11px] text-purple-400">{s.refunds > 0 ? `${s.refunds} 件` : "—"}</td>
                     </tr>
                   ))}
               </tbody>
@@ -192,22 +169,22 @@ export default async function PurchasesPage({
 
       {/* Search + filters */}
       <section>
-        <h2 className="mono text-[11px] tracking-[0.28em] uppercase opacity-60 mb-3">
+        <h2 className="text-[14px] font-bold mb-2">
           購入履歴
         </h2>
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <form className="contents">
             <input
               type="search"
               name="q"
               defaultValue={query}
               placeholder="物件名・メール・ラベルで検索…"
-              className="bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-64 focus:outline-none focus:border-accent placeholder:text-black/40"
+              className="min-h-[40px] bg-neutral-300 text-black border border-line px-3 py-2 text-[13px] w-full sm:w-64 focus:outline-none focus:border-accent placeholder:text-black/40"
             />
             <select
               name="property"
               defaultValue={filterPropertyId}
-              className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
+              className="min-h-[40px] bg-bg border border-line text-[13px] px-2 py-2 text-ink"
             >
               <option value="">物件すべて</option>
               {purchasedPropertyIds.map((id) => (
@@ -217,7 +194,7 @@ export default async function PurchasesPage({
             <select
               name="status"
               defaultValue={filterStatus}
-              className="bg-bg border border-line text-[12px] px-2 py-2 text-ink"
+              className="min-h-[40px] bg-bg border border-line text-[13px] px-2 py-2 text-ink"
             >
               <option value="">状態すべて</option>
               <option value="completed">完了</option>
@@ -227,14 +204,14 @@ export default async function PurchasesPage({
             <PendingPurchasesToggle checked={showPending} />
             <button
               type="submit"
-              className="mono text-[10px] tracking-[0.18em] uppercase border border-line px-3 py-2 text-muted hover:text-accent hover:border-accent transition"
+              className="min-h-[40px] text-[13px] border border-line px-4 text-muted hover:text-accent hover:border-accent transition"
             >
               検索
             </button>
             {(query || filterPropertyId || filterStatus !== "completed" || showPending) && (
               <Link
                 href="/admin/purchases"
-                className="mono text-[10px] tracking-[0.18em] uppercase text-muted hover:text-ink transition"
+                className="inline-flex min-h-[40px] items-center text-[13px] text-muted hover:text-ink transition"
               >
                 リセット
               </Link>
@@ -244,27 +221,27 @@ export default async function PurchasesPage({
         </div>
 
         {purchases.length === 0 ? (
-          <p className="text-sm opacity-50">該当する購入はありません。</p>
+          <AdminEmpty>該当する購入はありません。</AdminEmpty>
         ) : (
           <div className="border border-line overflow-x-auto">
-            <table className="w-full text-sm text-ink">
+            <table className="w-full min-w-[760px] text-sm text-ink">
               <thead>
-                <tr className="mono text-[10px] tracking-[0.2em] uppercase text-left opacity-40 border-b border-line">
-                  <th className="px-4 py-3 font-normal">日時</th>
-                  <th className="px-4 py-3 font-normal">物件</th>
-                  <th className="px-4 py-3 font-normal">購入者</th>
-                  <th className="px-4 py-3 font-normal text-right">金額</th>
-                  <th className="px-4 py-3 font-normal text-center">状態</th>
-                  <th className="px-4 py-3 font-normal text-center">操作</th>
+                <tr className="text-[12px] text-left text-muted border-b border-line">
+                  <th className="px-3 py-2 font-normal">日時</th>
+                  <th className="px-3 py-2 font-normal">物件</th>
+                  <th className="px-3 py-2 font-normal">購入者</th>
+                  <th className="px-3 py-2 font-normal text-right">金額</th>
+                  <th className="px-3 py-2 font-normal text-center">状態</th>
+                  <th className="px-3 py-2 font-normal text-center">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/50">
                 {purchases.map((p) => (
                   <tr key={p.id} className="hover:bg-neutral-100 transition">
-                    <td className="px-4 py-3 mono text-[11px] opacity-60 whitespace-nowrap">
+                    <td className="px-3 py-2 mono text-[11px] opacity-60 whitespace-nowrap">
                       {fmtDate(p.createdAt)}
                     </td>
-                    <td className="px-4 py-3 truncate max-w-[200px]">
+                    <td className="px-3 py-2 truncate max-w-[200px]">
                       {p.propertyTitle || p.propertyId}
                       {p.itemLabel && (
                         <span className="ml-2 mono text-[9px] tracking-[0.14em] uppercase border border-line px-1 py-0.5 opacity-50">
@@ -272,13 +249,13 @@ export default async function PurchasesPage({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 mono text-[11px] opacity-60 truncate max-w-[180px]">
+                    <td className="px-3 py-2 mono text-[11px] opacity-60 truncate max-w-[180px]">
                       {p.userEmail}
                     </td>
-                    <td className="px-4 py-3 text-right mono text-[11px] whitespace-nowrap">
+                    <td className="px-3 py-2 text-right mono text-[11px] whitespace-nowrap">
                       {fmtPrice(p.priceYen)}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
                       {statusBadge(p.status)}
                       {p.status === "refunded" && p.refundReason && (
                         <div className="mono text-[9px] text-purple-400/60 mt-1 max-w-[120px] truncate" title={p.refundReason}>
@@ -286,7 +263,7 @@ export default async function PurchasesPage({
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 text-center">
                       <div className="inline-flex items-center gap-2">
                         {p.status === "completed" && (
                           <form action={refundPurchaseAction} className="inline-flex items-center gap-1">
@@ -295,7 +272,7 @@ export default async function PurchasesPage({
                               type="text"
                               name="reason"
                               placeholder="返金理由"
-                              className="w-24 bg-bg border border-line text-[10px] px-2 py-1 text-ink"
+                              className="min-h-[40px] w-28 bg-bg border border-line text-[12px] px-2 text-ink"
                             />
                             <RefundButton />
                           </form>
@@ -321,6 +298,6 @@ export default async function PurchasesPage({
           </div>
         )}
       </section>
-    </div>
+    </AdminPageShell>
   );
 }

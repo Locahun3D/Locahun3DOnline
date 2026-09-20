@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/dal";
 import { inquiryRepo } from "@/lib/inquiries";
 import { setInquiryStatusAction, deleteInquiryAction } from "@/lib/admin-actions";
+import AdminPageHeader, { AdminPageShell, AdminEmpty, adminChip } from "@/components/admin/admin-page-header";
 import InquiryReplyForm from "@/components/admin/inquiry-reply-form";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
 
@@ -28,50 +29,27 @@ export default async function AdminInquiriesPage({
   const inquiries = purposeFilter ? all.filter((i) => i.purpose === purposeFilter) : all;
 
   return (
-    <div className="theme-online ui-page-shell px-8 pb-8">
-      <div className="ui-page-header">
-        <h1 className="ui-page-title">
-          問い合わせ
-          {newCount > 0 && (
-            <span className="ml-3 align-middle inline-block bg-accent text-white text-[12px] font-bold px-2 py-0.5 rounded-full">
-              未読 {newCount}
-            </span>
-          )}
-        </h1>
-        <p className="ui-page-lead text-[13px] text-muted">
-          公開フォームから届いたスタジオへの問い合わせ。各物件の「スタジオ連絡先メール」へ自動転送されます。
-          <br />
-          メール転送には <code className="text-accent">RESEND_API_KEY</code> の設定が必要です（未設定でも内容はここに保存されます）。
-        </p>
-      </div>
+    <AdminPageShell className="theme-online">
+      {/* 2026-09-20: 小型ヘッダーへ。転送の仕組み（環境変数名を含む）は毎回読むものではないので「使い方」に畳んだ。 */}
+      <AdminPageHeader
+        title="スタジオ宛の問い合わせ"
+        count={newCount > 0 ? <span className="inline-block bg-accent text-white text-[12px] font-bold px-2 py-0.5 rounded-full">未読 {newCount}</span> : undefined}
+        description="物件ページのフォームから届いた問い合わせです。"
+        help="各物件の「スタジオ連絡先メール」へ自動転送されます。メール送信の設定がない環境でも、内容はここに保存されます。"
+      />
 
-      <nav aria-label="問い合わせの保存先" className="flex gap-3 mb-4 text-sm">
-        <Link href="/admin/inquiries" aria-current={!showArchived ? "page" : undefined} className={!showArchived ? "text-accent" : "text-muted"}>受信箱（{records.filter(i => i.status !== "archived").length}）</Link>
-        <Link href="/admin/inquiries?box=archive" aria-current={showArchived ? "page" : undefined} className={showArchived ? "text-accent" : "text-muted"}>アーカイブ（{records.filter(i => i.status === "archived").length}）</Link>
+      <nav aria-label="問い合わせの保存先" className="flex flex-wrap gap-2 mb-3">
+        <Link href="/admin/inquiries" aria-current={!showArchived ? "page" : undefined} className={adminChip(!showArchived)}>受信箱（{records.filter(i => i.status !== "archived").length}）</Link>
+        <Link href="/admin/inquiries?box=archive" aria-current={showArchived ? "page" : undefined} className={adminChip(showArchived)}>アーカイブ（{records.filter(i => i.status === "archived").length}）</Link>
       </nav>
       {purposes.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.18em] uppercase">
-          <span className="text-muted mr-1">種別</span>
-          <Link
-            href={hrefFor()}
-            className={`px-3 py-1.5 border rounded-sm transition ${
-              !purposeFilter
-                ? "border-accent text-accent"
-                : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
-          >
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-muted text-[12px] mr-1">種別</span>
+          <Link href={hrefFor()} className={adminChip(!purposeFilter)}>
             全て（{all.length}）
           </Link>
           {purposes.map((p) => (
-            <Link
-              key={p}
-              href={hrefFor(p)}
-              className={`px-3 py-1.5 border rounded-sm transition ${
-                purposeFilter === p
-                  ? "border-accent text-accent"
-                  : "border-line text-muted hover:border-ink hover:text-ink"
-              }`}
-            >
+            <Link key={p} href={hrefFor(p)} className={adminChip(purposeFilter === p)}>
               {p}（{all.filter((i) => i.purpose === p).length}）
             </Link>
           ))}
@@ -79,9 +57,7 @@ export default async function AdminInquiriesPage({
       )}
 
       {inquiries.length === 0 ? (
-        <div className="border border-line rounded-md p-10 text-center text-muted text-[14px]">
-          まだ問い合わせはありません。
-        </div>
+        <AdminEmpty>{showArchived ? "アーカイブはありません。" : "問い合わせはありません。"}</AdminEmpty>
       ) : (
         <div className="flex flex-col gap-4">
           {inquiries.map((i) => (
@@ -114,7 +90,7 @@ export default async function AdminInquiriesPage({
                   }`}
                   title={i.forwardedTo || "先方メール未設定"}
                 >
-                  {i.emailed ? `転送済 → ${i.forwardedTo}` : "メール未転送（要RESEND設定）"}
+                  {i.emailed ? `転送済 → ${i.forwardedTo}` : "メール未転送"}
                 </span>
                 <Link
                   href={`/properties/${i.propertyId}`}
@@ -182,7 +158,7 @@ export default async function AdminInquiriesPage({
                   <form action={setInquiryStatusAction}>
                     <input type="hidden" name="id" value={i.id} />
                     <input type="hidden" name="status" value="read" />
-                    <button className="text-[12px] border border-line text-ink px-3 py-1.5 rounded-sm hover:border-accent hover:text-accent transition">
+                    <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-ink px-3 py-1.5 rounded-sm hover:border-accent hover:text-accent transition">
                       既読にする
                     </button>
                   </form>
@@ -191,7 +167,7 @@ export default async function AdminInquiriesPage({
                   <form action={setInquiryStatusAction}>
                     <input type="hidden" name="id" value={i.id} />
                     <input type="hidden" name="status" value="archived" />
-                    <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
+                    <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">
                       アーカイブ
                     </button>
                   </form>
@@ -199,12 +175,12 @@ export default async function AdminInquiriesPage({
                   <form action={setInquiryStatusAction}>
                     <input type="hidden" name="id" value={i.id} />
                     <input type="hidden" name="status" value="read" />
-                    <button className="text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">受信箱に戻す</button>
+                    <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-line text-muted px-3 py-1.5 rounded-sm hover:text-ink transition">受信箱に戻す</button>
                   </form>
                 )}
                 <form action={deleteInquiryAction}>
                   <input type="hidden" name="id" value={i.id} />
-                  <button className="text-[12px] border border-red-900/50 text-red-400 px-3 py-1.5 rounded-sm hover:bg-red-900/20 transition">
+                  <button className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-red-900/50 text-red-400 px-3 py-1.5 rounded-sm hover:bg-red-900/20 transition">
                     削除
                   </button>
                 </form>
@@ -213,6 +189,6 @@ export default async function AdminInquiriesPage({
           ))}
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

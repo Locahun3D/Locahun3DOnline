@@ -48,7 +48,7 @@ export default function StripeWebhookSetupButton() {
           type="button"
           disabled={loading}
           onClick={() => run(false)}
-          className="mono text-[10px] tracking-[0.2em] uppercase border border-[#5ec8e8] text-[#5ec8e8] px-3 py-1 hover:bg-[#5ec8e8]/10 transition disabled:opacity-40"
+          className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-[#5ec8e8] text-[#5ec8e8] px-3 py-1 hover:bg-[#5ec8e8]/10 transition disabled:opacity-40"
         >
           {loading ? "処理中…" : "Webhookを登録"}
         </button>
@@ -58,7 +58,7 @@ export default function StripeWebhookSetupButton() {
             disabled={loading}
             onClick={() => run(true)}
             title="既存を削除して署名シークレットを再発行"
-            className="mono text-[10px] tracking-[0.2em] uppercase border border-amber-400 text-amber-400 px-3 py-1 hover:bg-amber-400/10 transition disabled:opacity-40"
+            className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-amber-400 text-amber-400 px-3 py-1 hover:bg-amber-400/10 transition disabled:opacity-40"
           >
             whsecを再発行
           </button>

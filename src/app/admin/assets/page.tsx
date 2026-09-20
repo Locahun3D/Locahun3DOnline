@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/dal";
 import { repo, assetRepo } from "@/lib/store";
 import { computeAssetUsage } from "@/lib/asset-usage";
+import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import AssetLibrary from "@/components/admin/asset-library";
 
 export const dynamic = "force-dynamic";
@@ -19,15 +20,10 @@ export default async function AssetsPage() {
     cover: p.cover?.src || "",
   }));
   return (
-    <div className="ui-page-shell px-6 pb-6">
-      <header className="ui-page-header">
-      <h1 className="ui-page-title">アセットライブラリ</h1>
-      <p className="ui-page-lead text-muted text-[13px]">
-        物件フォルダごとにアセットを管理します。フォルダ内はさらに画像・3DGS等の種別で整理。
-        物件編集では「ライブラリから選択」で紐付け。
-      </p>
-      </header>
+    <AdminPageShell>
+      {/* 2026-09-20: 管理画面共通の小型ヘッダー。説明は1行に短縮。 */}
+      <AdminPageHeader title="アセット" description="物件フォルダごとに画像・3DGSを管理します。" />
       <AssetLibrary initialAssets={assets} usage={usage} properties={folderProperties} />
-    </div>
+    </AdminPageShell>
   );
 }

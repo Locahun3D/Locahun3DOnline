@@ -13,14 +13,14 @@ export default function StudioRevenueShareNotice() {
   const [result, setResult] = useState<{ notified: number; skipped: number } | null>(null);
 
   return (
-    <div className="border border-line bg-[#1c1c1c] px-5 py-4">
-      <div className="mono text-[10px] tracking-[0.2em] uppercase opacity-50 mb-1">
-        掲載データ販売分配規約（20%）の案内
+    // 2026-09-20: 説明を1行に短縮し、見出しとボタンを横並びにして高さを抑えた。
+    <div className="border border-line bg-[#1c1c1c] px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="min-w-0 flex-1 basis-[280px]">
+        <div className="text-[13px] font-bold">分配規約（20%）の案内</div>
+        <p className="text-[12px] text-muted">
+          公開済みの直接掲載スタジオへアプリ内通知で案内します（送信済みの相手には再送しません）。
+        </p>
       </div>
-      <p className="text-[11px] text-muted mb-3 leading-[1.7] max-w-[60ch]">
-        既に公開済みの直接掲載スタジオへ、新設した分配規約をアプリ内通知で案内します。
-        送信済みのユーザーには再送しません（何度押しても安全）。
-      </p>
       <button
         type="button"
         disabled={pending}
@@ -30,12 +30,12 @@ export default function StudioRevenueShareNotice() {
             setResult(r);
           })
         }
-        className="mono text-[10px] tracking-[0.2em] uppercase border border-accent/50 text-accent px-4 py-2 hover:bg-accent hover:text-bg transition disabled:opacity-40"
+        className="min-h-[40px] text-[13px] border border-accent/50 text-accent px-4 hover:bg-accent hover:text-bg transition disabled:opacity-40"
       >
         {pending ? "送信中…" : "既存スタジオへ案内を送る"}
       </button>
       {result && (
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="basis-full text-[12px] text-muted">
           送信: {result.notified}件 / 送信済みでスキップ: {result.skipped}件
         </p>
       )}

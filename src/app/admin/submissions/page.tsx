@@ -1,3 +1,4 @@
+import AdminPageHeader, { AdminPageShell, AdminEmpty, adminChip } from "@/components/admin/admin-page-header";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/dal";
 import { scanSubmissionRepo } from "@/lib/scan-submissions-repo";
@@ -35,41 +36,24 @@ export default async function AdminScanSubmissionsPage({
   const emailById = new Map(users.map((u) => [u.id, u.email] as const));
 
   return (
-    <div className="theme-online ui-page-shell px-8 pb-8">
-      <div className="ui-page-header">
-        <h1 className="ui-page-title">持ち込みスキャン</h1>
-        <p className="ui-page-lead text-[13px] text-muted">
-          撮影者から届いた持ち込みスキャン申請。成立するまでは非公開で預かります。
-        </p>
-      </div>
+    <AdminPageShell className="theme-online">
+      {/* 2026-09-20: 小型ヘッダー・絞り込みタブ(高さ40px)・1行の空状態へ。 */}
+      <AdminPageHeader title="持ち込みスキャン" description="撮影者から届いた申請です。成立するまでは非公開で預かります。" />
 
-      <div className="flex flex-wrap items-center gap-2 mb-6 mono text-[10px] tracking-[0.18em] uppercase">
-        <span className="text-muted mr-1">状態</span>
-        <Link
-          href="/admin/submissions"
-          className={`px-3 py-1.5 border rounded-sm transition ${
-            !statusFilter ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
-          }`}
-        >
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-muted text-[12px] mr-1">状態</span>
+        <Link href="/admin/submissions" className={adminChip(!statusFilter)}>
           全て（{all.length}）
         </Link>
         {SCAN_SUBMISSION_STATUSES.map((s) => (
-          <Link
-            key={s}
-            href={`/admin/submissions?status=${s}`}
-            className={`px-3 py-1.5 border rounded-sm transition ${
-              statusFilter === s ? "border-accent text-accent" : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
-          >
+          <Link key={s} href={`/admin/submissions?status=${s}`} className={adminChip(statusFilter === s)}>
             {scanStatusLabel(s)}（{all.filter((x) => x.status === s).length}）
           </Link>
         ))}
       </div>
 
       {submissions.length === 0 ? (
-        <div className="border border-line rounded-md p-10 text-center text-muted text-[14px]">
-          該当する申請はありません。
-        </div>
+        <AdminEmpty>該当する申請はありません。</AdminEmpty>
       ) : (
         <div className="border border-line rounded-md overflow-hidden overflow-x-auto">
           <table className="w-full text-[13px]">
@@ -85,8 +69,8 @@ export default async function AdminScanSubmissionsPage({
             <tbody className="divide-y divide-line">
               {submissions.map((s) => (
                 <tr key={s.id} className="hover:bg-[#141414] transition">
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/submissions/${s.id}`} className="text-accent hover:underline">
+                  <td className="px-4 py-0.5">
+                    <Link href={`/admin/submissions/${s.id}`} className="inline-flex min-h-[40px] items-center text-accent hover:underline">
                       {s.locationName || "（無題）"}
                     </Link>
                   </td>
@@ -104,6 +88,6 @@ export default async function AdminScanSubmissionsPage({
           </table>
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }
