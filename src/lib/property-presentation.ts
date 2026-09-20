@@ -133,6 +133,22 @@ export function dailyEstimates(dailyPrice: number): { days: number; total: numbe
 }
 
 /**
+ * 目安の行を「選べる」ようにする（2026-09-20 本人指示の追補: 単価1つの物件でも「用途を選ぶ → 金額が出る」）。
+ * 行を選ぶとシミュレーターの時間（日額の行なら1日貸し）が切り替わる。利用者が時間を手で変えたら、
+ * その時間に合う行だけを選択中として見せる（合う行が無ければ選択なし）。
+ * 最低利用時間の切り上げで複数の行が同じ時間になる時は、直前に選んだ行（preferred）を優先する。
+ */
+export type EstimateApply = { kind: "hours"; hours: number } | { kind: "day" };
+export function applyEstimateRow(row: UsageEstimate): EstimateApply {
+  return row.daily ? { kind: "day" } : { kind: "hours", hours: row.hours };
+}
+export function matchEstimateRow(rows: UsageEstimate[], hours: number, preferred?: UsageEstimate["key"] | null): UsageEstimate["key"] | null {
+  const hit = rows.filter((r) => !r.daily && r.hours === hours);
+  if (hit.length === 0) return null;
+  return (hit.find((r) => r.key === preferred) ?? hit[0]).key;
+}
+
+/**
  * 物件タイトルを「スタジオ名」と「意味のまとまりごとの行」に分ける（2026-09-20 本人指示）。
  *   "Studio Union｜世田谷若林 自然光ハウススタジオ" → name "Studio Union" / lines ["世田谷若林", "自然光ハウススタジオ"]
  * 区切りは「｜」「|」と改行。区切りより後ろは空白（全角含む）でまとまりに分ける。

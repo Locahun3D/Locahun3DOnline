@@ -107,3 +107,23 @@ it("daily simulation applies only the holiday surcharge, per day", () => {
   expect(dailyEstimates(120000)).toEqual([{ days: 1, total: 120000 }, { days: 2, total: 240000 }, { days: 3, total: 360000 }]);
   expect(dailyEstimates(0)).toEqual([]);
 });
+
+// 2026-09-20 追補: 目安の行を選ぶとシミュレーターが連動する
+import { applyEstimateRow, matchEstimateRow } from "./property-presentation";
+it("selecting an estimate row drives the simulator, and manual hours clear or re-match the row", () => {
+  // Studio Montfort 型: 単価1つ・プランなし・日額なし
+  const rows = usageEstimates({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 0, dailyPrice: 0 });
+  expect(rows.map(applyEstimateRow)).toEqual([{ kind: "hours", hours: 3 }, { kind: "hours", hours: 5 }, { kind: "hours", hours: 9 }]);
+  expect(matchEstimateRow(rows, 3)).toBe("still-small");
+  expect(matchEstimateRow(rows, 9)).toBe("movie-day");
+  expect(matchEstimateRow(rows, 4)).toBeNull();
+  // 日額のある物件: 1日の行は「1日貸し」への切り替えで、時間では一致しない
+  const withDaily = usageEstimates({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 0, dailyPrice: 45000 });
+  expect(applyEstimateRow(withDaily[2])).toEqual({ kind: "day" });
+  expect(matchEstimateRow(withDaily, 9)).toBeNull();
+  // 最低5時間で上2行が同じ5時間になる時は、直前に選んだ行を優先
+  const min5 = usageEstimates({ priceType: "hourly", hourlyPrice: 6600, minUsageHours: 5, dailyPrice: 0 });
+  expect(matchEstimateRow(min5, 5)).toBe("still-small");
+  expect(matchEstimateRow(min5, 5, "still-half")).toBe("still-half");
+  expect(matchEstimateRow(min5, 5, "movie-day")).toBe("still-small");
+});

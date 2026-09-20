@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { isJpDayOff, jpDayKind, jpHolidayName } from "@/lib/jp-holidays";
-import { dailyEstimates, priceChoices, simulateDailyPrice, simulatePrice, usageEstimates, type DayKind, type RateSurcharge } from "@/lib/property-presentation";
+import { applyEstimateRow, dailyEstimates, matchEstimateRow, priceChoices, simulateDailyPrice, simulatePrice, usageEstimates, type DayKind, type RateSurcharge, type UsageEstimate } from "@/lib/property-presentation";
 
 type RatePlan = { label: string; labelEn: string; hourlyPrice: number; minHours: number };
 
@@ -34,7 +34,9 @@ export default function PriceEstimator({
   const [choiceIdx, setChoiceIdx] = useState(0);
   const [date, setDate] = useState("");
   const [startHour, setStartHour] = useState(Math.max(openFrom, 9));
-  const [hoursRaw, setHours] = useState(4);
+  // 初期値は目安の1行目（3時間）に合わせ、開いた時から「選んでいる状態」にする（2026-09-20 追補）
+  const [hoursRaw, setHours] = useState(3);
+  const [pickedRow, setPickedRow] = useState<UsageEstimate["key"] | null>(null);
   const [days, setDays] = useState(1);
 
   const choice = choices[Math.min(choiceIdx, choices.length - 1)];
@@ -69,6 +71,27 @@ export default function PriceEstimator({
   const unit = daily ? (en ? "/day" : "/日") : en ? "/h" : "/時間";
   // max-w-full + text-left: 長いプラン名でもカード幅を超えず、ラベルは折り返す（2026-09-20）
   const chip = "min-h-[40px] max-w-full px-3.5 py-1.5 border text-[13px] font-medium text-left transition";
+  // 目安の行: ○ / 用途 / 時間 / 合計。列幅は固定にして行どうしで桁を揃える
+  // スマホ幅では「時間」を用途名の下の小さい行へ回し、用途名が1文字ずつ折れないようにする
+  const rowHours = "text-right whitespace-nowrap max-[480px]:col-start-2 max-[480px]:row-start-2 max-[480px]:text-left max-[480px]:text-[12px] max-[480px]:text-muted";
+  const rowTotal = "text-right whitespace-nowrap font-bold max-[480px]:col-start-3 max-[480px]:row-start-1 max-[480px]:row-span-2";
+  const rowGrid = "grid grid-cols-[18px_minmax(0,1fr)_3.4em_5.6em] max-[480px]:grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-x-2 text-left";
+  const rowBtn = "min-h-[44px] min-[721px]:max-lg:min-h-[56px] py-2 px-2 -mx-2 w-[calc(100%+1rem)] border-t border-line transition cursor-pointer";
+  const rowOn = "bg-accent/10";
+  const rowOff = "hover:bg-line/30";
+  const dot = "grid place-items-center w-[18px] h-[18px] rounded-full border-2 bg-white";
+  const activeRow = daily ? null : matchEstimateRow(rows, hours, pickedRow);
+  const pickRow = (r: UsageEstimate) => {
+    const a = applyEstimateRow(r);
+    if (a.kind === "day") {
+      // 日額の行 → 「1日貸し」の選択肢へ切り替え（1日）
+      const i = choices.findIndex((c) => c.kind === "daily");
+      if (i >= 0) { setChoiceIdx(i); setDays(1); }
+      return;
+    }
+    setPickedRow(r.key);
+    setHours(a.hours);
+  };
   const stepBtn = "w-11 h-full text-[18px] leading-none disabled:opacity-30 hover:bg-line/40";
 
   return (
@@ -92,31 +115,39 @@ export default function PriceEstimator({
         })}
       </div>
 
-      <table className="w-full text-[14px] border-collapse">
-        <thead>
-          <tr className="text-[11px] text-muted tracking-[0.06em]">
-            <th className="text-left font-medium py-1.5">{en ? "Use" : "目安"}</th>
-            <th className="text-right font-medium py-1.5">{daily ? (en ? "Days" : "日数") : en ? "Hours" : "時間"}</th>
-            <th className="text-right font-medium py-1.5">{en ? "Total" : "合計"}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.key} className="border-t border-line">
-              <td className="py-2.5 pr-2">{useLabels[r.key][en ? 1 : 0]}</td>
-              <td className="py-2.5 text-right whitespace-nowrap">{r.daily ? (en ? "1 day" : "1日") : en ? `${r.hours} h` : `${r.hours}時間`}</td>
-              <td className={`py-2.5 text-right whitespace-nowrap font-bold ${i === rows.length - 1 ? "text-accent" : ""}`}>{yen(r.total)}</td>
-            </tr>
-          ))}
-          {dayRows.map((r, i) => (
-            <tr key={r.days} className="border-t border-line">
-              <td className="py-2.5 pr-2">{en ? (r.days === 1 ? "Single day" : `${r.days}-day shoot`) : r.days === 1 ? "1日撮影" : `${r.days}日連続`}</td>
-              <td className="py-2.5 text-right whitespace-nowrap">{en ? `${r.days} day${r.days > 1 ? "s" : ""}` : `${r.days}日`}</td>
-              <td className={`py-2.5 text-right whitespace-nowrap font-bold ${i === 0 ? "text-accent" : ""}`}>{yen(r.total)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* 目安の行は選べる（2026-09-20 本人指示の追補）: 行を押すと下のシミュレーターの時間（日額の行なら1日貸し）が切り替わる。
+          時間を手で変えたら、その時間に合う行だけが選択中になる。ラジオの意味づけ・タッチで44px以上。 */}
+      <div className="text-[12px] text-muted mb-1">{en ? "Choose a use to see the price" : "用途を選ぶと金額が出ます"}</div>
+      <div role="radiogroup" aria-label={en ? "Typical use" : "撮影別の目安"} data-price-rows className="text-[14px]">
+        <div aria-hidden className={`${rowGrid} text-[11px] text-muted tracking-[0.06em] font-medium py-1.5`}>
+          <span />
+          <span>{en ? "Use" : "目安"}</span>
+          <span className="text-right max-[480px]:hidden">{daily ? (en ? "Days" : "日数") : en ? "Hours" : "時間"}</span>
+          <span className="text-right">{en ? "Total" : "合計"}</span>
+        </div>
+        {rows.map((r) => {
+          const on = r.key === activeRow;
+          return (
+            <button key={r.key} type="button" role="radio" aria-checked={on} onClick={() => pickRow(r)} className={`${rowGrid} ${rowBtn} ${on ? rowOn : rowOff}`}>
+              <span aria-hidden className={`${dot} max-[480px]:row-span-2 ${on ? "border-accent" : "border-line"}`}>{on && <span className="w-2 h-2 rounded-full bg-accent" />}</span>
+              <span className="min-w-0">{useLabels[r.key][en ? 1 : 0]}</span>
+              <span className={rowHours}>{r.daily ? (en ? "1 day" : "1日") : en ? `${r.hours} h` : `${r.hours}時間`}</span>
+              <span className={`${rowTotal} ${on ? "text-accent" : ""}`}>{yen(r.total)}</span>
+            </button>
+          );
+        })}
+        {dayRows.map((r) => {
+          const on = r.days === days;
+          return (
+            <button key={r.days} type="button" role="radio" aria-checked={on} onClick={() => setDays(r.days)} className={`${rowGrid} ${rowBtn} ${on ? rowOn : rowOff}`}>
+              <span aria-hidden className={`${dot} max-[480px]:row-span-2 ${on ? "border-accent" : "border-line"}`}>{on && <span className="w-2 h-2 rounded-full bg-accent" />}</span>
+              <span className="min-w-0">{en ? (r.days === 1 ? "Single day" : `${r.days}-day shoot`) : r.days === 1 ? "1日撮影" : `${r.days}日連続`}</span>
+              <span className={rowHours}>{en ? `${r.days} day${r.days > 1 ? "s" : ""}` : `${r.days}日`}</span>
+              <span className={`${rowTotal} ${on ? "text-accent" : ""}`}>{yen(r.total)}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* シミュレーション: 日付（土日祝を自動判定）・開始時刻・時間 → 1時間ごとに割増を計算。1日貸しは日付と日数だけ */}
       <div className="mt-4 border border-line px-4 py-4">
