@@ -4,6 +4,7 @@ import {
   EMPTY_PUBLISH_FLOW,
   RESEND_COOLDOWN_MS,
   canRequestReview,
+  canStudioApprove,
   canResendStudioMail,
   canReusePreview,
   enterReview,
@@ -255,5 +256,31 @@ describe("publishWarnings（止めないが確認ダイアログを出す）", (
   });
   it("確認済みなら警告なし", () => {
     expect(publishWarnings({ publishRequestedAt: NOW, publishFlow: { ...EMPTY_PUBLISH_FLOW, studioConfirmedAt: NOW } })).toEqual([]);
+  });
+});
+
+describe("canStudioApprove（スタジオの承認ボタンで公開してよいか）", () => {
+  const inReview = (over: Partial<Property["publishFlow"]> = {}): Property =>
+    ready({
+      publishRequestedAt: "2026-09-21T00:00:00.000Z",
+      publishFlow: { ...EMPTY_PUBLISH_FLOW, studioNotifiedAt: "2026-09-21T00:00:00.000Z", studioNotifiedTo: "s@example.com", studioNotifyMode: "sent", studioApproveKeyHash: "h1", ...over },
+    });
+  it("申請中・メール送信済み・キー一致のときだけ通る", () => {
+    expect(canStudioApprove(inReview(), "h1").ok).toBe(true);
+    expect(canStudioApprove(inReview(), "other").ok).toBe(false);
+    expect(canStudioApprove(inReview(), "").ok).toBe(false);
+  });
+  it("プレビューURLだけ（キーなし）・メール未送信・申請前・公開済みは通らない", () => {
+    expect(canStudioApprove(inReview({ studioApproveKeyHash: null }), "").ok).toBe(false);
+    expect(canStudioApprove(inReview({ studioNotifyMode: "skipped" }), "h1").ok).toBe(false);
+    expect(canStudioApprove({ ...inReview(), publishRequestedAt: null }, "h1").ok).toBe(false);
+    expect(canStudioApprove({ ...inReview(), status: "published" }, "h1").ok).toBe(false);
+  });
+  it("メールを送り直すとキーが入れ替わり、公開・取り下げでキーは消える", () => {
+    const resent = recordStudioNotified(inReview(), { now: "2026-09-22T00:00:00.000Z", mail: { mode: "sent", to: "s@example.com", approveKeyHash: "h2" } });
+    expect(canStudioApprove(resent, "h1").ok).toBe(false);
+    expect(canStudioApprove(resent, "h2").ok).toBe(true);
+    expect(markPublished(resent, "2026-09-23T00:00:00.000Z").publishFlow.studioApproveKeyHash).toBeNull();
+    expect(resetReview(resent).publishFlow.studioApproveKeyHash).toBeNull();
   });
 });

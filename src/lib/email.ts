@@ -472,11 +472,13 @@ export async function sendStudioReviewMail(opts: {
   previewPath: string;
   previewExpiresAt: string;
   resend?: boolean;
+  /** 承認ボタン用キー（URLにだけ入れる。DBにはハッシュを保存）。 */
+  approveKey?: string;
 }): Promise<StudioReviewMailResult> {
   const to = opts.to.trim();
   const mail = buildStudioReviewMail({
     studioName: opts.studioName,
-    previewUrl: appUrl(opts.previewPath),
+    previewUrl: appUrl(opts.previewPath) + (opts.approveKey ? `?approve=${opts.approveKey}` : ""),
     previewExpiresAt: opts.previewExpiresAt,
     resend: opts.resend,
     contactAddress: operatorAddress(),
@@ -498,4 +500,33 @@ export async function sendStudioReviewMail(opts: {
   return ok
     ? { status: "sent", to }
     : { status: "failed", to, error: "メール送信に失敗しました（Resend がエラーを返しました）。" };
+}
+
+/**
+ * スタジオがプレビューの承認ボタンを押したことを、運営へ知らせる（社内宛のみ・2026-09-21）。
+ * 自動公開は運営が見ていない時間にも起きるので、必ず控えを残す。
+ */
+export async function notifyStudioApproved(opts: {
+  propertyId: string;
+  title: string;
+  published: boolean;
+}): Promise<boolean> {
+  if (mailDryRun()) {
+    console.info(`[mail:dry-run] studio approved. property=${opts.propertyId} published=${opts.published}`);
+    return false;
+  }
+  const name = esc(opts.title || opts.propertyId);
+  const body = opts.published
+    ? `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">スタジオが承認ボタンを押したため、「${name}」を自動で公開しました。</p>
+       <p style="margin:0 0 16px;"><a href="${esc(appUrl(`/properties/${opts.propertyId}`))}">公開ページを開く</a> ／ <a href="${esc(appUrl(`/admin/properties/${opts.propertyId}/edit`))}">物件編集を開く</a></p>
+       <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">取り下げる場合は、物件編集の「公開停止」を押してください。</p>`
+    : `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">スタジオが「${name}」を承認しましたが、公開に必要な項目が不足しているため、自動公開はしていません。</p>
+       <p style="margin:0;"><a href="${esc(appUrl(`/admin/properties/${opts.propertyId}/edit`))}">物件編集を開く</a></p>`;
+  return sendEmail({
+    to: operatorAddress(),
+    subject: opts.published
+      ? `【ロケハン3D】スタジオ承認により公開しました（${opts.title}）`
+      : `【ロケハン3D】スタジオ承認済み・公開は保留（${opts.title}）`,
+    html: shell(opts.published ? "スタジオ承認により公開しました" : "スタジオ承認済み（公開は保留）", body),
+  });
 }

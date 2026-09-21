@@ -4,6 +4,9 @@ import { repo } from "@/lib/store";
 import { propertyPreviewRepo, isPreviewExpired } from "@/lib/property-previews";
 import PropertyDetailView from "@/components/property-detail-view";
 import { getLocale } from "@/lib/i18n/server";
+import StudioApproveBar from "@/components/studio-approve-bar";
+import { canStudioApprove } from "@/lib/publish-flow";
+import { hashStudioApproveKey } from "@/lib/studio-approval";
 
 // トークンの有効期限を毎リクエストで判定するため動的レンダリング。
 // noindex: 共有用の非公開リンクなので検索エンジンには載せない。
@@ -52,10 +55,14 @@ function ExpiredView() {
  */
 export default async function PreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ approve?: string | string[] }>;
 }) {
   const { token } = await params;
+  const approveParam = (await searchParams).approve;
+  const approveKey = typeof approveParam === "string" ? approveParam : "";
   const preview = await propertyPreviewRepo.get(token);
   if (!preview) notFound();
   if (isPreviewExpired(preview)) return <ExpiredView />;
@@ -65,7 +72,19 @@ export default async function PreviewPage({
 
   const locale = await getLocale();
 
+  // 確認メールのリンク（?approve=キー）から開いたときだけ、スタジオ用の承認バーを出す。
+  // プレビューURLだけを知っている人（共有先など）には出ない。
+  const canApprove = approveKey !== "" && canStudioApprove(property, hashStudioApproveKey(approveKey)).ok;
+
+  // 承認して公開された直後は、サーバーの再描画でバーが消えてしまう（キーは使い切りで消える）。
+  // 確認メールのリンクで開いていて、スタジオの承認で公開済みなら、お礼の表示を出し続ける。
+  const approvedHere = approveKey !== "" && property.status === "published" && property.publishFlow?.studioConfirmedVia === "studio-link";
+
   return (
+    <>
+    {(canApprove || approvedHere) && (
+      <StudioApproveBar token={token} approveKey={approveKey} en={locale === "en"} publishedId={approvedHere ? property.id : undefined} />
+    )}
     <PropertyDetailView
       property={property}
       others={[]}
@@ -77,5 +96,6 @@ export default async function PreviewPage({
       signedIn={false}
       hasViewerAccess
     />
+    </>
   );
 }

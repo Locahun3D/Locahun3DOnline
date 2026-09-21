@@ -80,13 +80,13 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
       <div style="font-size:12px;color:#666;margin-bottom:6px;">ご確認いただきたい点</div>
       <ul style="font-size:14px;line-height:1.8;margin:0;padding-left:20px;">${checkpoints}</ul>
     </div>
-    <p ${p}>問題がなければ「この内容でOK」と、このメールにそのままご返信ください。<br>
-    修正のご希望がある場合も、このメールへの返信でお知らせください。<br>
-    ご返信を確認したうえで公開いたします。</p>
+    <p ${p}>問題がなければ、プレビューページの上部にある「この内容でOK・公開する」ボタンを押してください。<br>
+    ボタンを押した時点で、掲載ページが公開されます。<br>
+    修正のご希望がある場合は、ボタンを押さずに、このメールへの返信でお知らせください。</p>
     <p style="font-size:12px;line-height:1.8;color:#999;margin:0 0 16px;">お問い合わせ: ${esc(contact)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
     <p style="font-size:12px;line-height:1.7;color:#666;margin:0;">
-      English: Your listing page on Locahun3D is ready for review. Please check the preview link above (no login required${expiry ? `, valid until ${esc(expiry)}` : ""}) and reply to this email with your approval or any corrections.
+      English: Your listing page on Locahun3D is ready for review. Please check the preview link above (no login required${expiry ? `, valid until ${esc(expiry)}` : ""}) then press the “Approve and publish” button at the top of the preview page to publish it, or reply to this email with any corrections.
     </p>
   `;
 

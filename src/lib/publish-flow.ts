@@ -34,6 +34,8 @@ export const EMPTY_PUBLISH_FLOW: PublishFlow = {
   studioNotifiedTo: null,
   studioNotifyMode: null,
   studioConfirmedAt: null,
+  studioConfirmedVia: null,
+  studioApproveKeyHash: null,
   publishedAt: null,
 };
 
@@ -176,8 +178,26 @@ export function canReusePreview(
 }
 
 export type MailOutcome =
-  | { mode: "sent" | "dry-run"; to: string }
+  | { mode: "sent" | "dry-run"; to: string; approveKeyHash?: string | null }
   | { mode: "skipped" };
+
+/**
+ * スタジオ自身の承認ボタンで公開してよいか（2026-09-21 本人指示「OKボタン押したら自動で公開」）。
+ * 条件: 公開申請中 ／ 確認メールを実際に出している ／ メールのURLに入っていたキーが一致。
+ * プレビューURLは他の人にも共有されうるので、URLを知っているだけでは公開できないようにキーを別に持つ。
+ */
+export function canStudioApprove(p: Property, keyHash: string): GuardResult {
+  if (p.status === "published") return { ok: false, code: "already_published", error: "すでに公開されています。" };
+  if (publishStage(p) !== "review") return { ok: false, code: "not_in_review", error: "この物件は現在、確認の受付中ではありません。" };
+  const f = p.publishFlow ?? EMPTY_PUBLISH_FLOW;
+  if (!f.studioNotifiedAt || f.studioNotifyMode === "skipped" || !f.studioApproveKeyHash) {
+    return { ok: false, code: "no_request", error: "確認のご依頼が出ていません。" };
+  }
+  if (!keyHash || keyHash !== f.studioApproveKeyHash) {
+    return { ok: false, code: "bad_key", error: "このリンクでは承認できません。最新の確認メールのリンクからお開きください。" };
+  }
+  return { ok: true };
+}
 
 // ─── 遷移（Property を受けて Property を返す純関数） ───────────────
 
@@ -199,6 +219,7 @@ export function enterReview<T extends Property>(
       ...mailFields(opts.mail, opts.now, prev),
       // 内容を出し直したら、以前の「確認済み」は無効（確認したのは前の内容）。
       studioConfirmedAt: opts.mail.mode === "skipped" ? prev.studioConfirmedAt : null,
+      studioConfirmedVia: opts.mail.mode === "skipped" ? prev.studioConfirmedVia : null,
     },
   };
 }
@@ -209,13 +230,13 @@ function mailFields(mail: MailOutcome, now: string, prev: PublishFlow) {
     if (prev.studioNotifiedAt && prev.studioNotifyMode !== "skipped") return {};
     return { studioNotifiedAt: null, studioNotifiedTo: null, studioNotifyMode: "skipped" as const };
   }
-  return { studioNotifiedAt: now, studioNotifiedTo: mail.to, studioNotifyMode: mail.mode };
+  return { studioNotifiedAt: now, studioNotifiedTo: mail.to, studioNotifyMode: mail.mode, studioApproveKeyHash: mail.approveKeyHash ?? null };
 }
 
 /** 確認メールの（再）送信を記録。 */
 export function recordStudioNotified<T extends Property>(
   p: T,
-  opts: { now: string; mail: { mode: "sent" | "dry-run"; to: string } },
+  opts: { now: string; mail: { mode: "sent" | "dry-run"; to: string; approveKeyHash?: string | null } },
 ): T {
   return {
     ...p,
@@ -224,6 +245,8 @@ export function recordStudioNotified<T extends Property>(
       studioNotifiedAt: opts.now,
       studioNotifiedTo: opts.mail.to,
       studioNotifyMode: opts.mail.mode,
+      // 送り直したら承認キーも入れ替わる（古いメールのボタンは無効になる）。
+      studioApproveKeyHash: opts.mail.approveKeyHash ?? null,
     },
   };
 }
@@ -231,13 +254,14 @@ export function recordStudioNotified<T extends Property>(
 /** 「スタジオ確認済み」の手動チェック（外すこともできる）。 */
 export function setStudioConfirmed<T extends Property>(
   p: T,
-  opts: { confirmed: boolean; now: string },
+  opts: { confirmed: boolean; now: string; via?: "admin" | "studio-link" },
 ): T {
   return {
     ...p,
     publishFlow: {
       ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW),
       studioConfirmedAt: opts.confirmed ? opts.now : null,
+      studioConfirmedVia: opts.confirmed ? (opts.via ?? "admin") : null,
     },
   };
 }
@@ -260,7 +284,8 @@ export function markPublished<T extends Property>(p: T, now: string): T {
     ...p,
     status: "published",
     publishRequestedAt: null,
-    publishFlow: { ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW), publishedAt: now },
+    // 公開したら承認キーは使い切り（同じメールのボタンで再公開できないようにする）。
+    publishFlow: { ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW), publishedAt: now, studioApproveKeyHash: null },
   };
 }
 

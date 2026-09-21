@@ -19,7 +19,7 @@ describe("buildStudioReviewMail", () => {
     expect(bodyHtml).toContain("ログインは不要");
     for (const c of STUDIO_REVIEW_CHECKPOINTS) expect(bodyHtml).toContain(c);
     for (const word of ["料金", "写真", "設備"]) expect(bodyHtml).toContain(word);
-    expect(bodyHtml).toContain("このメールにそのままご返信ください");
+    expect(bodyHtml).toContain("「この内容でOK・公開する」ボタン");
     expect(bodyHtml).toContain("contact@locahun3d.com");
   });
   it("短い英語の案内が付く", () => {

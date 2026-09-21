@@ -13,6 +13,7 @@ import { requireAdmin, requireAdminOrStudioOwner, getCurrentUser } from "@/lib/d
 import { protectStudioManagedFields } from "@/lib/studio-guard";
 import { createNotification } from "@/lib/notifications";
 import { renamePayoutRecordsForProperty, autoCreateStudioVenueSplit } from "@/lib/payouts";
+import { newStudioApproveKey } from "@/lib/studio-approval";
 import { fillPropertyEnglish, needsEnglish } from "@/lib/property-translate";
 import {
   propertySchema,
@@ -489,10 +490,14 @@ export async function requestReviewAction(
 
   let mail: MailOutcome = { mode: "skipped" };
   let previewExpiresAt: string | null = null;
+  let approveKeyHash: string | null = null;
   if (!skipMail) {
     const preview = await ensurePreview(parsed.id);
     previewExpiresAt = preview.expiresAt;
+    const approve = newStudioApproveKey();
+    approveKeyHash = approve.hash;
     const sent = await sendStudioReviewMail({
+      approveKey: approve.key,
       to: translated.contactEmail,
       studioName: translated.title,
       previewPath: `/preview/${preview.token}`,
@@ -501,7 +506,7 @@ export async function requestReviewAction(
     if (sent.status === "failed") {
       return { ok: false, error: `${sent.error} 公開申請にはしていません。時間をおいて再実行してください。` };
     }
-    mail = { mode: sent.status, to: sent.to };
+    mail = { mode: sent.status, to: sent.to, approveKeyHash };
   }
 
   const saved = await repo.upsert(
@@ -537,7 +542,9 @@ export async function resendStudioReviewMailAction(id: string): Promise<FlowOk |
   const tg = translationGuard(existing);
   if (!tg.ok) return { ok: false, error: `${tg.error} いったん申請を取り下げ、「公開申請する」をやり直すと自動翻訳されます。` };
   const preview = await ensurePreview(id);
+  const approve = newStudioApproveKey();
   const sent = await sendStudioReviewMail({
+    approveKey: approve.key,
     to: existing.contactEmail,
     studioName: existing.title,
     previewPath: `/preview/${preview.token}`,
@@ -549,7 +556,7 @@ export async function resendStudioReviewMailAction(id: string): Promise<FlowOk |
   const saved = await repo.upsert(
     recordStudioNotified(existing, {
       now: new Date().toISOString(),
-      mail: { mode: sent.status, to: sent.to },
+      mail: { mode: sent.status, to: sent.to, approveKeyHash: approve.hash },
     }),
   );
   revalidatePath("/admin/properties");

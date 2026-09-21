@@ -662,6 +662,10 @@ export const propertySchema = z.object({
       studioNotifyMode: z.enum(["sent", "dry-run", "skipped"]).nullable().default(null),
       /** スタジオから「この内容でOK」の返事をもらった日時（運営が手動で記録）。 */
       studioConfirmedAt: z.string().nullable().default(null),
+      /** 確認の取り方。admin=運営が手動で記録 / studio-link=スタジオがプレビューの承認ボタンを押した（2026-09-21）。 */
+      studioConfirmedVia: z.enum(["admin", "studio-link"]).nullable().default(null),
+      /** 承認ボタン用キーの SHA-256。キー本体は確認メールのURLにだけ入る（保存しない）。メールを送り直すと入れ替わる。 */
+      studioApproveKeyHash: z.string().nullable().default(null),
       /** このワークフローを経て公開した日時（直近の公開）。 */
       publishedAt: z.string().nullable().default(null),
     })
