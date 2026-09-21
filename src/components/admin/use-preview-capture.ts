@@ -26,6 +26,25 @@ interface UseCaptureResult {
 import { buildViewerUrl } from "@/lib/viewer";
 
 /**
+ * ビューアーから返る失敗の理由を、そのまま出さずに日本語の指示に直す（2026-09-21）。
+ * とくに no-splats は「3DGSが1粒も読めていないので撮らずに止めた」という意味で、
+ * 空の動画が掲載スタジオ向けの埋め込みサムネイルになるのを防ぐための停止。
+ * 生の英語IDのままだと、見た人が「何をすればいいか」を判断できない。
+ */
+export function captureErrorText(error?: string): string {
+  if (error === "no-splats") {
+    return "3DGSが読み込めなかったため、撮影を中止しました（空の動画を作らないための停止）。データの配信を確認してからやり直してください。";
+  }
+  if (error === "no-scene") {
+    return "3DGSが開けなかったため、撮影を中止しました。データを確認してください。";
+  }
+  if (error === "no-h264-encoder") {
+    return "このブラウザで動画を作れませんでした（H.264非対応）。Chrome でやり直してください。";
+  }
+  return error || "キャプチャ失敗";
+}
+
+/**
  * キャプチャは別ウィンドウ(window.open)ではなく「同じタブ内の iframe」で実行する。
  *  - ポップアップブロックに殺されない／別窓を放置監視しなくてよい。
  *  - ビューアーの ?capture=1 は postMessage を `window.opener || parent` に送る
@@ -524,7 +543,7 @@ export function usePreviewCapture(): UseCaptureResult {
           clearTimeout(timeout);
           cleanup();
           setState("error");
-          setProgress(d.error || "キャプチャ失敗");
+          setProgress(captureErrorText(d.error));
           processQueue();
         }
       }
