@@ -60,13 +60,32 @@ function Eyebrow({ jp }: { en: string; jp: string }) {
  * （body の word-break: auto-phrase）。閉じ括弧の直前では切らない。
  */
 function sentenceLines(body: string) {
-  const parts = body.split(/(?<=。)(?![」』）\)])/);
+  // 1段落の中だけを扱う。句点で切り、段落内の改行もそのまま1行にする。
+  // （段落の区切りは paragraphs() が担当する。ここで空行まで扱うと間が二重に空く。）
+  const parts = body
+    .split(/(?<=。)(?![」』）\)])|\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
   return parts.map((part, i) => (
     <Fragment key={i}>
       {part}
-      {i < parts.length - 1 && !part.endsWith("\n") && <br />}
+      {i < parts.length - 1 && <br />}
     </Fragment>
   ));
+}
+
+/**
+ * 空行で段落に割る（2026-09-21 本人指摘「日本語の段落デザインまだ治ってない」）。
+ * それまでは `whitespace-pre-line` で元の改行をそのまま出したうえ、句点ごとに `<br>` も足していたので、
+ * 段落の切れ目だけ2〜3行ぶん空き、文の切れ目は詰まる——という不揃いな縦の間になっていた。
+ * 段落は一定の間隔で並べ、段落の中は1文＝1行にする。
+ */
+function paragraphs(text: string): string[] {
+  return text
+    .replace(/\r/g, "")
+    .split(/\n[ \t　]*\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function renderOverview(text: string) {
@@ -100,9 +119,14 @@ function renderOverview(text: string) {
               </h3>
             )}
             {s.body && (
-              <p className="text-[15px] leading-[1.95] text-ink/85 whitespace-pre-line">
-                {sentenceLines(s.body)}
-              </p>
+              <div
+                className="text-[15px] leading-[1.95] text-ink/85 space-y-3"
+                data-property-overview-body
+              >
+                {paragraphs(s.body).map((para, k) => (
+                  <p key={k}>{sentenceLines(para)}</p>
+                ))}
+              </div>
             )}
           </div>
         ))}
