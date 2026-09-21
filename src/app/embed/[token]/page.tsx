@@ -93,7 +93,7 @@ export default async function EmbedPage({
        （720–1199px で 0.8 / 1200px以上で 0.9）が掛からない分だけ内容が縮み、
        貼り先の iframe の下端に黒い帯が残る（実測: 幅992pxの16:9 iframe で約115px）。 */
     <div className="theme-online flex flex-col h-[calc(100dvh/var(--z))]">
-      <div className="flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0">
         <EmbedPlayer
           splatUrl={splatUrl}
           embedToken={token}
@@ -102,6 +102,14 @@ export default async function EmbedPage({
           autoplay={autoplay}
           en={en}
         />
+        {/* 埋め込みは外部サイトに露出するため、スクレイピング/AI学習への抑止表記を常設する。
+            ⚠ 画面に fixed で置くと、狭い枠（スマホ幅の16:9＝約342px）で下端の帯の
+            「物件名／Powered by」と重なって三重に潰れる（2026-09-21 別オリジンの
+            検証ページで実測）。ビューアー領域の中に収めれば、どの幅でも重ならない。 */}
+        {/* ビューアー(暗)とゲート(明)のどちらの背景でも読めるよう、白文字+影にする */}
+        <div className="pointer-events-none absolute bottom-2 right-3 z-50 mono text-[9px] tracking-[0.12em] text-white/60 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+          © ロケハン3D — 無断転載・AI学習利用禁止
+        </div>
       </div>
       {/* 掲載者サイト上での出所表示。埋め込みを配ることが当社への導線になる
           （掲載者には無料の集客ツール、当社にはブランド露出という交換）。 */}
@@ -116,12 +124,6 @@ export default async function EmbedPage({
           {/* 2026-09-20: 商標ロゴ統一。外部サイトに出るブランド表示は欧文ワードマーク */}
           Powered by Locahun 3D
         </a>
-      </div>
-      {/* 埋め込みは外部サイトに露出するため、スクレイピング/AI学習への
-          抑止表記を常設する。ビューアーの邪魔をしないよう右下に固定表示。 */}
-      {/* ビューアー(暗)とゲート(明)のどちらの背景でも読めるよう、白文字+影にする */}
-      <div className="pointer-events-none fixed bottom-2 right-3 z-50 mono text-[9px] tracking-[0.12em] text-white/60 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-        © ロケハン3D — 無断転載・AI学習利用禁止
       </div>
     </div>
   );

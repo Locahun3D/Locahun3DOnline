@@ -20,4 +20,13 @@ describe("埋め込みページの高さ", () => {
   it("素の 100dvh を使わない", () => {
     expect(src).not.toContain("h-[100dvh]");
   });
+
+  /**
+   * 転載禁止の表記は画面に fixed で置かない。狭い枠（スマホ幅の16:9＝約342px）で
+   * 下端の帯の「物件名／Powered by」と重なって三重に潰れる（2026-09-21 実測）。
+   */
+  it("転載禁止の表記はビューアー領域の中に置く（下端の帯と重ねない）", () => {
+    expect(src).toContain("absolute bottom-2 right-3");
+    expect(src).not.toContain("fixed bottom-2 right-3");
+  });
 });
