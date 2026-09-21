@@ -2917,7 +2917,10 @@ body.local-project-saving::after,body.local-project-restoring::after {content:''
 }
 @media (pointer:coarse) and (any-hover:none) and (max-width:699px),
        (pointer:coarse) and (any-hover:none) and (max-height:699px){
-  body:not(.v1-ipad) #cam-panel{top:var(--v1-camera-top,64px)!important;bottom:auto!important;max-height:var(--v1-camera-height,calc(100dvh - 280px))!important;overflow-y:auto!important;box-sizing:border-box;}
+  /* 既定値（JS が測る前の一瞬と、スクリプトを外した検証時に効く）は、下のツールバー
+   （測定・日照・カメラの行。bottom:212px・ボタン高 ≈44px）を覆わない高さにする。
+   2026-09-21: 280px だと 390×844 で下端 628px となり、ボタン（上端 ≈588px）に被っていた。 */
+  body:not(.v1-ipad) #cam-panel{top:var(--v1-camera-top,64px)!important;bottom:auto!important;max-height:var(--v1-camera-height,calc(100dvh - 330px))!important;overflow-y:auto!important;box-sizing:border-box;}
   body:not(.v1-ipad) #sun-panel{left:auto!important;right:calc(14px + env(safe-area-inset-right,0px))!important;top:auto!important;bottom:var(--v1-sun-bottom,264px)!important;max-height:var(--v1-sun-height,calc(100dvh - 330px))!important;overflow-y:auto!important;box-sizing:border-box;}
 }
 /* Visible-viewport shell (touch devices; class set by 409_visible_viewport.js).
@@ -2995,7 +2998,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="ca1122f39afc6883a81962dee2c3e51414aa4674c2d3ad54e865db371352537f";
+window.__locahunBuildRelease="08a15e36d489e038c54a2c1768597c2a4a194f959040301462ef7bba36b73f7d";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
