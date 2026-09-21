@@ -49,6 +49,22 @@ const FRAME_H = 1080;
 const THUMB_W = 168;
 const THUMB_H = 26;
 
+/**
+ * 2026-09-21: 録画の完了通知（capture-done）に載ってくる Blob の判定。
+ * 専用ウィンドウで録画するようになってから、この Blob は「そのウィンドウのレルム」で
+ * 組み立てられて届く。レルムが違うと `blob instanceof Blob`（編集画面側の Blob）は
+ * **false** になり、録画は終わっているのに完了処理へ進まず、進捗が 93% のまま
+ * 15分のタイムアウトまで止まる（＝3DGSを保存しても動画が撮り直されない）。
+ * 実測: instanceof(録画ウィンドウ側)=true / instanceof(編集画面側)=false。
+ * そのためコンストラクタではなく「Blob として振る舞うか」で判定する。
+ */
+function isBlobLike(value: unknown): value is Blob {
+  return !!value && typeof value === "object"
+    && typeof (value as Blob).size === "number"
+    && typeof (value as Blob).arrayBuffer === "function"
+    && typeof (value as Blob).slice === "function";
+}
+
 interface CaptureFrame {
   container: HTMLDivElement;
   iframe: HTMLIFrameElement;
@@ -409,22 +425,25 @@ export function usePreviewCapture(): UseCaptureResult {
           setProgress("録画中…");
         }
 
-        if (d.type === "capture-done" && d.blob instanceof Blob) {
+        if (d.type === "capture-done" && isBlobLike(d.blob)) {
           clearTimeout(timeout);
           if (abortRef.current) { cleanup(); return; }
           // 録画は完了 — レンダリング用 iframe はもう不要なので撤去
           window.removeEventListener("message", handler);
           frame.popup?.removeEventListener("message", handler);
+
+          const ext = d.ext || "webm";
+          const contentType = d.mimeType || "video/webm";
+          // ⚠ ウィンドウを閉じる **前** にこちらのレルムの Blob へ写す。専用ウィンドウを
+          //    閉じてから元の Blob を読もうとすると、読めずにアップロードが落ちる。
+          const cleanBlob = new Blob([d.blob], { type: contentType });
+
           // アップロード中も、次に撮るものがあるならウィンドウは開けておく。
           destroyCaptureFrame(frame, queueRef.current.length > 0);
           if (frameRef.current === frame) frameRef.current = null;
           if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
           setState("uploading");
           setProgress("アップロード準備中…");
-
-          const ext = d.ext || "webm";
-          const contentType = d.mimeType || "video/webm";
-          const cleanBlob = new Blob([d.blob], { type: contentType });
 
           async function uploadWithRetry(retries = 3): Promise<string> {
             await new Promise((r) => setTimeout(r, 2000));

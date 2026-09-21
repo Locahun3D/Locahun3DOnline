@@ -40,8 +40,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no_property_id" }, { status: 400 });
   }
 
-  const itemIdx = String(form.get("itemIdx") ?? "").trim();
-  const slug = itemIdx || nanoid(6);
+  const itemIdx = String(form.get("itemIdx") ?? "").trim().replace(/[^0-9]/g, "");
+  // ⚠ キーを itemIdx だけで決めていたため、撮り直しても URL が 1 文字も変わらず
+  //    （uploads/<物件>/0-preview.mp4）、/api/r2 が 8MB 以下に付ける
+  //    `public, max-age=3600` と Workers の Cache API が古い動画を返し続けていた
+  //    ＝「3DGSを更新しても動画が更新されない」（2026-09-21）。毎回別キーにして
+  //    URL 自体を変える。古い動画は previewVideoUrl 差し替え時に
+  //    cleanupReplacedFileAction が消す（ローカル保存も同じくランダム名）。
+  const slug = `${itemIdx || "x"}-${nanoid(6)}`;
   const ext = file.name.endsWith(".mp4") ? "mp4" : "webm";
   const contentType = ext === "mp4" ? "video/mp4" : "video/webm";
   const key = `uploads/${propertyId}/${slug}-preview.${ext}`;
