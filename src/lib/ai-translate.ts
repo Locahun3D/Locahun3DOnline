@@ -42,6 +42,10 @@ export interface TranslateInput {
   saleDescriptions: string[];
   /** ギャラリー画像の代替テキスト（順序を保持）。 */
   galleryAlts: string[];
+  /** 設備の1行メモ（順序を保持。2026-09-21 追加）。 */
+  amenityNotes: string[];
+  /** 図面のラベル（順序を保持。2026-09-21 追加）。 */
+  blueprintLabels: string[];
 }
 
 /** 翻訳結果。各フィールドは英語。翻訳できなかった要素は "" で返る。 */
@@ -59,6 +63,8 @@ export interface TranslateResult {
   sceneLabelsEn: string[];
   saleDescriptionsEn: string[];
   galleryAltsEn: string[];
+  amenityNotesEn: string[];
+  blueprintLabelsEn: string[];
   source: "ai" | "none";
 }
 
@@ -82,7 +88,13 @@ async function getApiKey(): Promise<string | null> {
   return process.env.ANTHROPIC_API_KEY || null;
 }
 
-function emptyResult(labelCount: number, saleCount: number, galleryCount: number): TranslateResult {
+function emptyResult(
+  labelCount: number,
+  saleCount: number,
+  galleryCount: number,
+  noteCount = 0,
+  planCount = 0,
+): TranslateResult {
   return {
     titleEn: "",
     summaryEn: "",
@@ -97,6 +109,8 @@ function emptyResult(labelCount: number, saleCount: number, galleryCount: number
     sceneLabelsEn: Array.from({ length: labelCount }, () => ""),
     saleDescriptionsEn: Array.from({ length: saleCount }, () => ""),
     galleryAltsEn: Array.from({ length: galleryCount }, () => ""),
+    amenityNotesEn: Array.from({ length: noteCount }, () => ""),
+    blueprintLabelsEn: Array.from({ length: planCount }, () => ""),
     source: "none",
   };
 }
@@ -116,6 +130,8 @@ function buildPrompt(input: TranslateInput): string {
     sceneLabels: input.sceneLabels,
     saleDescriptions: input.saleDescriptions,
     galleryAlts: input.galleryAlts,
+    amenityNotes: input.amenityNotes,
+    blueprintLabels: input.blueprintLabels,
   };
   return [
     "You are a professional Japanese→English translator for a location-scouting / film-set rental platform (撮影ロケ地・スタジオ).",
@@ -132,10 +148,12 @@ function buildPrompt(input: TranslateInput): string {
     "- nearestStation and availableHours are short free-text notes; keep them short and natural.",
     "- permitNotes is a practical notice about filming permits — preserve police-station names, phone numbers and other operational details exactly as in the source; only translate the surrounding prose.",
     "- coverAlt and galleryAlts are short image alt-text captions; keep them short and descriptive.",
-    "- sceneLabels, saleDescriptions and galleryAlts are arrays; return arrays of the SAME length in the SAME order.",
+    "- amenityNotes are one-line facility notes (e.g. 「3台まで」→「Up to 3 cars」, 「光回線 1Gbps」→「Fibre 1 Gbps」). Keep them very short.",
+    "- blueprintLabels are floor-plan tab labels (e.g. 「1階平面図」→「1F floor plan」). Keep them very short.",
+    "- sceneLabels, saleDescriptions, galleryAlts, amenityNotes and blueprintLabels are arrays; return arrays of the SAME length in the SAME order.",
     "",
     "Return ONLY a single JSON object, no prose, with exactly these keys:",
-    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": string[], "saleDescriptionsEn": string[], "galleryAltsEn": string[]}',
+    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": string[], "saleDescriptionsEn": string[], "galleryAltsEn": string[], "amenityNotesEn": string[], "blueprintLabelsEn": string[]}',
     "",
     "Source (JSON):",
     JSON.stringify(payload, null, 2),
@@ -147,6 +165,8 @@ function parseResult(
   labelCount: number,
   saleCount: number,
   galleryCount: number,
+  noteCount = 0,
+  planCount = 0,
 ): TranslateResult | null {
   const text = resp.content
     .filter((b) => b.type === "text" && b.text)
@@ -160,6 +180,8 @@ function parseResult(
     const labelArr = Array.isArray(obj.sceneLabelsEn) ? obj.sceneLabelsEn : [];
     const saleArr = Array.isArray(obj.saleDescriptionsEn) ? obj.saleDescriptionsEn : [];
     const galleryArr = Array.isArray(obj.galleryAltsEn) ? obj.galleryAltsEn : [];
+    const noteArr = Array.isArray(obj.amenityNotesEn) ? obj.amenityNotesEn : [];
+    const planArr = Array.isArray(obj.blueprintLabelsEn) ? obj.blueprintLabelsEn : [];
     return {
       titleEn: str(obj.titleEn),
       summaryEn: str(obj.summaryEn),
@@ -174,6 +196,8 @@ function parseResult(
       sceneLabelsEn: Array.from({ length: labelCount }, (_, i) => str(labelArr[i])),
       saleDescriptionsEn: Array.from({ length: saleCount }, (_, i) => str(saleArr[i])),
       galleryAltsEn: Array.from({ length: galleryCount }, (_, i) => str(galleryArr[i])),
+      amenityNotesEn: Array.from({ length: noteCount }, (_, i) => str(noteArr[i])),
+      blueprintLabelsEn: Array.from({ length: planCount }, (_, i) => str(planArr[i])),
       source: "ai",
     };
   } catch {
@@ -189,6 +213,8 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
   const labelCount = input.sceneLabels.length;
   const saleCount = input.saleDescriptions.length;
   const galleryCount = input.galleryAlts.length;
+  const noteCount = input.amenityNotes.length;
+  const planCount = input.blueprintLabels.length;
 
   // 翻訳すべき自由記述が何も無いなら API を叩かない。
   const hasAnything =
@@ -204,11 +230,13 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
     !!input.coverAlt.trim() ||
     input.sceneLabels.some((s) => s.trim()) ||
     input.saleDescriptions.some((s) => s.trim()) ||
-    input.galleryAlts.some((s) => s.trim());
-  if (!hasAnything) return emptyResult(labelCount, saleCount, galleryCount);
+    input.galleryAlts.some((s) => s.trim()) ||
+    input.amenityNotes.some((s) => s.trim()) ||
+    input.blueprintLabels.some((s) => s.trim());
+  if (!hasAnything) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
 
   const apiKey = await getApiKey();
-  if (!apiKey) return emptyResult(labelCount, saleCount, galleryCount);
+  if (!apiKey) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
 
   const prompt = buildPrompt(input);
   try {
@@ -225,13 +253,13 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) return emptyResult(labelCount, saleCount, galleryCount);
+    if (!res.ok) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
     const data = (await res.json()) as AnthropicResponse;
     return (
-      parseResult(data, labelCount, saleCount, galleryCount) ??
-      emptyResult(labelCount, saleCount, galleryCount)
+      parseResult(data, labelCount, saleCount, galleryCount, noteCount, planCount) ??
+      emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount)
     );
   } catch {
-    return emptyResult(labelCount, saleCount, galleryCount);
+    return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
   }
 }

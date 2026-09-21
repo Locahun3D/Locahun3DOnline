@@ -398,6 +398,19 @@ export const propertySchema = z.object({
     fireAllowed: z.string().max(40).default(""),
     elevator: z.string().max(40).default(""),
   }).default({ elevator: "", parking: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", restroom: "", smokingArea: "", fireAllowed: "" }),
+  /** 設備メモの英語（2026-09-21 追加。EN ページでも1行メモが出るように）。空なら日本語のまま出す。 */
+  amenityNotesEn: z.object({
+    parking: z.string().max(80).default(""),
+    loadingDock: z.string().max(80).default(""),
+    soundproofing: z.string().max(80).default(""),
+    hasInternet: z.string().max(80).default(""),
+    airConditioning: z.string().max(80).default(""),
+    greenRoom: z.string().max(80).default(""),
+    restroom: z.string().max(80).default(""),
+    smokingArea: z.string().max(80).default(""),
+    fireAllowed: z.string().max(80).default(""),
+    elevator: z.string().max(80).default(""),
+  }).default({ elevator: "", parking: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", restroom: "", smokingArea: "", fireAllowed: "" }),
 
   // ── 料金の内訳 ──
   /** 最低利用時間（h）。0 = 設定なし。 */
@@ -481,6 +494,8 @@ export const propertySchema = z.object({
   // 2.6 Blueprints / floor plans
   blueprints: z.array(z.object({
     label: z.string().max(60).default(""),
+    /** 図面ラベルの英語（2026-09-21 追加。EN ページのタブ表示に使う）。 */
+    labelEn: z.string().max(120).default(""),
     url: urlOrPath(),
   })).max(10).default([]),
 
@@ -922,6 +937,9 @@ export function localizeProperty<
     | "addressEn"
     | "nearestStation"
     | "nearestStationEn"
+    | "amenityNotes"
+    | "amenityNotesEn"
+    | "blueprints"
     | "availableHours"
     | "availableHoursEn"
     | "permitType"
@@ -949,6 +967,14 @@ export function localizeProperty<
     permitType: p.permitTypeEn || p.permitType,
     permitNotes: p.permitNotesEn || p.permitNotes,
     cover: { ...p.cover, alt: p.cover.altEn || p.cover.alt },
+    // 設備メモと図面ラベルも EN があれば差し替える（2026-09-21）。
+    amenityNotes: Object.fromEntries(
+      Object.entries(p.amenityNotes).map(([k, v]) => [
+        k,
+        (p.amenityNotesEn as Record<string, string> | undefined)?.[k] || v,
+      ]),
+    ) as Property["amenityNotes"],
+    blueprints: p.blueprints.map((b) => ({ ...b, label: b.labelEn || b.label })),
     gallery: p.gallery.map((g) => ({ ...g, alt: g.altEn || g.alt })),
     splatItems: p.splatItems.map((it) => ({
       ...it,

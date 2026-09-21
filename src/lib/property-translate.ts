@@ -24,6 +24,12 @@ export async function fillPropertyEnglish(p: Property): Promise<Property> {
     it.saleDescriptionEn.trim() ? "" : it.saleDescription,
   );
   const galleryAlts = p.gallery.map((g) => (g.altEn.trim() ? "" : g.alt));
+  // 設備メモと図面ラベルも同じやり方で（既訳は "" にして温存。2026-09-21）。
+  const noteKeys = Object.keys(p.amenityNotes) as (keyof typeof p.amenityNotes)[];
+  const amenityNotes = noteKeys.map((k) =>
+    (p.amenityNotesEn?.[k] ?? "").trim() ? "" : p.amenityNotes[k],
+  );
+  const blueprintLabels = p.blueprints.map((b) => (b.labelEn.trim() ? "" : b.label));
 
   const r = await translateProperty({
     title: p.titleEn.trim() ? "" : p.title,
@@ -39,6 +45,8 @@ export async function fillPropertyEnglish(p: Property): Promise<Property> {
     sceneLabels,
     saleDescriptions,
     galleryAlts,
+    amenityNotes,
+    blueprintLabels,
   });
 
   if (r.source === "none") return p;
@@ -63,6 +71,13 @@ export async function fillPropertyEnglish(p: Property): Promise<Property> {
       ...it,
       labelEn: it.labelEn || (r.sceneLabelsEn[i] ?? ""),
       saleDescriptionEn: it.saleDescriptionEn || (r.saleDescriptionsEn[i] ?? ""),
+    })),
+    amenityNotesEn: Object.fromEntries(
+      noteKeys.map((k, i) => [k, (p.amenityNotesEn?.[k] ?? "") || (r.amenityNotesEn[i] ?? "")]),
+    ) as Property["amenityNotesEn"],
+    blueprints: p.blueprints.map((b, i) => ({
+      ...b,
+      labelEn: b.labelEn || (r.blueprintLabelsEn[i] ?? ""),
     })),
   };
 }

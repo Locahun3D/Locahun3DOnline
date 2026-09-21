@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Plan = { label?: string; url: string };
+type Plan = { label?: string; labelEn?: string; url: string };
 
 const isImage = (url: string) => /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url);
 
@@ -19,7 +19,9 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
   const cur = images[Math.min(idx, images.length - 1)];
-  const name = (p: Plan, i: number) => p.label || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`);
+  // 2026-09-21: EN ページでは英語のラベルを使う（空なら日本語のまま）。
+  const name = (p: Plan, i: number) =>
+    (en ? p.labelEn || p.label : p.label) || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`);
   const step = (d: number) => setIdx((i) => (i + d + images.length) % images.length);
 
   return (
@@ -70,7 +72,7 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
           {files.map((b, i) => (
             <a key={b.url} href={b.url} download target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[13px] border border-line px-3 py-2.5 hover:border-accent hover:text-accent transition">
               <span className="text-accent">⬇</span>
-              <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">{b.label || (en ? `File ${i + 1}` : `資料 ${i + 1}`)}</span>
+              <span className="flex-1 truncate text-[14px] text-ink/90 font-medium">{(en ? b.labelEn || b.label : b.label) || (en ? `File ${i + 1}` : `資料 ${i + 1}`)}</span>
               <span className="text-[12px] text-ink/70 font-bold">{en ? "Download PDF" : "PDFをダウンロード"}</span>
             </a>
           ))}

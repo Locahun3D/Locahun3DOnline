@@ -2032,7 +2032,7 @@ export default function PropertyEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={() => blueprintsArray.append({ label: "", url: "" })}
+                    onClick={() => blueprintsArray.append({ label: "", labelEn: "", url: "" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -2054,6 +2054,12 @@ export default function PropertyEditor({
                           {...register(`blueprints.${idx}.label`)}
                           className={`${inputClass} flex-1`}
                           placeholder="ラベル（例: 1F 平面図 / 断面図）"
+                        />
+                        <input
+                          type="text"
+                          {...register(`blueprints.${idx}.labelEn`)}
+                          className={`${inputClass} flex-1 text-muted`}
+                          placeholder="EN（未記入でOK・公開申請時に自動翻訳）"
                         />
                         <button
                           type="button"
@@ -3351,16 +3357,16 @@ function StepCard({
 function AmenityToggles({ register }: { register: UseFormRegister<Property> }) {
   return (
     <div className="grid md:grid-cols-3 gap-5">
-      <Toggle label="駐車可" register={register("parking")} note={register("amenityNotes.parking")} notePlaceholder="例: 3台・大型不可" />
-      <Toggle label="搬入口 大" register={register("loadingDock")} note={register("amenityNotes.loadingDock")} notePlaceholder="例: 2t車まで・EVあり" />
-      <Toggle label="エレベーター あり" register={register("elevator")} note={register("amenityNotes.elevator")} notePlaceholder="例: 定員9名・間口80cm" />
-      <Toggle label="防音あり" register={register("soundproofing")} note={register("amenityNotes.soundproofing")} notePlaceholder="例: 楽器可・深夜は不可" />
-      <Toggle label="インターネット" register={register("hasInternet")} note={register("amenityNotes.hasInternet")} notePlaceholder="例: 光 1Gbps・Wi-Fi" />
-      <Toggle label="空調 あり" register={register("airConditioning")} note={register("amenityNotes.airConditioning")} notePlaceholder="例: 各部屋・無音運転可" />
-      <Toggle label="控室 あり" register={register("greenRoom")} note={register("amenityNotes.greenRoom")} notePlaceholder="例: 8畳・鏡台2" />
-      <Toggle label="トイレ あり" register={register("restroom")} note={register("amenityNotes.restroom")} notePlaceholder="例: 男女別・2か所" />
-      <Toggle label="喫煙所 あり" register={register("smokingArea")} note={register("amenityNotes.smokingArea")} notePlaceholder="例: 屋外・1F裏口" />
-      <Toggle label="火気使用 可" register={register("fireAllowed")} note={register("amenityNotes.fireAllowed")} notePlaceholder="例: 要事前申請" />
+      <Toggle label="駐車可" register={register("parking")} note={register("amenityNotes.parking")} notePlaceholder="例: 3台・大型不可"  noteEn={register("amenityNotesEn.parking")} />
+      <Toggle label="搬入口 大" register={register("loadingDock")} note={register("amenityNotes.loadingDock")} notePlaceholder="例: 2t車まで・EVあり"  noteEn={register("amenityNotesEn.loadingDock")} />
+      <Toggle label="エレベーター あり" register={register("elevator")} note={register("amenityNotes.elevator")} notePlaceholder="例: 定員9名・間口80cm"  noteEn={register("amenityNotesEn.elevator")} />
+      <Toggle label="防音あり" register={register("soundproofing")} note={register("amenityNotes.soundproofing")} notePlaceholder="例: 楽器可・深夜は不可"  noteEn={register("amenityNotesEn.soundproofing")} />
+      <Toggle label="インターネット" register={register("hasInternet")} note={register("amenityNotes.hasInternet")} notePlaceholder="例: 光 1Gbps・Wi-Fi"  noteEn={register("amenityNotesEn.hasInternet")} />
+      <Toggle label="空調 あり" register={register("airConditioning")} note={register("amenityNotes.airConditioning")} notePlaceholder="例: 各部屋・無音運転可"  noteEn={register("amenityNotesEn.airConditioning")} />
+      <Toggle label="控室 あり" register={register("greenRoom")} note={register("amenityNotes.greenRoom")} notePlaceholder="例: 8畳・鏡台2"  noteEn={register("amenityNotesEn.greenRoom")} />
+      <Toggle label="トイレ あり" register={register("restroom")} note={register("amenityNotes.restroom")} notePlaceholder="例: 男女別・2か所"  noteEn={register("amenityNotesEn.restroom")} />
+      <Toggle label="喫煙所 あり" register={register("smokingArea")} note={register("amenityNotes.smokingArea")} notePlaceholder="例: 屋外・1F裏口"  noteEn={register("amenityNotesEn.smokingArea")} />
+      <Toggle label="火気使用 可" register={register("fireAllowed")} note={register("amenityNotes.fireAllowed")} notePlaceholder="例: 要事前申請"  noteEn={register("amenityNotesEn.fireAllowed")} />
       <Toggle label="自然光あり" register={register("hasNaturalLight")} />
     </div>
   );
@@ -3371,12 +3377,15 @@ function Toggle({
   register,
   note,
   notePlaceholder,
+  noteEn,
 }: {
   label: string;
   register: ReturnType<ReturnType<typeof useForm<Property>>["register"]>;
   /** 設備の1行メモ（台数・回線速度など）。物件ページのアイコンの下に出る。 */
   note?: ReturnType<ReturnType<typeof useForm<Property>>["register"]>;
   notePlaceholder?: string;
+  /** 同じメモの英語（2026-09-21）。空欄でよい＝公開申請のときに自動翻訳が埋める。 */
+  noteEn?: ReturnType<ReturnType<typeof useForm<Property>>["register"]>;
 }) {
   return (
     <div className="border border-line hover:border-ink transition">
@@ -3391,6 +3400,15 @@ function Toggle({
           placeholder={notePlaceholder ?? "補足（1行）"}
           {...note}
           className="w-full border-t border-line bg-transparent px-4 py-2 text-[12px] placeholder:text-ink/35 focus:outline-none focus:bg-accent/5"
+        />
+      )}
+      {noteEn && (
+        <input
+          type="text"
+          maxLength={80}
+          placeholder="EN（未記入でOK・公開申請時に自動翻訳）"
+          {...noteEn}
+          className="w-full border-t border-line bg-transparent px-4 py-2 text-[12px] text-muted placeholder:text-ink/25 focus:outline-none focus:bg-accent/5"
         />
       )}
     </div>

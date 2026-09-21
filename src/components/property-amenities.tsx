@@ -43,7 +43,16 @@ const icons = {
 };
 
 export function propertyAmenities(p: Property, en = false): Amenity[] {
-  const n = p.amenityNotes;
+  // 2026-09-21: EN ページでは英語のメモを出す（空なら日本語のまま＝従来どおり）。
+  // 公開ページは localizeProperty で差し替え済みだが、管理プレビューなど素の Property を
+  // 受け取る経路もあるので、ここでも見る。
+  const raw = p.amenityNotes;
+  const notesEn = (p.amenityNotesEn ?? {}) as Partial<typeof raw>;
+  const n = en
+    ? (Object.fromEntries(
+        (Object.keys(raw) as (keyof typeof raw)[]).map((k) => [k, notesEn[k] || raw[k]]),
+      ) as typeof raw)
+    : raw;
   // 駐車場のメモが空なら台数フィールドを代用（旧データ互換）
   const parkingNote = n.parking || (p.parkingCapacity > 0 ? (en ? `${p.parkingCapacity} cars` : `${p.parkingCapacity}台`) : "");
   return [

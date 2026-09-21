@@ -14,6 +14,7 @@ type EnglishSource = Pick<
   | "city" | "cityEn" | "address" | "addressEn" | "nearestStation" | "nearestStationEn"
   | "availableHours" | "availableHoursEn" | "permitType" | "permitTypeEn"
   | "permitNotes" | "permitNotesEn" | "cover" | "gallery" | "splatItems"
+  | "amenityNotes" | "amenityNotesEn" | "blueprints"
 >;
 
 const has = (s: string | undefined | null) => !!(s ?? "").trim();
@@ -43,6 +44,15 @@ export function missingEnglishFields(p: EnglishSource): string[] {
     (it) => has(it.saleDescription) && !has(it.saleDescriptionEn),
   ).length;
   if (saleMissing > 0) out.push(`販売説明（${saleMissing}件）`);
+  // 2026-09-21 追加: 設備の1行メモと図面ラベルも EN ページに出るので翻訳の対象にする。
+  const notes = p.amenityNotes ?? {};
+  const notesEn = (p.amenityNotesEn ?? {}) as Record<string, string>;
+  const noteMissing = Object.entries(notes).filter(
+    ([k, v]) => has(v as string) && !has(notesEn[k]),
+  ).length;
+  if (noteMissing > 0) out.push(`設備のメモ（${noteMissing}件）`);
+  const planMissing = (p.blueprints ?? []).filter((b) => has(b.label) && !has(b.labelEn)).length;
+  if (planMissing > 0) out.push(`図面のラベル（${planMissing}件）`);
   return out;
 }
 
