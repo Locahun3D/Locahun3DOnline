@@ -338,9 +338,9 @@ export default function ViewerGate({
       }
       // その他の非200（503 署名未設定 / ネットワーク不良等）のみ従来フォールバック。
       if (!res.ok) return fallback();
-      const data = (await res.json()) as { url?: string };
+      const data = (await res.json()) as { url?: string; streamUrl?: string };
       if (!data.url) return fallback();
-      const target = buildViewerUrl(data.url, { protected: true });
+      const target = buildViewerUrl(data.url, { protected: true, streamRef: data.streamUrl });
       if (win) win.location.href = target;
       else window.open(target, "_blank");
     } catch {

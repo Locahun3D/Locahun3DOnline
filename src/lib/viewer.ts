@@ -26,6 +26,11 @@ interface ViewerUrlOptions {
    * 画質が乗り切る前に録画が始まりボケるのを防ぐ用途（capture 時のみ有効）。
    */
   warmupExtraMs?: number;
+  /**
+   * 参照保存のシーン（編集後の .zip）が段階読み込みする、元の RAD のURL（/api/viewer-asset が返す署名URL）。
+   * 同一オリジンの /api/viewer-stream で開くときは不要（ビューアーが ?ref=stream を付けて取りに行く）。
+   */
+  streamRef?: string | null;
 }
 
 export function buildViewerUrl(
@@ -45,6 +50,7 @@ export function buildViewerUrl(
     params.set("warmupExtra", String(Math.round(options.warmupExtraMs)));
   }
   if (options?.protected) params.set("protected", "1");
+  if (options?.streamRef) params.set("streamref", options.streamRef);
   return `${VIEWER_PATH}?${params}`;
 }
 

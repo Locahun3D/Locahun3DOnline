@@ -7,6 +7,7 @@ import PropertiesAdmin, {
 } from "@/components/admin/properties-admin";
 import TranslateMissingButton from "@/components/admin/translate-missing-button";
 import { publishStage, reviewSubState } from "@/lib/publish-flow";
+import { publishReadiness } from "@/lib/publish-readiness";
 
 export const metadata = { title: "物件管理" };
 
@@ -32,12 +33,15 @@ export default async function AdminPropertiesList() {
     publishRequestedAt: p.publishRequestedAt ?? null,
     reviewState: reviewSubState(p.publishFlow),
     coverSrc: p.cover?.src || undefined,
+    // 公開に必要な項目が埋まった下書きは「公開申請待ち」と出す（2026-09-21 本人指示）。
+    ready: publishReadiness(p).ready,
   }));
 
   const counts = {
     published: all.filter((p) => p.status === "published").length,
     // 下書きと公開申請中は分けて数える（一覧のタブと同じ区切り。2026-09-20）。
-    draft: all.filter((p) => publishStage(p) === "draft").length,
+    draft: all.filter((p) => publishStage(p) === "draft" && !publishReadiness(p).ready).length,
+    ready: all.filter((p) => publishStage(p) === "draft" && publishReadiness(p).ready).length,
     review: all.filter((p) => publishStage(p) === "review").length,
     archived: all.filter((p) => p.status === "archived").length,
   };
@@ -47,7 +51,7 @@ export default async function AdminPropertiesList() {
       {/* 2026-09-20: 管理画面共通の小さい見出しに統一（公開側の 42〜60px 見出しは一覧の1画面目を食うだけ）。 */}
       <AdminPageHeader
         title="物件管理"
-        count={`合計 ${all.length} 件（公開 ${counts.published}／公開申請中 ${counts.review}／下書き ${counts.draft}／アーカイブ ${counts.archived}）`}
+        count={`合計 ${all.length} 件（公開 ${counts.published}／公開申請済み ${counts.review}／公開申請待ち ${counts.ready}／下書き ${counts.draft}／アーカイブ ${counts.archived}）`}
         actions={
           <>
             {isAdmin && <TranslateMissingButton />}

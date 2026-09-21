@@ -298,7 +298,11 @@ export function usePreviewCapture(): UseCaptureResult {
         }
       }
       const fileName = splatUrl.split("/").pop()?.split("?")[0] || "";
-      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 10, warmupExtraMs: warmupRef.current });
+      // 参照保存のシーン（編集後の小さい .zip）は本体を含まない。元の RAD の場所を渡す。
+      // どのファイルかはサーバーが物件データから決める（?ref=stream）。該当が無ければ 404 になり、ビューアーは無視する。
+      const zipKey = /\.zip(\?|#|$)/i.test(splatUrl) ? splatUrl.match(/^\/api\/r2\/(.+)$/i)?.[1] : undefined;
+      let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 10, warmupExtraMs: warmupRef.current,
+        streamRef: zipKey ? `/api/viewer-stream/${zipKey}?ref=stream` : undefined });
       // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
       // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
       if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;

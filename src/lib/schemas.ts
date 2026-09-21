@@ -511,6 +511,13 @@ export const propertySchema = z.object({
       url: urlOrPath(), sizeMb: z.number().min(0), savedAt: z.string().datetime(),
       key: z.string().regex(/^[a-f0-9]{64}$/),
     })).optional(),
+    /**
+     * 参照保存（2026-09-21）: オンライン編集の保存は 3DGS 本体を埋め込まず、元の RAD を段階読み込みで参照する。
+     * その元ファイル。splatUrl が編集後の小さいアーカイブ（.zip）のときだけ使われる。サーバーが attach 時に記録する。
+     */
+    streamUrl: urlOrPath().optional(),
+    /** 元ファイルの大きさ（表示用。sizeMb は編集後アーカイブの大きさになるため）。 */
+    streamSizeMb: z.number().min(0).max(99999).optional(),
     previewVideoUrl: urlOrPath(),
     sizeMb: z.number().min(0).max(99999).default(0),
     notes: z.string().max(500).default(""),

@@ -58,7 +58,10 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
-  const key = path.join("/");
+  let key = path.join("/");
+  // ?ref=stream: 参照保存のアーカイブ（編集後の .zip）が指す「元のRAD」を返す（2026-09-21）。
+  // どのファイルを返すかはサーバーが物件データから決める。クライアントからキーは受け取らない。
+  const wantsStream = req.nextUrl.searchParams.get("ref") === "stream";
 
   if (!ALLOWED_RE.test(key)) {
     return NextResponse.json({ error: "Not a 3DGS asset" }, { status: 403 });
@@ -83,12 +86,23 @@ export async function GET(
   let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
   for (const p of props) {
     for (const item of p.splatItems) {
-      if (item.splatUrl && toR2Key(item.splatUrl) === key) {
+      // 参照元の RAD を直接指された場合も、同じシーンの公開範囲（制限あり／NDA限定）を当てる。
+      if (
+        (item.splatUrl && toR2Key(item.splatUrl) === key) ||
+        (!wantsStream && item.streamUrl && toR2Key(item.streamUrl) === key)
+      ) {
         matchedItem = item;
         break;
       }
     }
     if (matchedItem) break;
+  }
+  if (wantsStream) {
+    const streamKey = matchedItem?.streamUrl ? toR2Key(matchedItem.streamUrl) : null;
+    if (!streamKey || !ALLOWED_RE.test(streamKey)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    key = streamKey;
   }
   if (matchedItem) {
     if (matchedItem.accessLevel === "restricted" && !canViewBackyard(user)) {

@@ -6,19 +6,23 @@ import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-h
 import MarketingComposer from "@/components/admin/marketing-composer";
 import GiftCodeAdmin from "@/components/admin/gift-code-admin";
 import StudioRevenueShareNotice from "@/components/admin/studio-revenue-share-notice";
+import ViewerFreePeriod from "@/components/admin/viewer-free-period";
+import { getSettings } from "@/lib/site-settings";
 
 export const metadata = { title: "マーケティング" };
 
 /**
  * 集客まわりの操作を1ページに集約する。
  * ⚠ 旧 /admin/gift-codes は廃止してここへ統合した（2026-07-29）。
- *   同ページにあった「全物件共通の限定無料期間」UIは廃止。無料化は
- *   3DGSデータごとに物件エディターで設定する運用へ一本化したため
- *   （サイト全体を一括で無料にする運用は行わない）。
+ *   同ページにあった「全物件共通の限定無料期間」UIは、**3DGSの閲覧**については
+ *   2026-09-21 に復活させた（本人指示「すべてのページの3DGS閲覧を期間限定で無料にする
+ *   オプションを追加」）。判定は従来から site-settings の freePeriod で行っており、
+ *   UI が無いだけだった。**3Dデータの販売**の無料化は従来どおりデータごとの設定
+ *   （物件エディター）で行う。
  */
 export default async function AdminMarketingPage() {
   await requireAdmin();
-  const [users, codes] = await Promise.all([userRepo.list(), giftCodeRepo.list()]);
+  const [users, codes, settings] = await Promise.all([userRepo.list(), giftCodeRepo.list(), getSettings()]);
   const consentedCount = users.filter((u) => u.marketingConsent && u.status === "active").length;
 
   return (
@@ -39,6 +43,8 @@ export default async function AdminMarketingPage() {
       )}
 
       <MarketingComposer disabled={!emailEnabled()} />
+
+      <ViewerFreePeriod initial={settings.freePeriod} />
 
       <StudioRevenueShareNotice />
 

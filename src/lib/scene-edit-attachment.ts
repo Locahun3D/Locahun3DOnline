@@ -15,6 +15,9 @@ export async function attachSceneEditConditionally(db:Database,b:Attachment):Pro
  const history=[...(scene.editVersions??[]),{url:scene.splatUrl,sizeMb:scene.sizeMb??0,savedAt:b.newUpdatedAt,key:b.key}];
  // Keep the original upload plus the latest versions; older ones lose protection and become collectable.
  scene.editVersions=history.length>SCENE_EDIT_HISTORY_LIMIT?[history[0],...history.slice(-(SCENE_EDIT_HISTORY_LIMIT-1))]:history;
+ // 参照保存: RAD を編集して保存したら、その RAD を「段階読み込みの元ファイル」として覚えておく。
+ // 以降の保存（.zip → .zip）では変えない。editVersions[0]（最初のアップロード）は常に残るので、元ファイルは掃除されない。
+ if(/\.rad$/i.test(b.previousUrl)){scene.streamUrl=b.previousUrl;scene.streamSizeMb=scene.sizeMb??0;}
  scene.splatUrl=b.url;scene.sizeMb=Math.max(1,Math.round(b.bytes/1024**2));property.updatedAt=b.newUpdatedAt;
  const result=await db.prepare('UPDATE properties SET data=?, updated_at=? WHERE id=? AND status=? AND updated_at=? AND data=?')
  .bind(JSON.stringify(property),b.newUpdatedAt,b.propertyId,b.status,b.expectedUpdatedAt,b.expectedJson).run();

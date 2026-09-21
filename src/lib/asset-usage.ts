@@ -45,6 +45,7 @@ export function computeAssetUsage(
     }
     for (const item of p.splatItems ?? []) {
       for (const version of item.editVersions ?? []) add(version.url, p.id);
+      add(item.streamUrl, p.id); // 参照保存の元ファイル（消すと編集後のシーンが開けなくなる。履歴と同じ扱いで守る）
       if(options.historyOnly)continue;
       add(item.splatUrl, p.id);
       add(item.previewVideoUrl, p.id);

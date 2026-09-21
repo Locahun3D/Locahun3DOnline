@@ -82,6 +82,13 @@ export async function GET(req: Request) {
     if (!matchedItem || !matchedProperty) {
       return NextResponse.json({ error: "視聴対象が見つかりません" }, { status: 404 });
     }
+    // 参照保存（編集後の小さい .zip）のシーンは、元の RAD の署名URLも一緒に返す（2026-09-21）。
+    // ビューアーはそれを段階読み込みするので、編集後も読み込みが速いまま。返すのはこのシーン自身の streamUrl だけ。
+    const streamKey = matchedItem.streamUrl ? toR2Key(matchedItem.streamUrl) : null;
+    const withStream = async (url: string) => {
+      const streamUrl = streamKey ? await presignViewerAsset(streamKey, PRESIGN_TTL_SECONDS) : null;
+      return streamUrl ? { url, streamUrl } : { url };
+    };
 
     /* ── 限定プレビュートークン経路（ログイン不要） ───────────────────
      * 先方スタジオへの共有URL(/preview/[token])からの視聴。トークンが有効
@@ -106,7 +113,7 @@ export async function GET(req: Request) {
           return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
         }
         return NextResponse.json(
-          { url: signedPreview },
+          await withStream(signedPreview),
           { headers: { "Cache-Control": "no-store" } },
         );
       }
@@ -131,7 +138,7 @@ export async function GET(req: Request) {
           return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
         }
         return NextResponse.json(
-          { url: signedEmbed },
+          await withStream(signedEmbed),
           { headers: { "Cache-Control": "no-store" } },
         );
       }
@@ -160,7 +167,7 @@ export async function GET(req: Request) {
         if (!signedShare) {
           return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
         }
-        return NextResponse.json({ url: signedShare }, { headers: { "Cache-Control": "no-store" } });
+        return NextResponse.json(await withStream(signedShare), { headers: { "Cache-Control": "no-store" } });
       }
       // 無効・期限切れの共有トークン → 通常の認証経路へフォールスルー。
     }
@@ -305,7 +312,7 @@ export async function GET(req: Request) {
     if (!signed) {
       return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
     }
-    return NextResponse.json({ url: signed }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(await withStream(signed), { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: "internal", detail: msg }, { status: 500 });

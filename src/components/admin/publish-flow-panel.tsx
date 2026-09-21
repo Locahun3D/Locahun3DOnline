@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {
-  PUBLISH_STAGE_LABEL,
+  PUBLISH_DISPLAY_LABEL,
+  publishDisplayStage,
+  type PublishDisplayStage,
   REVIEW_SUBSTATE_LABEL,
   resendCooldownRemaining,
   reviewSubState,
@@ -19,6 +21,7 @@ import {
  */
 export default function PublishFlowPanel({
   stage,
+  ready = false,
   flow,
   contactEmail,
   missingRequired,
@@ -33,6 +36,8 @@ export default function PublishFlowPanel({
   onPublish,
 }: {
   stage: PublishStage;
+  /** 公開に必要な項目が埋まっているか（下書きを「公開申請待ち」と出すため。2026-09-21）。 */
+  ready?: boolean;
   flow: PublishFlow;
   contactEmail: string;
   missingRequired: string[];
@@ -64,7 +69,8 @@ export default function PublishFlowPanel({
       ? new Date(iso).toLocaleString("ja-JP", { hour12: false, dateStyle: "short", timeStyle: "short" })
       : "—";
   const sub = reviewSubState(flow);
-  const stages: PublishStage[] = ["draft", "review", "published"];
+  const shown = publishDisplayStage({ status: stage === "published" ? "published" : stage === "archived" ? "archived" : "draft", publishRequestedAt: stage === "review" ? "2026-09-21T00:00:00.000Z" : null }, ready);
+  const stages: PublishDisplayStage[] = ["draft", "ready", "review", "published"];
   const btn =
     "px-4 py-2 mono text-[10px] tracking-[0.22em] uppercase border transition disabled:opacity-50 disabled:cursor-not-allowed";
   const primary = `${btn} border-accent text-accent hover:bg-accent hover:text-bg`;
@@ -72,23 +78,23 @@ export default function PublishFlowPanel({
 
   return (
     <div className="border border-line p-5 space-y-5" data-publish-flow={stage}>
-      {/* 段階の表示: 下書き → 公開申請中 → 公開中 */}
+      {/* 段階の表示: 下書き → 公開申請待ち → 公開申請済み → 公開中（2026-09-21 本人指示） */}
       <ol className="flex flex-wrap items-center gap-2 mono text-[10px] tracking-[0.2em] uppercase">
         {stages.map((s, i) => (
           <li key={s} className="flex items-center gap-2">
             {i > 0 && <span className="opacity-40">→</span>}
             <span
-              aria-current={stage === s ? "step" : undefined}
+              aria-current={shown === s ? "step" : undefined}
               className={`px-2.5 py-1 border ${
-                stage === s ? "border-accent text-accent bg-[#2a1f10]" : "border-line text-muted"
+                shown === s ? "border-accent text-accent bg-[#2a1f10]" : "border-line text-muted"
               }`}
             >
-              {PUBLISH_STAGE_LABEL[s]}
+              {PUBLISH_DISPLAY_LABEL[s]}
             </span>
           </li>
         ))}
         {stage === "archived" && (
-          <li className="px-2.5 py-1 border border-line text-muted">{PUBLISH_STAGE_LABEL.archived}</li>
+          <li className="px-2.5 py-1 border border-line text-muted">{PUBLISH_DISPLAY_LABEL.archived}</li>
         )}
       </ol>
 

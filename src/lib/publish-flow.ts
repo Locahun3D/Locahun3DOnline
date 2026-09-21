@@ -53,6 +53,26 @@ export function publishStage(p: StageSource): PublishStage {
   return p.publishRequestedAt ? "review" : "draft";
 }
 
+/**
+ * 画面に出す段階（2026-09-21 本人指示「下書き → 書くことが埋まったら公開申請待ち → 公開申請済み → 公開」）。
+ * `ready` は公開に必要な項目がすべて埋まっているか（publishReadiness と同じ基準）。
+ * タブ・絞り込み・保存の判断は従来どおり publishStage（4段階）を使う。ここは表示だけ。
+ */
+export type PublishDisplayStage = "draft" | "ready" | "review" | "published" | "archived";
+
+export const PUBLISH_DISPLAY_LABEL: Record<PublishDisplayStage, string> = {
+  draft: "下書き",
+  ready: "公開申請待ち",
+  review: "公開申請済み",
+  published: "公開中",
+  archived: "アーカイブ",
+};
+
+export function publishDisplayStage(p: StageSource, ready: boolean): PublishDisplayStage {
+  const stage = publishStage(p);
+  return stage === "draft" && ready ? "ready" : stage;
+}
+
 /** 申請中の細かい状態（一覧バッジ・エディター表示用）。 */
 export type ReviewSubState = "mail-unsent" | "awaiting-studio" | "studio-confirmed";
 

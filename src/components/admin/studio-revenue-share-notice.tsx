@@ -18,7 +18,9 @@ export default function StudioRevenueShareNotice() {
       <div className="min-w-0 flex-1 basis-[280px]">
         <div className="text-[13px] font-bold">分配規約（20%）の案内</div>
         <p className="text-[12px] text-muted">
-          公開済みの直接掲載スタジオへアプリ内通知で案内します（送信済みの相手には再送しません）。
+          3Dデータを販売していない、公開済みの直接掲載スタジオへアプリ内通知で案内します。
+          <br />
+          すでに販売しているスタジオと、送信済みの相手には送りません。
         </p>
       </div>
       <button

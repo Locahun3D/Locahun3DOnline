@@ -23,7 +23,8 @@ export async function GET(req:Request){
  const origin=req.headers.get('origin');
  if((origin&&origin!==new URL(req.url).origin)||req.headers.get('sec-fetch-site')==='cross-site')return error('origin',403);
  const params=new URL(req.url).searchParams;
- if([...params.keys()].some(key=>key!=='sessionKey')||params.getAll('sessionKey').length!==1)return error('invalid_request',400);
+ // ref=stream: 参照保存のアーカイブが指す「元のRAD」を返す（2026-09-21）。値はこの1つだけ。URLやキーは受け取らない。
+ if([...params.keys()].some(key=>key!=='sessionKey'&&key!=='ref')||params.getAll('sessionKey').length!==1||params.getAll('ref').length>1||(params.has('ref')&&params.get('ref')!=='stream'))return error('invalid_request',400);
  const actor=await getCurrentUser();if(!actor)return error('unauthorized',401);
  try{
   const db=await getD1();if(!db)throw new SceneEditError(503,'storage_unavailable');
@@ -32,8 +33,15 @@ export async function GET(req:Request){
   // 2026-09-21: 配信は「同じファイルのままか」だけを見る。読み込みは Range で分割して数十回に分けて取りに来るため、
   // 途中で物件の別の欄が自動保存される（例: 回転プレビュー動画の撮り直し）と、残りが全部 409 になって読み込みが止まっていた。
   // 上書き防止の厳密な照合（updated_at・全体ハッシュ）は、保存側（/api/scene-edit の reserve/attach）が引き続き行う。
-  if(snapshot.row.status!==target.status||snapshot.scene.splatUrl!==target.previousUrl)throw new SceneEditError(409,'scene_changed');
-  const key=sceneEditSourceKey(target.previousUrl)!;
+  // 編集画面は開いている間ずっと RAD を少しずつ取りに来る。保存するとシーンのURLは新しいアーカイブに変わるが、
+  // このセッションのファイルが「いまのシーン」「その参照元」「保存履歴」のどれかである限りは配信を続ける。
+  const scene=snapshot.scene as {splatUrl:string;streamUrl?:string;editVersions?:{url?:string}[]};
+  const known=scene.splatUrl===target.previousUrl||scene.streamUrl===target.previousUrl||!!scene.editVersions?.some(v=>v.url===target.previousUrl);
+  if(snapshot.row.status!==target.status||!known)throw new SceneEditError(409,'scene_changed');
+  const wantsStream=params.get('ref')==='stream';
+  if(wantsStream&&!scene.streamUrl)return error('source_missing',404);
+  const key=sceneEditSourceKey(wantsStream?scene.streamUrl!:target.previousUrl);
+  if(!key)return error('source_missing',404);
   const rangeHeader=req.headers.get('range'),range=rangeHeader?parseRange(rangeHeader):undefined;
   const {env}=await getCloudflareContext();const bucket=(env as unknown as {R2_ASSETS?:Bucket}).R2_ASSETS;
   if(!bucket)throw new SceneEditError(503,'storage_unavailable');

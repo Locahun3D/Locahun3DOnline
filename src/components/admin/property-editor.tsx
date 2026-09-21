@@ -17,7 +17,6 @@ import {
   propertySchema,
   publishablePropertySchema,
   CATEGORY_LABEL,
-  STATUS_LABEL,
   PROPERTY_CATEGORIES,
   STUDIO_TYPE_SUGGESTIONS,
   AREA_SUGGESTIONS,
@@ -56,7 +55,7 @@ import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness } from "@/lib/publish-readiness";
 import PublishFlowPanel from "@/components/admin/publish-flow-panel";
-import { EMPTY_PUBLISH_FLOW, PUBLISH_STAGE_LABEL, publishStage, publishWarnings, type PublishStage } from "@/lib/publish-flow";
+import { EMPTY_PUBLISH_FLOW, PUBLISH_DISPLAY_LABEL, publishDisplayStage, publishStage, publishWarnings, type PublishStage } from "@/lib/publish-flow";
 import { missingEnglishFields } from "@/lib/property-english";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
@@ -782,7 +781,7 @@ export default function PropertyEditor({
         <div className={`${styles.toolbar} sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-2.5 bg-bg/95 backdrop-blur border-b border-line mb-5 space-y-2`}>
           <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <StatusPill status={currentStatus} stage={currentStage} />
+            <StatusPill status={currentStatus} stage={currentStage} ready={requestReadiness.ready} />
             {/* 編集画面の見出しは小さく1行で（2026-09-20 本人指摘「このスペース無駄」）。共通の ui-page-title は 42〜60px あり、
                 追従ツールバーの中では上に大きな空きができ、入力欄が下へ押し出されていた。 */}
             <h1 className="min-w-0 truncate text-[19px] lg:text-[22px] font-bold leading-tight" title={currentTitle || undefined}>
@@ -2798,6 +2797,7 @@ export default function PropertyEditor({
             >
               <PublishFlowPanel
                 stage={currentStage}
+                ready={requestReadiness.ready}
                 flow={watch("publishFlow") ?? EMPTY_PUBLISH_FLOW}
                 contactEmail={watch("contactEmail") ?? ""}
                 missingRequired={requestReadiness.missing}
@@ -2817,7 +2817,7 @@ export default function PropertyEditor({
                     <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-1">
                       Current status
                     </div>
-                    <StatusPill status={currentStatus} stage={currentStage} />
+                    <StatusPill status={currentStatus} stage={currentStage} ready={requestReadiness.ready} />
                   </div>
                   <div className="mono text-[10px] text-muted">
                     ID: {initial.id}
@@ -3397,7 +3397,7 @@ function Toggle({
   );
 }
 
-function StatusPill({ status, stage }: { status: Property["status"]; stage?: PublishStage }) {
+function StatusPill({ status, stage, ready = false }: { status: Property["status"]; stage?: PublishStage; ready?: boolean }) {
   const cls =
     stage === "review"
       ? "border border-accent text-accent"
@@ -3410,7 +3410,7 @@ function StatusPill({ status, stage }: { status: Property["status"]; stage?: Pub
     <span
       className={`inline-block shrink-0 whitespace-nowrap px-2 py-1 mono text-[9px] tracking-[0.22em] uppercase ${cls}`}
     >
-      {stage === "review" ? PUBLISH_STAGE_LABEL.review : STATUS_LABEL[status]}
+      {PUBLISH_DISPLAY_LABEL[publishDisplayStage({ status, publishRequestedAt: stage === "review" ? "2026-09-21T00:00:00.000Z" : null }, ready)]}
     </span>
   );
 }

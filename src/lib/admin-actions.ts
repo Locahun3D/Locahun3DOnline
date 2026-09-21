@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getSettings, saveSettings } from "./site-settings";
+import { freePeriodSchema, type FreePeriod } from "./settings-schema";
 import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdmin } from "./dal";
 import { userRepo } from "./users";
@@ -523,9 +525,23 @@ export async function notifyStudioRevenueShareAction(): Promise<{ notified: numb
   const LINK = "/terms/listing-revenue-share";
   const [users, properties] = await Promise.all([userRepo.list(), propertyRepo.list()]);
   const studioIds = new Set(users.filter((u) => u.role === "studio").map((u) => u.id));
+  // 2026-09-21 本人指示「モデル販売してないスタジオのみにして」。
+  // すでに3Dデータを販売しているスタジオは、販売の条件を個別に取り決め済みなので案内しない。
+  // 1件でも販売中のデータがあれば、そのスタジオ全体を対象から外す（公開・下書きを問わない）。
+  const sellingOwners = new Set(
+    properties
+      .filter((p) => p.ownerId && (p.splatItems ?? []).some((item) => item.forSale))
+      .map((p) => p.ownerId as string),
+  );
   const ownersWithPublished = new Set(
     properties
-      .filter((p) => p.status === "published" && p.ownerId && studioIds.has(p.ownerId))
+      .filter(
+        (p) =>
+          p.status === "published" &&
+          p.ownerId &&
+          studioIds.has(p.ownerId) &&
+          !sellingOwners.has(p.ownerId),
+      )
       .map((p) => p.ownerId as string),
   );
 
@@ -556,3 +572,46 @@ async function notificationRepoHasPolicyUpdate(userId: string, link: string): Pr
   return list.some((n) => n.type === "policy_update" && n.link === link);
 }
 
+
+/**
+ * サイト全体の 3DGS 閲覧を期間限定で無料にする（2026-09-21 本人指示）。
+ *
+ * プランや残高に関わらず、期間中は誰でも全ページの3DGSを見られる（isFreePeriodActive）。
+ * 日時は「日本時間」で受け取り、ISO に直して保存する。終了日時を空にすると、止めるまで続く。
+ * 反映は最大60秒（設定の読み取りキャッシュ）。3Dデータの販売は対象外（販売の無料化はデータごとの設定）。
+ */
+export async function setViewerFreePeriodAction(input: {
+  enabled: boolean;
+  startAt: string;
+  endAt: string;
+  note: string;
+}): Promise<{ ok: true; freePeriod: FreePeriod } | { ok: false; error: string }> {
+  await requireAdmin();
+  const jstToIso = (value: string): string | null => {
+    const v = (value || "").trim();
+    if (!v) return null;
+    // <input type="datetime-local"> の値（例 2026-09-21T10:00）を日本時間として読む。
+    const d = new Date(/[Zz+]|[+-]\d\d:\d\d$/.test(v) ? v : `${v}:00+09:00`.replace(/:00:00\+09:00$/, ":00+09:00"));
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  };
+  const startAt = jstToIso(input.startAt);
+  const endAt = jstToIso(input.endAt);
+  if ((input.startAt.trim() && !startAt) || (input.endAt.trim() && !endAt)) {
+    return { ok: false, error: "日時の形式が正しくありません。" };
+  }
+  if (startAt && endAt && endAt <= startAt) {
+    return { ok: false, error: "終了日時は開始日時より後にしてください。" };
+  }
+  const settings = await getSettings();
+  const parsed = freePeriodSchema.safeParse({
+    enabled: !!input.enabled,
+    startAt,
+    endAt,
+    note: (input.note || "").slice(0, 200),
+  });
+  if (!parsed.success) return { ok: false, error: "設定の内容が正しくありません。" };
+  const saved = await saveSettings({ ...settings, freePeriod: parsed.data });
+  // 設定の読み取りは 60 秒キャッシュ（site-settings.ts）。反映は最大60秒（既存の取り決めどおり）。
+  for (const path of ["/", "/properties", "/en/properties", "/admin/marketing"]) revalidatePath(path);
+  return { ok: true, freePeriod: saved.freePeriod };
+}

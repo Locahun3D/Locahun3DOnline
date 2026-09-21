@@ -15,9 +15,9 @@ export default function ShareViewerLauncher({ token, assetKey, en }: { token: st
     setState("loading");
     try {
       const res = await fetch(`/api/viewer-asset?key=${encodeURIComponent(assetKey)}&share=${encodeURIComponent(token)}`, { cache: "no-store" });
-      const data = res.ok ? ((await res.json()) as { url?: string }) : null;
+      const data = res.ok ? ((await res.json()) as { url?: string; streamUrl?: string }) : null;
       if (!data?.url) return setState("error");
-      window.location.href = `${buildViewerUrl(data.url, { protected: true })}&shared=1`;
+      window.location.href = `${buildViewerUrl(data.url, { protected: true, streamRef: data.streamUrl })}&shared=1`;
     } catch {
       setState("error");
     }

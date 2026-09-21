@@ -2995,7 +2995,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="9abf8691365a7bf76a96748a91ca8ee8aee89c98b3d97f12b1e9e8958d520ca4";
+window.__locahunBuildRelease="ab5e6d937a6c8220ba10f9de91b8b003d88f002832ffe82779cb23c68b53477f";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -21866,6 +21866,13 @@ async function loadFromURL(url, displayName){
     const name = (displayName || url.split('/').pop().split('?')[0]) || 'autoload.ply';
     const file = new File([buf], name, {type:'application/octet-stream'});
     if(ext === 'zip'){
+      // 参照保存のアーカイブ用（streamRef）: 元のRADの場所。署名付きURLで開いたときは ?streamref= で渡され、
+      // 同一オリジンの配信で開いたときは同じURLに ref=stream を付けるとサーバーが元のRADを返す。
+      try{
+        const given=new URLSearchParams(location.search).get('streamref');
+        if(given && (/^https:\/\//.test(given) || given.startsWith('/api/viewer-stream/'))) window.__l3dStreamRefUrl=given;
+        else if(url.startsWith('/api/viewer-stream/')) window.__l3dStreamRefUrl=url+(url.includes('?')?'&':'?')+'ref=stream';
+      }catch(_){}
       // Zipped splat/mesh (e.g. a large .rad zipped for upload-size limits, or
       // an online-SaaS stored property scene). _loadProjectZipFromFile already
       // knows how to unzip + auto-detect a raw splat/mesh when there's no
@@ -24896,7 +24903,7 @@ window.saveProjectZip = async function(forceLite, opts){
       }
     }
     const _skipSplatData = !!forceLite || (_isPhoneClass && _totalSplatBytes > PHONE_SPLAT_BUDGET);
-    if(opts.strictOnline && (_skipSplatData || (_isPhoneClass && layers.some(L=>L.type==='splat' && !L._rawBuffer))))throw new Error('Device capacity insufficient for complete archive');
+    if(opts.strictOnline && (_skipSplatData || (_isPhoneClass && layers.some(L=>L.type==='splat' && !L._rawBuffer && L._streamRef!=='source'))))throw new Error('Device capacity insufficient for complete archive');
     if(_skipSplatData){
       const mb = Math.round(_totalSplatBytes / 1024 / 1024);
       console.warn(`[saveZIP] lite save (${forceLite?'user-requested':'phone-class device'}) — ${mb} MB splat data excluded`);
@@ -24973,6 +24980,12 @@ window.saveProjectZip = async function(forceLite, opts){
             entry.rawExt=ext;
             entry.isMain=L._isMain||false;
           }
+        } else if(L._streamUrl && L._streamRef==='source' && opts.strictOnline){
+          // オンライン編集の保存: 本体は元のRADを参照するだけにする（URLは書かない）。
+          // 数百MBを取り直して埋め込むのをやめたので、保存は数秒で終わり、保存後も段階読み込みのまま。
+          entry.streamRef='source';
+          entry.rawExt=L._rawExt||'rad';
+          entry.isMain=L._isMain||false;
         } else if(L._streamUrl){
           // Streaming RAD (?demo=1 / ?autoload=URL): the bytes were never
           // pulled into memory — Spark fetches chunks lazily over HTTP Range.
@@ -25088,6 +25101,7 @@ window.saveProjectZip = async function(forceLite, opts){
     }
     if(opts.strictOnline){
       for(const entry of serialized){
+        if(entry.type==='splat' && entry.streamRef==='source' && !entry.missing && !entry.streamUrl)continue; // 元のRADを参照する保存（本体は埋め込まない）
         if(entry.missing || (['splat','obj'].includes(entry.type) && (!entry.file || !files[entry.file]?.byteLength)))throw new Error('Incomplete asset: '+entry.name);
         if(entry.type==='obj')_validateOnlineModelBytes(files[entry.file],entry.rawExt);
       }
@@ -25184,7 +25198,18 @@ window.saveProjectZip = async function(forceLite, opts){
 };
 // Online editing never uses the tolerant offline reattach/placeholder path.
 // Validate all archive references before mutating the currently displayed scene.
-async function _loadOnlineSceneFile(file, fileName){
+// RAD をダウンロードせず、そのまま段階読み込みで開く（編集画面用・2026-09-21）。
+async function _loadOnlineSceneStream(streamUrl, fileName){
+  const project={version:4,projectName:fileName,layerNextId:2,layers:[{
+    id:1,name:fileName,type:'splat',streamRef:'source',streamUrl,rawExt:'rad',isMain:true,
+    pos:{x:0,y:0,z:0},rot:{x:0,y:0,z:0},scale:{x:1,y:1,z:1},size:{x:1,y:1,z:1},visible:true,
+  }]};
+  const restored=await restoreProject(project,{strict:true});
+  if(!restored || restored.epoch!==walkSetup.epoch || layers.length!==1 || restored.layers[0]!==layers[0])throw new Error('Project load was interrupted');
+  _regionalNavigationFiles=null;
+  return restored;
+}
+async function _loadOnlineSceneFile(file, fileName, streamRefUrl){
   const shortEdge=Math.min(window.innerWidth||0,window.innerHeight||0);
   const limit=isMobile && shortEdge>0 && shortEdge<700 ? 200*1024**2 : MAX_EMBED_BYTES;
   if(!file.size || file.size>limit)throw new Error('Device capacity insufficient for complete archive');
@@ -25208,7 +25233,12 @@ async function _loadOnlineSceneFile(file, fileName){
       if(!entry || ids.has(entry.id) || !['folder','cube','sphere','obj','splat','light','figure','event','path'].includes(entry.type))throw new Error('Unsupported project layer');
       ids.add(entry.id);
       if(entry.type==='event' && entry.eventImage && !/^data:image\/(png|jpeg|webp|gif);base64,/i.test(entry.eventImage))throw new Error('Incomplete event image');
-      if(['splat','obj'].includes(entry.type)){
+      if(entry.type==='splat' && entry.streamRef==='source' && !entry.file){
+        // 本体は埋め込まれていない（元のRADを参照）。URLは呼び出し側が渡したものだけを使う。
+        if(!streamRefUrl)throw new Error('Incomplete asset: '+entry.name);
+        entry.streamUrl=streamRefUrl;entry.rawExt='rad';
+        delete entry.rawData;
+      }else if(['splat','obj'].includes(entry.type)){
         const name=entry.file;
         if(typeof name!=='string' || name.includes('..') || name.startsWith('/') || name.includes('\\') || !files[prefix+name]?.byteLength)throw new Error('Incomplete asset: '+entry.name);
         entry._buf=files[prefix+name].slice().buffer;
@@ -25823,14 +25853,18 @@ async function restoreProject(project, opts = {}) {
           console.error(`[restore] splat fail: ${entry.name}`, e);
           mesh=new THREE.Group();
         }
-      } else if(entry.streamUrl){
+      } else if(entry.streamUrl || (entry.streamRef==='source' && window.__l3dStreamRefUrl)){
+        // streamRef（2026-09-21）: オンライン編集の保存は 3DGS 本体を埋め込まず「元のファイルを参照」とだけ書く。
+        // 実際のURLはアーカイブに残さず、読み込む側（公開ビューアー／編集画面）がその場で渡す。
+        // これで保存後も RAD の段階読み込みが効く。
+        if(entry.streamRef==='source' && window.__l3dStreamRefUrl) entry.streamUrl=window.__l3dStreamRefUrl; // 参照はアーカイブ内のURLより優先
         // No embedded bytes, but the project recorded a streaming source URL
         // (URL-streamed RAD saved via Option-A). Re-stream from that URL,
         // mirroring loadFromURL's RAD path. Requires the URL to be reachable
         // (i.e. online) — if it 404s/CORS-fails Spark just renders nothing.
         try{
           const surl=entry.streamUrl;
-          const sext=(surl.split('?')[0].split('#')[0].split('.').pop()||'rad').toLowerCase();
+          const sext=(entry.streamRef ? (entry.rawExt||'rad') : (surl.split('?')[0].split('#')[0].split('.').pop()||'rad')).toLowerCase();
           const sft=_splatFileTypeFor(sext);
           if(sext==='rad'){
             const opts={url:surl, fileType:sft, ...SPARK_QUALITY_OPTS};
@@ -25925,6 +25959,7 @@ async function restoreProject(project, opts = {}) {
     // Carry the streaming source URL (URL-streamed RAD) onto the restored
     // layer so a subsequent re-save persists it again instead of dropping it.
     if(entry.streamUrl){ L._streamUrl=entry.streamUrl; L._rawExt=entry.rawExt||L._rawExt||'rad'; }
+    if(entry.streamRef==='source' && !rb) L._streamRef='source';
     if(entry.type==='splat'){
       L._isMain=entry.isMain||false;
       if(L._isMain) splatMesh=mesh; // update global splatMesh ref
@@ -30606,6 +30641,13 @@ if(new URLSearchParams(location.search).get('onlineSceneEdit')==='1'){
           const uiFns={showLd:typeof showLd==='function'?showLd:null,setBar:typeof setBar==='function'?setBar:null,setMsg:typeof setMsg==='function'?setMsg:null};
           const ui=(fn,...args)=>{try{uiFns[fn]?.(...args);}catch(_){}};
           const get=(headers,ms)=>fetch(source.href,{credentials:'same-origin',cache:'no-store',redirect:'error',headers,signal:AbortSignal.any([controller.signal,AbortSignal.timeout(ms)])});
+          if(/\.rad$/i.test(data.fileName) && typeof _loadOnlineSceneStream==='function'){
+            // RAD はダウンロードしない。公開ビューアーと同じ段階読み込みで、すぐ編集に入れる（2026-09-21）。
+            await _loadOnlineSceneStream(source.href,data.fileName);
+            loaded=true;state.ready=true;state.dirty=false;
+            send({type:'locahun:scene-ready',requestId:data.requestId});
+            return;
+          }
           ui('showLd',en?'Downloading the scene':'3DGSをダウンロードしています');ui('setBar',1);
           let total=0;
           const probe=await get({Range:'bytes=0-0'},60000);
@@ -30653,7 +30695,7 @@ if(new URLSearchParams(location.search).get('onlineSceneEdit')==='1'){
             for(;;){const {done,value}=await reader.read();if(done)break;loadedBytes+=value.byteLength;if(loadedBytes>limit)throw Error('Device capacity exceeded');chunks.push(value);progress();}
           }
           ui('setMsg',en?'Opening the scene':'3DGSを開いています');
-          await _loadOnlineSceneFile(new Blob(chunks),data.fileName);
+          await _loadOnlineSceneFile(new Blob(chunks),data.fileName,source.href+'&ref=stream');
           loaded=true;state.ready=true;state.dirty=false;
           send({type:'locahun:scene-ready',requestId:data.requestId});
         }catch(error){state.ready=false;try{if(typeof hideLd==='function')hideLd();}catch(_){}fail(/capacity/i.test(error.message)?'capacity':'incomplete');}

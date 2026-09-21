@@ -39,3 +39,12 @@ it('rejects invalid ranges, foreign fetches and caller-supplied URLs',async()=>{
  expect((await GET(new Request(url,{headers:{'sec-fetch-site':'cross-site'}}))).status).toBe(403);
  expect((await GET(new Request(url+'&url=https://evil.test'))).status).toBe(400);
 });
+it('keeps streaming the session file after a save and serves the referenced RAD only via ref=stream',async()=>{
+ const saved={...property,updatedAt:'2026-09-19T00:00:02.000Z',splatItems:[{id:'s',splatUrl:'/api/r2/assets/splat/wf_x-project.zip',streamUrl:'/api/r2/assets/splat/scene.rad',editVersions:[{url:'/api/r2/assets/splat/scene.rad'}]}]};
+ sqlite.prepare('UPDATE properties SET data=?,updated_at=?').run(JSON.stringify(saved),saved.updatedAt);
+ expect((await GET(new Request(url,{headers:{range:'bytes=1-3'}}))).status).toBe(206);expect(mocks.get).toHaveBeenLastCalledWith('assets/splat/scene.rad',{range:{offset:1,length:3}});
+ expect((await GET(new Request(url+'&ref=stream'))).status).toBe(200);expect(mocks.get).toHaveBeenLastCalledWith('assets/splat/scene.rad',undefined);
+ expect((await GET(new Request(url+'&ref=other'))).status).toBe(400);
+ sqlite.prepare('UPDATE properties SET data=?').run(JSON.stringify({...saved,splatItems:[{id:'s',splatUrl:'/api/r2/assets/splat/wf_x-project.zip'}]}));
+ expect((await GET(new Request(url+'&ref=stream'))).status).toBe(409);
+});

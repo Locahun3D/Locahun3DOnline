@@ -11,6 +11,8 @@ import {
   isPlausibleEmail,
   markPublished,
   publishStage,
+  publishDisplayStage,
+  PUBLISH_DISPLAY_LABEL,
   publishWarnings,
   recordStudioNotified,
   resendCooldownRemaining,
@@ -282,5 +284,24 @@ describe("canStudioApprove（スタジオの承認ボタンで公開してよい
     expect(canStudioApprove(resent, "h2").ok).toBe(true);
     expect(markPublished(resent, "2026-09-23T00:00:00.000Z").publishFlow.studioApproveKeyHash).toBeNull();
     expect(resetReview(resent).publishFlow.studioApproveKeyHash).toBeNull();
+  });
+});
+
+describe("publishDisplayStage（一覧・エディターの表示）", () => {
+  const draft = ready();
+  it("下書き → 公開申請待ち → 公開申請済み → 公開中", () => {
+    expect(publishDisplayStage(draft, false)).toBe("draft");
+    expect(publishDisplayStage(draft, true)).toBe("ready");
+    expect(publishDisplayStage({ ...draft, publishRequestedAt: "2026-09-21T00:00:00.000Z" }, true)).toBe("review");
+    expect(publishDisplayStage({ ...draft, status: "published" }, true)).toBe("published");
+    expect(publishDisplayStage({ ...draft, status: "archived" }, true)).toBe("archived");
+  });
+  it("申請中とアーカイブは、項目の充足では変わらない", () => {
+    expect(publishDisplayStage({ ...draft, publishRequestedAt: "2026-09-21T00:00:00.000Z" }, false)).toBe("review");
+    expect(publishDisplayStage({ ...draft, status: "archived" }, false)).toBe("archived");
+  });
+  it("表示の名前", () => {
+    expect(PUBLISH_DISPLAY_LABEL.ready).toBe("公開申請待ち");
+    expect(PUBLISH_DISPLAY_LABEL.review).toBe("公開申請済み");
   });
 });

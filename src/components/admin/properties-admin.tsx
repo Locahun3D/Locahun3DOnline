@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CATEGORY_LABEL,
-  STATUS_LABEL,
   type PropertyCategory,
   type PropertyStatus,
 } from "@/lib/schemas";
@@ -15,8 +14,10 @@ import { bulkSetStatusAction, bulkDeleteAction } from "@/app/admin/_actions";
 import styles from "./properties-admin.module.css";
 import {
   publishStage,
-  PUBLISH_STAGE_LABEL,
+  PUBLISH_DISPLAY_LABEL,
+  publishDisplayStage,
   REVIEW_SUBSTATE_LABEL,
+  type PublishDisplayStage,
   type PublishStage,
   type ReviewSubState,
 } from "@/lib/publish-flow";
@@ -31,6 +32,8 @@ export type PropertyListItem = {
   publishRequestedAt?: string | null;
   /** 公開申請中の細かい状態（確認メール未送信 / スタジオ確認待ち / 確認済み）。 */
   reviewState?: ReviewSubState;
+  /** 公開に必要な項目がすべて埋まっているか（下書きを「公開申請待ち」と出し分けるため）。 */
+  ready?: boolean;
   /** 一覧のサムネイル用（カバー写真のURLだけ渡す） */
   coverSrc?: string;
 };
@@ -44,13 +47,16 @@ const GRID = "grid-cols-[34px_104px_1fr_96px_96px_140px_minmax(290px,320px)]";
 const STATUS_TABS: { key: PublishStage | "all"; label: string }[] = [
   { key: "all", label: "全て" },
   { key: "draft", label: "下書き" },
-  { key: "review", label: "公開申請中" },
+  { key: "review", label: "公開申請済み" },
   { key: "published", label: "公開" },
   { key: "archived", label: "アーカイブ" },
 ];
 
 const stageOf = (p: PropertyListItem): PublishStage =>
   publishStage({ status: p.status, publishRequestedAt: p.publishRequestedAt ?? null });
+
+const displayStageOf = (p: PropertyListItem): PublishDisplayStage =>
+  publishDisplayStage({ status: p.status, publishRequestedAt: p.publishRequestedAt ?? null }, !!p.ready);
 
 export default function PropertiesAdmin({
   items,
@@ -277,18 +283,11 @@ export default function PropertiesAdmin({
                 )}
               </div>
               <div className="flex flex-col items-start gap-1">
-                {stageOf(p) === "review" ? (
-                  <>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 border text-[12px] font-bold leading-none whitespace-nowrap bg-[#fff1dc] text-[#7a4a00] border-[#ffb454]">
-                      <span aria-hidden="true">◑</span>
-                      {PUBLISH_STAGE_LABEL.review}
-                    </span>
-                    <span className="text-[10px] leading-tight text-muted">
-                      {REVIEW_SUBSTATE_LABEL[p.reviewState ?? "mail-unsent"]}
-                    </span>
-                  </>
-                ) : (
-                  <StatusBadge status={p.status} />
+                <StageBadge stage={displayStageOf(p)} />
+                {stageOf(p) === "review" && (
+                  <span className="text-[10px] leading-tight text-muted">
+                    {REVIEW_SUBSTATE_LABEL[p.reviewState ?? "mail-unsent"]}
+                  </span>
                 )}
               </div>
               {/* サムネイル（2026-09-20 本人指示「物件一覧でサムネ見えるように」）。グリッドの列は増やさず、
@@ -355,19 +354,23 @@ function BulkBtn({
  * 運用側の指摘（2026-08-13）を受けて、文字を大きく・色で区別し・●で状態が
  * 一目で分かる形にした。
  */
-function StatusBadge({ status }: { status: PropertyStatus }) {
-  const styles =
-    status === "published"
-      ? "bg-[#0f7a4a] text-white border-[#0f7a4a]"
-      : status === "draft"
-        ? "bg-amber-100 text-amber-900 border-amber-400"
-        : "bg-neutral-200 text-neutral-600 border-neutral-400";
+// 2026-09-21 本人指示: 下書き → 公開申請待ち（必要な項目が埋まった）→ 公開申請済み → 公開中。
+const STAGE_BADGE: Record<PublishDisplayStage, { mark: string; className: string }> = {
+  draft: { mark: "◐", className: "bg-amber-100 text-amber-900 border-amber-400" },
+  ready: { mark: "◕", className: "bg-[#e7f3ff] text-[#0b4a7a] border-[#5ec8e8]" },
+  review: { mark: "◑", className: "bg-[#fff1dc] text-[#7a4a00] border-[#ffb454]" },
+  published: { mark: "●", className: "bg-[#0f7a4a] text-white border-[#0f7a4a]" },
+  archived: { mark: "○", className: "bg-neutral-200 text-neutral-600 border-neutral-400" },
+};
+
+function StageBadge({ stage }: { stage: PublishDisplayStage }) {
+  const { mark, className } = STAGE_BADGE[stage];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 border text-[12px] font-bold leading-none whitespace-nowrap ${styles}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 border text-[12px] font-bold leading-none whitespace-nowrap ${className}`}
     >
-      <span aria-hidden="true">{status === "published" ? "●" : status === "draft" ? "◐" : "○"}</span>
-      {STATUS_LABEL[status]}
+      <span aria-hidden="true">{mark}</span>
+      {PUBLISH_DISPLAY_LABEL[stage]}
     </span>
   );
 }
