@@ -84,9 +84,23 @@ export async function GET(req: Request) {
     }
     // 参照保存（編集後の小さい .zip）のシーンは、元の RAD の署名URLも一緒に返す（2026-09-21）。
     // ビューアーはそれを段階読み込みするので、編集後も読み込みが速いまま。返すのはこのシーン自身の streamUrl だけ。
-    const streamKey = matchedItem.streamUrl ? toR2Key(matchedItem.streamUrl) : null;
-    const withStream = async (url: string) => {
-      const streamUrl = streamKey ? await presignViewerAsset(streamKey, PRESIGN_TTL_SECONDS) : null;
+    // 参照保存のシーン（編集後の小さい .zip）は、本体を別ファイルから段階読み込みする。
+    // ⚠ 2026-09-21 本番で判明: ここで元ファイルの**署名付きURL**を渡すと、元が ZIP のときに
+    //    中の .rad ではなく ZIP 全体を指してしまい、ビューアーは「本体なし」で真っ白になる。
+    //    ZIP の中の位置を割り出せるのはサーバーだけなので、同一オリジンの
+    //    /api/viewer-stream/<キー>?ref=stream を渡す（そこが中の .rad の範囲だけを返す）。
+    //    このURLは視聴を許したのと同じ根拠（トークン、または会員資格）で通す必要があるため、
+    //    許可に使ったトークンをそのまま引き継ぐ。
+    const streamFor = (token?: { name: string; value: string }) => {
+      if (!matchedItem?.streamUrl) return null;
+      const key = toR2Key(matchedItem.splatUrl);
+      if (!key) return null;
+      const qs = new URLSearchParams({ ref: "stream" });
+      if (token) qs.set(token.name, token.value);
+      return `/api/viewer-stream/${key}?${qs}`;
+    };
+    const withStream = async (url: string, token?: { name: string; value: string }) => {
+      const streamUrl = streamFor(token);
       return streamUrl ? { url, streamUrl } : { url };
     };
 
@@ -113,7 +127,7 @@ export async function GET(req: Request) {
           return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
         }
         return NextResponse.json(
-          await withStream(signedPreview),
+          await withStream(signedPreview, { name: "preview", value: previewTokenParam }),
           { headers: { "Cache-Control": "no-store" } },
         );
       }
@@ -138,7 +152,7 @@ export async function GET(req: Request) {
           return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
         }
         return NextResponse.json(
-          await withStream(signedEmbed),
+          await withStream(signedEmbed, { name: "embed", value: embedTokenParam }),
           { headers: { "Cache-Control": "no-store" } },
         );
       }
@@ -167,7 +181,7 @@ export async function GET(req: Request) {
         if (!signedShare) {
           return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
         }
-        return NextResponse.json(await withStream(signedShare), { headers: { "Cache-Control": "no-store" } });
+        return NextResponse.json(await withStream(signedShare, { name: "share", value: shareTokenParam }), { headers: { "Cache-Control": "no-store" } });
       }
       // 無効・期限切れの共有トークン → 通常の認証経路へフォールスルー。
     }

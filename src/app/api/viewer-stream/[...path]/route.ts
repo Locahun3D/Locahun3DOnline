@@ -5,6 +5,7 @@ import { repo as propertyRepo } from "@/lib/store";
 import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
+import { viewerStreamTokenGrant } from "@/lib/viewer-stream-grant";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
@@ -70,10 +71,22 @@ export async function GET(
   const [user, settings] = await Promise.all([getCurrentUser(), getSettings()]);
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
-  if (!user && !freeAccess) {
+  // 共有・埋め込み・限定プレビューのトークンで許された視聴（2026-09-21）。
+  // これらは /api/viewer-asset で既に「ログイン不要で見せてよい」と判断している経路。
+  // 参照保存のシーンは本体を ?ref=stream から読むので、同じ根拠でここも通さないと、
+  // 埋め込み先や共有リンクで 3D が出ない（本番で発生）。物件の一致は下の照合で必ず見る。
+  const q = req.nextUrl.searchParams;
+  const grant = await viewerStreamTokenGrant({
+    preview: q.get("preview") || "",
+    embed: q.get("embed") || "",
+    share: q.get("share") || "",
+  });
+
+  if (!user && !freeAccess && !grant) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
   }
-  const hasAccess = freeAccess || (!!user && (user.role === "admin" || (!!user.plan && user.plan !== "free")));
+  const hasAccess = !!grant || freeAccess
+    || (!!user && (user.role === "admin" || (!!user.plan && user.plan !== "free")));
   if (!hasAccess) {
     return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
   }
@@ -84,6 +97,7 @@ export async function GET(
   // canViewBackyard/canViewNdaOnly で常に通る（下の関数を参照）。
   const props = await propertyRepo.list();
   let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
+  let matchedProperty: (typeof props)[number] | null = null;
   for (const p of props) {
     for (const item of p.splatItems) {
       // 参照元の RAD を直接指された場合も、同じシーンの公開範囲（制限あり／NDA限定）を当てる。
@@ -92,6 +106,7 @@ export async function GET(
         (!wantsStream && item.streamUrl && toR2Key(item.streamUrl) === key)
       ) {
         matchedItem = item;
+        matchedProperty = p;
         break;
       }
     }
@@ -103,6 +118,10 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     key = streamKey;
+  }
+  // トークンで来た場合は、そのトークンが指す物件のファイルに限る（他物件は読ませない）。
+  if (grant && matchedProperty?.id !== grant.propertyId) {
+    return NextResponse.json({ error: "閲覧権限がありません" }, { status: 403 });
   }
   if (matchedItem) {
     if (matchedItem.accessLevel === "restricted" && !canViewBackyard(user)) {

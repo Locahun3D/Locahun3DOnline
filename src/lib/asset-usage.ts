@@ -33,7 +33,12 @@ export function computeAssetUsage(
     if (!url) return;
     const key=sceneEditSourceKey(url);
     const urls=new Set([...(known.has(url)?[url]:[]),...(key?aliases.get(key)??[]:[])]);
-    for(const matched of urls)(usage[matched]??=[]).push(pid);
+    // 同じ物件が同じURLを2か所で参照することがある（例: 参照保存の元ファイルは
+    // editVersions[0] と streamUrl の両方に出る）。重複して数えない（2026-09-21）。
+    for(const matched of urls){
+      const list=(usage[matched]??=[]);
+      if(!list.includes(pid))list.push(pid);
+    }
   };
   for (const p of properties) {
     if (!options.historyOnly) {

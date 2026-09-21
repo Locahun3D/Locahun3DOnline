@@ -14,7 +14,8 @@ afterEach(()=>sqlite.close());
 it('changes only preview and timestamp, preserves sales/unknown fields and retains recovery reference',async()=>{
  expect(await attachSceneEditConditionally(db,input())).toBe(true);
  const result=JSON.parse(sqlite.prepare('SELECT data FROM properties').get().data);
- expect(result).toEqual({...before,updatedAt:'2026-09-19T01:00:00.000Z',splatItems:[{...before.splatItems[0],splatUrl:url,sizeMb:1,editVersions:[{url:old,sizeMb:2,savedAt:'2026-09-19T01:00:00.000Z',key:'a'.repeat(64)}]},before.splatItems[1]]});
+ // 2026-09-21: 最初に上げた本体は「段階読み込みの元ファイル」として控える（編集後のアーカイブには本体が入らないため）。
+ expect(result).toEqual({...before,updatedAt:'2026-09-19T01:00:00.000Z',splatItems:[{...before.splatItems[0],splatUrl:url,sizeMb:1,streamUrl:old,streamSizeMb:2,editVersions:[{url:old,sizeMb:2,savedAt:'2026-09-19T01:00:00.000Z',key:'a'.repeat(64)}]},before.splatItems[1]]});
  const parsed=propertySchema.parse(result);
  expect(parsed.splatItems[0].editVersions?.[0].url).toBe(old);
  expect(computeAssetUsage([parsed],[{url:old},{url}])[old]).toEqual(['p']);
