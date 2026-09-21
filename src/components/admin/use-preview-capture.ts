@@ -82,7 +82,18 @@ interface CaptureFrame {
  * （従来の埋め込みと同じ作り）。ポップアップが塞がれている場合は、従来どおり編集画面の中で走らせる。
  */
 function openCaptureWindow(): Window | null {
+  // ⚠ 2026-09-21 本番で確認: 別ウィンドウは**前面に出ていないと1フレームも録画できない**
+  //    （「録画中… 0%(0/240)」のまま進まない）。Chrome は他のウィンドウに隠れた
+  //    ウィンドウの描画を止めるため、WebGL キャンバスから映像が出てこない。
+  //    編集画面の中の枠なら、そのタブを開いている限り描画が続く（従来どおり動く）。
+  //    そのため既定は編集画面の中に戻し、別ウィンドウは明示的に選んだときだけにする
+  //    （録画中そのウィンドウを前面に置いておける場合のみ有効）。
+  //    URL に ?capturewindow=1 を付けるか、localStorage の l3d-capture-window を 1 にする。
   try {
+    const params = new URLSearchParams(location.search);
+    const wanted = params.get("capturewindow") === "1"
+      || (() => { try { return localStorage.getItem("l3d-capture-window") === "1"; } catch { return false; } })();
+    if (!wanted) return null;
     const width = Math.min(960, Math.max(480, screen.availWidth - 80));
     const height = Math.round((width * FRAME_H) / FRAME_W) + 64;
     const w = window.open("", "locahun-preview-capture", `popup,width=${width},height=${height}`);
