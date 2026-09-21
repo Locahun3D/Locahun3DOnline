@@ -36,10 +36,14 @@ export type PropertyListItem = {
   ready?: boolean;
   /** 一覧のサムネイル用（カバー写真のURLだけ渡す） */
   coverSrc?: string;
+  /** 「申請メールを送る」の確認ダイアログで宛先を見せるため（送信自体はサーバー側で保存値から行う）。 */
+  contactEmail?: string;
 };
 
 // ステータス列は 72px だとバッジ（大きくした）が収まらないので 104px に広げる。
-const GRID = "grid-cols-[34px_104px_1fr_96px_96px_140px_minmax(290px,320px)]";
+// 2026-09-21: CITY 列は本人指示で廃止。ACTIONS はボタン5つが1行に収まる幅を下限にし、
+// 余白は TITLE と ACTIONS で分け合う（TITLE だけ 1fr だと中央に大きな空白が残るため）。
+const GRID = "grid-cols-[34px_104px_minmax(220px,1.6fr)_96px_140px_minmax(360px,1fr)]";
 
 // タブは公開ワークフローの段階で切る（2026-09-20）: 下書き → 公開申請中 → 公開。
 // 「公開申請中」は status=draft + publishRequestedAt（lib/publish-flow.ts の publishStage）。
@@ -52,11 +56,12 @@ const STATUS_TABS: { key: PublishStage | "all"; label: string }[] = [
   { key: "archived", label: "アーカイブ" },
 ];
 
-type SortColumn = "status" | "title" | "category" | "city" | "updated";
+// 2026-09-21 本人指示「（CITY は）これいらない」。列ごと外した（検索の対象には残す）。
+type SortColumn = "status" | "title" | "category" | "updated";
 
 // 並べ替えの既定の向き。日付は新しい順、それ以外は名前順（昇順）から始める。
 const SORT_DEFAULT_DESC: Record<SortColumn, boolean> = {
-  status: false, title: false, category: false, city: false, updated: true,
+  status: false, title: false, category: false, updated: true,
 };
 
 // 状態は、工程の順（下書き → 公開申請待ち → 公開申請済み → 公開中 → アーカイブ）で並べる。
@@ -130,7 +135,6 @@ export default function PropertiesAdmin({
       sort.column === "status" ? String(SORT_STAGE_ORDER[displayStageOf(p)])
       : sort.column === "title" ? p.title || p.id
       : sort.column === "category" ? CATEGORY_LABEL[p.category] || ""
-      : sort.column === "city" ? p.city || ""
       : p.updatedAt || "";
     return [...rows].sort((a, b) => {
       const x = key(a), y = key(b);
@@ -310,7 +314,6 @@ export default function PropertiesAdmin({
           <SortHeader column="status" label="Status" sort={sort} onSort={setSort} />
           <SortHeader column="title" label="Title" sort={sort} onSort={setSort} />
           <SortHeader column="category" label="Category" sort={sort} onSort={setSort} />
-          <SortHeader column="city" label="City" sort={sort} onSort={setSort} />
           <SortHeader column="updated" label="Updated" sort={sort} onSort={setSort} />
           <div className="text-right">Actions</div>
         </div>
@@ -371,12 +374,19 @@ export default function PropertiesAdmin({
               <div className="text-[12px] text-muted">
                 {CATEGORY_LABEL[p.category]}
               </div>
-              <div className="text-[12px] text-muted truncate">{p.city || "—"}</div>
               <div className="mono text-[11px] text-muted">
                 {/* 生ISOのsliceはUTC表示（実害あり）。JSTで整形 */}
                 {p.updatedAt ? fmtDateTimeLocaleJST(p.updatedAt) : "—"}
               </div>
-              <PropertyRowActions id={p.id} status={p.status} isAdmin={isAdmin} />
+              <PropertyRowActions
+                id={p.id}
+                status={p.status}
+                isAdmin={isAdmin}
+                title={p.title}
+                contactEmail={p.contactEmail}
+                // 「公開申請待ち」＝下書き＋必要項目が揃った行にだけ申請メールのボタンを出す（2026-09-21）。
+                canRequestReview={displayStageOf(p) === "ready"}
+              />
             </div>
           ))
         )}

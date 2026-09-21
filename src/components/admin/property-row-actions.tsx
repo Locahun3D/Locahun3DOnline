@@ -7,6 +7,7 @@ import {
   unpublishAction,
   archiveAction,
   deleteAction,
+  requestReviewByIdAction,
 } from "@/app/admin/_actions";
 import type { PropertyStatus } from "@/lib/schemas";
 
@@ -18,10 +19,19 @@ export default function PropertyRowActions({
   id,
   status,
   isAdmin = false,
+  title,
+  contactEmail,
+  canRequestReview = false,
 }: {
   id: string;
   status: PropertyStatus;
   isAdmin?: boolean;
+  /** 確認ダイアログで「どの物件か」を見せるため。 */
+  title?: string;
+  /** 確認ダイアログで宛先を見せるため（送信先はサーバーが保存値から決める）。 */
+  contactEmail?: string;
+  /** 「公開申請待ち」の行か（＝下書き＋公開に必要な項目が揃っている）。 */
+  canRequestReview?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +62,25 @@ export default function PropertyRowActions({
       if (r && !r.ok) setError("アーカイブに失敗しました");
     });
   };
+  // 一覧から公開申請（＝スタジオへ社外メールが出る）。押す前に宛先を見せて確認する。
+  // 処理自体はエディターの「公開申請する」と同じサーバーアクションを id 経由で呼ぶだけ。
+  const requestReview = () => {
+    if (!contactEmail) {
+      setError("連絡先メールが未設定です。エディターで入力してください。");
+      return;
+    }
+    if (
+      !window.confirm(
+        `「${title || id}」の掲載内容確認メールを ${contactEmail} へ送り、公開申請中にします。よろしいですか？`,
+      )
+    )
+      return;
+    setError(null);
+    start(async () => {
+      const r = await requestReviewByIdAction(id);
+      if (!r.ok) setError(r.error);
+    });
+  };
   const remove = () => {
     if (
       !window.confirm(
@@ -67,6 +96,18 @@ export default function PropertyRowActions({
 
   return (
     <div className="flex flex-col items-end gap-1">
+      {/* 2026-09-21 本人指示「公開申請待ちの場合、右側に 申請メールを送るボタンを追加」。
+          常設5つのボタンと同じ行に入れると必ず折り返すので、目立つ一次動作として上の行に置く。 */}
+      {isAdmin && canRequestReview && (
+        <button
+          type="button"
+          onClick={requestReview}
+          disabled={pending}
+          className={`${BTN} border-accent bg-accent/10 text-accent hover:bg-accent hover:text-bg`}
+        >
+          申請メールを送る
+        </button>
+      )}
       <div className="flex gap-1.5 justify-end flex-wrap">
         <Link
           href={`/admin/properties/${id}/preview`}

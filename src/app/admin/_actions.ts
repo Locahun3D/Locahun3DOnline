@@ -529,6 +529,18 @@ export async function requestReviewAction(
 }
 
 /**
+ * 一覧の行から「申請メールを送る」を押したときの入口（2026-09-21 本人指示）。
+ * 一覧はフォームの値を持たないので、保存済みの内容を読んで requestReviewAction に渡すだけ。
+ * メール送信・翻訳・プレビュー確保のロジックは絶対に複製しない（分岐すると送信条件がずれる）。
+ */
+export async function requestReviewByIdAction(id: string): Promise<FlowOk | FlowErr> {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  return requestReviewAction(existing, { expectedUpdatedAt: existing.updatedAt });
+}
+
+/**
  * 確認メールの再送。保存済みの内容（contactEmail）宛に送る。
  * 二重送信の防止: クライアントの確認ダイアログ + サーバー側 60 秒クールダウン。
  */

@@ -33,6 +33,8 @@ export default async function AdminPropertiesList() {
     publishRequestedAt: p.publishRequestedAt ?? null,
     reviewState: reviewSubState(p.publishFlow),
     coverSrc: p.cover?.src || undefined,
+    // 「申請メールを送る」の確認ダイアログで宛先を見せるために渡す（2026-09-21）。
+    contactEmail: p.contactEmail || undefined,
     // 公開に必要な項目が埋まった下書きは「公開申請待ち」と出す（2026-09-21 本人指示）。
     ready: publishReadiness(p).ready,
   }));

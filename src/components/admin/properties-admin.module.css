@@ -1,6 +1,9 @@
 .root { min-width:0 }
 .list { min-width:0 }
-.row { grid-template-columns:34px 104px minmax(180px,1fr) 96px 96px 140px minmax(290px,320px) }
+/* 2026-09-21: CITY 列を廃止（1=選択 2=STATUS 3=TITLE 4=CATEGORY 5=UPDATED 6=ACTIONS）。
+   ACTIONS はボタン5つが1行に収まる幅（実測 ~345px）を下限にし、余りは TITLE と分け合う
+   （TITLE だけを 1fr で伸ばすと中央に大きな空白ができる、という本人指摘への対応）。 */
+.row { grid-template-columns:34px 104px minmax(220px,1.6fr) 96px 140px minmax(360px,1fr) }
 .row > * { min-width:0 }
 @media(max-width:1279px){
  .root button,.root a { min-height:calc(44px / var(--z,1));display:inline-flex;align-items:center }
@@ -9,8 +12,7 @@
  .row > :nth-child(3) { grid-column:3;grid-row:1 / span 2 }
  .row > :nth-child(3) a { display:block;white-space:normal;overflow-wrap:anywhere;font-size:16px;line-height:1.6 }
  .row > :nth-child(4) { grid-column:2;grid-row:2 }
- .row > :nth-child(5) { grid-column:3;grid-row:3;white-space:normal }
- .row > :nth-child(6) { grid-column:2;grid-row:3 }
+ .row > :nth-child(5) { grid-column:2;grid-row:3 }
  .row > :last-child { grid-column:2 / -1;align-items:flex-start }
  .row > :last-child > div { justify-content:flex-start }
 }
@@ -18,6 +20,6 @@
  .row { grid-template-columns:24px minmax(0,1fr);padding:16px;gap:8px 12px }
  .row > :nth-child(3) { grid-column:2;grid-row:auto }
  .row > :nth-child(4) { grid-row:auto }
- .row > :nth-child(5),.row > :nth-child(6) { grid-column:2;grid-row:auto }
+ .row > :nth-child(5) { grid-column:2;grid-row:auto }
  .root input[type=search] { min-height:44px }
 }
