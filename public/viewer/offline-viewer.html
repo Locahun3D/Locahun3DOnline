@@ -2995,7 +2995,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="5d772e9d3f16a4c8afeeb943067d2e78dbd542c990b5769462f9065970d77e11";
+window.__locahunBuildRelease="ca1122f39afc6883a81962dee2c3e51414aa4674c2d3ad54e865db371352537f";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -25209,6 +25209,10 @@ async function _loadOnlineSceneStream(streamUrl, fileName){
   _regionalNavigationFiles=null;
   return restored;
 }
+// 検証用（scripts/test-scene-edit-zip-stream.mjs）から呼べるようにしておく。
+// 本体はモジュール内の関数なので、window に出さないとブラウザのテストから触れない。
+try{window._loadOnlineSceneStream=_loadOnlineSceneStream;}catch(_){}
+
 async function _loadOnlineSceneFile(file, fileName, streamRefUrl){
   const shortEdge=Math.min(window.innerWidth||0,window.innerHeight||0);
   const limit=isMobile && shortEdge>0 && shortEdge<700 ? 200*1024**2 : MAX_EMBED_BYTES;
@@ -25868,7 +25872,13 @@ async function restoreProject(project, opts = {}) {
           const sft=_splatFileTypeFor(sext);
           if(sext==='rad'){
             const opts={url:surl, fileType:sft, ...SPARK_QUALITY_OPTS};
-            opts.lod=true; opts.enableLod=true; opts.paged=true;
+            opts.lod=true; opts.enableLod=true;
+            // paged:true だと Spark が内部で PagedSplats を作り直し、形式を URL の拡張子から
+            // 推測する（vendor 12191行あたり）。オンライン編集の配信URLは拡張子を持たない
+            // （/api/scene-edit/source?...）ので、ここで形式を明示した PagedSplats を渡す。
+            opts.paged=new PagedSplats({rootUrl:surl, fileType:sft});
+            // 明示した PagedSplats に任せるので、url と fileType は外す（残すと本体を丸ごと取りに行く）。
+            delete opts.url; delete opts.fileType;
             opts.lodScale=_radEffectiveLodScale();
             // Same foveation strip as loadFromURL — otherwise the LoD walker
             // never splits and only the root chunk ever loads.
