@@ -1,5 +1,6 @@
 """掲載準備パイプライン（Dropbox 側のスクリプト群）の起動口。
 
+  python scripts/l3d.py where                       # このPCでの場所の解決結果（別PCでまずこれ）
   python scripts/l3d.py status                      # 全案件の進捗
   python scripts/l3d.py pipeline [--run ...]        # ZIP→動画
   python scripts/l3d.py register [plan|run ...]     # R2 登録・物件紐付け（本番 D1/R2 に書く）
@@ -20,11 +21,28 @@ import os
 import subprocess
 import sys
 
-SCRIPTS = os.environ.get(
-    "LOCAHUN_PIPELINE_DIR",
-    r"C:\Users\askgg\Dropbox\KWI\Products\Locahun3D\01_3DData\01_ワークフロー解説\scripts",
-)
+def _find_scripts():
+    """Dropbox 側の 01_ワークフロー解説/scripts を探す（別PC対応・2026-09-21）。
+
+    順番: 環境変数 LOCAHUN_PIPELINE_DIR → LOCAHUN_DATA_ROOT の下 → よくある Dropbox の場所。
+    どれも無ければ最後の候補を返し、main() が「無い」と言って止まる。
+    """
+    v = os.environ.get("LOCAHUN_PIPELINE_DIR")
+    if v and os.path.isdir(v):
+        return v
+    rel = os.path.join("01_ワークフロー解説", "scripts")
+    root = os.environ.get("LOCAHUN_DATA_ROOT")
+    cands = [os.path.join(root, rel)] if root else []
+    tail = os.path.join("KWI", "Products", "Locahun3D", "01_3DData", rel)
+    home = os.path.expanduser("~")
+    cands += [os.path.join(home, "Dropbox", tail)]
+    cands += [f"{d}:\\Dropbox\\{tail}" for d in "GEFDCH"]
+    return next((c for c in cands if os.path.isdir(c)), cands[-1])
+
+
+SCRIPTS = _find_scripts()
 TOOLS = {
+    "where": "paths.py",                   # このPCで場所がどう解決されているか（別PCでの最初の動作確認）
     "status": "pipeline_status.py",
     "pipeline": "run_pipeline.py",
     "register": "r2_register.py",
@@ -61,7 +79,10 @@ def main():
         sys.exit(__doc__)
     script = os.path.join(SCRIPTS, TOOLS[sys.argv[1]])
     if not os.path.exists(script):
-        sys.exit(f"スクリプトが無い: {script}")
+        sys.exit(f"スクリプトが無い: {script}\n"
+                 "別PCなら、Dropbox の 01_ワークフロー解説/scripts のフルパスを環境変数 "
+                 "LOCAHUN_PIPELINE_DIR に入れてください（または LOCAHUN_DATA_ROOT に 01_3DData を）。\n"
+                 "詳しくは 01_ワークフロー解説/00_はじめに.md。")
     load_user_env()
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
     sys.exit(subprocess.call([sys.executable, script, *sys.argv[2:]], cwd=SCRIPTS))
