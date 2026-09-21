@@ -6,6 +6,7 @@ import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { viewerStreamTokenGrant } from "@/lib/viewer-stream-grant";
+import { readStoredRadEntry, mapRangeIntoEntry } from "@/lib/zip-stored-entry";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
@@ -139,6 +140,39 @@ export async function GET(
     }
 
     const rangeHeader = req.headers.get("range");
+
+    // ?ref=stream で行き着いた先が ZIP のときは、**中に無圧縮で入っている .rad の部分だけ**を返す。
+    // ⚠ 2026-09-21 本番で確認: ここでキーを差し替えるだけだと ZIP 全体が流れ、
+    //    ビューアーが「Invalid RAD magic: 0x04034b50」（＝ZIPの先頭）で止まる。
+    //    位置の割り出しは scene-edit の配信と同じ手順（lib/zip-stored-entry.ts）。
+    if (wantsStream && /\.zip$/i.test(key)) {
+      const entry = await readStoredRadEntry(async (offset, length) => {
+        const head = await bucket.get(key, { range: { offset, length } });
+        if (!head?.body) return null;
+        return new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer());
+      });
+      if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      const asked = rangeHeader ? toR2Range(rangeHeader) : undefined;
+      if (rangeHeader && !asked) return new NextResponse("Bad Range", { status: 400 });
+      const window = mapRangeIntoEntry(entry, asked ?? undefined);
+      if (window.length < 1) return new NextResponse("Bad Range", { status: 416 });
+      const headers = new Headers({
+        "Content-Type": "application/octet-stream",
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+        "Content-Length": String(rangeHeader ? window.length : entry.size),
+        "X-Stream-Name": entry.name,
+      });
+      if (req.method === "HEAD") return new NextResponse(null, { headers });
+      const part = await bucket.get(key, { range: window });
+      if (!part) return new NextResponse("Not found", { status: 404 });
+      if (rangeHeader) {
+        const from = window.offset - entry.offset;
+        headers.set("Content-Range", `bytes ${from}-${from + window.length - 1}/${entry.size}`);
+        return new NextResponse(part.body as ReadableStream, { status: 206, headers });
+      }
+      return new NextResponse(part.body as ReadableStream, { headers });
+    }
 
     if (rangeHeader) {
       const r2range = toR2Range(rangeHeader);
