@@ -8,7 +8,7 @@
    仕様を意図的に変えるときは、この検査も同じコミットで更新すること（黙って外さない）。
    本番DOMでしか確認できない項目（幅・影・色の実測）は台帳側の手順に記載。
 """
-import io, re, sys
+import io, json, re, shutil, subprocess, sys, urllib.request
 
 CHECKS = [
     # ⚠「復活させない」系のパターンは、撤去の経緯を書いたコメントに反応しないよう
@@ -84,7 +84,88 @@ CHECKS = [
     #   ヘッダーの真上に同色の帯（::before）を常に貼り、上端がずれても本文が見えない構造にした。消さないこと。
     ("ヘッダーの真上に同色の帯（before:bottom-full + before:bg-bg）がある",
      "src/components/site-header.tsx", r'className="[^"]*before:bottom-full[^"]*before:bg-bg', True),
+    # ⚠ 2026-09-21「日本語の段落デザインまだ治ってない」。原因は2つあり、どちらも再発しやすい:
+    #   (a) 概要本文が `whitespace-pre-line`（元の改行）と句点ごとの <br> の二重描画で、
+    #       段落の切れ目だけ2〜3行ぶん空き、文の切れ目は詰まる不揃いな縦の間になっていた。
+    #   (b) スマホ幅だけ body の字間を 0.02em に詰めており、本文が詰まって読みにくかった。
+    #   ここは静的検査。実測は下の typography_live_check()（scripts/typography-audit.mjs）が担当する。
+    ("本文の字間は全幅 0.04em（globals.css の body）",
+     "src/app/globals.css", r"letter-spacing: 0\.04em", True),
+    # 宣言（末尾の `;` まで）に一致させる。globals.css 側の「なぜ撤去したか」を書いた
+    # コメントには `;` を付けていないので、経緯コメントには反応しない。
+    ("スマホ幅で本文の字間を詰める指定を復活させない（0.02em）",
+     "src/app/globals.css", r"letter-spacing: 0\.02em;", False),
+    ("本文の行間は 1.8（globals.css の body）",
+     "src/app/globals.css", r"line-height: 1\.8;", True),
+    ("概要は空行で段落に割ってから1文1行にする（paragraphs → <p> → sentenceLines）",
+     "src/components/property-detail-view.tsx",
+     r"paragraphs\(s\.body\)\.map\([\s\S]{0,120}sentenceLines\(para\)", True),
+    ("概要本文で whitespace-pre-line と句点ごとの <br> を併用しない（間が二重に空く）",
+     "src/components/property-detail-view.tsx",
+     # className は data 属性の前にも後ろにも書けるので、前後どちらも見る。
+     r"whitespace-pre-line[\s\S]{0,200}data-property-overview-body"
+     r"|data-property-overview-body[\s\S]{0,200}whitespace-pre-line", False),
 ]
+
+
+def typography_live_check():
+    """実ブラウザでの本文タイポグラフィ実測（scripts/typography-audit.mjs を呼ぶ）。
+
+    静的検査だけだと「CSSは正しいが、別の指定に上書きされて実際は詰まっている」を
+    取り逃がす（実際 2026-09-21 の字間 0.02em はそれで見落とされていた）。
+    開発サーバーが動いていれば実測し、動いていなければ SKIP と明示する
+    （OK とは数えない＝黙って通らない）。サーバーが動いているのに1つも測れなければ
+    typography-audit.mjs 側が失敗を返すので、ここでも NG になる。
+
+    戻り値: (ok件数, ng件数, skipしたか)
+    """
+    base = None
+    for port in (3000, 3001):
+        url = f"http://localhost:{port}/"
+        try:
+            with urllib.request.urlopen(url, timeout=3) as r:
+                if r.status == 200:
+                    base = f"http://localhost:{port}"
+                    break
+        except Exception:
+            continue
+    if base is None:
+        print("SKIP  本文タイポグラフィの実測（localhost:3000/3001 に開発サーバーが無い。"
+              "`npm run dev` を立ててから再実行すること）")
+        return 0, 0, True
+
+    node = shutil.which("node")
+    if not node:
+        print("NG    本文タイポグラフィの実測（node が見つからない）")
+        return 0, 1, False
+
+    # 公開中の物件を1件選ぶ（概要本文があるページでないと測れない）。
+    path = "/properties/wh-002"
+    try:
+        data = json.load(io.open("data/properties.json", encoding="utf-8"))
+        pub = [p for p in data.get("properties", []) if p.get("status") == "published"]
+        if pub:
+            path = "/properties/" + pub[0]["id"]
+    except Exception:
+        pass
+
+    try:
+        proc = subprocess.run(
+            [node, "scripts/typography-audit.mjs", "--base", base, "--paths", path, "--json"],
+            capture_output=True, text=True, encoding="utf-8", timeout=300)
+        result = json.loads(proc.stdout)
+    except Exception as e:
+        print(f"NG    本文タイポグラフィの実測（typography-audit.mjs を実行できない: {e}）")
+        return 0, 1, False
+
+    if result.get("ok"):
+        print(f"OK    本文タイポグラフィの実測（{base}{path} ・{len(result.get('blocks', []))}ブロック"
+              "／段落の間隔・行間・字間）")
+        return 1, 0, False
+    for p in result.get("problems", []):
+        print("NG    本文タイポグラフィの実測:", p)
+    return 0, max(1, len(result.get("problems", []))), False
+
 
 ok = fail = 0
 for desc, path, pat, expect in CHECKS:
@@ -103,5 +184,9 @@ for desc, path, pat, expect in CHECKS:
         print(("OK " if good else "NG "), desc)
     ok += good; fail += (not good)
 
-print(f"\n{ok} OK / {fail} NG")
+t_ok, t_fail, t_skipped = typography_live_check()
+ok += t_ok
+fail += t_fail
+
+print(f"\n{ok} OK / {fail} NG" + ("（＋実測1件はSKIP）" if t_skipped else ""))
 sys.exit(1 if fail else 0)

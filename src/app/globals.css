@@ -176,9 +176,18 @@ br.pc {
   br.pc {
     display: none;
   }
-  body {
-    letter-spacing: 0.02em;
-  }
+  /* ⚠ 2026-09-21: ここには `body { letter-spacing: 0.02em }` があり、スマホ幅だけ
+     本文の字間が半分（実測 0.021em）に詰まっていた（本人指摘「日本語の段落デザイン
+     まだ治ってない」。scripts/typography-audit.mjs が 390px で検出）。
+     入った経緯は 2876ac7 の一括 recover コミットで、詰めた理由はどこにも残っていない。
+     CLAUDE.md の本文ルールは「行間 1.8 / 字間 0.04em（詰めない）」なので、
+     スマホだけ詰める例外は撤去し、全幅 0.04em に統一する（本文の可読性を優先）。
+     ⚠ ここで `button, th, td { letter-spacing: … }` のような要素セレクタを足して
+     器（ボタン・チップ・表）だけ詰め直すのは不可。未レイヤーのCSSは @layer utilities
+     より強く、`tracking-[0.2em]` 等の指定を黙って上書きしてしまう（CLAUDE.md の注意点）。
+     字間を戻したことで崩れる箇所が出たら、その部品に Tailwind の tracking-* を付けて直すこと。
+     崩れが無いことは 320/360/390〜1920px × 公開ページで実測済み
+     （node scripts/layout-overlap-audit.mjs / node scripts/ui-audit.mjs）。 */
 }
 
 body::before {
