@@ -41,8 +41,11 @@ export async function POST(req:Request){
    const storageOrigin=new URL(await getWorkflowStorageOrigin()).origin;
    // 段階読み込みできるか（2026-09-21）。元が .rad ならそのまま、ZIP なら中の無圧縮 .rad を見る。
    // できる場合は、編集画面が ZIP 全体を落とさずに Range で少しずつ読む。
+   // ただし、一度でも編集して保存したシーン（streamUrl がある）は、置いたモデルや経路が入った
+   // プロジェクトを開く必要がある。その場合は本体だけを流し込まず、従来どおりアーカイブを読む
+   // （アーカイブは 3DGS 本体を含まないので小さい。本体は ?ref=stream で段階読み込みする）。
    let streamFileName='';
-   const streamKey=sceneEditSourceKey(snapshot.scene.streamUrl||snapshot.scene.splatUrl)||sourceKey;
+   const streamKey=snapshot.scene.streamUrl?'':sourceKey;
    if(/\.rad$/i.test(streamKey))streamFileName=streamKey.split('/').at(-1)!;
    else if(/\.zip$/i.test(streamKey)){
     try{

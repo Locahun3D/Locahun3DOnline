@@ -5,6 +5,13 @@ const mocks=vi.hoisted(()=>({user:vi.fn(),access:vi.fn(),db:vi.fn(),head:vi.fn()
 vi.mock('@/lib/dal',()=>({getCurrentUser:mocks.user,assertPropertyAccess:mocks.access}));
 vi.mock('@/lib/d1',()=>({getD1:mocks.db}));
 vi.mock('next/cache',()=>({revalidatePath:mocks.revalidate}));
+const storedZipHead=()=>{
+ const name='splat/0_scene.rad',size=219983184;
+ const head=Buffer.alloc(1024);head.writeUInt32LE(0x04034b50,0);head.writeUInt16LE(0,8);
+ head.writeUInt32LE(size,18);head.writeUInt32LE(size,22);head.writeUInt16LE(name.length,26);head.writeUInt16LE(0,28);
+ head.write(name,30,'latin1');return head;
+};
+vi.mock('@opennextjs/cloudflare',()=>({getCloudflareContext:async()=>({env:{R2_ASSETS:{get:async()=>({body:new Response(storedZipHead()).body})}}})}));
 vi.mock('@/lib/uploads',()=>({getUploadMode:async()=> 'r2',getWorkflowStorageOrigin:async()=> 'https://storage.test',createWorkflowUpload:mocks.put,statWorkflowUpload:mocks.head,createPresignedGet:mocks.get}));
 import {POST} from './route';
 const {DatabaseSync}=createRequire(import.meta.url)('node:sqlite');
@@ -94,4 +101,14 @@ it('administrator can revert to a retained version; the replaced preview stays i
  const response=await POST(request({action:'revert',propertyId:'p',sceneId:'s',versionKey:version.key,expectedUpdatedAt:edited.updatedAt}));expect(response.status).toBe(200);
  const after=data();expect(after.splatItems[0].splatUrl).toBe(old);expect(after.splatItems[0]).toMatchObject({salePrice:500,downloadFileUrl:'/sale.zip',accessLevel:'paid'});
  expect(after.splatItems[0].editVersions.map((v:{url:string})=>v.url)).toContain(edited.splatItems[0].splatUrl);
+});
+
+it('names the streamable file so the editor can page the RAD, but not for a scene that already has edits',async()=>{
+ // 未編集の ZIP シーン: 中の .rad を段階読み込みできると伝える。
+ const body=await (await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).json();
+ expect(body.streamFileName).toBe('0_scene.rad');
+ // 一度保存したシーン（streamUrl あり）: 置いたモデルごと開く必要があるので、伝えない。
+ replace({...initial,updatedAt:'2026-09-15T00:00:00.000Z',splatItems:[{...initial.splatItems[0],splatUrl:'/api/r2/assets/splat/wf_x-project.zip',streamUrl:old},initial.splatItems[1]]} as typeof initial);
+ const edited=await (await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).json();
+ expect(edited.streamFileName).toBe('');
 });
