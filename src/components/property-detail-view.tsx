@@ -556,10 +556,13 @@ export default function PropertyDetailView({
        *  Overview + Specs — side-by-side white cards
        * ══════════════════════════════════════════════════ */}
       <section className="frame pt-14">
-        <div className="grid lg:grid-cols-2 gap-6">
+        {/* 2026-09-21 本人指摘「文章ごとに改行してほしい／意味わからん場所の改行が多すぎる」。
+            概要は1文40字前後で書く決まりなのに、行が36字ぶんしか無く、ほぼ全ての文が
+            途中で折り返して2行目に数文字だけ残っていた。概要側の列を広げ、1文が1行に収まるようにする。 */}
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-6">
           <div className="bg-white border border-line shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-7 py-8 sm:px-8">
             <Eyebrow en="OVERVIEW" jp={en ? "Overview" : "概要"} />
-            <div className="max-w-[36em]">
+            <div className="max-w-[46em]">
               {renderOverview(property.description) || (
                 <p className="text-[15px] text-ink/60">
                   {en ? "No description yet." : "紹介文は準備中です。"}
