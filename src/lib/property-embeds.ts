@@ -86,6 +86,17 @@ export const propertyEmbedRepo = {
     return rows[0] ?? null;
   },
 
+  /**
+   * 既にあればそれを返し、無ければ作る（2026-09-21）。
+   * 公開申請のメールに埋め込みURLを載せるために使う。`create()` は**失効と再発行**なので、
+   * メールを送るたびに呼ぶと、先方が貼ったコードが黙って切れる。ここは絶対に作り直さない。
+   */
+  async ensure(propertyId: string): Promise<PropertyEmbed> {
+    const found = await this.findByProperty(propertyId);
+    if (found) return found;
+    return this.create(propertyId);
+  },
+
   async create(propertyId: string): Promise<PropertyEmbed> {
     await this.removeByProperty(propertyId);
     const embed: PropertyEmbed = {

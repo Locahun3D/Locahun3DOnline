@@ -14,6 +14,12 @@ import { protectStudioManagedFields } from "@/lib/studio-guard";
 import { createNotification } from "@/lib/notifications";
 import { renamePayoutRecordsForProperty, autoCreateStudioVenueSplit } from "@/lib/payouts";
 import { newStudioApproveKey } from "@/lib/studio-approval";
+import { propertyEmbedRepo } from "@/lib/property-embeds";
+import { embedUrl as buildEmbedUrl } from "@/lib/embed-snippet";
+
+/** メールに載せる埋め込みURL。サイトの絶対URLは lib/email.ts と同じ決め方にそろえる。 */
+const appEmbedUrl = (token: string) =>
+  buildEmbedUrl(process.env.NEXT_PUBLIC_APP_URL || "https://locahun3d.com", token);
 import { fillPropertyEnglish, needsEnglish } from "@/lib/property-translate";
 import {
   propertySchema,
@@ -496,8 +502,12 @@ export async function requestReviewAction(
     previewExpiresAt = preview.expiresAt;
     const approve = newStudioApproveKey();
     approveKeyHash = approve.hash;
+    // 自社サイトへ貼れる3Dツアーの恒久URL（2026-09-21 本人指示）。
+    // ensure なので、既にあるトークンは作り直さない（先方が貼ったコードを切らない）。
+    const embed = await propertyEmbedRepo.ensure(parsed.id).catch(() => null);
     const sent = await sendStudioReviewMail({
       approveKey: approve.key,
+      embedUrl: embed ? appEmbedUrl(embed.token) : undefined,
       to: translated.contactEmail,
       studioName: translated.title,
       previewPath: `/preview/${preview.token}`,
@@ -555,8 +565,10 @@ export async function resendStudioReviewMailAction(id: string): Promise<FlowOk |
   if (!tg.ok) return { ok: false, error: `${tg.error} いったん申請を取り下げ、「公開申請する」をやり直すと自動翻訳されます。` };
   const preview = await ensurePreview(id);
   const approve = newStudioApproveKey();
+  const embed = await propertyEmbedRepo.ensure(id).catch(() => null);
   const sent = await sendStudioReviewMail({
     approveKey: approve.key,
+    embedUrl: embed ? appEmbedUrl(embed.token) : undefined,
     to: existing.contactEmail,
     studioName: existing.title,
     previewPath: `/preview/${preview.token}`,

@@ -8,6 +8,7 @@ import {
   revokePropertyEmbedAction,
 } from "@/app/admin/properties/embed-actions";
 import type { PropertyEmbed } from "@/lib/property-embeds";
+import { embedUrl as buildEmbedUrl, embedSnippet } from "@/lib/embed-snippet";
 
 /**
  * 掲載者サイトへの「3Dツアー埋め込みコード」コントロール
@@ -18,14 +19,17 @@ import type { PropertyEmbed } from "@/lib/property-embeds";
  * 掲載者が自社サイトへ貼る iframe スニペットを生成してコピーさせる。
  */
 
+// 2026-09-21: URL とコードの組み立ては lib/embed-snippet.ts に一本化した。
+// 公開申請のメールが同じコードを載せるため、ここで別に組み立てると食い違う。
+// 固定高さ(520px)をやめて比率を保つ入れ物にしたのも同じ理由（スマホで崩れていた）。
 function embedUrl(token: string): string {
   const origin =
     typeof window !== "undefined" ? window.location.origin : "https://locahun3d.com";
-  return `${origin}/embed/${token}`;
+  return buildEmbedUrl(origin, token);
 }
 
 function snippet(token: string): string {
-  return `<iframe src="${embedUrl(token)}" width="100%" height="520" style="border:0" allowfullscreen loading="lazy" title="3Dツアー"></iframe>`;
+  return embedSnippet(embedUrl(token));
 }
 
 const DEFAULT_BUTTON_CLASS =

@@ -474,6 +474,8 @@ export async function sendStudioReviewMail(opts: {
   resend?: boolean;
   /** 承認ボタン用キー（URLにだけ入れる。DBにはハッシュを保存）。 */
   approveKey?: string;
+  /** 自社サイト埋め込み用の恒久URL（省略可。2026-09-21）。 */
+  embedUrl?: string;
 }): Promise<StudioReviewMailResult> {
   const to = opts.to.trim();
   const mail = buildStudioReviewMail({
@@ -481,6 +483,7 @@ export async function sendStudioReviewMail(opts: {
     previewUrl: appUrl(opts.previewPath) + (opts.approveKey ? `?approve=${opts.approveKey}` : ""),
     previewExpiresAt: opts.previewExpiresAt,
     resend: opts.resend,
+    embedUrl: opts.embedUrl,
     contactAddress: operatorAddress(),
   });
   if (mailDryRun()) {

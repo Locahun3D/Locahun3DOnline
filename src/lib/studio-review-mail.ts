@@ -7,6 +7,11 @@
  */
 
 export interface StudioReviewMailInput {
+  /**
+   * 自社サイトへ貼れる3Dツアーの埋め込みURL（絶対URL・**期限なし**）。2026-09-21 本人指示。
+   * 渡すと「自社サイトへの掲載」の節が付く。省略すると節ごと出ない（トークンを作れなかった場合）。
+   */
+  embedUrl?: string;
   /** スタジオ名（物件名）。 */
   studioName: string;
   /** ログイン不要のプレビューURL（絶対URL）。 */
@@ -24,6 +29,8 @@ export interface StudioReviewMail {
   heading: string;
   bodyHtml: string;
 }
+
+import { embedSnippet } from "./embed-snippet";
 
 const esc = (s: string) =>
   String(s ?? "")
@@ -53,6 +60,12 @@ export const STUDIO_REVIEW_CHECKPOINTS = [
   "設備",
 ] as const;
 
+/** メール本文に載せる貼り付け用コード。文字参照に直してから <pre> に入れる。 */
+function embedCodeBlock(url: string, studioName: string): string {
+  const code = embedSnippet(url, { title: `${studioName} 3Dツアー` });
+  return `<pre style="margin:0;padding:12px 14px;background:#0f1115;color:#d8d8d8;font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre;border-radius:4px;"><code>${esc(code)}</code></pre>`;
+}
+
 export function buildStudioReviewMail(input: StudioReviewMailInput): StudioReviewMail {
   const name = input.studioName.trim() || "貴スタジオ";
   const contact = input.contactAddress || "contact@locahun3d.com";
@@ -80,6 +93,20 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
       <div style="font-size:12px;color:#666;margin-bottom:6px;">ご確認いただきたい点</div>
       <ul style="font-size:14px;line-height:1.8;margin:0;padding-left:20px;">${checkpoints}</ul>
     </div>
+    ${input.embedUrl ? `
+    <div style="border:1px solid #eee;padding:14px 18px;margin:0 0 16px;">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">貴社サイトに3Dツアーを貼れます（無料・期限なし）</div>
+      <p style="font-size:13px;line-height:1.9;margin:0 0 10px;color:#444;">
+        下のコードを、貴社サイトの載せたい場所にそのまま貼り付けてください。<br>
+        幅は貼った場所に合わせて伸び縮みし、スマートフォンでも崩れません。<br>
+        訪問者はログイン不要で、そのまま歩いて見られます。
+      </p>
+      ${embedCodeBlock(input.embedUrl, name)}
+      <p style="font-size:12px;line-height:1.8;color:#666;margin:10px 0 0;word-break:break-all;">
+        リンクだけを使う場合: ${esc(input.embedUrl)}<br>
+        このURLは期限切れになりません（貼り替えは不要です）。停止したいときは当社までご連絡ください。
+      </p>
+    </div>` : ""}
     <p ${p}>問題がなければ、プレビューページの上部にある「この内容でOK・公開する」ボタンを押してください。<br>
     ボタンを押した時点で、掲載ページが公開されます。<br>
     修正のご希望がある場合は、ボタンを押さずに、このメールへの返信でお知らせください。</p>
