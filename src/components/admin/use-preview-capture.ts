@@ -52,9 +52,53 @@ const THUMB_H = 26;
 interface CaptureFrame {
   container: HTMLDivElement;
   iframe: HTMLIFrameElement;
+  /** 別ウィンドウで走らせている場合、そのウィンドウ（終わったら閉じる）。 */
+  popup?: Window | null;
 }
 
-function createCaptureFrame(url: string): CaptureFrame {
+/**
+ * 2026-09-21 本人指示「アップロードしたら動画を自動で生成するように／別ウィンドウで開いて処理がいいのでは／
+ * 終わったらウィンドウ消せばいいし」。
+ *
+ * 録画は別ウィンドウで走らせる。物件編集の画面を占有しないうえ、Chrome は他のウィンドウに隠れた
+ * ウィンドウの描画を絞るため、専用ウィンドウを前面に置いておけるほうが確実に終わる。
+ * 録画の解像度は窓の大きさに左右されないよう、中に 1920×1080 の iframe を置いて縮小して見せる
+ * （従来の埋め込みと同じ作り）。ポップアップが塞がれている場合は、従来どおり編集画面の中で走らせる。
+ */
+function openCaptureWindow(): Window | null {
+  try {
+    const width = Math.min(960, Math.max(480, screen.availWidth - 80));
+    const height = Math.round((width * FRAME_H) / FRAME_W) + 64;
+    const w = window.open("", "locahun-preview-capture", `popup,width=${width},height=${height}`);
+    if (!w) return null;
+    w.document.title = "プレビュー動画を生成中 — ロケハン3D";
+    w.document.body.style.cssText = "margin:0;background:#111;color:#ffb454;font:12px/1.6 ui-monospace,monospace;overflow:hidden;";
+    w.document.body.innerHTML =
+      '<div id="cap-msg" style="padding:8px 12px;letter-spacing:.08em;">プレビュー動画を生成しています。終わると自動で閉じます。</div>';
+    return w;
+  } catch {
+    return null;
+  }
+}
+
+function createCaptureFrame(url: string, popup?: Window | null): CaptureFrame {
+  // 別ウィンドウで走らせる場合は、そのウィンドウの中に 1920×1080 の iframe を置く
+  // （同じオリジンなので、こちらから直接組み立てられる）。
+  if (popup && !popup.closed) {
+    const doc = popup.document;
+    const container = doc.createElement("div");
+    container.style.cssText = "position:fixed;left:0;right:0;bottom:0;top:32px;overflow:hidden;";
+    const iframe = doc.createElement("iframe");
+    iframe.src = url;
+    iframe.setAttribute("title", "3DGS preview capture");
+    const scale = Math.min(1, (popup.innerWidth || FRAME_W) / FRAME_W);
+    iframe.style.cssText =
+      `position:absolute;top:0;left:0;width:${FRAME_W}px;height:${FRAME_H}px;border:0;` +
+      `transform:scale(${scale});transform-origin:top left;`;
+    container.appendChild(iframe);
+    doc.body.appendChild(container);
+    return { container: container as unknown as HTMLDivElement, iframe: iframe as unknown as HTMLIFrameElement, popup };
+  }
   const container = document.createElement("div");
   // 画面のどこにも重ならない右下の小さな帯。編集中のフォームを塞がない。
   container.style.cssText =
@@ -169,7 +213,7 @@ async function downloadChunkedBlob(
   return new Blob(parts);
 }
 
-function destroyCaptureFrame(frame: CaptureFrame | null) {
+function destroyCaptureFrame(frame: CaptureFrame | null, keepWindow = false) {
   if (!frame) return;
   try {
     frame.iframe.src = "about:blank"; // レンダリング/エンコードを確実に停止
@@ -177,6 +221,10 @@ function destroyCaptureFrame(frame: CaptureFrame | null) {
   try {
     frame.container.remove();
   } catch {}
+  // 続けて撮るものが無ければ、専用ウィンドウは閉じる（本人指示）。
+  if (frame.popup && !keepWindow) {
+    try { frame.popup.close(); } catch {}
+  }
 }
 
 export function usePreviewCapture(): UseCaptureResult {
@@ -187,6 +235,7 @@ export function usePreviewCapture(): UseCaptureResult {
   const [capturedIdx, setCapturedIdx] = useState<number | null>(null);
   const [queueLength, setQueueLength] = useState(0);
   const frameRef = useRef<CaptureFrame | null>(null);
+  const popupRef = useRef<Window | null>(null);
   const abortRef = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const busyRef = useRef(false);
@@ -306,11 +355,15 @@ export function usePreviewCapture(): UseCaptureResult {
       // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
       // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
       if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;
-      const frame = createCaptureFrame(url);
+      // 専用ウィンドウは1つだけ開き、キューの間は使い回す。塞がれていたら編集画面の中で走らせる。
+      if (popupRef.current?.closed) popupRef.current = null;
+      if (!popupRef.current) popupRef.current = openCaptureWindow();
+      const frame = createCaptureFrame(url, popupRef.current);
       frameRef.current = frame;
 
       const cleanup = () => {
         window.removeEventListener("message", handler);
+        frame.popup?.removeEventListener("message", handler);
         destroyCaptureFrame(frame);
         if (frameRef.current === frame) frameRef.current = null;
         if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
@@ -361,7 +414,9 @@ export function usePreviewCapture(): UseCaptureResult {
           if (abortRef.current) { cleanup(); return; }
           // 録画は完了 — レンダリング用 iframe はもう不要なので撤去
           window.removeEventListener("message", handler);
-          destroyCaptureFrame(frame);
+          frame.popup?.removeEventListener("message", handler);
+          // アップロード中も、次に撮るものがあるならウィンドウは開けておく。
+          destroyCaptureFrame(frame, queueRef.current.length > 0);
           if (frameRef.current === frame) frameRef.current = null;
           if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
           setState("uploading");
@@ -428,7 +483,10 @@ export function usePreviewCapture(): UseCaptureResult {
         }
       }
 
+      // ビューアーは `window.opener || parent` へ送る。別ウィンドウの中の iframe なら、
+      // 送り先はその別ウィンドウになるので、そちらでも受け取る（同じオリジンなので購読できる）。
       window.addEventListener("message", handler);
+      frame.popup?.addEventListener("message", handler as EventListener);
   }
 
   const runOne = useCallback(

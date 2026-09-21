@@ -52,6 +52,47 @@ const STATUS_TABS: { key: PublishStage | "all"; label: string }[] = [
   { key: "archived", label: "アーカイブ" },
 ];
 
+type SortColumn = "status" | "title" | "category" | "city" | "updated";
+
+// 並べ替えの既定の向き。日付は新しい順、それ以外は名前順（昇順）から始める。
+const SORT_DEFAULT_DESC: Record<SortColumn, boolean> = {
+  status: false, title: false, category: false, city: false, updated: true,
+};
+
+// 状態は、工程の順（下書き → 公開申請待ち → 公開申請済み → 公開中 → アーカイブ）で並べる。
+const SORT_STAGE_ORDER: Record<PublishDisplayStage, number> = {
+  draft: 0, ready: 1, review: 2, published: 3, archived: 4,
+};
+
+/** 一覧の見出し。押すとその列で並べ替える（同じ列をもう一度押すと逆順）。 */
+function SortHeader({
+  column, label, sort, onSort, align,
+}: {
+  column: SortColumn;
+  label: string;
+  sort: { column: SortColumn; desc: boolean };
+  onSort: (next: { column: SortColumn; desc: boolean }) => void;
+  align?: "right";
+}) {
+  const active = sort.column === column;
+  // aria-sort は列（columnheader）に付ける属性なので、ボタンではなく外側の見出しに置く。
+  return (
+    <div role="columnheader" aria-sort={active ? (sort.desc ? "descending" : "ascending") : "none"} className={align === "right" ? "text-right" : ""}>
+    <button
+      type="button"
+      onClick={() => onSort({ column, desc: active ? !sort.desc : SORT_DEFAULT_DESC[column] })}
+      aria-label={`${label} で並べ替え`}
+      className={`flex items-center gap-1 !min-h-0 p-0 bg-transparent border-0 text-inherit font-inherit tracking-[inherit] uppercase cursor-pointer hover:opacity-100 ${
+        align === "right" ? "justify-end" : ""
+      } ${active ? "opacity-100 text-accent" : ""}`}
+    >
+      {label}
+      <span aria-hidden="true" className={active ? "" : "opacity-40"}>{active ? (sort.desc ? "▼" : "▲") : "▽"}</span>
+    </button>
+    </div>
+  );
+}
+
 const stageOf = (p: PropertyListItem): PublishStage =>
   publishStage({ status: p.status, publishRequestedAt: p.publishRequestedAt ?? null });
 
@@ -67,6 +108,7 @@ export default function PropertiesAdmin({
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PublishStage | "all">("all");
+  const [sort, setSort] = useState<{ column: SortColumn; desc: boolean }>({ column: "updated", desc: true });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
@@ -74,7 +116,7 @@ export default function PropertiesAdmin({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((p) => {
+    const rows = items.filter((p) => {
       if (statusFilter !== "all" && stageOf(p) !== statusFilter) return false;
       if (q) {
         const hay = `${p.title} ${p.id} ${p.city}`.toLowerCase();
@@ -82,7 +124,22 @@ export default function PropertiesAdmin({
       }
       return true;
     });
-  }, [items, query, statusFilter]);
+    // 2026-09-21 本人指示「これ、それぞれでソートできるように」。見出しを押すと、その列で並べ替える。
+    const collator = new Intl.Collator("ja");
+    const key = (p: PropertyListItem) =>
+      sort.column === "status" ? String(SORT_STAGE_ORDER[displayStageOf(p)])
+      : sort.column === "title" ? p.title || p.id
+      : sort.column === "category" ? CATEGORY_LABEL[p.category] || ""
+      : sort.column === "city" ? p.city || ""
+      : p.updatedAt || "";
+    return [...rows].sort((a, b) => {
+      const x = key(a), y = key(b);
+      // 空欄は、昇順でも降順でも最後に置く（「—」が先頭に固まると見づらい）。
+      if (!x !== !y) return x ? -1 : 1;
+      const d = collator.compare(x, y);
+      return sort.desc ? -d : d;
+    });
+  }, [items, query, statusFilter, sort]);
 
   const counts = useMemo(
     () => ({
@@ -250,11 +307,11 @@ export default function PropertiesAdmin({
               />
             )}
           </div>
-          <div>Status</div>
-          <div>Title</div>
-          <div>Category</div>
-          <div>City</div>
-          <div>Updated</div>
+          <SortHeader column="status" label="Status" sort={sort} onSort={setSort} />
+          <SortHeader column="title" label="Title" sort={sort} onSort={setSort} />
+          <SortHeader column="category" label="Category" sort={sort} onSort={setSort} />
+          <SortHeader column="city" label="City" sort={sort} onSort={setSort} />
+          <SortHeader column="updated" label="Updated" sort={sort} onSort={setSort} />
           <div className="text-right">Actions</div>
         </div>
 
