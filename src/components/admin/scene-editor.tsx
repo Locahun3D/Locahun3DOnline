@@ -39,7 +39,13 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
   const onMessage=(event:MessageEvent)=>{
    if(event.origin!==location.origin||event.source!==frame.current?.contentWindow)return;
    const data=event.data;
-   if(data?.type==='locahun:scene-editor-ready'){transportReady.current=true;load();}
+   // ビューアーは新しい文書になるたびに ready を送る。**その都度**読み込みを出し直す（2026-09-21）。
+   // ⚠ 本番の /viewer/scene-editor.html は拡張子なしのURLへ 307 で飛ぶ（Cloudflare の
+   //    静的配信の既定）。iframe は文書を2回作り、1回目の ready で送った読み込み指示は
+   //    差し替えで消える。1回だけ送る作りだと、2回目の文書は指示を受け取れず
+   //    「3DGSを読み込んでいます」のまま永久に止まる（本番で実測）。
+   //    新しい文書は何も読み込んでいないので、出し直しても二重取得にはならない。
+   if(data?.type==='locahun:scene-editor-ready'){transportReady.current=true;loadSent.current=false;load();}
    // 進んでいる間は打ち切らない（大きい3DGSでも、止まったときだけ5分で失敗にする）。
    if(data?.type==='locahun:scene-load-progress'&&data.requestId===loadId&&Number.isFinite(data.loaded)){clearTimeout(loadTimer);loadTimer=setTimeout(()=>setPhase('loadError'),300000);setDownload(data.total?`${mb(data.loaded)} / ${mb(data.total)} MB`:`${mb(data.loaded)} MB`);}
    if(['locahun:scene-ready','locahun:scene-load-error'].includes(data?.type)&&loadReply(event)){
