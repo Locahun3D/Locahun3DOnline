@@ -27,11 +27,12 @@ it('streams only the session source and preserves HTTP range semantics without b
  const part=await GET(new Request(url,{headers:{range:'bytes=1-3'}}));expect(part.status).toBe(206);expect(part.headers.get('content-range')).toBe('bytes 1-3/6');expect(await part.text()).toBe('bcd');expect(mocks.get).toHaveBeenLastCalledWith('assets/splat/scene.rad',{range:{offset:1,length:3}});
  const head=await HEAD(new Request(url,{method:'HEAD'}));expect(head.status).toBe(200);expect(await head.text()).toBe('');expect(head.headers.get('content-length')).toBe('6');
 });
-it('rejects unauthenticated, other actor, revoked access and changed raw snapshot before storage',async()=>{
+it('rejects unauthenticated, other actor, revoked access and a replaced scene source before storage; unrelated property edits keep streaming',async()=>{
  mocks.user.mockResolvedValue(null);expect((await GET(new Request(url))).status).toBe(401);
  mocks.user.mockResolvedValue({id:'other'});expect((await GET(new Request(url))).status).toBe(403);
  mocks.user.mockResolvedValue({id:'owner'});mocks.access.mockRejectedValue(new Error('forbidden'));expect((await GET(new Request(url))).status).toBe(403);
- mocks.access.mockResolvedValue({id:'owner',role:'admin'});sqlite.exec("UPDATE properties SET data=data||' '");expect((await GET(new Request(url))).status).toBe(409);expect(mocks.get).not.toHaveBeenCalled();
+ mocks.access.mockResolvedValue({id:'owner',role:'admin'});sqlite.prepare('UPDATE properties SET data=?,updated_at=?').run(JSON.stringify({...property,title:'edited elsewhere',updatedAt:'2026-09-19T00:00:01.000Z'}),'2026-09-19T00:00:01.000Z');expect((await GET(new Request(url))).status).toBe(200);mocks.get.mockClear();
+ sqlite.prepare('UPDATE properties SET data=?').run(JSON.stringify({...property,splatItems:[{id:'s',splatUrl:'/api/r2/assets/splat/other.rad'}]}));expect((await GET(new Request(url))).status).toBe(409);expect(mocks.get).not.toHaveBeenCalled();
 });
 it('rejects invalid ranges, foreign fetches and caller-supplied URLs',async()=>{
  for(const range of ['bytes=4-1','bytes=0-1,4-5','bytes=-0','bytes=999999999999999999999-'])expect((await GET(new Request(url,{headers:{range}}))).status).toBe(416);

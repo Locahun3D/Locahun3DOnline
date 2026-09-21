@@ -2,7 +2,7 @@ import {getCloudflareContext} from '@opennextjs/cloudflare';
 import {getCurrentUser} from '@/lib/dal';
 import {getD1} from '@/lib/d1';
 import {sceneEditSourceKey} from '@/lib/scene-edit-contract';
-import {SceneEditError,loadSceneEditSession,sceneEditSnapshot,sceneEditMatches} from '@/lib/scene-edit-session';
+import {SceneEditError,loadSceneEditSession,sceneEditSnapshot} from '@/lib/scene-edit-session';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 type ObjectInfo={size:number;httpEtag:string;body?:ReadableStream;range?:{offset?:number;length?:number}};
@@ -29,7 +29,10 @@ export async function GET(req:Request){
   const db=await getD1();if(!db)throw new SceneEditError(503,'storage_unavailable');
   const target=await loadSceneEditSession(db,params.get('sessionKey')!,actor.id);
   const snapshot=await sceneEditSnapshot(db,target.propertyId,target.sceneId);
-  if(!sceneEditMatches(snapshot,target))throw new SceneEditError(409,'scene_changed');
+  // 2026-09-21: 配信は「同じファイルのままか」だけを見る。読み込みは Range で分割して数十回に分けて取りに来るため、
+  // 途中で物件の別の欄が自動保存される（例: 回転プレビュー動画の撮り直し）と、残りが全部 409 になって読み込みが止まっていた。
+  // 上書き防止の厳密な照合（updated_at・全体ハッシュ）は、保存側（/api/scene-edit の reserve/attach）が引き続き行う。
+  if(snapshot.row.status!==target.status||snapshot.scene.splatUrl!==target.previousUrl)throw new SceneEditError(409,'scene_changed');
   const key=sceneEditSourceKey(target.previousUrl)!;
   const rangeHeader=req.headers.get('range'),range=rangeHeader?parseRange(rangeHeader):undefined;
   const {env}=await getCloudflareContext();const bucket=(env as unknown as {R2_ASSETS?:Bucket}).R2_ASSETS;

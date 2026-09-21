@@ -49,7 +49,7 @@ export function formatExpiryJst(iso: string): string {
 export const STUDIO_REVIEW_CHECKPOINTS = [
   "掲載内容（物件名・紹介文・住所・利用条件）",
   "料金",
-  "写真",
+  "写真（公式サイト等から引用している写真を、このページに掲載してよいか）",
   "設備",
 ] as const;
 

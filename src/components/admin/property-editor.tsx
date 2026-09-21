@@ -145,6 +145,8 @@ export default function PropertyEditor({
   //   常にONで良く「選ばせる必要がない」という判断で常時適用に変更（本人指示）。
   //   3秒の待ちよりボケた動画を作り直す方がはるかに高くつく。
   const captureWarmupMs = 3000;
+  const startCaptureRef = useRef(capture.startCapture);
+  useEffect(() => { startCaptureRef.current = capture.startCapture; }, [capture.startCapture]);
 
   const form = useForm<Property>({
     // zod's input type (fields with .default() are optional) differs from the
@@ -270,6 +272,9 @@ export default function PropertyEditor({
   const inlineSceneKeysRef = useRef(new Set<string>());
   const sceneMessagesRef = useRef(new Set<string>());
   const sceneRefreshExpectedRef = useRef<string | null>(null);
+  // 3DGS編集を保存したシーン。物件の再読込が済んだら回転プレビュー動画を撮り直す（2026-09-21）。
+  // 編集で初期視点や置いた物が変わるので、古い動画のままだと一覧と中身が食い違う。
+  const sceneRecaptureRef = useRef(new Set<string>());
   useEffect(() => {
     const expected = sceneRefreshExpectedRef.current;
     const decision = sceneRefreshDecision(expected, baseUpdatedAtRef.current, initial.updatedAt,
@@ -282,6 +287,12 @@ export default function PropertyEditor({
       return;
     }
     reset(initial);
+    for (const sceneId of sceneRecaptureRef.current) {
+      const idx = (initial.splatItems ?? []).findIndex(item => item.id === sceneId);
+      const url = idx >= 0 ? initial.splatItems?.[idx]?.splatUrl : "";
+      if (url) startCaptureRef.current(url, initial.id, idx, captureWarmupMs);
+    }
+    sceneRecaptureRef.current.clear();
     // reset notifies RHF watch synchronously; discard that programmatic debounce while frozen.
     clearTimeout(autoSaveTimer.current);
     autoSavePendingRef.current = false;
@@ -307,6 +318,7 @@ export default function PropertyEditor({
         freeze: () => { conflictRef.current = true; clearTimeout(autoSaveTimer.current); },
         conflict: stopForConflict,
         reload: () => {
+          if (typeof event.data.sceneId === "string") sceneRecaptureRef.current.add(event.data.sceneId);
           autoSavePendingRef.current = false;
           pendingSaveRef.current = false;
           sceneRefreshExpectedRef.current = event.data.updatedAt;
@@ -369,6 +381,7 @@ export default function PropertyEditor({
     autoSavePendingRef.current = false;
     pendingSaveRef.current = false;
     sceneRefreshExpectedRef.current = data.updatedAt;
+    sceneRecaptureRef.current.add(data.sceneId);
     router.refresh();
   };
   const revertSceneVersion = async (idx: number, versionKey: string) => {

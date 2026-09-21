@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from 'react';
 import {createSceneReplyGate,parseSceneSession,saveSceneArchive,sceneRequest,SceneHttpError,type SceneSession} from '@/lib/scene-edit-client';
 import styles from './scene-editor.module.css';
 
-const messages:Record<string,string>={loading:'3DGSを読み込んでいます',ready:'編集できます',exporting:'編集内容をまとめています',hashing:'保存データを確認しています',reserving:'保存先を準備しています',uploading:'アップロードしています',verifying:'保存した内容を照合しています',attaching:'シーンへ反映しています',saved:'保存しました',savedSessionError:'保存しました。次の編集を保存する前に、接続を再確認してください。',error:'保存できませんでした。編集内容はこの画面に残っています。もう一度保存してください。',expired:'認証または編集セッションの期限が切れました。この画面を閉じずにログイン状態を確認してください。',conflict:'他の画面で物件が更新されました。上書きせず停止しました。',cancelled:'保存を中断しました。反映済みか不明な場合は物件を別画面で確認してください。',loadError:'読み込みが完了しなかったため保存できません。物件編集から開き直してください。',tooLarge:'この3DGSはオンライン編集できるサイズ（1GB）を超えています。ファイルを軽くしてから差し替えるか、管理者に相談してください。',publishedAdminOnly:'公開中の物件は管理者のみ編集・保存できます。下書きに戻すか、管理者に依頼してください。'};
+const messages:Record<string,string>={loading:'3DGSを読み込んでいます',ready:'編集できます',exporting:'編集内容をまとめています',hashing:'保存データを確認しています',reserving:'保存先を準備しています',uploading:'アップロードしています',verifying:'保存した内容を照合しています',attaching:'シーンへ反映しています',saved:'保存しました',refreshing:'保存先の状態を確認しています',savedSessionError:'保存しました。次の編集を保存する前に、接続を再確認してください。',error:'保存できませんでした。編集内容はこの画面に残っています。もう一度保存してください。',expired:'認証または編集セッションの期限が切れました。この画面を閉じずにログイン状態を確認してください。',conflict:'他の画面で物件が更新されました。上書きせず停止しました。',cancelled:'保存を中断しました。反映済みか不明な場合は物件を別画面で確認してください。',loadError:'読み込みが完了しなかったため保存できません。物件編集から開き直してください。',tooLarge:'この3DGSはオンライン編集できるサイズ（1GB）を超えています。ファイルを軽くしてから差し替えるか、管理者に相談してください。',publishedAdminOnly:'公開中の物件は管理者のみ編集・保存できます。下書きに戻すか、管理者に依頼してください。'};
 
 export type SceneAttached={propertyId:string;sceneId:string;key:string;updatedAt:string};
 
@@ -22,6 +22,8 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
  const saveRef=useRef<()=>void>(()=>{});
  const validRef=useRef(false);
  const [phase,setPhase]=useState('loading'),[ready,setReady]=useState(false),[busy,setBusy]=useState(false);
+ // 読み込みの進み具合（MB）と、最後に保存できた時刻。「本当に保存されたか」を画面で確かめられるようにする（2026-09-21）。
+ const [download,setDownload]=useState(''),[savedAt,setSavedAt]=useState('');
  useEffect(()=>{
   const abort=new AbortController();controller.current=abort;
   let loadId='',loadTimer:ReturnType<typeof setTimeout>|undefined;
@@ -33,10 +35,13 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
    frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId:loadId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName},location.origin);
    loadTimer=setTimeout(()=>setPhase('loadError'),300000);
   };
+  const mb=(n:number)=>Math.round(n/1048576);
   const onMessage=(event:MessageEvent)=>{
    if(event.origin!==location.origin||event.source!==frame.current?.contentWindow)return;
    const data=event.data;
    if(data?.type==='locahun:scene-editor-ready'){transportReady.current=true;load();}
+   // 進んでいる間は打ち切らない（大きい3DGSでも、止まったときだけ5分で失敗にする）。
+   if(data?.type==='locahun:scene-load-progress'&&data.requestId===loadId&&Number.isFinite(data.loaded)){clearTimeout(loadTimer);loadTimer=setTimeout(()=>setPhase('loadError'),300000);setDownload(data.total?`${mb(data.loaded)} / ${mb(data.total)} MB`:`${mb(data.loaded)} MB`);}
    if(['locahun:scene-ready','locahun:scene-load-error'].includes(data?.type)&&loadReply(event)){
     clearTimeout(loadTimer);validRef.current=data.type==='locahun:scene-ready';setReady(validRef.current);setPhase(validRef.current?'ready':'loadError');
     if(validRef.current){frame.current?.focus();frame.current?.contentWindow?.focus();}
@@ -61,6 +66,12 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
   const abort=new AbortController();controller.current=abort;
   const requestId=crypto.randomUUID(),atExport=generation.current;
   try {
+   // 開いている間に物件の別の欄が保存されていることがある（回転動画の撮り直し・物件編集の自動保存）。
+   // このシーンのファイルが同じままなら、最新の状態に結び直してから保存する。違うファイルになっていたら止める。
+   setPhase('refreshing');
+   const fresh=parseSceneSession(await sceneRequest({action:'target',propertyId,sceneId},abort.signal),{propertyId,sceneId});
+   if(fresh.target.previousUrl!==session.current.target.previousUrl){setPhase('conflict');setReady(false);return;}
+   session.current=fresh;setPhase('exporting');
    const archive=await new Promise<Blob>((resolve,reject)=>{
     const child=frame.current?.contentWindow;
     if(!child){reject(Error('Viewer unavailable'));return;}
@@ -74,6 +85,7 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
    const result=await saveSceneArchive({target:session.current.target,archive:new File([archive],'scene.zip',{type:'application/zip'}),origin:location.origin,storageOrigin:session.current.storageOrigin,revision:revision.current++,signal:abort.signal,onPhase:setPhase});
    setPhase(result.phase);
    if(result.attached){
+    setSavedAt(new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}));
     if(atExport===generation.current){dirty.current=false;frame.current?.contentWindow?.postMessage({type:'locahun:scene-saved',requestId},location.origin);}
     if(onAttached)onAttached({propertyId,sceneId,key:result.key,updatedAt:result.updatedAt});
     else window.opener?.postMessage({type:'locahun:scene-attached',propertyId,sceneId,key:result.key,updatedAt:result.updatedAt},location.origin);
@@ -98,7 +110,8 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
    session.current=next;setReady(true);setPhase('ready');
   }catch{setPhase('expired');}finally{busyRef.current=false;setBusy(false);}
  };
- const status=phase==='edited'?'未保存の変更があります':messages[phase]||phase;
+ const status=phase==='edited'?'未保存の変更があります':phase==='loading'&&download?`${messages.loading}（${download}）`:phase==='saved'?`保存しました（${savedAt}）。アップロードを照合済みです`:messages[phase]||phase;
+ const tone=phase==='saved'?styles.ok:phase==='edited'?styles.warn:['error','conflict','expired','loadError','tooLarge','publishedAdminOnly','cancelled','savedSessionError'].includes(phase)?styles.bad:'';
  const close=()=>{if((dirty.current||busyRef.current)&&!confirm('未保存の編集があります。閉じますか？'))return;onClose?.();};
  return <section className={`${inline?'':'theme-online '}${styles.root} ${inline?styles.inline:styles.window}`}>
   <header className={styles.bar}>
@@ -110,7 +123,8 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
        if(window.opener){event.preventDefault();dirty.current=false;busyRef.current=false;window.close();}
       }}>× 閉じて物件編集に戻る</a>}
    <strong className={styles.title}>{label||'3DGS'}の編集</strong>
-   <span className={styles.status} role="status" aria-live="polite">{status}</span>
+   <span className={`${styles.status} ${tone}`} role="status" aria-live="polite">{status}</span>
+   {savedAt&&phase!=='saved'&&<span className={styles.last}>最終保存 {savedAt}</span>}
    <span className={styles.actions}>
     {['expired','savedSessionError'].includes(phase)&&<button type="button" disabled={busy} onClick={()=>void reconnect()}>接続を再確認</button>}
     {busy&&phase!=='attaching'&&<button type="button" onClick={()=>controller.current?.abort()}>中断</button>}
