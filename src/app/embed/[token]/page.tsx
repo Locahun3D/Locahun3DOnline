@@ -89,7 +89,10 @@ export default async function EmbedPage({
     /* 2026-09-21: 貼った先のサイトの中でそのまま動かす（Matterport と同じ）。
        以前は物件ページと同じ ViewerGate を置いており、押すと**新しいタブ**が開いた。
        埋め込みとしては「サイトの中で歩ける」ようにならないため、専用の部品に替えた。 */
-    <div className="theme-online flex flex-col h-[100dvh]">
+    /* 高さは実画面基準（globals.css 冒頭の規約2）。素の 100dvh だと html の zoom
+       （720–1199px で 0.8 / 1200px以上で 0.9）が掛からない分だけ内容が縮み、
+       貼り先の iframe の下端に黒い帯が残る（実測: 幅992pxの16:9 iframe で約115px）。 */
+    <div className="theme-online flex flex-col h-[calc(100dvh/var(--z))]">
       <div className="flex-1 min-h-0">
         <EmbedPlayer
           splatUrl={splatUrl}
