@@ -82,26 +82,20 @@ interface CaptureFrame {
  * （従来の埋め込みと同じ作り）。ポップアップが塞がれている場合は、従来どおり編集画面の中で走らせる。
  */
 function openCaptureWindow(): Window | null {
-  // ⚠ 2026-09-21 本番で確認: 別ウィンドウは**前面に出ていないと1フレームも録画できない**
-  //    （「録画中… 0%(0/240)」のまま進まない）。Chrome は他のウィンドウに隠れた
-  //    ウィンドウの描画を止めるため、WebGL キャンバスから映像が出てこない。
-  //    編集画面の中の枠なら、そのタブを開いている限り描画が続く（従来どおり動く）。
-  //    そのため既定は編集画面の中に戻し、別ウィンドウは明示的に選んだときだけにする
-  //    （録画中そのウィンドウを前面に置いておける場合のみ有効）。
-  //    URL に ?capturewindow=1 を付けるか、localStorage の l3d-capture-window を 1 にする。
   try {
-    const params = new URLSearchParams(location.search);
-    const wanted = params.get("capturewindow") === "1"
-      || (() => { try { return localStorage.getItem("l3d-capture-window") === "1"; } catch { return false; } })();
-    if (!wanted) return null;
     const width = Math.min(960, Math.max(480, screen.availWidth - 80));
     const height = Math.round((width * FRAME_H) / FRAME_W) + 64;
     const w = window.open("", "locahun-preview-capture", `popup,width=${width},height=${height}`);
     if (!w) return null;
     w.document.title = "プレビュー動画を生成中 — ロケハン3D";
     w.document.body.style.cssText = "margin:0;background:#111;color:#ffb454;font:12px/1.6 ui-monospace,monospace;overflow:hidden;";
+    // ⚠ 2026-09-21 本番で確認: 隠れたウィンドウは Chrome が描画を止めるため、
+    //    このウィンドウが後ろに回ると1フレームも録画されない（0/240 のまま）。
+    //    画面内の枠で録画する従来の方法でも、Chrome 自体が他のアプリの後ろだと同じ。
+    //    止めようがないので、隠さないよう案内し、進まないときは下の見張りが知らせる。
     w.document.body.innerHTML =
-      '<div id="cap-msg" style="padding:8px 12px;letter-spacing:.08em;">プレビュー動画を生成しています。終わると自動で閉じます。</div>';
+      '<div id="cap-msg" style="padding:8px 12px;letter-spacing:.08em;">プレビュー動画を生成しています。終わると自動で閉じます。<br>' +
+      '<span style="color:#ff9a8a;">このウィンドウを前面のままにしてください（隠れると録画が止まります）。</span></div>';
     return w;
   } catch {
     return null;
@@ -389,6 +383,7 @@ export function usePreviewCapture(): UseCaptureResult {
       frameRef.current = frame;
 
       const cleanup = () => {
+        clearInterval(stallWatch);
         window.removeEventListener("message", handler);
         frame.popup?.removeEventListener("message", handler);
         destroyCaptureFrame(frame);
@@ -396,6 +391,21 @@ export function usePreviewCapture(): UseCaptureResult {
         if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
         busyRef.current = false;
       };
+
+      // 録画が進んでいるかの見張り（2026-09-21）。Chrome は隠れたウィンドウの描画を
+      // 止めるので、その間は1フレームも録れない。15分の打ち切りまで黙って待つと
+      // 「動画が更新されない」としか見えないため、20秒動かなかった時点で理由を出す。
+      let lastProgressText = "";
+      let lastProgressAt = Date.now();
+      const stallWatch = setInterval(() => {
+        if (abortRef.current || busyRef.current === false) return;
+        if (Date.now() - lastProgressAt < 20_000) return;
+        setProgress(
+          frame.popup
+            ? "録画が進んでいません。録画ウィンドウを前面にしてください（隠れると Chrome が描画を止めます）。"
+            : "録画が進んでいません。このタブと Chrome のウィンドウを前面にしてください。",
+        );
+      }, 5_000);
 
       // ⚠ Chrome はウィンドウが他のウィンドウに隠れている（occluded）と
       // rAF を絞るため、キャプチャ中はこのタブを前面に表示しておくこと。
@@ -428,6 +438,11 @@ export function usePreviewCapture(): UseCaptureResult {
           setState(d.phase === "recording" ? "recording" : "loading");
           if (d.pct != null) setProgressPct(d.pct);
           if (d.text) setProgress(d.text);
+          // 進捗が動いた＝描画されている。見張りの時計を進める。
+          if (d.text !== lastProgressText) {
+            lastProgressText = d.text ?? "";
+            lastProgressAt = Date.now();
+          }
         }
 
         if (d.type === "capture-started") {
@@ -438,6 +453,7 @@ export function usePreviewCapture(): UseCaptureResult {
 
         if (d.type === "capture-done" && isBlobLike(d.blob)) {
           clearTimeout(timeout);
+          clearInterval(stallWatch);
           if (abortRef.current) { cleanup(); return; }
           // 録画は完了 — レンダリング用 iframe はもう不要なので撤去
           window.removeEventListener("message", handler);
