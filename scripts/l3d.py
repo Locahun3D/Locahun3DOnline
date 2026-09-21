@@ -9,6 +9,7 @@
   python scripts/l3d.py official <slug> ...         # result.json を下書き物件へ反映（--swap-cover / --rollback）
   python scripts/l3d.py check                       # 公開前チェック
   python scripts/l3d.py documents <slug> --blueprint "ラベル=画像" ...   # 図面を平面図へ追加
+  python scripts/l3d.py sell <slug> [--allow-published]   # データ販売を有効化（ZIP作成→R2→販売設定）
 
 1行の単純なコマンドにしてあるのは、Claude Code の許可ルール（.claude/settings.local.json の
 `Bash(python scripts/l3d.py *)`）に一致させ、自動モードのまま最後まで通すため（2026-09-20）。
@@ -35,6 +36,7 @@ TOOLS = {
     "documents": "add_documents.py",       # 先方の図面などを下書き物件の平面図へ追加（既存は消さない）
     "new": "new_draft.py",                 # カレンダーの撮影予定から下書きを先に作る（既存 id は上書きしない）
     "photos": "replace_photos.py",         # スキャン切り出しのカバー・ギャラリーを公式の実写へ入れ替える
+    "sell": "sell_data.py",                # 3Dデータ販売を有効にする（販売用ZIPを作って R2 へ／公開中は --allow-published）
     "english": "apply_english.py",          # 物件の英語欄（…En）を en.json から埋める（空欄のみ。--force で上書き）
 }
 R2_KEYS = ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_ENDPOINT", "R2_BUCKET")
