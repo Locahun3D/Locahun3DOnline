@@ -6,6 +6,8 @@ import {getUploadMode,getWorkflowStorageOrigin,createWorkflowUpload,statWorkflow
 import {reserveWorkflowUpload} from '@/lib/workflow-upload-reservation';
 import {sceneEditMaxSourceBytes,sceneEditRequestSchema,sceneEditTargetSchema,sceneEditDigestSchema,sceneEditSourceKey,type SceneEditTarget,type SceneEditDigest,type SceneEditReceipt} from '@/lib/scene-edit-contract';
 import {attachSceneEditConditionally,revertSceneEditConditionally} from '@/lib/scene-edit-attachment';
+import {readStoredRadEntry} from '@/lib/zip-stored-entry';
+import {getCloudflareContext} from '@opennextjs/cloudflare';
 import {SCENE_EDIT_PURPOSE,SceneEditError,sceneEditPublishPolicy,sceneEditAccess,sceneEditSnapshot,sceneEditMatches,sceneEditHash,loadSceneEditSession} from '@/lib/scene-edit-session';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -37,8 +39,26 @@ export async function POST(req:Request){
    if(source!.size>sceneEditMaxSourceBytes())throw new SceneEditError(413,'source_too_large');
    const target:SceneEditTarget=sceneEditTargetSchema.parse({propertyId:input.propertyId,sceneId:input.sceneId,expectedUpdatedAt:snapshot.row.updated_at,previousUrl:snapshot.scene.splatUrl,propertyRevision:sceneEditHash(snapshot.row.data),expiresAt:new Date(Date.now()+24*60*60*1000).toISOString(),sessionKey:randomBytes(32).toString('hex'),status:snapshot.row.status});
    const storageOrigin=new URL(await getWorkflowStorageOrigin()).origin;
+   // 段階読み込みできるか（2026-09-21）。元が .rad ならそのまま、ZIP なら中の無圧縮 .rad を見る。
+   // できる場合は、編集画面が ZIP 全体を落とさずに Range で少しずつ読む。
+   let streamFileName='';
+   const streamKey=sceneEditSourceKey(snapshot.scene.streamUrl||snapshot.scene.splatUrl)||sourceKey;
+   if(/\.rad$/i.test(streamKey))streamFileName=streamKey.split('/').at(-1)!;
+   else if(/\.zip$/i.test(streamKey)){
+    try{
+     const {env}=await getCloudflareContext();
+     const bucket=(env as unknown as {R2_ASSETS?:{get(key:string,options?:{range:{offset:number;length:number}}):Promise<{body?:ReadableStream}|null>}}).R2_ASSETS;
+     if(bucket){
+      const entry=await readStoredRadEntry(async(offset,length)=>{
+       const head=await bucket.get(streamKey,{range:{offset,length}});
+       return head?.body?new Uint8Array(await new Response(head.body).arrayBuffer()):null;
+      });
+      if(entry)streamFileName=entry.name;
+     }
+    }catch{/* 判定できないときは ZIP 全体を落とす従来どおりの読み込みにする */}
+   }
    await db.prepare('INSERT INTO workflow_uploads(job_key,binding,asset_id) VALUES(?,?,?)').bind(target.sessionKey,JSON.stringify({purpose:SCENE_EDIT_PURPOSE,kind:'target',actorId:actor.id,target}),'se_target_'+target.sessionKey).run();
-   return reply({target,sourceUrl:'/api/scene-edit/source?sessionKey='+target.sessionKey,fileName:sourceKey.split('/').at(-1),storageOrigin});
+   return reply({target,sourceUrl:'/api/scene-edit/source?sessionKey='+target.sessionKey,fileName:sourceKey.split('/').at(-1),storageOrigin,streamFileName});
   }
   if(input.action==='revert'){
    const user=await sceneEditAccess(input.propertyId);

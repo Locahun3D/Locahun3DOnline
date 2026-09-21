@@ -3,6 +3,7 @@ import {getCurrentUser} from '@/lib/dal';
 import {getD1} from '@/lib/d1';
 import {sceneEditSourceKey} from '@/lib/scene-edit-contract';
 import {SceneEditError,loadSceneEditSession,sceneEditSnapshot} from '@/lib/scene-edit-session';
+import {readStoredRadEntry,mapRangeIntoEntry} from '@/lib/zip-stored-entry';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 type ObjectInfo={size:number;httpEtag:string;body?:ReadableStream;range?:{offset?:number;length?:number}};
@@ -39,12 +40,33 @@ export async function GET(req:Request){
   const known=scene.splatUrl===target.previousUrl||scene.streamUrl===target.previousUrl||!!scene.editVersions?.some(v=>v.url===target.previousUrl);
   if(snapshot.row.status!==target.status||!known)throw new SceneEditError(409,'scene_changed');
   const wantsStream=params.get('ref')==='stream';
-  if(wantsStream&&!scene.streamUrl)return error('source_missing',404);
-  const key=sceneEditSourceKey(wantsStream?scene.streamUrl!:target.previousUrl);
+  const key=sceneEditSourceKey(wantsStream&&scene.streamUrl?scene.streamUrl:target.previousUrl);
   if(!key)return error('source_missing',404);
   const rangeHeader=req.headers.get('range'),range=rangeHeader?parseRange(rangeHeader):undefined;
   const {env}=await getCloudflareContext();const bucket=(env as unknown as {R2_ASSETS?:Bucket}).R2_ASSETS;
   if(!bucket)throw new SceneEditError(503,'storage_unavailable');
+  // ref=stream で、元が ZIP のとき: 中に無圧縮で入っている .rad の部分だけを返す（2026-09-21）。
+  // ビューアー用の ZIP は .rad を無圧縮で入れてあるので、ZIP 全体を落とさずに段階読み込みできる。
+  if(wantsStream&&/\.zip$/i.test(key)){
+   const entry=await readStoredRadEntry(async(offset,length)=>{
+    const head=await bucket.get(key,{range:{offset,length}});
+    return head?new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer()):null;
+   });
+   if(!entry)return error('source_missing',404);
+   const window=mapRangeIntoEntry(entry,range);
+   if(window.length<1)throw new SceneEditError(416,'invalid_range');
+   const part=await (req.method==='HEAD'?bucket.head(key):bucket.get(key,{range:window}));
+   if(!part)return error('source_missing',404);
+   const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':part.httpEtag,'X-Content-Type-Options':'nosniff','Content-Length':String(range?window.length:entry.size),'X-Stream-Name':entry.name});
+   if(req.method==='HEAD'){await part.body?.cancel();return new Response(null,{status:200,headers});}
+   if(range){
+    const from=window.offset-entry.offset;
+    headers.set('Content-Range',`bytes ${from}-${from+window.length-1}/${entry.size}`);
+    return new Response(part.body as ReadableStream,{status:206,headers});
+   }
+   return new Response(part.body as ReadableStream,{status:200,headers});
+  }
+  if(wantsStream&&!scene.streamUrl)return error('source_missing',404);
   const object=await (req.method==='HEAD'?bucket.head(key):bucket.get(key,range?{range}:undefined));
   if(!object)return error('source_missing',404);
   const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':object.httpEtag,'X-Content-Type-Options':'nosniff'});

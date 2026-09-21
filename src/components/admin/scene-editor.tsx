@@ -32,7 +32,7 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
    if(!transportReady.current||!session.current||loadSent.current)return;
    loadSent.current=true;loadId=crypto.randomUUID();
    loadReply=createSceneReplyGate(location.origin,frame.current?.contentWindow,loadId,['locahun:scene-ready','locahun:scene-load-error']);
-   frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId:loadId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName},location.origin);
+   frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId:loadId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName,streamFileName:session.current.streamFileName},location.origin);
    loadTimer=setTimeout(()=>setPhase('loadError'),300000);
   };
   const mb=(n:number)=>Math.round(n/1048576);
