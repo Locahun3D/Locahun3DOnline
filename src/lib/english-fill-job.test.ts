@@ -19,9 +19,9 @@ function fakeDb(rows: { id: string; status: string; updated_at: string; data: st
         async all() { return { results: rows }; },
         async run() {
           writes.push(args);
-          const row = rows.find((r) => r.id === args[2]);
-          const ok = !!row && row.updated_at === args[3] && row.data === args[4];
-          if (ok && row) { row.data = String(args[0]); row.updated_at = String(args[1]); }
+          const row = rows.find((r) => r.id === args[1]);
+          const ok = !!row && row.updated_at === args[2] && row.data === args[3];
+          if (ok && row) row.data = String(args[0]);
           return { meta: { changes: ok ? 1 : 0 } };
         },
       };
@@ -51,6 +51,9 @@ describe("英語の自動補完", () => {
     expect(r.report[0].filled?.length).toBeGreaterThan(0);
     const saved = JSON.parse(String(db.writes[0][0]));
     expect(Object.values(saved.amenityNotesEn).filter(Boolean).length).toBeGreaterThan(0);
+    // 更新日時は進めない（編集画面を開いたままの人の保存を止めない）
+    expect(saved.updatedAt).toBe(p.updatedAt);
+    expect(db.writes[0].length).toBe(4);
   });
 
   it("直近5分に更新された物件は触らない（編集中の保存と衝突させない）", async () => {

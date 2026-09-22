@@ -30,3 +30,11 @@ describe("訳せなかった理由の表示", () => {
     expect(translationFailureText()).not.toContain("ANTHROPIC_API_KEY");
   });
 });
+
+describe("キーが無効なときの表示", () => {
+  it("401/403 は『待って再実行』ではなく、キーの設定し直しを案内する", () => {
+    const t = translationFailureText({ kind: "http", status: 401, message: "authentication_error: invalid x-api-key" });
+    expect(t).toContain("キーが無効");
+    expect(t).not.toContain("少し待って");
+  });
+});

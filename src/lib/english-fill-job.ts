@@ -16,7 +16,7 @@ import { translatePropertyWithKey } from "./ai-translate-core";
  *
  * 安全策:
  *  - 直近 QUIET_MS に更新された物件は触らない（編集画面を開いている人の保存と衝突させない）。
- *  - 書くのは英語欄だけ。読んだ時点の updated_at と data が一致するときだけ書く（条件付き更新）。
+ *  - 書くのは英語欄だけ。読んだ時点の updated_at と data が一致するときだけ書く（条件付き更新）。更新日時は変えない。
  *  - 1回に訳すのは MAX_PER_RUN 件まで（時間と費用の上限）。
  */
 export const MAX_PER_RUN = 3;
@@ -58,11 +58,13 @@ export async function runEnglishFill(
       report.push({ id: row.id, left, failure: failure ? (failure.kind === "http" ? `http ${failure.status} ${failure.message ?? ""}`.trim() : failure.kind) : "none" });
       continue;
     }
-    const updatedAt = new Date(now).toISOString();
-    const next = JSON.stringify({ ...property, updatedAt });
+    // 更新日時（updated_at / updatedAt）は進めない（2026-09-23）。進めると、編集画面を開いたまま
+    // 置いていた人の次の保存が「他の画面で更新されました」で止まる。英語欄だけを静かに足す。
+    // 編集中の保存で英語欄が空に戻っても、編集が終われば次の回にまた埋まる。
+    const next = JSON.stringify({ ...property, updatedAt: p.updatedAt });
     const res = await db
-      .prepare("UPDATE properties SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?")
-      .bind(next, updatedAt, row.id, row.updated_at, row.data)
+      .prepare("UPDATE properties SET data = ? WHERE id = ? AND updated_at = ? AND data = ?")
+      .bind(next, row.id, row.updated_at, row.data)
       .run();
     if (!res.meta?.changes) {
       report.push({ id: row.id, skipped: "changed_meanwhile" });

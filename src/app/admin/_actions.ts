@@ -523,13 +523,23 @@ export async function requestReviewAction(
     mail = { mode: sent.status, to: sent.to, approveKeyHash };
   }
 
-  const saved = await repo.upsert(
-    enterReview(translated, {
-      by: user.email || user.name,
-      now: new Date().toISOString(),
-      mail,
-    }),
-  );
+  // 2026-09-23: メール送信には数秒かかる。その間に別の保存（エディターの自動保存など）が入って
+  // いたら、翻訳前の内容で上書きせず、最新の保存内容に申請の記録だけを入れる（英語欄は定期処理が埋める）。
+  const flowOpts = { by: user.email || user.name, now: new Date().toISOString(), mail };
+  let saved: Property;
+  try {
+    const latest = await repo.get(parsed.id);
+    const base = latest && latest.updatedAt !== existing.updatedAt ? latest : translated;
+    saved = await repo.upsert(enterReview(base, flowOpts));
+  } catch {
+    if (mail.mode === "sent") {
+      return {
+        ok: false,
+        error: `スタジオへの確認メールは送信しましたが、申請の記録を保存できませんでした（メールの承認ボタンは使えません）。もう一度「申請メールを送る」を押してください（${mail.to} に2通目が届きます）。`,
+      };
+    }
+    return { ok: false, error: "申請の記録を保存できませんでした。もう一度押してください。" };
+  }
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${parsed.id}/edit`);
   return {
@@ -581,8 +591,10 @@ export async function resendStudioReviewMailAction(id: string): Promise<FlowOk |
     resend: !!existing.publishFlow.studioNotifiedAt,
   });
   if (sent.status === "failed") return { ok: false, error: sent.error };
+  // 送信中に別の保存が入っていても消さないよう、最新の保存内容に送信の記録だけを足す（2026-09-23）。
+  const latest = (await repo.get(id)) ?? existing;
   const saved = await repo.upsert(
-    recordStudioNotified(existing, {
+    recordStudioNotified(latest, {
       now: new Date().toISOString(),
       mail: { mode: sent.status, to: sent.to, approveKeyHash: approve.hash },
     }),

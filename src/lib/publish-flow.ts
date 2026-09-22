@@ -167,6 +167,9 @@ export function translationFailureText(failure?: TranslateFailure): string {
     case "no_key":
       return "自動翻訳の設定（ANTHROPIC_API_KEY）が本番にありません。管理者に設定を依頼してください。";
     case "http":
+      if (failure.status === 401 || failure.status === 403) {
+        return `自動翻訳の API キーが無効です（HTTP ${failure.status}）。管理者が本番の ANTHROPIC_API_KEY を新しいキーに設定し直すまで、自動翻訳はできません。`;
+      }
       return `自動翻訳の API がエラーを返しました（HTTP ${failure.status}${failure.message ? `: ${failure.message}` : ""}）。少し待ってもう一度押してください。`;
     case "truncated":
       return "訳文が長すぎて途中で切れました。説明文を短くするか、英語欄を手で入力してください。";
