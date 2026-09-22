@@ -68,12 +68,21 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
   };
   const unload=(event:BeforeUnloadEvent)=>{if(dirty.current||busyRef.current)event.preventDefault();};
   window.addEventListener('message',onMessage);window.addEventListener('beforeunload',unload);
+  // 2026-09-22: 3D の枠はサーバーで組み立てた HTML に最初から入っているため、ビューアーが先に
+  // 読み込み終わって ready を送り、この受け口が置かれる前に消えることがある（キャッシュから一瞬で
+  // 開いたとき。本番で「3DGSを読み込んでいます」のまま止まった原因）。同じオリジンなので、
+  // ビューアーがもう待ち受けているかを直接見る。見えたら ready を受けたのと同じに扱う。
+  const readyPoll=setInterval(()=>{
+   let listening=false;try{listening=!!(frame.current?.contentWindow as (Window&{onlineSceneEditor?:unknown})|null|undefined)?.onlineSceneEditor;}catch{/* 別オリジンなら見えない＝ready を待つ */}
+   if(listening&&!transportReady.current){transportReady.current=true;loadSent.current=false;load();}
+   if(transportReady.current)clearInterval(readyPoll);
+  },300);
   void sceneRequest({action:'target',propertyId,sceneId},abort.signal).then(value=>{
    if(abort.signal.aborted)return;
    const result=parseSceneSession(value,{propertyId,sceneId});
    session.current=result;load();
   }).catch(error=>{if(abort.signal.aborted)return;setPhase(error instanceof SceneHttpError&&error.code==='source_too_large'?'tooLarge':error instanceof SceneHttpError&&error.code==='published_admin_only'?'publishedAdminOnly':'loadError');});
-  return ()=>{abort.abort();controller.current?.abort();clearTimeout(loadTimer);clearInterval(resendTimer);window.removeEventListener('message',onMessage);window.removeEventListener('beforeunload',unload);};
+  return ()=>{abort.abort();controller.current?.abort();clearTimeout(loadTimer);clearInterval(resendTimer);clearInterval(readyPoll);window.removeEventListener('message',onMessage);window.removeEventListener('beforeunload',unload);};
  },[propertyId,sceneId]);
 
  const save=async()=>{

@@ -27,6 +27,11 @@ describe("3DGS編集の受け渡し", () => {
     expect(src).toContain("loadIds.has(data.requestId)");
   });
 
+  it("受け口を置く前に来た ready を取りこぼしても、ビューアーが待ち受けていれば読み込みを始める", () => {
+    expect(src).toContain("?.onlineSceneEditor;");
+    expect(src).toMatch(/listening&&!transportReady\.current\)\{transportReady\.current=true;loadSent\.current=false;load\(\);\}/);
+  });
+
   it("読み込み指示はシーンの読み込み先を必ず添える", () => {
     expect(src).toContain("type:'locahun:scene-load'");
     expect(src).toContain("sourceUrl:session.current.sourceUrl");
