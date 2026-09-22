@@ -58,3 +58,46 @@ export function mapRangeIntoEntry(
   const length = Math.min(range.length ?? entry.size - start, entry.size - start);
   return { offset: entry.offset + start, length };
 }
+
+/**
+ * 3DGS 本体のすぐ後ろに入っている project.json を読む（2026-09-21）。
+ *
+ * パイプラインのビューアー用 ZIP は「.rad → project.json」の順に入っており、project.json に
+ * 方角合わせ（本体の回転）・初期視点・シーン名が書いてある。編集画面が本体だけを段階読み込みで
+ * 開くと、これを捨てて回転0・名前＝ファイル名のシーンを作ってしまい、保存でそのまま上書きされて
+ * いた（歌舞伎町ゲートで方角合わせ 53.6° が 0° に戻った原因）。
+ *
+ * 中央ディレクトリは読まず、本体の直後のローカルヘッダだけを見る。無圧縮と deflate の両方に対応。
+ * 形が想定外（別名・データ記述子つき・大きすぎる）なら null を返し、呼び出し側は従来どおりにする。
+ */
+export async function readProjectJsonAfter(
+  read: RangeReader,
+  entry: StoredEntry,
+  maxBytes = 256 * 1024,
+): Promise<string | null> {
+  const at = entry.offset + entry.size;
+  const head = await read(at, 30 + 256);
+  if (!head || head.byteLength < 30) return null;
+  const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
+  if (view.getUint32(0, true) !== LOCAL_HEADER) return null;
+  const flags = view.getUint16(6, true), method = view.getUint16(8, true);
+  const compressed = view.getUint32(18, true), size = view.getUint32(22, true);
+  const nameLength = view.getUint16(26, true), extraLength = view.getUint16(28, true);
+  if (flags & 0x08 || flags & 0x01) return null; // データ記述子（大きさが後ろにある）・暗号化は扱わない
+  if (head.byteLength < 30 + nameLength) return null;
+  const name = new TextDecoder().decode(head.subarray(30, 30 + nameLength));
+  if (!/(^|\/)project\.json$/.test(name)) return null;
+  if (compressed < 1 || size < 1 || size > maxBytes || compressed > maxBytes) return null;
+  if (method !== 0 && method !== 8) return null;
+  const data = await read(at + 30 + nameLength + extraLength, compressed);
+  if (!data || data.byteLength !== compressed) return null;
+  let bytes = data;
+  if (method === 8) {
+    const stream = new Blob([data as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  if (bytes.byteLength !== size) return null;
+  const text = new TextDecoder().decode(bytes);
+  try { JSON.parse(text); } catch { return null; }
+  return text;
+}

@@ -2,16 +2,20 @@ import {runWorkflowHash} from './workflow-hash-client';
 import {sceneEditTargetSchema} from './scene-edit-contract';
 
 export type SceneTarget={propertyId:string;sceneId:string;expectedUpdatedAt:string;previousUrl:string;propertyRevision:string;expiresAt:string;sessionKey:string;status:string};
-export type SceneSession={target:SceneTarget;sourceUrl:string;fileName:string;storageOrigin:string;streamFileName:string};
+export type SceneSession={target:SceneTarget;sourceUrl:string;fileName:string;storageOrigin:string;streamFileName:string;streamProject:string};
 export function parseSceneSession(value:unknown,ids:{propertyId:string;sceneId:string}):SceneSession {
  if(!value||typeof value!=='object')throw Error('Invalid session');
  const response=value as Record<string,unknown>,target=sceneEditTargetSchema.parse(response.target);
  if(target.propertyId!==ids.propertyId||target.sceneId!==ids.sceneId||response.sourceUrl!=='/api/scene-edit/source?sessionKey='+target.sessionKey||typeof response.fileName!=='string'||! /^[A-Za-z0-9_.-]+\.(zip|rad|ply|splat|ksplat)$/i.test(response.fileName)||typeof response.storageOrigin!=='string')throw Error('Invalid session binding');
  // 段階読み込みできるファイル名（サーバーが決める）。信用できる形だけ通す。
  const streamFileName=typeof response.streamFileName==='string'&&/^[A-Za-z0-9_.-]+\.rad$/i.test(response.streamFileName)?response.streamFileName:'';
+ // 本体の直後にあった project.json（方角合わせ・初期視点・シーン名）。段階読み込みのときだけ意味がある。
+ // 中身はビューアー側で形を確かめる。ここでは JSON として読めて小さいことだけ見る。
+ let streamProject='';
+ if(streamFileName&&typeof response.streamProject==='string'&&response.streamProject.length<=256*1024){try{JSON.parse(response.streamProject);streamProject=response.streamProject;}catch{/* 読めなければ渡さない */}}
  const storage=new URL(response.storageOrigin);
  if(storage.protocol!=='https:'||storage.origin!==response.storageOrigin||storage.username||storage.password)throw Error('Invalid storage origin');
- return {target,sourceUrl:response.sourceUrl,fileName:response.fileName,storageOrigin:response.storageOrigin,streamFileName};
+ return {target,sourceUrl:response.sourceUrl,fileName:response.fileName,storageOrigin:response.storageOrigin,streamFileName,streamProject};
 }
 type ReplyEvent={origin:string;source:unknown;data:unknown};
 export function sceneRefreshDecision(expected:string|null,base:string|undefined,incoming:string|undefined,pending:boolean):'wait'|'apply'|'conflict'{

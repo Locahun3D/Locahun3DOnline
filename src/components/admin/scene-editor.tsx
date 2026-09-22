@@ -20,6 +20,9 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
  const dirty=useRef(false),generation=useRef(0),revision=useRef(0),busyRef=useRef(false);
  const transportReady=useRef(false),loadSent=useRef(false);
  const saveRef=useRef<()=>void>(()=>{});
+ // 読み込み時に渡すシーン名。途中で名前が変わっても読み込み直さないよう、ref で持つ。
+ const labelRef=useRef(label);
+ useEffect(()=>{labelRef.current=label;},[label]);
  const validRef=useRef(false);
  const [phase,setPhase]=useState('loading'),[ready,setReady]=useState(false),[busy,setBusy]=useState(false);
  // 読み込みの進み具合（MB）と、最後に保存できた時刻。「本当に保存されたか」を画面で確かめられるようにする（2026-09-21）。
@@ -32,7 +35,7 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
    if(!transportReady.current||!session.current||loadSent.current)return;
    loadSent.current=true;loadId=crypto.randomUUID();
    loadReply=createSceneReplyGate(location.origin,frame.current?.contentWindow,loadId,['locahun:scene-ready','locahun:scene-load-error']);
-   frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId:loadId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName,streamFileName:session.current.streamFileName},location.origin);
+   frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId:loadId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName,streamFileName:session.current.streamFileName,streamProject:session.current.streamProject,sceneLabel:labelRef.current},location.origin);
    loadTimer=setTimeout(()=>setPhase('loadError'),300000);
   };
   const mb=(n:number)=>Math.round(n/1048576);

@@ -6,7 +6,7 @@ import {getUploadMode,getWorkflowStorageOrigin,createWorkflowUpload,statWorkflow
 import {reserveWorkflowUpload} from '@/lib/workflow-upload-reservation';
 import {sceneEditMaxSourceBytes,sceneEditRequestSchema,sceneEditTargetSchema,sceneEditDigestSchema,sceneEditSourceKey,type SceneEditTarget,type SceneEditDigest,type SceneEditReceipt} from '@/lib/scene-edit-contract';
 import {attachSceneEditConditionally,revertSceneEditConditionally} from '@/lib/scene-edit-attachment';
-import {readStoredRadEntry} from '@/lib/zip-stored-entry';
+import {readStoredRadEntry,readProjectJsonAfter} from '@/lib/zip-stored-entry';
 import {getCloudflareContext} from '@opennextjs/cloudflare';
 import {SCENE_EDIT_PURPOSE,SceneEditError,sceneEditPublishPolicy,sceneEditAccess,sceneEditSnapshot,sceneEditMatches,sceneEditHash,loadSceneEditSession} from '@/lib/scene-edit-session';
 export const runtime='nodejs';
@@ -44,7 +44,7 @@ export async function POST(req:Request){
    // ただし、一度でも編集して保存したシーン（streamUrl がある）は、置いたモデルや経路が入った
    // プロジェクトを開く必要がある。その場合は本体だけを流し込まず、従来どおりアーカイブを読む
    // （アーカイブは 3DGS 本体を含まないので小さい。本体は ?ref=stream で段階読み込みする）。
-   let streamFileName='';
+   let streamFileName='',streamProject='';
    const streamKey=snapshot.scene.streamUrl?'':sourceKey;
    if(/\.rad$/i.test(streamKey))streamFileName=streamKey.split('/').at(-1)!;
    else if(/\.zip$/i.test(streamKey)){
@@ -56,12 +56,19 @@ export async function POST(req:Request){
        const head=await bucket.get(streamKey,{range:{offset,length}});
        return head?.body?new Uint8Array(await new Response(head.body).arrayBuffer()):null;
       });
-      if(entry)streamFileName=entry.name;
+      if(entry){
+       streamFileName=entry.name;
+       // 方角合わせ・初期視点・シーン名は本体の直後の project.json にある。本体だけで開くと消えるので一緒に渡す。
+       streamProject=await readProjectJsonAfter(async(offset,length)=>{
+        const part=await bucket.get(streamKey,{range:{offset,length}});
+        return part?.body?new Uint8Array(await new Response(part.body).arrayBuffer()):null;
+       },entry)||'';
+      }
      }
     }catch{/* 判定できないときは ZIP 全体を落とす従来どおりの読み込みにする */}
    }
    await db.prepare('INSERT INTO workflow_uploads(job_key,binding,asset_id) VALUES(?,?,?)').bind(target.sessionKey,JSON.stringify({purpose:SCENE_EDIT_PURPOSE,kind:'target',actorId:actor.id,target}),'se_target_'+target.sessionKey).run();
-   return reply({target,sourceUrl:'/api/scene-edit/source?sessionKey='+target.sessionKey,fileName:sourceKey.split('/').at(-1),storageOrigin,streamFileName});
+   return reply({target,sourceUrl:'/api/scene-edit/source?sessionKey='+target.sessionKey,fileName:sourceKey.split('/').at(-1),storageOrigin,streamFileName,streamProject});
   }
   if(input.action==='revert'){
    const user=await sceneEditAccess(input.propertyId);
