@@ -29,29 +29,36 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
  const [download,setDownload]=useState(''),[savedAt,setSavedAt]=useState('');
  useEffect(()=>{
   const abort=new AbortController();controller.current=abort;
-  let loadId='',loadTimer:ReturnType<typeof setTimeout>|undefined;
-  let loadReply:(event:MessageEvent)=>boolean=()=>false;
+   let loadTimer:ReturnType<typeof setTimeout>|undefined,resendTimer:ReturnType<typeof setInterval>|undefined;
+  // 2026-09-22: 読み込み指示は「ビューアーから返事が来るまで」2秒ごとに出し直す。
+  // 指示がビューアーの受け口より先に届いて消えることがあり、「3DGSを読み込んでいます」のまま
+  // 止まっていた（本番で再発。手で同じ指示を送り直すと即座に開いた）。ビューアー側は同じ指示が
+  // 重なっても1回だけ読み込み、受け取った指示すべてに返事をする（432_online_scene_edit.js）。
+  const loadIds=new Set<string>();let acked=false;
+  const postLoad=()=>{
+   if(!session.current)return;
+   const requestId=crypto.randomUUID();loadIds.add(requestId);
+   frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName,streamFileName:session.current.streamFileName,streamProject:session.current.streamProject,sceneLabel:labelRef.current},location.origin);
+  };
   const load=()=>{
    if(!transportReady.current||!session.current||loadSent.current)return;
-   loadSent.current=true;loadId=crypto.randomUUID();
-   loadReply=createSceneReplyGate(location.origin,frame.current?.contentWindow,loadId,['locahun:scene-ready','locahun:scene-load-error']);
-   frame.current?.contentWindow?.postMessage({type:'locahun:scene-load',requestId:loadId,sourceUrl:session.current.sourceUrl,fileName:session.current.fileName,streamFileName:session.current.streamFileName,streamProject:session.current.streamProject,sceneLabel:labelRef.current},location.origin);
-   loadTimer=setTimeout(()=>setPhase('loadError'),300000);
+   loadSent.current=true;acked=false;
+   postLoad();
+   clearInterval(resendTimer);resendTimer=setInterval(()=>{if(acked)clearInterval(resendTimer);else postLoad();},2000);
+   clearTimeout(loadTimer);loadTimer=setTimeout(()=>setPhase('loadError'),300000);
   };
-  const mb=(n:number)=>Math.round(n/1048576);
+ const mb=(n:number)=>Math.round(n/1048576);
   const onMessage=(event:MessageEvent)=>{
    if(event.origin!==location.origin||event.source!==frame.current?.contentWindow)return;
    const data=event.data;
-   // ビューアーは新しい文書になるたびに ready を送る。**その都度**読み込みを出し直す（2026-09-21）。
-   // ⚠ 本番の /viewer/scene-editor.html は拡張子なしのURLへ 307 で飛ぶ（Cloudflare の
-   //    静的配信の既定）。iframe は文書を2回作り、1回目の ready で送った読み込み指示は
-   //    差し替えで消える。1回だけ送る作りだと、2回目の文書は指示を受け取れず
-   //    「3DGSを読み込んでいます」のまま永久に止まる（本番で実測）。
-   //    新しい文書は何も読み込んでいないので、出し直しても二重取得にはならない。
+   // ビューアーは新しい文書になるたびに ready を送る（iframe の読み直しなど）。新しい文書は何も
+   // 読み込んでいないので、その都度読み込み指示を出し直す。返事が来るまでの出し直しは load() が行う。
    if(data?.type==='locahun:scene-editor-ready'){transportReady.current=true;loadSent.current=false;load();}
    // 進んでいる間は打ち切らない（大きい3DGSでも、止まったときだけ5分で失敗にする）。
-   if(data?.type==='locahun:scene-load-progress'&&data.requestId===loadId&&Number.isFinite(data.loaded)){clearTimeout(loadTimer);loadTimer=setTimeout(()=>setPhase('loadError'),300000);setDownload(data.total?`${mb(data.loaded)} / ${mb(data.total)} MB`:`${mb(data.loaded)} MB`);}
-   if(['locahun:scene-ready','locahun:scene-load-error'].includes(data?.type)&&loadReply(event)){
+   const ours=typeof data?.requestId==='string'&&loadIds.has(data.requestId);
+   if(ours&&['locahun:scene-load-progress','locahun:scene-ready','locahun:scene-load-error'].includes(data.type)){acked=true;clearInterval(resendTimer);}
+   if(data?.type==='locahun:scene-load-progress'&&ours&&Number.isFinite(data.loaded)){clearTimeout(loadTimer);loadTimer=setTimeout(()=>setPhase('loadError'),300000);setDownload(data.total?`${mb(data.loaded)} / ${mb(data.total)} MB`:`${mb(data.loaded)} MB`);}
+   if(['locahun:scene-ready','locahun:scene-load-error'].includes(data?.type)&&ours){
     clearTimeout(loadTimer);validRef.current=data.type==='locahun:scene-ready';setReady(validRef.current);setPhase(validRef.current?'ready':'loadError');
     if(validRef.current){frame.current?.focus();frame.current?.contentWindow?.focus();}
    }
@@ -66,7 +73,7 @@ export default function SceneEditor({propertyId,sceneId,label,published,inline=f
    const result=parseSceneSession(value,{propertyId,sceneId});
    session.current=result;load();
   }).catch(error=>{if(abort.signal.aborted)return;setPhase(error instanceof SceneHttpError&&error.code==='source_too_large'?'tooLarge':error instanceof SceneHttpError&&error.code==='published_admin_only'?'publishedAdminOnly':'loadError');});
-  return ()=>{abort.abort();controller.current?.abort();clearTimeout(loadTimer);window.removeEventListener('message',onMessage);window.removeEventListener('beforeunload',unload);};
+  return ()=>{abort.abort();controller.current?.abort();clearTimeout(loadTimer);clearInterval(resendTimer);window.removeEventListener('message',onMessage);window.removeEventListener('beforeunload',unload);};
  },[propertyId,sceneId]);
 
  const save=async()=>{

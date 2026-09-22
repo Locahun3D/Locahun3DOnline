@@ -22,6 +22,11 @@ describe("3DGS編集の受け渡し", () => {
     expect(line).toContain("load()");
   });
 
+  it("返事が来るまで読み込み指示を出し直し、どの指示への返事でも受け取る", () => {
+    expect(src).toContain("resendTimer=setInterval(");
+    expect(src).toContain("loadIds.has(data.requestId)");
+  });
+
   it("読み込み指示はシーンの読み込み先を必ず添える", () => {
     expect(src).toContain("type:'locahun:scene-load'");
     expect(src).toContain("sourceUrl:session.current.sourceUrl");
