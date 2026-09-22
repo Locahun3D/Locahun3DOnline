@@ -7,6 +7,7 @@ import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { viewerStreamTokenGrant } from "@/lib/viewer-stream-grant";
 import { readStoredRadEntry, mapRangeIntoEntry } from "@/lib/zip-stored-entry";
+import { streamContentEtag } from "@/lib/stream-content-etag";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBucket = any;
@@ -146,9 +147,12 @@ export async function GET(
     //    ビューアーが「Invalid RAD magic: 0x04034b50」（＝ZIPの先頭）で止まる。
     //    位置の割り出しは scene-edit の配信と同じ手順（lib/zip-stored-entry.ts）。
     if (wantsStream && /\.zip$/i.test(key)) {
+      // 当たり判定キャッシュの識別用に、中身だけで決まる ETag を返す（lib/stream-content-etag.ts）。
+      let objectEtag = "";
       const entry = await readStoredRadEntry(async (offset, length) => {
         const head = await bucket.get(key, { range: { offset, length } });
         if (!head?.body) return null;
+        if (head.httpEtag) objectEtag = head.httpEtag;
         return new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer());
       });
       if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -163,6 +167,7 @@ export async function GET(
         "Content-Length": String(rangeHeader ? window.length : entry.size),
         "X-Stream-Name": entry.name,
       });
+      if (objectEtag) headers.set("ETag", streamContentEtag(objectEtag, entry.offset));
       if (req.method === "HEAD") return new NextResponse(null, { headers });
       const part = await bucket.get(key, { range: window });
       if (!part) return new NextResponse("Not found", { status: 404 });
@@ -193,7 +198,7 @@ export async function GET(
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
       headers.set("Cache-Control", "no-store");
-      headers.set("ETag", obj.httpEtag);
+      headers.set("ETag", wantsStream ? streamContentEtag(obj.httpEtag, 0) : obj.httpEtag);
       headers.set("Last-Modified", obj.uploaded.toUTCString());
 
       return new NextResponse(obj.body as ReadableStream, { status: 206, headers });
@@ -207,7 +212,7 @@ export async function GET(
     headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", "no-store");
-    headers.set("ETag", obj.httpEtag);
+    headers.set("ETag", wantsStream ? streamContentEtag(obj.httpEtag, 0) : obj.httpEtag);
     headers.set("Last-Modified", obj.uploaded.toUTCString());
 
     return new NextResponse(req.method === "HEAD" ? null : obj.body as ReadableStream, { headers });

@@ -4,6 +4,7 @@ import {getD1} from '@/lib/d1';
 import {sceneEditSourceKey} from '@/lib/scene-edit-contract';
 import {SceneEditError,loadSceneEditSession,sceneEditSnapshot} from '@/lib/scene-edit-session';
 import {readStoredRadEntry,mapRangeIntoEntry} from '@/lib/zip-stored-entry';
+import {streamContentEtag} from '@/lib/stream-content-etag';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 type ObjectInfo={size:number;httpEtag:string;body?:ReadableStream;range?:{offset?:number;length?:number}};
@@ -57,7 +58,7 @@ export async function GET(req:Request){
    if(window.length<1)throw new SceneEditError(416,'invalid_range');
    const part=await (req.method==='HEAD'?bucket.head(key):bucket.get(key,{range:window}));
    if(!part)return error('source_missing',404);
-   const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':part.httpEtag,'X-Content-Type-Options':'nosniff','Content-Length':String(range?window.length:entry.size),'X-Stream-Name':entry.name});
+   const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':streamContentEtag(part.httpEtag,entry.offset),'X-Content-Type-Options':'nosniff','Content-Length':String(range?window.length:entry.size),'X-Stream-Name':entry.name});
    if(req.method==='HEAD'){await part.body?.cancel();return new Response(null,{status:200,headers});}
    if(range){
     const from=window.offset-entry.offset;
@@ -69,7 +70,7 @@ export async function GET(req:Request){
   if(wantsStream&&!scene.streamUrl)return error('source_missing',404);
   const object=await (req.method==='HEAD'?bucket.head(key):bucket.get(key,range?{range}:undefined));
   if(!object)return error('source_missing',404);
-  const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':object.httpEtag,'X-Content-Type-Options':'nosniff'});
+  const headers=new Headers({'Content-Type':'application/octet-stream','Accept-Ranges':'bytes','Cache-Control':'no-store','ETag':wantsStream?streamContentEtag(object.httpEtag,0):object.httpEtag,'X-Content-Type-Options':'nosniff'});
   let status=200,length=object.size;
   if(range&&req.method!=='HEAD'){
    const offset=object.range?.offset,partLength=object.range?.length;
