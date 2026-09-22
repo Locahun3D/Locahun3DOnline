@@ -77,6 +77,6 @@ describe("英語の自動補完", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("overloaded", { status: 529 })));
     const r = await runEnglishFill(db, "key", now);
     expect(db.writes.length).toBe(0);
-    expect(r.report[0].failure).toBe("http");
+    expect(r.report[0].failure).toMatch(/^http 529/);
   });
 });

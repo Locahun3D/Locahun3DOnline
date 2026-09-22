@@ -76,7 +76,7 @@ export interface TranslateResult {
 
 export type TranslateFailure =
   | { kind: "no_key" }
-  | { kind: "http"; status: number }
+  | { kind: "http"; status: number; message?: string }
   | { kind: "truncated" }
   | { kind: "parse" }
   | { kind: "network" };
@@ -271,7 +271,17 @@ export async function translatePropertyWithKey(input: TranslateInput, apiKey: st
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "http", status: res.status });
+    if (!res.ok) {
+      // API の返す誤りの種類と文（鍵は含まない）を残す。原因の切り分けに使う（2026-09-23）。
+      let message = "";
+      try {
+        const body = (await res.json()) as { error?: { type?: string; message?: string } };
+        message = [body.error?.type, body.error?.message].filter(Boolean).join(": ").slice(0, 300);
+      } catch {
+        /* 本文が JSON でない */
+      }
+      return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "http", status: res.status, message });
+    }
     const data = (await res.json()) as AnthropicResponse;
     if (data.stop_reason === "max_tokens") {
       return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "truncated" });

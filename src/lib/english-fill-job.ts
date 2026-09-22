@@ -55,7 +55,7 @@ export async function runEnglishFill(
     const left = missingEnglishFields(property);
     const filled = missing.filter((m) => !left.includes(m));
     if (!filled.length) {
-      report.push({ id: row.id, left, failure: failure?.kind ?? "none" });
+      report.push({ id: row.id, left, failure: failure ? (failure.kind === "http" ? `http ${failure.status} ${failure.message ?? ""}`.trim() : failure.kind) : "none" });
       continue;
     }
     const updatedAt = new Date(now).toISOString();
