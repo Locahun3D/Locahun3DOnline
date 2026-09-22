@@ -1,6 +1,6 @@
 import "server-only";
 import type { Property } from "./schemas";
-import { translateProperty } from "./ai-translate";
+import { translateProperty, type TranslateFailure } from "./ai-translate";
 import { needsEnglish } from "./property-english";
 
 /**
@@ -16,7 +16,14 @@ export { needsEnglish };
  *   （＝日本語表示にフォールバック）。副作用なし・例外を投げない。
  */
 export async function fillPropertyEnglish(p: Property): Promise<Property> {
-  if (!needsEnglish(p)) return p;
+  return (await fillPropertyEnglishWithReport(p)).property;
+}
+
+/** 訳した結果と、訳せなかった理由（公開申請の画面に出す。2026-09-23）。 */
+export async function fillPropertyEnglishWithReport(
+  p: Property,
+): Promise<{ property: Property; failure?: TranslateFailure }> {
+  if (!needsEnglish(p)) return { property: p };
 
   // 空の EN 欄に対応する日本語だけを翻訳対象に渡す（既訳は "" にして温存）。
   const sceneLabels = p.splatItems.map((it) => (it.labelEn.trim() ? "" : it.label));
@@ -49,9 +56,9 @@ export async function fillPropertyEnglish(p: Property): Promise<Property> {
     blueprintLabels,
   });
 
-  if (r.source === "none") return p;
+  if (r.source === "none") return { property: p, failure: r.failure };
 
-  return {
+  const property: Property = {
     ...p,
     titleEn: p.titleEn || r.titleEn,
     summaryEn: p.summaryEn || r.summaryEn,
@@ -80,4 +87,5 @@ export async function fillPropertyEnglish(p: Property): Promise<Property> {
       labelEn: b.labelEn || (r.blueprintLabelsEn[i] ?? ""),
     })),
   };
+  return { property, failure: r.failure };
 }

@@ -168,10 +168,12 @@ export default function PropertyRowActions({
           </button>
         )}
       </div>
+      {/* 2026-09-23: 以前は 9px の等幅・幅240pxで、長い理由（翻訳の失敗など）が5行に折れて読めなかった。
+          本文と同じ書体・読める大きさ・ボタン列と同じ幅にする。 */}
       {error && (
-        <div className="mono text-[9px] text-red-400 max-w-[240px] text-right leading-tight">
+        <p role="alert" className="max-w-[420px] rounded border border-red-500/30 bg-red-500/5 px-2.5 py-1.5 text-left text-[11.5px] leading-[1.6] text-red-500">
           {error}
-        </div>
+        </p>
       )}
     </div>
   );

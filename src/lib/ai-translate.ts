@@ -66,7 +66,19 @@ export interface TranslateResult {
   amenityNotesEn: string[];
   blueprintLabelsEn: string[];
   source: "ai" | "none";
+  /**
+   * 訳せなかった理由（2026-09-23）。公開申請の画面に「キー未設定」「APIエラー」などを区別して出すため。
+   * 成功時は undefined。
+   */
+  failure?: TranslateFailure;
 }
+
+export type TranslateFailure =
+  | { kind: "no_key" }
+  | { kind: "http"; status: number }
+  | { kind: "truncated" }
+  | { kind: "parse" }
+  | { kind: "network" };
 
 interface AnthropicBlock {
   type: string;
@@ -94,8 +106,10 @@ function emptyResult(
   galleryCount: number,
   noteCount = 0,
   planCount = 0,
+  failure?: TranslateFailure,
 ): TranslateResult {
   return {
+    failure,
     titleEn: "",
     summaryEn: "",
     descriptionEn: "",
@@ -115,6 +129,24 @@ function emptyResult(
   };
 }
 
+/**
+ * 並びを「番号つきの辞書」にして、訳すものだけを送る（2026-09-23）。
+ * 以前は空欄も含めた並びのまま送り「同じ長さ・同じ順で返せ」と頼んでいた。AI が空欄を飛ばして
+ * 短い並びを返すと、以降の訳が1つずつずれて別の項目に入る／欠ける。STUDIO MONTFORT で設備メモ
+ * （10項目中4項目だけ中身あり）が訳されず、公開申請が止まった。番号で対応させればずれない。
+ */
+function keyed(values: string[]): Record<string, string> {
+  return Object.fromEntries(values.map((v, i) => [String(i), v] as const).filter(([, v]) => v.trim()));
+}
+
+/** 番号つきの辞書（または旧形式の並び）を、元の並びの長さに戻す。 */
+export function unkeyed(value: unknown, count: number): string[] {
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  if (Array.isArray(value)) return Array.from({ length: count }, (_, i) => str(value[i]));
+  const obj = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return Array.from({ length: count }, (_, i) => str(obj[String(i)]));
+}
+
 function buildPrompt(input: TranslateInput): string {
   const payload = {
     title: input.title,
@@ -127,11 +159,11 @@ function buildPrompt(input: TranslateInput): string {
     permitType: input.permitType,
     permitNotes: input.permitNotes,
     coverAlt: input.coverAlt,
-    sceneLabels: input.sceneLabels,
-    saleDescriptions: input.saleDescriptions,
-    galleryAlts: input.galleryAlts,
-    amenityNotes: input.amenityNotes,
-    blueprintLabels: input.blueprintLabels,
+    sceneLabels: keyed(input.sceneLabels),
+    saleDescriptions: keyed(input.saleDescriptions),
+    galleryAlts: keyed(input.galleryAlts),
+    amenityNotes: keyed(input.amenityNotes),
+    blueprintLabels: keyed(input.blueprintLabels),
   };
   return [
     "You are a professional Japanese→English translator for a location-scouting / film-set rental platform (撮影ロケ地・スタジオ).",
@@ -150,10 +182,10 @@ function buildPrompt(input: TranslateInput): string {
     "- coverAlt and galleryAlts are short image alt-text captions; keep them short and descriptive.",
     "- amenityNotes are one-line facility notes (e.g. 「3台まで」→「Up to 3 cars」, 「光回線 1Gbps」→「Fibre 1 Gbps」). Keep them very short.",
     "- blueprintLabels are floor-plan tab labels (e.g. 「1階平面図」→「1F floor plan」). Keep them very short.",
-    "- sceneLabels, saleDescriptions, galleryAlts, amenityNotes and blueprintLabels are arrays; return arrays of the SAME length in the SAME order.",
+    "- sceneLabels, saleDescriptions, galleryAlts, amenityNotes and blueprintLabels are objects keyed by number; return objects with exactly the SAME keys, each value translated.",
     "",
     "Return ONLY a single JSON object, no prose, with exactly these keys:",
-    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": string[], "saleDescriptionsEn": string[], "galleryAltsEn": string[], "amenityNotesEn": string[], "blueprintLabelsEn": string[]}',
+    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": {"<key>": string}, "saleDescriptionsEn": {"<key>": string}, "galleryAltsEn": {"<key>": string}, "amenityNotesEn": {"<key>": string}, "blueprintLabelsEn": {"<key>": string}}',
     "",
     "Source (JSON):",
     JSON.stringify(payload, null, 2),
@@ -177,11 +209,6 @@ function parseResult(
   try {
     const obj = JSON.parse(match[0]) as Record<string, unknown>;
     const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
-    const labelArr = Array.isArray(obj.sceneLabelsEn) ? obj.sceneLabelsEn : [];
-    const saleArr = Array.isArray(obj.saleDescriptionsEn) ? obj.saleDescriptionsEn : [];
-    const galleryArr = Array.isArray(obj.galleryAltsEn) ? obj.galleryAltsEn : [];
-    const noteArr = Array.isArray(obj.amenityNotesEn) ? obj.amenityNotesEn : [];
-    const planArr = Array.isArray(obj.blueprintLabelsEn) ? obj.blueprintLabelsEn : [];
     return {
       titleEn: str(obj.titleEn),
       summaryEn: str(obj.summaryEn),
@@ -193,11 +220,11 @@ function parseResult(
       permitTypeEn: str(obj.permitTypeEn),
       permitNotesEn: str(obj.permitNotesEn),
       coverAltEn: str(obj.coverAltEn),
-      sceneLabelsEn: Array.from({ length: labelCount }, (_, i) => str(labelArr[i])),
-      saleDescriptionsEn: Array.from({ length: saleCount }, (_, i) => str(saleArr[i])),
-      galleryAltsEn: Array.from({ length: galleryCount }, (_, i) => str(galleryArr[i])),
-      amenityNotesEn: Array.from({ length: noteCount }, (_, i) => str(noteArr[i])),
-      blueprintLabelsEn: Array.from({ length: planCount }, (_, i) => str(planArr[i])),
+      sceneLabelsEn: unkeyed(obj.sceneLabelsEn, labelCount),
+      saleDescriptionsEn: unkeyed(obj.saleDescriptionsEn, saleCount),
+      galleryAltsEn: unkeyed(obj.galleryAltsEn, galleryCount),
+      amenityNotesEn: unkeyed(obj.amenityNotesEn, noteCount),
+      blueprintLabelsEn: unkeyed(obj.blueprintLabelsEn, planCount),
       source: "ai",
     };
   } catch {
@@ -236,7 +263,7 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
   if (!hasAnything) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
 
   const apiKey = await getApiKey();
-  if (!apiKey) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
+  if (!apiKey) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "no_key" });
 
   const prompt = buildPrompt(input);
   try {
@@ -249,17 +276,21 @@ export async function translateProperty(input: TranslateInput): Promise<Translat
       },
       body: JSON.stringify({
         model: "claude-opus-4-8",
-        max_tokens: 4096,
+        // 説明文が長い物件で 4096 だと途中で切れて JSON が壊れる（切れたら truncated として報告する）。
+        max_tokens: 8192,
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (!res.ok) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
+    if (!res.ok) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "http", status: res.status });
     const data = (await res.json()) as AnthropicResponse;
+    if (data.stop_reason === "max_tokens") {
+      return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "truncated" });
+    }
     return (
       parseResult(data, labelCount, saleCount, galleryCount, noteCount, planCount) ??
-      emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount)
+      emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "parse" })
     );
   } catch {
-    return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount);
+    return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "network" });
   }
 }

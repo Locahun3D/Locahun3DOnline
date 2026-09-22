@@ -20,7 +20,8 @@ import { embedUrl as buildEmbedUrl } from "@/lib/embed-snippet";
 /** メールに載せる埋め込みURL。サイトの絶対URLは lib/email.ts と同じ決め方にそろえる。 */
 const appEmbedUrl = (token: string) =>
   buildEmbedUrl(process.env.NEXT_PUBLIC_APP_URL || "https://locahun3d.com", token);
-import { fillPropertyEnglish, needsEnglish } from "@/lib/property-translate";
+import { fillPropertyEnglish, fillPropertyEnglishWithReport, needsEnglish } from "@/lib/property-translate";
+import type { TranslateFailure } from "@/lib/ai-translate";
 import {
   propertySchema,
   publishablePropertySchema,
@@ -478,12 +479,15 @@ export async function requestReviewAction(
   // 翻訳は必須。fillPropertyEnglish は失敗しても例外を投げず元のまま返すので、
   // 結果を translationGuard で検査して「埋まっていなければ止める」。
   let translated: Property = merged;
+  let translateFailure: TranslateFailure | undefined;
   try {
-    translated = await fillPropertyEnglish(merged);
+    const report = await fillPropertyEnglishWithReport(merged);
+    translated = report.property;
+    translateFailure = report.failure;
   } catch {
     /* 下の translationGuard が未翻訳として弾く */
   }
-  const tg = translationGuard(translated);
+  const tg = translationGuard(translated, translateFailure);
   if (!tg.ok) return { ok: false, error: tg.error };
 
   // 翻訳は数秒かかる。その間に別の保存が入っていたら上書きしない。

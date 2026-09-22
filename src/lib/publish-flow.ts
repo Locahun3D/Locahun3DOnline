@@ -1,3 +1,4 @@
+import type { TranslateFailure } from "./ai-translate";
 import type { Property } from "./schemas";
 import { publishReadiness } from "./publish-readiness";
 import { missingEnglishFields } from "./property-english";
@@ -146,14 +147,36 @@ export function canRequestReview(
  * 翻訳必須ガード（本人指示 2026-09-20「公開申請になったら、翻訳を必ずするように」）。
  * 自動翻訳をかけた「後」の物件を渡す。1つでも EN が空なら申請へ進めない。
  */
-export function translationGuard(afterTranslate: Property): GuardResult {
+export function translationGuard(afterTranslate: Property, failure?: TranslateFailure): GuardResult {
   const missing = missingEnglishFields(afterTranslate);
   if (missing.length === 0) return { ok: true };
   return {
     ok: false,
     code: "translation_missing",
-    error: `英語への翻訳が完了していないため公開申請にできません（未翻訳: ${missing.join("、")}）。自動翻訳が失敗しています（ANTHROPIC_API_KEY 未設定、または API エラー）。少し待って再実行してください。`,
+    error: `英語への翻訳が完了していないため公開申請にできません（未翻訳: ${missing.join("、")}）。${translationFailureText(failure)}`,
   };
+}
+
+/**
+ * 訳せなかった理由を、次に何をすればいいかが分かる言葉にする（2026-09-23）。
+ * 以前は理由によらず「ANTHROPIC_API_KEY 未設定、または API エラー」と出ていたが、実際には
+ * AI の返事の一部が欠けただけのこともあり（STUDIO MONTFORT）、キーを疑って時間を失う。
+ */
+export function translationFailureText(failure?: TranslateFailure): string {
+  switch (failure?.kind) {
+    case "no_key":
+      return "自動翻訳の設定（ANTHROPIC_API_KEY）が本番にありません。管理者に設定を依頼してください。";
+    case "http":
+      return `自動翻訳の API がエラーを返しました（HTTP ${failure.status}）。少し待ってもう一度押してください。`;
+    case "truncated":
+      return "訳文が長すぎて途中で切れました。説明文を短くするか、英語欄を手で入力してください。";
+    case "parse":
+      return "自動翻訳の返事を読み取れませんでした。もう一度押してください。続く場合は英語欄を手で入力してください。";
+    case "network":
+      return "自動翻訳に接続できませんでした。少し待ってもう一度押してください。";
+    default:
+      return "自動翻訳が一部の項目を訳しませんでした。もう一度押すか、エディターの英語欄に手で入力してください。";
+  }
 }
 
 /** 再送までの残り時間(ms)。0 = 送ってよい。 */
