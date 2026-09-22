@@ -2998,7 +2998,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="46ffd2420de0a644d5b6185d994c47830c14d5c29d6fe7f71b6039deb15362e2";
+window.__locahunBuildRelease="172d25749aec898c778b8cb63bb769e252a49c4ea20b8142d7412543a9ede1fe";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -3256,7 +3256,16 @@ function _trySelectByClick(clientX, clientY){
   if(hits.length > 0){
     const hitLayerId = meshToLayer.get(hits[0].object);
     if(hitLayerId != null){
+      // 2026-09-22 本人指示「イベント機能、触ったら写真が前面に表示されるように」:
+      // 写真つきのイベントは、触った（押して離した）時点で写真を最前面に出す。選択もそのまま行うので、
+      // 閉じれば位置の調整に移れる。ドラッグで動かす操作はクリックにならないので写真は出ない。
+      // ⚠ 「選択中をもう一度触ったら出す」は不可: 選択すると同じ場所に移動用の矢印が重なり、
+      //    2回目のクリックは矢印に取られて届かない（ブラウザで確認）。
+      const hitLayer = findLayer(hitLayerId);
       window.selectLayer(hitLayerId);
+      if(hitLayer && hitLayer.type==='event' && hitLayer.eventImage && typeof window.showEventImage==='function'){
+        window.showEventImage(hitLayerId);
+      }
       return true;
     }
   } else {
@@ -14764,10 +14773,22 @@ globalThis.LocahunWalkSettings = {
       if(!n&&this.cells.size>=this.maxCells)throw new Error('Whole-scene collision cell limit exceeded');
       this.cells.set(key,Math.min(this.minPoints,n+1));this.points++;
     }
-    tiles(){
+    tiles({dropIsolated=false}={}){
+      // 周り26升に固い升が1つもない升は、宙に浮いたノイズとして捨てる（2026-09-22）。
+      // 壁・床・天井は必ず隣り合う升があるので残る。通路の中に1升だけ浮いたもやが、
+      // 体の幅ぎりぎりの廊下を塞いでいた。
+      const solid=new Set();
+      for(const [key,count] of this.cells)if(count>=this.minPoints)solid.add(key);
+      const lonely=key=>{
+        const [x,y,z]=key.split(',').map(Number);
+        for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++){
+          if((dx||dy||dz)&&solid.has((x+dx)+','+(y+dy)+','+(z+dz)))return false;
+        }
+        return true;
+      };
       const groups=new Map();
       for(const [key,count] of this.cells){
-        if(count<this.minPoints)continue;
+        if(count<this.minPoints||(dropIsolated&&lonely(key)))continue;
         const coord=key.split(',').map(n=>Math.floor(Number(n)/32)),id=coord.join(',');
         if(!groups.has(id))groups.set(id,{coord,acc:new Accumulator({cellSize:this.cellSize,minPoints:this.minPoints})});
         groups.get(id).acc.cells.set(key,count);
@@ -14909,7 +14930,7 @@ globalThis.LocahunCollisionManifest=Object.freeze({
 (() => {
   const CONCURRENCY=6;
   const half=h=>{const e=(h>>10)&31,m=h&1023,s=h&32768?-1:1;return s*(e===0?m*2**-24:e===31?Infinity:(1+m/1024)*2**(e-15));};
-  async function generate(sources,{check=()=>{},progress=()=>{},cellSize=.15,awaitJob=p=>p}={}){
+  async function generate(sources,{check=()=>{},progress=()=>{},cellSize=.15,awaitJob=p=>p,opacityMin=0,dropIsolated=false}={}){
     const accumulator=new LocahunWholeCollision.Accumulator({cellSize});let entries=0,leaves=0;
     function consume(chunk,matrix,hierarchy){
       const packed=chunk.packedArray,count=chunk.numSplats,tree=chunk.extra?.lodTree;
@@ -14917,6 +14938,10 @@ globalThis.LocahunCollisionManifest=Object.freeze({
       entries+=count;
       for(let i=0;i<count;i++){
         if(hierarchy&&tree[i*4+2]!==0)continue;
+        // ほぼ透明な点は壁として数えない（2026-09-22 本人指摘「廊下を通り抜けられないときがある」）。
+        // 実データ（歌舞伎町）では末端の点の約3割が不透明度0.2未満で、宙に浮いた薄いもやが
+        // 通路の升を埋めていた。不透明度は word0 の上位8bit（RAD は lodOpacity のため実値の半分で入る）。
+        if(hierarchy&&opacityMin&&(packed[i*4]>>>24)<opacityMin)continue;
         const w1=packed[i*4+1],w2=packed[i*4+2],x=half(w1&65535),y=half(w1>>>16),z=half(w2&65535);
         const m=matrix;
         accumulator.add(m[0]*x+m[4]*y+m[8]*z+m[12],m[1]*x+m[5]*y+m[9]*z+m[13],m[2]*x+m[6]*y+m[10]*z+m[14]);leaves++;
@@ -14946,7 +14971,7 @@ globalThis.LocahunCollisionManifest=Object.freeze({
       }else if(s.packed){consume(s.packed,s.matrix,false);await new Promise(resolve=>setTimeout(resolve,0));}
       else throw new Error('No complete collision source');
     }
-    check();const tiles=accumulator.tiles();check();
+    check();const tiles=accumulator.tiles({dropIsolated});check();
     return {tiles,entries,leaves,cellSize,cells:accumulator.cells.size};
   }
   globalThis.LocahunCollisionBake={generate};
@@ -15915,7 +15940,12 @@ async function _walkRunWholeGeneration(job,splats){
     const matrix=[...layer.mesh.matrixWorld.elements],identity=await _wholeSourceIdentity(layer,job);
     identities.push({identity,matrix});sources.push({paged:layer.mesh.paged,packed:layer.mesh.packedSplats,raw:layer._rawBuffer,matrix});
   }
-  const key=await _wholeHash(new TextEncoder().encode(JSON.stringify(['whole-tiles-v1',cellSize,identities])));
+  // v2（2026-09-22）: 判定の作り方を変えた（ほぼ透明な点を数えない・孤立した升を消す）ので、
+  // 旧方式で作った保存データや手元の記録は使わず作り直す（廊下が塞がる旧データを使い続けないため）。
+  // ただし事前に作って配布しているデモの判定（旧方式・LocahunCollisionManifest）はそのまま使う。
+  let key=await _wholeHash(new TextEncoder().encode(JSON.stringify(['whole-tiles-v2',cellSize,identities])));
+  const legacyKey=await _wholeHash(new TextEncoder().encode(JSON.stringify(['whole-tiles-v1',cellSize,identities])));
+  if(!globalThis.LocahunCollisionManifest?.[key]&&globalThis.LocahunCollisionManifest?.[legacyKey])key=legacyKey;
   _walkCheckJob(job);let bytes,index,persistentHit=false;
   const saved=walkSetup.settings.whole;
   if(saved?.key===key){try{bytes=_wholeUnbase64(saved.data);index=await LocahunWholeCollision.decodeTiles(bytes,key);}catch(_){bytes=null;}}
@@ -15959,7 +15989,9 @@ async function _walkRunWholeGeneration(job,splats){
           requestHeader:original.requestHeader,withCredentials:original.withCredentials,pager:{extSplats:false,maxSh:0}});
         decoders.push(paged);return {...source,paged};
       });
-      result=await LocahunCollisionBake.generate(bakeSources,{cellSize,check:()=>_walkCheckJob(job),awaitJob:p=>_walkAwait(p,job),progress:p=>_walkStatus(_walkL('全体の当たり判定を準備中 ','Preparing scene collision ')+Math.round(p.chunk/p.chunks*100)+'%')});
+      // ほぼ透明な点（0〜255で19未満。RAD は lodOpacity で実値の半分なので 不透明度0.15 未満）は数えず、
+      // 周りに何もない孤立した升は捨てる（2026-09-22 廊下が塞がる件）。どちらも RAD（実測した形式）のときだけ。キーは v2。
+      result=await LocahunCollisionBake.generate(bakeSources,{opacityMin:19,dropIsolated:bakeSources.some(source=>source.paged),cellSize,check:()=>_walkCheckJob(job),awaitJob:p=>_walkAwait(p,job),progress:p=>_walkStatus(_walkL('全体の当たり判定を準備中 ','Preparing scene collision ')+Math.round(p.chunk/p.chunks*100)+'%')});
     }finally{for(const decoder of decoders)decoder.dispose();}
     bytes=await LocahunWholeCollision.encodeTiles(result.tiles,key,result.cellSize);_walkCheckJob(job);
     index=await LocahunWholeCollision.decodeTiles(bytes,key);
@@ -26488,6 +26520,7 @@ function _pathPopulateGroup(g, local, color, opacity, labelText, width){
 const _pathLabelWorld=new THREE.Vector3(), _pathLabelCamera=new THREE.Vector3();
 function _pathUpdateLabelVisibility(viewCamera){
   viewCamera.getWorldPosition(_pathLabelCamera);
+  let farthestNearLabel=0;
   for(const L of layers){
     if(L.type!=='path'||!L.mesh)continue;
     const sp=L.mesh.userData.pathLabelSprite;
@@ -26498,6 +26531,24 @@ function _pathUpdateLabelVisibility(viewCamera){
     sp.renderOrder=near?10000:-9;
     // Separate group order also places nearby text above the editing gizmo.
     if(sp.parent.userData.pathLabelContainer)sp.parent.renderOrder=near?10000:0;
+    if(near)farthestNearLabel=Math.max(farthestNearLabel,_pathLabelCamera.distanceTo(_pathLabelWorld));
+  }
+  // 2026-09-22 本人指摘「イベント表示がパス表示より前になってても隠れちゃう」:
+  // 近くのパスの文字は上のとおり「常に最前面」で描くので、それより手前にあるイベントまで上書きしていた。
+  // 最前面で描いている文字より近いイベントは、そのさらに前に描く。遠いイベントは今までどおり（奥行きで隠れる）。
+  for(const L of layers){
+    if(L.type!=='event'||!L.mesh)continue;
+    L.mesh.getWorldPosition(_pathLabelWorld);
+    const front=farthestNearLabel>0 && _pathLabelCamera.distanceTo(_pathLabelWorld)<farthestNearLabel;
+    if(L.mesh.userData.eventInFront===front)continue;
+    L.mesh.userData.eventInFront=front;
+    L.mesh.renderOrder=front?10001:0;
+    L.mesh.traverse(o=>{
+      if(!o.material)return;
+      if(o.userData.eventDepthTest===undefined)o.userData.eventDepthTest=o.material.depthTest;
+      o.material.depthTest=front?false:o.userData.eventDepthTest;
+      o.renderOrder=front?10001:0;
+    });
   }
 }
 function _buildPathMesh(local, color, opacity, labelText, width){
@@ -26852,14 +26903,38 @@ window.importEventImage = function(id){
 
 window.showEventImage = function(id){
   const L=findLayer(id); if(!L||L.type!=='event'||!L.eventImage) return;
+  document.getElementById('event-image-viewer')?.remove();
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer';
+  ov.id='event-image-viewer';
+  ov.setAttribute('role','dialog');
+  // 2026-09-22: 写真は必ず最前面に出す。以前の z-index 9999 では、日照・天気などのパネル
+  // （それより上に重ねてある）が写真の上にかぶっていた（本人の画面で確認）。
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483000;display:flex;align-items:center;justify-content:center;cursor:pointer';
   const img=document.createElement('img');
   img.src=L.eventImage;
+  img.alt=L.eventImageName||L.name||'';
   img.style.cssText='max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,.6)';
   ov.appendChild(img);
-  ov.onclick=function(){ document.body.removeChild(ov); };
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown',onKey,true); };
+  const onKey=e=>{ if(e.key==='Escape'){ e.preventDefault(); close(); } };
+  ov.onclick=close;
+  document.addEventListener('keydown',onKey,true);
   document.body.appendChild(ov);
+};
+
+// 検証用: レイヤーが画面のどこに見えているか（CSS px）。ブラウザのテストが「そこを触る」ために使う。読むだけ。
+window.__layerScreenPoint = function(id){
+  const L=findLayer(id); if(!L||!L.mesh||!canvas) return null;
+  const v=new THREE.Vector3(); L.mesh.getWorldPosition(v); v.project(_useOrtho ? _orthoCamera : camera);
+  if(v.z<-1||v.z>1) return null;
+  const r=canvas.getBoundingClientRect();
+  return {x:r.left+(v.x+1)/2*r.width, y:r.top+(1-v.y)/2*r.height};
+};
+
+// 検証用: 今の視点（位置と向き）。読むだけ。
+window.__cameraPose = function(){
+  const f=new THREE.Vector3(); camera.getWorldDirection(f);
+  return {pos:{x:camPos.x,y:camPos.y,z:camPos.z},fwd:{x:f.x,y:f.y,z:f.z}};
 };
 
 window.clearEventImage = function(id){
