@@ -12,11 +12,12 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   const { env } = await getCloudflareContext();
-  const key = (env as Record<string, unknown>).ANTHROPIC_API_KEY;
+  const e = env as Record<string, unknown>;
+  const key = e.ANTHROPIC_API_KEY;
   if (typeof key !== "string" || !key) return Response.json({ error: "no_key" }, { status: 503 });
   const token = req.headers.get("x-english-fill-token") || "";
   if (!sameToken(token, await englishFillToken(key))) return Response.json({ error: "forbidden" }, { status: 403 });
   const db = await getD1();
   if (!db) return Response.json({ error: "no_db" }, { status: 503 });
-  return Response.json({ ok: true, ...(await runEnglishFill(db, key)) });
+  return Response.json({ ok: true, ...(await runEnglishFill(db, { apiKey: key, ai: (e.AI as Parameters<typeof runEnglishFill>[1]["ai"]) ?? null })) });
 }

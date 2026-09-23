@@ -18,13 +18,14 @@ type Ctx = { waitUntil(p: Promise<unknown>): void };
 export default {
   fetch: handler.fetch,
   async scheduled(_event: unknown, env: Env, ctx: Ctx) {
-    const key = env.ANTHROPIC_API_KEY;
+    const key = env.ANTHROPIC_API_KEY ?? null;
+    const ai = (env.AI as Parameters<typeof runEnglishFill>[1]["ai"]) ?? null;
     const db = env.DB as EnglishFillDb | undefined;
-    if (!key || !db) return;
+    if (!db || (!key && !ai)) return;
     // ⚠ サイト自身の URL を fetch しない（自分の独自ドメインへの接続は Cloudflare が 522 で拒否する。
     //    本番のログで確認）。英訳の処理を直接呼ぶ。
     ctx.waitUntil(
-      runEnglishFill(db, key).then(
+      runEnglishFill(db, { apiKey: key, ai }).then(
         (r) => console.log("[english-fill]", JSON.stringify(r).slice(0, 2000)),
         (e) => console.log("[english-fill] error", String(e).slice(0, 500)),
       ),

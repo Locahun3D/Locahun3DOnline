@@ -1,7 +1,7 @@
 import { propertySchema, type Property } from "./schemas";
 import { missingEnglishFields } from "./property-english";
 import { fillPropertyEnglishUsing } from "./property-translate-core";
-import { translatePropertyWithKey } from "./ai-translate-core";
+import { translatePropertyWithFallback, type WorkersAi } from "./ai-translate-core";
 
 /**
  * 英語が欠けた物件を見つけて英訳する処理の本体（2026-09-23 本人ルール「追加時点で翻訳されてほしい」
@@ -30,7 +30,7 @@ export type EnglishFillReport = { id: string; filled?: string[]; left?: string[]
 
 export async function runEnglishFill(
   db: EnglishFillDb,
-  apiKey: string,
+  translators: { apiKey?: string | null; ai?: WorkersAi | null },
   now = Date.now(),
 ): Promise<{ translated: number; report: EnglishFillReport[] }> {
   const rows = ((await db.prepare("SELECT id, status, updated_at, data FROM properties WHERE status != 'archived' ORDER BY updated_at DESC").all()).results ?? []) as Row[];
@@ -51,7 +51,7 @@ export async function runEnglishFill(
       continue;
     }
     translated++;
-    const { property, failure } = await fillPropertyEnglishUsing(p, (input) => translatePropertyWithKey(input, apiKey));
+    const { property, failure } = await fillPropertyEnglishUsing(p, (input) => translatePropertyWithFallback(input, translators));
     const left = missingEnglishFields(property);
     const filled = missing.filter((m) => !left.includes(m));
     if (!filled.length) {

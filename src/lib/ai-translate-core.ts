@@ -79,7 +79,8 @@ export type TranslateFailure =
   | { kind: "http"; status: number; message?: string }
   | { kind: "truncated" }
   | { kind: "parse" }
-  | { kind: "network" };
+  | { kind: "network" }
+  | { kind: "no_translator" };
 
 interface AnthropicBlock {
   type: string;
@@ -293,4 +294,48 @@ export async function translatePropertyWithKey(input: TranslateInput, apiKey: st
   } catch {
     return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "network" });
   }
+}
+
+/**
+ * Cloudflare の Workers AI（このアカウントで既に使える）で訳す（2026-09-23 本人指摘
+ * 「既に許可してはった前のAPIを使用できるのでは？」）。Anthropic のキーが無効・エラーのときの予備。
+ * 新しい鍵は要らない（Worker の AI バインディングを使う）。短い項目（設備メモ・図面ラベル・
+ * シーン名・写真の説明）が中心なので、この予備でも十分実用になる。
+ */
+export type WorkersAi = { run(model: string, input: Record<string, unknown>): Promise<unknown> };
+
+const WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+
+export async function translatePropertyWithWorkersAi(input: TranslateInput, ai: WorkersAi): Promise<TranslateResult> {
+  const labelCount = input.sceneLabels.length;
+  const saleCount = input.saleDescriptions.length;
+  const galleryCount = input.galleryAlts.length;
+  const noteCount = input.amenityNotes.length;
+  const planCount = input.blueprintLabels.length;
+  try {
+    const out = (await ai.run(WORKERS_AI_MODEL, {
+      messages: [{ role: "user", content: buildPrompt(input) }],
+      max_tokens: 4096,
+    })) as { response?: unknown };
+    const text = typeof out?.response === "string" ? out.response : "";
+    if (!text) return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "parse" });
+    const parsed = parseResult({ content: [{ type: "text", text }], stop_reason: "end_turn" }, labelCount, saleCount, galleryCount, noteCount, planCount);
+    return parsed ?? emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "parse" });
+  } catch {
+    return emptyResult(labelCount, saleCount, galleryCount, noteCount, planCount, { kind: "network" });
+  }
+}
+
+/** Anthropic を先に試し、だめなら Workers AI に回す。どちらも無ければ no_translator。 */
+export async function translatePropertyWithFallback(
+  input: TranslateInput,
+  opts: { apiKey?: string | null; ai?: WorkersAi | null },
+): Promise<TranslateResult> {
+  if (opts.apiKey) {
+    const first = await translatePropertyWithKey(input, opts.apiKey);
+    if (first.source === "ai") return first;
+    if (!opts.ai) return first;
+  }
+  if (opts.ai) return translatePropertyWithWorkersAi(input, opts.ai);
+  return translatePropertyWithKey(input, null);
 }
