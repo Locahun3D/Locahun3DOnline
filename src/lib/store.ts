@@ -158,8 +158,12 @@ class PropertyRepoImpl implements PropertyRepo {
       await ensurePropsSeeded(db);
       raw = await d1ListData<unknown>(db, PROP_TABLE);
     }
+    // 一覧も salvage する（2026-09-23）。1欄が上限を超えただけでレコードが丸ごと
+    // 一覧から消え、管理画面でも公開側でも「その物件が存在しない」ように見えていた
+    // （ビュースタジオ水道橋: 自動英訳の amenityNotesEn.loadingDock が81字以上）。
+    // 消すより、既定値に落としてでも見せて直せるほうが安全。原因は console.error に残る。
     const props = raw
-      .map((r) => coerceProperty(r))
+      .map((r) => coerceProperty(r, { lenient: true }))
       .filter((p): p is Property => p !== null);
     const backfilled = await Promise.all(props.map((p) => this.ensureSplatItemIds(p)));
     const out = opts.status

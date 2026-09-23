@@ -1,7 +1,49 @@
 // 物件への英訳の当てはめ（2026-09-23 分離）。Next の外（Worker の定期実行）からも使うため "server-only" を持たない。
-import type { Property } from "./schemas";
+import { propertySchema, type Property } from "./schemas";
 import type { TranslateFailure, TranslateInput, TranslateResult } from "./ai-translate-core";
 import { needsEnglish } from "./property-english";
+
+
+/**
+ * 訳した文字列が欄の上限を超えたら、その欄だけ上限まで切る（2026-09-23）。
+ *
+ * ⚠ これが無いと、1欄が長すぎるだけで **レコード全体がスキーマ検証に落ち**、
+ *   管理画面の物件一覧と公開側のカタログから丸ごと消える（store.ts の coerceProperty は
+ *   list() では null を返す）。実際に起きた: ビュースタジオ水道橋の
+ *   amenityNotesEn.loadingDock が 91 字（上限80）になり、一覧から消えていた
+ *   （本人 2026-09-23「ビュースタジオがないが」）。英語は日本語より長くなりやすい。
+ *   切るのは英語の自動翻訳だけ。日本語（人が書いた欄）は触らない。
+ */
+export function clampToSchema(p: Property): { property: Property; trimmed: string[] } {
+  const parsed = propertySchema.safeParse(p);
+  if (parsed.success) return { property: p, trimmed: [] };
+  const next = JSON.parse(JSON.stringify(p)) as Record<string, unknown>;
+  const trimmed: string[] = [];
+  for (const issue of parsed.error.issues) {
+    if (issue.code !== "too_big" || typeof issue.maximum !== "number") continue;
+    const path = issue.path as (string | number)[];
+    let node: Record<string | number, unknown> | undefined = next as never;
+    for (const key of path.slice(0, -1)) {
+      node = node?.[key] as Record<string | number, unknown> | undefined;
+    }
+    const last = path[path.length - 1];
+    const value = node?.[last];
+    if (!node || typeof value !== "string" || value.length <= issue.maximum) continue;
+    node[last] = cutAtWord(value, issue.maximum);
+    trimmed.push(path.join("."));
+  }
+  const again = propertySchema.safeParse(next);
+  // 直せない種類の崩れ（型違いなど）はここでは触らない。呼び出し側が元を返す。
+  return again.success ? { property: again.data, trimmed } : { property: p, trimmed: [] };
+}
+
+/** 上限内で、できれば単語の切れ目まで下げて切る。 */
+function cutAtWord(s: string, max: number): string {
+  const cut = s.slice(0, max);
+  const at = Math.max(cut.lastIndexOf(" "), cut.lastIndexOf("、"), cut.lastIndexOf("; "));
+  const body = at >= Math.floor(max * 0.6) ? cut.slice(0, at) : cut;
+  return body.replace(/[\s,;:(（、]+$/, "");
+}
 
 /**
  * 「日本語はあるが英語(EN欄)が空」の判定。正本は lib/property-english.ts（純関数・
@@ -84,5 +126,5 @@ export async function fillPropertyEnglishUsing(
       labelEn: b.labelEn || (r.blueprintLabelsEn[i] ?? ""),
     })),
   };
-  return { property, failure: r.failure };
+  return { property: clampToSchema(property).property, failure: r.failure };
 }
