@@ -14,6 +14,9 @@ const LABEL: Record<WorksStatus, string> = {
   published: "公開",
   draft: "下書き",
   private: "限定公開",
+  // 記事ファイルは残したまま一覧から下げる状態（2026-09-26 本人指示「削除ボタン追加」）。
+  // 取り込み済みの記事は git 管理なので画面からは消せない。押しても元の状態に戻せる。
+  removed: "削除",
 };
 
 const WORKS_ORIGIN = "https://web.locahun3d.com";
@@ -81,7 +84,9 @@ export default async function AdminWorksPage() {
                 <td className="py-2 pr-3">
                   <a
                     href={`${WORKS_ORIGIN}/works/${slug}.html`}
-                    className="hover:text-accent transition"
+                    className={`hover:text-accent transition ${
+                      meta.status === "removed" ? "line-through text-muted" : ""
+                    }`}
                     target="_blank"
                     rel="noopener"
                   >

@@ -36,6 +36,12 @@ describe("canViewWorks", () => {
   it("published は誰でも", () => {
     expect(canViewWorks({ status: "published" }, guest)).toBe(true);
   });
+  it("removed（削除）は下書きと同じく管理者だけ（記事ファイルは残す）", () => {
+    expect(canViewWorks({ status: "removed" }, guest)).toBe(false);
+    expect(canViewWorks({ status: "removed" }, admin)).toBe(true);
+    // 共有トークンがあっても削除扱いの記事は見せない
+    expect(canViewWorks({ status: "removed", shareToken: "t" }, { isAdmin: false, token: "t" })).toBe(false);
+  });
   it("draft は管理者だけ", () => {
     expect(canViewWorks({ status: "draft" }, guest)).toBe(false);
     expect(canViewWorks({ status: "draft" }, admin)).toBe(true);

@@ -10,14 +10,17 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
  *   値  : { status, shareToken? }
  * エントリが無い slug は published 扱い（記事を足しただけで公開される）。
  */
-export type WorksStatus = "published" | "draft" | "private";
+/** removed = 一覧から下げた記事（2026-09-26 本人指示「削除ボタン追加」）。
+ *  記事ファイル自体は content/works に残る（取り込みは git 管理なので消せない）。
+ *  公開側は下書きと同じく管理者以外に出さない。状態を戻せば復活する。 */
+export type WorksStatus = "published" | "draft" | "private" | "removed";
 
 export type WorksMeta = {
   status: WorksStatus;
   shareToken?: string | null;
 };
 
-export const WORKS_STATUSES: WorksStatus[] = ["published", "draft", "private"];
+export const WORKS_STATUSES: WorksStatus[] = ["published", "draft", "private", "removed"];
 
 const KEY = (slug: string) => `works:${slug}`;
 const DEFAULT_META: WorksMeta = { status: "published" };
