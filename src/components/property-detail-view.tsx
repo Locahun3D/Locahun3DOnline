@@ -909,6 +909,31 @@ export default function PropertyDetailView({
                   {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length === 0 && (
                     <PurchaseContents files={resolvePurchaseContents(item)} en={en} />
                   )}
+                  {/* 販売していないシーンにも、データ販売の窓口だけは置く（2026-09-26 本人指示
+                      「data販売の問い合わせフォーム、販売してなくても書いておいて」）。
+                      宛先は施設ではなく当社なので、物件の問い合わせフォーム(#inquiry)ではなく
+                      /contact/license（データ利用・提携のご相談）へ送る。 */}
+                  {!item.forSale && (
+                    <p className="mt-4 text-[13px] text-muted leading-[1.8]">
+                      {en ? (
+                        <>
+                          Need the 3D data (PLY / OBJ) of this scene?{" "}
+                          <Link href={lh("/contact/license")} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
+                            Ask us about data licensing
+                          </Link>
+                          .
+                        </>
+                      ) : (
+                        <>
+                          このシーンの3Dデータ（PLY・OBJ）が必要な場合は、
+                          <Link href={lh("/contact/license")} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
+                            データ利用のご相談
+                          </Link>
+                          からお問い合わせください。
+                        </>
+                      )}
+                    </p>
+                  )}
                 </section>
                 );
               })}
