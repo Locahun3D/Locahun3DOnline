@@ -10,6 +10,7 @@
   python scripts/l3d.py official <slug> ...         # result.json を下書き物件へ反映（--swap-cover / --rollback）
   python scripts/l3d.py check                       # 公開前チェック
   python scripts/l3d.py documents <slug> --blueprint "ラベル=画像" ...   # 図面を平面図へ追加
+  python scripts/l3d.py place <slug> <ZIP|フォルダ> --captions <txt>   # もらった写真を番号順に配置
   python scripts/l3d.py basics <slug> --summary "…" --confirm-url   # 掲載の基本欄（公開申請の必須項目）
   python scripts/l3d.py sell <slug> [--allow-published]   # データ販売を有効化（ZIP作成→R2→販売設定）
 
@@ -54,6 +55,7 @@ TOOLS = {
     "check": "publish_check.py",
     "documents": "add_documents.py",       # 先方の図面などを下書き物件の平面図へ追加（既存は消さない）
     "new": "new_draft.py",                 # カレンダーの撮影予定から下書きを先に作る（既存 id は上書きしない）
+    "place": "place_photos.py",                # もらった写真を番号どおりに自動配置（ZIP/フォルダ＋キャプション）
     "photos": "replace_photos.py",         # スキャン切り出しのカバー・ギャラリーを公式の実写へ入れ替える
     "sell": "sell_data.py",                # 3Dデータ販売を有効にする（販売用ZIPを作って R2 へ／公開中は --allow-published）
     "fields": "set_fields.py",               # 料金・許可など決まった欄を1つずつ入れる（下書きのみ）
