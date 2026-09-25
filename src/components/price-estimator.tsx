@@ -50,10 +50,13 @@ export default function PriceEstimator({
   const rows = daily ? [] : usageEstimates({ priceType, hourlyPrice: rate, minUsageHours: min, dailyPrice: choice.fromPlan ? 0 : dailyPrice });
   const dayRows = daily ? dailyEstimates(rate) : [];
   const yen = (n: number) => `¥${n.toLocaleString(en ? "en-US" : "ja-JP")}`;
+  // 目安の行名に用途（スチール／ムービー）を入れない（2026-09-25）。
+  // 用途別プランを持つ物件では、上で「ムービー」を選んでも行に「スチール・」と出て矛盾して
+  // 見えていた（PLEASE GREEN でスタジオから指摘）。行は「どれくらいの規模・長さか」だけを表す。
   const useLabels: Record<string, [string, string]> = {
-    "still-small": ["スチール・少人数", "Stills, small crew"],
-    "still-half": ["スチール・半日", "Stills, half day"],
-    "movie-day": ["ムービー・1日", "Video, full day"],
+    "still-small": ["少人数", "Small crew"],
+    "still-half": ["半日", "Half day"],
+    "movie-day": ["1日", "Full day"],
   };
   const holidayName = (() => {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
