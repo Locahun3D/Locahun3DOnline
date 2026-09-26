@@ -20,6 +20,12 @@ export const MAX_FORM_AGE_MS = 24 * 60 * 60 * 1000;
 const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 時間
 /** ウィンドウ内に許可する同一送信元×同一物件の最大件数。 */
 const RATE_MAX = 5;
+/**
+ * 写真の投稿は1回に何枚も送るのが普通なので、問い合わせフォームより枠を広く取る
+ * （2026-09-26。5枚で止まって「送れない」と言われるのを防ぐ）。
+ * 1物件の受け入れ上限は 20 枚なので、やり直しの余地を見てこの値にしてある。
+ */
+export const PHOTO_RATE_MAX = 50;
 
 /** ハニーポットに使う隠しフィールド名。フォームと共有する。 */
 export const HONEYPOT_FIELD = "website";
@@ -76,7 +82,7 @@ const buckets: Map<string, Bucket> = (g.__inquiryRate ??= new Map());
  * 呼ぶたびにカウントを 1 進める。上限超過なら false（拒否）を返す。
  * source が空（IP 取得不可）の場合はレート制限を適用しない（誤検知回避）。
  */
-export function allowByRate(source: string, propertyId: string): boolean {
+export function allowByRate(source: string, propertyId: string, max: number = RATE_MAX): boolean {
   if (!source) return true;
   const key = `${source}::${propertyId}`;
   const now = Date.now();
@@ -89,7 +95,7 @@ export function allowByRate(source: string, propertyId: string): boolean {
     }
     return true;
   }
-  if (b.count >= RATE_MAX) return false;
+  if (b.count >= max) return false;
   b.count += 1;
   return true;
 }

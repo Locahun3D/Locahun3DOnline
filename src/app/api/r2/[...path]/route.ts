@@ -31,6 +31,13 @@ const BLOCKED_3DGS_RE =
   /\.(splat|ply|spz|ksplat|rad|sog|pcsogs|pcsogszip|obj|gltf|glb|fbx|zip)$/i;
 
 /**
+ * 隔離中のファイル（スタジオから届いてまだ採用していない写真）は、この無認証の
+ * 配信口から絶対に出さない（2026-09-26）。見られるのは管理画面用の
+ * /api/studio-photos/<id>/file（requireAdmin）だけ。
+ */
+const QUARANTINE_RE = /^quarantine\//i;
+
+/**
  * 大きいボディは Cache-Control: public を付けない。
  * Workers 経由の大容量ストリームは途中切断されることがあり（実測: 116MB zip が
  * 56MB/40KB で truncate）、切れた本体が public キャッシュに保存されると、その URL は
@@ -56,6 +63,10 @@ export async function GET(
 ) {
   const { path } = await params;
   const key = path.join("/");
+
+  if (QUARANTINE_RE.test(key)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   if (BLOCKED_3DGS_RE.test(key)) {
     return NextResponse.json({ error: "Use /api/viewer-asset for 3DGS data" }, { status: 403 });

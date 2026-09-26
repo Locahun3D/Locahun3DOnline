@@ -28,6 +28,11 @@ export interface StudioReviewMailInput {
    * 回答リンクは previewUrl（?approve=キー付き）に &sale=… を足して作る。
    */
   dataSale?: { price: number };
+  /**
+   * 掲載用の写真をこのメールから送ってもらう（2026-09-26 本人指示）。
+   * missing は公開に必要な枚数まであと何枚か（0なら「追加も歓迎」と書く）。
+   */
+  photoUpload?: { missing: number };
   /** 規約ページの絶対URLを作るためのサイトURL。 */
   siteUrl?: string;
 }
@@ -131,6 +136,36 @@ function dataSaleSection(input: StudioReviewMailInput, name: string): string {
     </div>`;
 }
 
+/**
+ * 掲載用の写真をお願いする節（2026-09-26 本人指示）。
+ * プレビュー画面の投稿欄へ誘導し、1枚ごとに名前・注釈・カバー希望を書いてもらう
+ * （本人「どこの写真かわかるようにつけてといって」）。
+ */
+function photoSection(input: StudioReviewMailInput): string {
+  if (!input.photoUpload) return "";
+  const url = `${input.previewUrl}${input.previewUrl.includes("?") ? "&" : "?"}photos=1#photos`;
+  const missing = input.photoUpload.missing;
+  return `
+    <div style="border:1px solid #eee;padding:14px 18px;margin:0 0 16px;">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">掲載用の写真をお送りいただけます</div>
+      <p style="font-size:13px;line-height:1.9;margin:0 0 10px;color:#444;">
+        ${missing > 0
+          ? `公開にはあと <strong>${missing}枚</strong> の写真が必要です。`
+          : "追加の写真もお送りいただけます。"}<br>
+        プレビューページの「写真」欄から、その場でお送りいただけます（ログイン不要）。<br>
+        スマートフォンで撮った写真をそのまま送っていただいても構いません。
+      </p>
+      <p style="margin:0 0 8px;">
+        <a href="${esc(url)}" style="display:inline-block;border:1px solid #111;color:#111;text-decoration:none;padding:10px 18px;font-size:13px;">写真を送る →</a>
+      </p>
+      <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">
+        1枚ごとに<strong>「名前」（例: 2Fスタジオ 窓側）</strong>と<strong>「注釈」（例: 午前中の自然光）</strong>をご記入ください。<br>
+        どの部屋のどの角度かが分かり、掲載ページの説明にそのまま使えます。<br>
+        ページの頭（カバー）に使ってほしい写真には、チェックを入れてください。
+      </p>
+    </div>`;
+}
+
 /** 規約の控え（2026-09-26 本人指示。何も無くても毎回同送する）。 */
 function termsSection(siteUrl: string): string {
   const base = siteUrl.replace(/\/$/, "");
@@ -190,6 +225,7 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
         リンクだけを使う場合: ${esc(input.embedUrl)}
       </p>
     </div>` : ""}
+    ${photoSection(input)}
     ${dataSaleSection(input, name)}
     ${termsSection(input.siteUrl || "https://locahun3d.com")}
     <p ${p}>問題がなければ、プレビューページの上部にある「この内容でOK・公開する」ボタンを押してください。<br>

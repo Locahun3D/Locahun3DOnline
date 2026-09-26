@@ -152,3 +152,28 @@ describe("英文の期限", () => {
     expect(bodyHtml).not.toContain("valid until 2026年");
   });
 });
+
+describe("写真のお願い（2026-09-26）", () => {
+  it("photoUpload を渡さなければ節は出ない", () => {
+    expect(buildStudioReviewMail(input).bodyHtml).not.toContain("掲載用の写真をお送りいただけます");
+  });
+
+  it("不足枚数と、名前・注釈・カバー希望のお願いを書く", () => {
+    const { bodyHtml } = buildStudioReviewMail({
+      ...input,
+      previewUrl: `${input.previewUrl}?approve=abc`,
+      photoUpload: { missing: 3 },
+    });
+    expect(bodyHtml).toContain("あと <strong>3枚</strong>");
+    expect(bodyHtml).toContain("「名前」");
+    expect(bodyHtml).toContain("「注釈」");
+    expect(bodyHtml).toContain("カバー");
+    expect(bodyHtml).toContain(`${input.previewUrl}?approve=abc&amp;photos=1#photos`);
+  });
+
+  it("足りているときは「追加も送れる」に変わる", () => {
+    const { bodyHtml } = buildStudioReviewMail({ ...input, photoUpload: { missing: 0 } });
+    expect(bodyHtml).toContain("追加の写真もお送りいただけます");
+    expect(bodyHtml).not.toContain("公開にはあと");
+  });
+});

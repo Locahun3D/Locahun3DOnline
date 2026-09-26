@@ -57,6 +57,14 @@ import {
 function dataSaleAsk(p: Property): { price: number } | undefined {
   return dataSaleConsentOf(p).status === "granted" ? undefined : { price: proposedSalePrice(p) };
 }
+
+/**
+ * 確認メールに写真の投稿口の案内を入れる（2026-09-26 本人指示）。
+ * 公開に必要なギャラリーはカバー以外6枚。足りていても追加は歓迎なので節自体は出す。
+ */
+function photoAsk(p: Property): { missing: number } {
+  return { missing: Math.max(0, 6 - p.gallery.length) };
+}
 import { sendStudioReviewMail } from "@/lib/email";
 import {sceneEditAssetProtection} from '@/lib/scene-edit-asset-protection';
 
@@ -531,6 +539,7 @@ export async function requestReviewAction(
       previewPath: `/preview/${preview.token}`,
       previewExpiresAt: preview.expiresAt,
       dataSale: dataSaleAsk(translated),
+      photoUpload: photoAsk(translated),
     });
     if (sent.status === "failed") {
       return { ok: false, error: `${sent.error} 公開申請にはしていません。時間をおいて再実行してください。` };
@@ -616,6 +625,7 @@ export async function resendStudioReviewMailAction(id: string): Promise<FlowOk |
     // 初回を「送らずに申請中」にしていた場合、これが1通目なので【再送】は付けない。
     resend: !!existing.publishFlow.studioNotifiedAt,
     dataSale: dataSaleAsk(existing),
+    photoUpload: photoAsk(existing),
   });
   if (sent.status === "failed") return { ok: false, error: sent.error };
   // 送信中に別の保存が入っていても消さないよう、最新の保存内容に送信の記録だけを足す（2026-09-23）。

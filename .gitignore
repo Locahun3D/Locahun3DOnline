@@ -112,3 +112,5 @@ public/viewer/*.bak
 .claude/settings.local.json
 data/scan-submissions.json
 /.worktrees/
+data/studio-photos.json
+data/studio-photo-files/

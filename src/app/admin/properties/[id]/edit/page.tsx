@@ -3,6 +3,7 @@ import Link from "next/link";
 import { repo } from "@/lib/store";
 import { assertPropertyAccess, getCurrentUser } from "@/lib/dal";
 import PropertyEditor from "@/components/admin/property-editor";
+import { studioPhotoRepo } from "@/lib/studio-photos";
 
 export default async function EditPropertyPage({
   params,
@@ -19,6 +20,9 @@ export default async function EditPropertyPage({
   const property = await repo.get(id);
   if (!property) notFound();
   const currentUser = await getCurrentUser();
+  // スタジオが確認メールから送ってきた写真（2026-09-26）。採用/却下は運営だけ。
+  const studioPhotos =
+    currentUser?.role === "admin" ? await studioPhotoRepo.listByProperty(id) : [];
 
   return (
     <div className="ui-page-shell px-8 pb-8">
@@ -38,6 +42,7 @@ export default async function EditPropertyPage({
       <PropertyEditor
         initial={property}
         isAdmin={currentUser?.role === "admin"}
+        studioPhotos={studioPhotos}
       />
     </div>
   );

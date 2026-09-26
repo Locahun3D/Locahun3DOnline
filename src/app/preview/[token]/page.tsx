@@ -6,9 +6,11 @@ import PropertyDetailView from "@/components/property-detail-view";
 import { getLocale } from "@/lib/i18n/server";
 import StudioApproveBar from "@/components/studio-approve-bar";
 import StudioDataSaleBar from "@/components/studio-data-sale-bar";
+import StudioPhotoUpload from "@/components/studio-photo-upload";
 import { canStudioApprove } from "@/lib/publish-flow";
 import { hashStudioApproveKey } from "@/lib/studio-approval";
 import { canAnswerDataSale, dataSaleConsentOf } from "@/lib/data-sale-consent";
+import { canStudioUpload } from "@/lib/studio-photo-intake";
 
 // トークンの有効期限を毎リクエストで判定するため動的レンダリング。
 // noindex: 共有用の非公開リンクなので検索エンジンには載せない。
@@ -89,6 +91,11 @@ export default async function PreviewPage({
   const consent = dataSaleConsentOf(property);
   const canAnswerSale = approveKey !== "" && canAnswerDataSale(property, hashStudioApproveKey(approveKey)).ok;
 
+  // 掲載用の写真を送ってもらう欄（2026-09-26 本人指示）。確認メールのリンクから開いた
+  // 公開申請中の物件だけ。公開に必要なのはカバー以外6枚なので、足りない枚数を伝える。
+  const canUploadPhotos = approveKey !== "" && canStudioUpload(property, hashStudioApproveKey(approveKey)).ok;
+  const missingPhotos = Math.max(0, 6 - property.gallery.length);
+
   return (
     <>
     {(canApprove || approvedHere) && (
@@ -104,6 +111,16 @@ export default async function PreviewPage({
           status={consent.status}
           price={consent.proposedPrice}
           savedNote={consent.note}
+        />
+      </div>
+    )}
+    {canUploadPhotos && (
+      <div className="ui-page-shell pt-6 pb-0">
+        <StudioPhotoUpload
+          token={token}
+          approveKey={approveKey}
+          en={locale === "en"}
+          missingCount={missingPhotos}
         />
       </div>
     )}

@@ -481,6 +481,8 @@ export async function sendStudioReviewMail(opts: {
    * 省略すると節ごと出ない（すでに許諾済みで聞き直す必要がない物件）。
    */
   dataSale?: { price: number };
+  /** 掲載用の写真をこのメールから送ってもらう（2026-09-26）。missing は不足枚数。 */
+  photoUpload?: { missing: number };
 }): Promise<StudioReviewMailResult> {
   const to = opts.to.trim();
   const mail = buildStudioReviewMail({
@@ -490,6 +492,7 @@ export async function sendStudioReviewMail(opts: {
     resend: opts.resend,
     embedUrl: opts.embedUrl,
     dataSale: opts.dataSale,
+    photoUpload: opts.photoUpload,
     siteUrl: appUrl(),
     contactAddress: operatorAddress(),
   });
@@ -570,5 +573,35 @@ export async function notifyDataSaleAnswer(opts: {
       ? `【ロケハン3D】3Dデータ販売の許諾をいただきました（${opts.title}）`
       : `【ロケハン3D】3Dデータ販売は見送りの回答（${opts.title}）`,
     html: shell(granted ? "3Dデータ販売の許諾" : "3Dデータ販売は見送り", body),
+  });
+}
+
+/**
+ * スタジオが写真を送ってきたことを運営へ知らせる（社内宛のみ・2026-09-26 本人指示）。
+ * 届いた写真は採用するまで公開されないので、気付かれずに埋もれないよう必ず出す。
+ */
+export async function notifyStudioPhotoUpload(opts: {
+  propertyId: string;
+  title: string;
+  name: string;
+  note: string;
+  wantCover: boolean;
+}): Promise<boolean> {
+  if (mailDryRun()) {
+    console.info(`[mail:dry-run] studio photo uploaded. property=${opts.propertyId}`);
+    return false;
+  }
+  const body = `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">「${esc(opts.title)}」のスタジオから、掲載用の写真が1枚届きました。</p>
+    <dl style="font-size:13px;line-height:1.8;margin:0 0 16px;">
+      <dt style="color:#888;">名前</dt><dd style="margin:0 0 8px;">${esc(opts.name) || "（無記入）"}</dd>
+      <dt style="color:#888;">注釈</dt><dd style="margin:0 0 8px;">${esc(opts.note) || "（無記入）"}</dd>
+      <dt style="color:#888;">カバー希望</dt><dd style="margin:0;">${opts.wantCover ? "あり" : "なし"}</dd>
+    </dl>
+    <p style="margin:0 0 16px;"><a href="${esc(appUrl(`/admin/properties/${opts.propertyId}/edit`))}">物件編集の「写真」で採用/却下する</a></p>
+    <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">採用するまで、この写真はサイトのどこにも表示されません。</p>`;
+  return sendEmail({
+    to: operatorAddress(),
+    subject: `【ロケハン3D】スタジオから写真が届きました（${opts.title}）`,
+    html: shell("スタジオから写真が届きました", body),
   });
 }

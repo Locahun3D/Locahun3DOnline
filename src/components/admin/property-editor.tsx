@@ -56,6 +56,8 @@ import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness } from "@/lib/publish-readiness";
 import PublishFlowPanel from "@/components/admin/publish-flow-panel";
+import StudioPhotoInbox from "@/components/admin/studio-photo-inbox";
+import type { StudioPhoto } from "@/lib/studio-photo-intake";
 import { EMPTY_PUBLISH_FLOW, PUBLISH_DISPLAY_LABEL, publishDisplayStage, publishStage, publishWarnings, type PublishStage } from "@/lib/publish-flow";
 import { missingEnglishFields } from "@/lib/property-english";
 import { EMPTY_DATA_SALE_CONSENT } from "@/lib/data-sale-consent";
@@ -95,10 +97,13 @@ type StepId = (typeof STEPS)[number]["id"];
 export default function PropertyEditor({
   initial,
   isAdmin = false,
+  studioPhotos = [],
 }: {
   initial: Property;
   /** 運営のみ 3DGS を編集できる。studio には読み取り専用で見せる。 */
   isAdmin?: boolean;
+  /** スタジオが確認メールから送ってきた写真（2026-09-26）。運営のときだけ渡る。 */
+  studioPhotos?: StudioPhoto[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState<StepId>("basic");
@@ -1826,6 +1831,11 @@ export default function PropertyEditor({
               title="写真"
               desc="カバー画像 1 枚 + ギャラリー（最大 40 枚）。ドラッグ&ドロップで public/uploads/ に保存、または既存ライブラリから選択。"
             >
+              {/* スタジオが確認メールから送ってきた写真（2026-09-26 本人指示）。
+                  採用するとギャラリー（カバー希望はカバー）に入るので、写真の作業の先頭に置く。 */}
+              {studioPhotos.length > 0 && (
+                <StudioPhotoInbox initial={studioPhotos} onChanged={() => router.refresh()} />
+              )}
               {/* Library pickers */}
               <div className="flex gap-2 flex-wrap">
                 <button
