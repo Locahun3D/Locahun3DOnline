@@ -58,6 +58,8 @@ TOOLS = {
     "place": "place_photos.py",                # もらった写真を番号どおりに自動配置（ZIP/フォルダ＋キャプション）
     "photos": "replace_photos.py",         # スキャン切り出しのカバー・ギャラリーを公式の実写へ入れ替える
     "sell": "sell_data.py",                # 3Dデータ販売を有効にする（販売用ZIPを作って R2 へ／公開中は --allow-published）
+    "findcontact": "find_contact.py",          # 収集済みページから問い合わせ先メールを探す（--apply で反映）
+    "contact": "set_contact.py",               # 問い合わせ先メールを手で入れる
     "archive": "archive_property.py",           # 不要になった下書きを閉じる（status=archived・戻せる）
     "fields": "set_fields.py",               # 料金・許可など決まった欄を1つずつ入れる（下書きのみ）
     "basics": "set_basics.py",              # エリア・都道府県・市区町村・紹介文・公開URL確認（公開申請の必須欄）
