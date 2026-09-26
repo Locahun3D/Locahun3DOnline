@@ -136,7 +136,13 @@ export default function PropertiesAdmin({
       : sort.column === "title" ? p.title || p.id
       : sort.column === "category" ? CATEGORY_LABEL[p.category] || ""
       : p.updatedAt || "";
+    // 2026-09-26 本人指示「公開中のものは下に」。作業中（下書き・申請中）を上に、公開中・アーカイブは下へ。
+    // 状態の列で並べ替えたときは、その並びをそのまま使う。
+    const group = (p: PropertyListItem) =>
+      sort.column === "status" ? 0 : stageOf(p) === "archived" ? 2 : stageOf(p) === "published" ? 1 : 0;
     return [...rows].sort((a, b) => {
+      const g = group(a) - group(b);
+      if (g !== 0) return g;
       const x = key(a), y = key(b);
       // 空欄は、昇順でも降順でも最後に置く（「—」が先頭に固まると見づらい）。
       if (!x !== !y) return x ? -1 : 1;
