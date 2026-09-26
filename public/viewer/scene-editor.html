@@ -3765,7 +3765,9 @@ Object.defineProperty(window.__dbg, 'captureHideUI', { get: () => (typeof _captu
 // near=0.3: prevents very-close giant splats from swallowing the entire screen
 // (rainbow streak artifact during fast pans in big PortalCam scans).
 // 0.3m ≈ arm's length; below that, splats are clipped before they smear.
-camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.3, 2000);
+// 2026-09-26: near 0.3→0.05（壁に寄ると目の前の壁が切り落とされて透けた。Locahun3D a57f6fb と同じ）。?near=0.3 で元に戻る。
+const _CAM_NEAR = (() => { const v = parseFloat(new URLSearchParams(location.search).get('near')); return v > 0 ? v : 0.05; })();
+camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, _CAM_NEAR, 2000);
 // ══════════════════════════════════════════════════
 //  ENVIRONMENT  (procedural sky dome / pseudo-HDRI)
 // ══════════════════════════════════════════════════

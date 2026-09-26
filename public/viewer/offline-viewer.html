@@ -2998,7 +2998,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="b7599959108d75db3d2bce804e2f878920ed812cf1bf44dd3de823b97834b139";
+window.__locahunBuildRelease="f4b4cf44e524d724e27496c145a8b6a9315929b91147d1f70d72d418bd556f34";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -3765,7 +3765,13 @@ Object.defineProperty(window.__dbg, 'captureHideUI', { get: () => (typeof _captu
 // near=0.3: prevents very-close giant splats from swallowing the entire screen
 // (rainbow streak artifact during fast pans in big PortalCam scans).
 // 0.3m ≈ arm's length; below that, splats are clipped before they smear.
-camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.3, 2000);
+// 手前の切り落とし距離（near）。2026-09-26: 0.3 → 0.05。
+// カメラは歩行で壁から 0.22m、自由移動で 0.06m まで近づける（215/217 の当たり判定）。
+// near がそれより遠い 0.3m だと、壁に寄ったとき目の前の壁が切り落とされて向こう側が透けた
+// （本人「カメラ端で3DGSが貫通して見える場合がある」）。当たり判定の半径より短くして、
+// 近づける範囲では必ず壁が描かれるようにする。?near=0.3 で元に戻る（前後比較・切り戻し用）。
+const _CAM_NEAR = (() => { const v = parseFloat(new URLSearchParams(location.search).get('near')); return v > 0 ? v : 0.05; })();
+camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, _CAM_NEAR, 2000);
 // ══════════════════════════════════════════════════
 //  ENVIRONMENT  (procedural sky dome / pseudo-HDRI)
 // ══════════════════════════════════════════════════
@@ -11259,6 +11265,9 @@ window.__loadRad = (url)=>{ try{ return loadFromURL(url,'RADtest'); }catch(e){ r
 window.__nSplat = ()=> (typeof splatMesh!=='undefined'&&splatMesh&&splatMesh.paged)?splatMesh.paged.numSplats:-1;
 window.__keepAlive = (ms)=>{ _splatActiveUntil=performance.now()+(ms||6000); markDirty(240); };
 window.__setCam = (y,p)=>{ if(typeof yaw!=='undefined'){yaw=_yawTarget=y;} if(typeof pitch!=='undefined'){pitch=_pitchTarget=(p||0);} _splatActiveUntil=performance.now()+8000; markDirty(240); };
+// 計測用（scripts/perf-edge-lod.mjs）: 画角と LoD 予算をその場で変え、いまの値を返す。描画には影響しない。
+window.__setFov = (deg)=>{ camera.fov=deg; camera.updateProjectionMatrix(); _splatActiveUntil=performance.now()+8000; markDirty(240); };
+window.__camInfo = ()=>({ fov:camera.fov, aspect:camera.aspect, near:camera.near, budget:(typeof sparkRenderer!=='undefined')?sparkRenderer.lodSplatCount:null });
 window.__setCamPos = (x,y,z)=>{ if(typeof camPos!=='undefined'){ camPos.set(x,y,z); } _splatActiveUntil=performance.now()+8000; markDirty(240); };
 // sparkRenderer のLOD関連プロパティをライブ設定（lodSplatCount/lodSplatScale/coneFov等）
 window.__setRenderer = (p)=>{ if(typeof sparkRenderer==='undefined') return 'no sr'; const out={}; for(const k in p){ sparkRenderer[k]=p[k]; out[k]=sparkRenderer[k]; } if(typeof markDirty==='function') markDirty(240); return out; };
