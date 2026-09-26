@@ -24,8 +24,14 @@ import { dataSaleConsentOf } from "./data-sale-consent";
 
 /** 1物件に受け取る枚数の上限（荒らし・容量対策）。 */
 export const MAX_STUDIO_PHOTOS = 20;
-/** 1枚あたりの上限。25MB は管理画面の画像アップロードと同じ。 */
-export const MAX_STUDIO_PHOTO_BYTES = 25 * 1024 * 1024;
+/**
+ * 1枚あたりの上限（サーバー側の保険）。
+ * 2026-09-26 本人指示「25MB制限とって、入れ込むときに最適化」で、画面側の 25MB 制限はやめ、
+ * 送る前にブラウザで長辺3000pxの JPEG に縮めるようにした（8K の書き出しでも数MBになる）。
+ * ここに届くのは、ブラウザが縮められない形式（多くのブラウザでの HEIC）の原本だけ。
+ * Workers のメモリ（128MB）で読み込むので、余裕を見て 50MB で止める。
+ */
+export const MAX_STUDIO_PHOTO_BYTES = 50 * 1024 * 1024;
 /** 画素数の上限。容量が小さくても展開すると巨大になる画像（画像爆弾）を弾く。 */
 export const MAX_STUDIO_PHOTO_PIXELS = 80_000_000;
 export const MAX_PHOTO_NAME = 60;
