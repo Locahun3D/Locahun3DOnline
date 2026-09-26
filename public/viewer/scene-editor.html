@@ -1985,7 +1985,7 @@ body.immersive #immersive-exit{ display:inline-block; }
   <div class="qp-perf-title" id="qp-settings-t">⚙ 設定</div>
   <div class="qrow" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0">
     <span id="qp-camera-collision-label" data-i18n="qp-camera-collision" style="font-size:.78em;color:#c8c8c8">カメラの当たり判定</span>
-    <button id="camera-collision-toggle" class="on" role="switch" aria-checked="true" aria-labelledby="qp-camera-collision-label" onclick="toggleCameraCollision()" style="min-width:48px;min-height:32px">ON</button>
+    <button id="camera-collision-toggle" role="switch" aria-checked="false" aria-labelledby="qp-camera-collision-label" onclick="toggleCameraCollision()" style="min-width:48px;min-height:32px">OFF</button>
   </div>
   <div class="qrow" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0">
     <label id="qp-lbl-grid" style="font-size:.78em;color:#686868">グリッド</label>
@@ -2007,10 +2007,10 @@ body.immersive #immersive-exit{ display:inline-block; }
   </div>
   <div class="qrow" style="margin:6px 0 2px">
     <label style="font-size:.78em;color:#686868"><span id="qp-lbl-spd">移動速度</span>
-      <span id="spdVal" style="color:#C0C0C0;margin-left:6px">1</span></label>
+      <span id="spdVal" style="color:#C0C0C0;margin-left:6px">2</span></label>
   </div>
   <div style="padding:0 2px;margin-bottom:6px">
-    <input type="range" id="spdSlider" min="0.5" max="20" step="0.5" value="1"
+    <input type="range" id="spdSlider" min="0.5" max="20" step="0.5" value="2"
            oninput="onSpeedSlider(this.value)" style="width:100%">
   </div>
 
@@ -3566,7 +3566,7 @@ let fov = 90;
 // the sprint multiplier (×5) compounds it. Seed a gentler 3 on touch so
 // the scene is comfortable to explore out of the box; the slider (0.5–20)
 // still lets users dial it up.
-let camSpeed = 1; // 2026-09-23 本人指示: 既定の移動速度は 1（2026-09-20 は 3、それ以前は PC=5）
+let camSpeed = 2; // 2026-09-23 本人指示: 既定の移動速度は 1（2026-09-20 は 3、それ以前は PC=5）
 
 const clock = new THREE.Clock();
 // ══════════════════════════════════════════════════
@@ -15617,7 +15617,7 @@ function _walkCollisionAdvance(av,dt,dx,dz,jump) {
   walkMode.actualSpeed=Math.hypot(av.position.x-oldX,av.position.z-oldZ)/Math.max(dt,.0001);
   return walkMode.actualSpeed>.03;
 }
-let cameraCollisionEnabled=true;
+let cameraCollisionEnabled=false;
 function _walkCameraReadiness(){
   const ready=!!walkSetup.core&&!walkSetup.importPending&&walkSetup.settings.signature===_walkSourceSignature();
   return !cameraCollisionEnabled?'off':ready?'ready':walkSetup.busy||walkSetup.importPending?'preparing':'unavailable';
@@ -15645,11 +15645,12 @@ globalThis.setCameraCollision=function(enabled){
   });
 };
 globalThis.toggleCameraCollision=()=>globalThis.setCameraCollision(!cameraCollisionEnabled);
-globalThis.prepareCameraCollision=async()=>{
-  if(!cameraCollisionEnabled)return false;
+globalThis.prepareCameraCollision=async(opts={})=>{
+  const force=!!opts.force;
+  if(!cameraCollisionEnabled&&!force)return false;
   if(_walkCameraReadiness()==='ready')return true;
   if(walkSetup.importPending)await walkSetup.importPending;
-  if(!cameraCollisionEnabled)return false;
+  if(!cameraCollisionEnabled&&!force)return false;
   // An explicit retry may reload a saved proxy, but never decode/bake the source.
   return _walkGenerateCollision({automatic:true,retryCache:true,center:camPos,preserveSpawn:true});
 };
@@ -29153,7 +29154,7 @@ function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeig
   if(!walkSetup.core||walkSetup.importPending||walkSetup.settings.signature!==_walkSourceSignature()){
     if(!preview&&typeof globalThis.prepareCameraCollision==='function'){
       const intent=_clickNavigationIntent,epoch=walkSetup.epoch;
-      globalThis.prepareCameraCollision().then(ready=>{
+      globalThis.prepareCameraCollision({force:true}).then(ready=>{
         if(ready&&intent===_clickNavigationIntent&&epoch===walkSetup.epoch&&!_clickNavigationBusy())
           _clickNavigateAt(clientX,clientY,false,null,eyeHeight);
       }).catch(()=>{});
@@ -29896,7 +29897,7 @@ let _navigationPoint=null,_navigationHold=null;
 let _navigationFwd=null,_navigationRel=null;
 function _navigationPointRadius(position){
   const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
-  const px=Math.max(4,Math.min(6,Math.min(w,h)*.012));
+  const px=Math.max(7,Math.min(11,Math.min(w,h)*.02));
   const focal=(h/2)/Math.tan(camera.fov*Math.PI/360); // 焦点距離(CSS px)
   if(!_navigationFwd){_navigationFwd=new THREE.Vector3();_navigationRel=new THREE.Vector3();}
   camera.getWorldDirection(_navigationFwd);
@@ -29914,16 +29915,23 @@ function _showNavigationPoint(point,valid){
     _navigationPoint.renderOrder=10000;
     _navigationPoint.raycast=()=>{};
     scene.add(_navigationPoint);
+    const ring=new THREE.Mesh(new THREE.RingGeometry(.7,1,40),
+      new THREE.MeshBasicMaterial({color:0x63edbd,transparent:true,opacity:.85,side:THREE.DoubleSide,depthTest:false,depthWrite:false}));
+    ring.name='NavigationTargetRing';ring.rotation.x=-Math.PI/2;ring.renderOrder=9999;ring.raycast=()=>{};
+    _navigationPoint.userData.ring=ring;scene.add(ring);
   }
   _navigationPoint.position.set(point.x,point.y+.08,point.z);
   const size=_navigationPointRadius(_navigationPoint.position);
   _navigationPoint.userData.size=size;
   _navigationPoint.scale.setScalar(size.radius/.075);
   _navigationPoint.material.color.setHex(valid?0x63edbd:0xff5353);
+  const ring=_navigationPoint.userData.ring;
+  ring.position.set(point.x,point.y+.01,point.z);ring.scale.setScalar(Math.max(.12,size.radius*4));
+  ring.material.color.setHex(valid?0x63edbd:0xff5353);ring.visible=true;
   _navigationPoint.visible=true;markDirty(2);
 }
 function _hideNavigationPoint(){
-  if(_navigationPoint){_navigationPoint.visible=false;markDirty(2);}
+  if(_navigationPoint){_navigationPoint.visible=false;if(_navigationPoint.userData.ring)_navigationPoint.userData.ring.visible=false;markDirty(2);}
 }
 function _navigationHoldReset(){
   if(_navigationHold){clearTimeout(_navigationHold.timer);_navigationHold=null;}
@@ -29940,7 +29948,7 @@ function _navigationHoldPreview(){
   if(!unready||h.preparing||typeof globalThis.prepareCameraCollision!=='function')return;
   h.preparing=true;
   if(typeof showUndoToast==='function')showUndoToast((window._lang==='en'?'Preparing the ground at the destination':'移動先の地面を準備しています'));
-  globalThis.prepareCameraCollision().then(ready=>{if(ready&&_navigationHold===h&&h.active)_navigationHoldPreview();}).catch(()=>{});
+  globalThis.prepareCameraCollision({force:true}).then(ready=>{if(ready&&_navigationHold===h&&h.active)_navigationHoldPreview();}).catch(()=>{});
 }
 function _navigationHoldArm(kind,point){
   _navigationHoldReset();
@@ -30380,7 +30388,7 @@ window.onSpeedSlider=function(v){
   const before = camSpeed;
   const after  = parseFloat(v);
   pushGenericUndo('move-speed', before, after, val=>{
-    camSpeed = parseFloat(val) || 1;
+    camSpeed = parseFloat(val) || 2;
     const lbl1=document.getElementById('spdLabel'); if(lbl1) lbl1.textContent = camSpeed;
     const lbl2=document.getElementById('spdVal');   if(lbl2) lbl2.textContent = camSpeed;
     const sl  =document.getElementById('spdSlider');if(sl)  sl.value = camSpeed;

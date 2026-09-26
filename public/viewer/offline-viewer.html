@@ -2007,10 +2007,10 @@ body.immersive #immersive-exit{ display:inline-block; }
   </div>
   <div class="qrow" style="margin:6px 0 2px">
     <label style="font-size:.78em;color:#686868"><span id="qp-lbl-spd">移動速度</span>
-      <span id="spdVal" style="color:#C0C0C0;margin-left:6px">1</span></label>
+      <span id="spdVal" style="color:#C0C0C0;margin-left:6px">2</span></label>
   </div>
   <div style="padding:0 2px;margin-bottom:6px">
-    <input type="range" id="spdSlider" min="0.5" max="20" step="0.5" value="1"
+    <input type="range" id="spdSlider" min="0.5" max="20" step="0.5" value="2"
            oninput="onSpeedSlider(this.value)" style="width:100%">
   </div>
 
@@ -3007,7 +3007,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="416b2e4b0ae5a3695a67766aaa4b35c7d20f68e1a77b4015a1eee9f12d3870d9";
+window.__locahunBuildRelease="c97405bd3f46afa9f5b774fcfb974919bab351128d4a5714270388e8b3224c59";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -3566,7 +3566,7 @@ let fov = 90;
 // the sprint multiplier (×5) compounds it. Seed a gentler 3 on touch so
 // the scene is comfortable to explore out of the box; the slider (0.5–20)
 // still lets users dial it up.
-let camSpeed = 1; // 2026-09-23 本人指示: 既定の移動速度は 1（2026-09-20 は 3、それ以前は PC=5）
+let camSpeed = 2; // 2026-09-26 本人指示: 既定の移動速度は 2（09-23 は 1、2026-09-20 は 3、それ以前は PC=5）
 
 const clock = new THREE.Clock();
 // ══════════════════════════════════════════════════
@@ -30386,7 +30386,7 @@ window.onSpeedSlider=function(v){
   const before = camSpeed;
   const after  = parseFloat(v);
   pushGenericUndo('move-speed', before, after, val=>{
-    camSpeed = parseFloat(val) || 1;
+    camSpeed = parseFloat(val) || 2;
     const lbl1=document.getElementById('spdLabel'); if(lbl1) lbl1.textContent = camSpeed;
     const lbl2=document.getElementById('spdVal');   if(lbl2) lbl2.textContent = camSpeed;
     const sl  =document.getElementById('spdSlider');if(sl)  sl.value = camSpeed;
