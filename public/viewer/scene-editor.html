@@ -1760,9 +1760,9 @@ body.immersive #immersive-exit{ display:inline-block; }
         <div style="border-top:1px solid rgba(255,255,255,.07);margin:2px 0"></div>
         <button onclick="_beginPlace('event');window.closeObjTypeMenuTop()" style="background:rgba(255,170,68,.06);border:1px solid rgba(255,170,68,.15);color:#C0C0C0;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:.8em;text-align:left;width:100%;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(255,170,68,.18)'" onmouseout="this.style.background='rgba(255,170,68,.06)'">🟠 <span id="obj-add-event">Event (イベント)</span></button>
         <div style="border-top:1px solid rgba(255,255,255,.07);margin:2px 0"></div>
-        <button onclick="_beginPlace('figure');window.closeObjTypeMenuTop()" style="background:rgba(255,140,200,.06);border:1px solid rgba(255,140,200,.18);color:#C0C0C0;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:.8em;text-align:left;width:100%;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(255,140,200,.20)'" onmouseout="this.style.background='rgba(255,140,200,.06)'" title="フィギュア追加（リグ付き人型モデル・配置場所を左クリック）" data-i18n-title="tt-add-figure">👤 <span id="lbl-addfig-top">フィギュア (人型リグ)</span></button>
+        <button onclick="_beginPlace('figure');window.closeObjTypeMenuTop()" style="background:rgba(255,140,200,.06);border:1px solid rgba(255,140,200,.18);color:#C0C0C0;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:.8em;text-align:left;width:100%;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(255,140,200,.20)'" onmouseout="this.style.background='rgba(255,140,200,.06)'" title="フィギュア追加（リグ付き人型モデル・配置場所を右クリック）" data-i18n-title="tt-add-figure">👤 <span id="lbl-addfig-top">フィギュア (人型リグ)</span></button>
         <div style="border-top:1px solid rgba(255,255,255,.07);margin:2px 0"></div>
-        <button onclick="addPathLayer();window.closeObjTypeMenuTop()" style="background:rgba(100,200,255,.06);border:1px solid rgba(100,200,255,.16);color:#C0C0C0;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:.8em;text-align:left;width:100%;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(100,200,255,.18)'" onmouseout="this.style.background='rgba(100,200,255,.06)'" title="4点を左クリックで囲んで区画を作成（駐車スペース等）。中央にテキストを表示できます" data-i18n-title="tt-add-path">🛣 <span id="obj-add-path">パス (区画＋ラベル)</span></button>
+        <button onclick="addPathLayer();window.closeObjTypeMenuTop()" style="background:rgba(100,200,255,.06);border:1px solid rgba(100,200,255,.16);color:#C0C0C0;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:.8em;text-align:left;width:100%;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(100,200,255,.18)'" onmouseout="this.style.background='rgba(100,200,255,.06)'" title="4点を右クリックで囲んで区画を作成（駐車スペース等）。中央にテキストを表示できます" data-i18n-title="tt-add-path">🛣 <span id="obj-add-path">パス (区画＋ラベル)</span></button>
         <!-- Sphere (球体) and Light (ライト) entries removed per user request.
              addSphereLayer / addLightLayer remain as window.* functions for
              programmatic use (e.g. ZIP project restore) but are no longer
@@ -2256,7 +2256,7 @@ body.immersive #immersive-exit{ display:inline-block; }
         <input type="number" id="cm-focal" step="1" class="cm-input" oninput="onCamFieldChange()">
         <span style="font-size:.82em;color:#666">mm</span>
       </div>
-      <div class="cm-row">
+      <div class="cm-row cm-pro">
         <input type="range" id="cm-focal-slider" min="8" max="200" step="1"
           oninput="document.getElementById('cm-focal').value=this.value;onCamFieldChange()"
           style="flex:1;accent-color:#ffb454">
@@ -2278,7 +2278,7 @@ body.immersive #immersive-exit{ display:inline-block; }
   </div>
 
   <!-- ── ⬛ センサー ── -->
-  <div class="cm-group">
+  <div class="cm-group cm-pro">
     <div class="cm-group-head">⬛ <span id="ct-sensor">センサー</span>
     </div>
     <div class="cm-group-body">
@@ -2336,7 +2336,7 @@ body.immersive #immersive-exit{ display:inline-block; }
         <button class="cm-aspect" onclick="setCamAspect(0.5625)" data-ar="0.5625">9:16</button>
         <button class="cm-aspect" onclick="setCamAspect(0.8)"   data-ar="0.8">4:5</button>
       </div>
-      <div class="cm-row" style="gap:4px;align-items:center">
+      <div class="cm-row cm-pro" style="gap:4px;align-items:center">
         <span class="cm-lbl" style="min-width:48px" id="ct-aspect-cust">カスタム</span>
         <input type="number" id="cm-ar-w" min="0.1" step="0.1" value="16" placeholder="W"
           class="cm-input" style="max-width:54px" oninput="onCamCustomAspect()">
@@ -2345,13 +2345,13 @@ body.immersive #immersive-exit{ display:inline-block; }
           class="cm-input" style="max-width:54px" oninput="onCamCustomAspect()">
         <button onclick="applyCamCustomAspect()" class="cm-aspect" style="flex:0 0 auto;padding:4px 10px" id="ct-aspect-apply">適用</button>
       </div>
-      <div class="cm-row" style="margin-top:6px">
+      <div class="cm-row cm-pro" style="margin-top:6px">
         <label class="cm-lbl" style="min-width:54px" id="ct-margin">外側余白</label>
         <input type="range" id="cm-margin" min="0" max="20" step="1" value="10"
           oninput="onCamFieldChange()" style="flex:1;accent-color:#ffb454">
         <span id="cm-margin-val" style="min-width:34px;text-align:right;color:#888;font-size:.82em">10%</span>
       </div>
-      <div class="cm-row" style="margin-top:6px;align-items:center;gap:5px">
+      <div class="cm-row cm-pro" style="margin-top:6px;align-items:center;gap:5px">
         <label class="cm-lbl" style="min-width:54px" id="ct-roll">ロール</label>
         <input type="range" id="cm-roll-slider" min="-180" max="180" step="0.5" value="0"
           oninput="document.getElementById('cm-roll').value=this.value;onCamRollChange(parseFloat(this.value))"
@@ -2366,8 +2366,17 @@ body.immersive #immersive-exit{ display:inline-block; }
     </div>
   </div>
 
+  <!-- ── シンプル表示（2026-09-26 本人FB: 初回はレンズ・アスペクト・書き出しの3つだけ） ── -->
+  <div class="cm-simple-only" style="margin:4px 0 10px">
+    <button onclick="captureCamShot()" style="width:100%;padding:9px;background:rgba(255,180,84,.2);
+      border:1px solid rgba(255,180,84,.5);color:#ffe4b3;border-radius:4px;font-size:1.05em;cursor:pointer;letter-spacing:.04em">📸 <span data-i18n="cm-simple-capture">書き出し（JPEG）</span></button>
+  </div>
+  <button id="cm-mode-toggle" onclick="toggleCamToolMode()" style="width:100%;margin:0 0 12px;padding:6px;background:none;
+    border:1px solid rgba(255,255,255,.14);color:#aaa;border-radius:4px;font-size:.92em;cursor:pointer">
+    <span class="cm-simple-only" data-i18n="cm-mode-pro">⚙ 詳細設定（プロツール）を開く</span><span class="cm-pro" data-i18n="cm-mode-simple">▴ シンプル表示に戻す</span></button>
+
   <!-- ── # グリッド ── -->
-  <div class="cm-group">
+  <div class="cm-group cm-pro">
     <div class="cm-group-head"># <span id="ct-grid">グリッド</span> <span style="opacity:.45;font-size:.85em;font-weight:400" id="ct-grid-multi">(複数選択可)</span>
     </div>
     <div class="cm-group-body">
@@ -2401,7 +2410,7 @@ body.immersive #immersive-exit{ display:inline-block; }
   </div>
 
   <!-- ══ ショット情報 (placed BELOW the グリッド group per user request) ══ -->
-  <div class="cm-group">
+  <div class="cm-group cm-pro">
     <div class="cm-group-head">📷 <span id="csp-shot-info">ショット情報</span></div>
     <div class="cm-group-body">
       <!-- ── Read-only camera info (collapsible, default collapsed) ── -->
@@ -2762,7 +2771,7 @@ body.ar-active #dz{display:none !important;}
 </div>
 
 <!-- Measurement step hint (below gizmo) -->
-<div id="msr-hint" class="guide-banner" data-i18n="msr-h0">左クリックで点 A を配置</div>
+<div id="msr-hint" class="guide-banner" data-i18n="msr-h0">右クリックで点 A を配置</div>
 
 <!-- ══ Export / Save Modal ══ -->
 <div id="export-modal">
@@ -10406,8 +10415,8 @@ function _ldGuide(){
   const rows=touch
     ?(en?[['Move','Tap a spot to go there'],['Look','Drag with one finger'],['Walk','Bottom-left stick']]
         :[['移動方法','タッチでその場所に移動'],['見回す','1本指でドラッグ'],['歩く','左下のスティック']])
-    :(en?[['Move','Click a spot to go there'],['Look','Right-drag'],['Keys','W A S D move / E up, Q down (Shift = fast)']]
-        :[['移動方法','クリックでその場所に移動'],['見回す','右ドラッグ'],['キー移動','W A S D 前後左右 ／ E 上昇・Q 下降（Shiftで高速）']]);
+    :(en?[['Move','Right-click a spot to go there'],['Look','Left-drag'],['Keys','W A S D move / E up, Q down (Shift = fast)']]
+        :[['移動方法','右クリックでその場所に移動'],['見回す','左ドラッグ'],['キー移動','W A S D 前後左右 ／ E 上昇・Q 下降（Shiftで高速）']]);
   const lt=document.getElementById('lt');lt.replaceChildren();lt.classList.add('ld-guide');
   for(const [k,v] of rows){
     const row=document.createElement('div'),a=document.createElement('span'),b=document.createElement('span');
@@ -17458,9 +17467,9 @@ window._lang = 'ja';
 const I18N = {
   ja:{
     'hb-cam':'── カメラ操作 ──',
-    'hb-cam-keys':'<kbd>W/S</kbd> 前後 &nbsp;<kbd>A/D</kbd> 左右<br><kbd>Q/E</kbd> 上下 &nbsp;<kbd>Shift</kbd> 5× 高速<br><kbd>右ドラッグ</kbd> 視点回転<br><kbd>スクロール</kbd> FOV変更 &nbsp;<kbd>Shift+↕</kbd> 速度変更',
+    'hb-cam-keys':'<kbd>W/S</kbd> 前後 &nbsp;<kbd>A/D</kbd> 左右<br><kbd>Q/E</kbd> 上下 &nbsp;<kbd>Shift</kbd> 5× 高速<br><kbd>左ドラッグ</kbd> 視点回転<br><kbd>スクロール</kbd> FOV変更 &nbsp;<kbd>Shift+↕</kbd> 速度変更',
     'hb-msr':'── 距離測定 ──',
-    'hb-msr-keys':'<kbd>M</kbd> 測定モード ON/OFF<br><kbd>左クリック長押し</kbd> 配置点をプレビュー<br>&nbsp;→ 離したとき確定<br><kbd>X/Y/Z 矢印</kbd> 軸拘束ドラッグ<br><kbd>水平ハンドル□</kbd> XZ平面移動<br><kbd>Z</kbd> 操作を10回まで戻す<br><kbd>Esc</kbd> 測定終了',
+    'hb-msr-keys':'<kbd>M</kbd> 測定モード ON/OFF<br><kbd>右クリック長押し</kbd> 配置点をプレビュー<br>&nbsp;→ 離したとき確定<br><kbd>X/Y/Z 矢印</kbd> 軸拘束ドラッグ<br><kbd>水平ハンドル□</kbd> XZ平面移動<br><kbd>Z</kbd> 操作を10回まで戻す<br><kbd>Esc</kbd> 測定終了',
     'lbl-pos':'位置','lbl-spd':'速度','lbl-measure':'測定','lbl-flip':'Y軸反転',
     'lbl-addobj':'オブジェクト追加','lbl-quality':'画質','lbl-settings':'設定','lbl-file':'ファイル変更',
     'tb-home':'⚡ ロケハン3D','tb-lang':'EN',
@@ -17497,14 +17506,14 @@ const I18N = {
     'layer-def':'レイヤー','folder-name':'フォルダ','folder-added':'📁 フォルダを追加',
     'cam-reset-msg':'🏠 カメラを初期位置にリセットしました',
     'ortho-lbl':'⬜ 正投影','persp-lbl':'📐 パース',
-    'msr-hint-a':'左クリック長押しで点 A を配置','msr-hint-b':'左クリック長押し → 点 B を配置',
-    'msr-hint-done':'左クリック長押し → 再測定 ｜ 矢印でドラッグ微調整',
+    'msr-hint-a':'右クリック長押しで点 A を配置','msr-hint-b':'右クリック長押し → 点 B を配置',
+    'msr-hint-done':'右クリック長押し → 再測定 ｜ 矢印でドラッグ微調整',
     'msr-pa':'🟡 点 A を配置 — 離して確定','msr-pb':'🟠 点 B を配置 — 離して確定',
     'msr-active':'📐 測定中','msr-end':'測定終了',
     'undo-info':'Z: 戻る —','undo-max':'これ以上戻れません',
     'undo-done-tpl':'↩ 戻りました',   // 2026-09-20 本人指示: 回数表示は不要
-    'msr-h0':'左クリックで点 A を配置','msr-h1':'左クリックで点 B を配置',
-    'msr-h2':'左クリックで再測定 ｜ 矢印でドラッグ微調整',
+    'msr-h0':'右クリックで点 A を配置','msr-h1':'右クリックで点 B を配置',
+    'msr-h2':'右クリックで再測定 ｜ 矢印でドラッグ微調整',
   'lp-h-scene':'シーンレイヤー',
   'lp-empty':'まだシーンがありません',
   'mf-title-key':'ミニマップ',
@@ -17585,9 +17594,9 @@ const I18N = {
   },
   en:{
     'hb-cam':'── Camera Controls ──',
-    'hb-cam-keys':'<kbd>W/S</kbd> Fwd/Back &nbsp;<kbd>A/D</kbd> Left/Right<br><kbd>Q/E</kbd> Up/Down &nbsp;<kbd>Shift</kbd> 5× Fast<br><kbd>Right drag</kbd> Look around<br><kbd>Scroll</kbd> Change FOV &nbsp;<kbd>Shift+↕</kbd> Change speed',
+    'hb-cam-keys':'<kbd>W/S</kbd> Fwd/Back &nbsp;<kbd>A/D</kbd> Left/Right<br><kbd>Q/E</kbd> Up/Down &nbsp;<kbd>Shift</kbd> 5× Fast<br><kbd>Left drag</kbd> Look around<br><kbd>Scroll</kbd> Change FOV &nbsp;<kbd>Shift+↕</kbd> Change speed',
     'hb-msr':'── Distance Measure ──',
-    'hb-msr-keys':'<kbd>M</kbd> Measure mode ON/OFF<br><kbd>Left-click hold</kbd> Preview placement<br>&nbsp;→ Release to confirm<br><kbd>X/Y/Z arrows</kbd> Axis-constrained drag<br><kbd>Flat handle □</kbd> XZ plane move<br><kbd>Z</kbd> Undo up to 10 times<br><kbd>Esc</kbd> End measurement',
+    'hb-msr-keys':'<kbd>M</kbd> Measure mode ON/OFF<br><kbd>Right-click hold</kbd> Preview placement<br>&nbsp;→ Release to confirm<br><kbd>X/Y/Z arrows</kbd> Axis-constrained drag<br><kbd>Flat handle □</kbd> XZ plane move<br><kbd>Z</kbd> Undo up to 10 times<br><kbd>Esc</kbd> End measurement',
     'lbl-pos':'Pos','lbl-spd':'Speed','lbl-measure':'Measure','lbl-flip':'Flip Y',
     'lbl-addobj':'Add Object','lbl-quality':'Quality','lbl-settings':'Settings','lbl-file':'Change File',
     'tb-home':'⚡ LOCAHUN 3D','tb-lang':'JA',
@@ -17624,14 +17633,14 @@ const I18N = {
     'layer-def':'Layer','folder-name':'Folder','folder-added':'📁 Folder added',
     'cam-reset-msg':'🏠 Camera reset to initial position',
     'ortho-lbl':'⬜ Ortho','persp-lbl':'📐 Perspective',
-    'msr-hint-a':'Left-click to place Point A','msr-hint-b':'Left-click hold to place Point B',
-    'msr-hint-done':'Left-click hold to re-measure | Drag arrows to fine-tune',
+    'msr-hint-a':'Right-click to place Point A','msr-hint-b':'Right-click hold to place Point B',
+    'msr-hint-done':'Right-click hold to re-measure | Drag arrows to fine-tune',
     'msr-pa':'🟡 Placing Point A — release to confirm','msr-pb':'🟠 Placing Point B — release to confirm',
     'msr-active':'📐 Measuring','msr-end':'End Measurement',
     'undo-info':'Z: Undo —','undo-max':'No more undos',
     'undo-done-tpl':'↩ Undone',
-    'msr-h0':'Left-click to place Point A','msr-h1':'Left-click to place Point B',
-    'msr-h2':'Left-click to re-measure | Drag arrows to fine-tune',
+    'msr-h0':'Right-click to place Point A','msr-h1':'Right-click to place Point B',
+    'msr-h2':'Right-click to re-measure | Drag arrows to fine-tune',
   'lp-h-scene':'Scene Layers',
   'lp-empty':'No scene yet',
   'mf-title-key':'Minimap',
@@ -26691,7 +26700,7 @@ function _pathHint(on){
       document.body.appendChild(el); }
     el.textContent=(window._lang==='en')
       ? '🛣 Path: long-press to place 4 points (hold to aim, release to confirm / '+(4-_pathPts.length)+' left)  |  Esc to cancel'
-      : '🛣 パス: 4点を左クリック長押しで配置（押して位置を探り、離して確定 / 残り '+(4-_pathPts.length)+'）  ｜  Esc で中止';
+      : '🛣 パス: 4点を右クリック長押しで配置（押して位置を探り、離して確定 / 残り '+(4-_pathPts.length)+'）  ｜  Esc で中止';
     el.style.display='block';
   } else if(el){ el.style.display='none'; }
 }
@@ -26799,7 +26808,7 @@ function _placeHint(on){
       document.body.appendChild(el); }
     el.textContent=(window._lang==='en')
       ? '📍 Long-press to place (hold to aim, release to confirm) | Esc to cancel'
-      : '📍 配置する場所を左クリック長押し（押して探り、離して確定） ｜ Esc で中止';
+      : '📍 配置する場所を右クリック長押し（押して探り、離して確定） ｜ Esc で中止';
     el.style.display='block';
   } else if(el){ el.style.display='none'; }
 }
@@ -27407,9 +27416,9 @@ Object.assign(I18N.ja,{
   'env-l-int':'強度',
   'msr-active-lbl':'測定中',
   'msr-end-lbl':'測定終了',
-  'msr-h0':'左クリックで点 A を配置',
-  'msr-h1':'左クリックで点 B を配置',
-  'msr-h2':'左クリックで再測定 ｜ 矢印でドラッグ微調整',
+  'msr-h0':'右クリックで点 A を配置',
+  'msr-h1':'右クリックで点 B を配置',
+  'msr-h2':'右クリックで再測定 ｜ 矢印でドラッグ微調整',
   'dz-manual-text':'ユーザーマニュアルを開く',
   'dz-ar-label':'2.39 : 1',
   'lbl-rot':'角度',
@@ -27662,9 +27671,9 @@ Object.assign(I18N.en,{
   'env-l-int':'Intensity',
   'msr-active-lbl':'Measuring',
   'msr-end-lbl':'End Measure',
-  'msr-h0':'Left-click to place Point A',
-  'msr-h1':'Left-click to place Point B',
-  'msr-h2':'Left-click to re-measure | Drag arrows to fine-tune',
+  'msr-h0':'Right-click to place Point A',
+  'msr-h1':'Right-click to place Point B',
+  'msr-h2':'Right-click to re-measure | Drag arrows to fine-tune',
   'dz-manual-text':'Open User Manual',
   'dz-ar-label':'2.39 : 1',
   'lbl-rot':'Angle',
@@ -27735,8 +27744,8 @@ Object.assign(I18N.ja,{
   'sun-rl-moonrise':'🌘 月の出','sun-rl-moonset':'🌗 月の入り',
   'tt-sunrise':'日の出','tt-sunset':'日の入り',
   'tt-sun-fetch-wx':'選択中の場所・日付・時刻の実際の天気予報を読み込み、上の天気を自動設定します（インターネット接続が必要）',
-  'tt-add-figure':'フィギュア追加（リグ付き人型モデル・配置場所を左クリック）',
-  'tt-add-path':'4点を左クリックで囲んで区画を作成（駐車スペース等）。中央にテキストを表示できます',
+  'tt-add-figure':'フィギュア追加（リグ付き人型モデル・配置場所を右クリック）',
+  'tt-add-path':'4点を右クリックで囲んで区画を作成（駐車スペース等）。中央にテキストを表示できます',
   'tt-home':'ホームに戻る — ロケハン3D','aria-home':'ロケハン3D — Home',
   'tt-fullscreen':'全画面表示','tt-fullscreen-exit':'全画面を終了','tt-immersive-exit':'全画面表示を終了',
   'tt-msr-close':'測定を閉じる',
@@ -27795,6 +27804,53 @@ function _applyI18nGaps(){
   // Equipment cards: dimension tooltips (JA/EN pairs live on the element).
   document.querySelectorAll('[data-title-ja]').forEach(el=>{ el.title=_en()?el.dataset.titleEn:el.dataset.titleJa; });
 }
+// ── Mouse button swap (2026-09-26 試験) ─────────────────────────────
+// 「左ドラッグで視点を回す（ストリートビュー感覚）」を試すため、キャンバス上の
+// 左右ボタンを入れ替える。以降の全ハンドラは e.button を見るだけなので、
+// capture 段階でイベントの button を書き換えて一括で入れ替える。
+//   左ドラッグ = 視点回転 / 右クリック = 選択・クリック移動・計測
+// ?swapMouse=0 で従来操作に戻せる。
+(function(){
+  let on=true;
+  try{ on=new URLSearchParams(location.search).get('swapMouse')!=='0'; }catch(_){}
+  window.__mouseButtonSwap=on;
+  if(!on)return;
+  const swap=e=>{
+    if(e.pointerType&&e.pointerType!=='mouse')return;
+    if(e.button!==0&&e.button!==2)return;
+    // mouseup は window で拾う処理があるので、押下がキャンバス起点なら常に入れ替える
+    if(e.type.endsWith('down')&&e.target!==canvas)return;
+    if(e.type.endsWith('up')&&e.target!==canvas&&!swap.fromCanvas)return;
+    if(e.type.endsWith('down'))swap.fromCanvas=true;
+    try{ Object.defineProperty(e,'button',{value:e.button===0?2:0,configurable:true}); }catch(_){}
+  };
+  swap.fromCanvas=false;
+  for(const t of['pointerdown','mousedown','pointerup','mouseup'])
+    window.addEventListener(t,swap,true);
+  window.addEventListener('mouseup',()=>{ setTimeout(()=>{ swap.fromCanvas=false; },0); });
+})();
+
+// ── カメラツールのシンプル表示（2026-09-26 本人FB） ─────────────────────
+// 初回から全項目が出ると初心者に重い。既定はレンズmm・アスペクト比・書き出しの3つだけ。
+// 「詳細設定」で従来の全項目（センサー・グリッド・余白・ロール・メタ情報・サルベージ等）を出す。
+// 選んだ表示は localStorage に覚える。
+(function(){
+  Object.assign(I18N.ja,{'cm-simple-capture':'書き出し（JPEG）','cm-mode-pro':'⚙ 詳細設定（プロツール）を開く','cm-mode-simple':'▴ シンプル表示に戻す'});
+  Object.assign(I18N.en,{'cm-simple-capture':'Export (JPEG)','cm-mode-pro':'⚙ Open advanced (pro tools)','cm-mode-simple':'▴ Back to simple view'});
+  const st=document.createElement('style');
+  st.textContent='#cam-panel.cm-simple .cm-pro{display:none!important}#cam-panel:not(.cm-simple) .cm-simple-only{display:none!important}';
+  document.head.appendChild(st);
+  const panel=document.getElementById('cam-panel');
+  if(!panel)return;
+  let pro=false;
+  try{ pro=localStorage.getItem('l3d.camToolMode')==='pro'; }catch(_){}
+  panel.classList.toggle('cm-simple',!pro);
+  window.toggleCamToolMode=function(){
+    const nowPro=!panel.classList.toggle('cm-simple');
+    try{ localStorage.setItem('l3d.camToolMode',nowPro?'pro':'simple'); }catch(_){}
+  };
+})();
+
 // ══════════════════════════════════════════════════
 //  INPUT
 // ══════════════════════════════════════════════════
