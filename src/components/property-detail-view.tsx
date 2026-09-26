@@ -2,6 +2,7 @@ import Link from "next/link";
 import styles from "./property-detail-view.module.css";
 import { sceneIndexForId } from "@/lib/scene-selection";
 import PropertyCardLite from "@/components/property-card-lite";
+import Jp from "@/components/jp";
 import { haversineKm } from "@/lib/distance";
 import {
   categoryLabel,
@@ -40,7 +41,14 @@ function KeyVal({ k, children }: { k: string; children: React.ReactNode }) {
         {k}
       </div>
       <div className="text-[14px] text-ink/90 whitespace-pre-line flex-1 leading-[1.8]">
-        {children}
+        {typeof children === "string"
+          ? children.split("\n").map((line, i) => (
+              <Fragment key={i}>
+                {i > 0 && "\n"}
+                <Jp>{line}</Jp>
+              </Fragment>
+            ))
+          : children}
       </div>
     </div>
   );
@@ -68,9 +76,11 @@ function sentenceLines(body: string) {
     .split(/(?<=。)(?![」』）\)])|\n/)
     .map((part) => part.trim())
     .filter(Boolean);
+  // 1文ずつ BudouX で文節の区切りを入れる。iPhone の Safari は body の auto-phrase に
+  // 対応しておらず、「植／物」「ダイニ／ング」のように語の途中で折れていた（2026-09-26）。
   return parts.map((part, i) => (
     <Fragment key={i}>
-      {part}
+      <Jp>{part}</Jp>
       {i < parts.length - 1 && <br />}
     </Fragment>
   ));
@@ -622,9 +632,11 @@ export default function PropertyDetailView({
             <table className="w-full text-[14px]">
               <tbody>
                 {specRows.map(([label, value], i) => (
-                  <tr key={label as string}>
+                  // スマホ（<640px）は「ラベル｜値」の2列をやめ、ラベルの下に値を全幅で置く。
+                  // 2列のままだと値の列が約半分の幅しかなく、数文字ごとに折れて読めなかった（2026-09-26）。
+                  <tr key={label as string} className="max-[639px]:flex max-[639px]:flex-col max-[639px]:border-b max-[639px]:border-line">
                     <th
-                      className={`text-left py-3.5 pr-2 mono text-[10px] tracking-[0.22em] uppercase text-muted font-normal w-[46%] border-b border-line ${
+                      className={`text-left py-3.5 pr-2 mono text-[10px] tracking-[0.22em] uppercase text-muted font-normal w-[46%] border-b border-line max-[639px]:w-full max-[639px]:border-b-0 max-[639px]:pb-1 ${
                         i === 0 ? "border-t-2 border-t-ink" : ""
                       }`}
                     >
@@ -632,11 +644,11 @@ export default function PropertyDetailView({
                       {en ? (label as string).split(" ／ ")[0] : label}
                     </th>
                     <td
-                      className={`text-left py-3.5 font-bold border-b border-line ${
-                        i === 0 ? "border-t-2 border-t-ink" : ""
+                      className={`text-left py-3.5 font-bold border-b border-line max-[639px]:border-0 max-[639px]:pt-0 ${
+                        i === 0 ? "border-t-2 border-t-ink max-[639px]:border-t-0" : ""
                       }`}
                     >
-                      {value}
+                      {typeof value === "string" ? <Jp>{value}</Jp> : value}
                     </td>
                   </tr>
                 ))}

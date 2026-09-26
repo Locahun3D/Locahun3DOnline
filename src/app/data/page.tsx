@@ -4,6 +4,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { listDataSales, summarizeDataSales, type DataSaleEntry } from "@/lib/data-catalog";
 import { categoryLabel, dataLicenseLabel } from "@/lib/schemas";
+import TitleText from "@/components/title-text";
 
 export const dynamic = "force-dynamic";
 
@@ -234,8 +235,8 @@ function DataSaleCard({
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {e.prefecture} / {e.city}
         </div>
-        <h2 className="ui-card-title serif min-h-[3em] whitespace-pre-wrap [overflow-wrap:anywhere] group-hover:text-accent transition">
-          {name}
+        <h2 className="ui-card-title serif min-h-[3em] [overflow-wrap:anywhere] group-hover:text-accent transition">
+          <TitleText text={name} />
         </h2>
         {showScene && <div className="mono text-[10px] tracking-[0.18em] text-muted -mt-1">{e.sceneLabel}</div>}
         <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">

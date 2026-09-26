@@ -1,4 +1,5 @@
 import type { Property } from "@/lib/schemas";
+import Jp from "@/components/jp";
 
 /**
  * 設備・条件をアイコンで並べる（2026-09-19 UI改善会議: スペースマーケットの
@@ -98,7 +99,7 @@ export default function PropertyAmenities({ property, en }: { property: Property
         {noted.map((a) => (
           <div key={a.key} className="flex gap-3 py-1.5 border-t border-line first:border-t-0">
             <dt className="shrink-0 w-[6.5em] font-bold">{en ? a.en : a.ja}</dt>
-            <dd className="min-w-0 text-ink/75 [overflow-wrap:anywhere]">{a.note}</dd>
+            <dd className="min-w-0 text-ink/75 [overflow-wrap:anywhere]">{en ? a.note : <Jp>{a.note}</Jp>}</dd>
           </div>
         ))}
       </dl>

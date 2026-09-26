@@ -105,6 +105,18 @@ CHECKS = [
      # className は data 属性の前にも後ろにも書けるので、前後どちらも見る。
      r"whitespace-pre-line[\s\S]{0,200}data-property-overview-body"
      r"|data-property-overview-body[\s\S]{0,200}whitespace-pre-line", False),
+    # 2026-09-26 本人ルール「スマホの改行デザインができてない　文字が途切れて改行されて非常にみづらい」。
+    # iPhone の Safari は body の word-break: auto-phrase に対応しないので、日本語は部品側で語・文節に分ける。
+    ("概要の1文は <Jp>（BudouX）で文節の区切りを入れる（iPhoneで語の途中で折れない）",
+     "src/components/property-detail-view.tsx", r"<Jp>\{part\}</Jp>", True),
+    ("仕様の値は <Jp> で組む", "src/components/property-detail-view.tsx",
+     r"typeof value === \"string\" \? <Jp>\{value\}</Jp>", True),
+    ("スマホの仕様表はラベルの下に値を全幅（2列のままにしない）", "src/components/property-detail-view.tsx",
+     r"max-\[639px\]:flex max-\[639px\]:flex-col", True),
+    ("設備メモは <Jp> で組む", "src/components/property-amenities.tsx", r"<Jp>\{a\.note\}</Jp>", True),
+    ("カタログのカードの物件名は TitleText（語単位・途中で折らない）", "src/components/property-card-lite.tsx",
+     r"<TitleText text=\{property\.title\} />", True),
+    ("データ販売のカードの物件名も TitleText", "src/app/data/page.tsx", r"<TitleText text=\{name\} />", True),
 ]
 
 

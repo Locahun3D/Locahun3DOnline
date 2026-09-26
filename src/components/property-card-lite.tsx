@@ -4,6 +4,7 @@ import Link from "next/link";
 import { categoryLabel, tokenCostLabel, isNewProperty, type Property } from "@/lib/schemas";
 import { formatKm } from "@/lib/distance";
 import BookmarkButton from "@/components/bookmark-button";
+import TitleText from "@/components/title-text";
 import { useLocale } from "@/components/locale-provider";
 
 /**
@@ -107,8 +108,8 @@ export default function PropertyCardLite({
         <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
           {property.prefecture} / {property.city}
         </div>
-        <h3 className="ui-card-title serif min-h-[3em] whitespace-pre-wrap [overflow-wrap:anywhere]">
-          {property.title}
+        <h3 className="ui-card-title serif min-h-[3em] [overflow-wrap:anywhere]">
+          <TitleText text={property.title} />
         </h3>
         <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">
           <Stat label={en ? "Ceiling" : "天井"} value={property.category === "outdoor" ? (en ? "Outdoor" : "屋外") : property.ceilingHeightM ? `${property.ceilingHeightM}m` : "—"} />
