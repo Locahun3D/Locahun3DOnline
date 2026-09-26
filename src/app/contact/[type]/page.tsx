@@ -9,7 +9,7 @@ import ListingValue from "@/components/listing-value";
 import SignupRequirements from "@/components/signup-requirements";
 import { getCurrentUser } from "@/lib/dal";
 import { repo } from "@/lib/store";
-import { canCreateListing, canConvertToStudio, resolveListingPrefill, STUDIO_INTENT } from "@/lib/listing-funnel";
+import { canCreateListing, canConvertToStudio, propertyPublicUrl, resolveListingPrefill, STUDIO_INTENT } from "@/lib/listing-funnel";
 import { isFreeEmailDomain } from "@/lib/free-email-domains";
 import { convertToStudioAction } from "@/lib/auth-actions";
 
@@ -146,10 +146,10 @@ export default async function ContactTypePage({
   searchParams,
 }: {
   params: Promise<{ type: string }>;
-  searchParams: Promise<{ property?: string }>;
+  searchParams: Promise<{ property?: string; scene?: string; no?: string }>;
 }) {
   const { type } = await params;
-  const { property: propertyParam } = await searchParams;
+  const { property: propertyParam, scene: sceneParam, no: sceneNoParam } = await searchParams;
   // 受付終了した種別（バグ報告など）はここで404になる。
   if (!(CONTACT_TYPES as readonly string[]).includes(type)) notFound();
   const t = type as (typeof CONTACT_TYPES)[number];
@@ -178,6 +178,34 @@ export default async function ContactTypePage({
   const target =
     t === "listing" && propertyParam && canOwn ? await repo.get(propertyParam) : null;
   const prefill = resolveListingPrefill(user, target);
+
+  // データ利用のご相談（license）は、物件ページの「データ利用のご相談」リンクから
+  // ?property=&scene=&no= 付きで来る（2026-09-26 本人指示「どのページのどのデータか
+  // わかるように自動入力」）。公開中の物件だけを引く（下書きの名前は出さない）。
+  const licenseSource = t === "license" && propertyParam ? await repo.get(propertyParam) : null;
+  const licenseScene =
+    licenseSource?.status === "published"
+      ? licenseSource.splatItems.find((s) => s.id === sceneParam) ?? null
+      : null;
+  const licenseTarget =
+    licenseSource?.status === "published"
+      ? {
+          propertyId: licenseSource.id,
+          targetName: [
+            en ? licenseSource.titleEn || licenseSource.title : licenseSource.title,
+            licenseScene
+              ? `GS-${String(Number(sceneNoParam) || 1).padStart(2, "0")} ${
+                  (en ? licenseScene.labelEn || licenseScene.label : licenseScene.label) || ""
+                }`.trim()
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" ／ "),
+          targetUrl: `https://${propertyPublicUrl(licenseSource.id)}${
+            licenseScene ? `#scene-${licenseSource.splatItems.indexOf(licenseScene)}` : ""
+          }`,
+        }
+      : undefined;
 
   // すでに撮影スタジオ（運営が権限を割り当てた場合を含む）なら、掲載依頼の
   // 案内は用済みなので物件管理へ直行させる。掲載ページは自分で作れるし、
@@ -359,7 +387,9 @@ export default async function ContactTypePage({
             contact-actions が requestPublishAction を呼んで
             **問い合わせと公開申請を同時に**成立させる。
             申請前の人には、上の導線カード（アカウント作成／掲載ページを作成）だけを見せる。 */}
-        {t !== "listing" || prefill ? <ContactForm type={t} prefill={prefill} /> : null}
+        {t !== "listing" || prefill ? (
+          <ContactForm type={t} prefill={prefill} licenseTarget={licenseTarget} />
+        ) : null}
       </div>
     </div>
   );

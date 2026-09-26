@@ -694,6 +694,31 @@ export const propertySchema = z.object({
     .prefault({}),
   annotations: z.array(annotationSchema).max(200).default([]),
 
+  /**
+   * 3Dデータ販売の許諾（2026-09-26 本人指示「3D販売許諾を確認メール送信時に送りたい」）。
+   *
+   * 掲載の確認メールに販売許諾のお願いと規約を同送し、スタジオはプレビュー画面の
+   * ボタンで「販売してよい／しない」を答える。答えは掲載の承認とは別に記録する
+   * （掲載はOKだがデータ販売はNG、という返事があり得るため）。
+   * 回答リンクのキーは publishFlow.studioApproveKeyHash と違って**公開後も消さない**
+   * （公開後に販売の可否だけ返ってくることがある）。
+   */
+  dataSaleConsent: z
+    .object({
+      status: z.enum(["unasked", "asked", "granted", "declined"]).default("unasked"),
+      askedAt: z.string().nullable().default(null),
+      answeredAt: z.string().nullable().default(null),
+      /** studio-link=スタジオがプレビューのボタンを押した / admin=運営がメールの返事を記録した。 */
+      answeredVia: z.enum(["studio-link", "admin"]).nullable().default(null),
+      /** スタジオの条件・希望価格などの自由記入（回答フォームで受ける）。 */
+      note: z.string().max(400).default(""),
+      /** 許諾をもらった時点で提示していた販売価格（税込・円）。値上げ時の説明の根拠。 */
+      proposedPrice: z.number().int().min(0).max(99999999).default(0),
+      /** 回答リンク用キーの SHA-256。キー本体は確認メールのURLにだけ入る。 */
+      keyHash: z.string().nullable().default(null),
+    })
+    .prefault({}),
+
   // Data sale fields moved to splatItems[].forSale/salePrice/saleDescription
 
   // 6. Studio page builder — ordered content blocks for the public page.

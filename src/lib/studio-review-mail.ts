@@ -22,7 +22,27 @@ export interface StudioReviewMailInput {
   resend?: boolean;
   /** 返信先として案内する窓口。 */
   contactAddress?: string;
+  /**
+   * 3Dデータ販売の許諾をこのメールで同時に聞く（2026-09-26 本人指示）。
+   * price は提示する販売価格（税込・円、0 なら「改めてご相談」）。
+   * 回答リンクは previewUrl（?approve=キー付き）に &sale=… を足して作る。
+   */
+  dataSale?: { price: number };
+  /** 規約ページの絶対URLを作るためのサイトURL。 */
+  siteUrl?: string;
 }
+
+/**
+ * 確認メールに必ず同送する規約（2026-09-26 本人指示「何もなくても規約のメールが欲しい」）。
+ * スタジオから「契約書や規約の控えが欲しい」と言われるたびに人が送っていたので、
+ * 掲載の確認メールに常に全部のリンクを入れる。並び順は読む順（掲載 → 販売 → 全体）。
+ */
+export const STUDIO_TERMS_DOCS = [
+  { path: "/terms/listing-revenue-share", title: "掲載データ販売分配規約", note: "販売時の分配（20%）と精算" },
+  { path: "/terms/data-download", title: "3Dデータ購入規約", note: "購入者が守る条件（第三者の権利物の扱いを含む）" },
+  { path: "/terms/service", title: "利用規約", note: "サービス全体" },
+  { path: "/terms/tokushoho", title: "特定商取引法に基づく表記", note: "運営者・支払い・キャンセル" },
+] as const;
 
 export interface StudioReviewMail {
   subject: string;
@@ -31,6 +51,7 @@ export interface StudioReviewMail {
 }
 
 import { embedSnippet } from "./embed-snippet";
+import { REVENUE_SHARE_PERCENT } from "./data-sale-consent";
 
 const esc = (s: string) =>
   String(s ?? "")
@@ -64,6 +85,69 @@ export const STUDIO_REVIEW_CHECKPOINTS = [
 function embedCodeBlock(url: string, studioName: string): string {
   const code = embedSnippet(url, { title: `${studioName} 3Dツアー` });
   return `<pre style="margin:0;padding:12px 14px;background:#0f1115;color:#d8d8d8;font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre;border-radius:4px;"><code>${esc(code)}</code></pre>`;
+}
+
+/** 回答リンク。プレビューURL（?approve=キー）に選択を足し、回答欄まで飛ばす。 */
+function saleAnswerUrl(previewUrl: string, choice: "yes" | "no"): string {
+  return `${previewUrl}${previewUrl.includes("?") ? "&" : "?"}sale=${choice}#data-sale`;
+}
+
+const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
+
+/**
+ * 3Dデータ販売の許諾をお願いする節（2026-09-26）。
+ * 掲載の承認ボタンとは別の回答リンクにする（掲載はOK・販売はNG を受け取れるようにするため）。
+ */
+function dataSaleSection(input: StudioReviewMailInput, name: string): string {
+  if (!input.dataSale) return "";
+  const price = input.dataSale.price;
+  const yes = saleAnswerUrl(input.previewUrl, "yes");
+  const no = saleAnswerUrl(input.previewUrl, "no");
+  return `
+    <div style="border:1px solid #e3d5b5;background:#fffaf0;padding:14px 18px;margin:0 0 16px;">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">3Dデータの販売について（ご許諾のお願い）</div>
+      <p style="font-size:13px;line-height:1.9;margin:0 0 10px;color:#444;">
+        撮影した「${esc(name)}」の3Dデータ（PLY・OBJ）を、映像制作者向けにダウンロード販売してよいかをお知らせください。<br>
+        ${price > 0
+          ? `販売価格は <strong>${esc(yen(price))}（税込）</strong> を予定しています。`
+          : "販売価格は、ご許諾をいただいたあとに改めてご相談します。"}<br>
+        売上のうち <strong>${REVENUE_SHARE_PERCENT}%</strong> を貴スタジオへ分配します（掲載データ販売分配規約 第2条）。<br>
+        分配は四半期ごとの精算です。<br>
+        他社へのスキャン許諾を妨げるものではありません（同規約 第5条）。<br>
+        販売しない場合でも、掲載ページと3Dツアーはそのままご利用いただけます。
+      </p>
+      <p style="margin:0 0 8px;">
+        <a href="${esc(yes)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;font-size:13px;margin-right:8px;">3Dデータの販売を許諾する →</a>
+        <a href="${esc(no)}" style="display:inline-block;border:1px solid #bbb;color:#333;text-decoration:none;padding:10px 18px;font-size:13px;">今回は販売しない →</a>
+      </p>
+      <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">
+        リンク先の画面で、そのままボタンを押すだけで回答できます（ログイン不要）。<br>
+        条件・価格のご希望は、同じ画面の記入欄かこのメールへの返信でお知らせください。<br>
+        許諾はいつでも取り消せます（販売済みのデータの利用は、購入者の既得の権利として残ります）。
+      </p>
+    </div>`;
+}
+
+/** 規約の控え（2026-09-26 本人指示。何も無くても毎回同送する）。 */
+function termsSection(siteUrl: string): string {
+  const base = siteUrl.replace(/\/$/, "");
+  const items = STUDIO_TERMS_DOCS.map(
+    (d) =>
+      `<li style="margin:0 0 6px;"><a href="${esc(base + d.path)}" style="color:#111;">${esc(d.title)}</a>` +
+      `<span style="color:#888;"> — ${esc(d.note)}</span></li>`,
+  ).join("");
+  return `
+    <div style="border:1px solid #eee;padding:14px 18px;margin:0 0 16px;">
+      <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">規約（掲載・販売に関する条件）</div>
+      <p style="font-size:13px;line-height:1.9;margin:0 0 8px;color:#444;">
+        掲載と3Dデータ販売の条件は、下記の規約のとおりです。<br>
+        ご確認のうえ、ご不明な点はこのメールへの返信でお知らせください。
+      </p>
+      <ul style="font-size:13px;line-height:1.8;margin:0;padding-left:20px;">${items}</ul>
+      <p style="font-size:12px;line-height:1.8;color:#666;margin:8px 0 0;">
+        PDF や書面の控えが必要な場合は、その旨ご返信ください。
+      </p>
+    </div>`;
 }
 
 export function buildStudioReviewMail(input: StudioReviewMailInput): StudioReviewMail {
@@ -107,13 +191,15 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
         このURLは期限切れになりません（貼り替えは不要です）。停止したいときは当社までご連絡ください。
       </p>
     </div>` : ""}
+    ${dataSaleSection(input, name)}
+    ${termsSection(input.siteUrl || "https://locahun3d.com")}
     <p ${p}>問題がなければ、プレビューページの上部にある「この内容でOK・公開する」ボタンを押してください。<br>
     ボタンを押した時点で、掲載ページが公開されます。<br>
     修正のご希望がある場合は、ボタンを押さずに、このメールへの返信でお知らせください。</p>
     <p style="font-size:12px;line-height:1.8;color:#999;margin:0 0 16px;">お問い合わせ: ${esc(contact)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
     <p style="font-size:12px;line-height:1.7;color:#666;margin:0;">
-      English: Your listing page on Locahun3D is ready for review. Please check the preview link above (no login required${expiry ? `, valid until ${esc(expiry)}` : ""}) then press the “Approve and publish” button at the top of the preview page to publish it, or reply to this email with any corrections.
+      English: Your listing page on Locahun3D is ready for review. Please check the preview link above (no login required${expiry ? `, valid until ${esc(expiry)}` : ""}) then press the “Approve and publish” button at the top of the preview page to publish it, or reply to this email with any corrections.${input.dataSale ? " We also ask whether we may sell the 3D data (PLY/OBJ) of your studio; you can answer with the two links above. You receive " + REVENUE_SHARE_PERCENT + "% of such sales. The applicable terms are linked above." : ""}
     </p>
   `;
 

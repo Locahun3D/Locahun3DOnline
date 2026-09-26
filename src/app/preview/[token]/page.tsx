@@ -5,8 +5,10 @@ import { propertyPreviewRepo, isPreviewExpired } from "@/lib/property-previews";
 import PropertyDetailView from "@/components/property-detail-view";
 import { getLocale } from "@/lib/i18n/server";
 import StudioApproveBar from "@/components/studio-approve-bar";
+import StudioDataSaleBar from "@/components/studio-data-sale-bar";
 import { canStudioApprove } from "@/lib/publish-flow";
 import { hashStudioApproveKey } from "@/lib/studio-approval";
+import { canAnswerDataSale, dataSaleConsentOf } from "@/lib/data-sale-consent";
 
 // トークンの有効期限を毎リクエストで判定するため動的レンダリング。
 // noindex: 共有用の非公開リンクなので検索エンジンには載せない。
@@ -58,11 +60,13 @@ export default async function PreviewPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ approve?: string | string[] }>;
+  searchParams: Promise<{ approve?: string | string[]; sale?: string | string[] }>;
 }) {
   const { token } = await params;
-  const approveParam = (await searchParams).approve;
+  const query = await searchParams;
+  const approveParam = query.approve;
   const approveKey = typeof approveParam === "string" ? approveParam : "";
+  const saleParam = typeof query.sale === "string" ? query.sale : "";
   const preview = await propertyPreviewRepo.get(token);
   if (!preview) notFound();
   if (isPreviewExpired(preview)) return <ExpiredView />;
@@ -80,10 +84,28 @@ export default async function PreviewPage({
   // 確認メールのリンクで開いていて、スタジオの承認で公開済みなら、お礼の表示を出し続ける。
   const approvedHere = approveKey !== "" && property.status === "published" && property.publishFlow?.studioConfirmedVia === "studio-link";
 
+  // 3Dデータ販売の許諾（2026-09-26 本人指示）。確認メールの回答リンクから開いたときだけ出す。
+  // 掲載の承認キーは公開で使い切りになるが、こちらは別のハッシュで見るので公開後も答えられる。
+  const consent = dataSaleConsentOf(property);
+  const canAnswerSale = approveKey !== "" && canAnswerDataSale(property, hashStudioApproveKey(approveKey)).ok;
+
   return (
     <>
     {(canApprove || approvedHere) && (
       <StudioApproveBar token={token} approveKey={approveKey} en={locale === "en"} publishedId={approvedHere ? property.id : undefined} />
+    )}
+    {canAnswerSale && (
+      <div className="ui-page-shell pt-6 pb-0">
+        <StudioDataSaleBar
+          token={token}
+          approveKey={approveKey}
+          en={locale === "en"}
+          initialChoice={saleParam === "yes" ? "granted" : saleParam === "no" ? "declined" : undefined}
+          status={consent.status}
+          price={consent.proposedPrice}
+          savedNote={consent.note}
+        />
+      </div>
     )}
     <PropertyDetailView
       property={property}

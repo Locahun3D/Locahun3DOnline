@@ -42,6 +42,7 @@ import {
   requestReviewAction,
   resendStudioReviewMailAction,
   setStudioConfirmedAction,
+  setDataSaleConsentAction,
   withdrawReviewAction,
   archiveAction,
   deleteAction,
@@ -57,6 +58,7 @@ import { publishReadiness } from "@/lib/publish-readiness";
 import PublishFlowPanel from "@/components/admin/publish-flow-panel";
 import { EMPTY_PUBLISH_FLOW, PUBLISH_DISPLAY_LABEL, publishDisplayStage, publishStage, publishWarnings, type PublishStage } from "@/lib/publish-flow";
 import { missingEnglishFields } from "@/lib/property-english";
+import { EMPTY_DATA_SALE_CONSENT } from "@/lib/data-sale-consent";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
 import { applyExtendedLicensePricing } from "@/lib/license-options";
@@ -649,6 +651,17 @@ export default function PropertyEditor({
     runFlow(
       () => setStudioConfirmedAction(initial.id, confirmed),
       () => (confirmed ? "スタジオ確認済みとして記録しました。" : "スタジオ確認済みの記録を外しました。"),
+    );
+  // 3Dデータ販売の許諾を運営が手で記録する（2026-09-26。電話・口頭で返事が来たとき）。
+  const onSetDataSale = (answer: "granted" | "declined" | "reset") =>
+    runFlow(
+      () => setDataSaleConsentAction(initial.id, answer),
+      () =>
+        answer === "granted"
+          ? "3Dデータ販売の許諾を記録しました。"
+          : answer === "declined"
+            ? "3Dデータは販売しない、として記録しました。"
+            : "3Dデータ販売の回答の記録を外しました。",
     );
   const onWithdrawReview = () =>
     runFlow(
@@ -2806,6 +2819,7 @@ export default function PropertyEditor({
                 ready={requestReadiness.ready}
                 flow={watch("publishFlow") ?? EMPTY_PUBLISH_FLOW}
                 contactEmail={watch("contactEmail") ?? ""}
+                consent={watch("dataSaleConsent") ?? EMPTY_DATA_SALE_CONSENT}
                 missingRequired={requestReadiness.missing}
                 missingEnglish={missingEnglishFields(watch())}
                 busy={publishing}
@@ -2814,6 +2828,7 @@ export default function PropertyEditor({
                 onRequest={onRequestReview}
                 onResend={onResendStudioMail}
                 onSetConfirmed={onSetStudioConfirmed}
+                onSetDataSale={onSetDataSale}
                 onWithdraw={onWithdrawReview}
                 onPublish={onPublish}
               />

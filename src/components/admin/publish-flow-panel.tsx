@@ -12,6 +12,11 @@ import {
   type PublishFlow,
   type PublishStage,
 } from "@/lib/publish-flow";
+import {
+  DATA_SALE_STATUS_LABEL,
+  REVENUE_SHARE_PERCENT,
+  type DataSaleConsent,
+} from "@/lib/data-sale-consent";
 
 /**
  * 公開ワークフロー（下書き → 公開申請 → 公開）の操作パネル（運営専用・2026-09-20）。
@@ -24,6 +29,7 @@ export default function PublishFlowPanel({
   ready = false,
   flow,
   contactEmail,
+  consent,
   missingRequired,
   missingEnglish,
   busy,
@@ -32,6 +38,7 @@ export default function PublishFlowPanel({
   onRequest,
   onResend,
   onSetConfirmed,
+  onSetDataSale,
   onWithdraw,
   onPublish,
 }: {
@@ -40,6 +47,8 @@ export default function PublishFlowPanel({
   ready?: boolean;
   flow: PublishFlow;
   contactEmail: string;
+  /** 3Dデータ販売の許諾（2026-09-26）。確認メールに同送したお願いの返事。 */
+  consent: DataSaleConsent;
   missingRequired: string[];
   missingEnglish: string[];
   busy: boolean;
@@ -49,6 +58,7 @@ export default function PublishFlowPanel({
   onRequest: (opts: { skipMail: boolean }) => void;
   onResend: () => void;
   onSetConfirmed: (confirmed: boolean) => void;
+  onSetDataSale: (answer: "granted" | "declined" | "reset") => void;
   onWithdraw: () => void;
   onPublish: () => void;
 }) {
@@ -119,6 +129,16 @@ export default function PublishFlowPanel({
               {missingEnglish.length > 0 && `これから翻訳: ${missingEnglish.join("、")}`}
             </FlowItem>
             <FlowItem ok pendingOk label="プレビューリンク（ログイン不要・30日）を用意" />
+            <FlowItem
+              ok={skipMail || emailOk}
+              label="確認メールに3Dデータ販売の許諾のお願いと規約を同送"
+            >
+              {skipMail
+                ? "メールを送らないので同送されません"
+                : consent.status === "granted"
+                  ? "すでに販売OKの回答済み。許諾のお願いは付けず、規約だけ同送します"
+                  : "許諾の回答ボタン（販売する／しない）と、規約4本のリンクを入れます"}
+            </FlowItem>
             <FlowItem ok={skipMail || emailOk} label="スタジオへ確認メールを送信">
               {skipMail
                 ? "今回は送信しません"
@@ -186,7 +206,34 @@ export default function PublishFlowPanel({
             </Row>
             <Row k="スタジオ確認">{flow.studioConfirmedAt ? fmt(flow.studioConfirmedAt) : "未確認"}</Row>
             <Row k="英訳">{missingEnglish.length === 0 ? "完了" : `未翻訳あり: ${missingEnglish.join("、")}`}</Row>
+            <Row k="3Dデータ販売">
+              {DATA_SALE_STATUS_LABEL[consent.status]}
+              {consent.answeredAt ? `（${fmt(consent.answeredAt)}・${consent.answeredVia === "studio-link" ? "スタジオが回答" : "運営が記録"}）` : ""}
+              {consent.proposedPrice > 0 && (
+                <span className="text-muted">
+                  {" "}
+                  提示 ¥{consent.proposedPrice.toLocaleString("ja-JP")}（税込）・分配 {REVENUE_SHARE_PERCENT}%
+                </span>
+              )}
+              {consent.note && <span className="block text-muted whitespace-pre-line">{consent.note}</span>}
+            </Row>
           </dl>
+
+          {/* 販売の可否は電話や口頭で返ってくることもあるので、運営が手でも記録できるようにする。 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[12px] text-muted">3Dデータ販売の回答を記録:</span>
+            <button type="button" disabled={busy} className={secondary} onClick={() => onSetDataSale("granted")}>
+              販売OK
+            </button>
+            <button type="button" disabled={busy} className={secondary} onClick={() => onSetDataSale("declined")}>
+              販売しない
+            </button>
+            {consent.status !== "asked" && consent.status !== "unasked" && (
+              <button type="button" disabled={busy} className={secondary} onClick={() => onSetDataSale("reset")}>
+                記録を外す
+              </button>
+            )}
+          </div>
 
           <label className="flex items-start gap-2 text-[12px] leading-[1.7] cursor-pointer">
             <input

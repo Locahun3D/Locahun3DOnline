@@ -43,6 +43,20 @@ import {
   type MailOutcome,
 } from "@/lib/publish-flow";
 import { propertyPreviewRepo, type PropertyPreview } from "@/lib/property-previews";
+import {
+  dataSaleConsentOf,
+  markDataSaleAsked,
+  recordDataSaleAnswer,
+  proposedSalePrice,
+} from "@/lib/data-sale-consent";
+
+/**
+ * 確認メールで3Dデータ販売の許諾も聞くか（2026-09-26 本人指示）。
+ * すでに「販売OK」をもらっている物件には聞き直さない（規約の同送はメール側で常に行う）。
+ */
+function dataSaleAsk(p: Property): { price: number } | undefined {
+  return dataSaleConsentOf(p).status === "granted" ? undefined : { price: proposedSalePrice(p) };
+}
 import { sendStudioReviewMail } from "@/lib/email";
 import {sceneEditAssetProtection} from '@/lib/scene-edit-asset-protection';
 
@@ -516,6 +530,7 @@ export async function requestReviewAction(
       studioName: translated.title,
       previewPath: `/preview/${preview.token}`,
       previewExpiresAt: preview.expiresAt,
+      dataSale: dataSaleAsk(translated),
     });
     if (sent.status === "failed") {
       return { ok: false, error: `${sent.error} 公開申請にはしていません。時間をおいて再実行してください。` };
@@ -530,7 +545,18 @@ export async function requestReviewAction(
   try {
     const latest = await repo.get(parsed.id);
     const base = latest && latest.updatedAt !== existing.updatedAt ? latest : translated;
-    saved = await repo.upsert(enterReview(base, flowOpts));
+    const withFlow = enterReview(base, flowOpts);
+    // 販売許諾の回答リンクは掲載の承認キーと同じキーを使う（メールは1通・リンクは2種類）。
+    // ハッシュは dataSaleConsent 側にも持たせる（公開時に承認キーを消しても回答できるように）。
+    saved = await repo.upsert(
+      !skipMail && approveKeyHash
+        ? markDataSaleAsked(withFlow, {
+            now: flowOpts.now,
+            keyHash: approveKeyHash,
+            proposedPrice: proposedSalePrice(withFlow),
+          })
+        : withFlow,
+    );
   } catch {
     if (mail.mode === "sent") {
       return {
@@ -589,15 +615,20 @@ export async function resendStudioReviewMailAction(id: string): Promise<FlowOk |
     previewExpiresAt: preview.expiresAt,
     // 初回を「送らずに申請中」にしていた場合、これが1通目なので【再送】は付けない。
     resend: !!existing.publishFlow.studioNotifiedAt,
+    dataSale: dataSaleAsk(existing),
   });
   if (sent.status === "failed") return { ok: false, error: sent.error };
   // 送信中に別の保存が入っていても消さないよう、最新の保存内容に送信の記録だけを足す（2026-09-23）。
   const latest = (await repo.get(id)) ?? existing;
+  const now = new Date().toISOString();
   const saved = await repo.upsert(
-    recordStudioNotified(latest, {
-      now: new Date().toISOString(),
-      mail: { mode: sent.status, to: sent.to, approveKeyHash: approve.hash },
-    }),
+    markDataSaleAsked(
+      recordStudioNotified(latest, {
+        now,
+        mail: { mode: sent.status, to: sent.to, approveKeyHash: approve.hash },
+      }),
+      { now, keyHash: approve.hash, proposedPrice: proposedSalePrice(latest) },
+    ),
   );
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${id}/edit`);
@@ -625,6 +656,30 @@ export async function setStudioConfirmedAction(
   const saved = await repo.upsert(
     setStudioConfirmed(existing, { confirmed, now: new Date().toISOString() }),
   );
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return { ok: true, updatedAt: saved.updatedAt, property: saved };
+}
+
+/**
+ * 3Dデータ販売の許諾を運営が手で記録する（2026-09-26）。
+ * スタジオが電話・口頭・メール本文で答えたときの受け皿。スタジオ自身の回答リンクは
+ * preview/[token]/_actions.ts の studioDataSaleAction。
+ */
+export async function setDataSaleConsentAction(
+  id: string,
+  answer: "granted" | "declined" | "reset",
+  note?: string,
+): Promise<{ ok: true; updatedAt: string | undefined; property: Property } | FlowErr> {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  const now = new Date().toISOString();
+  const next =
+    answer === "reset"
+      ? { ...existing, dataSaleConsent: { ...dataSaleConsentOf(existing), status: "asked" as const, answeredAt: null, answeredVia: null } }
+      : recordDataSaleAnswer(existing, { answer, now, via: "admin", note });
+  const saved = await repo.upsert(next);
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${id}/edit`);
   return { ok: true, updatedAt: saved.updatedAt, property: saved };

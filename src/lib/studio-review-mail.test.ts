@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { buildStudioReviewMail, formatExpiryJst, STUDIO_REVIEW_CHECKPOINTS } from "./studio-review-mail";
+import {
+  buildStudioReviewMail,
+  formatExpiryJst,
+  STUDIO_REVIEW_CHECKPOINTS,
+  STUDIO_TERMS_DOCS,
+} from "./studio-review-mail";
 
 const input = {
   studioName: "スタジオ青空",
@@ -96,5 +101,44 @@ describe("sendStudioReviewMail（実送信しないこと）", () => {
     fetchSpy.mockResolvedValueOnce({ ok: false });
     const bad = await sendStudioReviewMail({ to: "s@example.com", studioName: "x", previewPath: "/preview/t", previewExpiresAt: input.previewExpiresAt });
     expect(bad.status).toBe("failed");
+  });
+});
+
+describe("規約と3Dデータ販売の許諾（2026-09-26）", () => {
+  it("規約のリンクは、販売の話があってもなくても毎回入る", () => {
+    for (const mail of [buildStudioReviewMail(input), buildStudioReviewMail({ ...input, dataSale: { price: 0 } })]) {
+      for (const doc of STUDIO_TERMS_DOCS) {
+        expect(mail.bodyHtml).toContain(`https://locahun3d.com${doc.path}`);
+        expect(mail.bodyHtml).toContain(doc.title);
+      }
+    }
+  });
+
+  it("siteUrl を渡すとその絶対URLで規約を案内する", () => {
+    const { bodyHtml } = buildStudioReviewMail({ ...input, siteUrl: "https://example.test/" });
+    expect(bodyHtml).toContain("https://example.test/terms/service");
+    expect(bodyHtml).not.toContain("https://example.test//terms");
+  });
+
+  it("dataSale を渡さなければ許諾のお願いは出ない", () => {
+    expect(buildStudioReviewMail(input).bodyHtml).not.toContain("ご許諾のお願い");
+  });
+
+  it("許諾の回答リンクは承認キーを保ったまま、yes/no と回答欄のアンカーが付く", () => {
+    const { bodyHtml } = buildStudioReviewMail({
+      ...input,
+      previewUrl: `${input.previewUrl}?approve=abc`,
+      dataSale: { price: 150000 },
+    });
+    expect(bodyHtml).toContain(`${input.previewUrl}?approve=abc&amp;sale=yes#data-sale`);
+    expect(bodyHtml).toContain(`${input.previewUrl}?approve=abc&amp;sale=no#data-sale`);
+    expect(bodyHtml).toContain("¥150,000");
+    expect(bodyHtml).toContain("20%");
+  });
+
+  it("価格が未定なら金額は書かず、あとで相談すると書く", () => {
+    const { bodyHtml } = buildStudioReviewMail({ ...input, dataSale: { price: 0 } });
+    expect(bodyHtml).toContain("ご許諾をいただいたあとに改めてご相談");
+    expect(bodyHtml).not.toContain("（税込）</strong>");
   });
 });

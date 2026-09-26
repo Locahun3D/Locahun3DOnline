@@ -134,6 +134,16 @@ function renderOverview(text: string) {
   );
 }
 
+/**
+ * 「データ利用のご相談」のリンク（2026-09-26 本人指示「押したらどのページのどのデータかわかるように」）。
+ * どの物件・どのシーンから来たのかを付けて、問い合わせフォームに自動で入れる。
+ * 画面に出ている GS-01 等の番号もそのまま渡す（人が口頭で照合できるように）。
+ */
+function licenseHref(propertyId: string, sceneId: string, sceneNo: number): string {
+  const q = new URLSearchParams({ property: propertyId, scene: sceneId, no: String(sceneNo) });
+  return `/contact/license?${q.toString()}`;
+}
+
 export default function PropertyDetailView({
   property,
   others,
@@ -918,7 +928,7 @@ export default function PropertyDetailView({
                       {en ? (
                         <>
                           Need the 3D data (PLY / OBJ) of this scene?{" "}
-                          <Link href={lh("/contact/license")} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
+                          <Link href={lh(licenseHref(property.id, item.id, i + 1))} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
                             Ask us about data licensing
                           </Link>
                           .
@@ -926,7 +936,7 @@ export default function PropertyDetailView({
                       ) : (
                         <>
                           このシーンの3Dデータ（PLY・OBJ）が必要な場合は、
-                          <Link href={lh("/contact/license")} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
+                          <Link href={lh(licenseHref(property.id, item.id, i + 1))} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
                             データ利用のご相談
                           </Link>
                           からお問い合わせください。

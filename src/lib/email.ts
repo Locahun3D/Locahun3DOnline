@@ -476,6 +476,11 @@ export async function sendStudioReviewMail(opts: {
   approveKey?: string;
   /** 自社サイト埋め込み用の恒久URL（省略可。2026-09-21）。 */
   embedUrl?: string;
+  /**
+   * 3Dデータ販売の許諾も同時に聞く（2026-09-26 本人指示）。price は提示価格（税込・円）。
+   * 省略すると節ごと出ない（すでに許諾済みで聞き直す必要がない物件）。
+   */
+  dataSale?: { price: number };
 }): Promise<StudioReviewMailResult> {
   const to = opts.to.trim();
   const mail = buildStudioReviewMail({
@@ -484,6 +489,8 @@ export async function sendStudioReviewMail(opts: {
     previewExpiresAt: opts.previewExpiresAt,
     resend: opts.resend,
     embedUrl: opts.embedUrl,
+    dataSale: opts.dataSale,
+    siteUrl: appUrl(),
     contactAddress: operatorAddress(),
   });
   if (mailDryRun()) {
@@ -531,5 +538,37 @@ export async function notifyStudioApproved(opts: {
       ? `【ロケハン3D】スタジオ承認により公開しました（${opts.title}）`
       : `【ロケハン3D】スタジオ承認済み・公開は保留（${opts.title}）`,
     html: shell(opts.published ? "スタジオ承認により公開しました" : "スタジオ承認済み（公開は保留）", body),
+  });
+}
+
+/**
+ * スタジオが3Dデータ販売の許諾に答えたことを、運営へ知らせる（社内宛のみ・2026-09-26）。
+ * 販売の可否は金額に直結するので、必ず控えを残す（社外へは送らない）。
+ */
+export async function notifyDataSaleAnswer(opts: {
+  propertyId: string;
+  title: string;
+  answer: "granted" | "declined";
+  note?: string;
+  price?: number;
+}): Promise<boolean> {
+  const granted = opts.answer === "granted";
+  if (mailDryRun()) {
+    console.info(`[mail:dry-run] data sale answer. property=${opts.propertyId} answer=${opts.answer}`);
+    return false;
+  }
+  const name = esc(opts.title || opts.propertyId);
+  const body = `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">「${name}」の3Dデータ販売について、スタジオから${
+    granted ? "<strong>許諾</strong>の回答がありました。" : "<strong>今回は販売しない</strong>との回答がありました。"
+  }</p>
+    ${opts.price ? `<p style="font-size:13px;color:#666;margin:0 0 16px;">提示していた販売価格: ¥${opts.price.toLocaleString("ja-JP")}（税込）</p>` : ""}
+    ${opts.note ? `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">スタジオからの記入:<br>${esc(opts.note).replace(/\n/g, "<br>")}</p>` : ""}
+    <p style="margin:0;"><a href="${esc(appUrl(`/admin/properties/${opts.propertyId}/edit`))}">物件編集を開く</a></p>`;
+  return sendEmail({
+    to: operatorAddress(),
+    subject: granted
+      ? `【ロケハン3D】3Dデータ販売の許諾をいただきました（${opts.title}）`
+      : `【ロケハン3D】3Dデータ販売は見送りの回答（${opts.title}）`,
+    html: shell(granted ? "3Dデータ販売の許諾" : "3Dデータ販売は見送り", body),
   });
 }

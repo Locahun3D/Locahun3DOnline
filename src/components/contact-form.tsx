@@ -28,13 +28,28 @@ export type ContactPrefill = {
   publicUrl?: string;
 };
 
+/**
+ * 物件ページの「データ利用のご相談」から来たときの対象（2026-09-26 本人指示
+ * 「押したらどのページのどのデータかわかるように自動入力されてほしい」）。
+ * 利用者が書き直さなくても、どの物件のどのシーンの話かが運営に届く。
+ */
+export type LicenseTarget = {
+  propertyId: string;
+  /** 例: StudioNow ／ GS-01 StudioNow */
+  targetName: string;
+  /** 例: https://locahun3d.com/properties/studio-now#scene-0 */
+  targetUrl: string;
+};
+
 export default function ContactForm({
   type,
   prefill,
+  licenseTarget,
   estimateSummary,
 }: {
   type: ContactType;
   prefill?: ContactPrefill;
+  licenseTarget?: LicenseTarget;
   /** scan（制作側スキャン依頼）専用。概算シミュレーターの選択内容。
    *  ⚠ ここには**入れずに** hidden で送り、サーバー側で本文の先頭へ足す。
    *  本文欄へ直接書き込むと、利用者が書いた文章と混ざるうえ、書いた後に
@@ -233,6 +248,21 @@ export default function ContactForm({
 
         {type === "license" && (
           <>
+            {licenseTarget && (
+              // 物件ページのリンクから来たときだけ出る。値はサーバーが物件から組み立てたもので、
+              // 利用者は編集しない（書き換えても本文に何を書いたかで運営が照合できるようにURLも送る）。
+              <Field en={en} label={en ? "Data you are asking about" : "お問い合わせ対象のデータ"}>
+                <input
+                  name="propertyName"
+                  type="text"
+                  readOnly
+                  value={licenseTarget.targetName}
+                  className={`${inputClass} bg-[#f7f7f5] text-muted`}
+                />
+                <input type="hidden" name="url" value={licenseTarget.targetUrl} />
+                <p className="mt-1.5 text-[12px] text-muted break-all">{licenseTarget.targetUrl}</p>
+              </Field>
+            )}
             <Field en={en} label={en ? "Company (optional)" : "会社名・屋号（任意）"}>
               <input name="company" type="text" placeholder={en ? "Acme Inc." : "株式会社〇〇"} className={inputClass} />
             </Field>
@@ -246,6 +276,20 @@ export default function ContactForm({
                 name="message"
                 rows={5}
                 required
+                defaultValue={
+                  licenseTarget
+                    ? en
+                      ? `I would like the 3D data of: ${licenseTarget.targetName}
+${licenseTarget.targetUrl}
+
+Intended use: `
+                      : `次のシーンの3Dデータについてのご相談です。
+${licenseTarget.targetName}
+${licenseTarget.targetUrl}
+
+使用目的: `
+                    : undefined
+                }
                 placeholder={en
                   ? "e.g. We'd like to use purchased data as part of an AI training set for a VR platform. Please let us know what's possible."
                   : "例: 購入データをVRプラットフォーム向けのAI学習データとして使いたいです。可能な範囲を教えてください。"}
