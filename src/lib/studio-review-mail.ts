@@ -222,7 +222,7 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
     <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">
       ロケハン3D（運営：KWI株式会社）<br>
       〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F<br>
-      TEL 080-4623-0377（平日 10:00–18:00） ／ ${esc(contact)}<br>
+      ${esc(contact)}<br>
       <a href="${esc((input.siteUrl || "https://locahun3d.com").replace(/\/$/, ""))}" style="color:#666;">${esc((input.siteUrl || "https://locahun3d.com").replace(/\/$/, ""))}</a>
     </p>
   `;
