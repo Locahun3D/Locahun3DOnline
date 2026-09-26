@@ -51,10 +51,11 @@ describe("公開申請メールの埋め込み案内", () => {
     previewExpiresAt: "2026-10-05T00:00:00.000Z",
   };
 
-  it("埋め込みURLを渡すと、貼り付け用コードと期限なしの説明が入る", () => {
+  it("埋め込みURLを渡すと、貼り付け用コードとURLが入る", () => {
     const mail = buildStudioReviewMail({ ...base, embedUrl: "https://locahun3d.com/embed/abc" });
-    expect(mail.bodyHtml).toContain("貴社サイトに3Dツアーを貼れます");
-    expect(mail.bodyHtml).toContain("期限切れになりません");
+    // 「無料・期限なし」は見出しに残す。本文の補足2行は 2026-09-26 本人指示で削った。
+    expect(mail.bodyHtml).toContain("貴社サイトに3Dツアーを貼れます（無料・期限なし）");
+    expect(mail.bodyHtml).not.toContain("期限切れになりません");
     expect(mail.bodyHtml).toContain("https://locahun3d.com/embed/abc");
     // コードは文字参照で入る（メールソフトがタグとして解釈しない）
     expect(mail.bodyHtml).toContain("&lt;iframe");

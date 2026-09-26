@@ -21,7 +21,9 @@ describe("buildStudioReviewMail", () => {
     const { bodyHtml } = buildStudioReviewMail(input);
     expect(bodyHtml).toContain(`href="${input.previewUrl}"`);
     expect(bodyHtml).toContain("2026年10月20日");
-    expect(bodyHtml).toContain("ログインは不要");
+    // 2026-09-26 本人指示で、ボタン下の生URLと「ログインは不要です。」は落とした。
+    expect(bodyHtml).not.toContain("ログインは不要です。");
+    expect(bodyHtml).toContain("まだ一般には公開されていません");
     for (const c of STUDIO_REVIEW_CHECKPOINTS) expect(bodyHtml).toContain(c);
     for (const word of ["料金", "写真", "設備"]) expect(bodyHtml).toContain(word);
     expect(bodyHtml).toContain("「この内容でOK・公開する」ボタン");

@@ -38,6 +38,7 @@ export interface StudioReviewMailInput {
  * 掲載の確認メールに常に全部のリンクを入れる。並び順は読む順（掲載 → 販売 → 全体）。
  */
 export const STUDIO_TERMS_DOCS = [
+  { path: "/terms/listing", title: "施設掲載規約", note: "掲載の条件・写真の扱い・掲載の停止" },
   { path: "/terms/listing-revenue-share", title: "掲載データ販売分配規約", note: "販売時の分配（20%）と精算" },
   { path: "/terms/data-download", title: "3Dデータ購入規約", note: "購入者が守る条件（第三者の権利物の扱いを含む）" },
   { path: "/terms/service", title: "利用規約", note: "サービス全体" },
@@ -128,14 +129,9 @@ function dataSaleSection(input: StudioReviewMailInput, name: string): string {
         他社へのスキャン許諾を妨げるものではありません（同規約 第5条）。<br>
         販売しない場合でも、掲載ページと3Dツアーはそのままご利用いただけます。
       </p>
-      <p style="margin:0 0 8px;">
+      <p style="margin:0;">
         <a href="${esc(yes)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;font-size:13px;margin-right:8px;">3Dデータの販売を許諾する →</a>
         <a href="${esc(no)}" style="display:inline-block;border:1px solid #bbb;color:#333;text-decoration:none;padding:10px 18px;font-size:13px;">今回は販売しない →</a>
-      </p>
-      <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">
-        リンク先の画面で、そのままボタンを押すだけで回答できます（ログイン不要）。<br>
-        条件・価格のご希望は、同じ画面の記入欄かこのメールへの返信でお知らせください。<br>
-        許諾はいつでも取り消せます（販売済みのデータの利用は、購入者の既得の権利として残ります）。
       </p>
     </div>`;
 }
@@ -180,10 +176,8 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
     <p style="margin:20px 0;">
       <a href="${esc(input.previewUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 22px;font-size:13px;letter-spacing:.1em;">掲載ページのプレビューを開く →</a>
     </p>
-    <p style="font-size:12px;line-height:1.8;color:#666;margin:0 0 16px;word-break:break-all;">
-      ${esc(input.previewUrl)}<br>
-      ログインは不要です。${expiry ? `<br>このリンクの有効期限は ${esc(expiry)} までです。` : ""}<br>
-      まだ一般には公開されていません。
+    <p style="font-size:12px;line-height:1.8;color:#666;margin:0 0 16px;">
+      ${expiry ? `このリンクの有効期限は ${esc(expiry)} までです。<br>` : ""}まだ一般には公開されていません。
     </p>
     <div style="background:#f7f7f5;border:1px solid #eee;padding:14px 18px;margin:0 0 16px;">
       <div style="font-size:12px;color:#666;margin-bottom:6px;">ご確認いただきたい点</div>
@@ -194,13 +188,11 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
       <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">貴社サイトに3Dツアーを貼れます（無料・期限なし）</div>
       <p style="font-size:13px;line-height:1.9;margin:0 0 10px;color:#444;">
         下のコードを、貴社サイトの載せたい場所にそのまま貼り付けてください。<br>
-        幅は貼った場所に合わせて伸び縮みし、スマートフォンでも崩れません。<br>
         訪問者はログイン不要で、そのまま歩いて見られます。
       </p>
       ${embedCodeBlock(input.embedUrl, name)}
       <p style="font-size:12px;line-height:1.8;color:#666;margin:10px 0 0;word-break:break-all;">
-        リンクだけを使う場合: ${esc(input.embedUrl)}<br>
-        このURLは期限切れになりません（貼り替えは不要です）。停止したいときは当社までご連絡ください。
+        リンクだけを使う場合: ${esc(input.embedUrl)}
       </p>
     </div>` : ""}
     ${dataSaleSection(input, name)}
