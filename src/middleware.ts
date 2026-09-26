@@ -30,7 +30,6 @@ const PROTECTED = /^\/(account|dashboard|admin|onboarding)(?:\/|$)/;
 const WORKS_HOST = "web.locahun3d.com";
 const ONLINE_HOST = "locahun3d.com";
 const ONLINE_ORIGIN = `https://${ONLINE_HOST}`;
-const WORKS_ORIGIN = `https://${WORKS_HOST}`;
 
 /** 旧マーケサイトのページ → オンライン版の着地先（digiroke3d_Web/worker.js より移植）。 */
 const RETIRE: Record<string, string> = {
@@ -74,7 +73,7 @@ function hostOf(req: NextRequest): string {
  */
 function hostRouting(req: NextRequest): NextResponse | null {
   const host = hostOf(req);
-  const { pathname, search } = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
   if (host === WORKS_HOST) {
     if (WORKS_PATH.test(pathname) || pathname.startsWith("/assets/") || PASSTHROUGH.test(pathname)) {
@@ -92,10 +91,12 @@ function hostRouting(req: NextRequest): NextResponse | null {
     return NextResponse.redirect(new URL(mapped, ONLINE_ORIGIN), 301);
   }
 
+  // 2026-09-26 本人指示「サイトマップのURLに works をコピーして移動／旧ページのURLは
+  // そのままにしつつ、移行する」。本体ホストでも同じ記事を配り、正典URL(canonical)を
+  // locahun3d.com 側に置いて検索の評価を1つのドメインへ寄せる。
+  // web.locahun3d.com の従来URLは今までどおり生きている（301にしない＝共有済みリンクを壊さない）。
   if (host === ONLINE_HOST || host === `www.${ONLINE_HOST}`) {
-    if (WORKS_PATH.test(pathname)) {
-      return NextResponse.redirect(new URL(pathname + search, WORKS_ORIGIN), 301);
-    }
+    if (WORKS_PATH.test(pathname)) return null;
   }
 
   return null;

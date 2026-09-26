@@ -9,6 +9,7 @@ import {
   type WorksPage,
 } from "@/lib/works-content";
 import { canViewWorks, getWorksMeta } from "@/lib/works-gating";
+import { isWorksIndexable, worksUrl } from "@/lib/works-seo";
 
 /**
  * /works/<slug>.html （EN は /en/works/<slug>.html）
@@ -42,18 +43,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const found = await load(pageParam);
   if (!found) return { title: "Not Found", robots: { index: false, follow: false } };
   const { slug, page } = found;
-  const jaUrl = `https://web.locahun3d.com/works/${slug}.html`;
-  const enUrl = `https://web.locahun3d.com/en/works/${slug}.html`;
+  // 2026-09-26: 正典URLは本体ホスト側へ移した（旧 web.locahun3d.com のURLもそのまま配る）。
+  // 転送ページと、KV で公開していない記事は今までどおり検索に出さない。
+  const jaUrl = worksUrl(slug, "ja");
+  const enUrl = worksUrl(slug, "en");
+  const locale = await getLocale();
+  const indexable = !page.redirectTo && (await isWorksIndexable(slug));
 
   return {
     // ルート layout の template（"%s｜ロケハン3D オンライン"）を当てない。
     // 取り込み元の <title> をそのまま出す（X で共有済みの見え方を変えないため）。
     title: { absolute: page.title },
     description: page.description ?? undefined,
-    // works は従来どおり全ページ noindex（sitemap にも出さない）。
-    robots: { index: false, follow: false },
+    robots: indexable ? { index: true, follow: true } : { index: false, follow: false },
     alternates: {
-      canonical: page.canonical ?? undefined,
+      canonical: locale === "en" ? enUrl : jaUrl,
       languages: { ja: jaUrl, en: enUrl, "x-default": jaUrl },
     },
     openGraph: {

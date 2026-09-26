@@ -24,10 +24,8 @@ export default function robots(): MetadataRoute.Robots {
         "/cart",
         "/sign-in",
         "/sign-up",
-        // works（実績＆技術ブログ）は従来どおり全ページ noindex。
-        // 各ページの metadata にも robots: noindex を入れてある。
-        "/works/",
-        "/en/works/",
+        // 2026-09-26: works（実績＆技術ブログ）はクロール可にした（本人指示）。
+        // 記事ごとの非公開は KV ゲーティング＋各ページの robots で制御する。
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,

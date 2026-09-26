@@ -29,6 +29,7 @@ export default async function SiteFooter() {
             しか無かった。zoom を 1.0 に戻したうえで、ここも実寸で 44px にする。 */}
         <nav className="flex flex-wrap gap-4 max-[720px]:gap-x-4 max-[720px]:gap-y-2 mono text-[10px] tracking-[0.18em] uppercase text-ink/70">
           {[
+            { href: "/data", label: en ? "3D data for sale" : "3Dデータ販売" },
             { href: "/terms/service", label: en ? "Terms of Service" : "利用規約" },
             { href: "/privacy", label: en ? "Privacy Policy" : "プライバシーポリシー" },
             { href: "/terms/tokushoho", label: en ? "Commercial Disclosure" : "特定商取引法" },
