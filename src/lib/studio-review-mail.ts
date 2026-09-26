@@ -115,7 +115,6 @@ function dataSaleSection(input: StudioReviewMailInput, name: string): string {
   if (!input.dataSale) return "";
   const price = input.dataSale.price;
   const yes = saleAnswerUrl(input.previewUrl, "yes");
-  const no = saleAnswerUrl(input.previewUrl, "no");
   return `
     <div style="border:1px solid #e3d5b5;background:#fffaf0;padding:14px 18px;margin:0 0 16px;">
       <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">3Dデータの販売について（ご許諾のお願い）</div>
@@ -130,8 +129,7 @@ function dataSaleSection(input: StudioReviewMailInput, name: string): string {
         販売しない場合でも、掲載ページと3Dツアーはそのままご利用いただけます。
       </p>
       <p style="margin:0;">
-        <a href="${esc(yes)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;font-size:13px;margin-right:8px;">3Dデータの販売を許諾する →</a>
-        <a href="${esc(no)}" style="display:inline-block;border:1px solid #bbb;color:#333;text-decoration:none;padding:10px 18px;font-size:13px;">今回は販売しない →</a>
+        <a href="${esc(yes)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 18px;font-size:13px;">3Dデータの販売を許諾する場合 →</a>
       </p>
     </div>`;
 }

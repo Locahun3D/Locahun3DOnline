@@ -133,7 +133,9 @@ describe("規約と3Dデータ販売の許諾（2026-09-26）", () => {
       dataSale: { price: 150000 },
     });
     expect(bodyHtml).toContain(`${input.previewUrl}?approve=abc&amp;sale=yes#data-sale`);
-    expect(bodyHtml).toContain(`${input.previewUrl}?approve=abc&amp;sale=no#data-sale`);
+    // 既定は販売しないので、「販売しない」のリンクは出さない（2026-09-26 本人指示）。
+    expect(bodyHtml).not.toContain("sale=no");
+    expect(bodyHtml).toContain("3Dデータの販売を許諾する場合");
     expect(bodyHtml).toContain("¥150,000");
     expect(bodyHtml).toContain("20%");
   });
