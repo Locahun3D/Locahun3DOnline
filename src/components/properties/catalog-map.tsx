@@ -20,6 +20,91 @@ import { useLocale } from "@/components/locale-provider";
  * (CircleMarker only), but explicit reset avoids console warnings on hot reload.
  */
 const noopIcon = L.divIcon({ className: "", iconSize: [0, 0] });
+
+/**
+ * ピンに乗せたときの小さなカード（2026-09-26 本人指示「カーソルオーバーすると写真付きで
+ * スタジオ情報とサムネが簡易で表示されるように」）。
+ * 以前は物件名を30字で切った1行だけで、どの物件か写真で判別できなかった。
+ * 中身はカタログのカードの要点だけ（写真・名前・所在地・料金・3Dの有無）。
+ * ⚠ Leaflet のツールチップは地図の中に描かれるので、サイトの CSS が効かない場所がある。
+ *   見た目はここのインライン指定で完結させる（globals.css に足すと全ページへ波及する）。
+ */
+function MarkerCard({ property: p, en }: { property: Property; en: boolean }) {
+  const name = p.title.split("\n")[0];
+  const sub = p.title.split("\n").slice(1).join(" ");
+  const hasSplat =
+    !!p.splatUrl?.trim() || (p.splatItems ?? []).some((s) => !!s.splatUrl?.trim());
+  const price =
+    p.priceType === "free"
+      ? en ? "Free" : "無料"
+      : p.hourlyPrice > 0
+        ? `¥${p.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP")}${p.priceType === "flat" ? "" : "/hr"}`
+        : "";
+  // 地図の枠は高さ 230px 前後しかないので、縦長のカードだと上の方のピンで切れる。
+  // 写真を左、文字を右に並べた横長（高さ約80px）にしてある。
+  return (
+    <div
+      style={{
+        width: 280,
+        display: "flex",
+        gap: 10,
+        padding: 8,
+        fontFamily: "'Noto Sans JP', sans-serif",
+        color: "#14181c",
+        whiteSpace: "normal",
+      }}
+    >
+      {p.cover.src && (
+        // eslint-disable-next-line @next/next/no-img-element -- next/image は使わない（CLAUDE.md）
+        <img
+          src={p.cover.src}
+          alt={p.cover.alt || name}
+          width={104}
+          height={70}
+          loading="lazy"
+          style={{ display: "block", width: 104, height: 70, objectFit: "cover", flexShrink: 0, background: "#141414" }}
+        />
+      )}
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 9.5, letterSpacing: "0.08em", color: "#6b7280", marginBottom: 2 }}>
+          {p.prefecture}
+          {p.city ? ` / ${p.city}` : ""}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1.4,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+          title={sub ? `${name} ${sub}` : name}
+        >
+          {name}
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4, fontSize: 11.5 }}>
+          <span style={{ color: "#1a9fc4", fontWeight: 700 }}>{price}</span>
+          {hasSplat && (
+            <span
+              style={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 8.5,
+                letterSpacing: "0.18em",
+                background: "#5ec8e8",
+                color: "#fff",
+                padding: "1px 5px",
+              }}
+            >
+              3DGS
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 L.Marker.prototype.options.icon = noopIcon;
 
 interface Props {
@@ -122,6 +207,7 @@ export default function CatalogMap({
   const withCoords = useMemo(() => items.filter((p) => p.coords), [items]);
   const containerRef = useRef<HTMLDivElement>(null);
   const tile = useMemo(() => mapTileConfig(), []);
+  const en = useLocale() === "en";
 
   return (
     <div
@@ -204,19 +290,24 @@ export default function CatalogMap({
             >
               <Tooltip
                 direction="top"
-                offset={[0, -8]}
-                opacity={0.95}
+                offset={[0, -10]}
+                opacity={1}
                 permanent={active}
+                className="catalog-map-card"
               >
-                <span style={{ fontFamily: "JetBrains Mono", fontSize: 10 }}>
-                  {p.title.slice(0, 30)}
-                  {p.title.length > 30 ? "…" : ""}
-                </span>
+                <MarkerCard property={p} en={en} />
               </Tooltip>
             </CircleMarker>
           );
         })}
       </MapContainer>
+      {/* ピンのカードだけ、Leaflet 既定の余白と角丸を外す（写真を枠いっぱいに出す）。
+          クラス名で絞っているので他の地図・ツールチップには効かない。 */}
+      <style>{`
+        .leaflet-tooltip.catalog-map-card { padding: 0; border: 1px solid #d6d9dc; border-radius: 0;
+          overflow: hidden; box-shadow: 0 6px 18px rgba(20,24,28,0.18); white-space: normal; }
+        .leaflet-tooltip.catalog-map-card::before { display: none; }
+      `}</style>
     </div>
   );
 }
