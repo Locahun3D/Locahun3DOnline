@@ -1,6 +1,8 @@
 import Link from "next/link";
 import styles from "./property-detail-view.module.css";
 import { sceneIndexForId } from "@/lib/scene-selection";
+import PropertyCardLite from "@/components/property-card-lite";
+import { haversineKm } from "@/lib/distance";
 import {
   categoryLabel,
   isNewProperty,
@@ -1063,45 +1065,25 @@ export default function PropertyDetailView({
         {!sharePreview && others.length > 0 && (
         <section className="mb-20">
           <Eyebrow en="RELATED" jp={en ? "Similar studios" : "類似スタジオ"} />
-          <div className="grid gap-4">
-              {others.map((p) => (
-                <Link
-                  key={p.id}
-                  href={lh(`/properties/${p.id}`)}
-                  className="group grid grid-cols-[120px_1fr_auto] sm:grid-cols-[170px_1fr_auto] gap-4 sm:gap-6 items-center border border-line bg-white shadow-[0_1px_3px_rgba(20,24,28,0.04)] px-4 py-4 sm:px-6 hover:border-accent transition max-w-[720px]"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.cover.src}
-                    alt={p.cover.alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full aspect-[2.39/1] object-cover"
-                  />
-                  <div>
-                    <h3 className="ui-card-title group-hover:text-accent transition">
-                      {p.title}
-                    </h3>
-                    <p className="text-[12px] text-muted mt-0.5">
-                      {p.area} · {p.city}
-                    </p>
-                    <div className="mono text-[10.5px] tracking-[0.12em] text-muted mt-1.5 flex gap-3.5">
-                      {p.floorAreaSqm > 0 && <span>{p.floorAreaSqm} m²</span>}
-                      {p.ceilingHeightM > 0 && (
-                        <span>
-                          {en ? "Ceiling" : "天井"} {p.ceilingHeightM}m
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {p.hourlyPrice > 0 && (
-                    <span className="mono text-[16px] text-accent whitespace-nowrap">
-                      ¥{p.hourlyPrice.toLocaleString()}/h
-                    </span>
-                  )}
-                </Link>
-              ))}
-          </div>
+          {/* 2026-09-26 本人指示「類似スタジオ、この並びになるようにして」: カタログ（/properties）と
+              同じカード・同じ並びにした。距離はこの物件からの直線距離（座標が無い物件は出さない）。 */}
+          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 gap-5 min-[720px]:max-[1024px]:gap-3">
+            {others.map((p) => (
+              <li key={p.id}>
+                <PropertyCardLite
+                  property={p}
+                  distanceKm={
+                    property.coords && p.coords
+                      ? haversineKm(property.coords, p.coords)
+                      : null
+                  }
+                  referenceLabel={en ? "this location" : "この物件"}
+                  signedIn={signedIn}
+                  revalidate={`/properties/${property.id}`}
+                />
+              </li>
+            ))}
+          </ul>
         </section>
         )}
       </div>
