@@ -67,9 +67,11 @@ export function listDataSales(properties: Property[], nowIso: string): DataSaleE
       if (isDataSaleDisabled(item.freePeriod, nowIso)) return;
       const files = resolveDownloadFiles(item);
       if (files.length === 0) return;
-      const free = isDataSaleFree(item.freePeriod, nowIso);
       const options = resolveLicenseOptions(item);
-      const price = free ? 0 : Math.min(...options.map((o) => o.price));
+      const lowest = Math.min(...options.map((o) => o.price));
+      // 無料期間中、または価格が0円（無料配布として置いている）なら「無料」。
+      const free = isDataSaleFree(item.freePeriod, nowIso) || !Number.isFinite(lowest) || lowest <= 0;
+      const price = free ? 0 : lowest;
       entries.push({
         propertyId: p.id,
         propertyTitle: p.title,

@@ -106,65 +106,11 @@ export default async function DataSalesPage() {
             : "現在、販売中のシーンはありません。"}
         </p>
       ) : (
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        /* カタログ（/properties）と同じカード・同じ並び（2026-09-26 本人指摘「トンマナあってない／物件サムネはこれにあわせて」）。 */
+        <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 gap-5 min-[720px]:max-[1024px]:gap-3">
           {entries.map((e) => (
-            <li key={`${e.propertyId}-${e.sceneId}`} className="border border-line">
-              <Link href={lh(e.href)} className="block group">
-                {/* next/image は使わない（Workers + 相対パスで最適化が404になる。CLAUDE.md） */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={e.cover.src}
-                  alt={e.cover.alt}
-                  width={800}
-                  height={500}
-                  className="w-full h-[180px] object-cover"
-                  loading="lazy"
-                />
-                <div className="p-4 space-y-2">
-                  <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted">
-                    {categoryLabel(e.category, locale)} ・ {e.prefecture}
-                    {e.city ? ` ${e.city}` : ""}
-                  </div>
-                  <h2 className="text-[15px] font-bold leading-[1.5] group-hover:text-accent transition">
-                    {e.propertyTitle}
-                  </h2>
-                  <div className="text-[13px] text-muted leading-[1.7]">{e.sceneLabel}</div>
-                  <div className="text-[15px] font-bold">
-                    {e.free ? (
-                      <span className="text-accent">{en ? "Free download" : "無料配布"}</span>
-                    ) : (
-                      <>
-                        {yen(e.price)}
-                        <span className="text-[12px] font-normal text-muted">
-                          {en ? " incl. tax ~" : "（税込）〜"}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <dl className="text-[12px] text-muted leading-[1.8]">
-                    {e.formats.length > 0 && (
-                      <div>
-                        <dt className="inline">{en ? "Formats: " : "形式: "}</dt>
-                        <dd className="inline">{e.formats.join(" / ")}</dd>
-                      </div>
-                    )}
-                    {e.licenses.length > 0 && (
-                      <div>
-                        <dt className="inline">{en ? "License: " : "ライセンス: "}</dt>
-                        <dd className="inline">
-                          {e.licenses.map((l) => dataLicenseLabel(l as never, locale)).join(" / ")}
-                        </dd>
-                      </div>
-                    )}
-                    {e.sizeMb > 0 && (
-                      <div>
-                        <dt className="inline">{en ? "Size: " : "容量: "}</dt>
-                        <dd className="inline">{e.sizeMb} MB</dd>
-                      </div>
-                    )}
-                  </dl>
-                </div>
-              </Link>
+            <li key={`${e.propertyId}-${e.sceneId}`}>
+              <DataSaleCard entry={e} en={en} href={lh(e.href)} locale={locale} />
             </li>
           ))}
         </ul>
@@ -230,6 +176,93 @@ export default async function DataSalesPage() {
           )}
         </p>
       </section>
+    </div>
+  );
+}
+
+/**
+ * 販売シーンのカード。見た目はカタログの PropertyCardLite に合わせる
+ * （16:10 の写真＋左上のカテゴリ、右上の 3DGS、下に所在地・名前・項目・価格）。
+ */
+function DataSaleCard({
+  entry: e,
+  en,
+  href,
+  locale,
+}: {
+  entry: DataSaleEntry;
+  en: boolean;
+  href: string;
+  locale: "ja" | "en";
+}) {
+  const name = e.propertyTitle;
+  // シーン名が物件名と同じ（1シーンだけの物件）なら出さない。
+  const showScene = e.sceneLabel && !name.replace(/\s/g, "").startsWith(e.sceneLabel.replace(/\s/g, ""));
+  return (
+    <Link href={href} className="group flex flex-col h-full border border-line bg-bg overflow-hidden transition hover:border-ink">
+      <div className="relative aspect-[16/10] bg-[#141414] overflow-hidden">
+        {e.cover.src ? (
+          // eslint-disable-next-line @next/next/no-img-element -- next/image は使わない（CLAUDE.md）
+          <img src={e.cover.src} alt={e.cover.alt} loading="lazy" className="w-full h-full object-cover" />
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
+        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+          {e.free && (
+            <div className="mono text-[10px] tracking-[0.24em] uppercase bg-[#e8443a] text-white px-2 py-1 font-bold">
+              {en ? "Free" : "無料"}
+            </div>
+          )}
+          <div className="mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
+            {categoryLabel(e.category, locale)}
+          </div>
+        </div>
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+          <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>
+          {e.formats.length > 0 && (
+            <div className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5">
+              {e.formats.join(" · ")}
+            </div>
+          )}
+        </div>
+        {e.sizeMb > 0 && (
+          <div className="absolute bottom-2 right-2 mono text-[10px] tracking-[0.2em] uppercase bg-bg/80 backdrop-blur px-2 py-1 border border-line">
+            {e.sizeMb} MB
+          </div>
+        )}
+      </div>
+      <div className="p-4 gap-3 flex flex-col flex-1">
+        <div className="mono text-[10px] tracking-[0.24em] uppercase text-muted">
+          {e.prefecture} / {e.city}
+        </div>
+        <h2 className="ui-card-title serif min-h-[3em] whitespace-pre-wrap [overflow-wrap:anywhere] group-hover:text-accent transition">
+          {name}
+        </h2>
+        {showScene && <div className="mono text-[10px] tracking-[0.18em] text-muted -mt-1">{e.sceneLabel}</div>}
+        <div className="grid grid-cols-2 gap-1.5 text-[10px] mono text-muted">
+          <Stat label={en ? "License" : "ライセンス"} value={e.licenses.map((l) => dataLicenseLabel(l as never, locale)).join(" / ") || "—"} />
+          <Stat label={en ? "Scan" : "撮影"} value={e.scannedAt ? e.scannedAt.slice(0, 10).replaceAll("-", ".") : "—"} />
+        </div>
+        <div className="flex items-baseline justify-between pt-2 border-t border-line mt-auto">
+          {e.free ? (
+            <span className="serif text-xl text-accent">{en ? "Free download" : "無料配布"}</span>
+          ) : (
+            <div>
+              <span className="serif text-xl text-accent">¥{e.price.toLocaleString("ja-JP")}</span>
+              <span className="mono text-[10px] tracking-[0.18em] opacity-50 ml-1">{en ? "incl. tax ~" : "税込〜"}</span>
+            </div>
+          )}
+          <span className="mono text-[10px] tracking-[0.2em] uppercase opacity-60">{en ? "Details →" : "詳細 →"}</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-l border-line pl-2 min-w-0">
+      <div className="opacity-50 text-[9px] uppercase tracking-[0.2em]">{label}</div>
+      <div className="text-ink truncate">{value}</div>
     </div>
   );
 }
