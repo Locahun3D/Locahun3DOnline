@@ -121,6 +121,7 @@ export default async function PreviewPage({
           approveKey={approveKey}
           en={locale === "en"}
           missingCount={missingPhotos}
+          propertyTitle={property.title.replace(/\n/g, " ")}
         />
       </div>
     )}

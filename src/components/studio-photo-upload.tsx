@@ -49,10 +49,13 @@ export default function StudioPhotoUpload({
   approveKey,
   en,
   missingCount,
+  propertyTitle,
 }: {
   token: string;
   approveKey: string;
   en: boolean;
+  /** メールの件名に入れる物件名（どの物件の話か運営が分かるように）。 */
+  propertyTitle: string;
   /** 公開に必要な枚数まで、あと何枚か（0なら足りている）。 */
   missingCount: number;
 }) {
@@ -120,6 +123,14 @@ export default function StudioPhotoUpload({
   };
 
   const pending = rows.filter((r) => r.state === "ready").length;
+  // 件名に物件名を入れておく（どの物件の話か、運営が受信箱で見分けられるように）。
+  const mailSubject = en
+    ? `Photos added / changed (${propertyTitle})`
+    : `【写真の追加・変更】${propertyTitle}`;
+  const mailBody = en
+    ? `We have added / changed photos for "${propertyTitle}".\n\nDetails:\n`
+    : `「${propertyTitle}」の写真を追加・変更しました。\n\n内容：\n`;
+  const mailHref = `mailto:contact@locahun3d.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
   const box = "frame border border-line bg-[#151515] px-4 py-4 text-[14px] text-ink";
   const field =
     "w-full bg-[#0f0f0f] border border-line px-3 py-2 text-[13px] leading-[1.7]";
@@ -141,6 +152,8 @@ export default function StudioPhotoUpload({
             <br />
             Please add a name, a note and tick the box if you want it at the top — it tells us which
             room each photo shows.
+            <br />
+            When you add or change photos, please let us know by replying to our email.
           </>
         ) : (
           <>
@@ -153,6 +166,8 @@ export default function StudioPhotoUpload({
             どの部屋の写真か分かるように、1枚ずつ「名前」「注釈」をお書きください。
             <br />
             ページの頭（カバー）に使ってほしい写真には、チェックを入れてください。
+            <br />
+            追加、変更した場合はメールの返信にてお知らせください。
           </>
         )}
       </p>
@@ -172,6 +187,10 @@ export default function StudioPhotoUpload({
         <button type="button" className={ghost} onClick={() => inputRef.current?.click()}>
           {en ? "Choose photos" : "写真を選ぶ"}
         </button>
+        {/* 追加・変更を知らせてもらう（2026-09-26 本人指示）。宛先は確認メールと同じ窓口。 */}
+        <a className={`${ghost} inline-flex items-center`} href={mailHref}>
+          {en ? "Send us an email" : "メールを送る"}
+        </a>
         {pending > 0 && (
           <button type="button" className={primary} onClick={send}>
             {en ? `Send ${pending} photo(s)` : `${pending}枚を送る`}
