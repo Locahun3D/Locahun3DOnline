@@ -142,3 +142,11 @@ describe("規約と3Dデータ販売の許諾（2026-09-26）", () => {
     expect(bodyHtml).not.toContain("（税込）</strong>");
   });
 });
+
+describe("英文の期限", () => {
+  it("英語の一文には英語表記の日付を入れる（和暦混在にしない）", () => {
+    const { bodyHtml } = buildStudioReviewMail(input);
+    expect(bodyHtml).toContain("valid until 20 October 2026");
+    expect(bodyHtml).not.toContain("valid until 2026年");
+  });
+});

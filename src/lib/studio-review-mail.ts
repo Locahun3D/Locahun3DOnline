@@ -74,6 +74,18 @@ export function formatExpiryJst(iso: string): string {
   return `${get("year")}年${get("month")}月${get("day")}日`;
 }
 
+/** 英文の末尾で使う期限（日本語の「2026年10月26日」を英文に混ぜない）。時刻は日本時間で切る。 */
+export function formatExpiryEn(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(d);
+}
+
 export const STUDIO_REVIEW_CHECKPOINTS = [
   "掲載内容（物件名・紹介文・住所・利用条件）",
   "料金",
@@ -199,7 +211,7 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
     <p style="font-size:12px;line-height:1.8;color:#999;margin:0 0 16px;">お問い合わせ: ${esc(contact)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
     <p style="font-size:12px;line-height:1.7;color:#666;margin:0;">
-      English: Your listing page on Locahun3D is ready for review. Please check the preview link above (no login required${expiry ? `, valid until ${esc(expiry)}` : ""}) then press the “Approve and publish” button at the top of the preview page to publish it, or reply to this email with any corrections.${input.dataSale ? " We also ask whether we may sell the 3D data (PLY/OBJ) of your studio; you can answer with the two links above. You receive " + REVENUE_SHARE_PERCENT + "% of such sales. The applicable terms are linked above." : ""}
+      English: Your listing page on Locahun3D is ready for review. Please check the preview link above (no login required${expiry ? `, valid until ${esc(formatExpiryEn(input.previewExpiresAt))}` : ""}) then press the “Approve and publish” button at the top of the preview page to publish it, or reply to this email with any corrections.${input.dataSale ? " We also ask whether we may sell the 3D data (PLY/OBJ) of your studio; you can answer with the two links above. You receive " + REVENUE_SHARE_PERCENT + "% of such sales. The applicable terms are linked above." : ""}
     </p>
   `;
 
