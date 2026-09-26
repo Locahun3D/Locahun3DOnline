@@ -29,8 +29,12 @@ describe("buildStudioReviewMail", () => {
     expect(bodyHtml).toContain("「この内容でOK・公開する」ボタン");
     expect(bodyHtml).toContain("contact@locahun3d.com");
   });
-  it("短い英語の案内が付く", () => {
-    expect(buildStudioReviewMail(input).bodyHtml).toMatch(/English: .*reply to this email/);
+  it("末尾は英語の案内ではなく、会社情報とサイトURL（2026-09-26 本人指示）", () => {
+    const { bodyHtml } = buildStudioReviewMail(input);
+    expect(bodyHtml).not.toContain("English:");
+    expect(bodyHtml).toContain("KWI株式会社");
+    expect(bodyHtml).toContain("東京都新宿区新宿1-24-12");
+    expect(bodyHtml).toContain('href="https://locahun3d.com"');
   });
   it("スタジオ名は HTML エスケープされる", () => {
     const { bodyHtml } = buildStudioReviewMail({ ...input, studioName: '<script>alert(1)</script>' });
@@ -144,14 +148,6 @@ describe("規約と3Dデータ販売の許諾（2026-09-26）", () => {
     const { bodyHtml } = buildStudioReviewMail({ ...input, dataSale: { price: 0 } });
     expect(bodyHtml).toContain("ご許諾をいただいたあとに改めてご相談");
     expect(bodyHtml).not.toContain("（税込）</strong>");
-  });
-});
-
-describe("英文の期限", () => {
-  it("英語の一文には英語表記の日付を入れる（和暦混在にしない）", () => {
-    const { bodyHtml } = buildStudioReviewMail(input);
-    expect(bodyHtml).toContain("valid until 20 October 2026");
-    expect(bodyHtml).not.toContain("valid until 2026年");
   });
 });
 
