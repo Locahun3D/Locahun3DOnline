@@ -66,6 +66,8 @@ TOOLS = {
     "restore": "restore_property.py",           # 閉じた下書きを元に戻す（まとめ方を変えたとき）
     "datasale": "set_data_sale.py",             # 3Dデータ販売の許諾を記録（口頭でOKをもらった物件）
     "cover": "set_cover.py",                    # カバーをギャラリーの写真と入れ替える（解像度の高い方へ）
+    "catch": "title_catch.py",                  # タイトルに「｜エリア キャッチ」を付ける（basics でも自動）
+    "floorplans": "find_floorplans.py",         # 公式サイトから平面図を探して入れる（--apply）
     "fields": "set_fields.py",               # 料金・許可など決まった欄を1つずつ入れる（下書きのみ）
     "basics": "set_basics.py",              # エリア・都道府県・市区町村・紹介文・公開URL確認（公開申請の必須欄）
     "english": "apply_english.py",          # 物件の英語欄（…En）を en.json から埋める（空欄のみ。--force で上書き）
