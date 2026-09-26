@@ -40,6 +40,8 @@ const ja = {
   // ラベルはスキャンサイトのヘッダーと同一表記。
   "nav.works": "実績＆ブログ",
   "nav.contact": "お問い合わせ",
+  // 3Dスキャンデータのダウンロード販売一覧（/data・2026-09-26）。
+  "nav.data": "データ販売",
   "nav.menuOpen": "メニューを開く",
   "nav.menuClose": "メニューを閉じる",
   "auth.login": "ログイン",
@@ -94,6 +96,7 @@ const en: Record<keyof typeof ja, string> = {
   "nav.pricing": "Pricing & Demo",
   "nav.works": "Work & Blog",
   "nav.contact": "Contact",
+  "nav.data": "3D data",
   "nav.menuOpen": "Open menu",
   "nav.menuClose": "Close menu",
   "auth.login": "Log in",

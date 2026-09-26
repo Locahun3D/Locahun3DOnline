@@ -29,6 +29,9 @@ const NAV: { href: string; key: DictKey; code: string; external?: boolean }[] = 
   //   恒久リダイレクトとして残っているが、ナビからは辿らせない。ナビは4項目。
   { href: "/works/index.html", key: "nav.works", code: "0.3", external: true },
   { href: "/contact", key: "nav.contact", code: "0.4" },
+  // 3Dデータ販売の一覧（2026-09-26 本人指示。ナビの右端に置く）。
+  // 販売していることが、どのページからでも1クリックで分かるようにする。
+  { href: "/data", key: "nav.data", code: "0.5" },
 ];
 
 export default async function SiteHeader() {
