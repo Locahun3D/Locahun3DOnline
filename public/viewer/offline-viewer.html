@@ -3007,7 +3007,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="48f04a56a2a93c55eaa0810a74f5d6bd54099d6c8294f2f204a8ad95d6b61a52";
+window.__locahunBuildRelease="09b063ac264f05e05e75cfba8dddb95f5d7cdcd055ebd7a4ef52fa9af05eb523";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -26115,9 +26115,7 @@ async function restoreProject(project, opts = {}) {
       const c3 = new THREE.Color(evColor); c3.lerp(new THREE.Color(1,1,1), 0.3);
       const circMat = new THREE.MeshBasicMaterial({color:c3, side:THREE.DoubleSide, transparent:true, opacity:0.35});
       evGroup.add(new THREE.Mesh(circGeo, circMat));
-      const dotGeo = new THREE.CircleGeometry(0.08, 16);
-      const dotMat = new THREE.MeshBasicMaterial({color:0xffffff, side:THREE.DoubleSide});
-      evGroup.add(new THREE.Mesh(dotGeo, dotMat));
+      evGroup.add(_eventIconMesh());
       const hitGeo = new THREE.SphereGeometry(1.2, 8, 8);
       const hitMat = new THREE.MeshBasicMaterial({visible:false});
       evGroup.add(new THREE.Mesh(hitGeo, hitMat));
@@ -26388,6 +26386,27 @@ window.openEventColorPicker = function(id, ev){
 // ══════════════════════════════════════════════════
 //  EVENT OBJECT
 // ══════════════════════════════════════════════════
+// イベント目印の中央アイコン（白いカメラの形）。テクスチャは1枚を共有する。
+let _eventIconTex=null;
+function _eventIconMesh(){
+  if(!_eventIconTex){
+    const c=document.createElement('canvas');c.width=c.height=128;
+    const g=c.getContext('2d');g.fillStyle='#fff';
+    const rr=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
+    rr(14,38,100,70,14);g.fill();            // 本体
+    rr(44,26,40,18,6);g.fill();              // 上の出っ張り
+    g.globalCompositeOperation='destination-out';
+    g.beginPath();g.arc(64,73,24,0,Math.PI*2);g.fill();   // レンズの穴
+    g.globalCompositeOperation='source-over';
+    g.beginPath();g.arc(64,73,15,0,Math.PI*2);g.fill();   // レンズ
+    _eventIconTex=new THREE.CanvasTexture(c);
+    if('colorSpace' in _eventIconTex)_eventIconTex.colorSpace=THREE.SRGBColorSpace;
+  }
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(.46,.46),
+    new THREE.MeshBasicMaterial({map:_eventIconTex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+  m.name='EventIcon';m.position.z=.001;
+  return m;
+}
 window.addEventLayer = function(posHint){
   const group = new THREE.Group();
   const ringGeo = new THREE.RingGeometry(0.35, 0.45, 32);
@@ -26396,9 +26415,8 @@ window.addEventLayer = function(posHint){
   const circGeo = new THREE.CircleGeometry(0.34, 32);
   const circMat = new THREE.MeshBasicMaterial({color:0xffaa44, side:THREE.DoubleSide, transparent:true, opacity:0.35});
   group.add(new THREE.Mesh(circGeo, circMat));
-  const dotGeo = new THREE.CircleGeometry(0.08, 16);
-  const dotMat = new THREE.MeshBasicMaterial({color:0xffffff, side:THREE.DoubleSide});
-  group.add(new THREE.Mesh(dotGeo, dotMat));
+  // 中央は白い点ではなく写真（カメラ）のアイコン（2026-09-27 本人FB「ほぼ画像にしか使っていないので写真アイコンの方が分かりやすい」）。
+  group.add(_eventIconMesh());
   // Invisible hitbox sphere for easier click detection
   const hitGeo = new THREE.SphereGeometry(1.2, 8, 8);
   const hitMat = new THREE.MeshBasicMaterial({visible:false});
@@ -26798,16 +26816,24 @@ function _placeUpdateProbe(clientX, clientY){
   const p=pickWorldPos(clientX, clientY,equipment?{groundFallback:true}:undefined);
   if(!p){ if(equipment&&_placeProbeMarker){ _placeProbeMarker.visible=false; if(typeof markDirty==='function')markDirty(6); } return; }
   if(!_placeProbeMarker){
-    _placeProbeMarker=new THREE.Mesh(new THREE.SphereGeometry(0.12,16,16),
-      new THREE.MeshBasicMaterial({color:0xffd400, transparent:true, opacity:.9, depthTest:false}));
-    _placeProbeMarker.renderOrder=9009; scene.add(_placeProbeMarker);
+    // 測定の点置きと同じ見た目（2026-09-27 本人指示）: 半透明の小さな玉＋地面に寝かせた白い輪（半径32cm）。
+    const g=new THREE.Group();
+    const sph=new THREE.Mesh(new THREE.SphereGeometry(0.055,10,10),
+      new THREE.MeshBasicMaterial({color:0xffff44, transparent:true, opacity:.45, depthTest:false}));
+    sph.renderOrder=9009;
+    const pts=[];for(let i=0;i<=40;i++){const a=i/40*Math.PI*2;pts.push(Math.cos(a)*.32,0,Math.sin(a)*.32);}
+    const rg=new THREE.BufferGeometry();rg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+    const ring=new THREE.Line(rg,new THREE.LineBasicMaterial({color:0xffffff, transparent:true, opacity:.6, depthTest:false}));
+    ring.renderOrder=9009;
+    g.add(sph,ring);g.renderOrder=9009;
+    _placeProbeMarker=g; scene.add(_placeProbeMarker);
   }
   _placeProbeMarker.position.copy(p);
   _placeProbeMarker.visible=true;
   if(typeof markDirty==='function') markDirty(6);
 }
 function _placeHideProbe(){
-  if(_placeProbeMarker){ scene.remove(_placeProbeMarker); _placeProbeMarker.geometry.dispose(); _placeProbeMarker.material.dispose(); _placeProbeMarker=null; }
+  if(_placeProbeMarker){ scene.remove(_placeProbeMarker); _placeProbeMarker.traverse(o=>{o.geometry?.dispose();o.material?.dispose();}); _placeProbeMarker=null; }
   _placeProbing=false;
 }
 function _placeHint(on){
@@ -26925,19 +26951,51 @@ window.importEventImage = function(id){
 window.showEventImage = function(id){
   const L=findLayer(id); if(!L||L.type!=='event'||!L.eventImage) return;
   document.getElementById('event-image-viewer')?.remove();
+  const en=window._lang==='en';
   const ov=document.createElement('div');
   ov.id='event-image-viewer';
   ov.setAttribute('role','dialog');
-  // 2026-09-22: 写真は必ず最前面に出す。以前の z-index 9999 では、日照・天気などのパネル
-  // （それより上に重ねてある）が写真の上にかぶっていた（本人の画面で確認）。
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483000;display:flex;align-items:center;justify-content:center;cursor:pointer';
+  // 2026-09-22: 写真は必ず最前面に出す（日照・天気のパネルが上にかぶっていた）。
+  // 2026-09-27 本人FB「写真表示がでかすぎ、拡大縮小や閉じるのUIが欲しい」: 最初は画面の約6割に収め、
+  // 右上に −／＋／等倍に戻す／✕。ホイールで拡大縮小、拡大中はドラッグで動かせる。背景クリック・Esc でも閉じる。
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:2147483000;display:flex;align-items:center;justify-content:center;overflow:hidden';
   const img=document.createElement('img');
   img.src=L.eventImage;
   img.alt=L.eventImageName||L.name||'';
-  img.style.cssText='max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,.6)';
+  img.draggable=false;
+  img.style.cssText='max-width:62vw;max-height:62vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,.6);transform-origin:center center;transition:transform .12s ease-out;cursor:zoom-in;user-select:none';
   ov.appendChild(img);
-  const close=()=>{ ov.remove(); document.removeEventListener('keydown',onKey,true); };
-  const onKey=e=>{ if(e.key==='Escape'){ e.preventDefault(); close(); } };
+  let zoom=1,tx=0,ty=0;
+  const apply=()=>{img.style.transform=`translate(${tx}px,${ty}px) scale(${zoom})`;img.style.cursor=zoom>1?'grab':'zoom-in';pct.textContent=Math.round(zoom*100)+'%';};
+  const setZoom=z=>{zoom=Math.max(.5,Math.min(5,z));if(zoom<=1){tx=0;ty=0;}apply();};
+  const bar=document.createElement('div');
+  bar.style.cssText='position:absolute;top:14px;right:14px;display:flex;gap:6px;align-items:center;background:rgba(20,20,22,.9);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:5px 6px';
+  const mk=(label,title,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.title=title;b.setAttribute('aria-label',title);
+    b.style.cssText='min-width:34px;min-height:32px;padding:0 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);color:#eee;border-radius:5px;cursor:pointer;font-size:15px;line-height:1';
+    b.onclick=e=>{e.stopPropagation();fn();};bar.appendChild(b);return b;};
+  mk('−',en?'Zoom out':'縮小',()=>setZoom(zoom/1.25));
+  const pct=document.createElement('span');pct.style.cssText='min-width:46px;text-align:center;color:#bbb;font:12px ui-monospace,Consolas,monospace';bar.appendChild(pct);
+  mk('＋',en?'Zoom in':'拡大',()=>setZoom(zoom*1.25));
+  mk(en?'Fit':'全体',en?'Fit to screen':'全体を表示',()=>{tx=0;ty=0;setZoom(1);});
+  mk('✕',en?'Close':'閉じる',()=>close());
+  bar.onclick=e=>e.stopPropagation();
+  ov.appendChild(bar);
+  apply();
+  // 拡大中のドラッグ移動。動かしたときは「背景クリックで閉じる」を働かせない。
+  let drag=null,moved=false;
+  img.addEventListener('mousedown',e=>{if(zoom<=1)return;e.preventDefault();drag={x:e.clientX-tx,y:e.clientY-ty};moved=false;img.style.transition='none';img.style.cursor='grabbing';});
+  const onMove=e=>{if(!drag)return;tx=e.clientX-drag.x;ty=e.clientY-drag.y;moved=true;apply();};
+  const onUp=()=>{if(!drag)return;drag=null;img.style.transition='transform .12s ease-out';apply();};
+  window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
+  img.addEventListener('click',e=>{e.stopPropagation();if(moved){moved=false;return;}if(zoom<=1)setZoom(2);});
+  ov.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom*(e.deltaY<0?1.15:1/1.15));},{passive:false});
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown',onKey,true); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+  const onKey=e=>{
+    if(e.key==='Escape'){ e.preventDefault(); close(); }
+    else if(e.key==='+'||e.key==='='){ e.preventDefault(); setZoom(zoom*1.25); }
+    else if(e.key==='-'){ e.preventDefault(); setZoom(zoom/1.25); }
+    else if(e.key==='0'){ e.preventDefault(); tx=0;ty=0;setZoom(1); }
+  };
   ov.onclick=close;
   document.addEventListener('keydown',onKey,true);
   document.body.appendChild(ov);
@@ -27826,12 +27884,28 @@ function _applyI18nGaps(){
   try{ on=new URLSearchParams(location.search).get('swapMouse')!=='0'; }catch(_){}
   window.__mouseButtonSwap=on;
   if(!on)return;
+  const _gizmoUnder=(x,y)=>{
+    try{
+      const measuring=typeof msr!=='undefined'&&msr.active;
+      if(!measuring&&typeof _checkBoneRotateRingHit==='function'&&_checkBoneRotateRingHit(x,y))return true;
+      if(!measuring&&typeof _checkIKHandleHit==='function'&&_checkIKHandleHit(x,y))return true;
+      if(!measuring&&typeof selectedLayerId!=='undefined'&&selectedLayerId!=null&&typeof checkLpvHandle==='function'&&checkLpvHandle(x,y))return true;
+      if(measuring&&typeof checkAxisHandle==='function'&&checkAxisHandle(x,y))return true;
+      if(measuring&&typeof nearMarker==='function'&&nearMarker(x,y))return true;
+      if(typeof _pathEditId!=='undefined'&&_pathEditId!=null&&typeof _pathHandleAt==='function'&&_pathHandleAt(x,y)>=0)return true;
+    }catch(_){}
+    return false;
+  };
   const swap=e=>{
     if(e.__l3dSynthetic)return;
     if(e.pointerType&&e.pointerType!=='mouse')return;
     if(e.button!==0&&e.button!==2)return;
     // mouseup は window で拾う処理があるので、押下がキャンバス起点なら常に入れ替える
     if(e.type.endsWith('down')&&e.target!==canvas)return;
+    // ギズモの持ち手（ピボット・軸・測定点・パスの角・ボーン）の上で押したときは入れ替えない
+    // （2026-09-27 本人指摘: 左ドラッグの見回しが優先されてギズモが動かせなかった）。
+    if(e.type.endsWith('down')&&e.button===0&&_gizmoUnder(e.clientX,e.clientY)){ swap.fromCanvas=false; swap.skip=true; return; }
+    if(e.type.endsWith('up')&&swap.skip){ if(e.type==='mouseup')swap.skip=false; return; }
     if(e.type.endsWith('up')&&e.target!==canvas&&!swap.fromCanvas)return;
     if(e.type.endsWith('down'))swap.fromCanvas=true;
     try{ Object.defineProperty(e,'button',{value:e.button===0?2:0,configurable:true}); }catch(_){}
@@ -27850,6 +27924,8 @@ function _applyI18nGaps(){
     const t=tap;tap=null;
     if(t.m>=5||performance.now()-t.t>500)return;
     setTimeout(()=>{
+      // 測定中は右クリック（旧左）が点置きなので、合成せずに移動だけ呼ぶ。
+      if(typeof msr!=='undefined'&&msr.active){ if(typeof _clickNavigateAt==='function')_clickNavigateAt(t.x,t.y); return; }
       const opt={button:0,buttons:1,bubbles:true,cancelable:true,clientX:t.x,clientY:t.y};
       const down=new MouseEvent('mousedown',opt);down.__l3dSynthetic=true;canvas.dispatchEvent(down);
       const up=new MouseEvent('mouseup',{...opt,buttons:0});up.__l3dSynthetic=true;canvas.dispatchEvent(up);
@@ -28206,7 +28282,9 @@ window.addEventListener('mouseup',e=>{
       const dx=e.clientX-_clickStartX, dy=e.clientY-_clickStartY;
       if(!lpv.dragging && (navigationTap?.held||Math.hypot(dx,dy)<5)){
         if(typeof _clickPointerTake!=='function'||navigationTap){
-          const consumed=_trySelectByClick(e.clientX,e.clientY);
+          // 長押しで行き先を探ったとき・カメラツール中は移動が目的なので選択を挟まない（2026-09-27。カメラツール中は
+          // 選択が先にクリックを取ってしまい移動しなかった）。
+          const consumed=(navigationTap?.held||(typeof cam!=='undefined'&&cam.active))?false:_trySelectByClick(e.clientX,e.clientY);
           // 右クリック長押し（探ってから離す）での移動は目線 100cm（2026-09-26 本人指示）。普通のクリックは従来の 1.8m。
           if(!consumed&&navigationTap)_clickNavigateAt(navigationTap.x,navigationTap.y,false,null,navigationTap.held?1.0:1.8);
         }
@@ -28828,7 +28906,7 @@ canvas.addEventListener('touchend',e=>{
     }
   }
   for(const t of e.changedTouches)if(t.identifier===tlId){ tlId=-1; markDirty(6); }
-  if(navigationTap){
+  if(navigationTap&&!(typeof msr!=='undefined'&&msr.active)){
     if(e.cancelable)e.preventDefault();
     if(!_trySelectByClick(navigationTap.x,navigationTap.y))_clickNavigateAt(navigationTap.x,navigationTap.y);
   }
@@ -29138,13 +29216,14 @@ function _clickNavigationTourOwnsCamera(){
   try{const state=tour.cam();return !state.aborted&&!state.yield;}catch(_){return true;}
 }
 function _clickNavigationBusy(){
-  return (typeof msr!=='undefined'&&msr.active)||
-    (typeof cam!=='undefined'&&cam.active)||(typeof arMode!=='undefined'&&arMode.active)||
+  // 2026-09-27 本人指示: 測定中・カメラツール中・カメラアニメーション編集中もクリック移動を使う。
+  // 測定中は「右クリック長押し＝点を置く」のまま（mouseup/touch 側で測定を優先）。再生中だけは止める。
+  return (typeof arMode!=='undefined'&&arMode.active)||
     (typeof _useOrtho!=='undefined'&&_useOrtho)||(typeof _viewRec!=='undefined'&&_viewRec.active)||
     !!globalThis._captureBusy||_clickNavigationTourOwnsCamera()||
     (typeof location!=='undefined'&&/[?&](orbit|capture)=1(?:&|$)/.test(location.search))||
     (typeof walkMode!=='undefined'&&walkMode.active)||
-    (typeof camAnim!=='undefined'&&(camAnim.playing||camAnim.open))||
+    (typeof camAnim!=='undefined'&&camAnim.playing)||
     (typeof _pathMode!=='undefined'&&!!_pathMode)||
     (typeof _placeMode!=='undefined'&&!!_placeMode)||
     (typeof _pathDragH!=='undefined'&&_pathDragH>=0)||
@@ -30025,6 +30104,9 @@ window.addEventListener('blur',_navigationHoldReset);
 canvas.addEventListener('touchcancel',_navigationHoldReset,{passive:true});
 // 診断用（自動テストから玉の状態を読む）。UI からは使わない。
 window.__navPoint=()=>_navigationPoint?{visible:_navigationPoint.visible,x:+_navigationPoint.position.x.toFixed(3),y:+_navigationPoint.position.y.toFixed(3),z:+_navigationPoint.position.z.toFixed(3),ok:_navigationPoint.material.color.getHex()===0x63edbd,radius:+(_navigationPoint.userData.size?.radius||0).toFixed(4),px:_navigationPoint.userData.size?.px||0,hold:!!_navigationHold,active:!!(_navigationHold&&_navigationHold.active)}:{visible:false,hold:!!_navigationHold};
+
+// 診断用（自動テストから読むだけ）
+window.__navDebug=(x,y)=>({busy:_clickNavigationBusy(),preview:_clickNavigateAt(x,y,true)});
 function _syncWalkJumpButton(){
   const button=document.getElementById('walk-jump-button');
   if(!button)return;
