@@ -3,10 +3,11 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright';
 
 // Real page and child JSX, isolated data/action boundaries. Never authenticates or writes APIs.
-const out = 'artifacts/account-workspace';
+const out = process.env.OUT_DIR || 'artifacts/account-workspace';
 fs.mkdirSync(out, { recursive: true });
 const base = process.env.BASE_URL || 'http://localhost:3032';
-const scenarios = ['individual-empty', 'production-long', 'studio-boards', 'admin-paid', 'production-expired'];
+const scenarios = process.env.SCENARIOS?.split(',') || ['individual-empty', 'production-long', 'studio-boards', 'admin-paid', 'production-expired'];
+const widths = process.env.WIDTHS?.split(',').map(Number) || [1440,820,390,320];
 const bundle = await build({ bundle:true,write:false,outdir:'fixture',format:'esm',platform:'browser',jsx:'automatic',tsconfig:'tsconfig.json',define:{'process.env.NODE_ENV':'"development"'},stdin:{loader:'tsx',resolveDir:process.cwd(),contents:`import React from 'react';import{createRoot}from'react-dom/client';import Page from './src/app/account/page';createRoot(document.getElementById('root')).render(<main className="flex flex-col min-h-screen">{await Page({searchParams:Promise.resolve({})})}</main>);`},plugins:[{name:'safe-fixture',setup(b){
   b.onResolve({filter:/^(?:@clerk\/|next\/|@\/lib\/(?:dal|device-limit|view-unlocks|properties|store|stripe|notifications|.*-actions|i18n\/server)$|@\/components\/locale-provider$)/},a=>({path:a.path,namespace:'stub'}));
   b.onLoad({filter:/.*/,namespace:'stub'},a=>{
@@ -34,12 +35,13 @@ const browser=await chromium.launch({channel:'chrome',headless:false});
 const results=[];
 try{
   const page=await browser.newPage();
-  await page.goto(base+'/contact',{waitUntil:'networkidle'});
+  await page.goto(base+'/contact',{waitUntil:'domcontentloaded',timeout:60000});
   const links=await page.locator('link[rel="stylesheet"]').evaluateAll(ns=>ns.map(n=>n.href));
   const css=(await Promise.all(links.map(async u=>(await page.request.get(u)).text()))).join('\n');
-  for(const locale of ['ja','en'])for(const width of [1440,820,390,320])for(const scenario of scenarios){
+  for(const locale of ['ja','en'])for(const width of widths)for(const scenario of scenarios){
     const role=scenario.split('-')[0],empty=scenario.includes('empty'),long=scenario.includes('long'),expired=scenario.includes('expired'),paid=scenario.includes('paid');
     const user={id:'fixture',role,status:'active',plan:paid?'pro':'free',displayName:long?(locale==='ja'?'長い表示名の制作会社映像企画担当者確認用':'AlexandertheLongDisplayNameTest'):(locale==='ja'?'確認ユーザー':'Fixture User'),name:'Fixture',email:long?'production.location.management.department@long-company-domain.example.test':'test@company.example.test',company:long?'株式会社 映像制作とロケーション企画管理部門':'確認制作会社',bookmarks:empty?[]:['p1','p2','p3'],bookmarkFolders:[{id:'b1',name:'長い保存ボード名ロケーション候補リスト'},{id:'b2',name:'Commercial production shortlist'}],bookmarkFolderAssignments:{p1:'b1',p2:'b2'},tokenBalance:6,bonusTokens:2,purchasedTokens:0,marketingConsent:false,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-09-12T00:00:00Z',stripeCustomerId:paid?'safe-fixture-customer':undefined,ndaAcceptedAt:paid?'2026-01-01T00:00:00Z':undefined};
+    if(scenario.endsWith('-english'))user.displayName='AlexandertheLongDisplayNameTest';
     const properties=['p1','p2','p3'].map(id=>({id,ownerId:'fixture',title:'ロケーション候補・長い物件名確認用',status:'published',splatItems:[{id:'scene',label:'Main scene'}]}));
     const fixture={locale,user,properties,unlocks:empty?[]:[{propertyId:'p1',splatItemIndex:0,unlockedAt:'2026-09-12T00:00:00Z',expiresAt:expired?'2020-01-01T00:00:00Z':'2099-01-01T00:00:00Z'}],sessions:empty?[]:[{id:'current',browserName:'Chrome',lastActiveAt:Date.now(),city:'Tokyo',country:'Japan'},{id:'other',browserName:'Safari',deviceType:'Desktop',lastActiveAt:Date.now()}],notices:[1,2].map(id=>({id:'u'+id,userId:'fixture',type:'inquiry_reply',title:'本人向け返信 / Personal inquiry reply',body:'本人向けの返信です。',read:false,createdAt:'2026-09-12T00:00:00Z'}))};
     if(paid)user.plan='team';
@@ -57,15 +59,38 @@ try{
       const regions=Object.fromEntries([...document.querySelectorAll('[data-account-region]')].map(e=>[e.dataset.accountRegion,rect(e)]));
       const slots=Object.fromEntries([...document.querySelectorAll('[data-account-slot]')].map(e=>[e.dataset.accountSlot,{...rect(e),region:e.parentElement.closest('[data-account-region]')?.dataset.accountRegion}]));
       const escaped=[...document.querySelectorAll('#root *')].filter(e=>{if(!e.getClientRects().length||getComputedStyle(e).position==='absolute'||getComputedStyle(e).position==='fixed')return false;const r=e.getBoundingClientRect(),p=e.parentElement?.getBoundingClientRect();return r.width>0&&(r.left< -1||r.right>innerWidth+1||(p&&(r.left<p.left-1||r.right>p.right+1)));}).map(e=>({tag:e.tagName,text:e.textContent.slice(0,70),...rect(e)}));
-      return{regions,slots,escaped,scrollWidth:document.documentElement.scrollWidth};
+      const boards=[...document.querySelectorAll('[data-account-slot="saved"] [class*="boardImage"]')].map(e=>({card:rect(e.parentElement.parentElement),image:rect(e)}));
+      const giftCard=document.querySelector('[data-account-slot="gift"] > div');
+      const boardLines=[...document.querySelectorAll('[class*="boardName"]')].map(e=>{
+        const lines=new Map(),walker=document.createTreeWalker(e,NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()){const n=walker.currentNode;for(let i=0;i<n.textContent.length;i++){const range=document.createRange();range.setStart(n,i);range.setEnd(n,i+1);const y=Math.round(range.getBoundingClientRect().y);lines.set(y,(lines.get(y)||'')+n.textContent[i]);}}
+        return{label:e.textContent,lines:[...lines.values()].map(s=>s.trim()).filter(Boolean)};
+      });
+      const nameChars=[],nameNode=document.querySelector('h1'),walker=document.createTreeWalker(nameNode,NodeFilter.SHOW_TEXT);
+      while(walker.nextNode()){const n=walker.currentNode;for(let i=0;i<n.textContent.length;i++){const r=document.createRange();r.setStart(n,i);r.setEnd(n,i+1);nameChars.push({char:n.textContent[i],y:Math.round(r.getBoundingClientRect().y)});}}
+      const nameText=nameChars.map(c=>c.char).join('');
+      const nameWords=['担当者','制作','映像','企画'].filter(word=>nameText.includes(word)).map(word=>{const i=nameText.indexOf(word);return{word,rows:[...new Set(nameChars.slice(i,i+word.length).map(c=>c.y))]};});
+      return{regions,slots,boards,boardLines,nameText,nameWords,giftCard:giftCard?rect(giftCard):null,escaped,scrollWidth:document.documentElement.scrollWidth};
     });
     for(const name of ['work','subscription','contracts','profile'])if(!geometry.regions[name])errors.push('Missing region '+name);
     for(const [slot,region]of Object.entries({saved:'work',history:'work',devices:'work',tokens:'subscription',plan:'subscription',invoices:'subscription',nda:'contracts',gift:'contracts'}))if(geometry.slots[slot]?.region!==region)errors.push('Wrong/missing slot '+slot);
     if(geometry.escaped.length)errors.push('Parent/viewport overflow');
+    if(geometry.nameText!==user.displayName)errors.push('Display name text changed');
+    if(long&&locale==='ja'&&!scenario.endsWith('-english')&&geometry.nameWords.length!==4)errors.push('Required display name words missing');
+    for(const word of geometry.nameWords)if(word.rows.length>1)errors.push('Display name word split: '+word.word);
+    for(const board of geometry.boardLines){
+      if(board.lines.length>1&&board.lines.at(-1).length===1)errors.push('Saved board label has single-character last line');
+      if(board.label==='Commercial production shortlist'&&board.lines.some(line=>line.split(' ').some(word=>!['Commercial','production','shortlist'].includes(word))))errors.push('Saved board English word split');
+    }
     const w=geometry.regions.work,s=geometry.regions.subscription,c=geometry.regions.contracts;
     if(w&&s&&width===1440&&!(w.x<s.x&&Math.abs(w.y-s.y)<3))errors.push('Desktop work/sidebar not aligned');
     if(w&&s&&width===320&&!(w.y<s.y))errors.push('Mobile work not first');
     if(w&&s&&c&&c.y<Math.max(w.bottom,s.bottom)-2)errors.push('Contracts not below workspace');
+    for(let i=0;i<geometry.boards.length;i++)for(let j=i+1;j<geometry.boards.length;j++){
+      const a=geometry.boards[i],b=geometry.boards[j];
+      if(Math.abs(a.card.y-b.card.y)<2&&Math.abs(a.image.y-b.image.y)>2)errors.push('Same-row saved thumbnails have different tops');
+    }
+    if(width>700&&geometry.giftCard&&Math.abs(geometry.giftCard.bottom-geometry.slots.nda.bottom)>2)errors.push('Contract card bottoms not aligned');
     const key=`${locale}-${width}-${scenario}`;
     await page.screenshot({path:`${out}/${key}-initial.png`});await page.screenshot({path:`${out}/${key}-full.png`,fullPage:true});
     if(expired&&await page.locator('a[href$="/properties/p1"]').count())errors.push('Expired unlock revisit shown');

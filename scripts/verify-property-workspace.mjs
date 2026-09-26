@@ -3,14 +3,14 @@ import {build} from 'esbuild';
 import {chromium} from 'playwright';
 import {createServer} from 'node:http';
 
-const out='artifacts/property-workspace';fs.mkdirSync(out,{recursive:true});
+const out=process.env.OUT_DIR||'artifacts/property-workspace';fs.mkdirSync(out,{recursive:true});
 const base=process.env.BASE_URL||'http://localhost:3032';
 if(process.argv.includes('--serve')){
  createServer((req,res)=>{const name=(req.url||'/').split('?')[0].replace(/^\//,'')||'ja-representative.html';if(!/^[a-z0-9.-]+$/.test(name)){res.writeHead(400).end();return;}try{res.setHeader('content-type',name.endsWith('.js')?'text/javascript':'text/html; charset=utf-8');res.end(fs.readFileSync(`${out}/${name}`));}catch{res.writeHead(404).end();}}).listen(8840,'127.0.0.1',()=>console.log('Safe fixture: http://127.0.0.1:8840/'));
  await new Promise(()=>{});
 }
 // Production NODE_ENV matters: ViewerGate intentionally bypasses subscription checks in dev.
-const built=await build({bundle:true,write:false,outdir:'fixture',format:'esm',platform:'browser',jsx:'automatic',tsconfig:'tsconfig.json',define:{'process.env.NODE_ENV':'"production"'},stdin:{loader:'tsx',resolveDir:process.cwd(),contents:`import React from 'react';import{createRoot}from'react-dom/client';import View from './src/components/property-detail-view';import{propertySchema}from './src/lib/schemas';const f=window.fixture;const scene=(id,label,accessLevel='public')=>({id,label,accessLevel,splatUrl:'/fixture/'+id+'.rad',forSale:!f.noSale,salePrice:200000,licenseOptions:[{license:'standard',price:200000},{license:'extended',price:400000}],downloadFiles:[{url:'/fixture/'+id+'.rad',format:'RAD'}],sizeMb:120,saleDescription:'検証用データ / Fixture data'});const property=propertySchema.parse({id:'shibuyasq',title:f.locale==='ja'?'渋谷スクランブル交差点':'Shibuya Scramble Crossing',category:'outdoor',status:f.preview?'draft':'published',prefecture:'東京都',city:'渋谷区',address:'東京都渋谷区',nearestStation:'渋谷駅',priceType:'hourly',hourlyPrice:10000,dailyPrice:50000,description:'検証用の物件説明。写真は公開ページの既存画像です。',cover:{src:'https://locahun3d.com/api/r2/assets/image/NbJ-IS95yS-shibuya-scramble-crossing-5_large.jpg',alt:'渋谷スクランブル交差点'},gallery:[{src:'https://locahun3d.com/api/r2/assets/image/65MVFXIF3T-shibuya-scramble-gallery-2.webp',alt:'Kakidai · CC BY-SA 4.0'}],splatItems:f.none?[]:[scene('first','メインシーン / Main scene'),...(f.multiple?[scene('restricted','非公開シーン / Restricted scene','restricted'),scene('second','長いシーン名の別アングル確認用 / Alternative angle with a long scene name'),scene('nda','NDA scene','nda_only')]:[])]});if(f.mixed){property.splatItems[2].forSale=false;property.splatItems.push({...property.splatItems[0],id:'third',label:'Third sale scene',splatUrl:'/fixture/third.rad'});}if(f.video)property.splatItems[0].previewVideoUrl='data:video/mp4;base64,';if(f.representative){property.contactEmail='fixture-inquiry@example.test';property.priceType='flat';property.hourlyPrice=0;property.dailyPrice=0;property.permitRequired=true;property.permitType=f.locale==='ja'?'道路使用許可':'Road use permit';property.address='東京都渋谷区（渋谷スクランブル交差点・ハチ公前）';property.nearestStation='各線 渋谷駅 ハチ公口すぐ（徒歩約1分）';property.availableHours='公道（24時間）／撮影には道路使用許可が必要';property.permitNotes='渋谷駅周辺での撮影に関しましては、渋谷警察署（03-3498-0110）へ相談してください。';property.gallery.push({src:'https://locahun3d.com/api/r2/assets/image/sLsA8AdHRO-shibuya-scramble-gallery-1.webp',alt:'Benh Lieu Song · CC BY-SA 2.0'});property.scannedAt='2026-07-06';property.splatItems[0].previewVideoUrl='https://locahun3d.com/api/r2/uploads/shibuya-scramble-crossing/0-preview.mp4';property.tokenCost=5;property.zipSizeMb=891;property.description=f.locale==='ja'?'東京都渋谷区の渋谷スクランブル交差点。':'Shibuya Scramble Crossing, Shibuya, Tokyo.';property.splatItems[0].sizeMb=1118;property.splatItems[0].saleDescription='';property.splatItems[0].downloadFiles=[{url:'/fixture/data.zip',format:'PLY & OBJ (ZIP)',sizeMb:891}];}createRoot(document.getElementById('root')).render(<View property={property} others={[]} locale={f.locale} preview={f.preview} sharePreview={f.preview} previewToken={f.preview?'fixture-preview':undefined} hasViewerAccess={f.unlocked||f.representative} signedIn={f.unlocked||f.representative} unlockedItemIds={f.unlocked?['first']:[]} />);`},plugins:[{name:'safe-boundaries',setup(b){
+const built=await build({bundle:true,write:false,outdir:'fixture',format:'esm',platform:'browser',jsx:'automatic',tsconfig:'tsconfig.json',define:{'process.env.NODE_ENV':'"production"'},stdin:{loader:'tsx',resolveDir:process.cwd(),contents:`import React from 'react';import{createRoot}from'react-dom/client';import View from './src/components/property-detail-view';import{propertySchema}from './src/lib/schemas';const f=window.fixture;const scene=(id,label,accessLevel='public')=>({id,label,accessLevel,splatUrl:'/fixture/'+id+'.rad',forSale:!f.noSale,salePrice:200000,licenseOptions:[{license:'standard',price:200000},{license:'extended',price:400000}],downloadFiles:[{url:'/fixture/'+id+'.rad',format:'RAD'}],sizeMb:120,saleDescription:'検証用データ / Fixture data'});const property=propertySchema.parse({id:'shibuyasq',title:f.locale==='ja'?'渋谷スクランブル交差点':'Shibuya Scramble Crossing',category:'outdoor',status:f.preview?'draft':'published',prefecture:'東京都',city:'渋谷区',address:'東京都渋谷区',nearestStation:'渋谷駅',priceType:'hourly',hourlyPrice:10000,dailyPrice:50000,description:'検証用の物件説明。写真は公開ページの既存画像です。',cover:{src:'https://locahun3d.com/api/r2/assets/image/NbJ-IS95yS-shibuya-scramble-crossing-5_large.jpg',alt:'渋谷スクランブル交差点'},gallery:[{src:'https://locahun3d.com/api/r2/assets/image/65MVFXIF3T-shibuya-scramble-gallery-2.webp',alt:'Kakidai · CC BY-SA 4.0'}],splatItems:f.none?[]:[scene('first','メインシーン / Main scene'),...(f.multiple?[scene('restricted','非公開シーン / Restricted scene','restricted'),scene('second','長いシーン名の別アングル確認用 / Alternative angle with a long scene name'),scene('nda','NDA scene','nda_only')]:[])]});if(f.mixed){property.splatItems[2].forSale=false;property.splatItems.push({...property.splatItems[0],id:'third',label:'Third sale scene',splatUrl:'/fixture/third.rad'});}if(f.video)property.splatItems[0].previewVideoUrl='data:video/mp4;base64,';if(f.representative){property.cover.alt='shibuya-scramble-crossing-5_large';property.contactEmail='fixture-inquiry@example.test';property.priceType='flat';property.hourlyPrice=0;property.dailyPrice=0;property.permitRequired=true;property.permitType=f.locale==='ja'?'道路使用許可':'Road use permit';property.address='東京都渋谷区（渋谷スクランブル交差点・ハチ公前）';property.nearestStation='各線 渋谷駅 ハチ公口すぐ（徒歩約1分）';property.availableHours='公道（24時間）／撮影には道路使用許可が必要';property.permitNotes='渋谷駅周辺での撮影に関しましては、渋谷警察署（03-3498-0110）へ相談してください。';property.gallery.push({src:'https://locahun3d.com/api/r2/assets/image/sLsA8AdHRO-shibuya-scramble-gallery-1.webp',alt:'Benh Lieu Song · CC BY-SA 2.0'});property.scannedAt='2026-07-06';property.splatItems[0].previewVideoUrl='https://locahun3d.com/api/r2/uploads/shibuya-scramble-crossing/0-preview.mp4';property.tokenCost=5;property.zipSizeMb=891;property.description=f.locale==='ja'?'東京都渋谷区の渋谷スクランブル交差点。':'Shibuya Scramble Crossing, Shibuya, Tokyo.';property.splatItems[0].sizeMb=1118;property.splatItems[0].saleDescription='';property.splatItems[0].downloadFiles=[{url:'/fixture/data.zip',format:'PLY & OBJ (ZIP)',sizeMb:891}];}createRoot(document.getElementById('root')).render(<View property={property} others={[]} locale={f.locale} preview={f.preview} sharePreview={f.preview} previewToken={f.preview?'fixture-preview':undefined} hasViewerAccess={f.unlocked||f.representative} signedIn={f.unlocked||f.representative} unlockedItemIds={f.unlocked?['first']:[]} />);`},plugins:[{name:'safe-boundaries',setup(b){
  b.onResolve({filter:/^(?:next\/|@\/lib\/(?:cart|viewer|.*-actions)$|@\/components\/locale-provider$)/},a=>({path:a.path,namespace:'stub'}));
  b.onLoad({filter:/.*/,namespace:'stub'},a=>{let contents;
   if(a.path==='next/link')contents='export default function Link({children,prefetch,...props}){return <a {...props}>{children}</a>}';
@@ -28,7 +28,7 @@ const browser=await chromium.launch({channel:'chrome',headless:false});const res
 try{
  const page=await browser.newPage();const headers={};let css='';
  for(const locale of ['ja','en']){
-  await page.goto(base+(locale==='en'?'/en':'')+'/contact',{waitUntil:'networkidle'});
+  await page.goto(base+(locale==='en'?'/en':'')+'/contact',{waitUntil:'domcontentloaded'});
   headers[locale]=await page.locator('header').first().evaluate(e=>e.outerHTML);
   if(!css){const links=await page.locator('link[rel="stylesheet"]').evaluateAll(ns=>ns.map(n=>n.href));css=(await Promise.all(links.map(async u=>(await page.request.get(u)).text()))).join('\n');}
  }
@@ -47,6 +47,8 @@ try{
   await page.locator('img').evaluateAll(ns=>{for(const n of ns)n.loading='eager';return Promise.race([Promise.all(ns.map(n=>n.decode().catch(()=>{}))),new Promise(r=>setTimeout(r,3000))]);});
   await page.evaluate(()=>scrollTo(0,0));
   const errors=[];
+  if(f.representative && !await page.locator('[data-property-spec-group]').count())errors.push('Registered property information groups missing');
+  if(!f.representative && !await page.locator('[data-property-specs]').getByText(locale==='en'?'Property information is not registered.':'物件情報は未登録です。',{exact:true}).count())errors.push('Missing-data state absent');
   const geometry=await page.evaluate(()=>{
    const rect=e=>{if(!e||!e.getClientRects().length)return null;const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}};
    const view=document.querySelector('[data-property-viewing]'),purchase=document.querySelector('[data-property-purchase]'),photos=document.querySelector('[data-property-photos],[aria-label="物件写真"],[aria-label="Property photos"]');
@@ -54,11 +56,32 @@ try{
    const gate=view?.querySelector('.group > a.absolute,.group > button.absolute');
    const gateRect=rect(gate),gateText=gate?[...gate.children].map(e=>({text:e.textContent,...rect(e)})):[];
    const gateClipped=gateRect?gateText.some(r=>r.x<gateRect.x-1||r.right>gateRect.right+1||r.y<gateRect.y-1||r.bottom>gateRect.bottom+1):false;
-   const regions=Object.fromEntries(['facts','access','contact','workspace','license','photo'].map(n=>[n,rect(document.querySelector('[data-property-'+n+']'))]));
+   const regions=Object.fromEntries(['facts','access','contact','workspace','specs','photo'].map(n=>[n,rect(document.querySelector('[data-property-'+n+']'))]));
    const licenseCards=purchase?[...purchase.querySelectorAll('label')].filter(e=>e.querySelector('input[type="radio"]')).map(e=>({text:e.textContent,...rect(e)})):[];
    return{view:rect(view),purchase:rect(purchase),photos:rect(photos),regions,licenseCards,escaped,gateRect,gateText,gateClipped,gateOpacity:gate?getComputedStyle(gate).opacity:null,video:rect(view?.querySelector('video')),heading:rect(document.querySelector('h1')),header:rect(document.querySelector('header'))};
   });
   if(geometry.escaped.length)errors.push('Parent/viewport overflow');
+  if(f.representative){
+   const photosText=await page.locator('[data-property-photos]').innerText();
+   if(photosText.includes('shibuya-scramble-crossing-5_large'))errors.push('Internal filename exposed as caption');
+   if(!photosText.includes(locale==='en'?'Shibuya Scramble Crossing':'渋谷スクランブル交差点'))errors.push('Actual property title missing from fallback caption');
+  }
+  if(locale==='ja'&&geometry.purchase){
+   const splitWords=await page.locator('[data-property-license-card] p').evaluateAll(elements=>elements.flatMap(el=>{
+    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT), chars=[];let node;
+    while(node=walker.nextNode())for(let i=0;i<node.textContent.length;i++)chars.push({node,i,char:node.textContent[i]});
+    const text=chars.map(c=>c.char).join('');
+    return ['同梱','再配布','改変配布','組込製品','許諾'].filter(word=>{const start=text.indexOf(word);if(start<0)return false;const ys=chars.slice(start,start+word.length).map(c=>{const r=document.createRange();r.setStart(c.node,c.i);r.setEnd(c.node,c.i+1);return r.getBoundingClientRect().top;});return Math.max(...ys)-Math.min(...ys)>2;});
+   }));if(splitWords.length)errors.push('License words split inside a word: '+splitWords.join(', '));
+  }
+  if(width===820&&geometry.purchase){
+   const physicalSize=await page.locator('[data-property-license-card] p').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize)*parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--z')));
+   if(physicalSize<11.9)errors.push('Tablet purchase license description below 12 physical pixels: '+physicalSize);
+  }
+  if(state==='locked'&&locale==='en'){
+   const rendered=await page.locator('[data-property-viewing] button.absolute .serif').innerText();
+   if(!/account\s+to unlock/.test(rendered))errors.push('English gate joins words across authored line break: '+rendered);
+  }
   if(!f.none&&!geometry.view)errors.push('Viewer region missing');
   if(!f.none&&(geometry.gateClipped||geometry.gateOpacity!=='1'))errors.push('Gate instruction hidden/clipped');
   if((f.video||f.representative)&&(!geometry.video||geometry.video.bottom>geometry.gateRect.y+2||geometry.video.height<100))errors.push('Video covered by gate instructions');
@@ -67,16 +90,26 @@ try{
   if(!f.noSale&&!f.preview&&!f.none&&!geometry.purchase)errors.push('Sale panel missing');
   if(geometry.photos&&geometry.purchase){if(width>=820&&!(geometry.photos.x<geometry.purchase.x&&(f.multiple||Math.abs(geometry.photos.y-geometry.purchase.y)<3)))errors.push('Photo/purchase not adjacent');if(width<=390&&geometry.purchase.y<geometry.photos.bottom-2)errors.push('Mobile purchase overlaps photos');}
   if(!geometry.photos)errors.push('Separate photos missing');
-  for(const n of ['facts','access','contact','workspace','license','photo'])if(!geometry.regions[n]&&!(f.none&&n==='workspace')&&!(n==='license'&&!geometry.purchase))errors.push('Missing original-layout region '+n);
-  const {facts,workspace,license,photo}=geometry.regions;
+  for(const n of ['facts','access','contact','workspace','specs','photo'])if(!geometry.regions[n]&&!(f.none&&n==='workspace'))errors.push('Missing original-layout region '+n);
+  const {facts,workspace,specs,photo}=geometry.regions;
   if(facts&&geometry.photos&&facts.y<Math.max(geometry.photos.bottom,geometry.purchase?.bottom||0)-2)errors.push('Facts must follow photo/purchase');
   if(facts&&workspace&&workspace.y<facts.bottom-2)errors.push('3DGS must follow facts');
-  if(workspace&&license&&license.y<workspace.bottom-2)errors.push('License notes must follow 3DGS');
+  if(workspace&&specs&&specs.y<workspace.bottom-2)errors.push('Property information must follow 3DGS');
   if(photo){const expected=width>=1400?16/9:width>=701?16/10:4/3;if(Math.abs(photo.width/photo.height-expected)>.08)errors.push('Original photo aspect changed');}
   if(f.representative&&photo){const reference={1440:759.34,820:416.81,390:341,320:271}[width];if(Math.abs(photo.width/reference-1)>.06)errors.push('Original photo width differs >6%');if(width>=820&&geometry.purchase&&Math.abs(geometry.photos.x-(width-geometry.purchase.right))>30)errors.push('Original top workspace is not centered');}
   if(geometry.purchase){if(geometry.licenseCards.length!==2)errors.push('Two original license cards missing');for(const [i,card]of geometry.licenseCards.entries()){if(card.height<95||!card.text.includes(i===0?'200,000':'400,000'))errors.push('Original license card price/size missing');}if(geometry.licenseCards.length===2&&geometry.licenseCards[1].y<geometry.licenseCards[0].bottom-1)errors.push('License cards not vertical');}
   const key=`${locale}-${width}-${state}`;await page.screenshot({path:`${out}/${key}-initial.png`});await page.screenshot({path:`${out}/${key}-full.png`,fullPage:true,clip:{x:0,y:0,width,height:await page.evaluate(()=>Math.ceil(document.body.getBoundingClientRect().bottom))}});
-  if(f.representative&&facts&&workspace&&license)await page.screenshot({path:`${out}/${key}-lower-sections.png`,fullPage:true,clip:{x:0,y:Math.floor(facts.y),width,height:Math.ceil(license.y+Math.min(license.height,300)-Math.floor(facts.y))}});
+  if(f.representative&&facts&&workspace&&specs)await page.screenshot({path:`${out}/${key}-lower-sections.png`,fullPage:true,clip:{x:0,y:Math.floor(facts.y),width,height:Math.ceil(specs.bottom-Math.floor(facts.y))}});
+  const comparison=page.locator('[data-property-license-comparison]').first();
+  if(await comparison.count()){
+   if(await comparison.getAttribute('open')!==null)errors.push('License comparison should start closed');
+   await comparison.locator('summary').click();
+   if(!await comparison.locator('table').isVisible())errors.push('Purchase license comparison missing');
+   if(await comparison.locator('table').evaluate(t=>t.parentElement.scrollWidth>t.parentElement.clientWidth+1))errors.push('Two-license comparison requires horizontal scrolling');
+   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1))errors.push('Expanded license comparison overflows page');
+   await comparison.screenshot({path:`${out}/${key}-license-open.png`});
+   await comparison.locator('summary').click();
+  }
   const thumbs=page.locator('[data-property-photos] button[aria-pressed]');
   if(await thumbs.count()>1){const before=await page.locator('[data-property-photo] img').getAttribute('src');await thumbs.last().click();const after=await page.locator('[data-property-photo] img').getAttribute('src');if(before===after)errors.push('Photo thumbnail selection failed');await page.locator('[data-property-photo] img').click();await page.getByRole('dialog').waitFor();const photoContained=await page.getByRole('dialog').locator('img').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1&&r.top>=-1&&r.bottom<=innerHeight+1});if(!photoContained)errors.push('Zoomed photo clipped');await page.screenshot({path:`${out}/${key}-photo-zoom.png`});await page.keyboard.press('Escape');await thumbs.first().click();}
   if(f.multiple&&!f.mixed){const pickers=page.getByRole('group',{name:locale==='en'?'Choose a 3DGS scene':'3DGSシーンを選択'}),picker=pickers.first();if(await picker.locator('button').count()!==2)errors.push('Restricted/NDA scene leaked');await picker.locator('button').last().click();if(!(await page.locator('[data-property-viewing]').innerText()).includes('Alternative angle'))errors.push('Scene selection failed');if(!f.preview){await pickers.last().locator('button').first().click();if(!(await page.locator('[data-property-purchase]').innerText()).includes('Main scene'))errors.push('Lower picker did not sync purchase');await pickers.last().locator('button').last().click();if(!(await page.locator('[data-property-purchase]').innerText()).includes('Alternative angle'))errors.push('Lower picker purchase scene mismatch');}}

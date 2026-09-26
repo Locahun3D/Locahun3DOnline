@@ -7,6 +7,8 @@
  *   node scripts/ui-audit.mjs --local                  # localhost:3000 + :8830 を監査
  *   node scripts/ui-audit.mjs --online https://...     # オンライン側のベースURLを指定
  *   node scripts/ui-audit.mjs --scan   https://...     # スキャン側のベースURLを指定
+ *   --widths 390,820,1440 --paths /,/en,/pricing      # bounded focused checks
+ *   --out artifacts/ui-audit-current                 # evidence destination
  *
  * 検出項目:
  *   h-overflow      : ページ全体の横スクロール発生（scrollWidth > innerWidth）
@@ -20,7 +22,7 @@
  * 除外を足すこと（黙って閾値を緩めない）。
  */
 import { chromium } from "playwright";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -31,32 +33,32 @@ const local = args.includes("--local");
 const ONLINE = flag("--online") ?? (local ? "http://localhost:3000" : "https://locahun3d.com");
 const SCAN = flag("--scan") ?? (local ? "http://localhost:8830" : "https://web.locahun3d.com");
 
-const SCAN_JA = [
-  "locahun3d_manifesto.html", "locahun3d_data.html", "locahun3d_pitch_hub.html",
-  "locahun3d_online.html", "locahun3d_demo.html", "locahun3d_contact.html", "locahun3d_privacy.html",
-];
 const PAGES = [
   // オンライン（Next.js）
   // ⚠ 2026-08-16: /about は "/" の #service へ、/demo は /pricing へ統合（どちらも redirect）。
   //    着地先の "/" と "/pricing"（/en 版含む）で検査する。
-  ...["/", "/properties", "/pricing", "/contact",
-    "/contact/bug", "/contact/request", "/contact/listing", "/contact/general",
-    "/en", "/en/properties", "/en/pricing"].map((p) => ({ url: ONLINE + p, site: "online" })),
+  ...["/", "/properties", "/pricing", "/contact", "/privacy",
+    "/contact/scan", "/contact/request", "/contact/listing", "/contact/license",
+    "/en", "/en/properties", "/en/pricing", "/en/contact", "/en/privacy",
+    "/en/contact/scan", "/en/contact/request", "/en/contact/listing", "/en/contact/license"].map((p) => ({ url: ONLINE + p, site: "online" })),
   // works（実績＆技術ブログ）— 2026-09-03 にオンライン版へ統合。ホストは
   // web.locahun3d.com のまま（URL不変・本人指示）。一覧と記事1本を見る。
   // ⚠ ローカル検証は --scan http://localhost:3005 を渡すこと（統合後の works は
   //    オンライン版の Next ルート /works/[page] が出す）。
   ...["works/index.html", "works/isaacsim-3dgs-robot-demos.html", "en/works/index.html"]
     .map((p) => ({ url: `${SCAN}/${p}`, site: "scan" })),
-  // スキャン（静的HTML）
-  ...SCAN_JA.map((p) => ({ url: `${SCAN}/${p}`, site: "scan" })),
-  ...SCAN_JA.filter((p) => p !== "locahun3d_contact.html").map((p) => ({ url: `${SCAN}/en/${p}`, site: "scan" })),
+  // Retired static URLs are host-specific redirects, not independent pages.
+  // Audit their current destinations above; redirect contracts belong in a separate check.
 ];
 
 const VIEWPORTS = [
   [320, 568], [360, 740], [390, 844], [414, 896],
   [768, 1024], [820, 1180], [1024, 768], [1280, 800], [1440, 900],
-];
+].filter(([w]) => !flag("--widths") || flag("--widths").split(",").map(Number).includes(w));
+const selectedPages = flag("--paths")
+  ? flag("--paths").split(",").map(p => ({url: new URL(p, ONLINE).href, site: "online"}))
+  : PAGES;
+if (!VIEWPORTS.length) throw new Error("No valid --widths selected");
 
 /** ページ内で実行する検査本体（シリアライズされる） */
 const AUDIT = () => {
@@ -93,14 +95,17 @@ const AUDIT = () => {
 
 const DRAWER_AUDIT = () => {
   const out = [];
-  const links = [...document.querySelectorAll('#mNav a, [class*="z-[60]"] a, [class*="z-[60]"] button')];
+  const links = [...document.querySelectorAll('#header-tablet-nav a, #header-tablet-nav button, #header-account-menu a, #header-account-menu button, #mNav a, [class*="z-[60]"] a, [class*="z-[60]"] button')];
+  let visible = 0;
   for (const a of links) {
     const r = a.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) continue;
+    visible++;
     if (r.right > innerWidth + 1 || r.left < -1) {
       out.push({ type: "drawer-offscreen", el: (a.textContent || "").trim().slice(0, 20) });
     }
   }
+  if (!visible) out.push({type:"drawer-empty",detail:"No visible drawer controls inspected"});
   return out;
 };
 
@@ -108,54 +113,82 @@ const DRAWER_AUDIT = () => {
 const browser = await chromium.launch(args.includes("--chrome")
   ? { channel: "chrome", headless: false }
   : {});
-const page = await browser.newPage();
-mkdirSync(".ui-audit", { recursive: true });
+const output = flag("--out") || ".ui-audit";
+mkdirSync(output, { recursive: true });
 const issues = [];
+const cases = [];
+const redact = (_key,value) => typeof value === "string"
+  ? value.replace(/([?&](?:__clerk[^=&#]*|token|nonce|jwt|access_token|id_token|authorization)=)[^&#\s]*/gi,"$1[REDACTED]") : value;
 let shot = 0;
-
-for (const { url, site } of PAGES) {
+const bounded = async (job, label, ms = 10000) => {
+  let timer;
+  try { return await Promise.race([job, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} timeout ${ms}ms`)), ms); })]); }
+  finally { clearTimeout(timer); }
+};
+try { for (const { url } of selectedPages) {
   for (const [w, h] of VIEWPORTS) {
-    await page.setViewportSize({ width: w, height: h });
+    const page = await browser.newPage({viewport:{width:w,height:h}});
+    page.setDefaultTimeout(5000);
+    // The audit never needs a mutation or a gated viewer-asset token.
+    await page.route("**/api/**", route => {
+      const req=route.request(), path=new URL(req.url()).pathname;
+      return !["GET","HEAD"].includes(req.method()) || /\/api\/(viewer-asset|purchase|unlock)(?:\/|$)/.test(path) ? route.abort() : route.continue();
+    });
+    const record={url,vw:w,finalUrl:null,status:null,drawer:false,pageErrors:[],failedScripts:[]};cases.push(record);
+    page.on("pageerror",error=>{record.pageErrors.push({message:error.message,stack:error.stack});});
+    page.on("requestfailed",request=>{if(request.resourceType()==="script")record.failedScripts.push({url:request.url(),failure:request.failure()});});
+    let stage="navigation";
+    console.log(`[${cases.length}/${selectedPages.length*VIEWPORTS.length}] ${w}px ${url} — ${stage}`);
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-    } catch {
-      issues.push({ url, vw: w, type: "load-failed" });
-      continue;
-    }
+      const response=await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+      record.finalUrl=page.url();record.status=response?.status()??null;
+      if(!response||!response.ok()){issues.push({url,vw:w,type:"http-error",status:record.status,finalUrl:record.finalUrl});continue;}
+      if(new URL(record.finalUrl).origin!==new URL(url).origin){issues.push({url,vw:w,type:"unexpected-origin",finalUrl:record.finalUrl});continue;}
+    stage="geometry";console.log(`  ${record.status} ${record.finalUrl} — ${stage}`);
     await page.waitForTimeout(500);
-    const found = await page.evaluate(AUDIT);
+    const found = await bounded(page.evaluate(AUDIT),stage);
     for (const f of found) {
       issues.push({ url, vw: w, state: "closed", ...f });
-      await page.screenshot({ path: `.ui-audit/issue-${++shot}.png` }).catch(() => {});
     }
+    if(found.length){stage="screenshot";await page.screenshot({path:`${output}/issue-${++shot}.png`,timeout:5000});}
     // モバイル幅ではドロワー開状態も検査
     if (w <= 414) {
       // ⚠ :visible 必須。オンライン版のタブレット用ハンバーガー(720–1023pxのみ表示)は
       //   スマホ幅でも DOM には存在するため、:visible が無いと非表示要素を掴んで
       //   click() が30秒タイムアウトし、監査が1ページ2分に激遅化する（実測）。
-      const toggle = site === "scan" ? "#mToggle:visible" : "header button[aria-expanded]:visible";
+      const toggle = 'header button[aria-controls="header-tablet-nav"]:visible, #mToggle:visible';
       const t = page.locator(toggle).first();
       if (await t.count()) {
-        await t.click().catch(() => {});
+        stage="drawer-click";console.log(`  ${stage}`);
+        await t.click({timeout:5000});
+        await bounded((async()=>{while(await t.getAttribute("aria-expanded")==="false")await page.waitForTimeout(50);})(),"drawer-expanded",5000);
+        record.drawer=true;
         await page.waitForTimeout(450);
-        const dFound = await page.evaluate(DRAWER_AUDIT);
+        stage="drawer-geometry";
+        const dFound = await bounded(page.evaluate(DRAWER_AUDIT),stage);
         for (const f of dFound) {
           issues.push({ url, vw: w, state: "drawer", ...f });
-          await page.screenshot({ path: `.ui-audit/issue-${++shot}.png` }).catch(() => {});
         }
-      }
+        if(dFound.length){stage="drawer-screenshot";await page.screenshot({path:`${output}/issue-${++shot}.png`,timeout:5000});}
+      } else issues.push({url,vw:w,type:"drawer-toggle-missing"});
     }
+    } catch(error){issues.push({url,vw:w,type:"audit-failed",stage,detail:String(error.message)});console.log(`  FAIL ${stage}: ${error.message}`);}
+    finally {
+      await page.close();
+      if(record.pageErrors.length)issues.push({url,vw:w,type:"page-error",errors:record.pageErrors});
+      if(record.failedScripts.length)issues.push({url,vw:w,type:"script-load-failed",scripts:record.failedScripts});
+      writeFileSync(`${output}/results.json`,JSON.stringify({cases,issues},redact,2));
+    }
+    console.log(`  done ${w}px ${url}`);
   }
-  process.stdout.write(".");
 }
-console.log("");
-await browser.close();
+} finally {await browser.close();}
 
 if (issues.length === 0) {
-  console.log(`✔ UI audit passed — ${PAGES.length} pages × ${VIEWPORTS.length} viewports, no issues.`);
+  console.log(`✔ UI audit passed — ${selectedPages.length} pages × ${VIEWPORTS.length} viewports, no issues.`);
   process.exit(0);
 }
 console.log(`✘ ${issues.length} issue(s) found:`);
-for (const i of issues) console.log(JSON.stringify(i));
-console.log(`Screenshots: .ui-audit/`);
+for (const i of issues) console.log(JSON.stringify(i,redact));
+console.log(`Screenshots and results: ${output}/`);
 process.exit(1);

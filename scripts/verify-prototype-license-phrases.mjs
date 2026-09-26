@@ -1,0 +1,25 @@
+import {chromium} from 'playwright';
+import fs from 'node:fs';
+const out=process.env.OUT_DIR||'F:/Codex/property-audit-20260913/proto-phrases';fs.mkdirSync(out,{recursive:true});
+const b=await chromium.launch({channel:'chrome',headless:false});const p=await b.newPage();const results=[];
+try{for(const width of [1440,820,390,320]){
+ await p.setViewportSize({width,height:900});await p.goto('http://localhost:8839/?variant=1',{waitUntil:'networkidle'});
+ if(await p.locator('img').evaluateAll(images=>images.some(image=>!image.naturalWidth)))await p.reload({waitUntil:'networkidle'});
+ await p.locator('img').evaluateAll(images=>Promise.all(images.map(image=>image.decode().catch(()=>{}))));
+ const errors=await p.locator('.license p').evaluateAll(elements=>elements.flatMap(el=>{const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT), chars=[];let node;while(node=w.nextNode())for(let i=0;i<node.textContent.length;i++)chars.push({node,i,char:node.textContent[i]});const text=chars.map(c=>c.char).join('');return ['同梱','改変配布','組込','テンプレート'].filter(word=>{const start=text.indexOf(word);if(start<0)return false;const ys=chars.slice(start,start+word.length).map(c=>{const r=document.createRange();r.setStart(c.node,c.i);r.setEnd(c.node,c.i+1);return r.getBoundingClientRect().top;});return Math.max(...ys)-Math.min(...ys)>2;});}));
+ const cart=p.locator('[data-buy="カートに入れる"]').first();
+ const buttonLines=await cart.evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);return [...new Set([...range.getClientRects()].map(r=>Math.round(r.top)))].length;});
+ if(buttonLines!==1)errors.push('Cart button label wraps onto '+buttonLines+' lines');
+ const fits=await cart.evaluate(el=>{const r=el.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(el);const text=range.getBoundingClientRect();return text.left>=r.left&&text.right<=r.right&&el.scrollWidth<=el.clientWidth;});
+ if(!fits)errors.push('Cart label overflows button');
+ if(await p.locator('img').evaluateAll(images=>images.some(image=>!image.naturalWidth)))errors.push('Photo failed to load');
+ if(!await cart.isDisabled())errors.push('Cart enabled before consent');
+ if(await p.locator('.demo-note').count())errors.push('Removed demo-note returned');
+ await p.locator('.purchase').scrollIntoViewIfNeeded();await p.screenshot({path:`${out}/${width}.png`});results.push({width,errors});console.log(width,errors.length?errors:'PASS');
+ await p.locator('.consent').check();
+ if(!await cart.isEnabled())errors.push('Cart remains disabled after consent');
+ await cart.click();await p.locator('#dialog').waitFor({state:'visible'});
+ if(!(await p.locator('#dialog').innerText()).includes('比較用モック'))errors.push('Cart demo dialog changed');
+ await p.locator('#dialog .close').click();
+ await p.screenshot({path:`${out}/${width}-consented.png`});
+}}finally{await b.close();fs.writeFileSync(`${out}/results.json`,JSON.stringify(results,null,2));}if(results.some(r=>r.errors.length))process.exitCode=1;
