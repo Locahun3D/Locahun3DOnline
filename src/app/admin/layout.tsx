@@ -45,6 +45,7 @@ export default async function AdminLayout({
           { href: "/admin/accounts", label: "アカウント" },
           { href: "/admin/marketing", label: "マーケティング" },
           { href: "/admin/works", label: "実績＆技術ブログ" },
+          { href: "/admin/terms", label: "規約" },
         ] },
       ]
     : [{ title: "物件", items: [{ href: "/admin/properties", label: "物件一覧" }] }];

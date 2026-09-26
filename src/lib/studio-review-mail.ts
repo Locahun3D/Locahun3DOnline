@@ -35,15 +35,9 @@ export interface StudioReviewMailInput {
 /**
  * 確認メールに必ず同送する規約（2026-09-26 本人指示「何もなくても規約のメールが欲しい」）。
  * スタジオから「契約書や規約の控えが欲しい」と言われるたびに人が送っていたので、
- * 掲載の確認メールに常に全部のリンクを入れる。並び順は読む順（掲載 → 販売 → 全体）。
+ * 掲載の確認メールに常に入れる。中身は lib/terms-catalog.ts（管理画面 /admin/terms と同じ表）。
  */
-export const STUDIO_TERMS_DOCS = [
-  { path: "/terms/listing", title: "施設掲載規約", note: "掲載の条件・写真の扱い・掲載の停止" },
-  { path: "/terms/listing-revenue-share", title: "掲載データ販売分配規約", note: "販売時の分配（20%）と精算" },
-  { path: "/terms/data-download", title: "3Dデータ購入規約", note: "購入者が守る条件（第三者の権利物の扱いを含む）" },
-  { path: "/terms/service", title: "利用規約", note: "サービス全体" },
-  { path: "/terms/tokushoho", title: "特定商取引法に基づく表記", note: "運営者・支払い・キャンセル" },
-] as const;
+export const STUDIO_TERMS_DOCS = STUDIO_MAIL_TERMS;
 
 export interface StudioReviewMail {
   subject: string;
@@ -53,6 +47,7 @@ export interface StudioReviewMail {
 
 import { embedSnippet } from "./embed-snippet";
 import { REVENUE_SHARE_PERCENT } from "./data-sale-consent";
+import { STUDIO_MAIL_TERMS } from "./terms-catalog";
 
 const esc = (s: string) =>
   String(s ?? "")
