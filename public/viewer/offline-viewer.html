@@ -3000,10 +3000,10 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
 <!-- 100 % offline imports — all dependencies live under ./vendor/:
        three             → cdn.jsdelivr.net/npm/three@0.180.0
        three/addons/     → cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/
-       @sparkjsdev/spark → cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.0.0
+       @sparkjsdev/spark → vendor/spark-2.2.0-workers16-nostore.module.js（jsDelivr の @sparkjsdev/spark@2.2.0 に2パッチ。vendor/README.md）
        fflate            → cdn.jsdelivr.net/npm/fflate@0.8.2 (Spark + ZIP both)
 
-     Versions are pinned so they match Spark 2.0.0's peerDependency
+     Versions are pinned so they match Spark 2.2.0's peerDependency
      (three ^0.180) and the original vendor build. Don't bump three to
      a major version Spark hasn't tested against, or splat rendering
      will silently stop (mesh added to scene but invisible).
@@ -3018,7 +3018,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="c686d00ae0d47b43587516ccf957f84505a74bb4ab7507f4ae45de485e5adf89";
+window.__locahunBuildRelease="cb0f4c11e451fe1eb34f689eff3d673f569878d05aa47b4fb9b4ec1090b5c7ed";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
