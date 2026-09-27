@@ -688,6 +688,13 @@ body.cam-active #view-tl-btns{
   display:none!important;
   z-index:59;display:none;line-height:1.6;
 }
+
+/* ホーム画面のドロップ枠の中の操作説明（2026-09-27）。クリックはドロップ枠に通す。 */
+#dz .dz-guide{display:grid;gap:6px;width:min(440px,100%);margin:14px auto 10px;padding:12px 16px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(255,255,255,.03);pointer-events:none;text-align:left;}
+#dz .dz-guide>div{display:grid;grid-template-columns:6.5em 1fr;gap:10px;align-items:baseline;}
+#dz .dz-guide .k{color:#ffb454;font-size:.74em;letter-spacing:.08em;white-space:nowrap;}
+#dz .dz-guide .v{color:#d8d8d8;font-size:.86em;line-height:1.5;}
+@media (max-width:600px){#dz .dz-guide{padding:10px 12px;} #dz .dz-guide>div{grid-template-columns:5.5em 1fr;}}
 /* ══════ LAYER PANEL ══════ */
 #layer-panel{
   position:fixed;left:0;top:var(--v1-header-bottom,45px);bottom:0;width:285px;
@@ -2601,6 +2608,8 @@ body.ar-active #dz{display:none !important;}
   <div class="zone" id="dropzone">
     <div class="ico">📂</div>
     <div id="dz-drop-text">3DGS、Zipファイルをドロップ、またはクリックして選択</div>
+    <!-- 操作説明（2026-09-27 本人指示「ここに操作説明を」）。中身は 160_loading_helpers.js の _dzGuide() が端末と言語に合わせて入れる。 -->
+    <div id="dz-guide" class="dz-guide" aria-label="操作方法"></div>
     <div class="fmt">.splat&nbsp;&nbsp; .ply&nbsp;&nbsp; .spz&nbsp;&nbsp; .ksplat&nbsp;&nbsp; .rad&nbsp;&nbsp; .sog&nbsp;&nbsp; .obj&nbsp;&nbsp; .glb&nbsp;&nbsp; .fbx&nbsp;&nbsp; .zip&nbsp;&nbsp; .json</div>
     <!-- File input: kept in layout but visually hidden via clip-path so iPad
          Safari reliably opens the native picker on programmatic .click().
@@ -3007,7 +3016,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="039f6ddc611f3ea7eb7e831635107584be7dbb2e7a5f09fda614e155b85ede7c";
+window.__locahunBuildRelease="fcecf8f1f5df6fbf2bbd5f3822bac6d685ec9b6449236a932f31ef64fdb4b0a0";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -10413,20 +10422,31 @@ function _ldPaint(){
   document.getElementById('bar').style.width=v+'%';
   const lp=document.getElementById('lpct');if(lp)lp.textContent=Math.floor(v)+'%';
 }
-function _ldGuide(){
-  // 読み込み中は操作方法を見せる（ファイル名は出さない）。端末ごとに内容を変える。
+function _guideRows(){
+  // 操作方法の行。端末（タッチ／PC）と言語で内容を変える。読み込み画面とホームのドロップ枠で共用。
   const touch=typeof isMobile!=='undefined'&&isMobile,en=typeof _en==='function'&&_en();
-  const rows=touch
+  return touch
     ?(en?[['Move','Tap a spot to go there'],['Look','Drag with one finger'],['Walk','Bottom-left stick']]
         :[['移動方法','タッチでその場所に移動'],['見回す','1本指でドラッグ'],['歩く','左下のスティック']])
     :(en?[['Move','Click a spot to go there'],['Look','Left-drag'],['Keys','W A S D move / E up, Q down'],['Dash','Shift']]
         :[['移動方法','クリックでその場所に移動'],['見回す','左ドラッグ'],['キー移動','W A S D 前後左右 ／ E 上昇・Q 下降'],['ダッシュ','Shift']]);
-  const lt=document.getElementById('lt');lt.replaceChildren();lt.classList.add('ld-guide');
-  for(const [k,v] of rows){
+}
+function _renderGuide(el){
+  el.replaceChildren();
+  for(const [k,v] of _guideRows()){
     const row=document.createElement('div'),a=document.createElement('span'),b=document.createElement('span');
-    a.className='k';a.textContent=k;b.className='v';b.textContent=v;row.append(a,b);lt.append(row);
+    a.className='k';a.textContent=k;b.className='v';b.textContent=v;row.append(a,b);el.append(row);
   }
 }
+function _ldGuide(){
+  // 読み込み中は操作方法を見せる（ファイル名は出さない）。
+  const lt=document.getElementById('lt');lt.classList.add('ld-guide');_renderGuide(lt);
+}
+// ホーム画面のドロップ枠にも同じ操作説明を出す（2026-09-27 本人指示）。言語切替のたびに描き直す。
+function _dzGuide(){
+  const el=document.getElementById('dz-guide');if(el)_renderGuide(el);
+}
+document.addEventListener('DOMContentLoaded',_dzGuide,{once:true});
 function showLd(t) {
   _ldGuide();
   const fresh=document.getElementById('ld').classList.contains('hidden');
@@ -17737,6 +17757,7 @@ function _en(){ return window._lang==='en'; }
 window.toggleLang = function(){
   window._lang = window._lang==='ja'?'en':'ja';
   applyI18n();
+  if(typeof _dzGuide==='function')_dzGuide();
 };
 function applyI18n(){
   const L=window._lang;
@@ -22049,8 +22070,10 @@ setTimeout(async ()=>{
 // Inject "Load demo scene" button into the dropzone. Inherits the existing
 // `.demo-btn` style and accent-colour treatment used by the other dropzone
 // buttons (空プロジェクト, ユーザーマニュアル, プロジェクトを開く).
+// 2026-09-27 本人指示「これ消す」: ホーム画面のデモボタンは出さない（?showcase=1 と ?demo=1 の自動読込は残す）。
 document.addEventListener('DOMContentLoaded', () => {
   if(!DEMO_SCENE_URL) return;
+  if(!/[?&]demoBtn=1/.test(location.search)) return;   // 検証用にだけ ?demoBtn=1 で出せる
   const anchor = document.getElementById('emptyBtn'); // first existing dz button
   if(!anchor) return;
   const btn = document.createElement('button');
@@ -27346,6 +27369,7 @@ Object.assign(I18N.ja,{
   'csp-salvage-drop':'以前撮った JPEG をここにドロップ',
   'csp-salvage-sub':'カメラ位置/設定を復元します',
   'ct-tool':'カメラツール',
+  'cm-simple-capture':'書き出し（JPEG）','cm-mode-pro':'⚙ 詳細設定（プロツール）を開く','cm-mode-simple':'▴ シンプル表示に戻す',
   'ct-lens':'レンズ',
   'ct-focal':'焦点距離',
   'ct-sensor':'センサー',
@@ -27601,6 +27625,7 @@ Object.assign(I18N.en,{
   'csp-salvage-drop':'Drop a previously captured JPEG here',
   'csp-salvage-sub':'Restores camera position/settings',
   'ct-tool':'Camera Tool',
+  'cm-simple-capture':'Export (JPEG)','cm-mode-pro':'⚙ Open advanced (pro tools)','cm-mode-simple':'▴ Back to simple view',
   'ct-lens':'Lens',
   'ct-focal':'Focal',
   'ct-sensor':'Sensor',
@@ -27937,8 +27962,7 @@ function _applyI18nGaps(){
 // 「詳細設定」で従来の全項目（センサー・グリッド・余白・ロール・メタ情報・サルベージ等）を出す。
 // 選んだ表示は localStorage に覚える。
 (function(){
-  Object.assign(I18N.ja,{'cm-simple-capture':'書き出し（JPEG）','cm-mode-pro':'⚙ 詳細設定（プロツール）を開く','cm-mode-simple':'▴ シンプル表示に戻す'});
-  Object.assign(I18N.en,{'cm-simple-capture':'Export (JPEG)','cm-mode-pro':'⚙ Open advanced (pro tools)','cm-mode-simple':'▴ Back to simple view'});
+  // 文言は 390_i18n_extensions の辞書にある（cm-simple-capture / cm-mode-pro / cm-mode-simple）。
   const st=document.createElement('style');
   st.textContent='#cam-panel.cm-simple .cm-pro{display:none!important}#cam-panel:not(.cm-simple) .cm-simple-only{display:none!important}';
   document.head.appendChild(st);
