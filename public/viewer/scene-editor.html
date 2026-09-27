@@ -2991,7 +2991,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-    "@sparkjsdev/spark": "./vendor/spark-2.0.0-workers16-incrtraverse-heap319-v1-nostore.module.js",
+    "@sparkjsdev/spark": "./vendor/spark-2.2.0-workers16-nostore.module.js",
     "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js",
     "mp4-muxer": "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.mjs"
   }
@@ -3018,7 +3018,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="90a8ca54e245857972f073f153bdc9147d32a1f408937974f095b851813a5e65";
+window.__locahunBuildRelease="c686d00ae0d47b43587516ccf957f84505a74bb4ab7507f4ae45de485e5adf89";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -3667,7 +3667,11 @@ scene = new THREE.Scene();
 // 4固定→hardwareConcurrency-2(上限16)へ拡大済み。デスクトップはプールを
 // フルに使えるよう16に合わせる。
 const _numLodFetchers = isMobile ? 6 : 16;
-const sparkRenderer = new SparkRenderer({ renderer, numLodFetchers: _numLodFetchers });
+// 2026-09-27 Spark 2.2: LoD 走査は新しい "dynamic"（実験的）を既定にする。perf-rad-turn.mjs の A/B で、振り向き後の収束が
+// 2.0改（heap319）の 1.9〜4.5s → 0.2〜1.7s、読込は同等、perf-edge-lod の端の精細さは同一だった（docs/perf-20260927-spark22.md）。
+// ?lodTraverse=standard で従来の走査に戻せる。2.0 系のバンドル（単体配布版）では未知の指定として無視される。
+const _lodTraverseMode = (()=>{ try{ const m=/[?&]lodTraverse=(standard|dynamic)/.exec(location.search); return m?m[1]:'dynamic'; }catch(_){ return 'dynamic'; } })();
+const sparkRenderer = new SparkRenderer({ renderer, numLodFetchers: _numLodFetchers, lodTraverseMode: _lodTraverseMode });
 scene.add(sparkRenderer);
 
 // ── Spark file-type lookup (extension → SplatFileType enum) ──
