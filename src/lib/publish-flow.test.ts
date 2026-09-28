@@ -44,6 +44,8 @@ function ready(over: Partial<Property> = {}): Property {
     urlConfirmedAt: "2026-09-01T00:00:00.000Z",
     cover: { src: "/api/r2/cover.jpg", alt: "外観", altEn: "Exterior", width: 1600, height: 1000 },
     gallery: [1, 2, 3, 4, 5, 6].map(img),
+    // 2026-09-29: 運営の公開申請は 3DGS が入っていることが条件（reviewReadiness）。
+    splatItems: [{ id: "scene-1", label: "メイン", labelEn: "Main", splatUrl: "/api/r2/assets/splat/main.zip" }],
   });
   return { ...base, ...over };
 }
@@ -97,6 +99,14 @@ describe("canRequestReview", () => {
     const r = canRequestReview(ready({ contactEmail: "studio＠example" }), { skipMail: false });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.code).toBe("bad_studio_email");
+  });
+  it("3DGS がまだ無い下書きは申請にできない（2026-09-29 本人指摘）", () => {
+    const r = canRequestReview(ready({ splatUrl: "", splatItems: [] }), { skipMail: false });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.code).toBe("not_ready");
+      expect(r.error).toContain("3DGSデータ");
+    }
   });
   it("公開中・アーカイブからは申請にできない", () => {
     expect(canRequestReview(ready({ status: "published" }), { skipMail: true }).ok).toBe(false);

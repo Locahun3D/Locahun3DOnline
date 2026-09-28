@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { publishReadiness } from "./publish-readiness";
+import { publishReadiness, reviewReadiness, hasSplatData } from "./publish-readiness";
 import { propertySchema } from "./schemas";
 
 /** 画像未選択の cover。⚠ width/height は positive 必須なので既定値を入れる
@@ -76,5 +76,37 @@ describe("publishReadiness — 3DGS以外が揃っているか", () => {
 
   it("公式サイトだけでも問い合わせ先として認める", () => {
     expect(publishReadiness(filled({ contactEmail: "", contactWebsite: "https://example.com/contact" })).ready).toBe(true);
+  });
+});
+
+describe("reviewReadiness — 運営の公開申請（スタジオ確認メール）は 3DGS が要る", () => {
+  it("他が揃っていても 3DGS が無ければ待ちにしない", () => {
+    const r = reviewReadiness(filled({ splatUrl: "", splatItems: [] }));
+    expect(r.ready).toBe(false);
+    expect(r.missing).toEqual(["3DGSデータ（スキャン）"]);
+  });
+
+  it("シーンに 3DGS が1つでも入っていれば待ちになる", () => {
+    const p = filled({ splatItems: [{ id: "s1", label: "メイン", splatUrl: "/api/r2/assets/splat/a.zip" }] });
+    expect(hasSplatData(p)).toBe(true);
+    expect(reviewReadiness(p)).toEqual({ ready: true, missing: [] });
+  });
+
+  it("旧形式の splatUrl だけでも 3DGS ありとみなす", () => {
+    expect(reviewReadiness(filled({ splatUrl: "/api/r2/assets/splat/old.zip" })).ready).toBe(true);
+  });
+
+  it("URL の無い空のシーンは 3DGS なし", () => {
+    expect(hasSplatData(filled({ splatItems: [{ id: "s1", label: "準備中", splatUrl: "" }] }))).toBe(false);
+  });
+
+  it("3DGS も他の項目も無ければ、両方が不足に出る", () => {
+    const r = reviewReadiness(draft());
+    expect(r.missing).toContain("物件名");
+    expect(r.missing).toContain("3DGSデータ（スキャン）");
+  });
+
+  it("スタジオ自身の申請（publishReadiness）は今までどおり 3DGS 不要", () => {
+    expect(publishReadiness(filled({ splatUrl: "", splatItems: [] })).ready).toBe(true);
   });
 });

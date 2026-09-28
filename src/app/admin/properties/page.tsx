@@ -7,7 +7,7 @@ import PropertiesAdmin, {
 } from "@/components/admin/properties-admin";
 import TranslateMissingButton from "@/components/admin/translate-missing-button";
 import { publishStage, reviewSubState } from "@/lib/publish-flow";
-import { publishReadiness } from "@/lib/publish-readiness";
+import { reviewReadiness } from "@/lib/publish-readiness";
 
 export const metadata = { title: "物件管理" };
 
@@ -36,14 +36,15 @@ export default async function AdminPropertiesList() {
     // 「申請メールを送る」の確認ダイアログで宛先を見せるために渡す（2026-09-21）。
     contactEmail: p.contactEmail || undefined,
     // 公開に必要な項目が埋まった下書きは「公開申請待ち」と出す（2026-09-21 本人指示）。
-    ready: publishReadiness(p).ready,
+    // 3DGS がまだ無いものは待ちにしない（2026-09-29 本人指摘）。
+    ready: reviewReadiness(p).ready,
   }));
 
   const counts = {
     published: all.filter((p) => p.status === "published").length,
     // 下書きと公開申請中は分けて数える（一覧のタブと同じ区切り。2026-09-20）。
-    draft: all.filter((p) => publishStage(p) === "draft" && !publishReadiness(p).ready).length,
-    ready: all.filter((p) => publishStage(p) === "draft" && publishReadiness(p).ready).length,
+    draft: all.filter((p) => publishStage(p) === "draft" && !reviewReadiness(p).ready).length,
+    ready: all.filter((p) => publishStage(p) === "draft" && reviewReadiness(p).ready).length,
     review: all.filter((p) => publishStage(p) === "review").length,
     archived: all.filter((p) => p.status === "archived").length,
   };

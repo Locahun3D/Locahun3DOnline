@@ -54,7 +54,7 @@ import SlugEditor from "./slug-editor";
 import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
 import { buildViewerUrl } from "@/lib/viewer";
-import { publishReadiness } from "@/lib/publish-readiness";
+import { publishReadiness, reviewReadiness } from "@/lib/publish-readiness";
 import PublishFlowPanel from "@/components/admin/publish-flow-panel";
 import StudioPhotoInbox from "@/components/admin/studio-photo-inbox";
 import type { StudioPhoto } from "@/lib/studio-photo-intake";
@@ -717,6 +717,9 @@ export default function PropertyEditor({
   // 入力すると即座にボタンが有効になる。判定の正本は lib/publish-readiness.ts で、
   // サーバー側 requestPublishAction も同じ関数を使う。
   const requestReadiness = publishReadiness(watch());
+  // 状態の表示と運営の「申請メール」は、3DGS が入っていることも条件（2026-09-29 本人指摘
+  // 「3DGSがないのに公開申請待ちになっている」）。スタジオ自身の申請ボタンは上の requestReadiness のまま。
+  const reviewReady = reviewReadiness(watch()).ready;
 
   // 運営専用ステップ（3DGS・公開設定）はスタジオに出さない。
   // ⚠ STEPS の並び順がそのまま番号になるので、番号は配列から導出する
@@ -799,7 +802,7 @@ export default function PropertyEditor({
         <div className={`${styles.toolbar} sticky top-[calc(var(--header-h)/var(--z))] z-20 -mx-2 px-2 py-2.5 bg-bg/95 backdrop-blur border-b border-line mb-5 space-y-2`}>
           <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <StatusPill status={currentStatus} stage={currentStage} ready={requestReadiness.ready} />
+            <StatusPill status={currentStatus} stage={currentStage} ready={reviewReady} />
             {/* 編集画面の見出しは小さく1行で（2026-09-20 本人指摘「このスペース無駄」）。共通の ui-page-title は 42〜60px あり、
                 追従ツールバーの中では上に大きな空きができ、入力欄が下へ押し出されていた。 */}
             <h1 className="min-w-0 truncate text-[19px] lg:text-[22px] font-bold leading-tight" title={currentTitle || undefined}>
@@ -2826,7 +2829,7 @@ export default function PropertyEditor({
             >
               <PublishFlowPanel
                 stage={currentStage}
-                ready={requestReadiness.ready}
+                ready={reviewReady}
                 flow={watch("publishFlow") ?? EMPTY_PUBLISH_FLOW}
                 contactEmail={watch("contactEmail") ?? ""}
                 consent={watch("dataSaleConsent") ?? EMPTY_DATA_SALE_CONSENT}
@@ -2848,7 +2851,7 @@ export default function PropertyEditor({
                     <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-1">
                       Current status
                     </div>
-                    <StatusPill status={currentStatus} stage={currentStage} ready={requestReadiness.ready} />
+                    <StatusPill status={currentStatus} stage={currentStage} ready={reviewReady} />
                   </div>
                   <div className="mono text-[10px] text-muted">
                     ID: {initial.id}

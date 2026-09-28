@@ -51,3 +51,30 @@ export function publishReadiness(property: unknown): PublishReadiness {
   }
   return { ready: false, missing };
 }
+
+/**
+ * 運営がスタジオへ確認メール（公開申請）を出せる状態か＝上の条件に加えて **3DGS が入っているか**。
+ *
+ * 2026-09-29 本人指摘「3DGSがないのに公開申請待ちになっている」。
+ * いまの流れは「撮影予定 → 下書き → スキャン → 3DGS → 運営が確認 → スタジオへ確認メール」なので、
+ * 3DGS がまだ無い下書きは「公開申請待ち」ではない（スタジオに見せるものが揃っていない）。
+ *
+ * ⚠ publishReadiness は変えない。スタジオ自身が「掲載ページを作ったので撮影に来てほしい」と出す
+ *   申請（requestPublishAction）は、3DGS より前に出すものだから。
+ */
+export function hasSplatData(property: unknown): boolean {
+  const p = (property ?? {}) as { splatUrl?: unknown; splatItems?: unknown };
+  const filled = (v: unknown) => typeof v === "string" && v.trim().length > 0;
+  if (filled(p.splatUrl)) return true;
+  const items = Array.isArray(p.splatItems) ? p.splatItems : [];
+  return items.some((it) => {
+    const i = (it ?? {}) as { splatUrl?: unknown; streamUrl?: unknown };
+    return filled(i.splatUrl) || filled(i.streamUrl);
+  });
+}
+
+export function reviewReadiness(property: unknown): PublishReadiness {
+  const base = publishReadiness(property);
+  if (hasSplatData(property)) return base;
+  return { ready: false, missing: [...base.missing, "3DGSデータ（スキャン）"] };
+}

@@ -1,6 +1,6 @@
 import type { TranslateFailure } from "./ai-translate";
 import type { Property } from "./schemas";
-import { publishReadiness } from "./publish-readiness";
+import { reviewReadiness } from "./publish-readiness";
 import { missingEnglishFields } from "./property-english";
 
 /**
@@ -100,7 +100,7 @@ export type GuardResult = { ok: true } | { ok: false; code: string; error: strin
 /**
  * 公開申請へ入れるか（翻訳の前に判定できる部分）。
  *  1. すでに公開中/アーカイブなら不可
- *  2. 公開に必要な項目が揃っている（publishReadiness と同じ基準）
+ *  2. 公開に必要な項目が揃っていて、3DGS も入っている（reviewReadiness。2026-09-29: 3DGS 無しでは申請にしない）
  *  3. スタジオの確認メール宛先がある。無ければ「メールを送らずに申請中にする」を
  *     明示的に選んだ場合のみ通す（黙って未送信のまま進めない）
  */
@@ -114,7 +114,7 @@ export function canRequestReview(
   if (p.status === "archived") {
     return { ok: false, code: "archived", error: "アーカイブ済みの物件は公開申請にできません。下書きに戻してください。" };
   }
-  const readiness = publishReadiness(p);
+  const readiness = reviewReadiness(p);
   if (!readiness.ready) {
     return {
       ok: false,

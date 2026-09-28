@@ -56,6 +56,7 @@ TOOLS = {
     "official": "import_official.py",
     "check": "publish_check.py",
     "documents": "add_documents.py",       # 先方の図面などを下書き物件の平面図へ追加（既存は消さない）
+    "intake": "intake_scans.py",          # 撮影データ置き場（02_撮影データ置き場）のスキャンを案件フォルダの形に移す（--apply）
     "new": "new_draft.py",                 # カレンダーの撮影予定から下書きを先に作る（既存 id は上書きしない）
     "place": "place_photos.py",                # もらった写真を番号どおりに自動配置（ZIP/フォルダ＋キャプション）
     "photos": "replace_photos.py",         # スキャン切り出しのカバー・ギャラリーを公式の実写へ入れ替える
@@ -66,6 +67,7 @@ TOOLS = {
     "restore": "restore_property.py",           # 閉じた下書きを元に戻す（まとめ方を変えたとき）
     "datasale": "set_data_sale.py",             # 3Dデータ販売の許諾を記録（口頭でOKをもらった物件）
     "cover": "set_cover.py",                    # カバーをギャラリーの写真と入れ替える（解像度の高い方へ）
+    "labels": "scene_labels.py",              # シーン名が英語・ローマ字のままなのを日本語にする（登録時も自動）
     "catch": "title_catch.py",                  # タイトルに「｜エリア キャッチ」を付ける（basics でも自動）
     "floorplans": "find_floorplans.py",         # 公式サイトから平面図を探して入れる（--apply）
     "fields": "set_fields.py",               # 料金・許可など決まった欄を1つずつ入れる（下書きのみ）
