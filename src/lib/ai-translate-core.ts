@@ -47,6 +47,8 @@ export interface TranslateInput {
   amenityNotes: string[];
   /** 図面のラベル（順序を保持。2026-09-21 追加）。 */
   blueprintLabels: string[];
+  /** 個別の英語欄が無い自由記述（キー＝欄の名前か "tag:<タグ>"。2026-09-29 追加）。省略可。 */
+  texts?: Record<string, string>;
 }
 
 /** 翻訳結果。各フィールドは英語。翻訳できなかった要素は "" で返る。 */
@@ -66,6 +68,8 @@ export interface TranslateResult {
   galleryAltsEn: string[];
   amenityNotesEn: string[];
   blueprintLabelsEn: string[];
+  /** texts の英訳（同じキー）。 */
+  textsEn: Record<string, string>;
   source: "ai" | "none";
   /**
    * 訳せなかった理由（2026-09-23）。公開申請の画面に「キー未設定」「APIエラー」などを区別して出すため。
@@ -117,6 +121,7 @@ function emptyResult(
     galleryAltsEn: Array.from({ length: galleryCount }, () => ""),
     amenityNotesEn: Array.from({ length: noteCount }, () => ""),
     blueprintLabelsEn: Array.from({ length: planCount }, () => ""),
+    textsEn: {},
     source: "none",
   };
 }
@@ -139,6 +144,14 @@ export function unkeyed(value: unknown, count: number): string[] {
   return Array.from({ length: count }, (_, i) => str(obj[String(i)]));
 }
 
+/** textsEn（名前つきの辞書）を文字列だけの辞書にする。 */
+function textsOf(value: unknown): Record<string, string> {
+  const obj = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return Object.fromEntries(
+    Object.entries(obj).flatMap(([k, v]) => (typeof v === "string" && v.trim() ? [[k, v.trim()] as const] : [])),
+  );
+}
+
 function buildPrompt(input: TranslateInput): string {
   const payload = {
     title: input.title,
@@ -156,6 +169,7 @@ function buildPrompt(input: TranslateInput): string {
     galleryAlts: keyed(input.galleryAlts),
     amenityNotes: keyed(input.amenityNotes),
     blueprintLabels: keyed(input.blueprintLabels),
+    texts: Object.fromEntries(Object.entries(input.texts ?? {}).filter(([, v]) => v.trim())),
   };
   return [
     "You are a professional Japanese→English translator for a location-scouting / film-set rental platform (撮影ロケ地・スタジオ).",
@@ -174,10 +188,11 @@ function buildPrompt(input: TranslateInput): string {
     "- coverAlt and galleryAlts are short image alt-text captions; keep them short and descriptive.",
     "- amenityNotes are one-line facility notes (e.g. 「3台まで」→「Up to 3 cars」, 「光回線 1Gbps」→「Fibre 1 Gbps」). Keep them very short.",
     "- blueprintLabels are floor-plan tab labels (e.g. 「1階平面図」→「1F floor plan」). Keep them very short.",
-    "- sceneLabels, saleDescriptions, galleryAlts, amenityNotes and blueprintLabels are objects keyed by number; return objects with exactly the SAME keys, each value translated.",
+    "- texts are other free-text fields keyed by field name: studioType (venue type), powerVoltage (power supply spec), availableDays, bookingDeadline, lightDirection, scoutingFee, extraFees (fee notes and pack prices), prohibitedItems, cancellationPolicy, shootingHistory, availableScenes, surroundings, interiorNotes, and search tags keyed \"tag:<Japanese>\" (translate the tag itself, 1-3 words). Keep line breaks, prices (e.g. 5,000円 → ¥5,000) and percentages exactly.",
+    "- sceneLabels, saleDescriptions, galleryAlts, amenityNotes, blueprintLabels and texts are objects keyed by number or name; return objects with exactly the SAME keys, each value translated.",
     "",
     "Return ONLY a single JSON object, no prose, with exactly these keys:",
-    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": {"<key>": string}, "saleDescriptionsEn": {"<key>": string}, "galleryAltsEn": {"<key>": string}, "amenityNotesEn": {"<key>": string}, "blueprintLabelsEn": {"<key>": string}}',
+    '{"titleEn": string, "summaryEn": string, "descriptionEn": string, "cityEn": string, "addressEn": string, "nearestStationEn": string, "availableHoursEn": string, "permitTypeEn": string, "permitNotesEn": string, "coverAltEn": string, "sceneLabelsEn": {"<key>": string}, "saleDescriptionsEn": {"<key>": string}, "galleryAltsEn": {"<key>": string}, "amenityNotesEn": {"<key>": string}, "blueprintLabelsEn": {"<key>": string}, "textsEn": {"<key>": string}}',
     "",
     "Source (JSON):",
     JSON.stringify(payload, null, 2),
@@ -217,6 +232,7 @@ function parseResult(
       galleryAltsEn: unkeyed(obj.galleryAltsEn, galleryCount),
       amenityNotesEn: unkeyed(obj.amenityNotesEn, noteCount),
       blueprintLabelsEn: unkeyed(obj.blueprintLabelsEn, planCount),
+      textsEn: textsOf(obj.textsEn),
       source: "ai",
     };
   } catch {

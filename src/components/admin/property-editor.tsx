@@ -541,8 +541,10 @@ export default function PropertyEditor({
           baseUpdatedAtRef.current = res.updatedAt;
           // Publication generates EN fields on the server. Reconcile those
           // before autosave resumes without resetting edits made in flight.
-          for (const update of publishedEnglishUpdates(data, getValues(), res.property)) {
-            setValue(update.path, update.value);
+          {
+            const english = publishedEnglishUpdates(data, getValues(), res.property);
+            for (const update of english.updates) setValue(update.path, update.value);
+            if (english.textEn) setValue("textEn", english.textEn);
           }
           setValue("status", res.status);
           setValue("publishRequestedAt", res.property.publishRequestedAt);
@@ -634,8 +636,10 @@ export default function PropertyEditor({
       () => requestReviewAction(getValues(), { expectedUpdatedAt: baseUpdatedAtRef.current, skipMail }),
       (saved, before) => {
         // サーバーで自動翻訳された EN 欄をフォームへ取り込む（入力中の編集は潰さない）。
-        for (const update of publishedEnglishUpdates(before, getValues(), saved)) {
-          setValue(update.path, update.value);
+        {
+          const english = publishedEnglishUpdates(before, getValues(), saved);
+          for (const update of english.updates) setValue(update.path, update.value);
+          if (english.textEn) setValue("textEn", english.textEn);
         }
         const f = saved.publishFlow;
         if (f.studioNotifyMode === "sent") return `公開申請中にしました。確認メールを ${f.studioNotifiedTo} へ送信しました。`;

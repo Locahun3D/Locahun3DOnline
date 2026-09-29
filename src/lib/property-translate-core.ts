@@ -1,5 +1,5 @@
 // 物件への英訳の当てはめ（2026-09-23 分離）。Next の外（Worker の定期実行）からも使うため "server-only" を持たない。
-import { propertySchema, type Property } from "./schemas";
+import { propertySchema, textEnFor, textEnSources, type Property } from "./schemas";
 import type { TranslateFailure, TranslateInput, TranslateResult } from "./ai-translate-core";
 import { needsEnglish } from "./property-english";
 
@@ -76,6 +76,9 @@ export async function fillPropertyEnglishUsing(
     (p.amenityNotesEn?.[k] ?? "").trim() ? "" : p.amenityNotes[k],
   );
   const blueprintLabels = p.blueprints.map((b) => (b.labelEn.trim() ? "" : b.label));
+  // 個別の英語欄が無い自由記述（料金の補足・規定・電源・タグなど。2026-09-29）。
+  const pendingTexts = textEnSources(p).filter(({ key, ja }) => !textEnFor(p, key, ja));
+  const texts = Object.fromEntries(pendingTexts.map(({ key, ja }) => [key, ja]));
 
   const r = await translate({
     title: p.titleEn.trim() ? "" : p.title,
@@ -93,6 +96,7 @@ export async function fillPropertyEnglishUsing(
     galleryAlts,
     amenityNotes,
     blueprintLabels,
+    texts,
   });
 
   if (r.source === "none") return { property: p, failure: r.failure };
@@ -125,6 +129,15 @@ export async function fillPropertyEnglishUsing(
       ...b,
       labelEn: b.labelEn || (r.blueprintLabelsEn[i] ?? ""),
     })),
+    // 今の日本語に合う英訳だけ残す（書き換え前の日本語の英訳・消えたタグは捨てる）。
+    textEn: {
+      ...Object.fromEntries(
+        textEnSources(p).flatMap(({ key, ja }) => (p.textEn[key]?.ja === ja ? [[key, p.textEn[key]]] : [])),
+      ),
+      ...Object.fromEntries(
+        pendingTexts.flatMap(({ key, ja }) => (r.textsEn[key] ? [[key, { ja, en: r.textsEn[key] }]] : [])),
+      ),
+    },
   };
   return { property: clampToSchema(property).property, failure: r.failure };
 }

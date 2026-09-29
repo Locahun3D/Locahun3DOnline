@@ -4,6 +4,7 @@ import type { Property } from "./schemas";
 /** Adopt only server-generated EN values the editor has not changed meanwhile. */
 export function publishedEnglishUpdates(before: Property, current: Property, saved: Property) {
   const updates: { path: FieldPath<Property>; value: string }[] = [];
+  let textEn: Property["textEn"] | null = null;
   const add = (path: FieldPath<Property>, old: string, live: string, stored: string) => {
     if (live === old && stored !== old) updates.push({ path, value: stored });
   };
@@ -35,5 +36,9 @@ export function publishedEnglishUpdates(before: Property, current: Property, sav
     add(`splatItems.${i}.labelEn`, old.labelEn, item.labelEn, stored.labelEn);
     add(`splatItems.${i}.saleDescriptionEn`, old.saleDescriptionEn, item.saleDescriptionEn, stored.saleDescriptionEn);
   });
-  return updates;
+  // textEn は訳した時点の日本語を持つので、サーバーが足した分を今の値に重ねるだけでよい
+  // （日本語が変わった欄の古い英訳は表示側で使われない）。2026-09-29
+  const added = Object.entries(saved.textEn ?? {}).filter(([k, v]) => current.textEn?.[k]?.en !== v.en);
+  if (added.length) textEn = { ...current.textEn, ...Object.fromEntries(added) };
+  return { updates, textEn };
 }

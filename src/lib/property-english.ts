@@ -1,4 +1,4 @@
-import type { Property } from "./schemas";
+import { textEnFor, textEnSources, type Property, type TextEnField } from "./schemas";
 
 /**
  * 「日本語はあるのに英語(EN欄)が空」の項目を列挙する純関数（2026-09-20）。
@@ -15,7 +15,7 @@ type EnglishSource = Pick<
   | "availableHours" | "availableHoursEn" | "permitType" | "permitTypeEn"
   | "permitNotes" | "permitNotesEn" | "cover" | "gallery" | "splatItems"
   | "amenityNotes" | "amenityNotesEn" | "blueprints"
->;
+> & Partial<Pick<Property, TextEnField | "tags" | "textEn">>;
 
 const has = (s: string | undefined | null) => !!(s ?? "").trim();
 
@@ -53,6 +53,9 @@ export function missingEnglishFields(p: EnglishSource): string[] {
   if (noteMissing > 0) out.push(`設備のメモ（${noteMissing}件）`);
   const planMissing = (p.blueprints ?? []).filter((b) => has(b.label) && !has(b.labelEn)).length;
   if (planMissing > 0) out.push(`図面のラベル（${planMissing}件）`);
+  // 2026-09-29 追加: 料金の補足・キャンセル規定・電源・タグなど、個別の英語欄が無い自由記述（textEn）。
+  const textMissing = textEnSources(p).filter(({ key, ja }) => !textEnFor(p, key, ja)).length;
+  if (textMissing > 0) out.push(`料金・規定・設備などの補足（${textMissing}件）`);
   return out;
 }
 

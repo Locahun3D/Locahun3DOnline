@@ -477,6 +477,14 @@ export const propertySchema = z.object({
   // ⚠ 上限は検索キーワードとして使い切れる余地を残すため 60 に設定
   //   （旧20は AIタグ自動生成が1回で12個返すだけで手入力の余地がほぼ無かった）。
   tags: z.array(z.string().min(1).max(20)).max(60).default([]),
+  /**
+   * 英語欄が個別に無い自由記述の英訳（2026-09-29）。キー＝欄の名前（TEXT_EN_FIELDS）か「tag:<日本語タグ>」。
+   * 訳した時点の日本語（ja）も持ち、日本語が書き換わったら古い英訳を使わない（未翻訳に戻る）。
+   * 以前は料金の補足・キャンセル規定・電源などに英語欄が無く、英語ページに日本語がそのまま出ていた。
+   */
+  textEn: z
+    .record(z.string().max(60), z.object({ ja: z.string().max(1000), en: z.string().max(2000) }))
+    .default({}),
 
   // 2.5 Contact — property-level contact info (overrides account-level)
   contactWebsite: z.string().max(300).default(""),
@@ -920,6 +928,11 @@ export const STUDIO_TYPE_EN: Record<string, string> = {
   体育館: "Gymnasium", オフィス: "Office", 教会: "Church", 住宅: "House",
   交差点: "Intersection", 路地: "Alley", 商店街: "Shopping street", 駅: "Station",
   橋: "Bridge", 神社: "Shrine", 寺: "Temple", 公園: "Park", 海岸: "Coast",
+  // エディターの候補（STUDIO_TYPE_SUGGESTIONS）は全部ここで訳せるようにする（2026-09-29）。
+  白ホリゾント: "White cyclorama", 黒ホリゾント: "Black cyclorama", ガレージ: "Garage", 一軒家: "Detached house",
+  "マンション / レジデンス": "Apartment / Residence", 商業店舗: "Commercial shop", "カフェ / レストラン": "Cafe / Restaurant",
+  "屋外 / ロケ地": "Outdoor / Location", "ライブ会場 / ホール": "Live venue / Hall", "ドーム / アリーナ": "Dome / Arena",
+  コンベンションセンター: "Convention center", "劇場 / シアター": "Theater", その他: "Other",
 };
 
 /** よく使うタグの英訳（ベストエフォート。未知タグはそのまま表示）。 */
@@ -942,6 +955,47 @@ export const TAG_EN: Record<string, string> = {
  * データ取得直後に通せば、下流の PropertyCard 等は無改修で済む。
  * 注意: 関連物件スコアリング等のロジックには原文(raw)の方を渡すこと。
  */
+/** textEn で英訳する自由記述の欄（英語ページに出るもの）。 */
+export const TEXT_EN_FIELDS = [
+  "studioType", "powerVoltage", "availableDays", "bookingDeadline", "lightDirection",
+  "scoutingFee", "extraFees", "prohibitedItems", "cancellationPolicy",
+  "shootingHistory", "availableScenes", "surroundings", "interiorNotes",
+] as const;
+export type TextEnField = (typeof TEXT_EN_FIELDS)[number];
+type TextEnSource = Partial<Record<TextEnField, string>> & {
+  tags?: string[];
+  textEn?: Record<string, { ja: string; en: string }>;
+};
+
+/** 辞書で英語にできるもの（スタジオ種類・タグ）は textEn を要らないとみなす。 */
+function dictionaryEn(key: string, ja: string): string {
+  if (key === "studioType") return STUDIO_TYPE_EN[ja] ?? "";
+  if (key.startsWith("tag:")) return TAG_EN[ja] ?? "";
+  return "";
+}
+
+/** 英訳が要る自由記述の一覧（キーと日本語）。空欄・辞書で訳せるものは除く。 */
+export function textEnSources(p: TextEnSource): { key: string; ja: string }[] {
+  const out: { key: string; ja: string }[] = [];
+  for (const f of TEXT_EN_FIELDS) {
+    const ja = (p[f] ?? "").trim();
+    if (ja && !dictionaryEn(f, ja)) out.push({ key: f, ja });
+  }
+  for (const t of p.tags ?? []) {
+    const ja = t.trim();
+    if (ja && !dictionaryEn(`tag:${ja}`, ja) && !out.some((o) => o.key === `tag:${ja}`)) out.push({ key: `tag:${ja}`, ja });
+  }
+  return out;
+}
+
+/** 今の日本語に対する英訳（辞書 → textEn）。日本語が変わっていたら "" 。 */
+export function textEnFor(p: TextEnSource, key: string, ja: string): string {
+  const dict = dictionaryEn(key, ja);
+  if (dict) return dict;
+  const hit = p.textEn?.[key];
+  return hit && hit.ja === ja ? hit.en : "";
+}
+
 export function localizeProperty<
   T extends Pick<
     Property,
@@ -973,6 +1027,8 @@ export function localizeProperty<
     | "permitNotesEn"
     | "cover"
     | "gallery"
+    | TextEnField
+    | "textEn"
   >,
 >(p: T, locale?: string): T {
   if (locale !== "en") return p;
@@ -984,8 +1040,11 @@ export function localizeProperty<
     prefecture: PREFECTURE_EN[p.prefecture] || p.prefecture,
     city: p.cityEn || p.city,
     area: areaLabelEn(p.area),
-    studioType: STUDIO_TYPE_EN[p.studioType] || p.studioType,
-    tags: p.tags.map((t) => TAG_EN[t] || t),
+    studioType: textEnFor(p, "studioType", p.studioType) || p.studioType,
+    ...Object.fromEntries(
+      TEXT_EN_FIELDS.filter((f) => f !== "studioType").map((f) => [f, textEnFor(p, f, p[f]) || p[f]]),
+    ),
+    tags: p.tags.map((t) => textEnFor(p, `tag:${t}`, t) || t),
     address: p.addressEn || p.address,
     nearestStation: p.nearestStationEn || p.nearestStation,
     availableHours: p.availableHoursEn || p.availableHours,

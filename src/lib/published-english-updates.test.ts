@@ -8,7 +8,7 @@ it("keeps generated English without replacing Japanese input made while publishi
   const before = initial();
   const current = { ...before, title: "処理中の追加入力" };
   const saved = { ...before, titleEn: "Before publication", summaryEn: "Generated summary" };
-  expect(publishedEnglishUpdates(before, current, saved)).toEqual([
+  expect(publishedEnglishUpdates(before, current, saved).updates).toEqual([
     { path: "titleEn", value: "Before publication" },
     { path: "summaryEn", value: "Generated summary" },
   ]);
@@ -17,14 +17,14 @@ it("keeps generated English without replacing Japanese input made while publishi
 
 it("never replaces English edited by the user while publication was pending", () => {
   const before = initial();
-  expect(publishedEnglishUpdates(before, { ...before, titleEn: "My edit" }, { ...before, titleEn: "Generated" })).toEqual([]);
+  expect(publishedEnglishUpdates(before, { ...before, titleEn: "My edit" }, { ...before, titleEn: "Generated" }).updates).toEqual([]);
 });
 
 it("retains translations of unchanged duplicate image rows", () => {
   const before = initial();
   before.gallery = [before.gallery[0], { ...before.gallery[0] }];
   const saved = { ...before, gallery: before.gallery.map(g => ({ ...g, altEn: "Room A" })) };
-  expect(publishedEnglishUpdates(before, before, saved)).toEqual([
+  expect(publishedEnglishUpdates(before, before, saved).updates).toEqual([
     { path: "gallery.0.altEn", value: "Room A" },
     { path: "gallery.1.altEn", value: "Room A" },
   ]);
@@ -34,7 +34,7 @@ it("matches reordered scans and images by identity, not old row indexes", () => 
   const before = initial();
   const current = { ...before, gallery: [...before.gallery].reverse(), splatItems: [...before.splatItems].reverse(), cover: { ...before.cover, src: "/replacement.jpg" } };
   const saved = { ...before, cover: { ...before.cover, altEn: "Old cover" }, gallery: before.gallery.map(g => ({ ...g, altEn: g.src === "/a.jpg" ? "Room A" : "Room B" })), splatItems: before.splatItems.map(s => ({ ...s, labelEn: s.id === "scan-a" ? "Interior" : "Exterior" })) };
-  expect(publishedEnglishUpdates(before, current, saved)).toEqual([
+  expect(publishedEnglishUpdates(before, current, saved).updates).toEqual([
     { path: "gallery.0.altEn", value: "Room B" },
     { path: "gallery.1.altEn", value: "Room A" },
     { path: "splatItems.0.labelEn", value: "Exterior" },
