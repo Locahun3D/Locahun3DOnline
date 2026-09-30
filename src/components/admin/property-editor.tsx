@@ -1349,6 +1349,9 @@ export default function PropertyEditor({
                         />
                       )}
                     </Field>
+                    <Field label="収容の表記" hint="人数で言えない時だけ（例: 利用施設による）。人数が入っていれば人数を出す。">
+                      <input type="text" maxLength={40} {...register("capacityNote")} className={inputClass} placeholder="利用施設による" />
+                    </Field>
                   </div>
 
                   <Field

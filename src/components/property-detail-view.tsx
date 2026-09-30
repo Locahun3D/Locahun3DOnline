@@ -300,6 +300,8 @@ export default function PropertyDetailView({
   if (property.ceilingHeightM > 0 && property.category !== "outdoor") specRows.push(["CEILING ／ 天井高", `${property.ceilingHeightM} m`]);
   if (property.capacity > 0) {
     specRows.push(["CAPACITY ／ 収容", en ? `${property.capacity} people` : `${property.capacity} 名`]);
+  } else if (property.capacityNote) {
+    specRows.push(["CAPACITY ／ 収容", property.capacityNote]);
   }
   // 2026-09-20: 値が空の行は「—」で埋めず、行ごと出さない。
   if (property.powerVoltage) specRows.push(["POWER ／ 電源", property.powerVoltage]);

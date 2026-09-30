@@ -332,6 +332,8 @@ export const propertySchema = z.object({
 
   // 2. Specs
   capacity: z.number().int().min(0).max(9999).default(0),
+  /** 収容を人数で言えない物件の表記（例: 利用施設による）。capacity が 0 のときだけ出す（2026-09-30 品川学藝の依頼）。 */
+  capacityNote: z.string().max(40).default(""),
   floorAreaSqm: z.number().min(0).max(99999).default(0),
   ceilingHeightM: z.number().min(0).max(50).default(0),
   powerVoltage: z.string().max(80).default(""),
@@ -957,7 +959,7 @@ export const TAG_EN: Record<string, string> = {
  */
 /** textEn で英訳する自由記述の欄（英語ページに出るもの）。 */
 export const TEXT_EN_FIELDS = [
-  "studioType", "powerVoltage", "availableDays", "bookingDeadline", "lightDirection",
+  "studioType", "capacityNote", "powerVoltage", "availableDays", "bookingDeadline", "lightDirection",
   "scoutingFee", "extraFees", "prohibitedItems", "cancellationPolicy",
   "shootingHistory", "availableScenes", "surroundings", "interiorNotes",
 ] as const;
