@@ -1807,6 +1807,12 @@ export default function PropertyEditor({
                   )}
                 </div>
               </Field>
+              <Field label="料金シミュレーション" hint="管理料や時間で変わる単価があって自動計算が実際と合わない時は、出さないようにできます（目安の表だけ残ります）。目安の表をスタジオ指定の金額にするのはスクリプトで（priceEstimates）。">
+                <label className="flex items-center gap-2 text-[13px]">
+                  <input type="checkbox" {...register("hidePriceSimulator")} />
+                  料金シミュレーションを出さない
+                </label>
+              </Field>
               <Field label="割増（時間帯・土日祝）" hint="例: 夜間 20時〜8時 +20%。「土日祝」にチェックすると曜日の割増（時間帯は無視）。重なる時間は高い方だけ適用されます。「N時間以上で割増なし」は長時間の予約でこの割増を免除する例外（0 = 設定なし）。">
                 <div className="space-y-2">
                   {rateSurchargesArray.fields.map((f, idx) => (

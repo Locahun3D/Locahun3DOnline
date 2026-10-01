@@ -22,11 +22,16 @@ function addDays(iso: string, n: number): string {
  * 時間貸し（priceType=hourly）で単価か日額のある物件だけに出す。
  */
 export default function PriceEstimator({
-  hourlyPrice, minUsageHours, dailyPrice, priceType, ratePlans = [], rateSurcharges = [], taxIncluded = false, openHours = ["", ""], en,
+  hourlyPrice, minUsageHours, dailyPrice, priceType, ratePlans = [], rateSurcharges = [], taxIncluded = false, openHours = ["", ""],
+  estimates = [], hideSimulator = false, en,
 }: {
   hourlyPrice: number; minUsageHours: number; dailyPrice: number; priceType: string;
   ratePlans?: RatePlan[]; rateSurcharges?: (RateSurcharge & { labelEn?: string })[];
-  taxIncluded?: boolean; openHours?: string[]; en: boolean;
+  taxIncluded?: boolean; openHours?: string[];
+  /** スタジオが決めた目安（空なら自動）。2026-10-01 */
+  estimates?: { label: string; labelEn: string; hours: number; total: number }[];
+  /** 料金シミュレーションを出さない。2026-10-01 */
+  hideSimulator?: boolean; en: boolean;
 }) {
   const choices = priceChoices({ priceType, hourlyPrice, minUsageHours, dailyPrice, ratePlans });
   const surcharges = rateSurcharges.filter((s) => s.label && s.percent !== 0);
@@ -38,6 +43,7 @@ export default function PriceEstimator({
   const [hoursRaw, setHours] = useState(3);
   const [pickedRow, setPickedRow] = useState<UsageEstimate["key"] | null>(null);
   const [days, setDays] = useState(1);
+  const [pickedFixed, setPickedFixed] = useState(0);
 
   const choice = choices[Math.min(choiceIdx, choices.length - 1)];
   if (!choice) return null;
@@ -47,7 +53,9 @@ export default function PriceEstimator({
   const hours = Math.max(min, hoursRaw);
 
   // 目安表は選んだ料金に合わせる: 1日貸し → 1〜3日、時間貸し → 撮影の単位（1日行は日額があれば日額）、用途別プラン → その単価のみ
-  const rows = daily ? [] : usageEstimates({ priceType, hourlyPrice: rate, minUsageHours: min, dailyPrice: choice.fromPlan ? 0 : dailyPrice });
+  // スタジオ指定の目安は、最初の料金（基本の時間料金）を選んでいる時だけ使う（用途別プラン・1日貸しは自動のまま）
+  const fixedRows = !daily && !choice.fromPlan ? estimates : [];
+  const rows = daily || fixedRows.length ? [] : usageEstimates({ priceType, hourlyPrice: rate, minUsageHours: min, dailyPrice: choice.fromPlan ? 0 : dailyPrice });
   const dayRows = daily ? dailyEstimates(rate) : [];
   const yen = (n: number) => `¥${n.toLocaleString(en ? "en-US" : "ja-JP")}`;
   // 目安の行名に用途（スチール／ムービー）を入れない（2026-09-25）。
@@ -137,8 +145,19 @@ export default function PriceEstimator({
           <span />
           <span>{en ? "Use" : "目安"}</span>
           <span className="text-right max-[480px]:hidden">{daily ? (en ? "Days" : "日数") : en ? "Hours" : "時間"}</span>
-          <span className="text-right">{en ? "Total" : "合計"}</span>
+          <span className="text-right">{en ? "Total" : "合計"}{hideSimulator ? (taxIncluded ? (en ? " (incl. tax)" : "（税込）") : en ? " (excl. tax)" : "（税別）") : ""}</span>
         </div>
+        {fixedRows.map((r, i) => {
+          const on = hideSimulator ? i === pickedFixed : r.hours === hours;
+          return (
+            <button key={i} type="button" role="radio" aria-checked={on} onClick={() => { setPickedFixed(i); setHours(r.hours); }} className={`${rowGrid} ${rowBtn} ${on ? rowOn : rowOff}`}>
+              <span aria-hidden className={`${dot} max-[480px]:row-span-2 ${on ? "border-accent" : "border-line"}`}>{on && <span className="w-2 h-2 rounded-full bg-accent" />}</span>
+              <span className="min-w-0">{(en && r.labelEn) || r.label}</span>
+              <span className={rowHours}>{en ? `${r.hours} h` : `${r.hours}時間`}</span>
+              <span className={`${rowTotal} ${on ? "text-accent" : ""}`}>{yen(r.total)}</span>
+            </button>
+          );
+        })}
         {rows.map((r) => {
           const on = r.key === activeRow;
           return (
@@ -164,7 +183,7 @@ export default function PriceEstimator({
       </div>
 
       {/* シミュレーション: 日付（土日祝を自動判定）・開始時刻・時間 → 1時間ごとに割増を計算。1日貸しは日付と日数だけ */}
-      <div className="mt-4 border border-line px-4 py-4">
+      {!hideSimulator && <div className="mt-4 border border-line px-4 py-4">
         <div className="text-[12px] text-muted mb-3">{en ? "Price simulator" : "料金シミュレーション"}</div>
         {/* 列数は画面幅でなくカード幅で決める: iPad縦や2カラム時はカードが狭く、sm:3列だと日付欄が詰まる（2026-09-20） */}
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
@@ -232,7 +251,7 @@ export default function PriceEstimator({
           <span className="ml-auto whitespace-nowrap"><span className="text-[11px] text-muted mr-2">{taxIncluded ? (en ? "incl. tax" : "税込") : en ? "excl. tax" : "税別"}</span>
             <span className="text-[24px] font-black text-accent tabular-nums" aria-live="polite">{yen(sim.total)}</span></span>
         </div>
-      </div>
+      </div>}
 
       <p className="text-[12px] text-muted mt-2 leading-relaxed">
         {daily

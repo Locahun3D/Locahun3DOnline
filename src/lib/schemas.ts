@@ -447,6 +447,18 @@ export const propertySchema = z.object({
      */
     waiveFromHours: z.number().int().min(0).max(24).default(0),
   })).max(4).default([]),
+  /**
+   * スタジオが決めた料金の目安（2026-10-01 ビュースタジオ水道橋の依頼）。空なら単価×時間で自動の目安（少人数／半日／1日）。
+   * 管理料・時間で変わる単価などで自動計算と合わないスタジオは、公式の金額をそのまま行にする。
+   */
+  priceEstimates: z.array(z.object({
+    label: z.string().min(1).max(20),
+    labelEn: z.string().max(40).default(""),
+    hours: z.number().int().min(1).max(24),
+    total: z.number().int().min(0).max(99999999),
+  })).max(6).default([]),
+  /** 料金シミュレーションを出さない（目安の表だけにする）。自動計算が実際の料金と合わないスタジオ向け。 */
+  hidePriceSimulator: z.boolean().default(false),
   /** 表示金額が税込なら true（false = 税別）。 */
   taxIncluded: z.boolean().default(false),
   /** ロケハン費（例: 1.5hまで無料）。 */

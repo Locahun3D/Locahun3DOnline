@@ -616,6 +616,8 @@ export default function PropertyDetailView({
                 rateSurcharges={property.rateSurcharges}
                 taxIncluded={property.taxIncluded}
                 openHours={[property.customHoursStart, property.customHoursEnd]}
+                estimates={property.priceEstimates}
+                hideSimulator={property.hidePriceSimulator}
                 en={en}
               />
             )}
