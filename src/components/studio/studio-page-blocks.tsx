@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { displaySceneSizeMb } from "@/lib/scene-size";
 import type { PageBlock, Property } from "@/lib/schemas";
 import ImageGallery from "@/components/image-gallery";
 import ViewerGate from "@/components/viewer-gate";
@@ -139,7 +140,7 @@ function BlockView({
                 splatUrl={item.splatUrl}
                 propertyId={property.id}
                 label={item.label || `#${origIndex + 1}`}
-                sizeMb={item.sizeMb}
+                sizeMb={displaySceneSizeMb(item)}
                 previewVideoUrl={item.previewVideoUrl}
                 tokenCost={property.tokenCost}
                 freeAccess={freeAccess}

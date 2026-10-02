@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { displaySceneSizeMb } from "@/lib/scene-size";
 import styles from "./property-detail-view.module.css";
 import { sceneIndexForId } from "@/lib/scene-selection";
 import PropertyCardLite from "@/components/property-card-lite";
@@ -887,13 +888,13 @@ export default function PropertyDetailView({
                       {item.label || (en ? "Virtual Walkthrough" : "3Dウォークスルー")}
                     </span>
                     <span className="flex-1 h-px bg-current opacity-20" />
-                    <span className="text-muted">{item.sizeMb} MB</span>
+                    <span className="text-muted">{displaySceneSizeMb(item)} MB</span>
                   </div>
                   <ViewerGate
                     splatUrl={item.splatUrl}
                     propertyId={property.id}
                     label={item.label || `#${origIndex + 1}`}
-                    sizeMb={item.sizeMb}
+                    sizeMb={displaySceneSizeMb(item)}
                     previewVideoUrl={item.previewVideoUrl}
                     tokenCost={property.tokenCost}
                     freeAccess={freeAccess}
@@ -922,7 +923,7 @@ export default function PropertyDetailView({
                       }))}
                       description={item.saleDescription}
                       scannedAt={property.scannedAt}
-                      splatSizeMb={item.sizeMb}
+                      splatSizeMb={displaySceneSizeMb(item)}
                       zipSizeMb={property.zipSizeMb}
                       splatItemCount={property.splatItems.length}
                       tokenCost={property.tokenCost as TokenCost}

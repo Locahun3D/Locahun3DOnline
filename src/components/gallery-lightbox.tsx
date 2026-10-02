@@ -70,7 +70,8 @@ export default function GalleryLightbox({ photos, en }: { photos: Photo[]; en: b
               />
             </button>
             <figcaption className="absolute bottom-2 left-2.5 right-2.5 flex justify-between mono text-[10px] tracking-[0.2em] uppercase text-muted">
-              <span>FRAME {String(i + 1).padStart(2, "0")}</span>
+              {/* 「FRAME 01」の通し番号は出さない（2026-10-02 本人「いらない 邪魔」） */}
+              <span />
               <span className="truncate max-w-[50%] text-right">{p.alt}</span>
             </figcaption>
           </figure>
