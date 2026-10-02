@@ -27,3 +27,8 @@ it("keeps the automatic rows and the simulator by default", () => {
   expect(html).toContain("少人数");
   expect(html).toContain("料金シミュレーション");
 });
+
+it("states the daily maximum when the studio has one (2026-10-03)", () => {
+  const html = renderToStaticMarkup(createElement(PriceEstimator, { ...base, hourlyPrice: 12000, dailyCap: 150000 }));
+  expect(html).toContain("上限 ¥150,000");
+});

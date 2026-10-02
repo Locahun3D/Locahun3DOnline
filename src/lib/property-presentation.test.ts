@@ -161,3 +161,13 @@ it("selecting an estimate row drives the simulator, and manual hours clear or re
   expect(matchEstimateRow(min5, 5, "still-half")).toBe("still-half");
   expect(matchEstimateRow(min5, 5, "movie-day")).toBe("still-small");
 });
+
+import { capDaily } from "./property-presentation";
+it("caps estimates and simulation at the daily maximum (2026-10-03 Studio Casablanca)", () => {
+  const rows = usageEstimates({ priceType: "hourly", hourlyPrice: 14000, minUsageHours: 3, dailyPrice: 0, dailyCap: 150000 });
+  expect(rows.map((r) => r.total)).toEqual([42000, 70000, 126000]);
+  const night = simulatePrice({ hourlyPrice: 14000, startHour: 9, hours: 15, holiday: true, day: "sunday", surcharges: [{ label: "日曜・祝日", percent: 20, fromHour: 0, toHour: 0, holidays: true, includeSaturday: false }] });
+  expect(night.total).toBeGreaterThan(150000);
+  expect(capDaily(night.total, 150000)).toBe(150000);
+  expect(capDaily(night.total, 0)).toBe(night.total);
+});

@@ -23,7 +23,7 @@ function addDays(iso: string, n: number): string {
  */
 export default function PriceEstimator({
   hourlyPrice, minUsageHours, dailyPrice, priceType, ratePlans = [], rateSurcharges = [], taxIncluded = false, openHours = ["", ""],
-  estimates = [], hideSimulator = false, en,
+  estimates = [], hideSimulator = false, dailyCap = 0, en,
 }: {
   hourlyPrice: number; minUsageHours: number; dailyPrice: number; priceType: string;
   ratePlans?: RatePlan[]; rateSurcharges?: (RateSurcharge & { labelEn?: string })[];
@@ -31,7 +31,9 @@ export default function PriceEstimator({
   /** スタジオが決めた目安（空なら自動）。2026-10-01 */
   estimates?: { label: string; labelEn: string; hours: number; total: number }[];
   /** 料金シミュレーションを出さない。2026-10-01 */
-  hideSimulator?: boolean; en: boolean;
+  hideSimulator?: boolean;
+  /** 1日の上限（円・0=なし）。2026-10-03 */
+  dailyCap?: number; en: boolean;
 }) {
   const choices = priceChoices({ priceType, hourlyPrice, minUsageHours, dailyPrice, ratePlans });
   const surcharges = rateSurcharges.filter((s) => s.label && s.percent !== 0);
@@ -55,7 +57,7 @@ export default function PriceEstimator({
   // 目安表は選んだ料金に合わせる: 1日貸し → 1〜3日、時間貸し → 撮影の単位（1日行は日額があれば日額）、用途別プラン → その単価のみ
   // スタジオ指定の目安は、最初の料金（基本の時間料金）を選んでいる時だけ使う（用途別プラン・1日貸しは自動のまま）
   const fixedRows = !daily && !choice.fromPlan ? estimates : [];
-  const rows = daily || fixedRows.length ? [] : usageEstimates({ priceType, hourlyPrice: rate, minUsageHours: min, dailyPrice: choice.fromPlan ? 0 : dailyPrice });
+  const rows = daily || fixedRows.length ? [] : usageEstimates({ priceType, hourlyPrice: rate, minUsageHours: min, dailyPrice: choice.fromPlan ? 0 : dailyPrice, dailyCap });
   const dayRows = daily ? dailyEstimates(rate) : [];
   const yen = (n: number) => `¥${n.toLocaleString(en ? "en-US" : "ja-JP")}`;
   // 目安の行名に用途（スチール／ムービー）を入れない（2026-09-25）。
@@ -72,9 +74,12 @@ export default function PriceEstimator({
   })();
   const dayOff = isJpDayOff(date);
   const dayKinds: DayKind[] = Array.from({ length: days }, (_, i) => jpDayKind(date ? addDays(date, i) : ""));
-  const sim = daily
+  const rawSim = daily
     ? simulateDailyPrice({ dailyPrice: rate, days: dayKinds, surcharges })
     : simulatePrice({ hourlyPrice: rate, startHour, hours, holiday: dayOff, day: jpDayKind(date), surcharges });
+  // 1日の上限（時間貸しのみ。24時間までの利用が上限で止まる）
+  const capped = !daily && dailyCap > 0 && rawSim.total > dailyCap;
+  const sim = capped ? { ...rawSim, total: dailyCap } : rawSim;
   const hasHolidayRule = surcharges.some((s) => s.holidays);
   const surchargeLabel = (label: string) => (en && surcharges.find((s) => s.label === label)?.labelEn) || label;
   /**
@@ -241,6 +246,12 @@ export default function PriceEstimator({
               <span className="tabular-nums whitespace-nowrap">{yen(l.rate * l.hours)}</span>
             </li>
           ))}
+          {capped && (
+            <li className="flex justify-between gap-3 py-1.5 border-t border-line text-accent">
+              <span>{en ? "Daily maximum applied" : "1日の上限を適用"}</span>
+              <span className="tabular-nums whitespace-nowrap">{yen(dailyCap)}</span>
+            </li>
+          )}
         </ul>
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mt-2 pt-3 border-t border-ink/20">
           <span className="text-[12px] text-muted">
@@ -264,6 +275,12 @@ export default function PriceEstimator({
         {/* 2026-09-20 本人指示: 料金は変わりうるので、確認先を明記する */}
         <br />
         {en ? "Rates may change. Please confirm the details with the studio." : "料金は変動する可能性があります。詳しくはスタジオにご確認ください。"}
+        {dailyCap > 0 && !daily && (
+          <>
+            <br />
+            {en ? `Up to ${yen(dailyCap)} per day (up to 24 h), including surcharges.` : `1日（24時間まで）の料金は、割増を含めて上限 ${yen(dailyCap)} です。`}
+          </>
+        )}
         {notedSurcharges.length > 0 && (
           <>
             <br />

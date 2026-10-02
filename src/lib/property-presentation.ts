@@ -36,12 +36,12 @@ export function googleMapsEmbedUrl(coords: { lat: number; lng: number } | null, 
  * 時間貸し以外（定額・無料）や単価未設定では出さない。
  */
 export type UsageEstimate = { key: "still-small" | "still-half" | "movie-day"; hours: number; total: number; daily: boolean };
-export function usageEstimates(p: { priceType: string; hourlyPrice: number; minUsageHours: number; dailyPrice: number }): UsageEstimate[] {
+export function usageEstimates(p: { priceType: string; hourlyPrice: number; minUsageHours: number; dailyPrice: number; dailyCap?: number }): UsageEstimate[] {
   if (p.priceType !== "hourly" || !(p.hourlyPrice > 0)) return [];
   const min = Math.max(0, p.minUsageHours | 0);
   const row = (key: UsageEstimate["key"], base: number): UsageEstimate => {
     const hours = Math.max(base, min);
-    return { key, hours, total: hours * p.hourlyPrice, daily: false };
+    return { key, hours, total: capDaily(hours * p.hourlyPrice, p.dailyCap), daily: false };
   };
   const day = p.dailyPrice > 0 ? { ...row("movie-day", 9), total: p.dailyPrice, daily: true } : row("movie-day", 9);
   return [row("still-small", 3), row("still-half", 5), day];
@@ -54,6 +54,11 @@ export function usageEstimates(p: { priceType: string; hourlyPrice: number; minU
  * fromHour > toHour は日をまたぐ時間帯（20→8）。holidays=true の割増は「土日祝」を選んだ時に全時間へ掛かる。
  * 2026-09-21: waiveFromHours（N時間以上なら免除）に対応。STUDIO MONTFORT の「土日祝 +50%、ただし4時間以上は通常料金」型。
  */
+/** 1日の上限（0 = 上限なし）で合計を止める（2026-10-03）。 */
+export function capDaily(total: number, cap?: number): number {
+  return cap && cap > 0 ? Math.min(total, cap) : total;
+}
+
 export type RateSurcharge = { label: string; percent: number; fromHour: number; toHour: number; holidays: boolean; includeSaturday?: boolean; waiveFromHours?: number };
 /** その予約時間で割増が免除されるか（2026-09-21）。waiveFromHours=0 / 未設定は免除なし。 */
 export function surchargeWaived(s: RateSurcharge, hours: number): boolean {

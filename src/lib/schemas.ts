@@ -459,6 +459,11 @@ export const propertySchema = z.object({
   })).max(6).default([]),
   /** 料金シミュレーションを出さない（目安の表だけにする）。自動計算が実際の料金と合わないスタジオ向け。 */
   hidePriceSimulator: z.boolean().default(false),
+  /**
+   * 1日（24時間まで）の料金の上限（円。0 = 上限なし）。2026-10-03 スタジオカサブランカ
+   * 「夜間・日曜祝日の割増があっても1日の上限は150,000円」。目安とシミュレーションの合計をこの額で止める。
+   */
+  dailyCapPrice: z.number().int().min(0).max(99999999).default(0),
   /** 表示金額が税込なら true（false = 税別）。 */
   taxIncluded: z.boolean().default(false),
   /** ロケハン費（例: 1.5hまで無料）。 */

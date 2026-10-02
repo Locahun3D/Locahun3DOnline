@@ -619,6 +619,7 @@ export default function PropertyDetailView({
                 openHours={[property.customHoursStart, property.customHoursEnd]}
                 estimates={property.priceEstimates}
                 hideSimulator={property.hidePriceSimulator}
+                dailyCap={property.dailyCapPrice}
                 en={en}
               />
             )}
