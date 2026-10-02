@@ -6,7 +6,7 @@ import PropertyDetailView from "@/components/property-detail-view";
 import { getLocale } from "@/lib/i18n/server";
 import StudioApproveBar from "@/components/studio-approve-bar";
 import StudioDataSaleBar from "@/components/studio-data-sale-bar";
-import StudioPhotoUpload from "@/components/studio-photo-upload";
+import StudioPhotoEditor from "@/components/studio-photo-editor";
 import { canStudioApprove } from "@/lib/publish-flow";
 import { hashStudioApproveKey } from "@/lib/studio-approval";
 import { canAnswerDataSale, dataSaleConsentOf } from "@/lib/data-sale-consent";
@@ -93,8 +93,9 @@ export default async function PreviewPage({
 
   // 掲載用の写真を送ってもらう欄（2026-09-26 本人指示）。確認メールのリンクから開いた
   // 公開申請中の物件だけ。公開に必要なのはカバー以外6枚なので、足りない枚数を伝える。
+  // 2026-10-02: 送って運営が採用する方式から、スタジオがその場で直接編集する方式へ（本人指示）。
   const canUploadPhotos = approveKey !== "" && canStudioUpload(property, hashStudioApproveKey(approveKey)).ok;
-  const missingPhotos = Math.max(0, 6 - property.gallery.length);
+  const img = (i: { src: string; alt: string; width: number; height: number }) => ({ src: i.src, alt: i.alt, width: i.width, height: i.height });
 
   return (
     <>
@@ -116,11 +117,11 @@ export default async function PreviewPage({
     )}
     {canUploadPhotos && (
       <div className="ui-page-shell pt-6 pb-0">
-        <StudioPhotoUpload
+        <StudioPhotoEditor
           token={token}
           approveKey={approveKey}
           en={locale === "en"}
-          missingCount={missingPhotos}
+          initial={{ cover: img(property.cover), gallery: property.gallery.map(img), updatedAt: property.updatedAt ?? "" }}
         />
       </div>
     )}

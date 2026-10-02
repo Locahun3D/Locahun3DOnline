@@ -153,25 +153,25 @@ describe("規約と3Dデータ販売の許諾（2026-09-26）", () => {
 
 describe("写真のお願い（2026-09-26）", () => {
   it("photoUpload を渡さなければ節は出ない", () => {
-    expect(buildStudioReviewMail(input).bodyHtml).not.toContain("掲載用の写真をお送りいただけます");
+    expect(buildStudioReviewMail(input).bodyHtml).not.toContain("掲載写真をページ上で直接編集いただけます");
   });
 
-  it("不足枚数と、名前・注釈・カバー希望のお願いを書く", () => {
+  it("不足枚数と、説明・カバーの指定方法を書く（2026-10-02 直接編集に変更）", () => {
     const { bodyHtml } = buildStudioReviewMail({
       ...input,
       previewUrl: `${input.previewUrl}?approve=abc`,
       photoUpload: { missing: 3 },
     });
     expect(bodyHtml).toContain("あと <strong>3枚</strong>");
-    expect(bodyHtml).toContain("「名前」");
-    expect(bodyHtml).toContain("「注釈」");
-    expect(bodyHtml).toContain("カバー");
+    expect(bodyHtml).toContain("「説明」");
+    expect(bodyHtml).toContain("カバーにする");
+    expect(bodyHtml).toContain("写真を編集する");
     expect(bodyHtml).toContain(`${input.previewUrl}?approve=abc&amp;photos=1#photos`);
   });
 
-  it("足りているときは「追加も送れる」に変わる", () => {
+  it("足りているときは「追加・入れ替えもできる」に変わる", () => {
     const { bodyHtml } = buildStudioReviewMail({ ...input, photoUpload: { missing: 0 } });
-    expect(bodyHtml).toContain("追加の写真もお送りいただけます");
+    expect(bodyHtml).toContain("写真の追加や入れ替えも、その場でできます");
     expect(bodyHtml).not.toContain("公開にはあと");
   });
 });

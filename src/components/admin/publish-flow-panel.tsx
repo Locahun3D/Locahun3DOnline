@@ -205,6 +205,7 @@ export default function PublishFlowPanel({
               )}
             </Row>
             <Row k="スタジオ確認">{flow.studioConfirmedAt ? fmt(flow.studioConfirmedAt) : "未確認"}</Row>
+            {flow.studioPhotosEditedAt && <Row k="写真の編集">{`${fmt(flow.studioPhotosEditedAt)}（スタジオが確認ページで変更）`}</Row>}
             <Row k="英訳">{missingEnglish.length === 0 ? "完了" : `未翻訳あり: ${missingEnglish.join("、")}`}</Row>
             <Row k="3Dデータ販売">
               {DATA_SALE_STATUS_LABEL[consent.status]}

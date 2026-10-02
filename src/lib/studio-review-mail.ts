@@ -133,21 +133,20 @@ function photoSection(input: StudioReviewMailInput): string {
   const missing = input.photoUpload.missing;
   return `
     <div style="border:1px solid #eee;padding:14px 18px;margin:0 0 16px;">
-      <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">掲載用の写真をお送りいただけます</div>
+      <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">掲載写真をページ上で直接編集いただけます</div>
       <p style="font-size:13px;line-height:1.9;margin:0 0 10px;color:#444;">
         ${missing > 0
           ? `公開にはあと <strong>${missing}枚</strong> の写真が必要です。`
-          : "追加の写真もお送りいただけます。"}<br>
-        プレビューページの「写真」欄から、その場でお送りいただけます（ログイン不要）。<br>
-        スマートフォンで撮った写真をそのまま送っていただいても構いません。
+          : "写真の追加や入れ替えも、その場でできます。"}<br>
+        プレビューページの「写真」欄で、追加・差し替え・並べ替え・削除ができます（ログイン不要）。<br>
+        変更はすぐにページへ反映されます。スマートフォンで撮った写真もそのまま使えます。
       </p>
       <p style="margin:0 0 8px;">
-        <a href="${esc(url)}" style="display:inline-block;border:1px solid #111;color:#111;text-decoration:none;padding:10px 18px;font-size:13px;">写真を送る →</a>
+        <a href="${esc(url)}" style="display:inline-block;border:1px solid #111;color:#111;text-decoration:none;padding:10px 18px;font-size:13px;">写真を編集する →</a>
       </p>
       <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">
-        1枚ごとに<strong>「名前」（例: 2Fスタジオ 窓側）</strong>と<strong>「注釈」（例: 午前中の自然光）</strong>をご記入ください。<br>
-        どの部屋のどの角度かが分かり、掲載ページの説明にそのまま使えます。<br>
-        ページの頭（カバー）に使ってほしい写真には、チェックを入れてください。
+        写真ごとに<strong>「説明」</strong>（例: 2Fスタジオ 窓側・午前中の自然光）を書けます。掲載ページの写真の説明にそのまま使います。<br>
+        ページの頭（カバー）にしたい写真は「カバーにする」を押してください。
       </p>
     </div>`;
 }

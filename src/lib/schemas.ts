@@ -712,6 +712,8 @@ export const propertySchema = z.object({
       studioApproveKeyHash: z.string().nullable().default(null),
       /** このワークフローを経て公開した日時（直近の公開）。 */
       publishedAt: z.string().nullable().default(null),
+      /** スタジオが確認ページで掲載写真を直接編集した最後の日時（2026-10-02）。運営が気づけるように。 */
+      studioPhotosEditedAt: z.string().nullable().default(null),
     })
     .prefault({}),
   annotations: z.array(annotationSchema).max(200).default([]),

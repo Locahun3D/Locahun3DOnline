@@ -38,6 +38,7 @@ export const EMPTY_PUBLISH_FLOW: PublishFlow = {
   studioConfirmedVia: null,
   studioApproveKeyHash: null,
   publishedAt: null,
+  studioPhotosEditedAt: null,
 };
 
 /** 確認メール再送のクールダウン（誤って連打・二重送信しないため）。 */
