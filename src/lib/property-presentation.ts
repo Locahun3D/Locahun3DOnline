@@ -1,5 +1,44 @@
+const OPEN_BRACKETS = "（(「『【［[〈《〔｛{“‘";
+const CLOSE_BRACKETS = "）)」』】］]〉》〕｝}”’";
+const TRAILING_PUNCT = CLOSE_BRACKETS + "、。，．,.・：:；;！!？?ー〜～…";
+
+/**
+ * 物件名を折り返しの単位に分ける。語の途中では折らない。
+ * 括弧は中身ごと1単位にまとめ、行末に「（」だけ残ったり行頭が「）」で始まったりしないようにする
+ * （2026-10-04 本人指摘「Le CAVE STUDIO（／ルケイブ）」改行ひどい）。
+ * 句読点・閉じ記号は前の語に付ける。
+ */
 export function propertyTitleSegments(title: string): string[] {
-  return Array.from(new Intl.Segmenter("ja", { granularity: "word" }).segment(title), part => part.segment);
+  const words = Array.from(new Intl.Segmenter("ja", { granularity: "word" }).segment(title), part => part.segment);
+  const out: string[] = [];
+  let i = 0;
+  while (i < words.length) {
+    const w = words[i];
+    if (w.length === 1 && OPEN_BRACKETS.includes(w)) {
+      const close = CLOSE_BRACKETS[OPEN_BRACKETS.indexOf(w)];
+      let j = i + 1;
+      let group = w;
+      while (j < words.length && !words[j].includes(close)) group += words[j++];
+      if (j < words.length && group.length + words[j].length <= 16) {
+        out.push(group + words[j]);
+        i = j + 1;
+        continue;
+      }
+      // 長い括弧は中身の語で折る。開き括弧だけは次の語に付ける。
+      if (i + 1 < words.length) {
+        out.push(w + words[i + 1]);
+        i += 2;
+        continue;
+      }
+    }
+    if (out.length && /^\S+$/.test(w) && [...w].every(ch => TRAILING_PUNCT.includes(ch))) {
+      out[out.length - 1] += w;
+    } else {
+      out.push(w);
+    }
+    i++;
+  }
+  return out;
 }
 
 /** Hide this owner's personal address only in the public presentation. */

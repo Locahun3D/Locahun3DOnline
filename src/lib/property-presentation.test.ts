@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleSegments } from "./property-presentation";
 
 it("keeps the crossing name in word-sized chunks without losing original title text", () => {
@@ -170,4 +170,19 @@ it("caps estimates and simulation at the daily maximum (2026-10-03 Studio Casabl
   expect(night.total).toBeGreaterThan(150000);
   expect(capDaily(night.total, 150000)).toBe(150000);
   expect(capDaily(night.total, 0)).toBe(night.total);
+});
+
+describe("propertyTitleSegments (2026-10-04)", () => {
+  it("keeps a short bracketed reading together with its brackets", () => {
+    expect(propertyTitleSegments("Le CAVE STUDIO（ルケイブ）")).toContain("（ルケイブ）");
+  });
+  it("never leaves an opening bracket alone or starts a unit with a closing one", () => {
+    const parts = propertyTitleSegments("スタジオ（とても長い名前の別館スタジオと屋上テラスの組み合わせ）・本館");
+    expect(parts.some(p => p === "（")).toBe(false);
+    expect(parts.some(p => /^[）・]/.test(p))).toBe(false);
+  });
+  it("still joins back to the original text", () => {
+    const t = "ザ・レジデンス南青山102、STUDIO NOW";
+    expect(propertyTitleSegments(t).join("")).toBe(t);
+  });
 });
