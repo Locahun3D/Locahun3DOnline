@@ -3018,7 +3018,7 @@ window.KAWAII_MALE_GLB_B64="Z2xURgIAAADsaRIAoPYCAEpTT057ImFzc2V0Ijp7InZlcnNpb24i
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="cb0f4c11e451fe1eb34f689eff3d673f569878d05aa47b4fb9b4ec1090b5c7ed";
+window.__locahunBuildRelease="c701ba264d84ede99fac2bac229d0cd2f8619ad26d676de4ab137ab869c42bb1";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -3796,6 +3796,36 @@ Object.defineProperty(window.__dbg, 'captureHideUI', { get: () => (typeof _captu
 // 近づける範囲では必ず壁が描かれるようにする。?near=0.3 で元に戻る（前後比較・切り戻し用）。
 const _CAM_NEAR = (() => { const v = parseFloat(new URLSearchParams(location.search).get('near')); return v > 0 ? v : 0.05; })();
 camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, _CAM_NEAR, 2000);
+// Spark's cone angles are degrees, not radians. A vertical 90° camera on a
+// wide screen has corners beyond the default 90° detail cone. Include the
+// actual projection (also zoom/view offsets) without raising memory budgets.
+const _splatConeCorner=new THREE.Vector3();
+function _updateSplatViewCone(viewCamera,viewRenderer){
+  if(!viewCamera?.isPerspectiveCamera || sparkRenderer.lodQuatOverride)return;
+  let halfAngle=0;
+  for(const x of [-1,1])for(const y of [-1,1]){
+    _splatConeCorner.set(x,y,0).applyMatrix4(viewCamera.projectionMatrixInverse);
+    halfAngle=Math.max(halfAngle,Math.atan2(Math.hypot(_splatConeCorner.x,_splatConeCorner.y),-_splatConeCorner.z));
+  }
+  const detail=Math.min(180,Math.max(90,halfAngle*360/Math.PI+2));
+  const outer=Math.min(180,detail+30);
+  if(!Number.isFinite(detail))return;
+  // The camera tool renders wide context then a narrower scissored frame.
+  // Both share one LOD tree: don't shrink it on the second pass every frame.
+  if(viewRenderer?.getScissorTest() && detail<=sparkRenderer.coneFov0)return;
+  if(Math.abs(sparkRenderer.coneFov0-detail)>.01 || Math.abs(sparkRenderer.coneFov-outer)>.01){
+    sparkRenderer.coneFov0=detail;
+    sparkRenderer.coneFov=outer;
+    // Spark does not detect cone changes in its camera-change test.
+    sparkRenderer.lodDirty=true;
+  }
+}
+// Cover normal rendering, camera framing and captures at the same boundary.
+const _splatBeforeRender=sparkRenderer.onBeforeRender;
+sparkRenderer.onBeforeRender=function(renderer,scene,viewCamera,...rest){
+  _updateSplatViewCone(viewCamera,renderer);
+  return _splatBeforeRender.call(this,renderer,scene,viewCamera,...rest);
+};
 // ══════════════════════════════════════════════════
 //  ENVIRONMENT  (procedural sky dome / pseudo-HDRI)
 // ══════════════════════════════════════════════════
@@ -10236,6 +10266,7 @@ function roundRect(ctx, x, y, w, h, r) {
 //  PIVOT HOVER GLOW (2D overlay)
 // ══════════════════════════════════════════════════
 let _hoveredLpv = null;   // current lpv hover data
+const _eventGuideWorld=new THREE.Vector3(), _eventGuideCamera=new THREE.Vector3();
 
 function drawGlowCircle(ctx, x, y, r, col, alpha=0.7){
   const g=ctx.createRadialGradient(x,y,0,x,y,r*2.5);
@@ -10332,13 +10363,16 @@ function updateOverlay() {
   //    sessions). The counter is maintained by _recountLayerActivity.
   if(window._activeBillboardCount) for(const L of layers){
     if(L.type==='event' && L.visible && L.mesh && L.eventGuide){
-      const sp=screenPos(L.mesh.position);
+      L.mesh.getWorldPosition(_eventGuideWorld);
+      camera.getWorldPosition(_eventGuideCamera);
+      if(_eventGuideCamera.distanceToSquared(_eventGuideWorld)>25)continue;
+      const sp=screenPos(_eventGuideWorld);
       if(sp&&!sp.behind){
-        const text=L.eventGuide;
+        const lines=String(L.eventGuide).split(/\r\n|\r|\n/);
         octx.save();
         octx.font='bold 13px "Segoe UI",sans-serif';
-        const tw=octx.measureText(text).width;
-        const px=sp.x-tw/2-6, py=sp.y-46, pw=tw+12, ph=22;
+        const tw=lines.reduce((width,line)=>Math.max(width,octx.measureText(line).width),0);
+        const ph=lines.length*18+4, pw=tw+12, px=sp.x-pw/2, py=sp.y-24-ph;
         octx.fillStyle='rgba(0,0,0,0.65)';
         octx.beginPath();
         if(octx.roundRect){octx.roundRect(px,py,pw,ph,5);}
@@ -10347,7 +10381,7 @@ function updateOverlay() {
         octx.fillStyle='#FFFFFF';
         octx.textAlign='center';
         octx.textBaseline='middle';
-        octx.fillText(text,sp.x,py+ph/2);
+        lines.forEach((line,i)=>octx.fillText(line,sp.x,py+2+9+i*18));
         octx.restore();
       }
     }
@@ -11262,8 +11296,8 @@ function _splatStride(){
 //   低い lodScale ほど粗い（解像数が減る＝軽量）。
 //   実測カーブ(単一ビュー): 0.5→0.65M / 0.7→1.04M / 1.0→1.64M / 1.4→2.39M /
 //   2.0以上→~2.5M(Spark の per-view 上限に飽和)。
-//   ※ foveation(coneFov/coneFoveate) は Spark デフォルトが最も多く解像する。
-//     上書きすると減る／coneFoveate:0 は degenerate(1 splat) なので触らない。
+//   ※ coneFov/coneFov0 は度。πを入れると約3°になり、coneFoveate:0も無効化ではない。
+//     RADはmesh側の上書きを外し、031で画面の四隅を含むrenderer側のconeへ追従する。
 
 // 間引き要求（「ポリゴン1/4」等）は RAD ではチャンクを間引けないので、
 // lodScale を下げて軽量化する。stride1→1.0 / 2→0.71 / 4→0.5。
