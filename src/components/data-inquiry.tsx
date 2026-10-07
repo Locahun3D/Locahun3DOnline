@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { submitContactRequestAction, type ContactState } from "@/lib/contact-actions";
+import { localizeActionError } from "@/lib/i18n/action-errors";
+import Turnstile from "@/components/turnstile";
 
 const HONEYPOT_FIELD = "website";
 const RENDERED_AT_FIELD = "_rt";
@@ -162,8 +164,12 @@ export default function DataInquiry({
             />
           </label>
 
+          <div className="mb-2">
+            <Turnstile resetKey={state} en={en} theme="auto" />
+          </div>
+
           {state?.ok === false && (
-            <p className="text-[11px] text-red-400 mb-2">{state.error}</p>
+            <p className="text-[11px] text-red-400 mb-2">{localizeActionError(state.error, en)}</p>
           )}
 
           <div className="flex items-center gap-3">

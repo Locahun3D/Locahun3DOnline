@@ -18,6 +18,7 @@ import {
   allowByRate,
   spamReason,
 } from "./inquiry-guard";
+import { verifyTurnstile, TURNSTILE_ERROR } from "./turnstile";
 
 const inputSchema = z.object({
   type: z.enum(CONTACT_TYPES),
@@ -134,19 +135,18 @@ export async function submitContactRequestAction(
   const d = parsed.data;
 
   let source = "";
+  let ip = "";
   try {
+    const h = await headers();
+    ip = h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
     const { userId } = await auth();
-    if (userId) {
-      source = `u:${userId}`;
-    } else {
-      const h = await headers();
-      source =
-        h.get("cf-connecting-ip") ??
-        h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        "";
-    }
+    source = userId ? `u:${userId}` : ip;
   } catch {
     // ヘッダ/認証が取れない環境（ローカル等）はレート制限をスキップ。
+  }
+  // Cloudflare Turnstile（2026-10-07）。人間でも失敗し得るので静かに捨てずにエラーを返す。
+  if (!(await verifyTurnstile(str("cf-turnstile-response"), ip))) {
+    return { ok: false, error: TURNSTILE_ERROR };
   }
   if (!allowByRate(source, `contact:${d.type}`)) {
     return {

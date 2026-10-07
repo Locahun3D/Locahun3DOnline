@@ -5,6 +5,7 @@ import { submitContactRequestAction, type ContactState } from "@/lib/contact-act
 import type { ContactType } from "@/lib/contact-requests";
 import { useLocale } from "@/components/locale-provider";
 import { localizeActionError } from "@/lib/i18n/action-errors";
+import Turnstile from "@/components/turnstile";
 
 const HONEYPOT_FIELD = "website";
 const RENDERED_AT_FIELD = "_rt";
@@ -336,6 +337,10 @@ ${licenseTarget.targetUrl}
                 className={inputClass}
               />
             </Field>
+          </div>
+
+          <div className="flex justify-center">
+            <Turnstile resetKey={state} en={en} />
           </div>
 
           {state?.ok === false && (

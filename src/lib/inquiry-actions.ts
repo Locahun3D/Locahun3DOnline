@@ -17,6 +17,7 @@ import {
   allowByRate,
   spamReason,
 } from "./inquiry-guard";
+import { verifyTurnstile, TURNSTILE_ERROR } from "./turnstile";
 
 const inputSchema = z.object({
   propertyId: z.string().min(1),
@@ -91,21 +92,24 @@ export async function submitInquiryAction(
   // サインイン済みなら userId を記録内容にも残す（返信をアカウント通知でも
   // 気づけるようにするため。匿名送信は null のまま = メールのみが通知経路）。
   let source = "";
+  let ip = "";
   let signedInUserId: string | null = null;
   try {
+    const h = await headers();
+    ip = h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
     const { userId } = await auth();
     if (userId) {
       source = `u:${userId}`;
       signedInUserId = userId;
     } else {
-      const h = await headers();
-      source =
-        h.get("cf-connecting-ip") ??
-        h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        "";
+      source = ip;
     }
   } catch {
     // ヘッダ/認証が取れない環境（ローカル等）はレート制限をスキップ。
+  }
+  // Cloudflare Turnstile（2026-10-07）。人間でも失敗し得るので静かに捨てずにエラーを返す。
+  if (!(await verifyTurnstile(formData.get("cf-turnstile-response")?.toString() ?? "", ip))) {
+    return { ok: false, error: TURNSTILE_ERROR };
   }
   if (!allowByRate(source, property.id)) {
     return {

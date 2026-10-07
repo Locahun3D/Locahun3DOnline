@@ -15,6 +15,7 @@ const EXACT: Record<string, string> = {
   "短時間に送信が集中しています。しばらく時間をおいて再度お試しください。": "Too many submissions in a short time. Please wait a moment and try again.",
   "送信に失敗しました。お手数ですが時間をおいて再度お試しください。": "Sending failed. Please try again in a little while.",
   "対象のスタジオが見つかりませんでした。": "We couldn't find that location.",
+  "ボット確認に失敗しました。チェックが完了してから再度送信してください。": "The bot check failed. Please wait for the check to finish and send again.",
   "施設・場所名を入力してください": "Please enter the venue or place name.",
   "空間の説明・撮影範囲を入力してください": "Please describe the space and what you captured.",
   "使用した機材を入力してください": "Please enter the equipment you used.",
