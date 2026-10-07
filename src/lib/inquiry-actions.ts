@@ -15,6 +15,7 @@ import {
   isHoneypotTripped,
   checkTiming,
   allowByRate,
+  spamReason,
 } from "./inquiry-guard";
 
 const inputSchema = z.object({
@@ -111,6 +112,12 @@ export async function submitInquiryAction(
       ok: false,
       error: "短時間に送信が集中しています。しばらく時間をおいて再度お試しください。",
     };
+  }
+
+  // 詐欺・売り込み（なりすましドメイン、英語の SEO 売り込み等）は掲載先スタジオへ転送しない。
+  // 送信者には成功を返す（2026-10-07）。
+  if (spamReason({ email: d.email, message: d.message })) {
+    return { ok: true };
   }
 
   // 1) 先方メールへ転送（キー未設定なら false）。

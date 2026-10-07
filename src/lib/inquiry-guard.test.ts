@@ -67,3 +67,22 @@ describe("allowByRate", () => {
     expect(allowByRate(ip, "prop-b")).toBe(true); // b fresh
   });
 });
+
+import { spamReason } from "./inquiry-guard";
+
+describe("spamReason", () => {
+  it("flags the search-index scam that reached the contact form (2026-10-06)", () => {
+    expect(spamReason({ email: "domains@search-locahun3d.com", message: "Greetings\r\n\r\nAdd locahun3d.com in Google's Search Index and have it appear in Google search results!\r\n\r\nInclude locahun3d.com today: searchregister.pro" })).toBe("impersonation");
+    expect(spamReason({ email: "x@example.com", message: "Add your site to Google's Search Index today: searchregister.pro" })).toBe("promo-en");
+  });
+  it("keeps real inquiries", () => {
+    expect(spamReason({ email: "takumitkm0202@icloud.com", message: "渋谷スクランブル交差点の3Dデータを購入したいです。" })).toBeNull();
+    expect(spamReason({ email: "", message: "" })).toBeNull();
+    expect(spamReason({ email: "staff@locahun3d.com", message: "test" })).toBeNull();
+    expect(spamReason({ email: "a@mail.locahun3d.com", message: "hi" })).toBeNull();
+    // 英語の正当な問い合わせ（EN版サイトあり）は落とさない
+    expect(spamReason({ email: "producer@studio.example", message: "Hi, we are a production company in London and would like to license the Shibuya scan for a commercial." })).toBeNull();
+    // 日本語が入っていれば売り込み語があっても通す（日本の取引先が SEO に触れることはある）
+    expect(spamReason({ email: "a@b.jp", message: "弊社サイトのSEOの件でご相談です。search engine 対策について" })).toBeNull();
+  });
+});

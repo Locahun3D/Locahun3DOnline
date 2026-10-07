@@ -99,3 +99,29 @@ export function allowByRate(source: string, propertyId: string, max: number = RA
   b.count += 1;
   return true;
 }
+
+/**
+ * 本文で分かる営業スパム・なりすましの判定（2026-10-07）。
+ * ハニーポット・時間・回数をすり抜けた「人が手で送る」詐欺まがいの問い合わせ向け。
+ * 例: 「Add locahun3d.com in Google's Search Index … searchregister.pro」
+ *     （送信元 domains@search-locahun3d.com ＝ 自社ドメインに似せた別ドメイン）
+ * 誤判定で本物の問い合わせを落とさないよう、条件は狭く取る:
+ *   - impersonation: 自社に似せたドメイン（locahun を含むが locahun3d.com 本体・サブドメインではない）
+ *   - promo-en: 日本語を1文字も含まない本文に、SEO・ドメイン登録・集客代行などの売り込み語がある
+ * 該当しても送信者には成功を返し（学習させない）、記録だけ残して運営への通知はしない。
+ */
+const SPAM_PROMO_EN =
+  /\b(search index|search engine|seo\b|backlinks?|google (?:ranking|search results|index)|first page of google|domain (?:registration|renewal|expir)|register (?:your )?domain|web ?traffic|guest post|lead generation|crypto|bitcoin|casino|loan offer|marketing services|website redesign|app development services)/i;
+const JAPANESE = /[぀-ヿ㐀-鿿]/;
+
+export type SpamReason = "impersonation" | "promo-en";
+
+export function spamReason(fields: { email?: string; message?: string }): SpamReason | null {
+  const domain = (fields.email ?? "").split("@")[1]?.toLowerCase().trim() ?? "";
+  if (domain && domain.includes("locahun") && domain !== "locahun3d.com" && !domain.endsWith(".locahun3d.com")) {
+    return "impersonation";
+  }
+  const message = fields.message ?? "";
+  if (!JAPANESE.test(message) && SPAM_PROMO_EN.test(message)) return "promo-en";
+  return null;
+}

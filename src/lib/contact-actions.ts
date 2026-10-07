@@ -16,6 +16,7 @@ import {
   isHoneypotTripped,
   checkTiming,
   allowByRate,
+  spamReason,
 } from "./inquiry-guard";
 
 const inputSchema = z.object({
@@ -156,6 +157,23 @@ export async function submitContactRequestAction(
 
   const typeLabel = CONTACT_TYPE_LABEL[d.type as ContactType];
   const id = randomUUID();
+
+  // 本文で分かる詐欺・売り込み（なりすましドメイン、英語の SEO 売り込み等）。
+  // 送信者には成功を返し、運営へのメール・通知は出さない。記録はアーカイブで残す（誤判定の確認用）。
+  const spam = spamReason({ email: d.email, message: d.message });
+  if (spam) {
+    try {
+      await contactRequestRepo.upsert({
+        id, type: d.type, name: d.name, email: d.email, company: d.company, phone: d.phone, url: d.url,
+        environment: d.environment, area: d.area, propertyName: d.propertyName, address: d.address,
+        publicUrl: "", message: d.message, attachments: [], forwardedTo: `spam:${spam}`, emailed: false,
+        reply: "", repliedAt: null, replyEmailed: false, status: "archived", createdAt: new Date().toISOString(),
+      });
+    } catch {
+      // 記録に失敗しても送信者には同じ応答を返す
+    }
+    return { ok: true, hasEmail: d.email !== "" };
+  }
 
   // ⚠ 画像添付はバグ報告専用の入口だった。バグ報告の受付を終了したので
   //    添付の受け取りも撤去した（2026-07-29）。保存済みレコードの
