@@ -6,6 +6,7 @@ import {
   getPropertyEmbedAction,
   setPropertyEmbedEnabledAction,
   revokePropertyEmbedAction,
+  setPropertyEmbedAllowedDomainsAction,
 } from "@/app/admin/properties/embed-actions";
 import type { PropertyEmbed } from "@/lib/property-embeds";
 import { embedUrl as buildEmbedUrl, embedSnippet } from "@/lib/embed-snippet";
@@ -50,6 +51,14 @@ export default function EmbedShare({
   const [copied, setCopied] = useState<"url" | "code" | null>(null);
   const [pending, start] = useTransition();
   const panelRef = useRef<HTMLDivElement>(null);
+  // 貼ってよいサイト（2026-10-08・利用規約 第7条）。空 = 制限なし（従来どおり）。
+  const [domainText, setDomainText] = useState("");
+  const [domainMsg, setDomainMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    // 取得・発行・保存で埋め込みが入れ替わったときだけ、入力欄を保存済みの値にそろえる。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDomainText((embed?.allowedDomains ?? []).join("\n"));
+  }, [embed?.token, embed?.allowedDomains]);
 
   // パネルを開いた時だけ取得する（一覧の全物件分を先読みしない）。
   useEffect(() => {
@@ -175,6 +184,61 @@ export default function EmbedShare({
                   >
                     {copied === "url" ? "済" : "コピー"}
                   </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor={`embed-domains-${propertyId}`}
+                  className="block mono text-[9.5px] tracking-[0.2em] uppercase text-muted mb-1"
+                >
+                  貼ってよいサイト（任意）
+                </label>
+                <textarea
+                  id={`embed-domains-${propertyId}`}
+                  value={domainText}
+                  onChange={(e) => {
+                    setDomainText(e.target.value);
+                    setDomainMsg(null);
+                  }}
+                  rows={2}
+                  placeholder={"例: studio-example.jp\n*.studio-example.jp"}
+                  className="w-full bg-[#111] border border-line text-[11px] text-ink/85 p-2 font-mono resize-y"
+                />
+                <p className="text-[11px] text-muted leading-[1.7] mt-1">
+                  カンマか改行で区切ります。
+                  <br />
+                  空欄なら、どのサイトにも貼れます（これまでどおり）。
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        const res = await setPropertyEmbedAllowedDomainsAction(embed.token, domainText);
+                        if (res.ok) {
+                          setEmbed(res.embed);
+                          setDomainMsg({
+                            ok: true,
+                            text: (res.embed.allowedDomains ?? []).length
+                              ? "保存しました。指定したサイトにだけ表示されます。"
+                              : "保存しました。制限はありません。",
+                          });
+                        } else {
+                          setDomainMsg({ ok: false, text: res.error });
+                        }
+                      })
+                    }
+                    className="mono text-[9.5px] tracking-[0.2em] uppercase border border-line px-2.5 py-1.5 text-muted hover:text-ink hover:border-ink transition disabled:opacity-50 shrink-0"
+                  >
+                    サイトを保存
+                  </button>
+                  {domainMsg && (
+                    <span className={`text-[11px] ${domainMsg.ok ? "text-green-400" : "text-red-400"}`}>
+                      {domainMsg.text}
+                    </span>
+                  )}
                 </div>
               </div>
 

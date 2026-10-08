@@ -20,6 +20,7 @@ async function assertAdmin(): Promise<void> {
 }
 import { repo } from "@/lib/store";
 import { propertyEmbedRepo, type PropertyEmbed } from "@/lib/property-embeds";
+import { parseAllowedDomains } from "@/lib/embed-domains";
 
 /**
  * 掲載者サイト埋め込み用URLの発行/取得/停止・再開/失効
@@ -55,6 +56,24 @@ export async function setPropertyEmbedEnabledAction(
   await assertAdmin();
   const embed = await propertyEmbedRepo.setEnabled(token, enabled);
   return { ok: !!embed, embed };
+}
+
+/**
+ * 貼ってよいサイトを設定する（2026-10-08・利用規約 第7条）。text はカンマ・改行区切り。
+ * 空にすると制限なし（従来どおり）。不正な行があれば保存せずに返す。
+ */
+export async function setPropertyEmbedAllowedDomainsAction(
+  token: string,
+  text: string,
+): Promise<{ ok: true; embed: PropertyEmbed } | { ok: false; error: string }> {
+  await assertAdmin();
+  const { domains, invalid } = parseAllowedDomains(text);
+  if (invalid.length > 0) {
+    return { ok: false, error: `ドメインとして読めない値があります: ${invalid.join("、")}` };
+  }
+  const embed = await propertyEmbedRepo.setAllowedDomains(token, domains);
+  if (!embed) return { ok: false, error: "埋め込みが見つかりません" };
+  return { ok: true, embed };
 }
 
 export async function revokePropertyEmbedAction(

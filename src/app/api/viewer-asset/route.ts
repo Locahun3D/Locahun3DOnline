@@ -143,7 +143,13 @@ export async function GET(req: Request) {
     const embedTokenParam = new URL(req.url).searchParams.get("embed") || "";
     if (embedTokenParam) {
       const embed = await propertyEmbedRepo.get(embedTokenParam);
-      if (embed && embed.enabled && embed.propertyId === matchedProperty.id) {
+      // 2026-10-08: 公開中の物件だけ（埋め込みページ側と同じ条件。利用規約 第7条5項）。
+      if (
+        embed &&
+        embed.enabled &&
+        embed.propertyId === matchedProperty.id &&
+        matchedProperty.status === "published"
+      ) {
         if (!allowAssetDownload(`embed:${embedTokenParam}`, key)) {
           return NextResponse.json({ error: "rate_limited" }, { status: 429 });
         }

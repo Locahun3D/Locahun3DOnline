@@ -6,6 +6,8 @@
  */
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { type NextRequest, NextResponse } from "next/server";
+import { embedTokenFromPath } from "@/lib/embed-domains";
+import { frameAncestorsForEmbed } from "@/lib/embed-policy-edge";
 
 // 保護対象は locale を剥がした素のパスで判定する（/en/admin も守る）。
 // ⚠ /works/** は入れない（実績＆技術ブログは公開ページ。記事単位の非公開は
@@ -118,9 +120,12 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-locale", "en");
     if (basePath.startsWith("/embed/")) requestHeaders.set("x-embed", "1");
-    return NextResponse.rewrite(rewriteUrl, {
-      request: { headers: requestHeaders },
-    });
+    return withEmbedFramePolicy(
+      basePath,
+      NextResponse.rewrite(rewriteUrl, {
+        request: { headers: requestHeaders },
+      }),
+    );
   }
 
   /* 埋め込みページ(/embed/*)であることを RSC へ渡す。App Router の layout は
@@ -137,9 +142,25 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (basePath.startsWith("/embed/") || basePath.startsWith("/scene-edit/")) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-embed", "1");
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return withEmbedFramePolicy(
+      basePath,
+      NextResponse.next({ request: { headers: requestHeaders } }),
+    );
   }
 });
+
+/**
+ * 埋め込みごとの「貼ってよいサイト」を CSP frame-ancestors で強制する（2026-10-08・利用規約 第7条）。
+ * 許可リストが未設定（既存の埋め込みすべて）ならヘッダーを付けない＝従来どおり。
+ * 取得に失敗・時間切れでも付けないだけで、応答そのものは止めない（embed-policy-edge.ts）。
+ */
+async function withEmbedFramePolicy(basePath: string, res: NextResponse): Promise<NextResponse> {
+  const token = embedTokenFromPath(basePath);
+  if (!token) return res;
+  const csp = await frameAncestorsForEmbed(token);
+  if (csp) res.headers.set("Content-Security-Policy", csp);
+  return res;
+}
 
 /**
  * Guard against malformed / garbage Clerk session cookies on PUBLIC routes.

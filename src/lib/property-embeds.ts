@@ -4,6 +4,7 @@ import path from "node:path";
 import { nanoid } from "nanoid";
 import { safeWriteFile, canAccessLocalFs } from "./fs-safe";
 import { getD1, d1GetData, d1ListData, d1Upsert, d1Delete } from "./d1";
+import { sanitizeAllowedDomains } from "./embed-domains";
 
 /**
  * 物件の「サイト埋め込み用トークン」(token -> propertyId)。
@@ -28,6 +29,11 @@ export interface PropertyEmbed {
   createdAt: string;
   /** 掲載者が一時的に無効化できる。行削除(失効)とは区別する。 */
   enabled: boolean;
+  /**
+   * 貼ってよいサイト（2026-10-08・利用規約 第7条）。正規化済みオリジン（embed-domains.ts）。
+   * 未設定・空 = 従来どおりどこにでも貼れる。D1 では data(JSON) 列にだけ持つ（カラム追加なし）。
+   */
+  allowedDomains?: string[];
 }
 
 const DATA_FILE = path.join(process.cwd(), "data", "property-embeds.json");
@@ -121,6 +127,22 @@ export const propertyEmbedRepo = {
     const cur = await this.get(token);
     if (!cur) return null;
     const next = { ...cur, enabled };
+    if (canAccessLocalFs()) {
+      const all = await fileReadAll();
+      await fileWriteAll(all.map((e) => (e.token === token ? next : e)));
+      return next;
+    }
+    const db = await getD1();
+    if (!db) return null;
+    await d1Upsert(db, TABLE, "token", embedCols(next), next);
+    return next;
+  },
+
+  /** 貼ってよいサイトを保存する（正規化済みの配列。空配列 = 制限なし）。 */
+  async setAllowedDomains(token: string, allowedDomains: string[]): Promise<PropertyEmbed | null> {
+    const cur = await this.get(token);
+    if (!cur) return null;
+    const next: PropertyEmbed = { ...cur, allowedDomains: sanitizeAllowedDomains(allowedDomains) };
     if (canAccessLocalFs()) {
       const all = await fileReadAll();
       await fileWriteAll(all.map((e) => (e.token === token ? next : e)));

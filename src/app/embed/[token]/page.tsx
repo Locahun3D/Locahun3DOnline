@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { repo } from "@/lib/store";
 import { propertyEmbedRepo } from "@/lib/property-embeds";
 import EmbedPlayer from "@/components/embed-player";
+import EmbedReferrerGuard from "@/components/embed-referrer-guard";
+import { sanitizeAllowedDomains } from "@/lib/embed-domains";
 import { getLocale } from "@/lib/i18n/server";
 
 // トークンの有効状態を毎リクエストで判定するため動的レンダリング。
@@ -17,14 +19,15 @@ export async function generateMetadata() {
   };
 }
 
-/** 停止済み・不明トークン用の静かな案内（iframe 内に出るため最小限）。 */
+/**
+ * 停止済み・非公開の物件・貼ってよいサイト外用の静かな案内（iframe 内に出るため最小限）。
+ * 理由は出さない（貼り先の訪問者に内部事情を見せない）。
+ */
 function UnavailableView({ en }: { en: boolean }) {
   return (
     <div className="w-full h-full min-h-[320px] flex items-center justify-center bg-bg px-6 text-center">
       <p className="text-[13px] text-muted leading-[1.9]">
-        {en
-          ? "This 3D tour is currently unavailable."
-          : "この3Dツアーは現在ご利用いただけません。"}
+        {en ? "This 3D tour cannot be displayed right now." : "この3Dツアーは現在表示できません。"}
       </p>
     </div>
   );
@@ -67,6 +70,9 @@ export default async function EmbedPage({
 
   const property = await repo.get(embed.propertyId);
   if (!property) notFound();
+  // 2026-10-08（利用規約 第7条5項）: 公開中の物件だけを出す。下書き・公開申請中・アーカイブ
+  // （公開停止を含む）では、貼られたままの埋め込みも中立の案内に切り替える。
+  if (property.status !== "published") return <UnavailableView en={en} />;
 
   // 3Dシーンの解決: 複数シーン(splatItems)があれば先頭、無ければ単一 splatUrl。
   // 一般公開レベルのシーンのみ埋め込む（restricted/nda_only は掲載者サイトに
@@ -92,6 +98,10 @@ export default async function EmbedPage({
     /* 高さは実画面基準（globals.css 冒頭の規約2）。素の 100dvh だと html の zoom
        （720–1199px で 0.8 / 1200px以上で 0.9）が掛からない分だけ内容が縮み、
        貼り先の iframe の下端に黒い帯が残る（実測: 幅992pxの16:9 iframe で約115px）。 */
+    /* 2026-10-08: 貼ってよいサイトの補助チェック（本命は middleware の CSP frame-ancestors）。
+       ⚠ 下端のクレジット（Powered by Locahun 3D）はURLのパラメータで消せないようにしておくこと
+       （利用規約 第7条3項。title=0 で消えるのは物件名だけ）。 */
+    <EmbedReferrerGuard allowedDomains={sanitizeAllowedDomains(embed.allowedDomains)} fallback={<UnavailableView en={en} />}>
     <div className="theme-online flex flex-col h-[calc(100dvh/var(--z))]">
       <div className="relative flex-1 min-h-0">
         <EmbedPlayer
@@ -126,5 +136,6 @@ export default async function EmbedPage({
         </a>
       </div>
     </div>
+    </EmbedReferrerGuard>
   );
 }
