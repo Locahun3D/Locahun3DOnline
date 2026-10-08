@@ -1834,6 +1834,7 @@ export default function PropertyEditor({
                 </div>
               </Field>
               <Toggle label="表示金額は税込（オフ = 税別）" register={register("taxIncluded")} />
+              <Toggle label="時間単価は「〜」（人数・内容で変わる最低額）" register={register("priceFrom")} />
               <Field label="追加費用" hint="照明・音響・機材・ピアノ使用など別途かかる費用（複数行可）">
                 <textarea {...register("extraFees")} className={`${inputClass} resize-y min-h-[70px]`} rows={3} maxLength={500} placeholder="例: ホール照明・音響 別途／ピアノ使用 別途" />
               </Field>

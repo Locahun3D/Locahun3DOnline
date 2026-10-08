@@ -466,6 +466,8 @@ export const propertySchema = z.object({
   dailyCapPrice: z.number().int().min(0).max(99999999).default(0),
   /** 表示金額が税込なら true（false = 税別）。 */
   taxIncluded: z.boolean().default(false),
+  /** 時間単価が「〜」（人数・内容で上がる最低額）なら true。表示に「〜」を付ける（2026-10-08 ダイスロケーション「¥25,000〜/h」）。 */
+  priceFrom: z.boolean().default(false),
   /** ロケハン費（例: 1.5hまで無料）。 */
   scoutingFee: z.string().max(120).default(""),
   /** 追加費用（照明・音響・機材など。複数行可）。 */

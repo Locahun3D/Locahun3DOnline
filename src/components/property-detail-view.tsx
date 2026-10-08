@@ -216,7 +216,7 @@ export default function PropertyDetailView({
   const lh = (href: string) => localizedHref(href, locale);
   const floorPlans = (property.blueprints ?? []).filter((b) => b.url);
   const heroTitle = propertyTitleLines(property.title);
-  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
+  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP") + (property.priceFrom ? "〜" : "");
   // 問い合わせ先（電話/メール/HP）が1つも無い物件は問い合わせを受け付けられない
   const hasContact = !!(
     property.contactPhone ||

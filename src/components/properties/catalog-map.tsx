@@ -38,7 +38,7 @@ function MarkerCard({ property: p, en }: { property: Property; en: boolean }) {
     p.priceType === "free"
       ? en ? "Free" : "無料"
       : p.hourlyPrice > 0
-        ? `¥${p.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP")}${p.priceType === "flat" ? "" : "/hr"}`
+        ? `¥${p.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP")}${p.priceFrom ? "〜" : ""}${p.priceType === "flat" ? "" : "/hr"}`
         : "";
   // 地図の枠は高さ 230px 前後しかないので、縦長のカードだと上の方のピンで切れる。
   // 写真を左、文字を右に並べた横長（高さ約80px）にしてある。

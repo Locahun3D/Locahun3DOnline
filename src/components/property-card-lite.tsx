@@ -29,7 +29,7 @@ export default function PropertyCardLite({
 }) {
   const en = useLocale() === "en";
   const lc = en ? "en" : "ja";
-  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
+  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP") + (property.priceFrom ? "〜" : "");
   // 3Dデータの有無（property-card.tsx と同一判定）。写真のみ掲載枠があるため、
   // バッジは実際に3Dがある物件にだけ出す。
   const hasSplat =

@@ -566,7 +566,7 @@ export default function BookmarksManager({
                 {p.priceType === "free" ? (
                   <span className="text-accent">{en ? "Free" : "無料"}</span>
                 ) : p.hourlyPrice > 0 ? (
-                  <span className="text-accent">¥{p.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP")}</span>
+                  <span className="text-accent">¥{p.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP")}{p.priceFrom ? "〜" : ""}</span>
                 ) : (
                   <span className="text-accent opacity-80">{en ? "Inquire" : "要問合せ"}</span>
                 )}

@@ -21,7 +21,7 @@ export default function PropertyCard({
   revalidate?: string;
 }) {
   const en = locale === "en";
-  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP");
+  const yen = property.hourlyPrice.toLocaleString(en ? "en-US" : "ja-JP") + (property.priceFrom ? "〜" : "");
   // 3Dデータの有無。単一の splatUrl と複数シーン(splatItems)のどちらかがあれば
   // 3Dありとみなす（エディターは両方の入り口を持つため片方だけのデータが実在する）。
   const hasSplat =
