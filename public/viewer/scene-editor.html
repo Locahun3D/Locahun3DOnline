@@ -224,6 +224,9 @@ body.protected-mode #em-export-splat,
 body.protected-mode #em-save-zip { display:none !important; }
 /* 2026-10-08 本人指示: オンライン版（物件ページ・埋め込み・共有）ではシーンレイヤーを出さない。 */
 body.protected-mode #layer-panel { display:none !important; }
+/* タッチ操作でボタンが押しにくい（2026-10-08 本人指示「見た目より少し当たり判定を大きく」）。
+   見た目は変えず、押せる範囲だけ周囲 8px 広げる（下の touch-hit の処理が、タッチ端末でだけ付ける）。 */
+body.touch-hit button.hit-pad::after{content:'';position:absolute;inset:-8px;}
 /* 2026-09-20: デモシーン(交差点)を読み込んでいる間もオンライン版と同じ扱い
    (保存/エクスポート不可)。body.demo-mode は 430 が layers を見て付け外しする。 */
 body.demo-mode #tb-save-btn,
@@ -3572,7 +3575,15 @@ const _SPLAT_TIERS = {
 // data; it is NOT something this code can tune from JS in 2.0.0.
 const _SPLAT_PARAMS = _SPLAT_TIERS[_splatPerfTier] || _SPLAT_TIERS.laptop_ok;
 console.info('[Locahun][PerfTier]', _splatPerfTier, _SPLAT_PARAMS);
-let fov = 90;
+// 標準の画角（2026-10-08 本人指示「デフォルトの画角をもっと大きめに」）。縦 90° は横長の画面では十分広いが、
+// 縦長（スマホ縦・iPad 縦）だと横が 55〜75° まで狭くなる。横の画角が 90° に満たない画面では縦を広げる（上限 110°）。
+// 利用者が FOV を変えたら（fov !== _autoFov）以後は触らない。
+function _autoFovFor(aspect){
+  const v=2*Math.atan(1/Math.max(.2,aspect||1))*180/Math.PI;
+  return Math.round(Math.min(110,Math.max(90,v)));
+}
+let fov = _autoFovFor(innerWidth/Math.max(1,innerHeight));
+let _autoFov = fov;
 // Touch devices (iPad / iPhone) felt too fast at the desktop default of 5
 // — the virtual joystick + touch-look make a given camSpeed cover more
 // ground per gesture than keyboard WASD, and at full joystick deflection
@@ -5421,6 +5432,8 @@ function _doViewportResize(){
   const h = visible ? visible.height : Math.max(1, innerHeight);
   renderer.setSize(w, h);
   camera.aspect = w / h;
+  let camTool=false;try{camTool=!!(cam&&cam.active);}catch(_){}
+  if(fov===_autoFov&&!camTool){const f=_autoFovFor(w/h);if(f!==fov){fov=_autoFov=f;camera.fov=f;}}
   camera.updateProjectionMatrix();
   _syncOrthoCamera();
   markDirty(8);
@@ -5966,9 +5979,20 @@ function checkLpvHandle(clientX,clientY){
   if(lpv.rotHandles) for(const rk of Object.keys(lpv.rotHandles)) meshes.push(...lpv.rotHandles[rk]);
   const hits=_lpvRay.intersectObjects(meshes,false);
   if(hits.length) return hits[0].object.userData.lpvHandle;
-
+  // タッチでは指が太く、細い矢印・輪に当たらない（2026-10-08 本人「iPad のギズモ操作が非常にシビア・動かしづらい」）。
+  // 当たらなかったら、触った点の周りを近い順に（10→19→28px）探して最初に当たった持ち手を使う。マウスは従来どおり。
+  if(_lpvCoarse){
+    for(const r of [10,19,28])for(let k=0;k<12;k++){
+      const a=k*Math.PI/6,x=clientX+Math.cos(a)*r,y=clientY+Math.sin(a)*r;
+      _lpvV2.set(((x-rect.left)/rect.width)*2-1,-((y-rect.top)/rect.height)*2+1);
+      _lpvRay.setFromCamera(_lpvV2, _useOrtho ? _orthoCamera : camera);
+      const near=_lpvRay.intersectObjects(meshes,false);
+      if(near.length) return near[0].object.userData.lpvHandle;
+    }
+  }
   return null;
 }
+const _lpvCoarse=typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches;
 
 function startLpvDrag(hit,clientX,clientY){
   const L=findLayer(selectedLayerId); if(!L) return;
@@ -31547,6 +31571,20 @@ if(new URLSearchParams(location.search).get('onlineSceneEdit')==='1'){
   lockName();
 
   // 共有URLボタンは 2026-10-08 本人指示で廃止（以前は Team プラン向けに2週間の共有URLを発行していた）。
+})();
+// タッチ端末ではボタンの押せる範囲を見た目より広げる（2026-10-08 本人指示）。CSS は body.touch-hit button.hit-pad::after。
+// 擬似要素をボタンの外へはみ出させるので、position が static のボタンだけ relative にする（見た目は変わらない）。
+(function(){
+  if(!matchMedia('(pointer:coarse)').matches)return;
+  const pad=root=>{
+    const list=root.tagName==='BUTTON'?[root]:root.querySelectorAll?root.querySelectorAll('button:not(.hit-pad)'):[];
+    for(const b of list){if(b.classList.contains('hit-pad'))continue;if(getComputedStyle(b).position==='static')b.style.position='relative';b.classList.add('hit-pad');}
+  };
+  const start=()=>{
+    document.body.classList.add('touch-hit');pad(document);
+    new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)pad(n);}).observe(document.body,{childList:true,subtree:true});
+  };
+  if(document.body)start();else addEventListener('DOMContentLoaded',start,{once:true});
 })();
 if(window.__locahunUpdateFrame)parent.postMessage({type:'locahun-update-ready',nonce:window.__locahunUpdateFrame},'*');
 </script>
