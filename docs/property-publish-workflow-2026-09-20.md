@@ -83,3 +83,17 @@
 - メールを送り直すとキーが入れ替わり、古いメールのボタンは無効になる。公開・申請の取り下げでキーは消える（使い切り）。
 - 取り下げたいときは、物件編集の「公開停止」。
 - 修正の希望は、従来どおりメールへの返信で受ける。
+
+## みなし承認（2026-10-08 追加・施設掲載規約 第4条3項）
+
+- 確認メール（**実送信**）から14日、承認も修正依頼も無ければ、再確認メールを1通（スタジオ宛・運営BCC）。
+  再確認（実送信）から7日、まだ回答が無ければ、`publishablePropertySchema` を通る場合だけ公開する。通らなければ「保留」を記録し運営へ1回通知。
+- 実行は Worker の定期実行（`custom-worker.ts` → `src/lib/deemed-approval-job.ts`、10分ごと。英訳の定期実行と同じ入口）。
+  判断は純関数 `deemedApprovalStep(p, now)`（`publish-flow.ts`）。書き込みは条件付き更新（updated_at と data が読んだときと同じ場合だけ）。
+  再確認メールは先に記録してから送る（送信失敗なら記録を戻して次回）。
+- 記録は `publishFlow` の JSON に持つ（D1 のカラム追加・マイグレーションは不要）:
+  `studioReconfirmSentAt / studioReconfirmMode / studioChangesRequestedAt / deemedApprovedAt / deemedApprovedBy("system:deemed-approval") / deemedApprovalHeldAt`、
+  公開時は `studioConfirmedVia: "deemed"`。
+- 修正依頼はメールで来るので、運営が公開設定パネルの「修正の依頼あり（みなし承認を止める）」にチェックする。直して確認メールを再送すると外れ、14日を数え直す。
+- `RESEND_API_KEY` が無い・`MAIL_DRY_RUN=1` の環境では送らず `dry-run` と記録し、dry-run の再確認からは公開しない。
+- 最初の確認メールの本文にも14日＋7日のルールを書いた（`studio-review-mail.ts`）。

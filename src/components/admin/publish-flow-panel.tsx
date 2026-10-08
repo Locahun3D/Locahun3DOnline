@@ -9,6 +9,8 @@ import {
   resendCooldownRemaining,
   reviewSubState,
   isPlausibleEmail,
+  DEEMED_RECONFIRM_AFTER_DAYS,
+  DEEMED_PUBLISH_AFTER_DAYS,
   type PublishFlow,
   type PublishStage,
 } from "@/lib/publish-flow";
@@ -38,6 +40,7 @@ export default function PublishFlowPanel({
   onRequest,
   onResend,
   onSetConfirmed,
+  onSetChangesRequested,
   onSetDataSale,
   onWithdraw,
   onPublish,
@@ -58,6 +61,8 @@ export default function PublishFlowPanel({
   onRequest: (opts: { skipMail: boolean }) => void;
   onResend: () => void;
   onSetConfirmed: (confirmed: boolean) => void;
+  /** 修正の依頼あり（記録中はみなし承認が止まる。2026-10-08）。 */
+  onSetChangesRequested?: (requested: boolean) => void;
   onSetDataSale: (answer: "granted" | "declined" | "reset") => void;
   onWithdraw: () => void;
   onPublish: () => void;
@@ -205,6 +210,9 @@ export default function PublishFlowPanel({
               )}
             </Row>
             <Row k="スタジオ確認">{flow.studioConfirmedAt ? fmt(flow.studioConfirmedAt) : "未確認"}</Row>
+            <Row k="みなし承認">
+              {deemedText(flow, fmt)}
+            </Row>
             {flow.studioPhotosEditedAt && <Row k="写真の編集">{`${fmt(flow.studioPhotosEditedAt)}（スタジオが確認ページで変更）`}</Row>}
             <Row k="英訳">{missingEnglish.length === 0 ? "完了" : `未翻訳あり: ${missingEnglish.join("、")}`}</Row>
             <Row k="3Dデータ販売">
@@ -251,6 +259,26 @@ export default function PublishFlowPanel({
               </span>
             </span>
           </label>
+
+          {onSetChangesRequested && (
+            <label className="flex items-start gap-2 text-[12px] leading-[1.7] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!flow.studioChangesRequestedAt}
+                disabled={busy}
+                onChange={(e) => onSetChangesRequested(e.target.checked)}
+                className="mt-1 w-4 h-4 accent-[#ffb454]"
+              />
+              <span>
+                修正の依頼あり（みなし承認を止める）
+                <span className="block text-[11px] text-muted">
+                  スタジオから修正の希望が届いたらチェックします。
+                  <br />
+                  直した内容で確認メールを再送すると外れ、14日を数え直します。
+                </span>
+              </span>
+            </label>
+          )}
 
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={busy} onClick={onPublish} className={primary}>
@@ -307,7 +335,15 @@ export default function PublishFlowPanel({
       {stage === "published" && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[12px]">
           <Row k="公開">{fmt(flow.publishedAt)}</Row>
-          <Row k="スタジオ確認">{flow.studioConfirmedAt ? fmt(flow.studioConfirmedAt) : "記録なし"}</Row>
+          <Row k="スタジオ確認">
+            {flow.studioConfirmedAt ? fmt(flow.studioConfirmedAt) : "記録なし"}
+            {flow.studioConfirmedVia === "deemed" && (
+              <span className="ml-2 text-amber-400">
+                みなし承認（{flow.deemedApprovedBy ?? "自動"}・施設掲載規約 第4条3項）
+              </span>
+            )}
+          </Row>
+          {flow.studioReconfirmSentAt && <Row k="再確認メール">{fmt(flow.studioReconfirmSentAt)}</Row>}
           <Row k="確認メール">
             {flow.studioNotifiedAt ? `${fmt(flow.studioNotifiedAt)} → ${flow.studioNotifiedTo ?? ""}` : "記録なし"}
           </Row>
@@ -315,6 +351,29 @@ export default function PublishFlowPanel({
       )}
     </div>
   );
+}
+
+/** みなし承認（施設掲載規約 第4条3項）の進み具合を一行で。判断は定期実行側（deemedApprovalStep）。 */
+function deemedText(flow: PublishFlow, fmt: (iso: string | null) => string): string {
+  const plusDays = (iso: string, d: number) => {
+    const t = Date.parse(iso);
+    return Number.isNaN(t) ? null : new Date(t + d * 86_400_000).toISOString();
+  };
+  if (flow.studioConfirmedAt) return "—（確認済み）";
+  if (flow.studioChangesRequestedAt) return `停止中（修正依頼 ${fmt(flow.studioChangesRequestedAt)}）`;
+  if (flow.studioNotifyMode !== "sent" || !flow.studioNotifiedAt) {
+    return "対象外（確認メールを実際には送っていません）";
+  }
+  if (!flow.studioReconfirmSentAt) {
+    return `再確認メール予定 ${fmt(plusDays(flow.studioNotifiedAt, DEEMED_RECONFIRM_AFTER_DAYS))}`;
+  }
+  if (flow.studioReconfirmMode !== "sent") {
+    return `再確認 ${fmt(flow.studioReconfirmSentAt)}（ドライランのため公開はしません）`;
+  }
+  if (flow.deemedApprovalHeldAt) {
+    return `期限到来・公開に必要な項目が不足のため保留（${fmt(flow.deemedApprovalHeldAt)}）`;
+  }
+  return `再確認 ${fmt(flow.studioReconfirmSentAt)} → 回答が無ければ ${fmt(plusDays(flow.studioReconfirmSentAt, DEEMED_PUBLISH_AFTER_DAYS))} 以降に公開`;
 }
 
 function FlowItem({

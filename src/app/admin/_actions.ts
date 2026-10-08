@@ -38,6 +38,7 @@ import {
   recordStudioNotified,
   resetReview,
   setStudioConfirmed,
+  setStudioChangesRequested,
   translationGuard,
   publishStage,
   type MailOutcome,
@@ -665,6 +666,29 @@ export async function setStudioConfirmedAction(
   }
   const saved = await repo.upsert(
     setStudioConfirmed(existing, { confirmed, now: new Date().toISOString() }),
+  );
+  revalidatePath("/admin/properties");
+  revalidatePath(`/admin/properties/${id}/edit`);
+  return { ok: true, updatedAt: saved.updatedAt, property: saved };
+}
+
+/**
+ * 「修正の依頼あり」の記録（2026-10-08）。スタジオの返事はメールで来るため運営が記録する。
+ * 記録がある間は、みなし承認（再確認メール・自動公開）を止める（施設掲載規約 第4条3項）。
+ * 直した内容で確認メールを送り直すと記録は消え、14日を数え直す（publish-flow.ts）。
+ */
+export async function setStudioChangesRequestedAction(
+  id: string,
+  requested: boolean,
+): Promise<{ ok: true; updatedAt: string | undefined; property: Property } | FlowErr> {
+  await requireAdmin();
+  const existing = await repo.get(id);
+  if (!existing) return { ok: false, error: "物件が見つかりません" };
+  if (publishStage(existing) !== "review") {
+    return { ok: false, error: "公開申請中の物件ではありません。" };
+  }
+  const saved = await repo.upsert(
+    setStudioChangesRequested(existing, { requested, now: new Date().toISOString() }),
   );
   revalidatePath("/admin/properties");
   revalidatePath(`/admin/properties/${id}/edit`);

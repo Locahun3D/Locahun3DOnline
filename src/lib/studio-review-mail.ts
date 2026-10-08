@@ -53,6 +53,7 @@ export interface StudioReviewMail {
 import { embedSnippet } from "./embed-snippet";
 import { REVENUE_SHARE_PERCENT } from "./data-sale-consent";
 import { STUDIO_MAIL_TERMS } from "./terms-catalog";
+import { DEEMED_RECONFIRM_AFTER_DAYS, DEEMED_PUBLISH_AFTER_DAYS } from "./publish-flow";
 
 const esc = (s: string) =>
   String(s ?? "")
@@ -216,6 +217,9 @@ export function buildStudioReviewMail(input: StudioReviewMailInput): StudioRevie
     <p ${p}>問題がなければ、プレビューページの上部にある「この内容でOK・公開する」ボタンを押してください。<br>
     ボタンを押した時点で、掲載ページが公開されます。<br>
     修正のご希望がある場合は、ボタンを押さずに、このメールへの返信でお知らせください。</p>
+    <p style="font-size:13px;line-height:1.9;margin:0 0 16px;color:#444;">このメールから${DEEMED_RECONFIRM_AFTER_DAYS}日以内にご回答がない場合は、改めて確認のご連絡をお送りします。<br>
+    その再確認から${DEEMED_PUBLISH_AFTER_DAYS}日以内にもご回答がない場合は、ご承認いただいたものとして掲載ページを公開いたします（施設掲載規約 第4条）。<br>
+    公開後も、内容の修正や掲載の停止・削除はいつでもお申し付けいただけます。</p>
     <p style="font-size:12px;line-height:1.8;color:#999;margin:0 0 16px;">お問い合わせ: ${esc(contact)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
     <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">

@@ -42,6 +42,7 @@ import {
   requestReviewAction,
   resendStudioReviewMailAction,
   setStudioConfirmedAction,
+  setStudioChangesRequestedAction,
   setDataSaleConsentAction,
   withdrawReviewAction,
   archiveAction,
@@ -660,6 +661,15 @@ export default function PropertyEditor({
     runFlow(
       () => setStudioConfirmedAction(initial.id, confirmed),
       () => (confirmed ? "スタジオ確認済みとして記録しました。" : "スタジオ確認済みの記録を外しました。"),
+    );
+  // 修正の依頼あり（2026-10-08）。記録中はみなし承認（再確認メール・自動公開）が止まる。
+  const onSetChangesRequested = (requested: boolean) =>
+    runFlow(
+      () => setStudioChangesRequestedAction(initial.id, requested),
+      () =>
+        requested
+          ? "修正の依頼ありとして記録しました。みなし承認は止まります。"
+          : "修正の依頼の記録を外しました。",
     );
   // 3Dデータ販売の許諾を運営が手で記録する（2026-09-26。電話・口頭で返事が来たとき）。
   const onSetDataSale = (answer: "granted" | "declined" | "reset") =>
@@ -2855,6 +2865,7 @@ export default function PropertyEditor({
                 onRequest={onRequestReview}
                 onResend={onResendStudioMail}
                 onSetConfirmed={onSetStudioConfirmed}
+                onSetChangesRequested={onSetChangesRequested}
                 onSetDataSale={onSetDataSale}
                 onWithdraw={onWithdrawReview}
                 onPublish={onPublish}

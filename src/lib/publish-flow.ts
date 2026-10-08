@@ -39,7 +39,21 @@ export const EMPTY_PUBLISH_FLOW: PublishFlow = {
   studioApproveKeyHash: null,
   publishedAt: null,
   studioPhotosEditedAt: null,
+  studioReconfirmSentAt: null,
+  studioReconfirmMode: null,
+  studioChangesRequestedAt: null,
+  deemedApprovedAt: null,
+  deemedApprovedBy: null,
+  deemedApprovalHeldAt: null,
 };
+
+/** みなし承認の再確認・公開を行う「再確認待ち」の各フィールドを白紙にした差分。 */
+const CLEAR_DEEMED_PROGRESS = {
+  studioReconfirmSentAt: null,
+  studioReconfirmMode: null,
+  studioChangesRequestedAt: null,
+  deemedApprovalHeldAt: null,
+} as const;
 
 /** 確認メール再送のクールダウン（誤って連打・二重送信しないため）。 */
 export const RESEND_COOLDOWN_MS = 60_000;
@@ -76,20 +90,142 @@ export function publishDisplayStage(p: StageSource, ready: boolean): PublishDisp
 }
 
 /** 申請中の細かい状態（一覧バッジ・エディター表示用）。 */
-export type ReviewSubState = "mail-unsent" | "awaiting-studio" | "studio-confirmed";
+export type ReviewSubState =
+  | "mail-unsent"
+  | "awaiting-studio"
+  | "reconfirm-sent"
+  | "changes-requested"
+  | "studio-confirmed";
 
 export function reviewSubState(flow: PublishFlow | undefined | null): ReviewSubState {
   const f = flow ?? EMPTY_PUBLISH_FLOW;
   if (f.studioConfirmedAt) return "studio-confirmed";
-  if (f.studioNotifiedAt && f.studioNotifyMode !== "skipped") return "awaiting-studio";
+  if (f.studioChangesRequestedAt) return "changes-requested";
+  if (f.studioNotifiedAt && f.studioNotifyMode !== "skipped") {
+    return f.studioReconfirmSentAt ? "reconfirm-sent" : "awaiting-studio";
+  }
   return "mail-unsent";
 }
 
 export const REVIEW_SUBSTATE_LABEL: Record<ReviewSubState, string> = {
   "mail-unsent": "確認メール未送信",
   "awaiting-studio": "スタジオ確認待ち",
+  "reconfirm-sent": "再確認中（期限後にみなし承認）",
+  "changes-requested": "修正依頼あり",
   "studio-confirmed": "スタジオ確認済み",
 };
+
+// ─── みなし承認（掲載規約 第4条3項・2026-10-08 本人判断） ────────────
+//
+// 確認用リンクを送った日から14日以内に回答（承認・修正の求め）が無ければ再確認メールを1通。
+// 再確認から7日以内にも回答が無ければ、承認されたものとみなして公開する。
+// 実行は Worker の定期実行（10分ごと。src/lib/deemed-approval-job.ts）。判断はここの純関数だけ。
+
+/** 確認メールから再確認メールまでの日数。 */
+export const DEEMED_RECONFIRM_AFTER_DAYS = 14;
+/** 再確認メールからみなし承認（公開）までの日数。 */
+export const DEEMED_PUBLISH_AFTER_DAYS = 7;
+/** みなし承認の記録に残す主体。 */
+export const DEEMED_APPROVAL_ACTOR = "system:deemed-approval";
+
+const DAY_MS = 86_400_000;
+
+export type DeemedApprovalStep =
+  | { kind: "none"; reason: string }
+  | { kind: "send-reconfirm"; dueAt: string }
+  | { kind: "publish"; dueAt: string };
+
+function parseMs(iso: string | null | undefined): number {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isNaN(t) ? NaN : t;
+}
+
+/**
+ * いま何をすべきか（純関数。nowMs を注入してテストする）。何度呼んでも同じ状態なら同じ答え
+ * （＝10分ごとに走っても、記録が進まない限り同じ処理を二重にしない。記録は呼び出し側が条件付き更新で書く）。
+ *
+ * 対象: 公開申請中 ／ 確認メールを**実際に送っている**（dry-run・skipped は対象外）／
+ *       スタジオ未確認 ／ 修正依頼の記録なし。
+ */
+export function deemedApprovalStep(
+  p: Pick<Property, "status" | "publishRequestedAt" | "publishFlow">,
+  nowMs: number,
+): DeemedApprovalStep {
+  if (publishStage(p) !== "review") return { kind: "none", reason: "not_in_review" };
+  const f = p.publishFlow ?? EMPTY_PUBLISH_FLOW;
+  if (f.studioConfirmedAt) return { kind: "none", reason: "confirmed" };
+  if (f.studioChangesRequestedAt) return { kind: "none", reason: "changes_requested" };
+  if (f.studioNotifyMode !== "sent") return { kind: "none", reason: "mail_not_sent" };
+  const notified = parseMs(f.studioNotifiedAt);
+  if (Number.isNaN(notified)) return { kind: "none", reason: "mail_not_sent" };
+
+  const reconfirm = parseMs(f.studioReconfirmSentAt);
+  // 再確認の記録が無い、または確認メールの再送より前のもの（＝古い流れ）なら、再確認がまだ。
+  if (Number.isNaN(reconfirm) || reconfirm < notified) {
+    const due = notified + DEEMED_RECONFIRM_AFTER_DAYS * DAY_MS;
+    if (nowMs < due) return { kind: "none", reason: "waiting_first_reply" };
+    return { kind: "send-reconfirm", dueAt: new Date(due).toISOString() };
+  }
+  // 再確認を実際に送っていない（dry-run）なら、みなし承認はしない。
+  if (f.studioReconfirmMode !== "sent") return { kind: "none", reason: "reconfirm_not_sent" };
+  const due = reconfirm + DEEMED_PUBLISH_AFTER_DAYS * DAY_MS;
+  if (nowMs < due) return { kind: "none", reason: "waiting_reconfirm_reply" };
+  if (f.deemedApprovalHeldAt) return { kind: "none", reason: "held_not_publishable" };
+  return { kind: "publish", dueAt: new Date(due).toISOString() };
+}
+
+/** 再確認メールの送信を記録。 */
+export function recordReconfirmSent<T extends Property>(
+  p: T,
+  opts: { now: string; mode: "sent" | "dry-run" },
+): T {
+  return {
+    ...p,
+    publishFlow: {
+      ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW),
+      studioReconfirmSentAt: opts.now,
+      studioReconfirmMode: opts.mode,
+      deemedApprovalHeldAt: null,
+    },
+  };
+}
+
+/** みなし承認として確認済みを記録する（公開そのものは markPublished と組み合わせる）。 */
+export function markDeemedApproved<T extends Property>(p: T, now: string): T {
+  return {
+    ...p,
+    publishFlow: {
+      ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW),
+      studioConfirmedAt: now,
+      studioConfirmedVia: "deemed",
+      deemedApprovedAt: now,
+      deemedApprovedBy: DEEMED_APPROVAL_ACTOR,
+      deemedApprovalHeldAt: null,
+    },
+  };
+}
+
+/** 期限は来たが公開に必要な項目が足りず保留した、を記録（運営への通知を1回にするため）。 */
+export function markDeemedApprovalHeld<T extends Property>(p: T, now: string): T {
+  return {
+    ...p,
+    publishFlow: { ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW), deemedApprovalHeldAt: now },
+  };
+}
+
+/** スタジオから修正の依頼を受けた（運営が記録）。記録がある間はみなし承認しない。 */
+export function setStudioChangesRequested<T extends Property>(
+  p: T,
+  opts: { requested: boolean; now: string },
+): T {
+  return {
+    ...p,
+    publishFlow: {
+      ...(p.publishFlow ?? EMPTY_PUBLISH_FLOW),
+      studioChangesRequestedAt: opts.requested ? opts.now : null,
+    },
+  };
+}
 
 /** ごく緩いメール形式チェック（宛先の打ち間違いを送信前に止める）。 */
 export function isPlausibleEmail(s: string | undefined | null): boolean {
@@ -277,7 +413,14 @@ function mailFields(mail: MailOutcome, now: string, prev: PublishFlow) {
     if (prev.studioNotifiedAt && prev.studioNotifyMode !== "skipped") return {};
     return { studioNotifiedAt: null, studioNotifiedTo: null, studioNotifyMode: "skipped" as const };
   }
-  return { studioNotifiedAt: now, studioNotifiedTo: mail.to, studioNotifyMode: mail.mode, studioApproveKeyHash: mail.approveKeyHash ?? null };
+  // 確認メールを（出し直して）送ったら、みなし承認の14日は送った日から数え直す。
+  return {
+    studioNotifiedAt: now,
+    studioNotifiedTo: mail.to,
+    studioNotifyMode: mail.mode,
+    studioApproveKeyHash: mail.approveKeyHash ?? null,
+    ...CLEAR_DEEMED_PROGRESS,
+  };
 }
 
 /** 確認メールの（再）送信を記録。 */
@@ -294,6 +437,8 @@ export function recordStudioNotified<T extends Property>(
       studioNotifyMode: opts.mail.mode,
       // 送り直したら承認キーも入れ替わる（古いメールのボタンは無効になる）。
       studioApproveKeyHash: opts.mail.approveKeyHash ?? null,
+      // 送り直した日から、みなし承認の14日を数え直す（修正依頼の記録も、直した内容を出し直したので消す）。
+      ...CLEAR_DEEMED_PROGRESS,
     },
   };
 }

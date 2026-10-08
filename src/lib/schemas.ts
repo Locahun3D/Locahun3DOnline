@@ -713,8 +713,25 @@ export const propertySchema = z.object({
       studioNotifyMode: z.enum(["sent", "dry-run", "skipped"]).nullable().default(null),
       /** スタジオから「この内容でOK」の返事をもらった日時（運営が手動で記録）。 */
       studioConfirmedAt: z.string().nullable().default(null),
-      /** 確認の取り方。admin=運営が手動で記録 / studio-link=スタジオがプレビューの承認ボタンを押した（2026-09-21）。 */
-      studioConfirmedVia: z.enum(["admin", "studio-link"]).nullable().default(null),
+      /**
+       * 確認の取り方。admin=運営が手動で記録 / studio-link=スタジオがプレビューの承認ボタンを押した（2026-09-21）/
+       * deemed=未回答のためみなし承認（掲載規約 第4条3項。2026-10-08）。
+       */
+      studioConfirmedVia: z.enum(["admin", "studio-link", "deemed"]).nullable().default(null),
+      /**
+       * みなし承認の流れ（掲載規約 第4条3項・2026-10-08）。確認メールから14日で再確認メールを1通、
+       * 再確認から7日で回答が無ければ公開する（定期実行 deemed-approval-job.ts）。
+       * 再確認メールを送った日時と送信モード（sent=実送信 / dry-run=送っていない）。
+       */
+      studioReconfirmSentAt: z.string().nullable().default(null),
+      studioReconfirmMode: z.enum(["sent", "dry-run"]).nullable().default(null),
+      /** スタジオから修正の依頼を受けた日時（運営が記録）。記録がある間はみなし承認しない。 */
+      studioChangesRequestedAt: z.string().nullable().default(null),
+      /** みなし承認で公開した日時と主体（"system:deemed-approval"）。運営が後から分かるように残す。 */
+      deemedApprovedAt: z.string().nullable().default(null),
+      deemedApprovedBy: z.string().nullable().default(null),
+      /** みなし承認の期限は来たが、公開に必要な項目が足りず保留した日時（運営への通知は1回だけ）。 */
+      deemedApprovalHeldAt: z.string().nullable().default(null),
       /** 承認ボタン用キーの SHA-256。キー本体は確認メールのURLにだけ入る（保存しない）。メールを送り直すと入れ替わる。 */
       studioApproveKeyHash: z.string().nullable().default(null),
       /** このワークフローを経て公開した日時（直近の公開）。 */
