@@ -29417,7 +29417,18 @@ function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeig
         if(solid-seen>.75)return preview?{point:{x:point.x,y:point.y,z:point.z},valid:false}:false;
       }
     }
-    const hit=LocahunClickNavigation.resolveSurface(picked,camPos,(a,b,d)=>core.raycastSurface(a,b,d));
+    let hit=LocahunClickNavigation.resolveSurface(picked,camPos,(a,b,d)=>core.raycastSurface(a,b,d));
+    // 家具の上面に乗らない（2026-10-08 スタジオバベル/バルス「目線が天井から見下ろす高さになる・天井を突き抜ける」）。
+    // 行き先が今の足元より 0.3〜1.7m 高く、その真下に今と同じ高さの床があるなら、それはソファ・机・台の天面なので床へ降ろす。
+    // 階段の上の階（真下に今の床が無い）はそのまま行ける。
+    if(hit){
+      const feet=LocahunClickNavigation.resolveOrigin(core,camPos),rise=hit.point.y-feet.y;
+      if(rise>.3&&rise<1.7){
+        const below=core.raycastSurface({x:hit.point.x,y:hit.point.y-.05,z:hit.point.z},{x:0,y:-1,z:0},rise+.4);
+        const n=below?.normal,len=n?Math.hypot(n.x,n.y,n.z):0;
+        if(below?.point&&len>1e-8&&n.y/len>=Math.SQRT1_2&&Math.abs(below.point.y-feet.y)<.3)hit=below;
+      }
+    }
     if(!hit)return preview?{point:picked.point,valid:false}:false;
     const controller=LocahunClickNavigation.create({
       collision:false,eyeHeight,
