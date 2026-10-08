@@ -21,7 +21,7 @@ export function mailShell(title: string, bodyHtml: string): string {
       ${bodyHtml}
     </div>
     <div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;">
-      発行者: ロケハン3D（KWI株式会社） / お問い合わせ: contact@locahun3d.com
+      発行者: ロケハン3D（Kawaii World Industries株式会社（KWI株式会社）） / お問い合わせ: contact@locahun3d.com
     </div>
   </div>
 </body></html>`;

@@ -53,7 +53,7 @@ export default async function PayoutStatementPage({
             {/* 2026-09-20: 商標ロゴ統一。ロゴ位置は欧文ワードマーク（発行者欄の製品名は据え置き） */}
             <div className="text-xl font-bold tracking-wider">Locahun 3D</div>
             <div className="text-[11px] opacity-50 tracking-[0.16em] uppercase mt-1">
-              運営: KWI株式会社
+              運営: Kawaii World Industries株式会社（KWI株式会社）
             </div>
           </div>
           <div className="text-right text-[12px] leading-[1.8] mono">
@@ -159,7 +159,7 @@ export default async function PayoutStatementPage({
         </p>
 
         <footer className="border-t border-[#ddd] pt-6 text-[11px] opacity-50 leading-[1.8]">
-          <div>発行者: ロケハン3D（運営: KWI株式会社）</div>
+          <div>発行者: ロケハン3D（運営: Kawaii World Industries株式会社（KWI株式会社））</div>
           <div>URL: https://locahun3d.com</div>
           <div>お問い合わせ: contact@locahun3d.com</div>
           <div className="mt-2">発行日時: {fmtDateLongJST(settlement.createdAt)}</div>

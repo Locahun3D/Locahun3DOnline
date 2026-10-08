@@ -126,7 +126,7 @@ Even where this Data is provided free of charge (e.g. through a
 campaign), these terms (full text at the URL above) still apply.
 
 ================================================================
-Locahun 3D (operated by KWI Inc.)
+Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
 https://locahun3d.com
 ================================================================
 `;
@@ -215,7 +215,7 @@ ${p.editorialRightsCredit ? `
 （全文は上記URL）がそのまま適用されます。
 
 ================================================================
-ロケハン3D（運営: KWI株式会社）
+ロケハン3D（運営: Kawaii World Industries株式会社（KWI株式会社））
 https://locahun3d.com
 ================================================================
 `;

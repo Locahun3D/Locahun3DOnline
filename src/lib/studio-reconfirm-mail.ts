@@ -72,7 +72,7 @@ export function buildStudioReconfirmMail(input: StudioReconfirmMailInput): MailT
     <p style="font-size:12px;line-height:1.8;color:#999;margin:0 0 16px;">お問い合わせ: ${esc(contact)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
     <p style="font-size:12px;line-height:1.8;color:#666;margin:0;">
-      ロケハン3D（運営：KWI株式会社）<br>
+      ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））<br>
       〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F<br>
       ${esc(contact)}<br>
       <a href="${esc(site)}" style="color:#666;">${esc(site)}</a>

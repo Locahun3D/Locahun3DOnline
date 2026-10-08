@@ -33,6 +33,8 @@ describe("buildStudioReviewMail", () => {
     const { bodyHtml } = buildStudioReviewMail(input);
     expect(bodyHtml).not.toContain("English:");
     expect(bodyHtml).toContain("KWI株式会社");
+    // 署名は正式な商号（2026-10-08）
+    expect(bodyHtml).toContain("ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））");
     expect(bodyHtml).toContain("東京都新宿区新宿1-24-12");
     expect(bodyHtml).toContain('href="https://locahun3d.com"');
   });

@@ -43,7 +43,7 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
         taxNote: "* The amount above includes consumption tax.",
         license: "License",
         purchaser: "Purchaser",
-        issuer: "Issuer: Locahun 3D (operated by KWI Inc.)",
+        issuer: "Issuer: Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))",
         contact: "Contact: contact@locahun3d.com",
         printBtn: "Print / Save as PDF",
       }
@@ -58,7 +58,7 @@ export function generateReceiptHtml(p: ReceiptInput, opts?: { forEmail?: boolean
         taxNote: "※ 上記金額には消費税が含まれています。",
         license: "ライセンス",
         purchaser: "購入者",
-        issuer: "発行者: ロケハン3D（KWI株式会社）",
+        issuer: "発行者: ロケハン3D（Kawaii World Industries株式会社（KWI株式会社））",
         contact: "お問い合わせ: contact@locahun3d.com",
         printBtn: "印刷 / PDF保存",
       };

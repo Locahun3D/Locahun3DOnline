@@ -18,9 +18,12 @@ export default async function SiteFooter() {
     <footer className="theme-online relative mt-0 sm:mt-32 border-t border-line">
       <div className="frame pt-8 pb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="mono text-[10px] tracking-[0.28em] uppercase text-ink/70">
-          {en
-            ? `© ${year} Locahun 3D — KWI Inc.`
-            : `© ${year} ロケハン3D — KWI株式会社`}
+          {/* 2026-10-08: 著作権表示は正式な商号。商号は大文字化しない（登記どおりの表記を保つ）。 */}
+          {en ? `© ${year} Locahun 3D — ` : `© ${year} ロケハン3D — `}
+          {/* 商号の途中で折らない（iPad 幅でナビと並ぶと「Kawaii World／Industries」と割れていた）。 */}
+          <span className="normal-case whitespace-nowrap">
+            {en ? "Kawaii World Industries Inc." : "Kawaii World Industries株式会社"}
+          </span>
         </div>
         {/* ⚠ スマホ(<720px)はタップ領域を 44px 確保する（Apple HIG / WCAG 2.5.5）。
             文字サイズ 10px は意匠なので変えず、min-h + inline-flex で「押せる高さ」
