@@ -87,7 +87,7 @@ export default function StudioDataSaleBar({
             <br />
             {price > 0 ? `Planned price: ${yen} (incl. tax).` : "The price will be agreed with you afterwards."}
             <br />
-            {REVENUE_SHARE_PERCENT}% of each sale goes to your studio.
+            {REVENUE_SHARE_PERCENT}% of each sale price (excluding tax), plus consumption tax, goes to your studio.
           </>
         ) : (
           <>
@@ -95,7 +95,7 @@ export default function StudioDataSaleBar({
             <br />
             {price > 0 ? `販売価格は ${yen}（税込）を予定しています。` : "販売価格は、ご許諾のあとに改めてご相談します。"}
             <br />
-            売上の {REVENUE_SHARE_PERCENT}% を貴スタジオへ分配します（掲載データ販売分配規約 第2条）。
+            税抜の販売価格の {REVENUE_SHARE_PERCENT}% に消費税相当額を加えた額を、貴スタジオへ分配します（掲載データ販売分配規約 第2条）。
             <br />
             販売しない場合でも、掲載ページと3Dツアーはそのままご利用いただけます。
           </>

@@ -34,6 +34,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "スタジオ",
     note: "掲載の条件・写真の扱い・掲載の停止",
     effective: "2026-09-26",
+    updated: "2026-10-08",
     inStudioMail: true,
   },
   {
@@ -43,7 +44,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "スタジオ",
     note: "販売時の分配（20%）と精算",
     effective: "2026-08-02",
-    updated: "2026-08-04",
+    updated: "2026-10-08",
     inStudioMail: true,
   },
   {
@@ -53,7 +54,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "購入者",
     note: "購入者が守る条件（第三者の権利物の扱いを含む）",
     effective: "2026-06-23",
-    updated: "2026-09-19",
+    updated: "2026-10-08",
     inStudioMail: true,
   },
   {
@@ -63,7 +64,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "全員",
     note: "サービス全体",
     effective: "2026-07-11",
-    updated: "2026-09-21",
+    updated: "2026-10-08",
     inStudioMail: true,
   },
   {
@@ -73,7 +74,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "購入者",
     note: "運営者・支払い・キャンセル",
     effective: "2026-07-01",
-    updated: "2026-08-02",
+    updated: "2026-10-08",
     inStudioMail: true,
   },
   {

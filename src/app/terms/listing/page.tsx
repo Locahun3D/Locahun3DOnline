@@ -29,7 +29,7 @@ export default async function ListingTermsPage() {
       <header className="ui-page-header">
         <h1 className="ui-page-title">施設掲載規約</h1>
         <p className="ui-page-lead text-[14px] text-muted">
-          KWI株式会社（以下「当社」）が運営する「ロケハン3D」に、スタジオ・ロケーション施設を掲載いただく際の条件を定めるものです。
+          Kawaii World Industries株式会社（KWI株式会社。以下「当社」）が運営する「ロケハン3D」に、スタジオ・ロケーション施設を掲載いただく際の条件を定めるものです。
           <br />
           3Dデータが売れたときの分配は
           <Link
@@ -65,7 +65,10 @@ export default async function ListingTermsPage() {
         <section>
           <h2 className="ui-section-title mb-4">第2条（費用）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>対象施設の3Dスキャン撮影、3Dデータの制作・調整、掲載ページの制作（日本語・英語）、公開後の保管・配信・維持管理は、当社が無償で行います。掲載者に費用のご負担を求めません。</li>
+            {/* 2026-10-08 本人判断: 掲載・保管配信・埋め込みは期限なしで無償。
+                有償になりうるのはスキャン（撮影＋3Dデータ制作）だけで、金額は撮影前の個別合意。 */}
+            <li>掲載ページの制作（日本語・英語）、3Dデータの保管・配信・維持管理、および掲載者のウェブサイト等への3Dツアーの埋め込み（ホスティング）は、当社が無償で行い、無償とする期間に期限を設けません。</li>
+            <li>対象施設の3Dスキャン（撮影および3Dデータの制作）の費用を有償とする場合は、撮影前に掲載者と個別に合意した金額とします（無償とする場合があります）。本条に定めるほか、当社は掲載者に費用のご負担を求めません。</li>
             <li>撮影当日の立会い、施設側の人員・鍵の手配、当社の到着から撤収までに要する時間の確保は、掲載者にご協力いただきます。</li>
           </ol>
         </section>
@@ -75,7 +78,7 @@ export default async function ListingTermsPage() {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>撮影の日時および範囲は、当社と掲載者が事前に協議して定めます。</li>
             <li>掲載者は、撮影範囲に、掲載を望まない物品、第三者の権利に関わる展示物、個人情報が記載された書類等が置かれていないことをご確認ください。撮影後に判明した場合は、第6条の手順により修正または非公開とします。</li>
-            <li>当社は、撮影にあたり対象施設の設備等を損傷しないよう注意します。当社の責めに帰すべき事由により損害が生じた場合は、当社がその損害を賠償します。</li>
+            <li>当社は、撮影にあたり対象施設の設備等を損傷しないよう注意します。当社の責めに帰すべき事由により損害が生じた場合は、当社がその損害を賠償します。この場合の賠償の範囲および上限は、当社の故意または重過失による場合を除き、第10条第2項によります。</li>
           </ol>
         </section>
 
@@ -84,7 +87,8 @@ export default async function ListingTermsPage() {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>当社は、掲載ページを作成し、公開前に掲載者へ確認用のリンク（ログイン不要・期限付き）をお送りします。</li>
             <li>掲載ページは、掲載者が当該リンク上で承認した時点、または掲載者から書面もしくは電子メールで承認の意思表示を受けた時点で公開します。</li>
-            <li>公開後の内容の修正・追加は、いつでもお申し付けください。当社は速やかに対応します。</li>
+            <li>当社が確認用のリンクをお送りした日から<strong>14日以内</strong>に、掲載者から承認、修正の求めその他の回答がない場合、当社は掲載者に改めて確認をお願いします。当該再確認の日から<strong>7日以内</strong>にも回答がない場合、当社は掲載ページが承認されたものとみなして公開することができます。</li>
+            <li>公開後の内容の修正・追加は、いつでもお申し付けください。当社は速やかに対応します。前項により公開した場合も、掲載者は第6条により、いつでも掲載の停止または削除を求めることができます。</li>
           </ol>
         </section>
 
@@ -92,7 +96,8 @@ export default async function ListingTermsPage() {
           <h2 className="ui-section-title mb-4">第5条（写真・情報の利用許諾）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>掲載者は当社に対し、対象施設の名称・所在地・設備・料金その他の掲載情報、ならびに掲載者が提供し、または掲載者の公式サイト等から当社が引用し掲載者の承認を得た写真を、本サービスの掲載ページ、本サービスの紹介、広告宣伝および報道発表に利用することを許諾します。</li>
-            <li>前項の許諾は無償・非独占とし、掲載が継続する期間について有効とします。掲載の終了後、当社は当該写真の新たな利用を行いません（既に配布した印刷物・公開済みの記事等を除きます）。</li>
+            <li>当社は、前項の写真を、表示に必要な範囲（トリミング、サイズの変更、明るさの調整）に限り改変することができます。これを超える改変は行いません。</li>
+            <li>第1項の許諾は無償・非独占とし、掲載が継続する期間について有効とします。掲載の終了後、当社は当該写真の新たな利用を行いません（既に配布した印刷物・公開済みの記事等を除きます）。</li>
             <li>当社は、写真の著作権を取得するものではありません。</li>
           </ol>
         </section>
@@ -128,7 +133,14 @@ export default async function ListingTermsPage() {
               によります。
             </li>
             <li>掲載者は、前項の許諾をいつでも撤回することができます。撤回の後、当社は新たな販売を行いません。撤回前に販売された分について購入者が取得した利用許諾は存続します。</li>
-            <li>掲載者は、掲載ページの3Dツアーを、自社サイトその他の媒体に無償で埋め込んで利用することができます。</li>
+            <li>
+              掲載者は、掲載ページの3Dツアーを、当社が発行する埋め込みコードにより、自社サイトその他の媒体に無償で埋め込んで利用することができます。埋め込みの条件は
+              <Link href={localizedHref("/terms/service", locale)} className="text-accent hover:underline">
+                利用規約
+              </Link>
+              第7条によります。
+            </li>
+            <li>掲載者は、本サービスの閲覧を通じて取得した対象施設のプレビュー画像・映像（カメラツールによる書き出し、スクリーンショット、画面録画を含みます）を、自らの施設の宣伝・営業のために無償で利用することができます。ただし、これにより3Dデータ自体の提供を受けるものではありません。</li>
           </ol>
         </section>
 
@@ -150,7 +162,14 @@ export default async function ListingTermsPage() {
           <h2 className="ui-section-title mb-4">第10条（免責）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>当社は、本サービスの停止、中断、掲載ページの表示不具合等により掲載者に生じた損害について、当社の故意または重過失による場合を除き、責任を負いません。</li>
-            <li>当社が掲載者に対して負う損害賠償の責任は、当社の故意または重過失による場合を除き、直接かつ通常の損害に限り、かつ<strong>10万円</strong>を上限とします（掲載を無償で提供していることを考慮したものです）。</li>
+            <li>当社が掲載者に対して負う損害賠償の責任は、当社の故意または重過失による場合を除き、直接かつ通常の損害に限り、かつ、損害賠償の請求の原因となった事由が生じた日の前12か月間に当社が掲載者に支払った分配金（
+              <Link
+                href={localizedHref("/terms/listing-revenue-share", locale)}
+                className="text-accent hover:underline"
+              >
+                掲載データ販売分配規約
+              </Link>
+              に基づくもの）の総額と<strong>10万円</strong>のいずれか高い額を上限とします。</li>
           </ol>
         </section>
 
@@ -186,7 +205,9 @@ export default async function ListingTermsPage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年9月26日
             <br />
-            ロケハン3D（運営：KWI株式会社）
+            改定日: 2026年10月8日（第2条の費用を、掲載・保管配信・埋め込みは期限なく無償、スキャン費用は撮影前の個別合意による旨に改定／第3条3項に賠償上限の適用を明記／第4条に未回答時の再確認とみなし承認を追加／第5条に写真の改変範囲を追加／第7条に埋め込みの条件とプレビュー画像の利用を追加／第10条2項の賠償上限を、直近12か月の分配金総額と10万円のいずれか高い額に改定／運営者の商号を正式名称で表記）
+            <br />
+            ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
       </div>
@@ -219,7 +240,7 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
         </p>
         <p className="ui-page-lead text-[14px] text-muted">
           These terms govern listing a studio or location facility on &quot;Locahun 3D&quot;, operated by
-          KWI Inc. (&quot;we&quot;, &quot;us&quot;). Revenue sharing on data sales is covered by the{" "}
+          Kawaii World Industries Inc. (KWI Inc.; &quot;we&quot;, &quot;us&quot;). Revenue sharing on data sales is covered by the{" "}
           {link("/terms/listing-revenue-share", "Listing Data Revenue Share Terms")}, and what buyers may
           do with purchased data by the {link("/terms/data-download", "3D Data Purchase Agreement")}.
         </p>
@@ -236,9 +257,10 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
         </section>
 
         <section>
-          <h2 className="ui-section-title mb-4">Article 2 (No charge)</h2>
+          <h2 className="ui-section-title mb-4">Article 2 (Fees)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>We carry out the 3D scan, the production and tuning of the 3D data, the listing page in Japanese and English, and the hosting, delivery and maintenance after publication, free of charge to the Lister.</li>
+            <li>We produce the listing page (in Japanese and English), store, deliver and maintain the 3D data, and provide embedding (hosting) of the 3D tour on the Lister&apos;s website or other media, free of charge and with no end date.</li>
+            <li>Where the 3D scan (the shoot and the production of the 3D data) is charged for, the fee is the amount individually agreed with the Lister before the shoot (it may also be free). Apart from this Article, we ask the Lister to bear no costs.</li>
             <li>Attendance on the shoot day, staff and keys, and securing the time we need on site are provided by the Lister.</li>
           </ol>
         </section>
@@ -248,7 +270,7 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>The date and the area to be scanned are agreed in advance between us and the Lister.</li>
             <li>Please make sure the area contains no items you do not want published, no exhibits involving third-party rights, and no documents showing personal data. Anything found afterwards is corrected or unpublished under Article 6.</li>
-            <li>We take care not to damage the facility. Where damage results from a cause attributable to us, we compensate for it.</li>
+            <li>We take care not to damage the facility. Where damage results from a cause attributable to us, we compensate for it. Except in cases of our wilful misconduct or gross negligence, the scope and cap in Article 10.2 apply.</li>
           </ol>
         </section>
 
@@ -257,7 +279,8 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We prepare the listing page and send the Lister a time-limited review link (no login required) before publication.</li>
             <li>The page is published when the Lister approves it on that link, or tells us so in writing or by email.</li>
-            <li>Corrections and additions after publication can be requested at any time; we act on them promptly.</li>
+            <li>If the Lister gives no approval, correction request or other response within <strong>14 days</strong> of our sending the review link, we will ask the Lister again. If there is still no response within <strong>7 days</strong> of that reminder, we may treat the page as approved and publish it.</li>
+            <li>Corrections and additions after publication can be requested at any time; we act on them promptly. Even where a page was published under the preceding paragraph, the Lister may ask for suspension or removal at any time under Article 6.</li>
           </ol>
         </section>
 
@@ -265,7 +288,8 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
           <h2 className="ui-section-title mb-4">Article 5 (Licence for photos and information)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>The Lister grants us the right to use the facility&apos;s name, address, facilities, rates and other listed information, together with photos supplied by the Lister or quoted from the Lister&apos;s official site with the Lister&apos;s approval, on the listing page and in describing, advertising and announcing the Service.</li>
-            <li>This licence is free of charge and non-exclusive, and lasts as long as the listing continues. After the listing ends we make no new use of those photos (excluding printed material already distributed and articles already published).</li>
+            <li>We may modify those photos only to the extent needed for display (cropping, resizing and brightness adjustment), and make no other modifications.</li>
+            <li>The licence in paragraph 1 is free of charge and non-exclusive, and lasts as long as the listing continues. After the listing ends we make no new use of those photos (excluding printed material already distributed and articles already published).</li>
             <li>We do not acquire copyright in the photos.</li>
           </ol>
         </section>
@@ -286,7 +310,8 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>We obtain the Lister&apos;s permission before selling the 3D data to third parties. Without it, the data is used only for walkthrough viewing on the Service and by the Lister.</li>
             <li>Revenue sharing is governed by the {link("/terms/listing-revenue-share", "Listing Data Revenue Share Terms")}.</li>
             <li>The Lister may withdraw that permission at any time. We then make no further sales; licences already obtained by buyers remain in force.</li>
-            <li>The Lister may embed the listing&apos;s 3D tour on their own website or other media, free of charge.</li>
+            <li>The Lister may embed the listing&apos;s 3D tour on their own website or other media, free of charge, using the embed code we issue. Embedding is subject to Article 7 of the {link("/terms/service", "Terms of Service")}.</li>
+            <li>The Lister may use preview images and video of the Target Facility obtained by viewing the Service (including camera-tool exports, screenshots and screen recordings) free of charge to promote and sell its own facility. This does not mean the 3D data itself is provided to the Lister.</li>
           </ol>
         </section>
 
@@ -308,7 +333,7 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
           <h2 className="ui-section-title mb-4">Article 10 (Limitation of liability)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We are not liable for loss caused by suspension or interruption of the Service or by display faults on a listing page, except where caused by our wilful misconduct or gross negligence.</li>
-            <li>Except in cases of our wilful misconduct or gross negligence, our liability to the Lister is limited to direct and ordinary damages and capped at <strong>JPY 100,000</strong>, reflecting that listing is provided free of charge.</li>
+            <li>Except in cases of our wilful misconduct or gross negligence, our liability to the Lister is limited to direct and ordinary damages and capped at the higher of (a) the total revenue share we paid to the Lister under the {link("/terms/listing-revenue-share", "Listing Data Revenue Share Terms")} in the 12 months before the event giving rise to the claim, and (b) <strong>JPY 100,000</strong>.</li>
           </ol>
         </section>
 
@@ -338,7 +363,9 @@ function ListingTermsEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Effective: 26 September 2026
             <br />
-            Locahun 3D (operated by KWI Inc.)
+            Revised: 8 October 2026 (Article 2: listing, hosting/delivery and embedding are free with no end date, and any scan fee is agreed individually before the shoot; Article 3.3: the liability cap applies; Article 4: reminder and deemed approval where the Lister does not respond; Article 5: limits on modifying photos; Article 7: embedding conditions and use of preview images; Article 10.2: cap changed to the higher of the last 12 months&apos; revenue share and JPY 100,000; operator shown by its registered name)
+            <br />
+            Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
       </div>

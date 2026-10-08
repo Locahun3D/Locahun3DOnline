@@ -111,8 +111,8 @@ function dataSaleSection(input: StudioReviewMailInput, name: string): string {
         ${price > 0
           ? `販売価格は <strong>${esc(yen(price))}（税込）</strong> を予定しています。`
           : "販売価格は、ご許諾をいただいたあとに改めてご相談します。"}<br>
-        売上のうち <strong>${REVENUE_SHARE_PERCENT}%</strong> を貴スタジオへ分配します（掲載データ販売分配規約 第2条）。<br>
-        分配は四半期ごとの精算です。<br>
+        税抜の販売価格の <strong>${REVENUE_SHARE_PERCENT}%</strong> に消費税相当額を加えた額を、貴スタジオへ分配します（掲載データ販売分配規約 第2条）。<br>
+        分配は半期ごとの精算です（6月末・12月末締め、翌月末払い）。<br>
         他社へのスキャン許諾を妨げるものではありません（同規約 第5条）。<br>
         販売しない場合でも、掲載ページと3Dツアーはそのままご利用いただけます。
       </p>

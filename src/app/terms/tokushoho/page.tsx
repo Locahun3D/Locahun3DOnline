@@ -23,7 +23,7 @@ export default async function TokushohoPage() {
       </header>
 
       <div className="prose-terms space-y-8 text-[14px] leading-[1.85]">
-        <Row label="販売業者" value="KWI株式会社" />
+        <Row label="販売業者" value="Kawaii World Industries株式会社（KWI株式会社）" />
         <Row label="資本金" value="60万円" />
         <Row label="運営統括責任者" value="中村 航" />
         <Row label="所在地" value="〒160-0022 東京都新宿区新宿1-24-12 THE GATE 新宿御苑 1F" />
@@ -52,7 +52,7 @@ export default async function TokushohoPage() {
         />
         <Row
           label="返品・キャンセル"
-          value="デジタルデータの性質上、購入後の返品・キャンセルは原則として承りません。データの破損等、当方に起因する不具合が確認された場合は、返金または代替データの提供にて対応いたします。"
+          value="デジタルデータの性質上、購入後の返品・キャンセルは原則として承りません。データの破損等、当方に起因する不具合が確認された場合は、購入日から1か月以内のお申し出により、返金または代替データの提供にて対応いたします。"
         />
         <Row
           label="サブスクリプションの解約"
@@ -67,7 +67,8 @@ export default async function TokushohoPage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年7月1日<br />
             改定日: 2026年8月2日（サブスクリプションの解約条件を追記）<br />
-            ロケハン3D（運営：KWI株式会社）
+            改定日: 2026年10月8日（販売業者を登記上の商号で表記／不具合時の返金・代替データの申出期間を購入日から1か月以内と明記）<br />
+            ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
       </div>
@@ -99,7 +100,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
       </header>
 
       <div className="prose-terms space-y-8 text-[14px] leading-[1.85]">
-        <Row label="Seller" value="KWI Inc." />
+        <Row label="Seller" value="Kawaii World Industries Inc. (KWI Inc.)" />
         <Row label="Capital" value="¥600,000" />
         <Row label="Operations Manager" value="Ko Nakamura" />
         <Row label="Address" value="THE GATE Shinjuku Gyoen 1F, 1-24-12 Shinjuku, Shinjuku-ku, Tokyo 160-0022, Japan" />
@@ -128,7 +129,7 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
         />
         <Row
           label="Returns & cancellations"
-          value="Due to the nature of digital data, returns and cancellations after purchase are not accepted as a general rule. If a defect attributable to us (e.g. corrupted data) is confirmed, we will provide a refund or replacement data."
+          value="Due to the nature of digital data, returns and cancellations after purchase are not accepted as a general rule. If a defect attributable to us (e.g. corrupted data) is confirmed and you contact us within one month of the purchase date, we will provide a refund or replacement data."
         />
         <Row
           label="Subscription cancellation"
@@ -143,7 +144,8 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: July 1, 2026<br />
             Revised: August 2, 2026 (added subscription cancellation terms)<br />
-            Locahun 3D (operated by KWI Inc.)
+            Revised: October 8, 2026 (seller shown by its registered name; refund or replacement for defects must be requested within one month of purchase)<br />
+            Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
       </div>

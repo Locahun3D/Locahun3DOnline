@@ -31,7 +31,7 @@ export default async function ListingRevenueSharePage() {
           掲載データ販売分配規約
         </h1>
         <p className="ui-page-lead text-[14px] text-muted">
-          KWI株式会社（以下「当社」）が提供する「ロケハン3D オンライン」において、<Link href={localizedHref("/contact/listing", locale)} className="text-accent hover:underline">掲載依頼</Link>を通じてご自身の物件（スタジオ・ロケーション施設）を掲載されたオーナー様（以下「掲載者」）向けの、3Dデータ販売時の収益分配に関する規約です。
+          Kawaii World Industries株式会社（KWI株式会社。以下「当社」）が提供する「ロケハン3D オンライン」において、<Link href={localizedHref("/contact/listing", locale)} className="text-accent hover:underline">掲載依頼</Link>を通じてご自身の物件（スタジオ・ロケーション施設）を掲載されたオーナー様（以下「掲載者」）向けの、3Dデータ販売時の収益分配に関する規約です。
         </p>
       </header>
 
@@ -52,7 +52,9 @@ export default async function ListingRevenueSharePage() {
         <section>
           <h2 className="ui-section-title mb-4">第2条（分配率）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>対象物件の3Dデータ（PLY/OBJ等）の販売により生じた売上（消費税・決済手数料を除いた金額）のうち、<strong>20%</strong>を掲載者へ分配します。</li>
+            {/* 2026-10-08 本人判断: 税抜販売価格の20%。決済手数料は差し引かない。消費税相当額は上乗せ。 */}
+            <li>対象物件の3Dデータ（PLY/OBJ等）が販売された場合、その販売価格（消費税を除いた額）の<strong>20%</strong>を掲載者へ分配します。決済手数料は控除しません。</li>
+            <li>分配金には消費税相当額を加算してお支払いします。</li>
             <li>本条の分配率は、当社と掲載者が別途書面で個別に合意した場合、その合意を優先します。</li>
           </ol>
         </section>
@@ -60,16 +62,16 @@ export default async function ListingRevenueSharePage() {
         <section>
           <h2 className="ui-section-title mb-4">第3条（対象範囲）</h2>
           <p className="opacity-80">
-            分配の対象は、対象物件の<strong>3Dデータそのものの販売</strong>（PLY/OBJ等のダウンロード販売）による売上に限られます。3DGSウォークスルーの閲覧（トークン消費）による収益、サブスクリプション料金、ホスティング商品の利用料等は、分配の対象に含まれません。
+            分配の対象は、対象物件の<strong>3Dデータそのものの販売</strong>（PLY/OBJ等のダウンロード販売）による売上に限られます。3DGSウォークスルーの閲覧（トークン消費）による収益、サブスクリプション料金等は、分配の対象に含まれません。
           </p>
         </section>
 
         <section>
           <h2 className="ui-section-title mb-4">第4条（精算）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>分配金は四半期ごとに精算します。各四半期（1〜3月・4〜6月・7〜9月・10〜12月）の末日を締め日とし、締め日の属する月の翌月末日までに掲載者の指定口座へお支払いします。</li>
-            <li>1回あたりの精算額が<strong>¥10,000未満</strong>の場合は次回精算へ繰り越します。繰越は、対象の売上が生じた四半期の末日から<strong>2年間</strong>を限度とし、当該期間内に¥10,000に達しない場合、以後の請求権は消滅します。</li>
-            <li>掲載者が個人事業主である場合、分配金の支払いにあたり法令に基づく源泉徴収税および復興特別所得税を控除いたします。掲載者が法人である場合、源泉徴収は行いません。</li>
+            <li>分配金は半期ごとに精算します。<strong>6月30日および12月31日</strong>を締め日とし、締め日の属する月の翌月末日までに掲載者の指定口座へお支払いします。</li>
+            <li>1回あたりの精算額が<strong>¥10,000未満</strong>の場合は次回精算へ繰り越します。ただし、対象物件の掲載または掲載者との契約が終了した場合は、金額にかかわらず、未払いの分配金の全額を精算します。</li>
+            <li>分配金の支払いにあたり、法令により源泉徴収が必要とされる場合に限り、所得税および復興特別所得税を控除いたします。</li>
             <li>振込手数料は当社が負担します。</li>
           </ol>
         </section>
@@ -106,7 +108,8 @@ export default async function ListingRevenueSharePage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年8月2日<br />
             改定日: 2026年8月4日（第7条の規約変更手続きを事前周知方式に変更）<br />
-            ロケハン3D（運営：KWI株式会社）
+            改定日: 2026年10月8日（第2条の分配額を税抜販売価格の20%とし、決済手数料を控除しない旨と消費税相当額の加算を明記／第3条から廃止したホスティング商品の利用料の記載を削除／第4条の精算を半期ごと（6月末・12月末締め、翌月末払い）に変更し、繰越の2年の期限を廃止して掲載終了時の全額精算を追加、源泉徴収を法令上必要な場合に限る旨に改定／運営者の商号を正式名称で表記）<br />
+            ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
       </div>
@@ -138,7 +141,7 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
         <p className="ui-page-lead text-[14px] text-muted">
           These terms govern revenue sharing on 3D data sales for property owners (&quot;Listers&quot;)
           who list their own studio or location facility on &quot;Locahun 3D Online&quot;, provided by
-          KWI Inc. (&quot;we&quot;, &quot;us&quot;), through the{" "}
+          Kawaii World Industries Inc. (KWI Inc.; &quot;we&quot;, &quot;us&quot;), through the{" "}
           <Link href={localizedHref("/contact/listing", locale)} className="text-accent hover:underline">
             listing request
           </Link>{" "}
@@ -164,7 +167,8 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 2 (Revenue share)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>Of the revenue generated from sales of a Target Property&apos;s 3D data (PLY/OBJ etc.), net of consumption tax and payment processing fees, <strong>20%</strong> is paid to the Lister.</li>
+            <li>When a Target Property&apos;s 3D data (PLY/OBJ etc.) is sold, <strong>20%</strong> of the sale price excluding consumption tax is paid to the Lister. Payment processing fees are not deducted.</li>
+            <li>An amount equivalent to consumption tax is added to the revenue share when it is paid.</li>
             <li>Where we and the Lister separately agree a different share in writing, that agreement prevails.</li>
           </ol>
         </section>
@@ -172,16 +176,16 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 3 (Scope of revenue)</h2>
           <p className="opacity-80">
-            Revenue sharing applies only to sales of the <strong>3D data itself</strong> (PLY/OBJ downloads) for the Target Property. It does not apply to revenue from walkthrough viewing (token consumption), subscription fees, or Hosting Product fees.
+            Revenue sharing applies only to sales of the <strong>3D data itself</strong> (PLY/OBJ downloads) for the Target Property. It does not apply to revenue from walkthrough viewing (token consumption) or subscription fees.
           </p>
         </section>
 
         <section>
           <h2 className="ui-section-title mb-4">Article 4 (Settlement)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>Revenue share is settled quarterly. Each quarter (Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec) closes on its last day, and payment is made to the Lister&apos;s designated bank account by the end of the following month.</li>
-            <li>If a settlement amount is under <strong>¥10,000</strong>, it carries over to the next settlement. Carryover is limited to <strong>2 years</strong> from the end of the quarter in which the underlying sale occurred; any amount that has not reached ¥10,000 within that period is forfeited.</li>
-            <li>Where the Lister is a sole proprietor, payments are made net of withholding tax and the special reconstruction income tax as required by law. No withholding applies where the Lister is a corporation.</li>
+            <li>Revenue share is settled semi-annually. The periods close on <strong>30 June and 31 December</strong>, and payment is made to the Lister&apos;s designated bank account by the end of the following month.</li>
+            <li>If a settlement amount is under <strong>¥10,000</strong>, it carries over to the next settlement. However, when the listing of the Target Property or the contract with the Lister ends, all outstanding revenue share is settled regardless of the amount.</li>
+            <li>Income tax and the special reconstruction income tax are withheld from payments only where withholding is required by law.</li>
             <li>We bear the bank transfer fee.</li>
           </ol>
         </section>
@@ -222,7 +226,8 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: August 2, 2026<br />
             Revised: August 4, 2026 (changed Article 7 to an advance-notice amendment procedure)<br />
-            Locahun 3D (operated by KWI Inc.)
+            Revised: October 8, 2026 (Article 2: the share is 20% of the sale price excluding consumption tax, with no deduction of payment processing fees and with consumption tax added; Article 3: removed the discontinued Hosting Product fee; Article 4: semi-annual settlement (closing 30 June and 31 December, paid by the end of the following month), removed the 2-year carryover limit and added full settlement when the listing ends, and limited withholding to cases required by law; operator shown by its registered name)<br />
+            Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
       </div>

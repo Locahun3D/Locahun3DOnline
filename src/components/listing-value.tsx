@@ -94,8 +94,8 @@ export default function ListingValue({ en }: { en: boolean }) {
       no: "04",
       title: en ? `${DATA_SALE_SHARE} of data sales, paid to you` : `データが売れたら${DATA_SALE_SHARE}を分配`,
       body: en
-        ? `If your property's 3D data (PLY/OBJ) sells, ${DATA_SALE_SHARE} of the revenue is paid to you. Settled quarterly.`
-        : `物件の3Dデータ（PLY/OBJ）が売れた場合、売上の${DATA_SALE_SHARE}を分配します。四半期ごとに精算します。`,
+        ? `If your property's 3D data (PLY/OBJ) sells, ${DATA_SALE_SHARE} of the sale price (excluding tax) is paid to you. Settled every six months.`
+        : `物件の3Dデータ（PLY/OBJ）が売れた場合、税抜の販売価格の${DATA_SALE_SHARE}を分配します。半期ごとに精算します。`,
     },
   ];
 

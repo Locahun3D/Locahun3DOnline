@@ -29,10 +29,10 @@ export default async function DataDownloadTermsPage() {
         <section>
           <h2 className="ui-section-title mb-4">第1条（定義）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>「本データ」とは、ロケハン3Dが提供する3Dスキャンデータ（PLY、OBJ、ZIP形式を含む）を指します。</li>
+            <li>「本データ」とは、ロケハン3Dが提供する3Dスキャンデータ（PLY、OBJ、ZIP形式を含む）であって、当社が撮影・制作したもの、および撮影者（持ち込みスキャンの提出者）から当社が販売の許諾を受けたものを指します。</li>
             <li>「購入者」とは、本サービスを通じて本データを購入した法人または個人を指します。</li>
             <li>「スタジオ」とは、本データのスキャン対象となった撮影スタジオ・ロケーション施設を指します。</li>
-            <li>本サービスの運営者および本データの販売者は、KWI株式会社（以下「当社」）です。本規約において本サービスが負う義務・責任は、当社が負います。</li>
+            <li>本サービスの運営者および本データの販売者は、Kawaii World Industries株式会社（KWI株式会社。以下「当社」）です。本規約において本サービスが負う義務・責任は、当社が負います。</li>
           </ol>
         </section>
 
@@ -59,6 +59,13 @@ export default async function DataDownloadTermsPage() {
             <li>キャンペーン等により本データを<strong>無償で提供する場合にも、本規約を準用します</strong>。この場合、本規約中の「購入者」は無償提供を受けた者と読み替えます。</li>
             <li>
               購入者は、本データを使用してレンダリング・撮影した<strong>静止画・映像をSNS等で公開できます</strong>。公開の際は「ロケハン3D」のクレジット表記（例: #ロケハン3D タグ、または locahun3d.com への言及）を添えてください。ただし第3条に定める第三者権利物の除去義務、および第4条の禁止事項（機密エリアの公開等）に該当する内容は除きます。
+            </li>
+            <li>
+              本データを購入せずに本サービスの閲覧を通じて取得したプレビュー画像（カメラツールによる書き出し、スクリーンショット、画面録画を含みます）の利用範囲、および3Dツアーの埋め込みの条件は、
+              <Link href={localizedHref("/terms/service", locale)} className="text-accent hover:underline">
+                利用規約
+              </Link>
+              第5条・第7条によります。
             </li>
           </ol>
         </section>
@@ -108,9 +115,10 @@ export default async function DataDownloadTermsPage() {
         <section>
           <h2 className="ui-section-title mb-4">第6条（返金）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>デジタルデータの性質上、ダウンロード後の返金は原則として行いません。</li>
-            <li>データの破損・欠陥等、本サービスに起因する問題が確認された場合は、返金または代替データの提供を検討します。</li>
-            <li>返金の可否は本サービスの判断によるものとします。</li>
+            {/* 2026-10-08 本人判断: 「返金の可否は当社の判断」をやめ、当社に起因する不具合なら
+                購入から1か月以内に返金または代替データを求められる形にした。特商法表記と一致させること。 */}
+            <li>デジタルデータの性質上、ダウンロード後の返金は行いません。ただし、次項の場合を除きます。</li>
+            <li>データの破損・欠陥等、当社に起因する不具合が確認された場合、購入者は、購入日から<strong>1か月以内</strong>に限り、返金または代替データの提供を求めることができます。</li>
           </ol>
         </section>
 
@@ -154,7 +162,8 @@ export default async function DataDownloadTermsPage() {
             改定日: 2026年7月16日（第三者の広告物・看板等の削除義務を明記し第3条として新設、以降の条項を繰り下げ／第2条に対価・契約成立時点、第8条にスタジオ運営者からの許諾取得努力義務を追記／第2条にゲーム等ソフトウェア製品への組込利用は拡張ライセンスが必要である旨、第4条に組込利用時のデータ抽出可能性についての取り扱いを追記）<br />
             改定日: 2026年8月4日（第1条に契約当事者がKWI株式会社である旨を明記／第2条5項にエディトリアル限定区分の新規販売停止を注記／第5条3項の免責を賠償上限方式（支払対価・故意重過失を除く）に変更／第9条の規約変更手続きを事前周知方式に変更し、購入済み分への不遡及を明記）<br />
             改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開／第4条から競合施設への情報提供の禁止を削除し、施設の名誉毀損・実在事件の表現・物件ごとの施設の利用条件への違反を禁止事項に追加）<br />
-            ロケハン3D（運営：KWI株式会社）
+            改定日: 2026年10月8日（第1条の本データに、撮影者から販売の許諾を受けた持ち込みスキャンのデータを含める旨を明記し、運営者を正式な商号で表記／第2条に、閲覧で取得したプレビュー画像と埋め込みの条件は利用規約によることを追加／第6条の返金を、当社に起因する不具合が確認された場合は購入日から1か月以内に返金または代替データの提供を求められる形に改定）<br />
+            ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
       </div>
@@ -194,10 +203,10 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 1 (Definitions)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>&quot;Data&quot; means the 3D scan data provided by Locahun 3D (including PLY, OBJ and ZIP formats).</li>
+            <li>&quot;Data&quot; means the 3D scan data provided by Locahun 3D (including PLY, OBJ and ZIP formats) that we captured and produced, or for which the person who captured it (a scan submitter) has granted us permission to sell it.</li>
             <li>&quot;Purchaser&quot; means the corporation or individual that purchases the Data through the Service.</li>
             <li>&quot;Studio&quot; means the filming studio or location facility that is the subject of the scanned Data.</li>
-            <li>The operator of the Service and the seller of the Data is KWI Inc. (&quot;we&quot;, &quot;us&quot;). Obligations and liabilities of the Service under these terms are borne by KWI Inc.</li>
+            <li>The operator of the Service and the seller of the Data is Kawaii World Industries Inc. (KWI Inc.; &quot;we&quot;, &quot;us&quot;). Obligations and liabilities of the Service under these terms are borne by us.</li>
           </ol>
         </section>
 
@@ -222,6 +231,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             </li>
             <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
             <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the <span data-i18n-audit-ignore>#ロケハン3D</span> tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>
+            <li>The permitted uses of preview images obtained by viewing the Service without purchasing the Data (including camera-tool exports, screenshots and screen recordings), and the conditions for embedding 3D tours, are set out in Articles 5 and 7 of the <Link href={localizedHref("/terms/service", locale)} className="text-accent hover:underline">Terms of Service</Link>.</li>
           </ol>
         </section>
 
@@ -267,9 +277,8 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 6 (Refunds)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>Due to the nature of digital data, refunds are not provided after download as a general rule.</li>
-            <li>If a problem attributable to the Service is confirmed (such as corrupted or defective data), we will consider a refund or replacement data.</li>
-            <li>Whether a refund is granted is at the Service&apos;s discretion.</li>
+            <li>Due to the nature of digital data, refunds are not provided after download, except as set out in the next paragraph.</li>
+            <li>Where a defect attributable to us (such as corrupted or defective data) is confirmed, the Purchaser may, within <strong>one month</strong> of the purchase date, request a refund or replacement data.</li>
           </ol>
         </section>
 
@@ -313,7 +322,8 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             Amended: July 16, 2026 (added Article 3 requiring removal of third-party advertisements/signage before use, renumbered subsequent articles; added payment/contract-formation terms to Article 2 and a studio-permission clause to Article 8; clarified in Articles 2 and 4 that embedding into games/software requires the extended license, with the treatment of incidental data extractability)<br />
             Amended: August 4, 2026 (named KWI Inc. as the contracting party in Article 1; noted in Article 2.5 that the Editorial tier is closed to new purchases; replaced the blanket disclaimer in Article 5.3 with a liability cap equal to the price paid, excluding willful misconduct/gross negligence; changed Article 9 to an advance-notice amendment procedure with non-retroactivity for purchased Data)<br />
             Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5; removed the prohibition on providing information to competing facilities from Article 4, and added prohibitions on harming the venue&apos;s reputation, depicting real incidents at an identifiable venue, and breaching per-property venue conditions)<br />
-            Locahun 3D (operated by KWI Inc.)
+            Amended: October 8, 2026 (Article 1: the Data includes scan-submitted data whose submitter has granted us permission to sell it, and the operator is shown by its registered name; Article 2: preview images and embedding are governed by the Terms of Service; Article 6: where a defect attributable to us is confirmed, the Purchaser may request a refund or replacement data within one month of purchase)<br />
+            Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
       </div>

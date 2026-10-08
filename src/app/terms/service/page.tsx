@@ -21,7 +21,7 @@ export default async function TermsServicePage() {
           利用規約
         </h1>
         <p className="ui-page-lead text-[14px] text-muted">
-          本規約は、KWI株式会社（以下「当社」）が提供する「ロケハン3D オンライン」（以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することにより本規約に同意したものとみなします。3Dデータの購入に関する条件は別途<Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">3Dデータ購入規約</Link>に定めます。
+          本規約は、Kawaii World Industries株式会社（KWI株式会社。以下「当社」）が提供する「ロケハン3D オンライン」（以下「本サービス」）の利用条件を定めるものです。利用者は、本サービスを利用することにより本規約に同意したものとみなします。3Dデータの購入に関する条件は別途<Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">3Dデータ購入規約</Link>に定めます。
         </p>
       </header>
 
@@ -89,6 +89,14 @@ export default async function TermsServicePage() {
           <p className="opacity-80">
             本サービスの閲覧（ウォークスルー・カメラツールによるJPEG書き出しを含みます）を通じて利用者が取得した画像・スクリーンショット等、および当該閲覧を通じて技術的な手段により取得しうる3Dスキャンデータ自体についても、購入の有無にかかわらず、第6条に定める3Dデータのライセンス分類と同様に、<strong>データ自体の再配布・転売、および機械学習・生成AIモデルの学習データとしての利用</strong>には、当社との事前のご相談・個別の書面合意が必要です。
           </p>
+          {/* 2026-10-08 本人判断: 購入せずに閲覧で得た画像（プレビュー画像）の使い道を明記。
+              AI学習は上の段落のとおり書面合意が必要（購入しても不可。データ購入規約 第4条と同じ）。 */}
+          <ol className="list-decimal pl-6 space-y-2 opacity-80 mt-3">
+            <li>3Dデータを購入せずに本サービスの閲覧を通じて取得した画像・映像（カメラツールによる書き出し、スクリーンショット、画面録画を含みます。以下「プレビュー画像」）は、ロケーションの検討、利用者の社内または制作チーム内での共有、および企画書・絵コンテ等の内部資料への使用に限り、利用することができます。</li>
+            <li>プレビュー画像を、広告・ポスター等の宣伝物、完成した映像作品、ストック素材としての販売、他の施設紹介サイトへの掲載、または施設の写真としての使用に用いる場合は、当該物件の3Dデータの購入または当社の書面による許諾が必要です。機械学習・生成AIモデルの学習への利用には、前段のとおり当社の書面による許諾が必要です。</li>
+            <li>プレビュー画像を公開する場合は「ロケハン3D」のクレジットを表記するものとし、施設について誤認を与え、または施設もしくはその運営者の名誉・信用を損なう態様で使用してはなりません。</li>
+            <li>前各項にかかわらず、施設の掲載者は、自らの施設のプレビュー画像を、自らの施設の宣伝・営業のために無償で利用することができます。ただし、これにより3Dデータ自体の利用が許諾されるものではありません。</li>
+          </ol>
         </section>
 
         {/* 3Dデータのライセンス分類は「データ購入規約」に詳細があるが、利用規約側に
@@ -128,22 +136,24 @@ export default async function TermsServicePage() {
 
         <section>
           <h2 className="ui-section-title mb-4">第7条（ホスティング商品）</h2>
-          {/* ⚠ 2026-08-10に価格モデルを変更（本人判断）。旧: 一括の「スキャン代金10万円＋交通費」
-              → 新: データ販売価格の20%/年（従価）＋ホスティング契約時はスキャン費用無料。
-              初期費用という決裁ハードルを消して継続収益へ振り替える設計（D-008の
-              「スキャン=資産+CAC、回収はホスティングで」の枠組みに沿う）。 */}
+          {/* 2026-10-08 本人判断: ホスティング（埋め込み）は期限なしで無償。
+              旧（2026-08-10）の「2027年以降はデータ販売価格の20%を年額」と
+              「3年未満解約時のスキャン費用の精算」は削除した。
+              スキャン費用の扱いは施設掲載規約 第2条（撮影前の個別合意）。 */}
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>当社は、物件ページの3Dツアーを利用者自身のウェブサイト等に埋め込み表示できる機能、およびそのアクセス解析（以下「ホスティング商品」）を、当社が発行するコードを通じて提供します。</li>
-            <li>ホスティング商品は、2026年中は無償で提供します。2027年以降の料金は、対象物件の3Dデータ販売価格の<strong>20%に相当する額を年額</strong>とします。販売価格は当社が定めるものとし、当該物件の3Dデータを販売していない場合も、当社が定める参考販売価格を基準として年額を算定します。</li>
-            <li>ホスティング商品をお申し込みいただく場合、対象物件のスキャン費用は無償とします。この場合において、ホスティング契約の開始から3年未満で解約されるときは、スキャン費用相当額（10万円・税別）に残存年数を3で除した割合を乗じた額を精算していただきます。</li>
+            <li>当社は、物件ページの3Dツアーを利用者自身のウェブサイト等に埋め込み表示できる機能、およびそのアクセス解析（以下「ホスティング商品」）を、当社が発行する埋め込みコードを通じて提供します。</li>
+            <li>ホスティング商品は無償で提供します。</li>
+            <li>ホスティング商品により3Dツアーを埋め込むことができるのは、当該物件の掲載者および当社が許諾した者に限ります。当社の許諾なく他の施設の3Dツアーを埋め込んではなりません。</li>
+            <li>埋め込みは、当社が発行する埋め込みコードによってのみ行うものとします。利用者は、埋め込み表示において、表示されるロゴ・クレジット・リンクを削除しもしくは見えなくすること、自らのサービスであるかのように表示すること、表示内容を改変すること、および埋め込みを通じて3Dデータを抽出・保存・解析することをしてはなりません。</li>
             <li>利用者は、当社が発行した埋め込みコードを、当社の指定する範囲を超えて第三者に譲渡・再配布してはなりません。</li>
+            <li>当社は、利用者が本条に違反した場合、または当該物件の掲載を停止した場合、当該埋め込みの表示を停止することができます。</li>
           </ol>
         </section>
 
         <section>
           <h2 className="ui-section-title mb-4">第8条（投稿コンテンツの管理）</h2>
           <p className="opacity-80">
-            当社は、利用者の投稿が第4条各号に該当すると判断した場合、事前の通知なく当該投稿の削除、非表示化、またはアカウントの利用制限を行うことができます。通報が一定件数に達した投稿は自動的に非表示となる場合があります。
+            当社は、利用者の投稿が第4条各号に該当すると判断した場合、事前の通知なく当該投稿の削除、非表示化、またはアカウントの利用制限を行うことができます。
           </p>
         </section>
 
@@ -200,7 +210,8 @@ export default async function TermsServicePage() {
             改定日: 2026年8月10日（第7条のホスティング商品の料金を、2027年以降は3Dデータ販売価格の20%の年額とする従価方式に変更。あわせてホスティング商品をお申し込みの場合のスキャン費用の無償化と、3年未満での解約時の精算を追記）<br />
             改定日: 2026年9月19日（第6条にエディトリアル限定のライセンス分類を追記）<br />
             改定日: 2026年9月21日（物件掲示板・通報機能の廃止に伴い、第4条の禁止事項と第5条の投稿コンテンツの記載を整理）<br />
-            ロケハン3D（運営：KWI株式会社）
+            改定日: 2026年10月8日（第5条に、購入せずに閲覧で取得したプレビュー画像の利用範囲を追加／第7条のホスティング商品を無償とし、2027年以降の年額料金と3年未満解約時のスキャン費用の精算を削除、埋め込みの条件を追加／第8条から通報による自動非表示の記載を削除／運営者の商号を正式名称で表記）<br />
+            ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
       </div>
@@ -231,7 +242,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
         </p>
         <p className="ui-page-lead text-[14px] text-muted">
           These Terms of Service (&quot;Terms&quot;) set out the conditions for using &quot;Locahun 3D
-          Online&quot; (the &quot;Service&quot;) provided by KWI Inc. (&quot;we&quot;, &quot;us&quot;). By
+          Online&quot; (the &quot;Service&quot;) provided by Kawaii World Industries Inc. (KWI Inc.; &quot;we&quot;, &quot;us&quot;). By
           using the Service, you are deemed to have agreed to these Terms. Terms specific
           to purchasing 3D data are set out separately in the{" "}
           <Link href={localizedHref("/terms/data-download", locale)} className="text-accent hover:underline">
@@ -292,6 +303,12 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <p className="opacity-80">
             Images and screenshots obtained by a user through viewing the Service (including JPEGs exported via the camera tool during a walkthrough), and any 3D scan data itself that may be obtainable through technical means during such viewing, are subject to the same restrictions as the 3D data license categories in Article 6 regardless of whether the data was purchased: <strong>redistributing or reselling the data itself, and using it as training data for machine-learning or generative-AI models</strong>, require our prior consultation and individual written agreement.
           </p>
+          <ol className="list-decimal pl-6 space-y-2 opacity-80 mt-3">
+            <li>Images and video obtained by viewing the Service without purchasing the 3D data (including camera-tool exports, screenshots and screen recordings; &quot;Preview Images&quot;) may be used only for considering a location, sharing within the user&apos;s own company or production team, and internal materials such as proposals and storyboards.</li>
+            <li>Using Preview Images in advertising such as posters, in finished footage, selling them as stock material, posting them on other facility-listing sites, or using them as photos of the facility requires purchase of that property&apos;s 3D data or our written permission. Use for training machine-learning or generative-AI models requires our written permission, as stated above.</li>
+            <li>Any public use of Preview Images must carry the &quot;Locahun 3D&quot; credit, and must not mislead about the facility or harm the reputation or credibility of the facility or its operator.</li>
+            <li>Notwithstanding the above, a facility&apos;s Lister may use Preview Images of its own facility free of charge to promote and sell that facility. This does not grant any right to use the 3D data itself.</li>
+          </ol>
         </section>
 
         <section>
@@ -329,16 +346,18 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           <h2 className="ui-section-title mb-4">Article 7 (Hosting Product)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>We provide a feature that lets you embed a property&apos;s 3D tour on your own website or elsewhere, together with access analytics (the &quot;Hosting Product&quot;), via embed code we issue.</li>
-            <li>The Hosting Product is provided free of charge through the end of 2026. From 2027 onward, the annual fee is <strong>20% of the 3D data sale price</strong> for the property. We set the sale price; where the property&apos;s 3D data is not offered for sale, the annual fee is calculated against a reference sale price we determine.</li>
-            <li>If you subscribe to the Hosting Product, the scan fee for the property is waived. If you cancel within three years of the hosting subscription start date, you will be charged the scan fee equivalent (¥100,000, excl. tax) multiplied by the remaining years divided by three.</li>
+            <li>The Hosting Product is provided free of charge.</li>
+            <li>Only the Lister of the property and those we permit may embed its 3D tour using the Hosting Product. You may not embed another facility&apos;s 3D tour without our permission.</li>
+            <li>Embedding may be done only with embed code we issue. You may not remove or hide the logos, credits or links shown in the embed, present it as your own service, alter the displayed content, or extract, save or analyse the 3D data through the embed.</li>
             <li>Users may not transfer or redistribute embed codes we issue to third parties beyond the scope we specify.</li>
+            <li>We may stop an embed from being displayed if the user breaches this Article or if the listing of the property is suspended.</li>
           </ol>
         </section>
 
         <section>
           <h2 className="ui-section-title mb-4">Article 8 (Content Moderation)</h2>
           <p className="opacity-80">
-            If we determine that a post violates Article 4, we may remove or hide it, or restrict the user&apos;s account, without prior notice. Posts that receive a certain number of reports may be automatically hidden.
+            If we determine that a post violates Article 4, we may remove or hide it, or restrict the user&apos;s account, without prior notice.
           </p>
         </section>
 
@@ -388,7 +407,8 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             Revised: August 4, 2026 (added user-initiated withdrawal to Article 10; added willful-misconduct/gross-negligence carve-out and a floor amount for free users to the liability cap in Article 11; changed Article 12 to an advance-notice amendment procedure)<br />
             Revised: August 10, 2026 (changed the Hosting Product fee in Article 7 to an ad valorem annual fee of 20% of the 3D data sale price from 2027 onward; added the scan-fee waiver for hosting subscribers and the settlement due on cancellation within three years)<br />
             Revised: September 21, 2026 (the location board and report functions were discontinued; tidied the prohibited acts in Article 4 and the wording on user-submitted content in Article 5)<br />
-            Locahun 3D (operated by KWI Inc.)
+            Revised: October 8, 2026 (added to Article 5 the permitted uses of Preview Images obtained by viewing without purchase; made the Hosting Product in Article 7 free of charge, removing the annual fee from 2027 and the scan-fee settlement on cancellation within three years, and added embedding conditions; removed the automatic hiding of reported posts from Article 8; operator shown by its registered name)<br />
+            Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
       </div>
