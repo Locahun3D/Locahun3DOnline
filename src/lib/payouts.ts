@@ -146,10 +146,22 @@ export const payoutLedgerEntrySchema = z.object({
   payeeId: z.string(),
   role: z.enum(PAYOUT_ROLES),
   ratePercent: z.number(),
-  /** 販売額（円）。台帳起票時点の purchase.priceYen のスナップショット。 */
+  /** 販売額（円・税込）。台帳起票時点の purchase.priceYen のスナップショット。 */
   baseAmountYen: z.number().int().min(0),
-  /** floor(baseAmountYen * ratePercent / 100)。 */
+  /**
+   * 支払うべき額（円）＝この行の合計。
+   * - venue（掲載データ販売分配規約）: shareYen + taxAddOnYen（computeLedgerAmount 参照）
+   * - それ以外 / 旧レコード: floor(baseAmountYen * ratePercent / 100)
+   */
   amountYen: z.number().int().min(0),
+  /**
+   * 内訳（2026-10-08 追加）。旧レコードには無い → 表示側は amountYen のみで出す。
+   * taxExclusiveBaseYen = 税抜販売価格、shareYen = 分配額、
+   * taxAddOnYen = 消費税相当額。amountYen = shareYen + taxAddOnYen。
+   */
+  taxExclusiveBaseYen: z.number().int().min(0).optional(),
+  shareYen: z.number().int().min(0).optional(),
+  taxAddOnYen: z.number().int().min(0).optional(),
   status: z.enum(LEDGER_STATUSES).default("accrued"),
   settlementId: z.string().optional(),
   createdAt: z.string().default(() => new Date().toISOString()),
@@ -162,9 +174,18 @@ export type SettlementStatus = (typeof SETTLEMENT_STATUSES)[number];
 export const payoutSettlementSchema = z.object({
   id: z.string(),
   payeeId: z.string(),
-  /** 自由入力の精算期間ラベル。例: "2026Q3"。 */
+  /** 精算期間ラベル。既定は半期（payout-period.ts の suggestSettlementPeriod）。自由入力も可。 */
   periodLabel: z.string().min(1),
   grossYen: z.number().int().min(0),
+  /**
+   * grossYen の内訳（2026-10-08 追加・旧レコードには無い）。
+   * shareYen = 分配額（内訳の無い旧台帳行は amountYen をそのまま計上）、
+   * taxAddOnYen = 消費税相当額。shareYen + taxAddOnYen = grossYen。
+   */
+  shareYen: z.number().int().min(0).optional(),
+  taxAddOnYen: z.number().int().min(0).optional(),
+  /** 掲載終了に伴う最終精算（¥10,000未満でも作成できる。分配規約 第4条2項ただし書き）。 */
+  finalSettlement: z.boolean().optional(),
   withholdingYen: z.number().int().min(0),
   netYen: z.number().int().min(0),
   ledgerIds: z.array(z.string()).default([]),
@@ -178,6 +199,80 @@ export type PayoutSettlement = z.infer<typeof payoutSettlementSchema>;
 // 2. 純粋計算関数（vitest対象・副作用なし）
 // ──────────────────────────────────────────────────────────────────
 
+/** 消費税率（%）。 */
+export const CONSUMPTION_TAX_PERCENT = 10;
+
+/**
+ * 税込金額 → 税抜金額（円）。floor(amount * 100 / 110)。
+ * 購入(purchase.priceYen)・Stripe の請求額は **税込** として扱う
+ * （/terms/tokushoho・領収書・規約の表記に合わせる。2026-10-08）。
+ */
+export function taxExclusiveFromInclusive(amountYen: number): number {
+  if (!(amountYen > 0)) return 0;
+  return Math.floor((amountYen * 100) / (100 + CONSUMPTION_TAX_PERCENT));
+}
+
+export interface LedgerAmount {
+  /** 計算の基になった税抜販売価格（venue 以外は税込額そのもの）。 */
+  taxExclusiveBaseYen: number;
+  /** 分配額（消費税相当額の加算前）。 */
+  shareYen: number;
+  /** 消費税相当額（venue のみ。その他は 0）。 */
+  taxAddOnYen: number;
+  /** 支払う額 = shareYen + taxAddOnYen。台帳の amountYen に入る。 */
+  totalYen: number;
+}
+
+/**
+ * 1販売×1受取者の分配額を計算する（純粋関数）。
+ *
+ * venue（直接掲載スタジオ。/terms/listing-revenue-share 第2条, 2026-10-08）:
+ *   1. 税抜販売価格 = floor(税込販売価格 × 100 / 110)
+ *   2. 分配額       = floor(税抜販売価格 × 分配率 / 100)   … 決済手数料は控除しない
+ *   3. 消費税相当額 = floor(分配額 × 10 / 100)
+ *   4. 支払額       = 分配額 + 消費税相当額
+ *   端数は各段階で円未満切り捨て（分配額・消費税相当額とも floor）。
+ *
+ * scanner / referrer は従来どおり floor(販売価格 × 分配率 / 100)、消費税相当額なし。
+ * （持ち込みスキャン規約の基準は「消費税・決済手数料を除いた金額」だが、
+ *   本変更の対象外。仕様確定まで既存の計算を変えない。）
+ *
+ * 分配率は 0.01% 刻みなので、浮動小数誤差を避けるため 1万分率の整数にしてから掛ける。
+ */
+export function computeLedgerAmount(
+  role: PayoutRole,
+  priceYenTaxIncluded: number,
+  ratePercent: number,
+): LedgerAmount {
+  const rateBp = Math.round(ratePercent * 100); // 20% → 2000
+  if (!(priceYenTaxIncluded > 0) || rateBp <= 0) {
+    return { taxExclusiveBaseYen: 0, shareYen: 0, taxAddOnYen: 0, totalYen: 0 };
+  }
+  if (role === "venue") {
+    const taxExclusiveBaseYen = taxExclusiveFromInclusive(priceYenTaxIncluded);
+    const shareYen = Math.floor((taxExclusiveBaseYen * rateBp) / 10_000);
+    const taxAddOnYen = Math.floor((shareYen * CONSUMPTION_TAX_PERCENT) / 100);
+    return { taxExclusiveBaseYen, shareYen, taxAddOnYen, totalYen: shareYen + taxAddOnYen };
+  }
+  const shareYen = Math.floor((priceYenTaxIncluded * rateBp) / 10_000);
+  return { taxExclusiveBaseYen: priceYenTaxIncluded, shareYen, taxAddOnYen: 0, totalYen: shareYen };
+}
+
+/**
+ * 台帳行の内訳を返す。内訳を持たない旧レコードは amountYen 全額を分配額とみなし、
+ * 消費税相当額 0 として扱う（旧レコードの表示・合計を変えないため）。
+ */
+export function ledgerBreakdown(row: {
+  amountYen: number;
+  shareYen?: number;
+  taxAddOnYen?: number;
+}): { shareYen: number; taxAddOnYen: number; hasBreakdown: boolean } {
+  if (typeof row.shareYen === "number" && typeof row.taxAddOnYen === "number") {
+    return { shareYen: row.shareYen, taxAddOnYen: row.taxAddOnYen, hasBreakdown: true };
+  }
+  return { shareYen: row.amountYen, taxAddOnYen: 0, hasBreakdown: false };
+}
+
 /** 最低支払額（円）。これ未満は精算を作成せず accrued のまま繰り越す。 */
 export const MIN_SETTLEMENT_YEN = 10_000;
 
@@ -186,6 +281,11 @@ const WITHHOLDING_RATE_LOW = 0.1021; // 100万円以下部分
 const WITHHOLDING_RATE_HIGH = 0.2042; // 100万円超部分
 
 /**
+ * TODO(2026-10-08, 弁護士確認中): 掲載データ販売分配規約 第4条3項は「法令により
+ * 源泉徴収が必要とされる場合に限り」控除すると定める。現行の「個人は一律で源泉徴収・
+ * 法人は0」のルールがこれと常に一致するか（個人スタジオへの分配が源泉徴収の対象と
+ * なる支払いに当たるか等）は弁護士に確認中。回答が出るまでルールは変えないこと。
+ *
  * 源泉徴収額（円）を計算する。**著作権使用料としての支払いを想定**しており、
  * 個人（entityType: "individual"）のみ源泉徴収し、法人は0円。
  * 100万円以下の部分は10.21%、100万円を超える部分は20.42%（円未満切り捨て）。
@@ -204,6 +304,10 @@ export function computeWithholding(grossYen: number, entityType: EntityType): nu
 
 export interface SettlementComputation {
   grossYen: number;
+  /** grossYen のうち分配額（消費税相当額の加算前）。 */
+  shareYen: number;
+  /** grossYen のうち消費税相当額。 */
+  taxAddOnYen: number;
   withholdingYen: number;
   netYen: number;
   /** ¥10,000未満のため精算せず、accrued のまま繰り越す対象であることを示す。 */
@@ -213,18 +317,31 @@ export interface SettlementComputation {
 /**
  * 未精算(accrued)行の合計から精算内容を計算する。最低支払額(¥10,000)未満
  * なら精算を作らず繰り越す(belowMinimum=true、源泉徴収・差引額は計算しない=0)。
+ *
+ * opts.finalSettlement = 掲載終了・契約終了に伴う最終精算（分配規約 第4条2項
+ * ただし書き）。この場合は ¥10,000 未満でも精算する（0円は精算しない）。
  */
 export function computeSettlement(
-  accruedRows: { amountYen: number }[],
+  accruedRows: { amountYen: number; shareYen?: number; taxAddOnYen?: number }[],
   payee: { entityType: EntityType },
+  opts?: { finalSettlement?: boolean },
 ): SettlementComputation {
-  const grossYen = accruedRows.reduce((sum, row) => sum + row.amountYen, 0);
-  if (grossYen < MIN_SETTLEMENT_YEN) {
-    return { grossYen, withholdingYen: 0, netYen: 0, belowMinimum: true };
+  let grossYen = 0;
+  let shareYen = 0;
+  let taxAddOnYen = 0;
+  for (const row of accruedRows) {
+    const b = ledgerBreakdown(row);
+    grossYen += row.amountYen;
+    shareYen += b.shareYen;
+    taxAddOnYen += b.taxAddOnYen;
+  }
+  const final = opts?.finalSettlement === true;
+  if (grossYen <= 0 || (!final && grossYen < MIN_SETTLEMENT_YEN)) {
+    return { grossYen, shareYen, taxAddOnYen, withholdingYen: 0, netYen: 0, belowMinimum: true };
   }
   const withholdingYen = computeWithholding(grossYen, payee.entityType);
   const netYen = grossYen - withholdingYen;
-  return { grossYen, withholdingYen, netYen, belowMinimum: false };
+  return { grossYen, shareYen, taxAddOnYen, withholdingYen, netYen, belowMinimum: false };
 }
 
 /** 分配設定の行の合計率が当社取り分の下限(30%)を侵さないか検証する。 */
@@ -572,6 +689,7 @@ export const payoutSettlementRepo = {
   async createFromAccrued(
     payeeId: string,
     periodLabel: string,
+    opts?: { finalSettlement?: boolean },
   ): Promise<
     | { ok: true; settlement: PayoutSettlement }
     | { ok: false; error: string; belowMinimum?: boolean }
@@ -581,8 +699,12 @@ export const payoutSettlementRepo = {
     const accrued = await payoutLedgerRepo.list({ payeeId, status: "accrued" });
     if (accrued.length === 0) return { ok: false, error: "未精算の台帳行がありません" };
 
-    const computation = computeSettlement(accrued, payee);
+    const finalSettlement = opts?.finalSettlement === true;
+    const computation = computeSettlement(accrued, payee, { finalSettlement });
     if (computation.belowMinimum) {
+      if (computation.grossYen <= 0) {
+        return { ok: false, error: "精算する金額がありません" };
+      }
       return {
         ok: false,
         error: `最低支払額(¥${MIN_SETTLEMENT_YEN.toLocaleString()})未満のため繰り越します（現在 ¥${computation.grossYen.toLocaleString()}）`,
@@ -595,6 +717,9 @@ export const payoutSettlementRepo = {
       payeeId,
       periodLabel,
       grossYen: computation.grossYen,
+      shareYen: computation.shareYen,
+      taxAddOnYen: computation.taxAddOnYen,
+      ...(finalSettlement ? { finalSettlement: true } : {}),
       withholdingYen: computation.withholdingYen,
       netYen: computation.netYen,
       ledgerIds: accrued.map((e) => e.id),
@@ -665,8 +790,9 @@ export async function recordPayoutAccrualsUnsafe(purchase: AccrualSourcePurchase
   if (existing.length > 0) return; // 冪等ガード
 
   for (const line of split.lines) {
-    const amountYen = Math.floor((purchase.priceYen * line.ratePercent) / 100);
-    if (amountYen <= 0) continue;
+    // purchase.priceYen は税込の請求額。内訳つきで記録する（computeLedgerAmount 参照）。
+    const calc = computeLedgerAmount(line.role, purchase.priceYen, line.ratePercent);
+    if (calc.totalYen <= 0) continue;
     await payoutLedgerRepo.upsert({
       id: `ldg-${nanoid(12)}`,
       purchaseId: purchase.id,
@@ -675,7 +801,10 @@ export async function recordPayoutAccrualsUnsafe(purchase: AccrualSourcePurchase
       role: line.role,
       ratePercent: line.ratePercent,
       baseAmountYen: purchase.priceYen,
-      amountYen,
+      amountYen: calc.totalYen,
+      taxExclusiveBaseYen: calc.taxExclusiveBaseYen,
+      shareYen: calc.shareYen,
+      taxAddOnYen: calc.taxAddOnYen,
       status: "accrued",
       createdAt: new Date().toISOString(),
     });

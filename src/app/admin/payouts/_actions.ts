@@ -148,13 +148,17 @@ export async function savePayoutSplitAction(
 export async function createSettlementAction(
   payeeId: string,
   periodLabel: string,
+  opts?: { finalSettlement?: boolean },
 ): Promise<
   | { ok: true; settlement: PayoutSettlement }
   | { ok: false; error: string; belowMinimum?: boolean }
 > {
   await assertAdmin();
   if (!periodLabel.trim()) return { ok: false, error: "精算期間を入力してください" };
-  const result = await payoutSettlementRepo.createFromAccrued(payeeId, periodLabel.trim());
+  // finalSettlement = 掲載終了に伴う最終精算（¥10,000未満でも作成可。分配規約 第4条2項）
+  const result = await payoutSettlementRepo.createFromAccrued(payeeId, periodLabel.trim(), {
+    finalSettlement: opts?.finalSettlement === true,
+  });
   if (result.ok) revalidatePath("/admin/payouts");
   return result;
 }

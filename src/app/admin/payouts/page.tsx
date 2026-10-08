@@ -11,6 +11,7 @@ import {
 } from "@/lib/payouts";
 import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import PayoutsAdmin from "@/components/admin/payouts-admin";
+import { suggestSettlementPeriod } from "@/lib/payout-period";
 
 export const metadata = { title: "精算" };
 
@@ -51,22 +52,42 @@ export default async function AdminPayoutsPage({
     .map((u) => ({ id: u.id, label: u.name || u.email || u.id }))
     .sort((a, b) => a.label.localeCompare(b.label, "ja"));
 
-  const accruedByPayee = new Map<string, { amountYen: number }[]>();
+  const accruedByPayee = new Map<
+    string,
+    { amountYen: number; shareYen?: number; taxAddOnYen?: number }[]
+  >();
   for (const row of accrued) {
     const list = accruedByPayee.get(row.payeeId) ?? [];
-    list.push({ amountYen: row.amountYen });
+    list.push({ amountYen: row.amountYen, shareYen: row.shareYen, taxAddOnYen: row.taxAddOnYen });
     accruedByPayee.set(row.payeeId, list);
   }
 
   const accruedSummaryByPayee: Record<
     string,
-    { count: number; grossYen: number; withholdingYen: number; netYen: number; belowMinimum: boolean }
+    {
+      count: number;
+      grossYen: number;
+      shareYen: number;
+      taxAddOnYen: number;
+      withholdingYen: number;
+      netYen: number;
+      belowMinimum: boolean;
+    }
   > = {};
   for (const payee of payees) {
     const rows = accruedByPayee.get(payee.id) ?? [];
     const computation = computeSettlement(rows, payee);
     accruedSummaryByPayee[payee.id] = { count: rows.length, ...computation };
   }
+
+  // 精算期間の既定値（半期。分配規約 第4条1項）。サーバーで1回だけ計算して渡す。
+  const now = new Date();
+  const regularPeriod = suggestSettlementPeriod(now);
+  const finalPeriod = suggestSettlementPeriod(now, { finalSettlement: true });
+  const suggestedPeriods = {
+    regular: { label: regularPeriod.label, payBy: regularPeriod.payBy },
+    final: { label: finalPeriod.label, payBy: finalPeriod.payBy },
+  };
 
   const settlementsByPayee: Record<string, PayoutSettlement[]> = {};
   for (const s of settlements) {
@@ -81,7 +102,7 @@ export default async function AdminPayoutsPage({
         title="精算"
         count={`受取者 ${payees.length} 名・未精算 ${accrued.length} 件`}
         description="撮影者・施設への使用料の後払いを管理します。"
-        help="物件ごとに分配率（合計70%まで／当社取り分は最低30%）を設定すると、販売完了時に自動で台帳へ計上されます。受取者ごとの未精算額が最低支払額（¥10,000）以上になったら精算を作成できます。"
+        help="物件ごとに分配率（合計70%まで／当社取り分は最低30%）を設定すると、販売完了時に自動で台帳へ計上されます。受取者ごとの未精算額が最低支払額（¥10,000）以上になったら精算を作成できます。精算は半期ごと（6月末・12月末締め、翌月末払い）。掲載が終了した受取者は「最終精算（掲載終了）」で¥10,000未満でも精算できます。施設（直接掲載スタジオ）への分配は、税込販売額から求めた税抜額×分配率に消費税相当額（10%）を加えて計上します。"
       />
 
       <PayoutsAdmin
@@ -92,6 +113,7 @@ export default async function AdminPayoutsPage({
         settlementsByPayee={settlementsByPayee}
         prefill={prefill}
         studioUsers={studioUsers}
+        suggestedPeriods={suggestedPeriods}
       />
     </AdminPageShell>
   );

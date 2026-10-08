@@ -4,6 +4,9 @@ import {
   computeSettlement,
   validateSplitLines,
   isAccrualMissing,
+  computeLedgerAmount,
+  taxExclusiveFromInclusive,
+  ledgerBreakdown,
   MIN_SETTLEMENT_YEN,
 } from "./payouts";
 
@@ -142,5 +145,109 @@ describe("isAccrualMissing", () => {
         hasLedgerEntry: false,
       }),
     ).toBe(false);
+  });
+});
+
+describe("computeLedgerAmount（掲載データ販売分配規約 第2条 2026-10-08）", () => {
+  it("venue: 税込11,000円 → 税抜10,000円の20% = 2,000円 + 消費税相当200円", () => {
+    expect(computeLedgerAmount("venue", 11_000, 20)).toEqual({
+      taxExclusiveBaseYen: 10_000,
+      shareYen: 2_000,
+      taxAddOnYen: 200,
+      totalYen: 2_200,
+    });
+  });
+
+  it("venue: 端数は税抜→分配額→消費税相当額の各段階で切り捨て", () => {
+    // 税込 9,999 → 税抜 floor(9999*100/110)=9,090 → 20% = 1,818 → 税 floor(181.8)=181
+    expect(computeLedgerAmount("venue", 9_999, 20)).toEqual({
+      taxExclusiveBaseYen: 9_090,
+      shareYen: 1_818,
+      taxAddOnYen: 181,
+      totalYen: 1_999,
+    });
+  });
+
+  it("venue: 決済手数料は控除しない", () => {
+    // 税込 33,000 → 税抜 30,000 → 6,000 + 600
+    expect(computeLedgerAmount("venue", 33_000, 20).totalYen).toBe(6_600);
+  });
+
+  it("venue: 個別合意の率（小数）でも浮動小数誤差なく計算する", () => {
+    // 税抜 10,000 × 12.34% = 1,234 → 税 123
+    expect(computeLedgerAmount("venue", 11_000, 12.34)).toMatchObject({
+      shareYen: 1_234,
+      taxAddOnYen: 123,
+      totalYen: 1_357,
+    });
+  });
+
+  it("scanner/referrer は従来どおり販売額×率（消費税相当額なし）", () => {
+    expect(computeLedgerAmount("scanner", 11_000, 30)).toEqual({
+      taxExclusiveBaseYen: 11_000,
+      shareYen: 3_300,
+      taxAddOnYen: 0,
+      totalYen: 3_300,
+    });
+    expect(computeLedgerAmount("referrer", 9_999, 10).totalYen).toBe(999);
+  });
+
+  it("0円・0%は0", () => {
+    expect(computeLedgerAmount("venue", 0, 20).totalYen).toBe(0);
+    expect(computeLedgerAmount("venue", 11_000, 0).totalYen).toBe(0);
+  });
+});
+
+describe("taxExclusiveFromInclusive", () => {
+  it("floor(amount*100/110)", () => {
+    expect(taxExclusiveFromInclusive(11_000)).toBe(10_000);
+    expect(taxExclusiveFromInclusive(1)).toBe(0);
+    expect(taxExclusiveFromInclusive(110)).toBe(100);
+    expect(taxExclusiveFromInclusive(-5)).toBe(0);
+  });
+});
+
+describe("ledgerBreakdown / computeSettlement の内訳", () => {
+  it("内訳の無い旧レコードは amountYen 全額を分配額・消費税相当0として扱う", () => {
+    expect(ledgerBreakdown({ amountYen: 3_000 })).toEqual({
+      shareYen: 3_000,
+      taxAddOnYen: 0,
+      hasBreakdown: false,
+    });
+  });
+
+  it("新旧混在でも合計は amountYen の和、内訳は分配額+消費税相当額", () => {
+    const result = computeSettlement(
+      [{ amountYen: 2_200, shareYen: 2_000, taxAddOnYen: 200 }, { amountYen: 8_000 }],
+      { entityType: "corporation" },
+    );
+    expect(result.grossYen).toBe(10_200);
+    expect(result.shareYen).toBe(10_000);
+    expect(result.taxAddOnYen).toBe(200);
+    expect(result.netYen).toBe(10_200);
+  });
+});
+
+describe("computeSettlement 最終精算（掲載終了）", () => {
+  it("¥10,000未満でも finalSettlement なら精算できる（源泉ルールは従来どおり）", () => {
+    const result = computeSettlement(
+      [{ amountYen: 2_200 }],
+      { entityType: "individual" },
+      { finalSettlement: true },
+    );
+    expect(result.belowMinimum).toBe(false);
+    expect(result.grossYen).toBe(2_200);
+    expect(result.withholdingYen).toBe(Math.floor(2_200 * 0.1021));
+    expect(result.netYen).toBe(2_200 - Math.floor(2_200 * 0.1021));
+  });
+
+  it("finalSettlement でも0円は精算しない", () => {
+    const result = computeSettlement([], { entityType: "corporation" }, { finalSettlement: true });
+    expect(result.belowMinimum).toBe(true);
+  });
+
+  it("finalSettlement でなければ従来どおり繰越", () => {
+    const result = computeSettlement([{ amountYen: 2_200 }], { entityType: "corporation" });
+    expect(result.belowMinimum).toBe(true);
   });
 });

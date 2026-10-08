@@ -72,6 +72,10 @@ const inputCls =
 type AccruedSummary = {
   count: number;
   grossYen: number;
+  /** grossYen のうち分配額（消費税相当額の加算前）。 */
+  shareYen: number;
+  /** grossYen のうち消費税相当額（施設=直接掲載スタジオの分配のみ）。 */
+  taxAddOnYen: number;
   withholdingYen: number;
   netYen: number;
   belowMinimum: boolean;
@@ -99,7 +103,14 @@ interface PayoutsAdminProps {
   prefill?: PayeePrefill | null;
   /** userId紐付け選択肢（直接掲載スタジオの分配自動設定用）。 */
   studioUsers?: { id: string; label: string }[];
+  /** 精算期間の既定値（半期）。regular=直前に締まった期、final=最終精算用の現在の期。 */
+  suggestedPeriods?: SuggestedPeriods;
 }
+
+type SuggestedPeriods = {
+  regular: { label: string; payBy: string };
+  final: { label: string; payBy: string };
+};
 
 export default function PayoutsAdmin({
   payees,
@@ -109,6 +120,7 @@ export default function PayoutsAdmin({
   settlementsByPayee,
   prefill = null,
   studioUsers = [],
+  suggestedPeriods,
 }: PayoutsAdminProps) {
   const [tab, setTab] = useState<Tab>("payees");
 
@@ -150,6 +162,7 @@ export default function PayoutsAdmin({
           payees={payees}
           accruedSummaryByPayee={accruedSummaryByPayee}
           settlementsByPayee={settlementsByPayee}
+          suggestedPeriods={suggestedPeriods}
         />
       )}
       {tab === "reconcile" && <ReconcileTab properties={properties} />}
@@ -639,27 +652,40 @@ function SettlementsTab({
   payees,
   accruedSummaryByPayee,
   settlementsByPayee,
+  suggestedPeriods,
 }: {
   payees: Payee[];
   accruedSummaryByPayee: Record<string, AccruedSummary>;
   settlementsByPayee: Record<string, PayoutSettlement[]>;
+  suggestedPeriods?: SuggestedPeriods;
 }) {
+  // 未編集なら半期の既定値（suggestedPeriods）を使う。入力欄は自由に書き換えられる。
   const [periodLabels, setPeriodLabels] = useState<Record<string, string>>({});
+  // 最終精算（掲載終了）。オンにすると¥10,000未満でも作成できる（分配規約 第4条2項）。
+  const [finalFlags, setFinalFlags] = useState<Record<string, boolean>>({});
   const [pendingPayeeId, setPendingPayeeId] = useState<string | null>(null);
   const [pendingSettlementId, setPendingSettlementId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const router = useRouter();
 
+  function periodLabelFor(payeeId: string): string {
+    const edited = periodLabels[payeeId];
+    if (edited !== undefined) return edited;
+    const s = finalFlags[payeeId] ? suggestedPeriods?.final : suggestedPeriods?.regular;
+    return s?.label ?? "";
+  }
+
   function createSettlement(payeeId: string) {
-    const label = (periodLabels[payeeId] ?? "").trim();
+    const label = periodLabelFor(payeeId).trim();
     if (!label) {
       setErrors((e) => ({ ...e, [payeeId]: "精算期間を入力してください" }));
       return;
     }
+    const finalSettlement = finalFlags[payeeId] === true;
     setErrors((e) => ({ ...e, [payeeId]: "" }));
     setPendingPayeeId(payeeId);
     void (async () => {
-      const r = await createSettlementAction(payeeId, label);
+      const r = await createSettlementAction(payeeId, label, { finalSettlement });
       setPendingPayeeId(null);
       if (r.ok) {
         router.refresh();
@@ -692,12 +718,17 @@ function SettlementsTab({
         const summary: AccruedSummary = accruedSummaryByPayee[payee.id] ?? {
           count: 0,
           grossYen: 0,
+          shareYen: 0,
+          taxAddOnYen: 0,
           withholdingYen: 0,
           netYen: 0,
           belowMinimum: false,
         };
         const settlements = settlementsByPayee[payee.id] ?? [];
-        const canCreate = summary.count > 0 && !summary.belowMinimum;
+        const isFinal = finalFlags[payee.id] === true;
+        const hasAccrued = summary.count > 0 && summary.grossYen > 0;
+        const canCreate = hasAccrued && (!summary.belowMinimum || isFinal);
+        const payBy = isFinal ? null : suggestedPeriods?.regular.payBy;
 
         return (
           <div key={payee.id} className="border border-line bg-[#1a1a1a] p-4 space-y-3">
@@ -708,35 +739,62 @@ function SettlementsTab({
               </span>
               <span className="mono text-[11px] text-muted ml-auto">
                 未精算 {summary.count}件 / {fmtYen(summary.grossYen)}
+                {summary.taxAddOnYen > 0 && (
+                  <span className="opacity-60">
+                    {" "}（分配 {fmtYen(summary.shareYen)}＋消費税相当 {fmtYen(summary.taxAddOnYen)}）
+                  </span>
+                )}
               </span>
-              {summary.belowMinimum && (
+              {summary.belowMinimum && hasAccrued && (
                 <span className="mono text-[10px] tracking-[0.18em] uppercase border border-amber-400/40 text-amber-400 px-2 py-0.5">
                   繰越中（最低支払未満）
                 </span>
               )}
             </div>
 
-            {canCreate && (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="精算期間（例: 2026Q3）"
-                  value={periodLabels[payee.id] ?? ""}
-                  onChange={(e) =>
-                    setPeriodLabels((p) => ({ ...p, [payee.id]: e.target.value }))
-                  }
-                  className={`${inputCls} w-48`}
-                />
-                <button
-                  type="button"
-                  onClick={() => createSettlement(payee.id)}
-                  disabled={pendingPayeeId === payee.id}
-                  className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition disabled:opacity-50"
-                >
-                  {pendingPayeeId === payee.id ? "作成中…" : "精算を作成"}
-                </button>
-                {errors[payee.id] && (
-                  <span className="text-[11px] text-red-400">{errors[payee.id]}</span>
+            {hasAccrued && (
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-[12px] text-muted cursor-pointer w-fit">
+                  <input
+                    type="checkbox"
+                    checked={isFinal}
+                    onChange={(e) =>
+                      setFinalFlags((f) => ({ ...f, [payee.id]: e.target.checked }))
+                    }
+                  />
+                  最終精算（掲載終了）— ¥10,000未満でも全額を精算
+                </label>
+                {canCreate && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      aria-label="精算期間"
+                      placeholder="精算期間（例: 2026H1（1/1〜6/30））"
+                      value={periodLabelFor(payee.id)}
+                      onChange={(e) =>
+                        setPeriodLabels((p) => ({ ...p, [payee.id]: e.target.value }))
+                      }
+                      className={`${inputCls} w-full sm:w-64`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => createSettlement(payee.id)}
+                      disabled={pendingPayeeId === payee.id}
+                      className="inline-flex min-h-[40px] items-center justify-center text-[12px] border border-accent text-accent px-3 py-1.5 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+                    >
+                      {pendingPayeeId === payee.id
+                        ? "作成中…"
+                        : isFinal
+                          ? "最終精算を作成"
+                          : "精算を作成"}
+                    </button>
+                    {payBy && (
+                      <span className="mono text-[11px] text-muted">支払期限 {payBy}</span>
+                    )}
+                    {errors[payee.id] && (
+                      <span className="text-[11px] text-red-400">{errors[payee.id]}</span>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -745,7 +803,10 @@ function SettlementsTab({
               <div className="border-t border-line/50 pt-3 space-y-2">
                 {settlements.map((s) => (
                   <div key={s.id} className="flex flex-wrap items-center gap-3 text-[12px]">
-                    <span className="mono opacity-60">{s.periodLabel}</span>
+                    <span className="mono opacity-60">
+                      {s.periodLabel}
+                      {s.finalSettlement && "・最終精算"}
+                    </span>
                     <span>
                       {fmtYen(s.netYen)}{" "}
                       <span className="opacity-40">(源泉 {fmtYen(s.withholdingYen)})</span>

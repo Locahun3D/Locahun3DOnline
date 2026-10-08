@@ -248,7 +248,7 @@ export default function CartClient() {
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <div className="mono text-[15px] tracking-[0.08em] whitespace-nowrap">
               ¥{i.price.toLocaleString(en ? "en-US" : "ja-JP")}
-              <span className="ml-2 text-[10px] tracking-normal text-muted">{en ? "tax excl." : "税抜"}</span>
+              <span className="ml-2 text-[10px] tracking-normal text-muted">{en ? "tax incl." : "税込"}</span>
             </div>
             <button
               type="button"
@@ -271,7 +271,7 @@ export default function CartClient() {
           </div>
           <div className="serif text-2xl text-accent">
             ¥{total.toLocaleString(en ? "en-US" : "ja-JP")}{" "}
-            <span className="mono text-[10px] opacity-40">{en ? "tax excl." : "税抜"}</span>
+            <span className="mono text-[10px] opacity-40">{en ? "tax incl." : "税込"}</span>
           </div>
         </div>
         <label className="flex items-start gap-2 cursor-pointer text-[13px] text-muted">

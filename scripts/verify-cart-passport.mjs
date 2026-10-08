@@ -24,7 +24,7 @@ try {
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
   if(overflow)throw Error(`Horizontal overflow ${width}`);
   const text=await cards.first().innerText();
-  if(!text.includes('356 MB')||!text.includes('1,240 MB')||!text.includes(en?'tax excl.':'税抜'))throw Error('Metadata/tax lost');
+  if(!text.includes('356 MB')||!text.includes('1,240 MB')||!text.includes(en?'tax incl.':'税込'))throw Error('Metadata/tax lost');
   const buy=summary.getByRole('button',{name:en?'Buy all':'まとめて購入',exact:true});
   if(await buy.isEnabled())throw Error('Consent gate lost');
   const before=await buy.boundingBox();await summary.getByRole('checkbox').check();

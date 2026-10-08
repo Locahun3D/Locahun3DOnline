@@ -167,7 +167,7 @@ export default function DataSalePanel({
         {propertyPresentation ? (<div className="space-y-2">{licenseOptions.map((o) => <label key={o.license} data-property-license-card data-selected={selectedLicense === o.license}>
 <input type="radio" name={`license-${propertyId}-${splatItemIndex}`} checked={selectedLicense === o.license} onChange={() => setSelectedLicense(o.license)} />
 <strong>{dataLicenseLabel(o.license, lc)}</strong>
-<div data-property-license-price>{o.price === 0 ? (en ? "Free" : "無料") : `¥${o.price.toLocaleString(en ? "en-US" : "ja-JP")}`} <small>{en ? "tax excl." : "税抜"}</small></div>
+<div data-property-license-price>{o.price === 0 ? (en ? "Free" : "無料") : `¥${o.price.toLocaleString(en ? "en-US" : "ja-JP")}`} <small>{en ? "tax incl." : "税込"}</small></div>
 <p>{en ? dataLicenseDesc(o.license, lc) : <Jp>{dataLicenseDesc(o.license, lc)}</Jp>}</p>
 </label>)}</div>) : licenseOptions.length > 1 ? (
           <div className="mt-1.5">
@@ -247,7 +247,7 @@ export default function DataSalePanel({
             ) : (
               <>
                 <span className="serif text-lg text-accent">¥{yen}</span>
-                <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax excl." : "税抜"}</span>
+                <span className="mono text-[9px] opacity-40 ml-1">{en ? "tax incl." : "税込"}</span>
               </>
             )}
           </div>

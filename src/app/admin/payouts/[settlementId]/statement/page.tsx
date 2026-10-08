@@ -6,6 +6,7 @@ import {
   payoutSettlementRepo,
   payoutLedgerRepo,
   ENTITY_TYPE_LABEL,
+  ledgerBreakdown,
 } from "@/lib/payouts";
 import { fmtDateOnlyJST, fmtDateLongJST } from "@/lib/date-format";
 import StatementPrintButton from "@/components/admin/statement-print-button";
@@ -60,6 +61,7 @@ export default async function PayoutStatementPage({
             <div>{shortId}</div>
             <div className="text-[10px] uppercase tracking-[0.2em] opacity-40 mt-2">Period</div>
             <div>{settlement.periodLabel}</div>
+            {settlement.finalSettlement && <div>最終精算（掲載終了）</div>}
             <div className="text-[10px] uppercase tracking-[0.2em] opacity-40 mt-2">Issued</div>
             <div>{fmtDateOnlyJST(settlement.createdAt)}</div>
           </div>
@@ -81,33 +83,61 @@ export default async function PayoutStatementPage({
             <tr className="text-left text-[10px] uppercase tracking-[0.16em] opacity-40 border-b border-[#ddd]">
               <th className="py-2 font-normal">物件</th>
               <th className="py-2 font-normal">計上日</th>
+              <th className="py-2 font-normal text-right">販売額（税込）</th>
+              <th className="py-2 font-normal text-right">税抜</th>
               <th className="py-2 font-normal text-right">率</th>
-              <th className="py-2 font-normal text-right">販売額</th>
+              <th className="py-2 font-normal text-right">分配額</th>
+              <th className="py-2 font-normal text-right">消費税相当額</th>
               <th className="py-2 font-normal text-right">金額</th>
             </tr>
           </thead>
           <tbody>
             {lines.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-[12px] opacity-50">
+                <td colSpan={8} className="py-6 text-center text-[12px] opacity-50">
                   対象明細がありません。
                 </td>
               </tr>
             ) : (
-              lines.map((line) => (
-                <tr key={line.id} className="border-b border-[#eee]">
-                  <td className="py-3">{propertyTitle.get(line.propertyId) ?? line.propertyId}</td>
-                  <td className="py-3 mono text-[11px] opacity-60">{fmtDateOnlyJST(line.createdAt)}</td>
-                  <td className="py-3 text-right mono text-[11px]">{line.ratePercent}%</td>
-                  <td className="py-3 text-right mono text-[11px] opacity-60">{fmtYen(line.baseAmountYen)}</td>
-                  <td className="py-3 text-right mono text-[11px]">{fmtYen(line.amountYen)}</td>
-                </tr>
-              ))
+              lines.map((line) => {
+                // 内訳の無い旧レコードは「—」を出し、金額は amountYen のまま。
+                const b = ledgerBreakdown(line);
+                return (
+                  <tr key={line.id} className="border-b border-[#eee]">
+                    <td className="py-3">{propertyTitle.get(line.propertyId) ?? line.propertyId}</td>
+                    <td className="py-3 mono text-[11px] opacity-60">{fmtDateOnlyJST(line.createdAt)}</td>
+                    <td className="py-3 text-right mono text-[11px] opacity-60">{fmtYen(line.baseAmountYen)}</td>
+                    <td className="py-3 text-right mono text-[11px] opacity-60">
+                      {b.hasBreakdown && line.taxExclusiveBaseYen !== undefined && line.taxExclusiveBaseYen !== line.baseAmountYen
+                        ? fmtYen(line.taxExclusiveBaseYen)
+                        : "—"}
+                    </td>
+                    <td className="py-3 text-right mono text-[11px]">{line.ratePercent}%</td>
+                    <td className="py-3 text-right mono text-[11px]">{fmtYen(b.shareYen)}</td>
+                    <td className="py-3 text-right mono text-[11px]">
+                      {b.hasBreakdown && b.taxAddOnYen > 0 ? fmtYen(b.taxAddOnYen) : "—"}
+                    </td>
+                    <td className="py-3 text-right mono text-[11px]">{fmtYen(line.amountYen)}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
 
         <div className="ml-auto max-w-[280px] text-[13px] space-y-1.5 mb-2">
+          {settlement.taxAddOnYen !== undefined && settlement.taxAddOnYen > 0 && (
+            <>
+              <div className="flex justify-between">
+                <span className="opacity-60">分配額</span>
+                <span className="mono">{fmtYen(settlement.shareYen ?? settlement.grossYen - settlement.taxAddOnYen)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-60">消費税相当額</span>
+                <span className="mono">{fmtYen(settlement.taxAddOnYen)}</span>
+              </div>
+            </>
+          )}
           <div className="flex justify-between">
             <span className="opacity-60">小計</span>
             <span className="mono">{fmtYen(settlement.grossYen)}</span>
