@@ -150,8 +150,9 @@ export const payoutLedgerEntrySchema = z.object({
   baseAmountYen: z.number().int().min(0),
   /**
    * 支払うべき額（円）＝この行の合計。
-   * - venue（掲載データ販売分配規約）: shareYen + taxAddOnYen（computeLedgerAmount 参照）
-   * - それ以外 / 旧レコード: floor(baseAmountYen * ratePercent / 100)
+   * - venue（掲載データ販売分配規約）/ scanner（持ち込みスキャン規約, 2026-10-09〜）:
+   *   shareYen + taxAddOnYen（computeLedgerAmount 参照）
+   * - referrer / 旧レコード: floor(baseAmountYen * ratePercent / 100)
    */
   amountYen: z.number().int().min(0),
   /**
@@ -184,7 +185,7 @@ export const payoutSettlementSchema = z.object({
    */
   shareYen: z.number().int().min(0).optional(),
   taxAddOnYen: z.number().int().min(0).optional(),
-  /** 掲載終了に伴う最終精算（¥10,000未満でも作成できる。分配規約 第4条2項ただし書き）。 */
+  /** 掲載終了に伴う最終精算（¥10,000未満でも作成できる。分配規約 第4条2項／持ち込みスキャン規約 第6条2項ただし書き）。 */
   finalSettlement: z.boolean().optional(),
   withholdingYen: z.number().int().min(0),
   netYen: z.number().int().min(0),
@@ -213,11 +214,11 @@ export function taxExclusiveFromInclusive(amountYen: number): number {
 }
 
 export interface LedgerAmount {
-  /** 計算の基になった税抜販売価格（venue 以外は税込額そのもの）。 */
+  /** 計算の基になった税抜販売価格（referrer は税込額そのもの）。 */
   taxExclusiveBaseYen: number;
   /** 分配額（消費税相当額の加算前）。 */
   shareYen: number;
-  /** 消費税相当額（venue のみ。その他は 0）。 */
+  /** 消費税相当額（venue / scanner のみ。referrer は 0）。 */
   taxAddOnYen: number;
   /** 支払う額 = shareYen + taxAddOnYen。台帳の amountYen に入る。 */
   totalYen: number;
@@ -226,16 +227,18 @@ export interface LedgerAmount {
 /**
  * 1販売×1受取者の分配額を計算する（純粋関数）。
  *
- * venue（直接掲載スタジオ。/terms/listing-revenue-share 第2条, 2026-10-08）:
+ * venue（直接掲載スタジオ。/terms/listing-revenue-share 第2条, 2026-10-08）と
+ * scanner（持ち込みスキャンの提出者。/terms/submission 第5条, 2026-10-09）:
  *   1. 税抜販売価格 = floor(税込販売価格 × 100 / 110)
  *   2. 分配額       = floor(税抜販売価格 × 分配率 / 100)   … 決済手数料は控除しない
  *   3. 消費税相当額 = floor(分配額 × 10 / 100)
  *   4. 支払額       = 分配額 + 消費税相当額
  *   端数は各段階で円未満切り捨て（分配額・消費税相当額とも floor）。
  *
- * scanner / referrer は従来どおり floor(販売価格 × 分配率 / 100)、消費税相当額なし。
- * （持ち込みスキャン規約の基準は「消費税・決済手数料を除いた金額」だが、
- *   本変更の対象外。仕様確定まで既存の計算を変えない。）
+ * referrer は従来どおり floor(販売価格 × 分配率 / 100)、消費税相当額なし。
+ *
+ * 旧レコード（2026-10-09 より前に起票された scanner 行など）は台帳に保存済みの
+ * amountYen をそのまま使う（再計算しない）。内訳の無い行は ledgerBreakdown 参照。
  *
  * 分配率は 0.01% 刻みなので、浮動小数誤差を避けるため 1万分率の整数にしてから掛ける。
  */
@@ -248,7 +251,7 @@ export function computeLedgerAmount(
   if (!(priceYenTaxIncluded > 0) || rateBp <= 0) {
     return { taxExclusiveBaseYen: 0, shareYen: 0, taxAddOnYen: 0, totalYen: 0 };
   }
-  if (role === "venue") {
+  if (role === "venue" || role === "scanner") {
     const taxExclusiveBaseYen = taxExclusiveFromInclusive(priceYenTaxIncluded);
     const shareYen = Math.floor((taxExclusiveBaseYen * rateBp) / 10_000);
     const taxAddOnYen = Math.floor((shareYen * CONSUMPTION_TAX_PERCENT) / 100);
@@ -281,7 +284,8 @@ const WITHHOLDING_RATE_LOW = 0.1021; // 100万円以下部分
 const WITHHOLDING_RATE_HIGH = 0.2042; // 100万円超部分
 
 /**
- * TODO(2026-10-08, 弁護士確認中): 掲載データ販売分配規約 第4条3項は「法令により
+ * TODO(2026-10-08, 弁護士確認中): 掲載データ販売分配規約 第4条3項（および 2026-10-09 に
+ * 同じ文言へ揃えた持ち込みスキャン規約 第6条3項）は「法令により
  * 源泉徴収が必要とされる場合に限り」控除すると定める。現行の「個人は一律で源泉徴収・
  * 法人は0」のルールがこれと常に一致するか（個人スタジオへの分配が源泉徴収の対象と
  * なる支払いに当たるか等）は弁護士に確認中。回答が出るまでルールは変えないこと。
@@ -318,7 +322,7 @@ export interface SettlementComputation {
  * 未精算(accrued)行の合計から精算内容を計算する。最低支払額(¥10,000)未満
  * なら精算を作らず繰り越す(belowMinimum=true、源泉徴収・差引額は計算しない=0)。
  *
- * opts.finalSettlement = 掲載終了・契約終了に伴う最終精算（分配規約 第4条2項
+ * opts.finalSettlement = 掲載終了・契約終了に伴う最終精算（分配規約 第4条2項／持ち込みスキャン規約 第6条2項
  * ただし書き）。この場合は ¥10,000 未満でも精算する（0円は精算しない）。
  */
 export function computeSettlement(

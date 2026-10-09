@@ -6,8 +6,9 @@ import { useLocale } from "@/components/locale-provider";
 /**
  * /submit-scan 用の分配額シミュレーター。
  *
- * ⚠ 計算ロジックは src/lib/payouts.ts の computeWithholding / MIN_SETTLEMENT_YEN /
- * MAX_TOTAL_SPLIT_PERCENT と同じ値・同じ式を意図的に複製している。payouts.ts は
+ * ⚠ 計算ロジックは src/lib/payouts.ts の computeLedgerAmount（scanner）/
+ * computeWithholding / MIN_SETTLEMENT_YEN / MAX_TOTAL_SPLIT_PERCENT と同じ値・
+ * 同じ式を意図的に複製している。payouts.ts は
  * 冒頭で "server-only" を import しており、そのファイルをクライアント
  * コンポーネントから実行時 import すると client バンドルが壊れるため
  * （同ファイルのコメント参照、preview-share.tsx と同じ回避パターン）、
@@ -20,6 +21,22 @@ const WITHHOLDING_THRESHOLD_YEN = 1_000_000;
 const WITHHOLDING_RATE_LOW = 0.1021;
 const WITHHOLDING_RATE_HIGH = 0.2042;
 const MAX_SCANNER_RATE_PERCENT = 70;
+const CONSUMPTION_TAX_PERCENT = 10;
+
+/**
+ * 1販売あたりの分配額（payouts.ts computeLedgerAmount の scanner と同じ式。
+ * 持ち込みスキャン規約 第5条, 2026-10-09）:
+ * 税抜販売価格 = floor(税込 × 100 / 110) → 分配額 = floor(税抜 × 率 / 100)
+ * → 消費税相当額 = floor(分配額 × 10 / 100)。決済手数料は控除しない。
+ */
+function computePerSale(priceYenTaxIncluded: number, ratePercent: number): { shareYen: number; taxAddOnYen: number } {
+  const rateBp = Math.round(ratePercent * 100);
+  if (!(priceYenTaxIncluded > 0) || rateBp <= 0) return { shareYen: 0, taxAddOnYen: 0 };
+  const taxExclusiveBaseYen = Math.floor((priceYenTaxIncluded * 100) / (100 + CONSUMPTION_TAX_PERCENT));
+  const shareYen = Math.floor((taxExclusiveBaseYen * rateBp) / 10_000);
+  const taxAddOnYen = Math.floor((shareYen * CONSUMPTION_TAX_PERCENT) / 100);
+  return { shareYen, taxAddOnYen };
+}
 
 function computeWithholding(grossYen: number, entityType: "individual" | "corporation"): number {
   if (entityType !== "individual") return 0;
@@ -52,12 +69,15 @@ export default function RevenueSimulator() {
     const safePrice = Math.max(0, Math.floor(pricePerSale || 0));
     const safeCount = Math.max(0, Math.floor(saleCount || 0));
     const safeRate = Math.min(MAX_SCANNER_RATE_PERCENT, Math.max(0, ratePercent));
-    const perSaleAmount = Math.floor((safePrice * safeRate) / 100);
-    const grossYen = perSaleAmount * safeCount;
+    // 台帳は1販売ごとに起票され端数も1販売ごとに切り捨てるので、1件分×件数で合計する。
+    const perSale = computePerSale(safePrice, safeRate);
+    const shareYen = perSale.shareYen * safeCount;
+    const taxAddOnYen = perSale.taxAddOnYen * safeCount;
+    const grossYen = shareYen + taxAddOnYen;
     const belowMinimum = grossYen > 0 && grossYen < MIN_SETTLEMENT_YEN;
     const withholdingYen = belowMinimum ? 0 : computeWithholding(grossYen, entityType);
     const netYen = belowMinimum ? 0 : grossYen - withholdingYen;
-    return { grossYen, withholdingYen, netYen, belowMinimum };
+    return { shareYen, taxAddOnYen, grossYen, withholdingYen, netYen, belowMinimum };
   }, [pricePerSale, saleCount, ratePercent, entityType]);
 
   return (
@@ -74,7 +94,7 @@ export default function RevenueSimulator() {
       <div className="grid sm:grid-cols-2 gap-3.5 mb-4">
         <label className="block">
           <span className="block text-[11.5px] text-muted mb-1">
-            {en ? "Price per sale (¥)" : "1件あたりの想定販売単価（¥）"}
+            {en ? "Price per sale (¥, incl. tax)" : "1件あたりの想定販売単価（税込・¥）"}
           </span>
           <input
             type="number"
@@ -157,7 +177,17 @@ export default function RevenueSimulator() {
       </div>
 
       <div className="border-t border-line pt-3.5 space-y-1.5">
-        <Row label={en ? "Total accrued (before tax)" : "累計分配額（源泉徴収前）"} value={yen(result.grossYen, en)} />
+        <Row
+          label={en ? "Your share (of the price excl. tax)" : "分配額（税抜販売価格×分配率）"}
+          value={yen(result.shareYen, en)}
+          dim
+        />
+        <Row
+          label={en ? "Consumption tax equivalent (10%)" : "消費税相当額（10%）"}
+          value={`+ ${yen(result.taxAddOnYen, en)}`}
+          dim
+        />
+        <Row label={en ? "Total accrued (before withholding)" : "累計分配額（源泉徴収前）"} value={yen(result.grossYen, en)} />
         {entityType === "individual" && (
           <Row
             label={en ? "Withholding tax (10.21% / 20.42%)" : "源泉徴収額（10.21%／20.42%）"}
@@ -169,7 +199,7 @@ export default function RevenueSimulator() {
         {result.belowMinimum && (
           <p className="text-[11.5px] text-accent mt-2">
             {en
-              ? `Below the ¥${MIN_SETTLEMENT_YEN.toLocaleString("en-US")} minimum settlement — this would roll over to the next quarter rather than being paid out yet.`
+              ? `Below the ¥${MIN_SETTLEMENT_YEN.toLocaleString("en-US")} minimum settlement — this would roll over to the next settlement rather than being paid out yet.`
               : `最低支払額（¥${MIN_SETTLEMENT_YEN.toLocaleString("ja-JP")}）未満のため、この時点ではまだ精算されず次回精算へ繰り越されます。`}
           </p>
         )}

@@ -148,7 +148,7 @@ describe("isAccrualMissing", () => {
   });
 });
 
-describe("computeLedgerAmount（掲載データ販売分配規約 第2条 2026-10-08）", () => {
+describe("computeLedgerAmount（掲載データ販売分配規約 第2条 2026-10-08 / 持ち込みスキャン規約 第5条 2026-10-09）", () => {
   it("venue: 税込11,000円 → 税抜10,000円の20% = 2,000円 + 消費税相当200円", () => {
     expect(computeLedgerAmount("venue", 11_000, 20)).toEqual({
       taxExclusiveBaseYen: 10_000,
@@ -182,12 +182,32 @@ describe("computeLedgerAmount（掲載データ販売分配規約 第2条 2026-1
     });
   });
 
-  it("scanner/referrer は従来どおり販売額×率（消費税相当額なし）", () => {
+  it("scanner（持ち込みスキャン規約 第5条 2026-10-09）: venue と同じ計算・30%", () => {
+    // 税込 11,000 → 税抜 10,000 → 30% = 3,000 + 消費税相当 300
     expect(computeLedgerAmount("scanner", 11_000, 30)).toEqual({
-      taxExclusiveBaseYen: 11_000,
-      shareYen: 3_300,
-      taxAddOnYen: 0,
+      taxExclusiveBaseYen: 10_000,
+      shareYen: 3_000,
+      taxAddOnYen: 300,
       totalYen: 3_300,
+    });
+  });
+
+  it("scanner: 50%・端数は各段階で切り捨て・決済手数料は控除しない", () => {
+    // 税込 9,999 → 税抜 9,090 → 50% = 4,545 → 税 floor(454.5)=454
+    expect(computeLedgerAmount("scanner", 9_999, 50)).toEqual({
+      taxExclusiveBaseYen: 9_090,
+      shareYen: 4_545,
+      taxAddOnYen: 454,
+      totalYen: 4_999,
+    });
+  });
+
+  it("referrer は従来どおり販売額×率（消費税相当額なし）", () => {
+    expect(computeLedgerAmount("referrer", 11_000, 10)).toEqual({
+      taxExclusiveBaseYen: 11_000,
+      shareYen: 1_100,
+      taxAddOnYen: 0,
+      totalYen: 1_100,
     });
     expect(computeLedgerAmount("referrer", 9_999, 10).totalYen).toBe(999);
   });
@@ -214,6 +234,16 @@ describe("ledgerBreakdown / computeSettlement の内訳", () => {
       taxAddOnYen: 0,
       hasBreakdown: false,
     });
+  });
+
+  it("内訳の無い旧 scanner 行（旧計算の amountYen）は再計算せずそのまま精算する", () => {
+    const result = computeSettlement(
+      [{ amountYen: 3_300 }, { amountYen: 3_300, shareYen: 3_000, taxAddOnYen: 300 }, { amountYen: 4_000 }],
+      { entityType: "corporation" },
+    );
+    expect(result.grossYen).toBe(10_600);
+    expect(result.shareYen).toBe(10_300);
+    expect(result.taxAddOnYen).toBe(300);
   });
 
   it("新旧混在でも合計は amountYen の和、内訳は分配額+消費税相当額", () => {
