@@ -61,7 +61,7 @@ function dataSaleAsk(p: Property): { price: number } | undefined {
 
 /**
  * 確認メールに写真の投稿口の案内を入れる（2026-09-26 本人指示）。
- * 公開に必要なギャラリーはカバー以外6枚。足りていても追加は歓迎なので節自体は出す。
+ * ギャラリーの目安はカバー以外6枚（公開の条件ではない・2026-10-09）。足りていても追加は歓迎なので節自体は出す。
  */
 function photoAsk(p: Property): { missing: number } {
   return { missing: Math.max(0, 6 - p.gallery.length) };

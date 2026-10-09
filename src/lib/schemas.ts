@@ -839,17 +839,9 @@ export const publishablePropertySchema = propertySchema.extend({
       message: "問い合わせ先のメールアドレス（なければ公式サイトの問い合わせページURL）を入力してください",
     });
   }
-  // ② ギャラリーはカバーと重複しない写真を6枚以上（公式サイトの写真を使う）。
-  const galleryCount = new Set(
-    data.gallery.map((g) => g.src).filter((src) => src && src !== data.cover.src),
-  ).size;
-  if (galleryCount < MIN_PUBLISH_GALLERY) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["gallery"],
-      message: `ギャラリーはカバー以外の写真を${MIN_PUBLISH_GALLERY}枚以上登録してください（現在${galleryCount}枚）`,
-    });
-  }
+  // ② ギャラリーの枚数は公開の条件にしない（2026-10-09 本人指示「写真が足りなくても公開できるように」）。
+  //    公式・フィルムコミッションに写真が少ない物件（ENDURE HOME 等）が、写真待ちで止まっていたため。
+  //    6枚（MIN_PUBLISH_GALLERY）は目安として残し、確認メールの写真依頼・掲載前チェックで知らせる。
 
   // 3DGS データは公開の必須条件ではない（都のロケーションボックス等の写真のみ
   // カタログと同様、スキャン前でも掲載できるようにする）。3DGS が無い物件は

@@ -67,11 +67,14 @@ describe("publishReadiness — 3DGS以外が揃っているか", () => {
     expect(publishReadiness({}).ready).toBe(false);
   });
 
-  it("問い合わせ先が無い・ギャラリーが6枚未満なら申請できない（2026-09-19）", () => {
+  it("問い合わせ先が無ければ申請できない（2026-09-19）", () => {
     const r = publishReadiness(filled({ contactEmail: "", contactWebsite: "", gallery: [] }));
     expect(r.ready).toBe(false);
     expect(r.missing).toContain("問い合わせ先（メール or 公式サイト）");
-    expect(r.missing).toContain("ギャラリー写真（カバー以外6枚以上）");
+  });
+
+  it("ギャラリーが6枚未満でも申請できる（2026-10-09 本人指示）", () => {
+    expect(publishReadiness(filled({ gallery: [] })).ready).toBe(true);
   });
 
   it("公式サイトだけでも問い合わせ先として認める", () => {
