@@ -86,6 +86,18 @@ export default async function EmbedPage({
   if (!splatUrl.trim()) return <UnavailableView en={en} />;
 
   const title = (en && property.titleEn) || property.title;
+  // 2026-10-09 ダイスロケーション様「埋め込みの3Dツアーが1階しか見られず、2階や玄関に進めない」。
+  // 複数シーンの物件は下端の帯にシーンの切り替えを出す。押したらそのシーンをすぐ始める（autoplay=1）。
+  // 他のパラメータ（title=0 など）は引き継ぐ。
+  const sceneHref = (id: string) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) { const x = one(v); if (x != null && k !== "scene" && k !== "autoplay") p.set(k, x); }
+    p.set("scene", id); p.set("autoplay", "1");
+    return `?${p.toString()}`;
+  };
+  const sceneLinks = publicItems.length > 1
+    ? publicItems.map((s, i) => ({ id: s.id, label: (en && s.labelEn) || s.label || (en ? `Scene ${i + 1}` : `シーン${i + 1}`), current: s.id === publicItem?.id }))
+    : [];
 
   return (
     /* ⚠ theme-online（ライトテーマ）で包む。ViewerGate の CTA パネルは物件詳細
@@ -124,7 +136,23 @@ export default async function EmbedPage({
       {/* 掲載者サイト上での出所表示。埋め込みを配ることが当社への導線になる
           （掲載者には無料の集客ツール、当社にはブランド露出という交換）。 */}
       <div className="flex items-center justify-between gap-3 px-3 py-2 border-t border-line bg-bg">
-        <span className="text-[11px] text-ink/80 truncate">{showTitle ? title : ""}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-[11px] text-ink/80 truncate">{showTitle ? title : ""}</span>
+          {sceneLinks.length > 0 && (
+            <nav aria-label={en ? "Scenes" : "シーン"} className="flex items-center gap-1 overflow-x-auto shrink-0 max-w-[60vw]">
+              {sceneLinks.map((s) => (
+                <a
+                  key={s.id}
+                  href={sceneHref(s.id)}
+                  aria-current={s.current ? "page" : undefined}
+                  className={`whitespace-nowrap text-[11px] px-2.5 py-1 border transition ${s.current ? "border-accent text-accent" : "border-line text-ink/70 hover:text-accent hover:border-accent"}`}
+                >
+                  {s.label}
+                </a>
+              ))}
+            </nav>
+          )}
+        </div>
         <a
           href={`https://locahun3d.com/properties/${property.id}`}
           target="_blank"
