@@ -84,7 +84,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "提出者",
     note: "第三者が撮って持ち込んだデータの扱いと分配（30/50%）",
     effective: "2026-08-02",
-    updated: "2026-08-04",
+    updated: "2026-10-09",
     // 掲載の確認メールは施設側に送るもの。提出者向けの規約は混ぜない。
     inStudioMail: false,
   },

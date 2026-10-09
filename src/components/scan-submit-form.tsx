@@ -19,7 +19,7 @@ const CONSENT_ITEMS_JA = [
   "本データは自身が撮影したもので、撮影禁止区域への立入等の違反なく撮影されており、第三者の権利を侵害しないことを保証します",
   "掲載・販売は当社が施設の許諾を得られた場合のみ行われ、それまで内容は非公開で取り扱われます（審査・権利調整に必要な範囲での閲覧・複製を除く）",
   "許諾が得られなかった場合、お預かりした内容（サンプル画像を含む）は削除されます",
-  "売上の分配率は、施設許諾を当社が取得した場合30%、私自身が取得し取り次いだ場合50%です。四半期ごとに精算し、個人への支払いは源泉徴収の対象となります",
+  "売上の分配率は、施設許諾を当社が取得した場合30%、私自身が取得し取り次いだ場合50%です（税抜販売価格に対する割合。決済手数料は差し引かず、消費税相当額が上乗せされます）。半期ごとに精算し、源泉徴収は法令上必要な場合に限り行われます",
   "本データのAI学習利用に関するライセンス管理は当社と施設管理者に委ねます",
 ];
 
@@ -28,7 +28,7 @@ const CONSENT_ITEMS_EN = [
   "This data was captured by me, without entering restricted areas or violating facility rules, and does not infringe any third party's rights.",
   "Listing and sale will only happen once we have obtained the facility's permission — until then, everything is handled privately (except viewing/copying needed for review and rights clearance).",
   "If permission cannot be obtained, everything we hold (including sample images) will be deleted.",
-  "The revenue share is 30% if we obtain the facility's permission, or 50% if I obtain it myself and relay it to Locahun 3D. Settlement is quarterly, and payments to individuals are made net of withholding tax.",
+  "The revenue share is 30% if we obtain the facility's permission, or 50% if I obtain it myself and relay it to Locahun 3D. The share is calculated on the sale price excluding consumption tax, with no deduction of payment processing fees and with consumption tax added. Settlement is semi-annual, and tax is withheld only where required by law.",
   "Management of AI-training licensing for this data is entrusted to us and the facility's manager.",
 ];
 

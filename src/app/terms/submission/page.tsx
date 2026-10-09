@@ -12,11 +12,15 @@ export async function generateMetadata() {
 /**
  * 持ち込みスキャン（分配）プログラムの正式規約。
  * これまで /submit-scan のフォームに「正式な規約は整備中です」という注記があった
- * だけで、実際にお金が動く仕組み（四半期精算・分配率・源泉徴収）を定める文書が
+ * だけで、実際にお金が動く仕組み（精算・分配率・源泉徴収）を定める文書が
  * 存在しなかった（2026-08-02 リーガルチェック準備で発見）。
- * 数値（分配率・精算日・繰越期間等）は本人からの指定値。締め日・支払日のみ
- * 「おすすめで」と一任されたため一般的な商習慣（四半期末締め翌月末払い）を採用—
- * 弁護士確認時にここだけは変更の可能性がある前提で読むこと。
+ * 分配率（30%/50%）は本人からの指定値。
+ * 2026-10-09 本人判断: 分配の計算・精算の仕組みを掲載データ販売分配規約
+ * （/terms/listing-revenue-share 第2条・第4条、2026-10-08 改定）と揃えた。
+ * 税抜販売価格が基準・決済手数料は控除しない・消費税相当額を上乗せ・
+ * 半期精算（6月末・12月末締め翌月末払い）・¥10,000未満繰越（期限なし）・
+ * 契約終了時は全額精算・源泉徴収は法令上必要な場合のみ。
+ * 実装は src/lib/payouts.ts（撮影者分も掲載分と同じ計算）。
  */
 export default async function SubmissionTermsPage() {
   const locale = await getLocale();
@@ -73,12 +77,14 @@ export default async function SubmissionTermsPage() {
         <section>
           <h2 className="ui-section-title mb-4">第5条（分配率）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>提出データの販売により生じた売上（消費税・決済手数料を除いた金額）のうち、次の割合を提出者へ分配します。
+            {/* 2026-10-09 本人判断: 掲載データ販売分配規約と同じく税抜販売価格が基準。決済手数料は差し引かない。消費税相当額は上乗せ。 */}
+            <li>提出データが販売された場合、その販売価格（消費税を除いた額）のうち、次の割合を提出者へ分配します。決済手数料は控除しません。
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li>対象施設の許諾取得を<strong>当社が行った</strong>場合 — <strong>30%</strong></li>
                 <li>対象施設の許諾取得を<strong>提出者自身が行い、当社に取り次いだ</strong>場合 — <strong>50%</strong></li>
               </ul>
             </li>
+            <li>分配金には消費税相当額を加算してお支払いします。</li>
             <li>いずれに該当するかは、成立時に当社が提出者へ通知します。</li>
             <li>本条の分配率は、当社と提出者が別途書面で個別に合意した場合、その合意を優先します。</li>
           </ol>
@@ -87,16 +93,9 @@ export default async function SubmissionTermsPage() {
         <section>
           <h2 className="ui-section-title mb-4">第6条（精算）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>
-              分配金は四半期ごとに精算します。各四半期（1〜3月・4〜6月・7〜9月・10〜12月）の末日を締め日とし、
-              <strong>締め日の属する月の翌月末日までに</strong>提出者の指定口座へお支払いします。
-              {/* ⚠ 締め日・支払日は本人から「おすすめで」と一任された唯一の数値。
-                  一般的な商習慣（四半期末締め翌月末払い）を採用しているが、
-                  他の数値（30%/50%・2年・源泉徴収対象等）と異なり本人の確定指示ではない。
-                  弁護士確認時に変更されうる前提で扱うこと。 */}
-            </li>
-            <li>1回あたりの精算額が<strong>¥10,000未満</strong>の場合は次回精算へ繰り越します。繰越は、対象の売上が生じた四半期の末日から<strong>2年間</strong>を限度とし、当該期間内に¥10,000に達しない場合、以後の請求権は消滅します。</li>
-            <li>提出者が個人（フリーランスを含みます）である場合、分配金の支払いにあたり法令に基づく源泉徴収税および復興特別所得税を控除いたします。控除後の金額をお支払いします。</li>
+            <li>分配金は半期ごとに精算します。<strong>6月30日および12月31日</strong>を締め日とし、締め日の属する月の翌月末日までに提出者の指定口座へお支払いします。</li>
+            <li>1回あたりの精算額が<strong>¥10,000未満</strong>の場合は次回精算へ繰り越します。ただし、提出データの掲載または提出者との契約が終了した場合は、金額にかかわらず、未払いの分配金の全額を精算します。</li>
+            <li>分配金の支払いにあたり、法令により源泉徴収が必要とされる場合に限り、所得税および復興特別所得税を控除いたします。</li>
             <li>振込手数料は当社が負担します。</li>
           </ol>
         </section>
@@ -165,6 +164,7 @@ export default async function SubmissionTermsPage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年8月2日<br />
             改定日: 2026年8月4日（第12条の規約変更手続きを事前周知方式に変更）<br />
+            改定日: 2026年10月9日（掲載データ販売分配規約にあわせ、第5条の分配額を税抜販売価格に対する割合とし、決済手数料を控除しない旨と消費税相当額の加算を明記／第6条の精算を半期ごと（6月末・12月末締め、翌月末払い）に変更し、繰越の2年の期限を廃止して契約終了時の全額精算を追加、源泉徴収を法令上必要な場合に限る旨に改定。分配率（30%・50%）は変更なし）<br />
             ロケハン3D（運営：KWI株式会社）
           </p>
         </div>
@@ -244,12 +244,13 @@ function SubmissionTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 5 (Revenue share)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>Of the revenue generated from sales of Submitted Data (net of consumption tax and payment processing fees), the following share is paid to the Submitter:
+            <li>When Submitted Data is sold, the following share of the sale price excluding consumption tax is paid to the Submitter. Payment processing fees are not deducted.
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
                 <li>Where <strong>we</strong> obtained the Target Facility&apos;s permission — <strong>30%</strong></li>
                 <li>Where the <strong>Submitter</strong> obtained the Target Facility&apos;s permission and relayed it to us — <strong>50%</strong></li>
               </ul>
             </li>
+            <li>An amount equivalent to consumption tax is added to the revenue share when it is paid.</li>
             <li>We notify the Submitter which applies at Closing.</li>
             <li>Where we and the Submitter separately agree a different share in writing, that agreement prevails.</li>
           </ol>
@@ -258,9 +259,9 @@ function SubmissionTermsEN({ locale }: { locale: "ja" | "en" }) {
         <section>
           <h2 className="ui-section-title mb-4">Article 6 (Settlement)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
-            <li>Revenue share is settled quarterly. Each quarter (Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec) closes on its last day, and payment is made to the Submitter&apos;s designated bank account <strong>by the end of the following month</strong>.</li>
-            <li>If a settlement amount is under <strong>¥10,000</strong>, it carries over to the next settlement. Carryover is limited to <strong>2 years</strong> from the end of the quarter in which the underlying sale occurred; any amount that has not reached ¥10,000 within that period is forfeited.</li>
-            <li>Where the Submitter is an individual (including freelancers), payments are made net of withholding tax and the special reconstruction income tax as required by law.</li>
+            <li>Revenue share is settled semi-annually. The periods close on <strong>30 June and 31 December</strong>, and payment is made to the Submitter&apos;s designated bank account by the end of the following month.</li>
+            <li>If a settlement amount is under <strong>¥10,000</strong>, it carries over to the next settlement. However, when the listing of the Submitted Data or the agreement with the Submitter ends, all outstanding revenue share is settled regardless of the amount.</li>
+            <li>Income tax and the special reconstruction income tax are withheld from payments only where withholding is required by law.</li>
             <li>We bear the bank transfer fee.</li>
           </ol>
         </section>
@@ -333,6 +334,7 @@ function SubmissionTermsEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: August 2, 2026<br />
             Revised: August 4, 2026 (changed Article 12 to an advance-notice amendment procedure)<br />
+            Revised: October 9, 2026 (aligned with the Listing Data Revenue Share Terms: Article 5: the share is a percentage of the sale price excluding consumption tax, with no deduction of payment processing fees and with consumption tax added; Article 6: semi-annual settlement (closing 30 June and 31 December, paid by the end of the following month), removed the 2-year carryover limit and added full settlement when the agreement ends, and limited withholding to cases required by law. The share percentages (30% / 50%) are unchanged)<br />
             Locahun 3D (operated by KWI Inc.)
           </p>
         </div>
