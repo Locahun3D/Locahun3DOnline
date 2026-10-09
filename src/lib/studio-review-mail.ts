@@ -137,7 +137,7 @@ function photoSection(input: StudioReviewMailInput): string {
       <div style="font-size:13px;font-weight:bold;margin-bottom:6px;">掲載写真をページ上で直接編集いただけます</div>
       <p style="font-size:13px;line-height:1.9;margin:0 0 10px;color:#444;">
         ${missing > 0
-          ? `公開にはあと <strong>${missing}枚</strong> の写真が必要です。`
+          ? `写真があと <strong>${missing}枚</strong> あると、ページがより伝わりやすくなります（公開は今の枚数でもできます）。`
           : "写真の追加や入れ替えも、その場でできます。"}<br>
         プレビューページの「写真」欄で、追加・差し替え・並べ替え・削除ができます（ログイン不要）。<br>
         変更はすぐにページへ反映されます。スマートフォンで撮った写真もそのまま使えます。

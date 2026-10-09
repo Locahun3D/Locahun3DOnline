@@ -174,6 +174,6 @@ describe("写真のお願い（2026-09-26）", () => {
   it("足りているときは「追加・入れ替えもできる」に変わる", () => {
     const { bodyHtml } = buildStudioReviewMail({ ...input, photoUpload: { missing: 0 } });
     expect(bodyHtml).toContain("写真の追加や入れ替えも、その場でできます");
-    expect(bodyHtml).not.toContain("公開にはあと");
+    expect(bodyHtml).not.toContain("写真があと");
   });
 });

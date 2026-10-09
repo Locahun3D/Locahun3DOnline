@@ -203,7 +203,7 @@ export default function StudioPhotoUpload({
             You can send photos for this page here.
             <br />
             {missingCount > 0
-              ? `${missingCount} more photo${missingCount > 1 ? "s" : ""} are needed to publish.`
+              ? `${missingCount} more photo${missingCount > 1 ? "s" : ""} would help (not required to publish).`
               : "Extra photos are welcome; we will pick the best ones."}
             <br />
             Please add a name, a note and tick the box if you want it at the top — it tells us which
@@ -216,7 +216,7 @@ export default function StudioPhotoUpload({
             掲載ページに使う写真を、ここから送っていただけます。
             <br />
             {missingCount > 0
-              ? `公開にはあと ${missingCount} 枚必要です。`
+              ? `あと ${missingCount} 枚あると見やすくなります（公開の条件ではありません）。`
               : "追加の写真も歓迎です。良いものを選んで掲載します。"}
             <br />
             どの部屋の写真か分かるように、1枚ずつ「名前」「注釈」をお書きください。
