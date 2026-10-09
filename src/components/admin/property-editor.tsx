@@ -3675,7 +3675,7 @@ function Checklist({ data }: { data: Property }) {
     { ok: data.city.length > 0, label: "市区町村" },
     {
       ok: data.permitRequired || data.hourlyPrice > 0,
-      label: data.permitRequired ? "料金（許可制のため入力不要）" : "料金 (0 円以上)",
+      label: data.permitRequired ? "料金（許可制のため入力不要）" : "料金（未入力なら「お問い合わせください」表示）",
     },
     {
       ok: !!data.cover.src && (/^https?:\/\//.test(data.cover.src) || data.cover.src.startsWith("/")),

@@ -848,16 +848,9 @@ export const publishablePropertySchema = propertySchema.extend({
   // 詳細ページ側で「3DGSデータは準備中です」の空表示にフォールバックする
   // （property-detail-view.tsx）。
 
-  // スクランブル交差点など「施設所有者への通常の問い合わせ先が存在せず、撮影に
-  // 道路使用許可等の別手続きが必要な場所」(permitRequired) はレンタル料金という
-  // 概念自体がないため、料金入力を必須にしない。それ以外は従来通り必須。
-  if (!data.permitRequired && data.hourlyPrice < 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["hourlyPrice"],
-      message: "料金を入力してください",
-    });
-  }
+  // 料金も公開の条件にしない（2026-10-09 本人指示）。単価を公開していない施設
+  // （「ご相談ください」）が多く、0円のままなら詳細ページ・カードは「お問い合わせください」
+  // と出る（property-detail-view.tsx / property-card.tsx）。
 
   // forSale=true（3Dデータ販売中）なのにダウンロードファイルが1つも無い項目は
   // 公開させない。以前は管理画面の一覧で「⚠DLファイル未設定」を警告表示する

@@ -50,9 +50,9 @@ describe("publishReadiness — 3DGS以外が揃っているか", () => {
     expect(r.missing).not.toContain("物件名");
   });
 
-  it("料金は許可制の場所では不要（撮影に道路使用許可が要る場所など）", () => {
+  it("料金が未入力でも申請できる（2026-10-09 本人指示・表示は「お問い合わせください」）", () => {
     expect(publishReadiness(filled({ hourlyPrice: 0, permitRequired: true })).ready).toBe(true);
-    expect(publishReadiness(filled({ hourlyPrice: 0, permitRequired: false })).missing).toContain("時間料金");
+    expect(publishReadiness(filled({ hourlyPrice: 0, permitRequired: false })).ready).toBe(true);
   });
 
   it("公開URLを確認していないと申請できない（2026-08-01方針）", () => {
