@@ -46,7 +46,7 @@ export default function EmbedPlayer({
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as { url?: string; streamUrl?: string };
       if (!data.url) throw new Error("no url");
-      setViewerUrl(buildViewerUrl(data.url, { protected: true, streamRef: data.streamUrl }));
+      setViewerUrl(buildViewerUrl(data.url, { protected: true, streamRef: data.streamUrl, embed: true }));
       setState("idle");
     } catch {
       started.current = false;

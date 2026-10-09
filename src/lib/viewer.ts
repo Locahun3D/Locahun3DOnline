@@ -31,6 +31,8 @@ interface ViewerUrlOptions {
    * 同一オリジンの /api/viewer-stream で開くときは不要（ビューアーが ?ref=stream を付けて取りに行く）。
    */
   streamRef?: string | null;
+  /** スタジオのサイトに貼る埋め込み（/embed/）から開くとき。シーンレイヤーと共有URLボタンを出さない（2026-10-09）。 */
+  embed?: boolean;
 }
 
 export function buildViewerUrl(
@@ -51,6 +53,7 @@ export function buildViewerUrl(
   }
   if (options?.protected) params.set("protected", "1");
   if (options?.streamRef) params.set("streamref", options.streamRef);
+  if (options?.embed) params.set("embed", "1");
   return `${VIEWER_PATH}?${params}`;
 }
 

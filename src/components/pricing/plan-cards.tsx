@@ -78,7 +78,7 @@ export const PLANS: Plan[] = [
     monthly: 29800,
     annualMonthly: Math.round(29800 * (1 - ANNUAL_DISCOUNT)),
     desc: "plan.team.desc",
-    features: ["plan.team.f1", "plan.team.f2", "plan.team.f3", "plan.team.f4"],
+    features: ["plan.team.f1", "plan.team.f2", "plan.team.f5", "plan.team.f3", "plan.team.f4"],
     cta: "Subscribe",
     href: "/sign-up?plan=team",
     accent: false,
