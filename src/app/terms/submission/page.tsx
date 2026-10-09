@@ -34,7 +34,7 @@ export default async function SubmissionTermsPage() {
           持ち込みスキャン規約
         </h1>
         <p className="ui-page-lead text-[14px] text-muted">
-          KWI株式会社（以下「当社」）が提供する「ロケハン3D オンライン」の持ち込みスキャン（分配）プログラム（以下「本プログラム」）に関する規約です。<Link href={localizedHref("/submit-scan", locale)} className="text-accent hover:underline">申請フォーム</Link>からの応募をもって、本規約に同意したものとみなします。
+          Kawaii World Industries株式会社（KWI株式会社。以下「当社」）が提供する「ロケハン3D オンライン」の持ち込みスキャン（分配）プログラム（以下「本プログラム」）に関する規約です。<Link href={localizedHref("/submit-scan", locale)} className="text-accent hover:underline">申請フォーム</Link>からの応募をもって、本規約に同意したものとみなします。
         </p>
       </header>
 
@@ -164,8 +164,8 @@ export default async function SubmissionTermsPage() {
           <p className="mono text-[11px] opacity-40">
             制定日: 2026年8月2日<br />
             改定日: 2026年8月4日（第12条の規約変更手続きを事前周知方式に変更）<br />
-            改定日: 2026年10月9日（掲載データ販売分配規約にあわせ、第5条の分配額を税抜販売価格に対する割合とし、決済手数料を控除しない旨と消費税相当額の加算を明記／第6条の精算を半期ごと（6月末・12月末締め、翌月末払い）に変更し、繰越の2年の期限を廃止して契約終了時の全額精算を追加、源泉徴収を法令上必要な場合に限る旨に改定。分配率（30%・50%）は変更なし）<br />
-            ロケハン3D（運営：KWI株式会社）
+            改定日: 2026年10月9日（掲載データ販売分配規約にあわせ、第5条の分配額を税抜販売価格に対する割合とし、決済手数料を控除しない旨と消費税相当額の加算を明記／第6条の精算を半期ごと（6月末・12月末締め、翌月末払い）に変更し、繰越の2年の期限を廃止して契約終了時の全額精算を追加、源泉徴収を法令上必要な場合に限る旨に改定。分配率（30%・50%）は変更なし。運営者の商号を正式名称で表記）<br />
+            ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
       </div>
@@ -196,7 +196,7 @@ function SubmissionTermsEN({ locale }: { locale: "ja" | "en" }) {
         </p>
         <p className="ui-page-lead text-[14px] text-muted">
           These terms govern the Scan Submission (revenue-share) Program (the
-          &quot;Program&quot;) offered by KWI Inc. (&quot;we&quot;, &quot;us&quot;) as part of
+          &quot;Program&quot;) offered by Kawaii World Industries Inc. (KWI Inc.; &quot;we&quot;, &quot;us&quot;) as part of
           &quot;Locahun 3D Online&quot;. By applying through the{" "}
           <Link href={localizedHref("/submit-scan", locale)} className="text-accent hover:underline">
             application form
@@ -334,8 +334,8 @@ function SubmissionTermsEN({ locale }: { locale: "ja" | "en" }) {
           <p className="mono text-[11px] opacity-40">
             Established: August 2, 2026<br />
             Revised: August 4, 2026 (changed Article 12 to an advance-notice amendment procedure)<br />
-            Revised: October 9, 2026 (aligned with the Listing Data Revenue Share Terms: Article 5: the share is a percentage of the sale price excluding consumption tax, with no deduction of payment processing fees and with consumption tax added; Article 6: semi-annual settlement (closing 30 June and 31 December, paid by the end of the following month), removed the 2-year carryover limit and added full settlement when the agreement ends, and limited withholding to cases required by law. The share percentages (30% / 50%) are unchanged)<br />
-            Locahun 3D (operated by KWI Inc.)
+            Revised: October 9, 2026 (aligned with the Listing Data Revenue Share Terms: Article 5: the share is a percentage of the sale price excluding consumption tax, with no deduction of payment processing fees and with consumption tax added; Article 6: semi-annual settlement (closing 30 June and 31 December, paid by the end of the following month), removed the 2-year carryover limit and added full settlement when the agreement ends, and limited withholding to cases required by law. The share percentages (30% / 50%) are unchanged; operator shown by its registered name)<br />
+            Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
       </div>

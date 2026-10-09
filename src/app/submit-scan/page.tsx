@@ -32,13 +32,13 @@ const STEPS_EN = [
 
 const REVENUE_SHARE_JA = [
   "販売が成立した場合、当社が売主として販売し、税抜販売価格の一部を撮影者へ使用料として分配します。決済手数料は差し引かず、消費税相当額を上乗せしてお支払いします（後払い・半期精算：6月末・12月末締め、翌月末払い）。",
-  "分配率は成立時に個別に合意します。施設側の許諾取得をご自身で進めていただけた場合、分配率を大幅に引き上げます。",
+  "分配率は税抜販売価格の30%です。施設側の許諾取得をご自身で進めていただけた場合は50%になります（持ち込みスキャン規約 第5条）。",
   "未精算額が¥10,000未満の場合は次回精算へ繰り越します。契約が終了したときは、金額にかかわらず全額を精算します。源泉徴収は法令上必要な場合に限り行います。",
 ];
 
 const REVENUE_SHARE_EN = [
   "If a sale is concluded, we sell the data as the seller of record and pay you a share of the sale price excluding consumption tax as a usage royalty. Payment processing fees are not deducted, and an amount equivalent to consumption tax is added (paid in arrears, settled semi-annually: closing 30 June and 31 December, paid by the end of the following month).",
-  "The exact share is agreed individually when the deal closes. If you help secure the facility's permission yourself, we substantially increase your share.",
+  "Your share is 30% of the sale price excluding consumption tax, or 50% if you secure the facility's permission yourself (Scan Submission Agreement, Art. 5).",
   "Unsettled balances under ¥10,000 roll over to the next settlement; when the agreement ends, everything outstanding is paid regardless of the amount. Tax is withheld only where Japanese law requires it.",
 ];
 
