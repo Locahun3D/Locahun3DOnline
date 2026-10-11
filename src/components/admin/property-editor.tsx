@@ -68,6 +68,7 @@ import { applyExtendedLicensePricing } from "@/lib/license-options";
 import { receiveSceneAttachment, sceneRefreshDecision, sceneRequest, SceneHttpError, sourceRefreshDecision, type SceneSession } from "@/lib/scene-edit-client";
 import styles from "./property-editor.module.css";
 import SceneEditor, { type SceneAttached } from "./scene-editor";
+import { displaySceneSizeMb } from "@/lib/scene-size";
 
 /**
  * 入力ステップ。⚠ 並び順 = 実際に埋める順番。ここを変えたら本文側の
@@ -2362,7 +2363,7 @@ export default function PropertyEditor({
                               {watch(`splatItems.${idx}.splatUrl`)}
                             </div>
                             <div className="text-[10px] text-muted mt-0.5">
-                              {watch(`splatItems.${idx}.sizeMb`)} MB
+                              {displaySceneSizeMb({ sizeMb: watch(`splatItems.${idx}.sizeMb`), streamUrl: watch(`splatItems.${idx}.streamUrl`), streamSizeMb: watch(`splatItems.${idx}.streamSizeMb`) })} MB
                             </div>
                           </div>
                           <button
@@ -2658,7 +2659,7 @@ export default function PropertyEditor({
                             <div className="grid sm:grid-cols-2 gap-3">
                               <Field label="データ容量（スペック表示）" hint="アップロード時のファイルサイズから自動表示（編集不可）。旧・点群数は参考にならないため撤去。">
                                 <div className={inputClass + " flex items-center gap-2 opacity-80"}>
-                                  <span>3DGS {watch(`splatItems.${idx}.sizeMb`) || 0} MB</span>
+                                  <span>3DGS {displaySceneSizeMb({ sizeMb: watch(`splatItems.${idx}.sizeMb`), streamUrl: watch(`splatItems.${idx}.streamUrl`), streamSizeMb: watch(`splatItems.${idx}.streamSizeMb`) })} MB</span>
                                   {!!watch(`splatItems.${idx}.downloadFileSizeMb`) && (
                                     <span className="text-muted">
                                       ／ DL {watch(`splatItems.${idx}.downloadFileSizeMb`)} MB

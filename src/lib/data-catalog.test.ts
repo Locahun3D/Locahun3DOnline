@@ -39,6 +39,14 @@ describe("3Dデータ販売の一覧", () => {
     expect(entry.sceneLabel).toBe("1F スタジオ");
   });
 
+  it("容量は受け取るファイルの合計。未登録ならオンライン編集後の 1MB ではなく 3DGS 本体の容量（2026-10-11）", () => {
+    const [sum] = listDataSales([prop({ splatItems: [scene({ sizeMb: 1 })] })], NOW);
+    expect(sum.sizeMb).toBe(1200);
+    const edited = scene({ sizeMb: 1, streamUrl: "/api/r2/a.zip", streamSizeMb: 447, downloadFiles: [], downloadFileUrl: "/api/r2/a_sale.zip", downloadFileSizeMb: 0 });
+    const [fallback] = listDataSales([prop({ splatItems: [edited] })], NOW);
+    expect(fallback.sizeMb).toBe(447);
+  });
+
   it("販売していないシーンと、配布ファイルが無いシーンは出さない（買えない導線を作らない）", () => {
     const p = prop({
       splatItems: [

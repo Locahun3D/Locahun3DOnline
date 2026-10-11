@@ -2,6 +2,7 @@ import type { Property } from "./schemas";
 import { resolveLicenseOptions } from "./license-options";
 import { resolveDownloadFiles } from "./downloads";
 import { isDataSaleDisabled, isDataSaleFree } from "./settings-schema";
+import { displaySceneSizeMb } from "./scene-size";
 
 /**
  * 3Dデータ販売の一覧（/data）に出す並び（2026-09-26 本人指示「販売一覧ページ /data を新設」）。
@@ -86,7 +87,9 @@ export function listDataSales(properties: Property[], nowIso: string): DataSaleE
         free,
         licenses: options.map((o) => o.license),
         formats: formatsOf(files),
-        sizeMb: item.sizeMb ?? 0,
+        // 買い手が受け取るファイルの合計。未登録なら 3DGS 本体の容量（オンライン編集後の sizeMb は
+        // 編集内容だけの小さなアーカイブ＝1MB なので、そのまま出さない。2026-10-11 本人指摘「1 MB」）。
+        sizeMb: files.reduce((sum, f) => sum + (f.sizeMb || 0), 0) || displaySceneSizeMb(item),
         scannedAt: p.scannedAt ?? "",
         cover: { src: p.cover.src, alt: p.cover.alt || p.title },
         href: `/properties/${p.id}#scene-${index}`,
