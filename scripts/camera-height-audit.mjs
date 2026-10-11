@@ -89,6 +89,7 @@ window.__audit={
    return out;},
  go:(x,y)=>_clickNavigateAt(x,y),
  finite:()=>[camPos.x,camPos.y,camPos.z,yaw,pitch].every(Number.isFinite),
+ walkInfo:()=>({active:!!walkMode.active,status:String(walkSetup.status||''),avatar:walkMode.avatar?walkMode.avatar.position.toArray().map(v=>+v.toFixed(2)):null,cam:camPos.toArray().map(v=>+v.toFixed(2)),yaw:+yaw.toFixed(2),pitch:+pitch.toFixed(2),spawn:walkSetup.settings.spawn||null,...__audit.at(camPos)}),
  rect:()=>{const r=canvas.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height};},
  corridorScan:(R,step,max)=>{const o={x:camPos.x,y:camPos.y,z:camPos.z},c=walkSetup.core,E=__audit.EYE,out=[];
    const ray=(x,y,z,dx,dz)=>{const h=c.raycastSurface({x,y,z},{x:dx,y:0,z:dz},3);return h?h.distance:3;};
@@ -205,6 +206,16 @@ for (const s of scenes) {
     rec.initial = await page.evaluate(() => __audit.state());
     rec.initialShot = await shot('initial');
     const yaw0 = rec.initial.yaw;
+    // --walk: 歩行ボタンを押した直後の視点（2026-10-12 本人指摘「歩行に入ると視点が外へ飛ぶ」）
+    if (process.argv.includes('--walk')) {
+      await page.evaluate(() => toggleAvatarWalk()); await page.waitForTimeout(9000);
+      rec.walk = await page.evaluate(() => __audit.walkInfo()); rec.walkShot = await shot('walk');
+      await page.keyboard.down('KeyW'); await page.waitForTimeout(2500); await page.keyboard.up('KeyW'); await page.waitForTimeout(800);
+      rec.walkAfterW = await page.evaluate(() => __audit.walkInfo()); rec.walkShot2 = await shot('walk_w');
+      rec.walkBad = !rec.walk.active || rec.walk.aboveFloor == null || rec.walk.headroom === 0 || rec.walkAfterW.aboveFloor == null;
+      console.log(tag, rec.walkBad ? 'WALKBAD' : 'WALKOK', JSON.stringify(rec.walk), JSON.stringify(rec.walkAfterW));
+      if (rec.walkAfterW?.active) { await page.evaluate(() => toggleAvatarWalk()); await page.waitForTimeout(1500); }
+    }
     rec.targets = [];
     for (let k = 0; k < (SKIP.has('targets') ? 0 : 4); k++) {
       await page.evaluate(([y]) => __audit.look(y, -0.3), [yaw0 + k * Math.PI / 2]);
