@@ -15776,7 +15776,8 @@ function _applyFreeCameraCollision(start){
   camPos.set(p.x,p.y,p.z);
 }
 function _walkCameraCollision(av) {
-  if(!cameraCollisionEnabled)return;
+  // 歩行の追従カメラは、設定「カメラの当たり判定」（自由移動用・既定オフ）に関係なく必ず壁・天井で止める。
+  // ここで設定を見て抜けていたため、室内で歩行に入るとカメラが天井や壁の外へ出て何も見えなかった（2026-10-12 本人指摘）。
   if(!walkSetup.core) return;
   const origin={x:av.position.x,y:av.position.y+walkMode.groundOffset+walkMode.height*.8,z:av.position.z};
   if(walkSetup.wholeIndex&&_walkWholeCoverage(origin,camPos)===false){camPos.set(origin.x,origin.y,origin.z);return;}
