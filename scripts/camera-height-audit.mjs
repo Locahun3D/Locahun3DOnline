@@ -89,6 +89,7 @@ window.__audit={
    return out;},
  go:(x,y)=>_clickNavigateAt(x,y),
  finite:()=>[camPos.x,camPos.y,camPos.z,yaw,pitch].every(Number.isFinite),
+ probe:()=>{const M=layers.find(L=>L.type==='splat');const c=walkSetup.core;M.mesh.updateMatrixWorld(true);const cp=new THREE.Vector3(camPos.x,camPos.y,camPos.z);const loc=cp.clone().applyMatrix4(M.mesh.matrixWorld.clone().invert());const two=cp.clone().applyMatrix4(M.mesh.matrixWorld);const C=(v)=>{const q={x:v.x,y:v.y,z:v.z};if(walkSetup.wholeIndex)_walkWholeCoverage(q,q,{drop:30,margin:1});const d=c.raycastSurface(q,{x:0,y:-1,z:0},8),u=c.raycastSurface(q,{x:0,y:1,z:0},8);return {p:[+v.x.toFixed(2),+v.y.toFixed(2),+v.z.toFixed(2)],down:d?+d.distance.toFixed(2):null,up:u?+u.distance.toFixed(2):null};};return {world:C(cp),layerLocal:C(loc),appliedTwice:C(two),matrix:M.mesh.matrixWorld.elements.map(v=>+v.toFixed(3)),status:walkSetup.status,sig:String(walkSetup.settings.signature).slice(0,160)};},
  walkInfo:()=>({active:!!walkMode.active,status:String(walkSetup.status||''),avatar:walkMode.avatar?walkMode.avatar.position.toArray().map(v=>+v.toFixed(2)):null,cam:camPos.toArray().map(v=>+v.toFixed(2)),yaw:+yaw.toFixed(2),pitch:+pitch.toFixed(2),spawn:walkSetup.settings.spawn||null,...__audit.at(camPos)}),
  rect:()=>{const r=canvas.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height};},
  corridorScan:(R,step,max)=>{const o={x:camPos.x,y:camPos.y,z:camPos.z},c=walkSetup.core,E=__audit.EYE,out=[];
@@ -206,6 +207,7 @@ for (const s of scenes) {
     rec.initial = await page.evaluate(() => __audit.state());
     rec.initialShot = await shot('initial');
     const yaw0 = rec.initial.yaw;
+    if (process.argv.includes('--probe')) console.log(tag, 'PROBE', JSON.stringify(await page.evaluate(() => __audit.probe())));
     // --walk: 歩行ボタンを押した直後の視点（2026-10-12 本人指摘「歩行に入ると視点が外へ飛ぶ」）
     if (process.argv.includes('--walk')) {
       await page.evaluate(() => toggleAvatarWalk()); await page.waitForTimeout(9000);
