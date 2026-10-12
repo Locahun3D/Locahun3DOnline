@@ -12,6 +12,8 @@ import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
+import { parsePurchaseIntake } from "@/lib/use-purpose";
+import { applyPurchaseIntake } from "@/lib/purchase-intake";
 
 export const runtime = "nodejs";
 
@@ -46,6 +48,12 @@ export async function POST(req: Request) {
     );
   }
   const termsAgreedAt = new Date().toISOString();
+
+  // 用途は必須（2026-10-13。単品購入 /api/purchase と同じ）。
+  const intake = parsePurchaseIntake(body);
+  if (!intake) {
+    return NextResponse.json({ error: "ご利用の用途を選択してください" }, { status: 400 });
+  }
 
   // 3Dデータ販売の限定無料期間/販売停止設定はアイテム単位(item.freePeriod)。
   // 単品購入 /api/purchase と同じロジックをカートにも適用する（以前はカート側
@@ -128,6 +136,8 @@ export async function POST(req: Request) {
         license: r.license,
         editorialRightsCredit: r.editorialRightsCredit,
         termsAgreedAt,
+        usePurpose: intake.usePurpose,
+        buyerCompany: intake.buyerCompany,
         priceYen: r.price,
         status: "completed",
         stripeSessionId: "",
@@ -139,6 +149,7 @@ export async function POST(req: Request) {
       await notifyPurchase(completed);
       await recordPayoutAccruals(completed);
     }
+    await applyPurchaseIntake(user.id, intake).catch(() => {});
     return NextResponse.json({ ok: true, count: resolved.length });
   }
 
@@ -195,6 +206,8 @@ export async function POST(req: Request) {
       license: r.license,
       editorialRightsCredit: r.editorialRightsCredit,
       termsAgreedAt,
+      usePurpose: intake.usePurpose,
+      buyerCompany: intake.buyerCompany,
       priceYen: r.price,
       status: "pending",
       stripeSessionId: session.id,
@@ -202,6 +215,8 @@ export async function POST(req: Request) {
       refundReason: "",
     });
   }
+
+  await applyPurchaseIntake(user.id, intake).catch(() => {});
 
   return NextResponse.json({ url: session.url });
 }

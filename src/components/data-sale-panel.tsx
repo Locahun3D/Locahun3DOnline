@@ -21,6 +21,7 @@ import LicenseDifference, { LicenseDescription } from "@/components/license-diff
 import PropertyLicenseDetails from "@/components/property-license-details";
 import DataInquiry from "@/components/data-inquiry";
 import { useLocale } from "@/components/locale-provider";
+import { EMPTY_INTAKE, PurchaseIntakeFields, type IntakeValue } from "@/components/purchase-intake-fields";
 import PurchaseContents from "@/components/purchase-contents";
 import type { PurchaseContent } from "@/lib/purchase-contents";
 import Jp from "@/components/jp";
@@ -73,6 +74,7 @@ export default function DataSalePanel({
   const [loading, setLoading] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [inCart, setInCart] = useState(false);
+  const [intake, setIntake] = useState<IntakeValue>(EMPTY_INTAKE);
   // 複数ライセンスがある場合、買い手がここで選ぶ。既定は先頭（管理画面で
   // チェックした順＝最初に有効化した区分）。
   const [selectedLicense, setSelectedLicense] = useState<DataLicense>(
@@ -113,6 +115,10 @@ export default function DataSalePanel({
       alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
     }
+    if (!intake.usePurpose) {
+      alert(en ? "Please choose how you plan to use the data." : "ご利用の用途を選択してください");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/purchase", {
@@ -121,7 +127,7 @@ export default function DataSalePanel({
         // agreedTerms はサーバー側でも必須検証され、同意時刻が購入レコードに記録される。
         // license はサーバー側で resolveLicenseOptions() に対して再検証され、
         // その区分の現在価格が使われる（クライアントの price は信用しない）。
-        body: JSON.stringify({ propertyId, splatItemIndex, agreedTerms, license }),
+        body: JSON.stringify({ propertyId, splatItemIndex, agreedTerms, license, ...intake }),
       });
       const data = await res.json();
       if (data.url) {
@@ -252,6 +258,10 @@ export default function DataSalePanel({
             )}
           </div>
 
+          {!displaySimulation && (
+            <PurchaseIntakeFields value={intake} onChange={setIntake} en={en} className="w-full basis-full min-w-0" />
+          )}
+
           <div className="flex flex-wrap items-center gap-3 min-w-0">
             <label className="flex items-center gap-1.5 cursor-pointer text-[10px] max-[720px]:text-[12px] max-[720px]:gap-2 max-[720px]:min-h-[44px] opacity-60 hover:opacity-80 transition">
               <input
@@ -292,7 +302,8 @@ export default function DataSalePanel({
             )}
             <button
               onClick={handlePurchase}
-              disabled={loading || !agreedTerms}
+              disabled={loading || !agreedTerms || (!displaySimulation && !intake.usePurpose)}
+              title={agreedTerms && !intake.usePurpose && !displaySimulation ? (en ? "Choose how you will use it first" : "先に用途を選択してください") : undefined}
               className="px-4 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
             >
               {loading

@@ -15,7 +15,8 @@ import {
 import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
 import PurchaseContents from "@/components/purchase-contents";
 import type { PurchaseContent } from "@/lib/purchase-contents";
-import { useLocale, useHref } from "@/components/locale-provider";
+import { useLocale, useHref } from "@/components/locale-provider";
+import { EMPTY_INTAKE, PurchaseIntakeFields, type IntakeValue } from "@/components/purchase-intake-fields";
 import { localizeActionError } from "@/lib/i18n/action-errors";
 
 export default function CartClient() {
@@ -24,6 +25,7 @@ export default function CartClient() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [intake, setIntake] = useState<IntakeValue>(EMPTY_INTAKE);
   const [mounted, setMounted] = useState(false);
   const [removedItems, setRemovedItems] = useState<RemovedCartItem[]>([]);
   const [details, setDetails] = useState<Record<string, { license?: DataLicense; purchaseContents: PurchaseContent[]; viewerHref?: string | null }>>({});
@@ -104,6 +106,10 @@ export default function CartClient() {
       alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
     }
+    if (!intake.usePurpose) {
+      alert(en ? "Please choose how you plan to use the data." : "ご利用の用途を選択してください");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/purchase/cart", {
@@ -117,6 +123,7 @@ export default function CartClient() {
           })),
           // サーバー側でも必須検証され、同意時刻が購入レコードに記録される。
           agreedTerms: agreed,
+          ...intake,
         }),
       });
       const data = (await res.json()) as {
@@ -274,6 +281,7 @@ export default function CartClient() {
             <span className="mono text-[10px] opacity-40">{en ? "tax incl." : "税込"}</span>
           </div>
         </div>
+        <PurchaseIntakeFields value={intake} onChange={setIntake} en={en} className="sm:!grid-cols-1" />
         <label className="flex items-start gap-2 cursor-pointer text-[13px] text-muted">
           <input
             type="checkbox"
@@ -302,7 +310,7 @@ export default function CartClient() {
         <button
           type="button"
           onClick={checkout}
-          disabled={loading || !agreed}
+          disabled={loading || !agreed || !intake.usePurpose}
           className="w-full min-h-[48px] px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
         >
           {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy all" : "まとめて購入"}

@@ -15,6 +15,8 @@ import {
 import PropertyDetailView from "@/components/property-detail-view";
 import TrackView from "@/components/track-view";
 import PurchaseToast from "@/components/purchase-toast";
+import NextDownloads from "@/components/next-downloads";
+import { listDataSales } from "@/lib/data-catalog";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { localizeProperty } from "@/lib/schemas";
@@ -58,10 +60,10 @@ export default async function PropertyDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ scene?: string | string[] }>;
+  searchParams: Promise<{ scene?: string | string[]; purchase?: string | string[] }>;
 }) {
   const { id } = await params;
-  const { scene } = await searchParams;
+  const { scene, purchase } = await searchParams;
   const rawProperty = await getPublishedProperty(id);
   if (!rawProperty) notFound();
 
@@ -97,6 +99,7 @@ export default async function PropertyDetailPage({
   // で対応がズレる）。旧レコード（splatItemId 未設定）は記録時の index から
   // 現在の id を逆引きする。
   const purchasedItemIds: string[] = [];
+  const purchasedKeys = new Set<string>();
   // シーン(splatItem)ごとに「1年以内のアンロック済みか」を集計。true のシーンは
   // ViewerGate 側で「視聴済み（無料再視聴）」表示になり、開いても課金されない。
   // splatItem.id で判定する（index だと並び替え/3DGS差し替えで対応がズレる）。
@@ -110,6 +113,7 @@ export default async function PropertyDetailPage({
         if (p.status !== "completed") continue;
         const itemId = p.splatItemId || property.splatItems[p.splatItemIndex]?.id;
         if (itemId) purchasedItemIds.push(itemId);
+        purchasedKeys.add(`${p.propertyId}:${p.splatItemIndex}`);
       }
     } catch {
       // purchase lookup failure is non-fatal
@@ -153,6 +157,18 @@ export default async function PropertyDetailPage({
         locale={locale}
         isAdminUser={isAdminUser}
       />
+      {/* 受け取り直後に次のデータを見せる（2026-10-13）。URL の ?purchase=success は
+          PurchaseToast が消すので、このブロックは最初の描画だけ出る。 */}
+      {purchase === "success" && user && (
+        <div className="frame ui-page-shell pt-0 pb-12">
+          <NextDownloads
+            entries={listDataSales(allPublished, nowIso)}
+            purchasedKeys={purchasedKeys}
+            locale={locale}
+            heading={locale === "en" ? "Thanks! Here is more 3D data you can download" : "ありがとうございます。ほかにもダウンロードできる3Dデータがあります"}
+          />
+        </div>
+      )}
     </>
   );
 }

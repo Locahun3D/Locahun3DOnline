@@ -12,6 +12,8 @@ import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
 import { isStudioPurchaseRestricted } from "@/lib/account-schema";
 import { randomUUID } from "node:crypto";
+import { parsePurchaseIntake } from "@/lib/use-purpose";
+import { applyPurchaseIntake } from "@/lib/purchase-intake";
 
 export const runtime = "nodejs";
 
@@ -47,6 +49,12 @@ export async function POST(req: Request) {
     );
   }
   const termsAgreedAt = new Date().toISOString();
+
+  // 用途は必須（2026-10-13）。誰が制作会社で誰が個人利用かを、受け取りの時点で残す。
+  const intake = parsePurchaseIntake(body);
+  if (!intake) {
+    return NextResponse.json({ error: "ご利用の用途を選択してください" }, { status: 400 });
+  }
 
   const property = await propertyRepo.get(propertyId);
   if (!property) {
@@ -124,6 +132,8 @@ export async function POST(req: Request) {
       license,
       editorialRightsCredit,
       termsAgreedAt,
+      usePurpose: intake.usePurpose,
+      buyerCompany: intake.buyerCompany,
       priceYen: price,
       status: "completed",
       stripeSessionId: "",
@@ -131,6 +141,7 @@ export async function POST(req: Request) {
       completedAt: now.toISOString(),
       refundReason: "",
     });
+    await applyPurchaseIntake(user.id, intake).catch(() => {});
     await track(propertyId, "purchase", "", jstDayKey(), "desktop", price);
     await notifyPurchase(completed);
     await recordPayoutAccruals(completed);
@@ -182,12 +193,16 @@ export async function POST(req: Request) {
     license,
     editorialRightsCredit,
     termsAgreedAt,
+    usePurpose: intake.usePurpose,
+    buyerCompany: intake.buyerCompany,
     priceYen: price,
     status: "pending",
     stripeSessionId: session.id,
     createdAt: new Date().toISOString(),
     refundReason: "",
   });
+
+  await applyPurchaseIntake(user.id, intake).catch(() => {});
 
   return NextResponse.json({ url: session.url });
 }

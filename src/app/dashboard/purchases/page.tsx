@@ -9,6 +9,9 @@ import { redirect } from "next/navigation";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { fmtDateTimeJST } from "@/lib/date-format";
+import { getPublishedProperties } from "@/lib/properties";
+import { listDataSales } from "@/lib/data-catalog";
+import NextDownloads from "@/components/next-downloads";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -52,6 +55,12 @@ export default async function UserPurchasesPage() {
   // Look up download URLs for completed purchases
   const allProps = await propertyRepo.list();
   const propMap = new Map(allProps.map((p) => [p.id, p]));
+  // 受け取り済み以外の3Dデータを下に並べる（2026-10-13。1点だけ受け取って帰る人が95%）。
+  const nowIso = new Date().toISOString();
+  const nextEntries = listDataSales(await getPublishedProperties(), nowIso);
+  const purchasedKeys = new Set(
+    purchases.filter((p) => p.status === "completed").map((p) => `${p.propertyId}:${p.splatItemIndex}`),
+  );
 
   return (
     <div className="theme-online frame ui-page-shell pb-12 sm:pb-32">
@@ -242,6 +251,10 @@ export default async function UserPurchasesPage() {
           })}
         </div>
       )}
+
+      <div className="mt-10">
+        <NextDownloads entries={nextEntries} purchasedKeys={purchasedKeys} locale={locale} />
+      </div>
 
       <div className="mt-10 text-center">
         <Link

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
+import { purposeLabel } from "@/lib/use-purpose";
 import { repo as propertyRepo } from "@/lib/store";
 import { refundPurchaseAction, deletePurchaseAction, bulkDeleteTestPurchasesAction } from "@/lib/admin-actions";
 import RefundButton from "@/components/admin/refund-button";
@@ -224,12 +225,13 @@ export default async function PurchasesPage({
           <AdminEmpty>該当する購入はありません。</AdminEmpty>
         ) : (
           <div className="border border-line overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm text-ink">
+            <table className="w-full min-w-[900px] text-sm text-ink">
               <thead>
                 <tr className="text-[12px] text-left text-muted border-b border-line">
                   <th className="px-3 py-2 font-normal">日時</th>
                   <th className="px-3 py-2 font-normal">物件</th>
                   <th className="px-3 py-2 font-normal">購入者</th>
+                  <th className="px-3 py-2 font-normal">用途 / 会社</th>
                   <th className="px-3 py-2 font-normal text-right">金額</th>
                   <th className="px-3 py-2 font-normal text-center">状態</th>
                   <th className="px-3 py-2 font-normal text-center">操作</th>
@@ -251,6 +253,11 @@ export default async function PurchasesPage({
                     </td>
                     <td className="px-3 py-2 mono text-[11px] opacity-60 truncate max-w-[180px]">
                       {p.userEmail}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] max-w-[200px]">
+                      {/* 2026-10-13 から受け取り時に聞く。古いレコードは空。 */}
+                      <div className="truncate">{purposeLabel(p.usePurpose) || <span className="opacity-30">—</span>}</div>
+                      {p.buyerCompany && <div className="mono text-[10px] opacity-60 truncate" title={p.buyerCompany}>{p.buyerCompany}</div>}
                     </td>
                     <td className="px-3 py-2 text-right mono text-[11px] whitespace-nowrap">
                       {fmtPrice(p.priceYen)}

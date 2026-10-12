@@ -41,6 +41,12 @@ export const purchaseSchema = z.object({
    * 旧レコードは未記録のため optional。
    */
   termsAgreedAt: z.string().optional(),
+  /**
+   * 受け取るときに聞いた用途（lib/use-purpose.ts の key）と、会社名・所属（任意）。
+   * 2026-10-13 追加。それ以前のレコードは未記録のため optional。
+   */
+  usePurpose: z.string().max(40).optional(),
+  buyerCompany: z.string().max(120).optional(),
   priceYen: z.number().int().min(0),
   status: purchaseStatusSchema.default("pending"),
   stripeSessionId: z.string().default(""),
