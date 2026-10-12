@@ -89,6 +89,10 @@ window.__audit={
    return out;},
  go:(x,y)=>_clickNavigateAt(x,y),
  finite:()=>[camPos.x,camPos.y,camPos.z,yaw,pitch].every(Number.isFinite),
+ rebake:async(c)=>{const inp=document.getElementById('walk-cell');if(inp)inp.value=String(c);walkSetup.settings.cellSize=c;const t=performance.now();let err=null;try{await generateWalkCollision();}catch(e){err=String(e).slice(0,160);}for(let i=0;i<300&&walkSetup.busy;i++)await new Promise(r=>setTimeout(r,500));return {cell:walkSetup.settings.effectiveCellSize,sec:+((performance.now()-t)/1000).toFixed(1),kb:walkSetup.settings.whole?Math.round(walkSetup.settings.whole.data.length*0.75/1024):0,total:walkSetup.wholeIndex?walkSetup.wholeIndex.total:null,status:String(walkSetup.status),err};},
+ walkMap:(R,step,radii)=>{const c=walkSetup.core,o={x:camPos.x,y:camPos.y,z:camPos.z},n=Math.round(2*R/step)+1;if(walkSetup.wholeIndex)_walkWholeCoverage({x:o.x-R,y:o.y,z:o.z-R},{x:o.x+R,y:o.y,z:o.z+R},{drop:6,margin:1});const fl0=c.raycastSurface(o,{x:0,y:-1,z:0},6);const fy=fl0?fl0.point.y:o.y-1.2;const rows=[];for(let j=0;j<n;j++){let row='';for(let i=0;i<n;i++){const x=o.x-R+i*step,z=o.z-R+j*step;const h=c.raycastSurface({x,y:fy+1.0,z},{x:0,y:-1,z:0},1.6);let ch='#';if(h&&Math.abs(h.point.y-fy)>=0.35)ch=h.point.y>fy?'u':'d';if(h&&Math.abs(h.point.y-fy)<0.35){const feet={x,y:h.point.y+.05,z};ch='x';for(let k=0;k<radii.length;k++){if(c.isCapsuleClear(feet,1,radii[k])){ch=String(k);break;}}}row+=ch;}rows.push(row);}return {origin:o,floorY:fy,R,step,rows};},
+ setBodyRadius:(r)=>{walkMode.bodyRadius=r;return walkMode.bodyRadius;},
+ avatarAt:()=>walkMode.active&&walkMode.avatar?{x:walkMode.avatar.position.x,y:walkMode.avatar.position.y,z:walkMode.avatar.position.z}:null,
  probe:()=>{const M=layers.find(L=>L.type==='splat');const c=walkSetup.core;M.mesh.updateMatrixWorld(true);const cp=new THREE.Vector3(camPos.x,camPos.y,camPos.z);const loc=cp.clone().applyMatrix4(M.mesh.matrixWorld.clone().invert());const two=cp.clone().applyMatrix4(M.mesh.matrixWorld);const C=(v)=>{const q={x:v.x,y:v.y,z:v.z};if(walkSetup.wholeIndex)_walkWholeCoverage(q,q,{drop:30,margin:1});const d=c.raycastSurface(q,{x:0,y:-1,z:0},8),u=c.raycastSurface(q,{x:0,y:1,z:0},8);return {p:[+v.x.toFixed(2),+v.y.toFixed(2),+v.z.toFixed(2)],down:d?+d.distance.toFixed(2):null,up:u?+u.distance.toFixed(2):null};};return {world:C(cp),layerLocal:C(loc),appliedTwice:C(two),matrix:M.mesh.matrixWorld.elements.map(v=>+v.toFixed(3)),status:walkSetup.status,sig:String(walkSetup.settings.signature).slice(0,160)};},
  walkInfo:()=>({active:!!walkMode.active,status:String(walkSetup.status||''),avatar:walkMode.avatar?walkMode.avatar.position.toArray().map(v=>+v.toFixed(2)):null,cam:camPos.toArray().map(v=>+v.toFixed(2)),yaw:+yaw.toFixed(2),pitch:+pitch.toFixed(2),spawn:walkSetup.settings.spawn||null,...__audit.at(camPos)}),
  rect:()=>{const r=canvas.getBoundingClientRect();return {l:r.left,t:r.top,w:r.width,h:r.height};},
@@ -207,6 +211,8 @@ for (const s of scenes) {
     rec.initial = await page.evaluate(() => __audit.state());
     rec.initialShot = await shot('initial');
     const yaw0 = rec.initial.yaw;
+    if (process.argv.includes('--cell')) console.log(tag, 'REBAKE', JSON.stringify(await page.evaluate(([c]) => __audit.rebake(c), [Number(arg('--cell', 0.25))])));
+    if (process.argv.includes('--walkmap')) { const m = await page.evaluate(() => __audit.walkMap(7, 0.05, [0.22, 0.15, 0.08])); fs.writeFileSync(path.join(outDir, `${tag}_walkmap.json`), JSON.stringify(m)); console.log(tag, 'WALKMAP saved', m.rows.length); }
     if (process.argv.includes('--probe')) console.log(tag, 'PROBE', JSON.stringify(await page.evaluate(() => __audit.probe())));
     // --walk: 歩行ボタンを押した直後の視点（2026-10-12 本人指摘「歩行に入ると視点が外へ飛ぶ」）
     if (process.argv.includes('--walk')) {
@@ -286,6 +292,32 @@ for (const s of scenes) {
       const tr = {i, kind, look: [+yawv.toFixed(2), +pit.toFixed(2)], at: [Math.round(a.x), Math.round(a.y)], ok: !!ok, moved, after, result: bad ? 'bad' : moved ? 'moved' : 'stayed'};
       if (bad) tr.shot = await shot(`fuzz${i}`);
       rec.fuzz.tries.push(tr);
+    }
+    // --walkcorr: 歩行のアバターで狭い通路（幅0.5〜1.2m）を通り抜けられるか（2026-10-12 本人指摘「こういうところが通り抜けられない」）。
+    // 通路の手前に立って歩行に入り、通路の向きへ W を4秒。通路の点を0.5m以上越えたら通過。--bodyradius で胴体半径を変えて比べる。
+    if (process.argv.includes('--walkcorr')) {
+      const br = Number(arg('--bodyradius', 0)); if (br) await page.evaluate(([r]) => __audit.setBodyRadius(r), [br]);
+      const wc = await page.evaluate(() => __audit.corridorScan(12, 0.25, 12));
+      rec.walkCorr = {candidates: wc.candidates, tries: []};
+      for (const [i, q] of wc.pick.entries()) {
+        const stand = await page.evaluate(([q]) => __audit.corridorStand(q), [q]);
+        if (!stand) { rec.walkCorr.tries.push({i, width: q.width, result: 'nostand'}); continue; }
+        await page.waitForTimeout(1200);
+        await page.evaluate(() => toggleAvatarWalk()); await page.waitForTimeout(3500);
+        const a0 = await page.evaluate(() => __audit.avatarAt());
+        if (!a0) { rec.walkCorr.tries.push({i, width: q.width, result: 'nowalk'}); continue; }
+        const dx = q.x - a0.x, dz = q.z - a0.z, L = Math.hypot(dx, dz) || 1;
+        await page.evaluate(([y]) => __audit.look(y, -0.35), [Math.atan2(dx, dz)]);
+        await page.waitForTimeout(400);
+        await page.keyboard.down('KeyW'); await page.waitForTimeout(Math.min(14000, 3000 + (L + 1.2) * 2500)); await page.keyboard.up('KeyW'); await page.waitForTimeout(600);
+        const a1 = await page.evaluate(() => __audit.avatarAt());
+        const prog = a1 ? ((a1.x - a0.x) * dx + (a1.z - a0.z) * dz) / L : 0;
+        const tr = {i, width: q.width, dist: +L.toFixed(2), progress: +prog.toFixed(2), result: prog > L + 0.5 ? 'passed' : prog > L - 0.3 ? 'reached' : 'blocked'};
+        if (tr.result === 'blocked') tr.shot = await shot(`wcorr${i}`);
+        rec.walkCorr.tries.push(tr);
+        await page.evaluate(() => toggleAvatarWalk()); await page.waitForTimeout(1200);
+      }
+      const T = rec.walkCorr.tries; console.log(tag, 'WALKCORR', JSON.stringify({radius: br || 0.22, n: T.length, passed: T.filter(t => t.result === 'passed').length, reached: T.filter(t => t.result === 'reached').length, blocked: T.filter(t => t.result === 'blocked').length, other: T.filter(t => !['passed','reached','blocked'].includes(t.result)).length, blockedWidths: T.filter(t => t.result === 'blocked').map(t => t.width), passedWidths: T.filter(t => t.result === 'passed').map(t => t.width)}));
     }
     // 狭い通路（2026-10-08 本人「壁際の制限は階段・狭い通路で裏目に出るかも。念入りに」）: 幅 0.5〜1.2m の通路を当たり判定から探し、
     // 通路の手前 1〜2m に立って通路の床をタッチ → 移動できたか（拒否されていないか）・壁に寄りすぎていないか。
