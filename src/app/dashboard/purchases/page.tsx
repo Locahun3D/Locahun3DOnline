@@ -12,6 +12,7 @@ import { fmtDateTimeJST } from "@/lib/date-format";
 import { getPublishedProperties } from "@/lib/properties";
 import { listDataSales } from "@/lib/data-catalog";
 import NextDownloads from "@/components/next-downloads";
+import DownloadFormatPicker from "@/components/download-format-picker";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -135,6 +136,10 @@ export default async function UserPurchasesPage() {
             // 既定DLは最新の日付版、無ければ旧単一ファイル、無ければ先頭形式。
             const bundled = versions[0]?.url || item?.downloadFileUrl || files[0]?.url || "";
             const individualFiles = individualPurchaseDownloads(files, bundled);
+            // 全部入り（既定のファイル）の表示名と容量。形式別の一覧とは別に持つ。
+            const bundleIsLegacy = !!item?.downloadFileUrl && bundled === item.downloadFileUrl;
+            const bundleFormat = bundleIsLegacy ? item?.downloadFileFormat || "ZIP" : files.find((f) => f.url === bundled)?.format || "ZIP";
+            const bundleSizeMb = bundleIsLegacy ? item?.downloadFileSizeMb ?? 0 : versions[0]?.sizeMb ?? 0;
 
             return (
               <div key={p.id} className="border border-line hover:border-line/80 transition">
@@ -175,32 +180,12 @@ export default async function UserPurchasesPage() {
 
                     {p.status === "completed" && (
                       <div className="flex flex-wrap gap-2 items-center justify-end">
-                        {bundled && (
-                          <a
-                            href={`/api/purchase/${p.id}/download`}
-                            className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/50 bg-green-400/10 text-green-400 px-3 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
-                            title={en ? "Download the default file" : "既定のファイルをダウンロード"}
-                          >
-                            {en ? "↓ Download" : "↓ ダウンロード"}
-                          </a>
-                        )}
-                        {individualFiles.length > 0 && (
-                          <>
-                            <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-30 mx-1">
-                              {en ? "each" : "個別"}
-                            </span>
-                            {individualFiles.map((f, fi) => (
-                              <a
-                                key={fi}
-                                href={`/api/purchase/${p.id}/download?format=${encodeURIComponent(f.format)}`}
-                                className="mono text-[10px] tracking-[0.18em] uppercase border border-green-400/30 text-green-400/80 px-2.5 py-1.5 hover:bg-green-400 hover:text-bg transition whitespace-nowrap"
-                                title={en ? `Download ${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} separately` : `${f.format}${f.sizeMb ? ` (${f.sizeMb} MB)` : ""} を個別ダウンロード`}
-                              >
-                                ↓ {f.format}
-                              </a>
-                            ))}
-                          </>
-                        )}
+                        <DownloadFormatPicker
+                          purchaseId={p.id}
+                          bundle={bundled ? { format: bundleFormat, sizeMb: bundleSizeMb } : null}
+                          files={individualFiles.map((f) => ({ format: f.format, sizeMb: f.sizeMb }))}
+                          en={en}
+                        />
                         {versions.length > 1 && (
                           <>
                             <span className="mono text-[9px] tracking-[0.18em] uppercase opacity-30 mx-1">

@@ -7,7 +7,7 @@ import type { DataSaleEntry } from "@/lib/data-catalog";
 
 const entry = (over: Partial<DataSaleEntry>): DataSaleEntry => ({
   propertyId: "p1", propertyTitle: "新宿 歌舞伎町ゲート", sceneIndex: 0, sceneId: "s", sceneLabel: "",
-  area: "東京23区", prefecture: "東京都", city: "新宿区", category: "street", price: 0, free: true,
+  area: "東京23区", prefecture: "東京都", city: "新宿区", category: "outdoor", price: 0, free: true,
   licenses: ["editorial"], formats: ["PLY"], sizeMb: 100, scannedAt: "2026-09-20",
   cover: { src: "/c.jpg", alt: "" }, href: "/properties/p1#scene-0", ...over,
 });
@@ -23,7 +23,7 @@ describe("NextDownloads — 受け取り直後に次のデータを見せる", (
     const html = renderToStaticMarkup(
       createElement(NextDownloads, {
         entries: [entry({}), entry({ propertyId: "p2", propertyTitle: "スタジオ", price: 200000, free: false })],
-        purchasedKeys: new Set(),
+        purchasedKeys: new Set<string>(),
         locale: "en",
       }),
     );
