@@ -45,7 +45,9 @@ export interface DataSaleEntry {
 function formatsOf(files: { format?: string; url?: string }[]): string[] {
   const out = new Set<string>();
   for (const f of files) {
-    const label = (f.format ?? "").trim();
+    // カードのバッジは短く出す。「Blender (.blend)」「LCC2 (XGRIDS)」の括弧書きは落とす
+    // （4形式を括弧つきで並べると写真の上で2行になった。2026-10-13）。
+    const label = (f.format ?? "").replace(/\s*[（(][^）)]*[）)]\s*/g, " ").trim();
     if (label && label.toUpperCase() !== "DATA") {
       out.add(label.toUpperCase());
       continue;

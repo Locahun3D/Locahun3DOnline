@@ -91,4 +91,10 @@ describe("3Dデータ販売の一覧", () => {
     );
     expect(summarizeDataSales(list)).toEqual({ count: 2, freeCount: 0, minPrice: 90000 });
   });
+  it("形式のバッジは括弧書きを落として短く出す", () => {
+    const p = propertySchema.parse({ id: "s1", category: "studio", status: "published", title: "T", cover: { src: "/c.jpg", alt: "" },
+      splatItems: [{ id: "a", label: "A", forSale: true, salePrice: 1000, downloadFileUrl: "/all.zip",
+        downloadFiles: [{ format: "Blender (.blend)", url: "/b.zip", sizeMb: 1 }, { format: "LCC2 (XGRIDS)", url: "/l.zip", sizeMb: 1 }] }] });
+    expect(listDataSales([p], "2027-06-01T00:00:00.000Z")[0].formats).toEqual(["BLENDER", "LCC2"]);
+  });
 });
