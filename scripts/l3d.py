@@ -13,6 +13,7 @@
   python scripts/l3d.py place <slug> <ZIP|フォルダ> --captions <txt>   # もらった写真を番号順に配置
   python scripts/l3d.py basics <slug> --summary "…" --confirm-url   # 掲載の基本欄（公開申請の必須項目）
   python scripts/l3d.py sell <slug> [--allow-published]   # データ販売を有効化（ZIP作成→R2→販売設定）
+  python scripts/l3d.py formats <slug>|--all [--rebuild]  # 販売データに Blender・形式別ZIP・使い方txt を付ける
   python scripts/l3d.py datasale <slug> --answer granted --price 150000   # 3Dデータ販売の許諾を記録
   python scripts/l3d.py restore <slug>              # 閉じた下書きを元に戻す（まとめ方を変えたとき）
 
@@ -61,6 +62,7 @@ TOOLS = {
     "place": "place_photos.py",                # もらった写真を番号どおりに自動配置（ZIP/フォルダ＋キャプション）
     "photos": "replace_photos.py",         # スキャン切り出しのカバー・ギャラリーを公式の実写へ入れ替える
     "sell": "sell_data.py",                # 3Dデータ販売を有効にする（販売用ZIPを作って R2 へ／公開中は --allow-published）
+    "formats": "sell_formats.py",          # 販売データに Blender ファイル・形式別 ZIP・使い方 txt を付ける（2026-10-13 ルール）
     "findcontact": "find_contact.py",          # 収集済みページから問い合わせ先メールを探す（--apply で反映）
     "contact": "set_contact.py",               # 問い合わせ先メールを手で入れる
     "archive": "archive_property.py",           # 不要になった下書きを閉じる（status=archived・戻せる）
