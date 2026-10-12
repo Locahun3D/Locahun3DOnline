@@ -2963,7 +2963,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 <dialog id="walk-setup" aria-labelledby="walk-setup-title">
   <form method="dialog"><header><h2 id="walk-setup-title" data-i18n="walk-setup-title">アバター歩行</h2><button aria-label="閉じる" title="閉じる" data-i18n-aria="btn-close" data-i18n-title="btn-close">&#x2715;</button></header></form>
   <label class="walk-field"><span data-i18n="walk-cell-lbl">判定セルの大きさ (m)</span>
-    <input id="walk-cell" type="number" min="0.1" max="1" step="0.05" value="0.25">
+    <input id="walk-cell" type="number" min="0.1" max="1" step="0.025" value="0.125">
   </label>
   <label class="walk-field"><span data-i18n="walk-radius-lbl">生成範囲の半径 (m)</span>
     <input id="walk-radius" type="number" min="2" max="50" step="1" value="12">
@@ -14832,7 +14832,9 @@ globalThis.LocahunWalkSettings = {
         typeof v.whole.data==='string' && v.whole.data.length>0 && v.whole.data.length<=22000000 && /^[A-Za-z0-9+/]*={0,2}$/.test(v.whole.data)
         ? {key:v.whole.key,data:v.whole.data} : null,
       meshOnly: v.meshOnly === true,
-      cellSize: finite(v.cellSize) && v.cellSize >= .1 && v.cellSize <= 1 ? v.cellSize : .25,
+      // 既定は 12.5cm（2026-10-12 本人指摘「通り抜けられない」）。25cm だと壁・家具が実物より最大25cm太り、
+      // 幅1m弱の戸口や通路が両側から塞がっていた（バロック: 歩ける床 6.1㎡→15.2㎡、焼き時間0.8秒・25KB）。
+      cellSize: finite(v.cellSize) && v.cellSize >= .1 && v.cellSize <= 1 ? v.cellSize : .125,
       radius: finite(v.radius) && v.radius>=2 && v.radius<=50 ? v.radius : 12,
       effectiveCellSize: finite(v.effectiveCellSize) && v.effectiveCellSize>=.1 && v.effectiveCellSize<=1 ? v.effectiveCellSize : null,
       detailRegion: v.detailRegion && v.detailRegion.center && ['x','y','z'].every(k=>finite(v.detailRegion.center[k])) && v.detailRegion.radius===2
@@ -15619,11 +15621,11 @@ function _walkCameraSpawnPosition(){
   }
   // 真下が家具の上・壁際で立てないときは、近くの立てる床を探す（2026-10-12 本人指摘「歩行に入れない」。
   // 初期視点が台車や机の真上にある物件で、歩行ボタンが効かず自由移動のまま壁を抜けていた）。
-  // 近い順に、今の目線から大きく外れない高さの床だけを候補にする（別の階へ飛ばさない）。
+  // 近い順に探す。深さは真下の判定と同じ20m（ホールの上の席など、高い初期視点から始める物件のため）。
   for(const r of [.3,.6,.9,1.3,1.8,2.4,3])for(let i=0;i<12;i++){
     const a=yaw+i*Math.PI/6,q={x:point.x+Math.sin(a)*r,y:point.y,z:point.z+Math.cos(a)*r};
     if(walkSetup.wholeIndex&&_walkWholeCoverage(q,q,{drop:22})===false)continue;
-    const d=core.raycast(q,{x:0,y:-1,z:0},3);
+    const d=core.raycast(q,{x:0,y:-1,z:0},20);
     if(!Number.isFinite(d)||d<=0)continue;
     const feet={x:q.x,y:q.y-d+.05,z:q.z};
     if(_walkFeetClear(core,feet))return feet;
@@ -16053,7 +16055,7 @@ async function _walkRunWholeGeneration(job,splats){
   job.wholeCacheOnly=_wholeCacheOnly(job);
   const cameraOnly=job.wholeCacheOnly&&!walkMode.active;
   const findSpawn=job.options.findSpawn&&!cameraOnly;
-  const sources=[],identities=[],cellSize=walkSetup.settings.cellSize;
+  const sources=[],identities=[];let cellSize=walkSetup.settings.cellSize;
   for(const layer of splats){
     _walkCheckJob(job);layer.mesh.updateWorldMatrix(true,false);
     const matrix=[...layer.mesh.matrixWorld.elements],identity=await _wholeSourceIdentity(layer,job);
@@ -16065,6 +16067,14 @@ async function _walkRunWholeGeneration(job,splats){
   let key=await _wholeHash(new TextEncoder().encode(JSON.stringify(['whole-tiles-v2',cellSize,identities])));
   const legacyKey=await _wholeHash(new TextEncoder().encode(JSON.stringify(['whole-tiles-v1',cellSize,identities])));
   if(!globalThis.LocahunCollisionManifest?.[key]&&globalThis.LocahunCollisionManifest?.[legacyKey])key=legacyKey;
+  // 事前に作って配布しているデモの判定は 25cm で作ってある。既定を 12.5cm にしたので（2026-10-12）、
+  // いまの升の大きさの配布物が無く 25cm の配布物があるときは、そちらをそのまま使う（読込のたびに作り直さない）。
+  if(!globalThis.LocahunCollisionManifest?.[key]&&cellSize!==.25&&globalThis.LocahunCollisionManifest){
+    for(const version of ['whole-tiles-v2','whole-tiles-v1']){
+      const coarse=await _wholeHash(new TextEncoder().encode(JSON.stringify([version,.25,identities])));
+      if(globalThis.LocahunCollisionManifest[coarse]){key=coarse;cellSize=.25;break;}
+    }
+  }
   _walkCheckJob(job);let bytes,index,persistentHit=false;
   const saved=walkSetup.settings.whole;
   if(saved?.key===key){try{bytes=_wholeUnbase64(saved.data);index=await LocahunWholeCollision.decodeTiles(bytes,key);}catch(_){bytes=null;}}
