@@ -135,7 +135,11 @@ export default async function UserPurchasesPage() {
             const versions = item ? resolveDownloadVersions(item, prop?.scannedAt) : [];
             // 既定DLは最新の日付版、無ければ旧単一ファイル、無ければ先頭形式。
             const bundled = versions[0]?.url || item?.downloadFileUrl || files[0]?.url || "";
-            const individualFiles = individualPurchaseDownloads(files, bundled);
+            // 全部入りの ZIP は 2026-10-13 にやめた（本人「全部dlする人いないやろ」）。形式別だけの購入では
+            // 先頭の形式を「全部入り」扱いにせず、形式の一覧だけを出す。日付別バージョンや旧来の単一 ZIP が
+            // ある購入だけ、それを先頭の選択肢にする。
+            const hasBundle = !!(versions[0]?.url || item?.downloadFileUrl);
+            const individualFiles = hasBundle ? individualPurchaseDownloads(files, bundled) : files;
             // 全部入り（既定のファイル）の表示名と容量。形式別の一覧とは別に持つ。
             const bundleIsLegacy = !!item?.downloadFileUrl && bundled === item.downloadFileUrl;
             const bundleFormat = bundleIsLegacy ? item?.downloadFileFormat || "ZIP" : files.find((f) => f.url === bundled)?.format || "ZIP";
@@ -182,7 +186,7 @@ export default async function UserPurchasesPage() {
                       <div className="flex flex-wrap gap-2 items-center justify-end">
                         <DownloadFormatPicker
                           purchaseId={p.id}
-                          bundle={bundled ? { format: bundleFormat, sizeMb: bundleSizeMb } : null}
+                          bundle={hasBundle ? { format: bundleFormat, sizeMb: bundleSizeMb } : null}
                           files={individualFiles.map((f) => ({ format: f.format, sizeMb: f.sizeMb }))}
                           en={en}
                         />

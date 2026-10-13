@@ -26,6 +26,11 @@ describe("DownloadFormatPicker — 形式を選んでダウンロード", () => 
     expect(html.replace(/<!-- -->/g, "")).toContain(">All (ZIP) (365 MB)<");
     expect(html).not.toContain("全部入り");
   });
+  it("全部入りが無ければ、先頭の形式を初期選択にして形式名だけを並べる", () => {
+    const html = render({ purchaseId: "p1", bundle: null, files: [{ format: "Blender (.blend)", sizeMb: 126 }, { format: "PLY (3DGS)", sizeMb: 171 }], en: false });
+    expect(html).not.toContain("全部入り");
+    expect(html).toContain('href="/api/purchase/p1/download?format=Blender%20(.blend)"');
+  });
   it("形式が1つだけなら選択欄を出さない", () => {
     const html = render({ purchaseId: "p1", bundle: { format: "ZIP", sizeMb: 0 }, files: [], en: true });
     expect(html).not.toContain("<select");
