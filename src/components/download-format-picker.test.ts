@@ -20,6 +20,11 @@ describe("DownloadFormatPicker — 形式を選んでダウンロード", () => 
     // 初期選択は全部入り＝format 指定なし
     expect(html).toContain('href="/api/purchase/p1/download"');
   });
+  it("All (ZIP) はそのままの名前で先頭に出す", () => {
+    const html = render({ purchaseId: "p1", bundle: { format: "All (ZIP)", sizeMb: 365 }, files: [{ format: "PLY (3DGS)", sizeMb: 171 }], en: false });
+    expect(html).toContain(">All (ZIP) (365 MB)<");
+    expect(html).not.toContain("全部入り");
+  });
   it("形式が1つだけなら選択欄を出さない", () => {
     const html = render({ purchaseId: "p1", bundle: { format: "ZIP", sizeMb: 0 }, files: [], en: true });
     expect(html).not.toContain("<select");
