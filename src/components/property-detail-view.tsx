@@ -1085,7 +1085,7 @@ export default function PropertyDetailView({
           <Eyebrow en="RELATED" jp={en ? "Similar studios" : "類似スタジオ"} />
           {/* 2026-09-26 本人指示「類似スタジオ、この並びになるようにして」: カタログ（/properties）と
               同じカード・同じ並びにした。距離はこの物件からの直線距離（座標が無い物件は出さない）。 */}
-          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
+          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 min-[640px]:max-[719px]:grid-cols-2 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
             {others.map((p) => (
               <li key={p.id}>
                 <PropertyCardLite

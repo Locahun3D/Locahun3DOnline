@@ -582,7 +582,7 @@ export default function CatalogClient({
              スマホ（<640px）は1列いっぱいに広げる: 幅上限320pxのままだと左に寄って右が空く（2026-09-20 本人指摘）。
              iPad 縦（720〜1024px）は3列に固定する: auto-fill は幅上限 320px で列数を数えるので 820px では2列になり、
              右に 1/4 ほど空きが出ていた（2026-10-13 本人指摘「横二つしか表示されない」）。/data と物件ページ下の関連物件も同じ。 */
-          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
+          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 min-[640px]:max-[719px]:grid-cols-2 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
             {computed.map((p) => (
               <li
                 key={p.id}
