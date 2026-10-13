@@ -25,7 +25,7 @@ export default function DownloadFormatPicker({
     // 全部入りは「All (ZIP)」で登録している（2026-10-13 本人「これ、Allで」）。その名前ならそのまま出し、
     // 古い名前（中身を並べたもの）のときだけ「全部入り」を頭に付けて区別する。
     ...(bundle
-      ? [{ value: "", ...bundle, format: /^all/i.test(bundle.format) ? bundle.format : en ? `Everything — ${bundle.format}` : `全部入り — ${bundle.format}` }]
+      ? [{ value: "", ...bundle, format: bundle.format.toLowerCase().startsWith("all") ? bundle.format : en ? `Everything — ${bundle.format}` : `全部入り — ${bundle.format}` }]
       : []),
     ...files.map((f) => ({ value: f.format, ...f })),
   ];
