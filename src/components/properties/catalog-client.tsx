@@ -10,6 +10,7 @@ import {
   presetLabel,
   type Property,
   type PropertyCategory,
+  listedAt,
 } from "@/lib/schemas";
 import { haversineKm } from "@/lib/distance";
 import PropertyCardLite from "@/components/property-card-lite";
@@ -428,7 +429,7 @@ export default function CatalogClient({
 
     filtered.sort((a, b) => {
       switch (sort) {
-        case "oldest":        return (a.updatedAt ?? "").localeCompare(b.updatedAt ?? "");
+        case "oldest":        return listedAt(a).localeCompare(listedAt(b));
         case "priceAsc":      return a.hourlyPrice - b.hourlyPrice;
         case "priceDesc":     return b.hourlyPrice - a.hourlyPrice;
         case "dailyAsc":      return (a.dailyPrice || Infinity) - (b.dailyPrice || Infinity);
@@ -442,7 +443,7 @@ export default function CatalogClient({
         case "distanceAsc":   return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
         case "distanceDesc":  return (b.distanceKm ?? -1) - (a.distanceKm ?? -1);
         case "newest":
-        default:              return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
+        default:              return listedAt(b).localeCompare(listedAt(a));
       }
     });
 

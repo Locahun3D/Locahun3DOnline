@@ -785,12 +785,23 @@ export const propertySchema = z.object({
   publishedAt: z.string().datetime().optional(),
 });
 
+/**
+ * 並び順「新着」の基準になる時刻（初回公開。旧データは作成時刻）。
+ *
+ * updatedAt は使わない: 販売データの差し替えや英訳の補完など、中身を直すたびに書き換わるので、
+ * 新しく載った物件ではなく「最後に触った物件」が先頭に来てしまう（2026-10-14 本人指摘
+ * 「新しい順、これ更新順じゃない」。前日に販売データを足した8物件が先頭に並んでいた）。
+ */
+export function listedAt(p: { publishedAt?: string; createdAt?: string }): string {
+  return p.publishedAt || p.createdAt || "";
+}
+
 /** 公開(初回)から2ヶ月以内なら true — カタログの "New" バッジ判定。 */
 export function isNewProperty(
   p: { publishedAt?: string; createdAt?: string },
   now: Date = new Date(),
 ): boolean {
-  const base = p.publishedAt || p.createdAt;
+  const base = listedAt(p);
   if (!base) return false;
   const d = new Date(base);
   if (Number.isNaN(d.getTime())) return false;

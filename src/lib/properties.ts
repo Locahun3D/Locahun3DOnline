@@ -3,6 +3,7 @@ import { repo } from "./store";
 import { getCurrentUser } from "./dal";
 import { canViewConfidential } from "./account-schema";
 import type { Property, PropertyCategory } from "./schemas";
+import { listedAt } from "./schemas";
 
 export type {
   Property,
@@ -160,7 +161,7 @@ export function findRelatedProperties(
     .sort(
       (a, b) =>
         b.score - a.score ||
-        (b.p.updatedAt ?? "").localeCompare(a.p.updatedAt ?? ""),
+        listedAt(b.p).localeCompare(listedAt(a.p)),
     )
     .slice(0, limit)
     .map(({ p }) => p);
