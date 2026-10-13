@@ -22,7 +22,8 @@ describe("DownloadFormatPicker — 形式を選んでダウンロード", () => 
   });
   it("All (ZIP) はそのままの名前で先頭に出す", () => {
     const html = render({ purchaseId: "p1", bundle: { format: "All (ZIP)", sizeMb: 365 }, files: [{ format: "PLY (3DGS)", sizeMb: 171 }], en: false });
-    expect(html).toContain(">All (ZIP) (365 MB)<");
+    // React は隣り合う文字列の間にコメントを挟むので、タグを除いた文字で比べる。
+    expect(html.replace(/<!-- -->/g, "")).toContain(">All (ZIP) (365 MB)<");
     expect(html).not.toContain("全部入り");
   });
   it("形式が1つだけなら選択欄を出さない", () => {
