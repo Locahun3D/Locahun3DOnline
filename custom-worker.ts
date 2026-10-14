@@ -9,12 +9,16 @@
  * 定期実行2（2026-10-08）: みなし承認（施設掲載規約 第4条3項）。確認メールから14日で再確認メールを1通、
  * 再確認から7日で回答が無ければ公開する（src/lib/deemed-approval-job.ts）。英訳とは独立に動く。
  *
+ * 定期実行3（2026-10-14）: 3DGS シーンの容量表示を R2 の実ファイルに合わせる（src/lib/scene-size-job.ts）。
+ * 仮ファイルで登録して本物で上書きする手順だと「1 MB」と出たままになる（本人「1mbになるバグなおして」）。
+ *
  * ⚠ この入口が壊れるとサイト全体が止まる。fetch には一切手を加えないこと。
  */
 // OpenNext のビルドで生成されるファイル（型なし）。このファイルは tsconfig の対象外（wrangler がまとめる）。
 import handler from "./.open-next/worker.js";
 import { runEnglishFill, type EnglishFillDb } from "./src/lib/english-fill-job";
 import { runDeemedApproval, type DeemedApprovalDb } from "./src/lib/deemed-approval-job";
+import { runSceneSizeFix, type SceneSizeBucket, type SceneSizeDb } from "./src/lib/scene-size-job";
 
 type Env = { ANTHROPIC_API_KEY?: string } & Record<string, unknown>;
 type Ctx = { waitUntil(p: Promise<unknown>): void };
@@ -24,8 +28,20 @@ const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v 
 export default {
   fetch: handler.fetch,
   async scheduled(_event: unknown, env: Env, ctx: Ctx) {
-    const db = env.DB as (EnglishFillDb & DeemedApprovalDb) | undefined;
+    const db = env.DB as (EnglishFillDb & DeemedApprovalDb & SceneSizeDb) | undefined;
     if (!db) return;
+
+    const bucket = env.R2_ASSETS as SceneSizeBucket | undefined;
+    if (bucket) {
+      ctx.waitUntil(
+        runSceneSizeFix(db, bucket).then(
+          (r) => {
+            if (r.fixed) console.log("[scene-size]", JSON.stringify(r).slice(0, 2000));
+          },
+          (e) => console.log("[scene-size] error", String(e).slice(0, 500)),
+        ),
+      );
+    }
 
     const dryFlag = (str(env.MAIL_DRY_RUN) ?? "").toLowerCase();
     ctx.waitUntil(
