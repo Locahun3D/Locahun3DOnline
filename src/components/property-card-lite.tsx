@@ -71,8 +71,8 @@ export default function PropertyCardLite({
               className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
               title={
                 en
-                  ? `${property.tokenCost} token(s) per view — ${tokenCostLabel(property.tokenCost, "en")}`
-                  : `1 回視聴で ${property.tokenCost} トークン消費 — ${tokenCostLabel(property.tokenCost, "ja")}`
+                  ? `${property.tokenCost} point(s) per view — ${tokenCostLabel(property.tokenCost, "en")}`
+                  : `1 回視聴で ${property.tokenCost} ポイント消費 — ${tokenCostLabel(property.tokenCost, "ja")}`
               }
             >
               {property.tokenCost}T ·{" "}

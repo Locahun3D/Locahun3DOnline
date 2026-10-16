@@ -53,7 +53,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
         <form action={formAction} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-[12px] text-muted">
-              トークン数
+              ポイント数
             </span>
             <input
               name="tokens"
@@ -67,7 +67,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
 
           <label className="flex flex-col gap-1">
             <span className="text-[12px] text-muted">
-              トークンの種類
+              ポイントの種類
             </span>
             <select name="bucket" defaultValue="bonus" className={inputCls}>
               {GIFT_BUCKETS.map((b) => (
@@ -152,7 +152,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
             </code>
             <CopyButton value={state.code.code} />
             <span className="mono text-[11px] text-muted">
-              {state.code.tokens} トークン / {GIFT_BUCKET_LABEL[state.code.bucket]} / 上限{" "}
+              {state.code.tokens} ポイント / {GIFT_BUCKET_LABEL[state.code.bucket]} / 上限{" "}
               {state.code.maxUses} 人
             </span>
           </div>
@@ -188,7 +188,7 @@ export default function GiftCodeAdmin({ codes }: { codes: GiftCode[] }) {
 
                   <div className="text-[12px]">
                     <span className="text-ink">{c.tokens}</span>{" "}
-                    <span className="text-muted">トークン</span>
+                    <span className="text-muted">ポイント</span>
                     <span className="mono text-[10px] text-muted ml-2 border border-line px-1.5 py-0.5">
                       {GIFT_BUCKET_LABEL[c.bucket]}
                     </span>

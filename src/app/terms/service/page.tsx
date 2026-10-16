@@ -39,17 +39,17 @@ export default async function TermsServicePage() {
             <li>利用者は、真実かつ正確な情報を登録するものとします。</li>
             <li>アカウントは登録者本人のみが利用でき、第三者への譲渡・貸与はできません。</li>
             <li>制作会社（production）区分での登録は、当社の承認をもって有効となります。当社は登録内容に基づき承認可否を判断します。</li>
-            <li>撮影スタジオ（studio）区分は、自らの物件（スタジオ・ロケーション施設）の掲載・管理を目的とする区分です。当区分での登録者は、有料プラン（サブスクリプション）への加入、閲覧用トークンの購入、および自己が所有・管理する物件以外の3Dデータの購入・視聴の対象外とします。</li>
-            <li>ゲスト（guest）区分は、当社が招待した利用者に付与される区分です。招待時に付与されるトークンには有効期限がありません。</li>
+            <li>撮影スタジオ（studio）区分は、自らの物件（スタジオ・ロケーション施設）の掲載・管理を目的とする区分です。当区分での登録者は、有料プラン（サブスクリプション）への加入、閲覧用ポイントの購入、および自己が所有・管理する物件以外の3Dデータの購入・視聴の対象外とします。</li>
+            <li>ゲスト（guest）区分は、当社が招待した利用者に付与される区分です。招待時に付与されるポイントには有効期限がありません。</li>
             <li>登録情報に変更が生じた場合、利用者は速やかに最新の内容へ更新するものとします。</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="ui-section-title mb-4">第3条（料金・トークン）</h2>
+          <h2 className="ui-section-title mb-4">第3条（料金・ポイント）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本サービスの一部機能は有料プラン（サブスクリプション）への加入を要します。料金は<Link href={localizedHref("/pricing", locale)} className="text-accent hover:underline">料金ページ</Link>に表示する金額（税込）とします。</li>
-            <li>3DGSウォークスルーの閲覧はトークン消費制です。トークンの付与・失効条件は料金ページおよびアカウント画面の表示に従います。</li>
+            <li>3DGSウォークスルーの閲覧はポイント消費制です。ポイントの付与・失効条件は料金ページおよびアカウント画面の表示に従います。</li>
             <li>決済はStripe, Inc.を通じて処理されます。支払方法の詳細は<Link href={localizedHref("/terms/tokushoho", locale)} className="text-accent hover:underline">特定商取引法に基づく表記</Link>をご確認ください。</li>
             <li>デジタルサービスの性質上、原則として返金には応じません。ただし当社に起因する不具合が確認された場合はこの限りではありません。</li>
           </ol>
@@ -76,7 +76,7 @@ export default async function TermsServicePage() {
           </p>
           {/* ⚠ 2段階の穴があった（2026-08-02指摘・対応）。
               ①3Dビューアーのカメラツールは、データを購入していない閲覧者
-                （サブスク/トークンで見られる人）でも、カメラ情報付きJPEGを書き出せる。
+                （サブスク/ポイントで見られる人）でも、カメラ情報付きJPEGを書き出せる。
               ②ウォークスルーは実データ（RAD/splat等）をブラウザへストリーミングする
                 以上、技術的な解析・通信傍受等により3Dスキャンデータ自体を
                 取得しうる状態も生じる。
@@ -266,14 +266,14 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             <li>Users must register true and accurate information.</li>
             <li>Accounts may only be used by the registered individual and may not be transferred or lent to third parties.</li>
             <li>Registration as a &quot;production company&quot; requires our approval, which we grant at our discretion based on the submitted information.</li>
-            <li>The &quot;studio&quot; account type is for listing and managing your own property (studio or location facility). Studio accounts are not eligible to subscribe to a paid plan, purchase viewing tokens, or purchase/view 3D data for properties other than their own.</li>
-            <li>The &quot;guest&quot; account type is granted to users we invite. Tokens granted upon invitation do not expire.</li>
+            <li>The &quot;studio&quot; account type is for listing and managing your own property (studio or location facility). Studio accounts are not eligible to subscribe to a paid plan, purchase viewing points, or purchase/view 3D data for properties other than their own.</li>
+            <li>The &quot;guest&quot; account type is granted to users we invite. Points granted upon invitation do not expire.</li>
             <li>Users must promptly update their registration information when it changes.</li>
           </ol>
         </section>
 
         <section>
-          <h2 className="ui-section-title mb-4">Article 3 (Fees &amp; Tokens)</h2>
+          <h2 className="ui-section-title mb-4">Article 3 (Fees &amp; Points)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>Some features require a paid subscription plan. Fees are as shown (tax included) on the <Link href={localizedHref("/pricing", locale)} className="text-accent hover:underline">Pricing page</Link>.</li>
             <li>Viewing 3DGS walkthroughs consumes tokens. Token grants and expiry follow the terms shown on the Pricing page and account screen.</li>

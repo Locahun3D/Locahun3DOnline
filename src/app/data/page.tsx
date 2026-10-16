@@ -43,7 +43,7 @@ export default async function DataSalesPage() {
   const locale = await getLocale();
   const en = locale === "en";
   const lh = (href: string) => localizedHref(href, locale);
-  const entries = listDataSales(await getPublishedProperties(), new Date().toISOString());
+  const entries = listDataSales(await getPublishedProperties(), new Date().toISOString(), locale);
   const summary = summarizeDataSales(entries);
   const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
 

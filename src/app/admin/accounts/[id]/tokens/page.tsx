@@ -8,7 +8,7 @@ import { repo as propertyRepo } from "@/lib/store";
 import { totalTokens } from "@/lib/account-schema";
 import { fmtDateOnlyJST } from "@/lib/date-format";
 
-export const metadata = { title: "トークン使用履歴" };
+export const metadata = { title: "ポイント使用履歴" };
 
 /**
  * 管理者向け: 特定アカウントのトークン使用履歴（/dashboard/unlocked の管理版）。
@@ -59,7 +59,7 @@ export default async function AdminAccountTokensPage({
             ← アカウント一覧に戻る
           </Link>
         }
-        title="トークン使用履歴"
+        title="ポイント使用履歴"
       />
 
       {/* サマリー */}
@@ -77,7 +77,7 @@ export default async function AdminAccountTokensPage({
         <div>
           <div className="text-[12px] text-muted">現在の残高</div>
           <div className="text-[14px]">
-            {totalTokens(user)} トークン
+            {totalTokens(user)} ポイント
             {user.bonusTokens > 0 && (
               <span className="mono text-[11px] opacity-60"> （内 貢献特別枠 {user.bonusTokens}）</span>
             )}
@@ -88,19 +88,19 @@ export default async function AdminAccountTokensPage({
         </div>
         <div>
           <div className="text-[12px] text-muted">累計消費</div>
-          <div className="text-[14px]">{totalSpent} トークン（{unlocks.length} 件の視聴解除）</div>
+          <div className="text-[14px]">{totalSpent} ポイント（{unlocks.length} 件の視聴解除）</div>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-[13px] opacity-60">このアカウントはまだトークンを消費していません（3DGSの視聴解除記録がありません）。</p>
+        <p className="text-[13px] opacity-60">このアカウントはまだポイントを消費していません（3DGSの視聴解除記録がありません）。</p>
       ) : (
         <div className="border border-line overflow-x-auto">
           <table className="w-full min-w-[620px] text-[13px]">
             <thead>
               <tr className="bg-[#222] border-b border-line">
                 <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.2em] uppercase opacity-60 font-normal">物件 / シーン</th>
-                <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.2em] uppercase opacity-60 font-normal">消費トークン</th>
+                <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.2em] uppercase opacity-60 font-normal">消費ポイント</th>
                 <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.2em] uppercase opacity-60 font-normal">解除日</th>
                 <th className="text-left px-4 py-3 mono text-[10px] tracking-[0.2em] uppercase opacity-60 font-normal">状態</th>
               </tr>

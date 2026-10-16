@@ -13,12 +13,12 @@ export async function generateMetadata() {
     ? {
         title: "Pricing & Demo",
         description:
-          "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus token-based 3DGS walkthroughs. Save 20% with annual billing. Walk the demo scene with no sign-up.",
+          "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus points-based 3DGS walkthroughs. Save 20% with annual billing. Walk the demo scene with no sign-up.",
       }
     : {
         title: "料金・デモ",
         description:
-          "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + トークン制 3DGS ウォークスルー。年払で -20%。登録不要のデモ体験つき。",
+          "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + ポイント制 3DGS ウォークスルー。年払で -20%。登録不要のデモ体験つき。",
       };
 }
 
@@ -38,7 +38,7 @@ const COMPARE_ROWS: Array<{
   { label: ["3Dビューの共有URL", "Share links for 3D views"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（ログイン不要・2週間）", "✓ (no sign-in, 14 days)"] },
   // 付与数は PLAN_TOKEN_BUDGET / SIGNUP_BONUS_TOKENS から導出する。以前ここは
   // 数値べた書きで、定数側を変更しても料金表が古い数字のまま残る状態だった。
-  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} トークン`, `${SIGNUP_BONUS_TOKENS} tokens at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} トークン`, `${PLAN_TOKEN_BUDGET.individual} tokens / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} トークン`, `${PLAN_TOKEN_BUDGET.studio} tokens / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} トークン`, `${PLAN_TOKEN_BUDGET.team} tokens / mo`] },
+  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} ポイント`, `${SIGNUP_BONUS_TOKENS} points at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} ポイント`, `${PLAN_TOKEN_BUDGET.individual} points / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} ポイント`, `${PLAN_TOKEN_BUDGET.studio} points / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} ポイント`, `${PLAN_TOKEN_BUDGET.team} points / mo`] },
   // ⚠ 以前は「制限あり / NDA 限定シーンの閲覧」だったが、「制限あり」が何の制限か
   //   一瞬迷う（2026-08-01 レビュー）。行の意味は「NDA限定シーンの閲覧」だけなので短縮。
   { label: ["NDA 限定シーンの閲覧", "NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
@@ -92,8 +92,8 @@ export default async function PricingPage({
         <div className="mb-8 max-w-2xl mx-auto border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] text-center">
           <p>
             {en
-              ? "Studio accounts are for managing your own listing and aren't eligible for viewing subscriptions or token purchases."
-              : "撮影スタジオアカウントは自分の物件を管理するための専用アカウントです。閲覧サブスクやトークン購入の対象ではありません。"}
+              ? "Studio accounts are for managing your own listing and aren't eligible for viewing subscriptions or point purchases."
+              : "撮影スタジオアカウントは自分の物件を管理するための専用アカウントです。閲覧サブスクやポイント購入の対象ではありません。"}
           </p>
         </div>
       )}
@@ -200,25 +200,25 @@ export default async function PricingPage({
       </section>
 
       {/* 単発購入（トークンパック 5枚 ¥3,000）のセクションは 2026-08-13 に廃止。
-          トークンは月額プランの付与のみで、買い足す導線はサイトのどこにも無い。 */}
+          ポイントは月額プランの付与のみで、買い足す導線はサイトのどこにも無い。 */}
 
       {/* Footer notes */}
       <div className="mt-16 grid md:grid-cols-3 gap-6 text-[12px] text-muted">
         <div className="border-t border-line pt-5">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-            {en ? "Token expiry" : "トークンの有効期限"}
+            {en ? "Point expiry" : "ポイントの有効期限"}
           </div>
           <p>
             {en ? (
-              "Tokens expire 1 year after they are granted, resetting oldest-first. Unlocking a scene costs tokens once — you can revisit that exact scene free for 1 year afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
+              "Points expire 1 year after they are granted, resetting oldest-first. Unlocking a scene costs points once — you can revisit that exact scene free for 1 year afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
             ) : (
               /* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。全端末共通なので素の <br />。 */
               <>
-                トークンは付与（追加）から 1 年で有効期限。
+                ポイントは付与（追加）から 1 年で有効期限。
                 <br />
                 期限が来たものから順にリセット（失効）します。
                 <br />
-                シーンのアンロックにトークンを消費するのは初回のみで、その後 1 年間は同じシーンを無償で再視聴できます。
+                シーンのアンロックにポイントを消費するのは初回のみで、その後 1 年間は同じシーンを無償で再視聴できます。
                 <br />1 物件に複数シーンがある場合（例: 4 部屋あるスタジオ）は、シーンごとに個別に消費されます。
               </>
             )}

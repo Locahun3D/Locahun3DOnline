@@ -63,8 +63,8 @@ export default function FreeDemoFunnel({
                   className="block text-center px-4 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-ink hover:border-ink/60 transition"
                 >
                   {en
-                    ? "Sign up free — get 6 tokens"
-                    : "無料登録して 6 トークンを受け取る"}
+                    ? "Sign up free — get 6 points"
+                    : "無料登録して 6 ポイントを受け取る"}
                 </a>
                 <span className="text-center text-[10.5px] max-[720px]:text-[12px] text-muted">
                   {en

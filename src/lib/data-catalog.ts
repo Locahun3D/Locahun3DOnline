@@ -1,4 +1,4 @@
-import type { Property } from "./schemas";
+import { localizeProperty, type Property } from "./schemas";
 import { resolveLicenseOptions } from "./license-options";
 import { resolveDownloadFiles } from "./downloads";
 import { isDataSaleDisabled, isDataSaleFree } from "./settings-schema";
@@ -62,9 +62,11 @@ function formatsOf(files: { format?: string; url?: string }[]): string[] {
  * 公開中の物件から「いま買える3Dデータ」を取り出す。
  * 販売中でも配布ファイルが無いものは出さない（買えない導線を作らない。物件ページと同じ判断）。
  */
-export function listDataSales(properties: Property[], nowIso: string): DataSaleEntry[] {
+export function listDataSales(properties: Property[], nowIso: string, locale?: "ja" | "en"): DataSaleEntry[] {
   const entries: DataSaleEntry[] = [];
-  for (const p of properties) {
+  // 英語ページでは物件名・所在・シーン名を英語にする（2026-10-16 /en/data が「東京都 新宿区」
+  // 「（スタジオバロック）」のまま出ていた）。訳が無い欄は日本語のまま残る。
+  for (const p of properties.map((x) => localizeProperty(x, locale))) {
     p.splatItems.forEach((item, index) => {
       if (!item.forSale) return;
       if (isDataSaleDisabled(item.freePeriod, nowIso)) return;
@@ -80,7 +82,7 @@ export function listDataSales(properties: Property[], nowIso: string): DataSaleE
         propertyTitle: p.title,
         sceneIndex: index,
         sceneId: item.id,
-        sceneLabel: item.label || `シーン${index + 1}`,
+        sceneLabel: item.label || (locale === "en" ? `Scene ${index + 1}` : `シーン${index + 1}`),
         area: p.area,
         prefecture: p.prefecture,
         city: p.city,

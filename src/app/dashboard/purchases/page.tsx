@@ -13,6 +13,7 @@ import { getPublishedProperties } from "@/lib/properties";
 import { listDataSales } from "@/lib/data-catalog";
 import NextDownloads from "@/components/next-downloads";
 import DownloadFormatPicker from "@/components/download-format-picker";
+import TitleText from "@/components/title-text";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -58,7 +59,7 @@ export default async function UserPurchasesPage() {
   const propMap = new Map(allProps.map((p) => [p.id, p]));
   // 受け取り済み以外の3Dデータを下に並べる（2026-10-13。1点だけ受け取って帰る人が95%）。
   const nowIso = new Date().toISOString();
-  const nextEntries = listDataSales(await getPublishedProperties(), nowIso);
+  const nextEntries = listDataSales(await getPublishedProperties(), nowIso, locale);
   const purchasedKeys = new Set(
     purchases.filter((p) => p.status === "completed").map((p) => `${p.propertyId}:${p.splatItemIndex}`),
   );
@@ -146,15 +147,19 @@ export default async function UserPurchasesPage() {
             const bundleSizeMb = bundleIsLegacy ? item?.downloadFileSizeMb ?? 0 : versions[0]?.sizeMb ?? 0;
 
             return (
+              // ⚠ 2026-10-16: 以前は「情報｜価格＋操作ボタン全部」を 640px 以上で横1列に並べていた。
+              // ボタン側が shrink-0 で幅を取り切るため、iPad 縦（820）・横（1180）で物件名の列が
+              // 数文字幅まで潰れていた（本人「iPadなどで見づらい」）。情報と価格を上の段、
+              // 操作は全幅の下の段に分け、どの幅でも同じ2段にする。
               <div key={p.id} className="border border-line hover:border-line/80 transition">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 p-4 sm:p-5">
+                <div className="flex items-start gap-4 p-4 sm:p-5">
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <Link
                         href={lh(`/properties/${p.propertyId}`)}
-                        className="text-sm font-medium hover:text-accent transition truncate"
+                        className="text-sm font-medium hover:text-accent transition min-w-0"
                       >
-                        {p.propertyTitle || p.propertyId}
+                        <TitleText text={p.propertyTitle || p.propertyId} />
                       </Link>
                       {p.itemLabel && (
                         <span className="mono text-[10px] tracking-[0.14em] uppercase border border-line px-1.5 py-0.5 opacity-60 shrink-0">
@@ -174,16 +179,17 @@ export default async function UserPurchasesPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-right">
-                      <div className={`mono text-[11px] tracking-[0.14em] ${p.status === "refunded" ? "line-through opacity-50" : ""}`}>
-                        {fmtPrice(p.priceYen)}
-                      </div>
-                      <div className="mono text-[9px] opacity-30 mt-0.5">{en ? "tax incl." : "税込"}</div>
+                  <div className="text-right shrink-0">
+                    <div className={`mono text-[11px] tracking-[0.14em] ${p.status === "refunded" ? "line-through opacity-50" : ""}`}>
+                      {fmtPrice(p.priceYen)}
                     </div>
+                    <div className="mono text-[9px] opacity-30 mt-0.5">{en ? "tax incl." : "税込"}</div>
+                  </div>
+                </div>
 
-                    {p.status === "completed" && (
-                      <div className="flex flex-wrap gap-2 items-center justify-end">
+                {p.status === "completed" && (
+                  <div className="border-t border-line px-4 sm:px-5 py-3">
+                      <div className="flex flex-wrap gap-2 items-center">
                         <DownloadFormatPicker
                           purchaseId={p.id}
                           bundle={hasBundle ? { format: bundleFormat, sizeMb: bundleSizeMb } : null}
@@ -232,9 +238,8 @@ export default async function UserPurchasesPage() {
                           {en ? "Receipt" : "領収書"}
                         </a>
                       </div>
-                    )}
                   </div>
-                </div>
+                )}
               </div>
             );
           })}

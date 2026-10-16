@@ -894,6 +894,7 @@ export default function PropertyDetailView({
                   <ViewerGate
                     splatUrl={item.splatUrl}
                     propertyId={property.id}
+                    sceneKey={item.id || String(origIndex)}
                     label={item.label || `#${origIndex + 1}`}
                     sizeMb={displaySceneSizeMb(item)}
                     previewVideoUrl={item.previewVideoUrl}

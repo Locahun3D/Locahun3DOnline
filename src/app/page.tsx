@@ -277,8 +277,8 @@ const FLOW: Array<{ key: string; title: Bi; desc: Bi }> = [
     key: "walk",
     title: ["歩く", "Walk"],
     desc: [
-      "物件ページからそのままウォークスルー。視聴はトークン制で、Free 登録で 6 トークンが付きます。",
-      "Open a walkthrough right from the property page. Viewing uses tokens — 6 are granted at Free signup.",
+      "物件ページからそのままウォークスルー。視聴はポイント制で、Free 登録で 6 ポイントが付きます。",
+      "Open a walkthrough right from the property page. Viewing uses points — 6 are granted at Free signup.",
     ],
   },
   {
@@ -396,14 +396,14 @@ const DETAILS: Array<{
   },
   {
     key: "tokens",
-    label: ["視聴トークン", "Viewing tokens"],
+    label: ["視聴ポイント", "Viewing points"],
     desc: [
-      "Free 登録で 6 トークン、有料プランは月 16〜120 トークンを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
-      "6 tokens at Free signup; paid plans grant 16–120 per month. Unlocking a scene costs tokens once — revisits are free for 1 year.",
+      "Free 登録で 6 ポイント、有料プランは月 16〜120 ポイントを付与。シーンのアンロック消費は初回のみで、以降 1 年間は同じシーンを無償で再視聴できます。",
+      "6 points at Free signup; paid plans grant 16–120 per month. Unlocking a scene costs points once — revisits are free for 1 year.",
     ],
     img: {
       src: "/about/tokens.webp",
-      alt: ["マイページのトークン残高表示", "Token balance on the account page"],
+      alt: ["マイページのポイント残高表示", "Point balance on the account page"],
     },
     link: { href: "/pricing", text: ["料金プラン →", "Pricing →"] },
   },
@@ -759,8 +759,8 @@ export default async function HomePage() {
             <p>
               {sentenceBreaks(
                 en
-                  ? "Four plans: Free / Individual / Studio / Team. Walkthrough viewing is token-based, and annual billing saves 20%. The demo requires no sign-up."
-                  : "プランは Free / Individual / Studio / Team の 4 段階。ウォークスルーの視聴はトークン制で、年払いは -20% です。デモは登録不要で視聴できます。"
+                  ? "Four plans: Free / Individual / Studio / Team. Walkthrough viewing is points-based, and annual billing saves 20%. The demo requires no sign-up."
+                  : "プランは Free / Individual / Studio / Team の 4 段階。ウォークスルーの視聴はポイント制で、年払いは -20% です。デモは登録不要で視聴できます。"
               )}
             </p>
           </div>

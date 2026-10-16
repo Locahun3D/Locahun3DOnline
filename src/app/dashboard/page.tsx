@@ -51,8 +51,8 @@ export default async function DashboardPage() {
           <div className="serif text-2xl">{planLabel}</div>
           <p className="text-[12px] text-muted mt-2 mb-4 leading-[1.7]">
             {en
-              ? "Manage your plan and token balance."
-              : "プランとトークン残高はこちら。"}
+              ? "Manage your plan and point balance."
+              : "プランとポイント残高はこちら。"}
           </p>
           <Link
             href={lh(user.plan === "free" ? "/pricing" : "/account")}

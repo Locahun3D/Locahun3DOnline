@@ -110,7 +110,13 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
   const basePath = isEn ? url.pathname.replace(/^\/en/, "") || "/" : url.pathname;
 
   if (PROTECTED.test(basePath)) {
-    await auth.protect();
+    // EN のページから来た未ログインの人は EN のログイン画面へ（2026-10-16: /en/onboarding 等が
+    // 既定の日本語 /sign-in に飛んでいた）。戻り先は元の EN の URL のまま。
+    await auth.protect(
+      isEn
+        ? { unauthenticatedUrl: `${url.origin}/en/sign-in?redirect_url=${encodeURIComponent(url.href)}` }
+        : undefined,
+    );
   }
 
   // /en は素のルートへ rewrite し、x-locale=en を上流(RSC)へ渡す。

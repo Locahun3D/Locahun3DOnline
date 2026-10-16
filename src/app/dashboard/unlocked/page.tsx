@@ -58,8 +58,8 @@ export default async function UnlockedScenesPage() {
         </h1>
         <p className="ui-page-lead text-[14px] text-muted max-w-[60ch]">
           {en
-            ? `Scenes you've unlocked with tokens. Each stays free to re-view for 1 year from the unlock date. ${rows.length} item(s).`
-            : `トークンで解除した3DGSシーンの一覧です。解除日から1年間は無償で再視聴できます。${rows.length} 件。`}
+            ? `Scenes you've unlocked with points. Each stays free to re-view for 1 year from the unlock date. ${rows.length} item(s).`
+            : `ポイントで解除した3DGSシーンの一覧です。解除日から1年間は無償で再視聴できます。${rows.length} 件。`}
         </p>
       </header>
 
@@ -129,7 +129,7 @@ export default async function UnlockedScenesPage() {
                       </span>
                     ) : (
                       <span className="mono text-[10px] tracking-[0.14em] uppercase text-muted">
-                        {en ? "Expired — re-view costs tokens" : "期限切れ（再視聴はトークン消費）"}
+                        {en ? "Expired — re-view costs points" : "期限切れ（再視聴はポイント消費）"}
                       </span>
                     )}
                   </td>

@@ -17,11 +17,10 @@
 .notifications :global(.line-clamp-2) { -webkit-line-clamp: unset; display: block; overflow-wrap: anywhere; }
 .columns { display: grid; grid-template-columns: minmax(0,1.9fr) minmax(280px,1fr); gap: 20px; align-items: start; }
 .workColumn, .subscriptionColumn { display: grid; gap: 16px; min-width: 0; align-content: start; }
-.workColumn > div, .subscriptionColumn > div, .contracts > div { min-width: 0; }
+.workColumn > div, .subscriptionColumn > div { min-width: 0; }
 .cardTitle { font-size: 18px; font-weight: 700; line-height: 1.5; color: #14181c; margin-bottom: 14px; }
-.contracts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
-.contracts > [data-account-slot="gift"] > div { background: white; height: 100%; }
-.contracts > [data-account-slot="gift"] > div > div:first-child { font-size: 18px; font-weight: 700; letter-spacing: normal; color: #14181c; opacity: 1; }
+.subscriptionColumn > [data-account-slot="gift"] > div { background: white; height: 100%; }
+.subscriptionColumn > [data-account-slot="gift"] > div > div:first-child { font-size: 18px; font-weight: 700; letter-spacing: normal; color: #14181c; opacity: 1; }
 .boards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-bottom: 14px; }
 .board { display: flex; flex-direction: column; min-width: 0; background: #f6f8fa; padding: 10px; border: 1px solid #e2e7ec; }
 .board > div { margin-top: auto; }
@@ -47,7 +46,7 @@
   .profile > div:first-child { width: 42px; height: 42px; font-size: 14px; }
   .dashboard .profileInfo h1 { font-size: 24px; }
   .adminEntry { font-size: 11px; padding: 8px 10px; }
-  .columns, .contracts { grid-template-columns: minmax(0,1fr); gap: 16px; }
+  .columns { grid-template-columns: minmax(0,1fr); gap: 16px; }
   .notifications summary { flex-wrap: wrap; gap: 8px; padding: 12px; }
   .noticeHint { flex-basis: 100%; order: 2; }
   .noticeToggle { font-size: 11px; }

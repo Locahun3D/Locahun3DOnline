@@ -162,7 +162,7 @@ export default async function PropertyDetailPage({
       {purchase === "success" && user && (
         <div className="frame ui-page-shell pt-0 pb-12">
           <NextDownloads
-            entries={listDataSales(allPublished, nowIso)}
+            entries={listDataSales(allPublished, nowIso, locale)}
             purchasedKeys={purchasedKeys}
             locale={locale}
             heading={locale === "en" ? "Thanks! Here is more 3D data you can download" : "ありがとうございます。ほかにもダウンロードできる3Dデータがあります"}

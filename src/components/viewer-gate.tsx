@@ -43,6 +43,8 @@ function LazyPreviewVideo({ src, className }: { src: string; className?: string 
 interface Props {
   splatUrl: string;
   propertyId: string;
+  /** シーンの id（無ければ位置の番号）。英語ページで注釈の英訳を引くのに使う。 */
+  sceneKey?: string;
   label: string;
   sizeMb: number;
   previewVideoUrl?: string;
@@ -67,6 +69,7 @@ interface Props {
 export default function ViewerGate({
   splatUrl,
   propertyId,
+  sceneKey,
   label,
   sizeMb,
   previewVideoUrl,
@@ -102,7 +105,11 @@ export default function ViewerGate({
     hasSubscription || devBypass || freeAccess || !!previewToken || !!embedToken;
 
   const proxied = proxySplatUrl(splatUrl);
-  const fullViewerUrl = buildViewerUrl(proxied, { protected: true });
+  // 英語ページから開くビューアーは英語表示で始め、注釈も英訳に差し替える（2026-10-16）。
+  const langOpts = en
+    ? { lang: "en" as const, sceneTextEn: sceneKey ? `/api/scene-text-en/${encodeURIComponent(propertyId)}/${encodeURIComponent(sceneKey)}` : undefined }
+    : {};
+  const fullViewerUrl = buildViewerUrl(proxied, { protected: true, ...langOpts });
 
   /* --- Paywall (signed out) --- */
   if (!effectiveSubscription) {
@@ -129,8 +136,8 @@ export default function ViewerGate({
         >
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
             {en
-              ? `● Free account required · ${tokenCost} token(s)`
-              : `● 無料登録が必要 · ${tokenCost} トークン消費`}
+              ? `● Free account required · ${tokenCost} point(s)`
+              : `● 無料登録が必要 · ${tokenCost} ポイント消費`}
           </div>
           <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
             {en ? (
@@ -181,8 +188,8 @@ export default function ViewerGate({
                   <li className="flex gap-2.5">
                     <span className="text-accent font-bold shrink-0">✓</span>
                     {en
-                      ? "3DGS walkthroughs (6 tokens on signup)"
-                      : "3DGS ウォークスルー視聴（6トークン付与）"}
+                      ? "3DGS walkthroughs (6 points on signup)"
+                      : "3DGS ウォークスルー視聴（6ポイント付与）"}
                   </li>
                   <li className="flex gap-2.5">
                     <span className="text-accent font-bold shrink-0">✓</span>
@@ -340,7 +347,7 @@ export default function ViewerGate({
       if (!res.ok) return fallback();
       const data = (await res.json()) as { url?: string; streamUrl?: string };
       if (!data.url) return fallback();
-      const target = buildViewerUrl(data.url, { protected: true, streamRef: data.streamUrl });
+      const target = buildViewerUrl(data.url, { protected: true, streamRef: data.streamUrl, ...langOpts });
       if (win) win.location.href = target;
       else window.open(target, "_blank");
     } catch {
@@ -402,18 +409,18 @@ export default function ViewerGate({
           }`}
         >
           {previewToken
-            ? en ? "● Shared preview · no tokens used" : "● 共有プレビュー · トークン消費なし"
+            ? en ? "● Shared preview · no points used" : "● 共有プレビュー · ポイント消費なし"
             : embedToken
               ? en ? "● 3D tour · free to view" : "● 3Dツアー · 無料で閲覧できます"
               : freeViewer
-                ? en ? "● Administrator · no tokens used" : "● 管理者 · トークン消費なし"
+                ? en ? "● Administrator · no points used" : "● 管理者 · ポイント消費なし"
               : freeAccess
-                ? en ? "● Free period · no tokens used" : "● 限定無料期間中 · トークン消費なし"
+                ? en ? "● Free period · no points used" : "● 限定無料期間中 · ポイント消費なし"
                 : alreadyUnlocked
                   ? en ? "● Unlocked · free re-view" : "● 視聴済み · 無料で再視聴"
                   : en
-                    ? `● ${tokenCost} token${tokenCost > 1 ? "s" : ""}`
-                    : `● ${tokenCost} トークン消費`}
+                    ? `● ${tokenCost} point${tokenCost > 1 ? "s" : ""}`
+                    : `● ${tokenCost} ポイント消費`}
         </div>
         <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
           {previewToken || embedToken || freeViewer
@@ -422,8 +429,8 @@ export default function ViewerGate({
               ? en ? (<>Watch the 3DGS walkthrough<br />free of charge.</>) : (<>無料で 3DGS<br />ウォークスルーが見られます。</>)
               : alreadyUnlocked
                 ? en ? (<>Watch the 3DGS<br />walkthrough again.</>) : (<>3DGS ウォークスルーを<br />もう一度見られます。</>)
-                : en ? (<>Use {tokenCost} token{tokenCost > 1 ? "s" : ""} to see<br />the 3DGS walkthrough.</>)
-                     : (<>{tokenCost} トークンで<br />3DGS ウォークスルーが見られます。</>)}
+                : en ? (<>Use {tokenCost} point{tokenCost > 1 ? "s" : ""} to see<br />the 3DGS walkthrough.</>)
+                     : (<>{tokenCost} ポイントで<br />3DGS ウォークスルーが見られます。</>)}
         </div>
       </a>
     </div>
@@ -482,18 +489,18 @@ export default function ViewerGate({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-[13px] font-bold text-red-700 mb-1.5">
-            {en ? "Not enough tokens" : "トークンが足りません"}
+            {en ? "Not enough points" : "ポイントが足りません"}
           </div>
           <p className="text-[12.5px] text-red-800/90 leading-[1.75]">
             {en
-              ? `This scene needs ${tokenError.tokenCost} token${
+              ? `This scene needs ${tokenError.tokenCost} point${
                   tokenError.tokenCost > 1 ? "s" : ""
                 }, but you have ${
                   tokenError.tokenBalance +
                   tokenError.purchasedTokens +
                   tokenError.bonusTokens
                 }.`
-              : `このシーンの視聴には ${tokenError.tokenCost} トークン必要ですが、残高は ${
+              : `このシーンの視聴には ${tokenError.tokenCost} ポイント必要ですが、残高は ${
                   tokenError.tokenBalance +
                   tokenError.purchasedTokens +
                   tokenError.bonusTokens
@@ -501,7 +508,7 @@ export default function ViewerGate({
           </p>
           {/* ⚠ ここにあった「トークン5枚を購入 ¥3,000」の単発購入ボタンは
               2026-08-13 に廃止（運用判断。単発購入自体をサービスから撤去）。
-              トークン不足の解決導線はプラン(サブスク)へ一本化する。 */}
+              ポイント不足の解決導線はプラン(サブスク)へ一本化する。 */}
           <div className="flex flex-wrap gap-2 mt-3.5">
             <Link
               href={lh(`/pricing?from=${propertyId}`)}
@@ -513,7 +520,7 @@ export default function ViewerGate({
               href={lh("/account")}
               className="px-4 py-2 text-[12px] font-semibold rounded-sm border border-red-300 text-red-700 hover:bg-red-100 transition"
             >
-              {en ? "My tokens" : "トークン残高"}
+              {en ? "My points" : "ポイント残高"}
             </Link>
           </div>
         </div>

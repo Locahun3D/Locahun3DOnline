@@ -97,7 +97,7 @@ export default function EmbedShare({
           </div>
           <p className="text-[11.5px] text-ink/70 leading-[1.8] mb-3">
             掲載者の自社サイトに3Dツアーを貼るためのコードです。閲覧者はログインも
-            トークンも不要で、期限もありません。一般公開シーンのみが表示されます。
+            ポイントも不要で、期限もありません。一般公開シーンのみが表示されます。
           </p>
 
           {!loaded ? (

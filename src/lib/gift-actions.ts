@@ -29,7 +29,7 @@ export async function createGiftCodeAction(
 
   const tokens = Math.trunc(Number(formData.get("tokens") ?? 0));
   if (!Number.isFinite(tokens) || tokens < 1) {
-    return { ok: false, error: "トークン数は 1 以上で指定してください。" };
+    return { ok: false, error: "ポイント数は 1 以上で指定してください。" };
   }
   const bucketRaw = String(formData.get("bucket") ?? "bonus");
   const bucket: GiftBucket = (GIFT_BUCKETS as readonly string[]).includes(bucketRaw)
@@ -137,7 +137,7 @@ export async function redeemGiftCodeAction(
   if (!nextUser) {
     return {
       ok: false,
-      error: "コードは有効でしたが、トークン付与に失敗しました。もう一度お試しください。",
+      error: "コードは有効でしたが、ポイント付与に失敗しました。もう一度お試しください。",
     };
   }
 

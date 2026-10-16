@@ -18,11 +18,18 @@ export default function TitleText({ text }: { text: string }) {
       {text.split("\n").map((line, li) => (
         <Fragment key={li}>
           {li > 0 && <br />}
-          {propertyTitleSegments(line).map((part, i) => (
-            <span key={i} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">
-              {part}
-            </span>
-          ))}
+          {propertyTitleSegments(line).map((part, i) =>
+            // 空白だけの区切りは inline-block に入れると幅0に潰れ、「STUDIO BAROQUE」が
+            // 「STUDIOBAROQUE」と詰まって見える（2026-10-16 購入履歴で発覚）。空白はそのまま出し、
+            // 英単語の間ではここで折り返せるようにする。
+            /^\s+$/.test(part) ? (
+              <Fragment key={i}>{" "}</Fragment>
+            ) : (
+              <span key={i} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">
+                {part}
+              </span>
+            ),
+          )}
         </Fragment>
       ))}
     </>

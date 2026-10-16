@@ -110,7 +110,7 @@ export default function AccountDashboard({
   if (user.bonusTokens > 0) {
     resetNote.push(
       en
-        ? `${user.bonusTokens} non-expiring contributor tokens`
+        ? `${user.bonusTokens} non-expiring contributor points`
         : `うち${user.bonusTokens}は失効しない貢献枠`,
     );
   }
@@ -294,7 +294,10 @@ export default function AccountDashboard({
         </div>
         <div className={styles.devices} data-account-region="devices" data-account-slot="devices">{loginDevices}</div>
       </div>
-      {/* ── 上段: ステータス3枚（トークン / プラン / 請求書＋配信設定） ──
+      {/* ── 右列: トークン / ギフトコード / プラン / NDA / 請求書＋配信設定 ──
+          ⚠ 2026-10-16: NDA とギフトコードは以前ページ最下部に全幅2枚で並べていたが、右列の下が
+            大きく空き、左右の列の下端もそろわなかった（本人「ここのデザイン枠に収めて」）。右列へ移した。
+            ポイントの買い足しカードは 2026-08-13 に廃止済み（月額プランの付与のみ）。
           ⚠ 配信設定（新着ロケ地の先行案内）は独立カードにせず、請求書カードの
             中に入れる。以前は同意前だけページ上部に全幅バナー、同意後はページ
             最下部、と場所が変わっていた。4枚目の独立カードにした版も試したが、
@@ -304,7 +307,7 @@ export default function AccountDashboard({
         {/* TOKENS */}
         <div data-account-slot="tokens" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className={styles.cardTitle}>
-            {en ? "Tokens" : "トークン"}
+            {en ? "Points" : "ポイント"}
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-[#1ea0c4]">{tokens}</div>
           {resetNote.length > 0 && (
@@ -313,6 +316,9 @@ export default function AccountDashboard({
             </div>
           )}
         </div>
+
+        {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード）。トークンのすぐ下に置く */}
+        <div data-account-slot="gift"><RedeemGift /></div>
 
         {/* PLAN */}
         <div data-account-slot="plan" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
@@ -340,8 +346,8 @@ export default function AccountDashboard({
           <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
             {planFree
               ? en
-                ? `Sign up bonus only — upgrade for ${planBudget || 16}+ tokens/mo`
-                : "登録時ボーナスのみ・有料プランで毎月トークン付与"
+                ? `Sign up bonus only — upgrade for ${planBudget || 16}+ points/mo`
+                : "登録時ボーナスのみ・有料プランで毎月ポイント付与"
               : (billing?.periodEnd ?? user.tokenRefillAt)
                 ? en
                   ? `Next renewal ${fmtDateOnlyJST((billing?.periodEnd ?? user.tokenRefillAt)!)}`
@@ -358,52 +364,6 @@ export default function AccountDashboard({
           </Link>
         </div>
 
-        {/* 請求書・購入履歴 */}
-        <div data-account-slot="invoices" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
-          <div className={styles.cardTitle}>
-            {en ? "Invoices & purchases" : "請求書・購入履歴"}
-          </div>
-          <div className="flex items-center gap-3 mb-2">
-            {/* CSS 描画のミニ書類プレビュー */}
-            <div className="w-10 h-12 shrink-0 bg-white border border-[#e2e7ec] relative">
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#1ea0c4]" />
-              <div className="absolute left-1.5 right-1.5 top-3 h-[2px] bg-[#e2e7ec]" />
-              <div className="absolute left-1.5 right-1.5 top-5 h-[2px] bg-[#e2e7ec]" />
-              <div className="absolute left-1.5 right-3 top-7 h-[2px] bg-[#e2e7ec]" />
-              <div className="absolute bottom-1 right-1.5 text-[8px] font-bold text-[#7b8794]">
-                ¥
-              </div>
-            </div>
-            <div className="text-[11px] text-[#7b8794] leading-[1.7]">
-              <div>
-                {en ? "Auto-send" : "自動送付"}{" "}
-                <span className={invoiceAutoSend ? "text-[#3f9d5f] font-bold" : "text-[#7b8794]"}>
-                  {invoiceAutoSend ? "ON" : "OFF"}
-                </span>
-              </div>
-              {user.updatedAt && (
-                <div>
-                  {en ? "Latest " : "最新 "}
-                  {fmtDateOnlyJST(user.updatedAt)}
-                </div>
-              )}
-            </div>
-          </div>
-          <Link
-            href={lh("/dashboard/purchases")}
-            className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline mt-auto pt-1"
-          >
-            {en ? "View list →" : "一覧を見る →"}
-          </Link>
-
-          {/* 配信設定はこのカードの中。枠を二重にしないため inline で描く。 */}
-          <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} inline />
-        </div>
-      </aside>
-      </div>
-
-      {/* ── 下段: NDA / ギフトコード ── */}
-      <div className={styles.contracts} data-account-region="contracts">
         {/* NDA */}
         <div data-account-slot="nda" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className={styles.cardTitle}>
@@ -464,12 +424,48 @@ export default function AccountDashboard({
           )}
         </div>
 
-        {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード） */}
-        <div data-account-slot="gift"><RedeemGift /></div>
+        {/* 請求書・購入履歴 */}
+        <div data-account-slot="invoices" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
+          <div className={styles.cardTitle}>
+            {en ? "Invoices & purchases" : "請求書・購入履歴"}
+          </div>
+          <div className="flex items-center gap-3 mb-2">
+            {/* CSS 描画のミニ書類プレビュー */}
+            <div className="w-10 h-12 shrink-0 bg-white border border-[#e2e7ec] relative">
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#1ea0c4]" />
+              <div className="absolute left-1.5 right-1.5 top-3 h-[2px] bg-[#e2e7ec]" />
+              <div className="absolute left-1.5 right-1.5 top-5 h-[2px] bg-[#e2e7ec]" />
+              <div className="absolute left-1.5 right-3 top-7 h-[2px] bg-[#e2e7ec]" />
+              <div className="absolute bottom-1 right-1.5 text-[8px] font-bold text-[#7b8794]">
+                ¥
+              </div>
+            </div>
+            <div className="text-[11px] text-[#7b8794] leading-[1.7]">
+              <div>
+                {en ? "Auto-send" : "自動送付"}{" "}
+                <span className={invoiceAutoSend ? "text-[#3f9d5f] font-bold" : "text-[#7b8794]"}>
+                  {invoiceAutoSend ? "ON" : "OFF"}
+                </span>
+              </div>
+              {user.updatedAt && (
+                <div>
+                  {en ? "Latest " : "最新 "}
+                  {fmtDateOnlyJST(user.updatedAt)}
+                </div>
+              )}
+            </div>
+          </div>
+          <Link
+            href={lh("/dashboard/purchases")}
+            className="mono text-[10px] tracking-[0.2em] uppercase text-[#1ea0c4] hover:underline mt-auto pt-1"
+          >
+            {en ? "View list →" : "一覧を見る →"}
+          </Link>
 
-        {/* トークン追加購入（5枚 ¥3,000）のカードは 2026-08-13 に廃止。
-            トークンは月額プランの付与のみで、買い足す導線は持たない。
-            既に購入済みの残高は上の残高表示のまま失効日まで使える。 */}
+          {/* 配信設定はこのカードの中。枠を二重にしないため inline で描く。 */}
+          <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} inline />
+        </div>
+      </aside>
       </div>
 
       {user.stripeCustomerId && (

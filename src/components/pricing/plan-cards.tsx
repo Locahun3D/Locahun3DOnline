@@ -30,7 +30,8 @@ export const PLANS: Plan[] = [
     name: "Free",
     monthly: 0,
     desc: "plan.free.desc",
-    features: ["plan.free.f1", "plan.free.f2", "plan.free.f3", "plan.free.f4"],
+    // 「問い合わせ 月 1 件まで」は 2026-10-16 本人指示で削除（plan.free.f3 は欠番）。
+    features: ["plan.free.f1", "plan.free.f2", "plan.free.f4"],
     cta: "Sign up",
     href: "/sign-up",
     accent: false,

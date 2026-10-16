@@ -62,7 +62,7 @@ export default async function ListingRevenueSharePage() {
         <section>
           <h2 className="ui-section-title mb-4">第3条（対象範囲）</h2>
           <p className="opacity-80">
-            分配の対象は、対象物件の<strong>3Dデータそのものの販売</strong>（PLY/OBJ等のダウンロード販売）による売上に限られます。3DGSウォークスルーの閲覧（トークン消費）による収益、サブスクリプション料金等は、分配の対象に含まれません。
+            分配の対象は、対象物件の<strong>3Dデータそのものの販売</strong>（PLY/OBJ等のダウンロード販売）による売上に限られます。3DGSウォークスルーの閲覧（ポイント消費）による収益、サブスクリプション料金等は、分配の対象に含まれません。
           </p>
         </section>
 

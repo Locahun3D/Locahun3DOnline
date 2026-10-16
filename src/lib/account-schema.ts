@@ -46,7 +46,7 @@ export const ROLE_DESCRIPTION: Record<AccountRole, string> = {
   individual: "撮影前ロケハンに 3D を使う個人・フリーランス。すぐ利用可。",
   studio: "自社スタジオを掲載・貸し出す事業者。登録後すぐ利用可。",
   production: "NDA 締結のうえ、倉庫裏など機密ロケ地まで閲覧できるプロアカウント。",
-  guest: `招待制の貢献特別枠。作成時に失効しないトークンを ${GUEST_BONUS_TOKENS} 付与。`,
+  guest: `招待制の貢献特別枠。作成時に失効しないポイントを ${GUEST_BONUS_TOKENS} 付与。`,
   admin: "サイト運営者。",
 };
 
@@ -74,7 +74,7 @@ export const ROLE_DESCRIPTION_EN: Record<AccountRole, string> = {
   individual: "Individuals and freelancers using 3D for pre-shoot scouting. Available immediately.",
   studio: "Operators who list and rent out their own studio. Available right after signup.",
   production: "Pro accounts that, after signing an NDA, can view confidential locations such as backyards.",
-  guest: `Invite-only contributor tier. Granted ${GUEST_BONUS_TOKENS} non-expiring tokens at creation.`,
+  guest: `Invite-only contributor tier. Granted ${GUEST_BONUS_TOKENS} non-expiring points at creation.`,
   admin: "Site operator.",
 };
 

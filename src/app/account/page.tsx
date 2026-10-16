@@ -131,7 +131,7 @@ export default async function AccountPage({
           ) : en ? (
             <>Registration complete. We&apos;ve granted you <strong className="text-accent">{SIGNUP_BONUS_TOKENS} tokens</strong>.</>
           ) : (
-            <>登録が完了しました。<strong className="text-accent">{SIGNUP_BONUS_TOKENS} トークン</strong>を付与しました。</>
+            <>登録が完了しました。<strong className="text-accent">{SIGNUP_BONUS_TOKENS} ポイント</strong>を付与しました。</>
           )}
         </div>
       )}
@@ -253,7 +253,7 @@ export default async function AccountPage({
           ) : (
             <>
               プランを <strong className="text-accent uppercase">{plan}</strong> に変更しました。
-              月次トークンを付与しました。
+              月次ポイントを付与しました。
             </>
           )}
         </div>

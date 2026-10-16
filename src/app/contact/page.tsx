@@ -196,7 +196,7 @@ export default async function ContactHubPage() {
               q: ["費用はいくらかかりますか？", "How much does it cost?"],
               a: [
                 <>
-                  プランは Free / Individual / Studio / Team の 4 段階。視聴はトークン制で、
+                  プランは Free / Individual / Studio / Team の 4 段階。視聴はポイント制で、
                   年払いは -20% です。詳細は{" "}
                   <Link href={lh("/pricing")} className="text-accent hover:underline">
                     料金ページ

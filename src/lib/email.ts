@@ -404,7 +404,7 @@ export async function notifySubscription(opts: {
       <p style="font-size:14px;line-height:1.8;">${PLAN_LABEL[opts.plan]} プランのお申し込みありがとうございます。下記の通り有効化しました。</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
         <tr><td style="padding:6px 0;color:#666;">プラン</td><td style="padding:6px 0;text-align:right;font-weight:700;">${PLAN_LABEL[opts.plan]}</td></tr>
-        <tr><td style="padding:6px 0;color:#666;">月次トークン</td><td style="padding:6px 0;text-align:right;">${monthly} トークン / 月</td></tr>
+        <tr><td style="padding:6px 0;color:#666;">月次ポイント</td><td style="padding:6px 0;text-align:right;">${monthly} ポイント / 月</td></tr>
         ${amountRow}
       </table>
       <p style="margin:20px 0;">

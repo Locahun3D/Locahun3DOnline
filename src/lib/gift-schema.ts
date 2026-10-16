@@ -12,7 +12,7 @@ export type GiftBucket = (typeof GIFT_BUCKETS)[number];
 
 export const GIFT_BUCKET_LABEL: Record<GiftBucket, string> = {
   bonus: "失効しない貢献枠",
-  balance: "通常トークン（1年失効）",
+  balance: "通常ポイント（1年失効）",
 };
 
 export const GIFT_STATUSES = ["active", "disabled"] as const;

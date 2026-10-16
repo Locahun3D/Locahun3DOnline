@@ -136,7 +136,7 @@ export default function AccountsAdmin({
             `${label}: ${res.count}/${res.total} 件を処理（${skip} 件はスキップ）`,
           );
         } else if (res && typeof res.count === "number" && typeof res.grant === "number") {
-          setNotice(`${label}: ${res.count} 件に ${res.grant} トークンずつ付与しました`);
+          setNotice(`${label}: ${res.count} 件に ${res.grant} ポイントずつ付与しました`);
         } else if (res && typeof res.count === "number") {
           setNotice(`${label}: ${res.count} 件を処理しました`);
         }
@@ -229,7 +229,7 @@ export default function AccountsAdmin({
           付与数はここで変更可（既存残高への加算・上書きではない）。 */}
       <div className="flex flex-wrap items-center gap-3 border border-line bg-ink/[0.03] px-3 py-2">
         <span className="text-[12px] text-ink/70">
-          フリープラン {freeCount} 件に、トークンを一括付与（既存残高に加算）
+          フリープラン {freeCount} 件に、ポイントを一括付与（既存残高に加算）
         </span>
         <input
           type="number"
@@ -239,11 +239,11 @@ export default function AccountsAdmin({
           className="w-16 bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink"
         />
         <BulkBtn
-          label={`フリープラン全員に +${freeGrantAmount} トークン`}
+          label={`フリープラン全員に +${freeGrantAmount} ポイント`}
           disabled={pending || freeCount === 0}
           onClick={() => {
-            if (confirm(`フリープランの ${freeCount} 件に ${freeGrantAmount} トークンずつ付与します（既存残高に加算）。よろしいですか？`)) {
-              runBulk(() => bulkGrantFreeTokensAction(freeGrantAmount), "トークン付与");
+            if (confirm(`フリープランの ${freeCount} 件に ${freeGrantAmount} ポイントずつ付与します（既存残高に加算）。よろしいですか？`)) {
+              runBulk(() => bulkGrantFreeTokensAction(freeGrantAmount), "ポイント付与");
             }
           }}
         />
@@ -274,11 +274,11 @@ export default function AccountsAdmin({
                 className="w-14 bg-bg border border-line min-h-[40px] text-[12px] px-2 py-1.5 text-ink"
               />
               <BulkBtn
-                label={`+${selectedGrantAmount} トークン付与`}
+                label={`+${selectedGrantAmount} ポイント付与`}
                 disabled={pending}
                 onClick={() => {
-                  if (confirm(`選択した ${selected.size} 件に ${selectedGrantAmount} トークンずつ付与します（既存残高に加算）。よろしいですか？`)) {
-                    runBulk(() => bulkGrantTokensAction(ids, selectedGrantAmount), "トークン付与");
+                  if (confirm(`選択した ${selected.size} 件に ${selectedGrantAmount} ポイントずつ付与します（既存残高に加算）。よろしいですか？`)) {
+                    runBulk(() => bulkGrantTokensAction(ids, selectedGrantAmount), "ポイント付与");
                   }
                 }}
               />
@@ -360,7 +360,7 @@ export default function AccountsAdmin({
                   {u.phone ? ` · ${u.phone}` : ""}
                 </div>
                 <div className="mono text-[10px] text-muted mt-0.5">
-                  プラン {u.plan.toUpperCase()} · トークン {totalTokens(u)}
+                  プラン {u.plan.toUpperCase()} · ポイント {totalTokens(u)}
                   {u.tokenExpiresAt && u.tokenBalance > 0
                     ? `（失効 ${fmtDateOnlyJST(u.tokenExpiresAt)}）`
                     : ""}{" "}
@@ -433,7 +433,7 @@ export default function AccountsAdmin({
                 </form>
 
                 {/* これは加算(付与)ではなく残高そのものを置き換える「上書き」。
-                    加算したい場合は下の選択チェック→一括バーの「+N トークン付与」を使う
+                    加算したい場合は下の選択チェック→一括バーの「+N ポイント付与」を使う
                     （1件だけ選べば特定アカウントへの加算にもなる）。 */}
                 <form
                   action={setTokenBalanceAction}

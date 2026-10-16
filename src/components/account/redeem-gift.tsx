@@ -40,8 +40,8 @@ export default function RedeemGift() {
       {state?.ok === true && (
         <p className="mt-2 text-[12px] text-green-400">
           {en
-            ? `✓ Granted ${state.granted} tokens (${GIFT_BUCKET_LABEL[state.bucket]}).`
-            : `✓ ${state.granted} トークン（${GIFT_BUCKET_LABEL[state.bucket]}）を付与しました。`}
+            ? `✓ Granted ${state.granted} points (${GIFT_BUCKET_LABEL[state.bucket]}).`
+            : `✓ ${state.granted} ポイント（${GIFT_BUCKET_LABEL[state.bucket]}）を付与しました。`}
         </p>
       )}
     </div>
