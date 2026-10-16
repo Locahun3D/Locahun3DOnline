@@ -67,7 +67,7 @@ export default function NextDownloads({
                 <div className="flex items-baseline justify-between gap-2 mono text-[10px] text-muted">
                   <span className="truncate">{e.prefecture} / {e.city}</span>
                   <span className="shrink-0 text-accent">
-                    {e.free ? (en ? "Free" : "無料") : `¥${e.price.toLocaleString("ja-JP")}〜`}
+                    {e.free ? (en ? "Free" : "無料") : en ? `From ¥${e.price.toLocaleString("en-US")}` : `¥${e.price.toLocaleString("ja-JP")}〜`}
                   </span>
                 </div>
               </div>

@@ -158,13 +158,14 @@ type FilterSnapshot = {
 const RECENT_KEY = "locahun3d:recent-filters:v2";
 const RECENT_MAX = 5;
 
-function rangePart(lo: number | "", hi: number | "", label: string, fmt: (n: number) => string): string | null {
+// EN では「〜」を使わない（2026-10-16 英語ページに全角の波ダッシュが残っていた）
+function rangePart(lo: number | "", hi: number | "", label: string, fmt: (n: number) => string, en = false): string | null {
   const hasLo = typeof lo === "number";
   const hasHi = typeof hi === "number";
   if (!hasLo && !hasHi) return null;
-  if (hasLo && hasHi) return `${label} ${fmt(lo)}〜${fmt(hi)}`;
-  if (hasHi) return `${label} 〜${fmt(hi)}`;
-  return `${label} ${fmt(lo as number)}〜`;
+  if (hasLo && hasHi) return en ? `${label} ${fmt(lo)}–${fmt(hi)}` : `${label} ${fmt(lo)}〜${fmt(hi)}`;
+  if (hasHi) return en ? `${label} ≤${fmt(hi)}` : `${label} 〜${fmt(hi)}`;
+  return en ? `${label} ≥${fmt(lo as number)}` : `${label} ${fmt(lo as number)}〜`;
 }
 
 /** 条件セットを人間可読な短い文字列に要約 (空なら "")。 */
@@ -178,9 +179,9 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
   if (s.category !== "all") parts.push(categoryLabel(s.category, en ? "en" : "ja"));
   if (s.studioType !== "all") parts.push(s.studioType);
   if (s.area !== "all") parts.push(s.area);
-  const pr = rangePart(s.minPrice, s.maxPrice, en ? "hr" : "時", yenFmt); if (pr) parts.push(pr);
-  const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, en ? "day" : "日", yenFmt); if (dp) parts.push(dp);
-  const ce = rangePart(s.minCeiling, s.maxCeiling, en ? "ceil." : "天井", (n) => `${n}m`); if (ce) parts.push(ce);
+  const pr = rangePart(s.minPrice, s.maxPrice, en ? "hr" : "時", yenFmt, en); if (pr) parts.push(pr);
+  const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, en ? "day" : "日", yenFmt, en); if (dp) parts.push(dp);
+  const ce = rangePart(s.minCeiling, s.maxCeiling, en ? "ceil." : "天井", (n) => `${n}m`, en); if (ce) parts.push(ce);
   if (typeof s.maxKmFromRef === "number") parts.push(`${refLabelFor(s.reference, en)}≤${s.maxKmFromRef}km`);
   if (s.requiresDaily) parts.push(en ? "daily" : "日貸し可");
   if (s.requiresParking) parts.push(en ? "parking" : "駐車場");
@@ -192,9 +193,9 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
   }
   if (s.hoursFrom || s.hoursTo) {
     const label = en ? "Hours" : "利用";
-    if (s.hoursFrom && s.hoursTo) parts.push(`${label} ${s.hoursFrom}〜${s.hoursTo}`);
-    else if (s.hoursFrom) parts.push(`${label} ${s.hoursFrom}〜`);
-    else parts.push(`${label} 〜${s.hoursTo}`);
+    if (s.hoursFrom && s.hoursTo) parts.push(en ? `${label} ${s.hoursFrom}–${s.hoursTo}` : `${label} ${s.hoursFrom}〜${s.hoursTo}`);
+    else if (s.hoursFrom) parts.push(en ? `${label} from ${s.hoursFrom}` : `${label} ${s.hoursFrom}〜`);
+    else parts.push(en ? `${label} until ${s.hoursTo}` : `${label} 〜${s.hoursTo}`);
   }
   return parts.join(" / ");
 }

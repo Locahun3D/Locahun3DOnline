@@ -14,11 +14,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const property = await propertyRepo.get(id);
   if (!property || property.status !== "published") return NextResponse.json({ texts: {}, images: {} }, { status: 404 });
   const item = property.splatItems.find((s) => s.id === scene) ?? property.splatItems[Number(scene)];
-  if (!item || item.accessLevel !== "public" || !item.sceneTextEn || item.sceneTextEn.source !== item.splatUrl) {
-    return NextResponse.json({ texts: {}, images: {} });
+  if (!item || item.accessLevel !== "public" || !item.sceneTextEn) {
+    return NextResponse.json({ texts: {}, images: {}, imagesEn: {} });
   }
+  // 文字の訳は今のシーンから作ったものだけ。英語版の画像（imagesEn）は画像の中身で引くので、シーンを保存し直しても使える。
+  const fresh = item.sceneTextEn.source === item.splatUrl;
   return NextResponse.json(
-    { texts: item.sceneTextEn.texts, images: item.sceneTextEn.images },
+    { texts: fresh ? item.sceneTextEn.texts : {}, images: fresh ? item.sceneTextEn.images : {}, imagesEn: item.sceneTextEn.imagesEn ?? {} },
     { headers: { "Cache-Control": "public, max-age=300" } },
   );
 }

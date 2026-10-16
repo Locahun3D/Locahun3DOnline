@@ -2083,7 +2083,7 @@ export default function PropertyEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={() => blueprintsArray.append({ label: "", labelEn: "", url: "", textEn: [], textEnFor: "" })}
+                    onClick={() => blueprintsArray.append({ label: "", labelEn: "", url: "", textEn: [], textEnFor: "", urlEn: "", urlEnFor: "" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加

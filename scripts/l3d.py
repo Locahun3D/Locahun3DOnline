@@ -72,6 +72,7 @@ TOOLS = {
     "labels": "scene_labels.py",              # シーン名が英語・ローマ字のままなのを日本語にする（登録時も自動）
     "catch": "title_catch.py",                  # タイトルに「｜エリア キャッチ」を付ける（basics でも自動）
     "floorplans": "find_floorplans.py",         # 公式サイトから平面図を探して入れる（--apply）
+    "plansen": "plans_en.py",                   # 図面・写真ピンの英語版の画像を作る（--apply／--scenes で写真ピン）。図面追加時は自動
     "fields": "set_fields.py",               # 料金・許可など決まった欄を1つずつ入れる（下書きのみ）
     "basics": "set_basics.py",              # エリア・都道府県・市区町村・紹介文・公開URL確認（公開申請の必須欄）
     "english": "apply_english.py",          # 物件の英語欄（…En）を en.json から埋める（空欄のみ。--force で上書き）

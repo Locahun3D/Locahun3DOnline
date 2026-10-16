@@ -530,6 +530,10 @@ export const propertySchema = z.object({
     textEn: z.array(z.object({ ja: z.string().max(200), en: z.string().max(400) })).max(120).default([]),
     /** textEn を作ったときの url。図面を差し替えたら作り直す。 */
     textEnFor: z.string().max(2000).default(""),
+    /** 図面の英語版の画像（日本語を英語に描き直したもの。2026-10-16。plans_en.py が作る）。EN ページでこちらを出す。 */
+    urlEn: urlOrPath(),
+    /** urlEn を作ったときの url。図面を差し替えたら古い英語版は使わない。 */
+    urlEnFor: z.string().max(2000).default(""),
   })).max(10).default([]),
 
   // 3. Description
@@ -599,6 +603,8 @@ export const propertySchema = z.object({
       images: z.record(z.string(), z.array(z.object({ ja: z.string().max(200), en: z.string().max(400) })).max(120)).default({}),
       /** 画像（写真ピン）の英訳を後回しにした印（Claude の鍵が効かなかった回）。 */
       imagesPending: z.boolean().optional(),
+      /** 写真ピンの英語版の画像（画像の鍵 → URL）。plans_en.py --scenes が作る。EN のビューアーはこちらを出す。 */
+      imagesEn: z.record(z.string(), z.string().max(2000)).optional(),
     }).optional(),
     accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
     // 販売用ダウンロードファイル（PLY & OBJ の ZIP）— ビューアー用 splatUrl とは別

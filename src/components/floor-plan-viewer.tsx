@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Plan = { label?: string; labelEn?: string; url: string; textEn?: { ja: string; en: string }[] };
+type Plan = { label?: string; labelEn?: string; url: string; textEn?: { ja: string; en: string }[]; urlEn?: string; urlEnFor?: string };
 
 const isImage = (url: string) => /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url);
 
@@ -23,6 +23,9 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
   const name = (p: Plan, i: number) =>
     (en ? p.labelEn || p.label : p.label) || (en ? `Plan ${i + 1}` : `図面 ${i + 1}`);
   const step = (d: number) => setIdx((i) => (i + d + images.length) % images.length);
+  // 2026-10-16: EN ページでは、日本語を英語に描き直した図面（urlEn）を出す。元の図面を差し替えた後の古い英語版は使わない。
+  const enImage = (p: Plan) => (en && p.urlEn && p.urlEnFor === p.url ? p.urlEn : "");
+  const srcOf = (p: Plan) => enImage(p) || p.url;
 
   return (
     <div className="mt-6" data-floor-plans>
@@ -58,7 +61,7 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
             className="block w-full p-2 cursor-zoom-in group"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- R2配信の相対パスは next/image 最適化が404になる */}
-            <img src={cur.url} alt={name(cur, idx)} loading="lazy" className="block w-full h-[300px] sm:h-[360px] object-contain bg-[#f4f5f6]" />
+            <img src={srcOf(cur)} alt={name(cur, idx)} loading="lazy" className="block w-full h-[300px] sm:h-[360px] object-contain bg-[#f4f5f6]" />
             <span className="flex items-center justify-between mt-2 px-1 text-[12px] text-ink/70">
               <span className="truncate">{name(cur, idx)}</span>
               <span className="font-bold group-hover:text-accent transition shrink-0 ml-3">{en ? "Enlarge ⤢" : "拡大 ⤢"}</span>
@@ -66,7 +69,7 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
           </button>
           {/* 英語ページ: 図面の中の日本語の英訳（2026-10-16。定期処理が画像から読み取って作る）。
               画像は描き直さず、下に一覧で添える。スマホでは1列。 */}
-          {en && cur.textEn && cur.textEn.length > 0 && (
+          {en && !enImage(cur) && cur.textEn && cur.textEn.length > 0 && (
             <div className="border-t border-line px-3 py-3" data-floor-plan-text-en>
               <div className="mono text-[10px] tracking-[0.18em] uppercase text-muted mb-2">English for the text in this plan</div>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 max-h-[240px] overflow-auto text-[13px] leading-[1.6]">
@@ -121,13 +124,13 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
                   <button type="button" onClick={() => step(1)} aria-label={en ? "Next" : "次の図面"} className="w-11 h-11 border border-white/30 hover:border-white text-[18px]">→</button>
                 </>
               )}
-              <a href={cur.url} target="_blank" rel="noopener noreferrer" className="h-11 px-3 inline-flex items-center border border-white/30 hover:border-white text-[12px]">{en ? "Open original ↗" : "原寸で開く ↗"}</a>
+              <a href={srcOf(cur)} target="_blank" rel="noopener noreferrer" className="h-11 px-3 inline-flex items-center border border-white/30 hover:border-white text-[12px]">{en ? "Open original ↗" : "原寸で開く ↗"}</a>
               <button type="button" onClick={() => setZoom(false)} aria-label={en ? "Close" : "閉じる"} className="w-11 h-11 border border-white/30 hover:border-white text-[18px]">×</button>
             </span>
           </div>
           <div className="flex-1 min-h-0 p-3 sm:p-6 flex items-center justify-center cursor-zoom-out">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cur.url} alt={name(cur, idx)} className="max-w-full max-h-full object-contain bg-white" />
+            <img src={srcOf(cur)} alt={name(cur, idx)} className="max-w-full max-h-full object-contain bg-white" />
           </div>
         </div>
       )}

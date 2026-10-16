@@ -30,7 +30,7 @@ export type MediaEnglishBucket = {
 };
 type Row = { id: string; updated_at: string; data: string };
 export type Pair = { ja: string; en: string };
-export type SceneTextEn = { source: string; texts: Record<string, string>; images: Record<string, Pair[]>; imagesPending?: boolean };
+export type SceneTextEn = { source: string; texts: Record<string, string>; images: Record<string, Pair[]>; imagesPending?: boolean; imagesEn?: Record<string, string> };
 export type MediaEnglishReport = { id: string; kind: "plan" | "scene"; index: number; pairs?: number; error?: string };
 
 /** ビューアー（offline-viewer.html の _sceneImageKey）と同じ計算。写真ピンの画像を見分ける鍵。 */
@@ -274,6 +274,8 @@ export async function runMediaEnglish(
         const meta = await bucket.head(key);
         const prev = scene.sceneTextEn?.source === scene.splatUrl ? scene.sceneTextEn : undefined;
         const result: SceneTextEn = { source: scene.splatUrl!, texts: prev?.texts ?? {}, images: prev?.images ?? {} };
+        // 写真ピンの英語版の画像（plans_en.py --scenes が作る）は画像の中身で引くので、作り直しても残す
+        if (scene.sceneTextEn?.imagesEn) result.imagesEn = scene.sceneTextEn.imagesEn;
         if (meta && meta.size > 22) {
           const read = async (offset: number, length: number) => {
             const part = await bucket.get(key, { range: { offset, length } });
