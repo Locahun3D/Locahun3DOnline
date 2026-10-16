@@ -31,8 +31,8 @@ const COMPARE_ROWS: Array<{
   studio: Cell;
   team: Cell;
 }> = [
-  { label: ["物件カタログ閲覧", "Location catalog"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
-  { label: ["履歴・ブックマーク", "History & bookmarks"], free: ["—", "—"], individual: ["永続", "Permanent"], studio: ["永続+共有", "Permanent + shared"], team: ["永続+共有", "Permanent + shared"] },
+  { label: ["物件カタログ・図面の閲覧", "Location catalog & floor plans"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
+  { label: ["ブックマーク", "Bookmarks"], free: ["✓", "✓"], individual: ["✓", "✓"], studio: ["✓＋共有URL", "✓ + share links"], team: ["✓＋共有URL", "✓ + share links"] },
   // 物件掲示板は 2026-09-19 に機能ごと削除したので行も外した。3Dビューの共有URLは Team だけ（2026-09-20）。
   // （2026-10-08 に一度外したが、10-09 本人「消すのはスタジオに渡す埋め込みだけ」で戻した）
   { label: ["3Dビューの共有URL", "Share links for 3D views"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（ログイン不要・2週間）", "✓ (no sign-in, 14 days)"] },
@@ -41,9 +41,9 @@ const COMPARE_ROWS: Array<{
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} ポイント`, `${SIGNUP_BONUS_TOKENS} points at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} ポイント`, `${PLAN_TOKEN_BUDGET.individual} points / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} ポイント`, `${PLAN_TOKEN_BUDGET.studio} points / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} ポイント`, `${PLAN_TOKEN_BUDGET.team} points / mo`] },
   // ⚠ 以前は「制限あり / NDA 限定シーンの閲覧」だったが、「制限あり」が何の制限か
   //   一瞬迷う（2026-08-01 レビュー）。行の意味は「NDA限定シーンの閲覧」だけなので短縮。
-  { label: ["NDA 限定シーンの閲覧", "NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（NDA締結で全て閲覧可）", "✓ (view all with NDA)"] },
-  { label: ["ログイン端末数", "Devices signed in"], free: ["—", "—"], individual: ["3 端末", "3 devices"], studio: ["10 端末", "10 devices"], team: ["30 端末", "30 devices"] },
-  { label: ["請求書 自動送付 / 電子帳簿対応", "Invoice auto-send / e-bookkeeping"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓ 一括", "✓ batch"] },
+  { label: ["NDA 限定シーンの閲覧", "NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（制作会社アカウント＋NDA締結）", "✓ (production account + NDA)"] },
+  { label: ["ログイン端末数", "Devices signed in"], free: ["制限なし", "No limit"], individual: ["3 端末", "3 devices"], studio: ["10 端末", "10 devices"], team: ["30 端末", "30 devices"] },
+  { label: ["適格請求書", "Qualified invoices"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
   { label: ["年払 -20% 適用", "Annual −20%"], free: ["—", "—"], individual: ["✓", "✓"], studio: ["✓", "✓"], team: ["✓", "✓"] },
 ];
 
@@ -129,17 +129,16 @@ export default async function PricingPage({
       <p className="text-center text-[11px] text-muted mt-5 leading-[1.7]">
         {en ? (
           <>
-            Every paid plan{" "}
-            <strong className="text-ink">auto-sends a monthly invoice</strong>{" "}
-            (compliant with Japan&apos;s e-bookkeeping & invoice systems). Your
+            Every paid plan comes with{" "}
+            <strong className="text-ink">qualified invoices issued via Stripe</strong>{" "}
+            (monthly, or once a year on annual billing). Your
             registration (T) number can be entered at signup and is applied to
             invoices automatically.
           </>
         ) : (
           <>
             {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
-            すべての有料プランは、毎月の<strong className="text-ink">請求書を自動送付</strong>
-            （電子帳簿保存法・インボイス制度対応）。
+            すべての有料プランで、Stripe から<strong className="text-ink">適格請求書</strong>を発行します（月払いは毎月・年払いは年 1 回）。
             <br />
             登録番号(T番号)は申込時に入力でき、請求書へ自動反映されます。
           </>
@@ -210,13 +209,13 @@ export default async function PricingPage({
           </div>
           <p>
             {en ? (
-              "Points expire 1 year after they are granted, resetting oldest-first. Unlocking a scene costs points once — you can revisit that exact scene free for 1 year afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
+              "Monthly points are reset at the next monthly grant (no rollover). The signup bonus expires 1 year after it is granted. Unlocking a scene costs points once — you can revisit that exact scene free for 1 year afterward. Multi-scene locations (e.g. a studio with 4 rooms) charge each scene independently."
             ) : (
               /* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。全端末共通なので素の <br />。 */
               <>
-                ポイントは付与（追加）から 1 年で有効期限。
+                毎月付与されるポイントは、次の月の付与でリセットされます（繰越なし）。
                 <br />
-                期限が来たものから順にリセット（失効）します。
+                登録時のボーナスは、付与から 1 年で失効します。
                 <br />
                 シーンのアンロックにポイントを消費するのは初回のみで、その後 1 年間は同じシーンを無償で再視聴できます。
                 <br />1 物件に複数シーンがある場合（例: 4 部屋あるスタジオ）は、シーンごとに個別に消費されます。

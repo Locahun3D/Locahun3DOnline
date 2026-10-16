@@ -30,8 +30,9 @@ export const PLANS: Plan[] = [
     name: "Free",
     monthly: 0,
     desc: "plan.free.desc",
-    // 「問い合わせ 月 1 件まで」は 2026-10-16 本人指示で削除（plan.free.f3 は欠番）。
-    features: ["plan.free.f1", "plan.free.f2", "plan.free.f4"],
+    // 2026-10-16 本人「実体にあうように」: 実装と照合して書き直した。「問い合わせ 月 1 件まで」は削除（制限は無い）。
+    // 図面・ブックマーク・再視聴無料は全プラン共通なので Free 側に置く（有料の特典のように見せない）。
+    features: ["plan.free.f1", "plan.free.f2", "plan.free.f5", "plan.free.f6", "plan.free.f4", "plan.free.f7"],
     cta: "Sign up",
     href: "/sign-up",
     accent: false,
@@ -45,10 +46,7 @@ export const PLANS: Plan[] = [
     features: [
       "plan.ind.f1",
       "plan.ind.f2",
-      "plan.ind.f3",
-      "plan.ind.f4",
       "plan.ind.f5",
-      "plan.ind.f6",
       "plan.ind.f7",
     ],
     cta: "Subscribe",
@@ -66,7 +64,6 @@ export const PLANS: Plan[] = [
       "plan.studio.f2",
       "plan.studio.f3",
       "plan.studio.f4",
-      "plan.studio.f5",
     ],
     cta: "Subscribe",
     href: "/sign-up?plan=studio",
@@ -79,7 +76,7 @@ export const PLANS: Plan[] = [
     monthly: 29800,
     annualMonthly: Math.round(29800 * (1 - ANNUAL_DISCOUNT)),
     desc: "plan.team.desc",
-    features: ["plan.team.f1", "plan.team.f2", "plan.team.f5", "plan.team.f3", "plan.team.f4"],
+    features: ["plan.team.f1", "plan.team.f2", "plan.team.f5", "plan.team.f3"],
     cta: "Subscribe",
     href: "/sign-up?plan=team",
     accent: false,
