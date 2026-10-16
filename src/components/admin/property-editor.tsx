@@ -2083,7 +2083,7 @@ export default function PropertyEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={() => blueprintsArray.append({ label: "", labelEn: "", url: "" })}
+                    onClick={() => blueprintsArray.append({ label: "", labelEn: "", url: "", textEn: [], textEnFor: "" })}
                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                   >
                     + 追加
@@ -2810,8 +2810,8 @@ export default function PropertyEditor({
                 </div>
 
                 <Field
-                  label="トークンコスト (1 件視聴の消費数)"
-                  hint="閲覧者のサブスクは月次トークン制。サイズが大きいほど消費トークン多。"
+                  label="ポイントコスト (1 件視聴の消費数)"
+                  hint="閲覧者のサブスクは月次ポイント制。サイズが大きいほど消費ポイント多。"
                 >
                   <select
                     {...register("tokenCost", { valueAsNumber: true })}
@@ -2819,7 +2819,7 @@ export default function PropertyEditor({
                   >
                     {TOKEN_COST_VALUES.map((n) => (
                       <option key={n} value={n} className="bg-bg">
-                        {n} トークン — {TOKEN_COST_LABEL[n]}
+                        {n} ポイント — {TOKEN_COST_LABEL[n]}
                       </option>
                     ))}
                   </select>
@@ -2827,7 +2827,7 @@ export default function PropertyEditor({
 
                 <Field
                   label="空間の複雑さ（社内分析用・公開されません）"
-                  hint="判定軸は「3Dが、この物件の写真＋図面に勝つか」。広さ(トークンコスト)とは別軸で、小さくても多部屋なら複雑、広くても白ホリ単室なら単純。どの空間タイプが実際に見られたかを後から集計するために記録します。"
+                  hint="判定軸は「3Dが、この物件の写真＋図面に勝つか」。広さ(ポイントコスト)とは別軸で、小さくても多部屋なら複雑、広くても白ホリ単室なら単純。どの空間タイプが実際に見られたかを後から集計するために記録します。"
                 >
                   <select {...register("spatialComplexity")} className={inputClass}>
                     <option value="unset" className="bg-bg">未分類</option>

@@ -526,6 +526,10 @@ export const propertySchema = z.object({
     /** 図面ラベルの英語（2026-09-21 追加。EN ページのタブ表示に使う）。 */
     labelEn: z.string().max(120).default(""),
     url: urlOrPath(),
+    /** 図面の中の日本語とその英訳（2026-10-16。定期処理 media-english-job が画像から作る。EN ページで図面の下に出す）。 */
+    textEn: z.array(z.object({ ja: z.string().max(200), en: z.string().max(400) })).max(120).default([]),
+    /** textEn を作ったときの url。図面を差し替えたら作り直す。 */
+    textEnFor: z.string().max(2000).default(""),
   })).max(10).default([]),
 
   // 3. Description
@@ -584,6 +588,16 @@ export const propertySchema = z.object({
     saleDescription: z.string().max(1000).default(""),
     /** EN版の販売説明文（空なら日本語のまま）。 */
     saleDescriptionEn: z.string().max(2000).default(""),
+    /**
+     * ビューアー注釈（シーンの project.json の写真ピン・区画ラベル）の英訳（2026-10-16）。
+     * 定期処理 media-english-job が作り、/api/scene-text-en から ?lang=en のビューアーへ渡す。
+     * source はこれを作ったときの splatUrl（シーンを保存し直したら作り直す）。
+     */
+    sceneTextEn: z.object({
+      source: z.string().max(2000).default(""),
+      texts: z.record(z.string(), z.string().max(2000)).default({}),
+      images: z.record(z.string(), z.array(z.object({ ja: z.string().max(200), en: z.string().max(400) })).max(120)).default({}),
+    }).optional(),
     accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
     // 販売用ダウンロードファイル（PLY & OBJ の ZIP）— ビューアー用 splatUrl とは別
     downloadFileUrl: urlOrPath(),

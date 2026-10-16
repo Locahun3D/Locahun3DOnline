@@ -19,6 +19,7 @@ import handler from "./.open-next/worker.js";
 import { runEnglishFill, type EnglishFillDb } from "./src/lib/english-fill-job";
 import { runDeemedApproval, type DeemedApprovalDb } from "./src/lib/deemed-approval-job";
 import { runSceneSizeFix, type SceneSizeBucket, type SceneSizeDb } from "./src/lib/scene-size-job";
+import { runMediaEnglish, type MediaEnglishBucket } from "./src/lib/media-english-job";
 
 type Env = { ANTHROPIC_API_KEY?: string } & Record<string, unknown>;
 type Ctx = { waitUntil(p: Promise<unknown>): void };
@@ -70,5 +71,14 @@ export default {
         (e) => console.log("[english-fill] error", String(e).slice(0, 500)),
       ),
     );
+    // 図面とビューアー注釈の英訳（画像の文字は Claude で読む。Workers AI の代替は無い）。
+    if (key && bucket) {
+      ctx.waitUntil(
+        runMediaEnglish(db, bucket as unknown as MediaEnglishBucket, key).then(
+          (r) => { if (r.report.length) console.log("[media-english]", JSON.stringify(r).slice(0, 2000)); },
+          (e) => console.log("[media-english] error", String(e).slice(0, 500)),
+        ),
+      );
+    }
   },
 };

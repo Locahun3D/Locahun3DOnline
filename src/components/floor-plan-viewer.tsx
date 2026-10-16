@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Plan = { label?: string; labelEn?: string; url: string };
+type Plan = { label?: string; labelEn?: string; url: string; textEn?: { ja: string; en: string }[] };
 
 const isImage = (url: string) => /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url);
 
@@ -64,6 +64,21 @@ export default function FloorPlanViewer({ plans, en }: { plans: Plan[]; en: bool
               <span className="font-bold group-hover:text-accent transition shrink-0 ml-3">{en ? "Enlarge ⤢" : "拡大 ⤢"}</span>
             </span>
           </button>
+          {/* 英語ページ: 図面の中の日本語の英訳（2026-10-16。定期処理が画像から読み取って作る）。
+              画像は描き直さず、下に一覧で添える。スマホでは1列。 */}
+          {en && cur.textEn && cur.textEn.length > 0 && (
+            <div className="border-t border-line px-3 py-3" data-floor-plan-text-en>
+              <div className="mono text-[10px] tracking-[0.18em] uppercase text-muted mb-2">English for the text in this plan</div>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 max-h-[240px] overflow-auto text-[13px] leading-[1.6]">
+                {cur.textEn.map((t, i) => (
+                  <li key={i} className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="font-medium text-ink">{t.en}</span>
+                    <span className="text-muted"> — {t.ja}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

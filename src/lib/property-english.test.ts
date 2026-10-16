@@ -15,8 +15,8 @@ describe("設備メモ・図面ラベルの英語", () => {
       amenityNotes: { parking: "3台まで", restroom: "男女共用", elevator: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", smokingArea: "", fireAllowed: "" },
       amenityNotesEn: { parking: "", restroom: "Unisex", elevator: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", smokingArea: "", fireAllowed: "" },
       blueprints: [
-        { label: "1F 平面図", labelEn: "", url: "/api/r2/a.png" },
-        { label: "断面図", labelEn: "Section", url: "/api/r2/b.png" },
+        { label: "1F 平面図", labelEn: "", url: "/api/r2/a.png", textEn: [], textEnFor: "" },
+        { label: "断面図", labelEn: "Section", url: "/api/r2/b.png", textEn: [], textEnFor: "" },
       ],
     });
     expect(missingEnglishFields(p)).toEqual(["設備のメモ（1件）", "図面のラベル（1件）"]);
@@ -26,7 +26,7 @@ describe("設備メモ・図面ラベルの英語", () => {
     const p = base({
       amenityNotes: { parking: "3台まで", restroom: "", elevator: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", smokingArea: "", fireAllowed: "" },
       amenityNotesEn: { parking: "Up to 3 cars", restroom: "", elevator: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", smokingArea: "", fireAllowed: "" },
-      blueprints: [{ label: "1F 平面図", labelEn: "1F floor plan", url: "/api/r2/a.png" }],
+      blueprints: [{ label: "1F 平面図", labelEn: "1F floor plan", url: "/api/r2/a.png", textEn: [], textEnFor: "" }],
     });
     expect(missingEnglishFields(p)).toEqual([]);
   });
@@ -36,8 +36,8 @@ describe("設備メモ・図面ラベルの英語", () => {
       amenityNotes: { parking: "3台まで", restroom: "男女共用", elevator: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", smokingArea: "", fireAllowed: "" },
       amenityNotesEn: { parking: "Up to 3 cars", restroom: "", elevator: "", loadingDock: "", soundproofing: "", hasInternet: "", airConditioning: "", greenRoom: "", smokingArea: "", fireAllowed: "" },
       blueprints: [
-        { label: "1F 平面図", labelEn: "1F floor plan", url: "/api/r2/a.png" },
-        { label: "断面図", labelEn: "", url: "/api/r2/b.png" },
+        { label: "1F 平面図", labelEn: "1F floor plan", url: "/api/r2/a.png", textEn: [], textEnFor: "" },
+        { label: "断面図", labelEn: "", url: "/api/r2/b.png", textEn: [], textEnFor: "" },
       ],
     });
     const en = localizeProperty(p, "en");
