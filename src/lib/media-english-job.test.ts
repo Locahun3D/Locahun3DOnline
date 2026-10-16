@@ -72,11 +72,11 @@ describe("media-english-job", () => {
         return st;
       },
     };
-    const bucket = { get: async () => ({ arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer, httpMetadata: { contentType: "image/png" } }) };
+    const bucket = { head: async () => ({ size: 3 }), get: async () => ({ arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer, httpMetadata: { contentType: "image/png" } }) };
     const origFetch = globalThis.fetch;
     globalThis.fetch = (async () => new Response(JSON.stringify({ content: [{ type: "text", text: '[{"ja":"控室","en":"Green room"}]' }] }))) as typeof fetch;
     try {
-      const r = await runMediaEnglish(db, bucket, "k", Date.parse("2026-02-01"));
+      const r = await runMediaEnglish(db, bucket, { apiKey: "k" }, Date.parse("2026-02-01"));
       expect(r.report).toEqual([{ id: "p1", kind: "plan", index: 0, pairs: 1 }]);
       const saved = JSON.parse(writes[0][0] as string);
       expect(saved.blueprints[0]).toMatchObject({ textEn: [{ ja: "控室", en: "Green room" }], textEnFor: "/api/r2/plan.png" });
@@ -85,4 +85,46 @@ describe("media-english-job", () => {
       globalThis.fetch = origFetch;
     }
   });
+  it("鍵が 401 のときは、図面を飛ばし、注釈の文字は Workers AI で訳して画像は後回しにする", async () => {
+    const zip = zipOf("project.json", JSON.stringify(project));
+    const rows = [
+      { id: "a", updated_at: "2026-01-02T00:00:00.000Z", data: JSON.stringify({ blueprints: [{ url: "/api/r2/plan.png" }] }) },
+      { id: "b", updated_at: "2026-01-01T00:00:00.000Z", data: JSON.stringify({ splatItems: [{ splatUrl: "/api/r2/s-project.zip" }] }) },
+    ];
+    const writes: unknown[][] = [];
+    const db = {
+      prepare(sql: string) {
+        const st = {
+          bind: (...v: unknown[]) => { if (sql.startsWith("UPDATE")) writes.push(v); return st; },
+          all: async () => ({ results: rows }),
+          run: async () => ({ meta: { changes: 1 } }),
+        };
+        return st;
+      },
+    };
+    const bytes = new Uint8Array(zip);
+    const bucket = {
+      head: async (k: string) => ({ size: k.endsWith(".zip") ? bytes.length : 3 }),
+      get: async (k: string, o?: { range?: { offset: number; length: number } }) => ({
+        arrayBuffer: async () => {
+          if (!k.endsWith(".zip")) return new Uint8Array([1, 2, 3]).buffer;
+          const r = o?.range ?? { offset: 0, length: bytes.length };
+          return bytes.slice(r.offset, r.offset + r.length).buffer;
+        },
+      }),
+    };
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("{}", { status: 401 })) as typeof fetch;
+    const ai = { run: async () => ({ response: JSON.stringify({ "搬入口": "Loading entrance", "控室": "Green room" }) }) };
+    try {
+      const r = await runMediaEnglish(db, bucket, { apiKey: "bad", ai }, Date.parse("2026-02-01"));
+      expect(r.report[0]).toMatchObject({ id: "a", kind: "plan", error: "Error: anthropic 401" });
+      expect(r.report[1]).toMatchObject({ id: "b", kind: "scene" });
+      const saved = JSON.parse(writes[0][0] as string);
+      expect(saved.splatItems[0].sceneTextEn).toMatchObject({ source: "/api/r2/s-project.zip", texts: { "搬入口": "Loading entrance", "控室": "Green room" }, imagesPending: true });
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
 });
+

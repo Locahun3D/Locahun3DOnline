@@ -71,10 +71,11 @@ export default {
         (e) => console.log("[english-fill] error", String(e).slice(0, 500)),
       ),
     );
-    // 図面とビューアー注釈の英訳（画像の文字は Claude で読む。Workers AI の代替は無い）。
-    if (key && bucket) {
+    // 図面とビューアー注釈の英訳（画像の文字は Claude で読む）。
+    // 鍵が効かないときは文字の翻訳だけ Workers AI に回す（画像は鍵が直るまで後回し）。
+    if (bucket) {
       ctx.waitUntil(
-        runMediaEnglish(db, bucket as unknown as MediaEnglishBucket, key).then(
+        runMediaEnglish(db, bucket as unknown as MediaEnglishBucket, { apiKey: key, ai }).then(
           (r) => { if (r.report.length) console.log("[media-english]", JSON.stringify(r).slice(0, 2000)); },
           (e) => console.log("[media-english] error", String(e).slice(0, 500)),
         ),

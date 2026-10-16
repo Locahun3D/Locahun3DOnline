@@ -90,6 +90,12 @@ type SortKey =
   | "capacityDesc" | "capacityAsc"
   | "distanceAsc" | "distanceDesc";
 
+/** 地点名を今の言語で。プリセットの駅は辞書から、現在地は固定の文言、それ以外は保存された名前。 */
+function refLabelFor(r: { id: string; label: string }, en: boolean): string {
+  if (r.id === "current") return en ? "Current location" : "現在地";
+  return presetLabel(r.id, en ? "en" : "ja") ?? r.label;
+}
+
 interface Reference {
   id: string;
   lat: number;
@@ -175,7 +181,7 @@ function describeSnapshot(s: FilterSnapshot, en = false): string {
   const pr = rangePart(s.minPrice, s.maxPrice, en ? "hr" : "時", yenFmt); if (pr) parts.push(pr);
   const dp = rangePart(s.minDailyPrice, s.maxDailyPrice, en ? "day" : "日", yenFmt); if (dp) parts.push(dp);
   const ce = rangePart(s.minCeiling, s.maxCeiling, en ? "ceil." : "天井", (n) => `${n}m`); if (ce) parts.push(ce);
-  if (typeof s.maxKmFromRef === "number") parts.push(`${s.reference.label}≤${s.maxKmFromRef}km`);
+  if (typeof s.maxKmFromRef === "number") parts.push(`${refLabelFor(s.reference, en)}≤${s.maxKmFromRef}km`);
   if (s.requiresDaily) parts.push(en ? "daily" : "日貸し可");
   if (s.requiresParking) parts.push(en ? "parking" : "駐車場");
   if (s.requires200V) parts.push("200V");
@@ -353,9 +359,10 @@ export default function CatalogClient({
     setRequires3D(s.requires3D ?? false);
     setFacilities(s.facilities ?? []);
     setHoursFrom(s.hoursFrom ?? ""); setHoursTo(s.hoursTo ?? "");
-    setReference(s.reference);
+    // 保存した条件の地点名は保存したときの言語のまま。今の言語で付け直す（2026-10-16: EN で「渋谷駅」と出ていた）。
+    setReference({ ...s.reference, label: refLabelFor(s.reference, en) });
     setSort(s.sort);
-  }, []);
+  }, [en]);
 
   // 初回マウント時、保存済みの最新条件 (= 最後に検索した条件) を自動復元する。
   // recent は localStorage から非同期で読まれるため、読み込まれ次第 1 度だけ適用。

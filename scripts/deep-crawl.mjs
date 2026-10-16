@@ -33,11 +33,17 @@ console.log(`routes ${ROUTES.length} × widths ${WIDTHS.length}`);
 
 const JP = /[ぁ-ゖァ-ヺ一-鿿]/;
 const b = await chromium.launch({ channel: "chrome" });
-const results = [];
+// 途中で止まっても続きから回せるよう、1件ずつ JSONL に追記する（--resume で済んだものを飛ばす）
+const JSONL = path.join(OUT, "results.jsonl");
+const results = process.argv.includes("--resume") && fs.existsSync(JSONL)
+  ? fs.readFileSync(JSONL, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l)) : [];
+if (!process.argv.includes("--resume")) fs.writeFileSync(JSONL, "");
+const doneKeys = new Set(results.map((r) => `${r.width} ${r.route}`));
 const links = new Set();
 for (const width of WIDTHS) {
   const ctx = await b.newContext({ viewport: { width, height: HEIGHT(width) } });
   for (const route of ROUTES) {
+    if (doneKeys.has(`${width} ${route}`)) continue;
     const p = await ctx.newPage();
     const errors = [], failed = [];
     p.on("pageerror", (e) => errors.push(String(e).slice(0, 200)));
@@ -90,6 +96,7 @@ for (const width of WIDTHS) {
       results.push({ route, width, status, error: String(e).slice(0, 200) });
     }
     const r = results.at(-1);
+    fs.appendFileSync(JSONL, JSON.stringify(r) + "\n");
     const bad = (r.errors?.length || 0) + (r.failed?.length || 0) + (r.brokenImgs?.length || 0) + (r.overflowX > 2 ? 1 : 0) + (r.offscreen?.length || 0) + (r.jp?.length || 0) + (r.error ? 1 : 0);
     console.log(width, route, status, bad ? `issues=${bad}` : "ok");
     if (bad && process.argv.includes("--verbose")) console.log("   ", JSON.stringify({ e: r.error, js: r.errors, req: r.failed, img: r.brokenImgs, ox: r.overflowX, off: r.offscreen, jp: r.jp?.slice(0, 10) }).slice(0, 1500));

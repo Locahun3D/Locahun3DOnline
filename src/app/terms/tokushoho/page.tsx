@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Jp from "@/components/jp";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 
@@ -164,11 +165,13 @@ function TokushohoEN({ locale }: { locale: "ja" | "en" }) {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[140px_1fr] gap-4 border-b border-line/30 pb-4">
+    // スマホでは「ラベル｜値」の2列にしない（CLAUDE.md）。640px 未満はラベルの下に値を全幅で置く。
+    // 2026-10-16: 390px 幅で「（Stripeカスタマーポータル）」の値が画面の外へはみ出していた。
+    <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-1 sm:gap-4 border-b border-line/30 pb-4">
       <dt className="mono text-[12px] tracking-wider opacity-60 uppercase pt-0.5">
         {label}
       </dt>
-      <dd className="opacity-80">{value}</dd>
+      <dd className="opacity-80 min-w-0 [overflow-wrap:anywhere]">{typeof value === "string" ? <Jp>{value}</Jp> : value}</dd>
     </div>
   );
 }

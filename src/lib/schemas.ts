@@ -597,6 +597,8 @@ export const propertySchema = z.object({
       source: z.string().max(2000).default(""),
       texts: z.record(z.string(), z.string().max(2000)).default({}),
       images: z.record(z.string(), z.array(z.object({ ja: z.string().max(200), en: z.string().max(400) })).max(120)).default({}),
+      /** 画像（写真ピン）の英訳を後回しにした印（Claude の鍵が効かなかった回）。 */
+      imagesPending: z.boolean().optional(),
     }).optional(),
     accessLevel: z.enum(SPLAT_ACCESS_LEVELS).default("public"),
     // 販売用ダウンロードファイル（PLY & OBJ の ZIP）— ビューアー用 splatUrl とは別
