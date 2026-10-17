@@ -435,19 +435,32 @@ export default function CatalogClient({
       return true;
     });
 
+    // 数値の並べ替えは「値なし（0・未入力）」を昇順でも降順でも末尾に回し、値なし同士は新着順。
+    // 以前の日料金の安い順は (a||Infinity)-(b||Infinity) で、値なし同士が Infinity-Infinity=NaN になり
+    // 並べ替え全体が崩れて「効いていない」状態だった（2026-10-17 本人指摘）。料金0（要問い合わせ）や
+    // 天井・面積の未入力が安い順・低い順の先頭に来る問題もこれで直る。
+    const byNum = (va: number | null | undefined, vb: number | null | undefined, dir: 1 | -1, a: typeof filtered[number], b: typeof filtered[number]) => {
+      const ha = typeof va === "number" && va > 0, hb = typeof vb === "number" && vb > 0;
+      if (ha && hb) return dir * ((va as number) - (vb as number)) || listedAt(b).localeCompare(listedAt(a));
+      if (ha !== hb) return ha ? -1 : 1;
+      return listedAt(b).localeCompare(listedAt(a));
+    };
+    // 日料金は公開中の物件でほぼ未入力（2026-10-17 時点で全件 0）。未入力なら時間料金×8時間を
+    // 1日の目安として並べる（日料金が入っている物件はその値）。
+    const dayPrice = (p: typeof filtered[number]) => p.dailyPrice > 0 ? p.dailyPrice : p.hourlyPrice > 0 ? p.hourlyPrice * 8 : 0;
     filtered.sort((a, b) => {
       switch (sort) {
         case "oldest":        return listedAt(a).localeCompare(listedAt(b));
-        case "priceAsc":      return a.hourlyPrice - b.hourlyPrice;
-        case "priceDesc":     return b.hourlyPrice - a.hourlyPrice;
-        case "dailyAsc":      return (a.dailyPrice || Infinity) - (b.dailyPrice || Infinity);
-        case "dailyDesc":     return (b.dailyPrice || 0) - (a.dailyPrice || 0);
-        case "ceilingDesc":   return b.ceilingHeightM - a.ceilingHeightM;
-        case "ceilingAsc":    return a.ceilingHeightM - b.ceilingHeightM;
-        case "areaDesc":      return b.floorAreaSqm - a.floorAreaSqm;
-        case "areaAsc":       return a.floorAreaSqm - b.floorAreaSqm;
-        case "capacityDesc":  return b.capacity - a.capacity;
-        case "capacityAsc":   return a.capacity - b.capacity;
+        case "priceAsc":      return byNum(a.hourlyPrice, b.hourlyPrice, 1, a, b);
+        case "priceDesc":     return byNum(a.hourlyPrice, b.hourlyPrice, -1, a, b);
+        case "dailyAsc":      return byNum(dayPrice(a), dayPrice(b), 1, a, b);
+        case "dailyDesc":     return byNum(dayPrice(a), dayPrice(b), -1, a, b);
+        case "ceilingDesc":   return byNum(a.ceilingHeightM, b.ceilingHeightM, -1, a, b);
+        case "ceilingAsc":    return byNum(a.ceilingHeightM, b.ceilingHeightM, 1, a, b);
+        case "areaDesc":      return byNum(a.floorAreaSqm, b.floorAreaSqm, -1, a, b);
+        case "areaAsc":       return byNum(a.floorAreaSqm, b.floorAreaSqm, 1, a, b);
+        case "capacityDesc":  return byNum(a.capacity, b.capacity, -1, a, b);
+        case "capacityAsc":   return byNum(a.capacity, b.capacity, 1, a, b);
         case "distanceAsc":   return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
         case "distanceDesc":  return (b.distanceKm ?? -1) - (a.distanceKm ?? -1);
         case "newest":
