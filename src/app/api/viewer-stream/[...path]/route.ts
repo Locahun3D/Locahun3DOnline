@@ -66,6 +66,11 @@ async function listPropertiesCached() {
   return list;
 }
 const entryCache = new Map<string, { at: number; entry: StoredEntry; etag: string }>();
+// 3Dデータは本人のブラウザにだけ1日保存させる（2026-10-17。同じ物件を開き直すたびに 158MB を取り直していた）。
+// private なので Cloudflare などの共有キャッシュには載らない。R2 のキーは差し替えのたびに新しくなる
+// （assets/splat/<乱数>-… や wf_<sha256>-…）ので、古い中身を見せ続けることはない。
+// Chrome は強い ETag 付きの 206 を部分ごとに保存し、同じ Range は通信せずに返す。
+const STREAM_CACHE = "private, max-age=86400";
 
 async function getBucket(): Promise<AnyBucket> {
   const { env } = await getCloudflareContext();
@@ -195,11 +200,18 @@ export async function GET(
       const headers = new Headers({
         "Content-Type": "application/octet-stream",
         "Accept-Ranges": "bytes",
-        "Cache-Control": "no-store",
+        "Cache-Control": STREAM_CACHE,
         "Content-Length": String(rangeHeader ? window.length : entry.size),
         "X-Stream-Name": entry.name,
       });
       if (objectEtag) headers.set("ETag", streamContentEtag(objectEtag, entry.offset));
+      // ビューアーの分割読み込み（Spark）は cache:'no-cache' で毎回確認に来る。ブラウザに同じ中身が
+      // 残っていれば 304 で本体を送らない（2回目以降に 158MB を取り直さない。2026-10-17）。
+      const inm = req.headers.get("if-none-match");
+      if (objectEtag && inm && inm.split(",").map((v) => v.trim().replace(/^W\//, "")).includes(streamContentEtag(objectEtag, entry.offset))) {
+        headers.delete("Content-Length");
+        return new NextResponse(null, { status: 304, headers });
+      }
       if (req.method === "HEAD") return new NextResponse(null, { headers });
       const part = await bucket.get(key, { range: window });
       if (!part) return new NextResponse("Not found", { status: 404 });
@@ -229,7 +241,7 @@ export async function GET(
       headers.set("Content-Length", String(length));
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
-      headers.set("Cache-Control", "no-store");
+      headers.set("Cache-Control", STREAM_CACHE);
       headers.set("ETag", wantsStream ? streamContentEtag(obj.httpEtag, 0) : obj.httpEtag);
       headers.set("Last-Modified", obj.uploaded.toUTCString());
 
@@ -243,7 +255,7 @@ export async function GET(
     headers.set("Content-Type", "application/octet-stream");
     headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
-    headers.set("Cache-Control", "no-store");
+    headers.set("Cache-Control", STREAM_CACHE);
     headers.set("ETag", wantsStream ? streamContentEtag(obj.httpEtag, 0) : obj.httpEtag);
     headers.set("Last-Modified", obj.uploaded.toUTCString());
 

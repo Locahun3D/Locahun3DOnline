@@ -18,7 +18,7 @@ import * as r2 from "./r2/[...path]/route";
 const uploaded = new Date("2026-09-01T12:00:00Z");
 const routes = [
   {name:"demo-asset", route:demo, key:"Kousaten_ForDemo_point_cloud.rad", cache:"public, max-age=86400"},
-  {name:"viewer-stream", route:viewer, key:"uploads/scan.rad", cache:"no-store"},
+  {name:"viewer-stream", route:viewer, key:"uploads/scan.rad", cache:"private, max-age=86400"},
   {name:"r2", route:r2, key:"uploads/image.png", cache:"public, max-age=3600, stale-while-revalidate=86400"},
 ];
 function object(etag = '"multipart-6"') {
