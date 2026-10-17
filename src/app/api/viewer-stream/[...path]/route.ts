@@ -66,6 +66,27 @@ async function listPropertiesCached() {
   return list;
 }
 const entryCache = new Map<string, { at: number; entry: StoredEntry; etag: string }>();
+// サイト設定（無料期間）と、埋め込み・共有・限定プレビューのトークン判定も 30秒覚える。
+// 取り始めに十数本が同時に来ると、そのたびに D1 を読みに行っていた。
+let settingsCache: { at: number; value: Awaited<ReturnType<typeof getSettings>> } | null = null;
+async function getSettingsCached() {
+  if (process.env.VITEST) return getSettings();
+  if (settingsCache && Date.now() - settingsCache.at < PROPS_TTL_MS) return settingsCache.value;
+  const value = await getSettings();
+  settingsCache = { at: Date.now(), value };
+  return value;
+}
+const grantCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof viewerStreamTokenGrant>> }>();
+async function grantCached(tokens: { preview: string; embed: string; share: string }) {
+  if (process.env.VITEST || (!tokens.preview && !tokens.embed && !tokens.share)) return viewerStreamTokenGrant(tokens);
+  const k = `${tokens.preview}|${tokens.embed}|${tokens.share}`;
+  const hit = grantCache.get(k);
+  if (hit && Date.now() - hit.at < PROPS_TTL_MS) return hit.value;
+  const value = await viewerStreamTokenGrant(tokens);
+  if (grantCache.size > 500) grantCache.clear();
+  grantCache.set(k, { at: Date.now(), value });
+  return value;
+}
 // 3Dデータは本人のブラウザにだけ1日保存させる（2026-10-17。同じ物件を開き直すたびに 158MB を取り直していた）。
 // private なので Cloudflare などの共有キャッシュには載らない。R2 のキーは差し替えのたびに新しくなる
 // （assets/splat/<乱数>-… や wf_<sha256>-…）ので、古い中身を見せ続けることはない。
@@ -86,6 +107,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  // 計測（2026-10-17）: 各段階の所要時間を Server-Timing で返し、ブラウザの開発ツールや計測スクリプトで見られるようにする。
+  const t0 = Date.now();
+  let tLast = t0;
+  const timing: string[] = [];
+  const mark = (name: string) => { const now = Date.now(); timing.push(`${name};dur=${now - tLast}`); tLast = now; };
   const { path } = await params;
   let key = path.join("/");
   // ?ref=stream: 参照保存のアーカイブ（編集後の .zip）が指す「元のRAD」を返す（2026-09-21）。
@@ -96,7 +122,8 @@ export async function GET(
     return NextResponse.json({ error: "Not a 3DGS asset" }, { status: 403 });
   }
 
-  const [user, settings] = await Promise.all([getCurrentUser(), getSettings()]);
+  const [user, settings] = await Promise.all([getCurrentUser(), getSettingsCached()]);
+  mark("auth");
   const freeAccess = isFreePeriodActive(settings.freePeriod, new Date().toISOString());
 
   // 共有・埋め込み・限定プレビューのトークンで許された視聴（2026-09-21）。
@@ -104,11 +131,12 @@ export async function GET(
   // 参照保存のシーンは本体を ?ref=stream から読むので、同じ根拠でここも通さないと、
   // 埋め込み先や共有リンクで 3D が出ない（本番で発生）。物件の一致は下の照合で必ず見る。
   const q = req.nextUrl.searchParams;
-  const grant = await viewerStreamTokenGrant({
+  const grant = await grantCached({
     preview: q.get("preview") || "",
     embed: q.get("embed") || "",
     share: q.get("share") || "",
   });
+  mark("grant");
 
   if (!user && !freeAccess && !grant) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
@@ -124,6 +152,7 @@ export async function GET(
   // この route は管理画面のキャプチャ/差し替えフローからも使われるため、admin は
   // canViewBackyard/canViewNdaOnly で常に通る（下の関数を参照）。
   const props = await listPropertiesCached();
+  mark("props");
   let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
   let matchedProperty: (typeof props)[number] | null = null;
   for (const p of props) {
@@ -193,6 +222,7 @@ export async function GET(
         }
       }
       if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      mark("entry");
       const asked = rangeHeader ? toR2Range(rangeHeader) : undefined;
       if (rangeHeader && !asked) return new NextResponse("Bad Range", { status: 400 });
       const window = mapRangeIntoEntry(entry, asked ?? undefined);
@@ -205,6 +235,7 @@ export async function GET(
         "X-Stream-Name": entry.name,
       });
       if (objectEtag) headers.set("ETag", streamContentEtag(objectEtag, entry.offset));
+      headers.set("Server-Timing", timing.join(", "));
       // ビューアーの分割読み込み（Spark）は cache:'no-cache' で毎回確認に来る。ブラウザに同じ中身が
       // 残っていれば 304 で本体を送らない（2回目以降に 158MB を取り直さない。2026-10-17）。
       const inm = req.headers.get("if-none-match");
@@ -215,6 +246,8 @@ export async function GET(
       if (req.method === "HEAD") return new NextResponse(null, { headers });
       const part = await bucket.get(key, { range: window });
       if (!part) return new NextResponse("Not found", { status: 404 });
+      mark("r2");
+      headers.set("Server-Timing", `${timing.join(", ")}, total;dur=${Date.now() - t0}`);
       if (rangeHeader) {
         const from = window.offset - entry.offset;
         headers.set("Content-Range", `bytes ${from}-${from + window.length - 1}/${entry.size}`);
