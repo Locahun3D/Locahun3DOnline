@@ -108,7 +108,7 @@ export default async function DataSalesPage() {
         </p>
       ) : (
         /* カタログ（/properties）と同じカード・同じ並び（2026-09-26 本人指摘「トンマナあってない／物件サムネはこれにあわせて」）。 */
-        <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 min-[640px]:max-[719px]:grid-cols-2 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
+        <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] max-[639px]:grid-cols-1 min-[640px]:max-[719px]:grid-cols-2 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
           {entries.map((e) => (
             <li key={`${e.propertyId}-${e.sceneId}`}>
               <DataSaleCard entry={e} en={en} href={lh(e.href)} locale={locale} />

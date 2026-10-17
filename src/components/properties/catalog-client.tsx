@@ -504,7 +504,7 @@ export default function CatalogClient({
       <div>
       {/* Top band: search panel (left) + map (right), flush to the same height.
           モバイルは縦積みなので gap を詰めて結果カードを早く見せる（見開き優先）。 */}
-      <div className={`grid grid-cols-1 ${showMap ? 'grid-cols-[1fr_minmax(380px,_520px)] 2xl:grid-cols-[1fr_minmax(520px,_720px)]' : ''} gap-3 sm:gap-5 lg:gap-6`}>
+      <div className={`grid grid-cols-1 ${showMap ? 'grid-cols-[1fr_minmax(380px,_520px)] min-[1800px]:grid-cols-[1fr_minmax(520px,_720px)]' : ''} gap-3 sm:gap-5 lg:gap-6`}>
         <div className="min-w-0 min-[720px]:max-[1024px]:col-start-1 min-[720px]:max-[1024px]:row-start-1">
           <FiltersPanel
             q={q} setQ={setQ}
@@ -587,11 +587,13 @@ export default function CatalogClient({
             </p>
           </div>
         ) : (
-          /* 空の列も維持するauto-fillと幅上限で、少数結果でもカードを引き伸ばさない。
+          /* 空の列も維持する auto-fill で、少数結果でもカードを引き伸ばさない（列の数は最小幅300pxで決まり、
+             結果が少なくても空の列が残るので1枚が横いっぱいにはならない）。列幅は 1fr で行いっぱいに配る:
+             以前の幅上限 320px は 24インチ（1920px）で右に1列分以上の空きが残っていた（2026-10-17 本人指摘）。
              スマホ（<640px）は1列いっぱいに広げる: 幅上限320pxのままだと左に寄って右が空く（2026-09-20 本人指摘）。
              iPad 縦（720〜1024px）は3列に固定する: auto-fill は幅上限 320px で列数を数えるので 820px では2列になり、
              右に 1/4 ほど空きが出ていた（2026-10-13 本人指摘「横二つしか表示されない」）。/data と物件ページ下の関連物件も同じ。 */
-          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),320px))] max-[639px]:grid-cols-1 min-[640px]:max-[719px]:grid-cols-2 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
+          <ul data-property-grid className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] max-[639px]:grid-cols-1 min-[640px]:max-[719px]:grid-cols-2 gap-5 min-[720px]:max-[1024px]:grid-cols-3 min-[720px]:max-[1024px]:gap-3">
             {computed.map((p) => (
               <li
                 key={p.id}
@@ -697,7 +699,7 @@ function FiltersPanel(p: FiltersProps) {
                 value={p.q}
                 onChange={(e) => p.setQ(e.target.value)}
                 placeholder={en ? "white cyc / Shibuya / garage ..." : "白ホリ / 渋谷 / ガレージ ..."}
-                className={inputWhiteCls + " w-full max-w-xs"}
+                className={inputWhiteCls + " flex-1 min-w-0"}
               />
               <button
                 type="button"
@@ -706,13 +708,30 @@ function FiltersPanel(p: FiltersProps) {
               >
                 ✕ {en ? "Reset all" : "すべてリセット"}
               </button>
+  <details className="relative shrink-0">
+              <summary className="cursor-pointer text-[11px] whitespace-nowrap border border-line px-2 py-1.5">
+                {en ? "Recent" : "最近の条件"}
+              </summary>
+              <div className="absolute right-0 top-full z-30 mt-1 w-[280px] max-w-[80vw] border border-line bg-bg p-2 shadow-lg space-y-1">
+                {p.recent.length === 0 ? <p className="text-[11px] text-muted">{en ? "None" : "なし"}</p> : p.recent.map((s) => (
+                  <div key={snapshotKey(s)} className="flex items-center gap-1">
+                    <button type="button" className="min-w-0 flex-1 truncate text-left text-[11px] p-1 hover:text-accent"
+                      onClick={(event) => { p.applyRecent(s); event.currentTarget.closest("details")?.removeAttribute("open"); }}>
+                      {describeSnapshot(s, en)}
+                    </button>
+                    <button type="button" onClick={() => p.removeRecent(snapshotKey(s))}
+                      aria-label={en ? "Remove this filter" : "この条件を削除"} className="shrink-0 px-2 py-1">×</button>
+                  </div>
+                ))}
+              </div>
+            </details>
             </div>
           </Row>
         </div>
 
         <Row label={en ? "Reference / distance" : "参照地点 / 距離"}>
           <div className="flex flex-wrap items-start gap-2">
-            <div className="flex-1 min-w-[220px]">
+            <div className="flex-1 min-w-[160px]">
               <ReferencePicker
                 value={p.reference}
                 onChange={p.setReference}
@@ -833,23 +852,7 @@ function FiltersPanel(p: FiltersProps) {
                   ✕
                 </button>
               )}
-              <details className="relative ml-auto shrink-0">
-                <summary className="cursor-pointer text-[11px] whitespace-nowrap border border-line px-2 py-1.5">
-                  {en ? "Recent" : "最近の条件"}
-                </summary>
-                <div className="absolute right-0 top-full z-30 mt-1 w-[280px] max-w-[80vw] border border-line bg-bg p-2 shadow-lg space-y-1">
-                  {p.recent.length === 0 ? <p className="text-[11px] text-muted">{en ? "None" : "なし"}</p> : p.recent.map((s) => (
-                    <div key={snapshotKey(s)} className="flex items-center gap-1">
-                      <button type="button" className="min-w-0 flex-1 truncate text-left text-[11px] p-1 hover:text-accent"
-                        onClick={(event) => { p.applyRecent(s); event.currentTarget.closest("details")?.removeAttribute("open"); }}>
-                        {describeSnapshot(s, en)}
-                      </button>
-                      <button type="button" onClick={() => p.removeRecent(snapshotKey(s))}
-                        aria-label={en ? "Remove this filter" : "この条件を削除"} className="shrink-0 px-2 py-1">×</button>
-                    </div>
-                  ))}
-                </div>
-              </details>
+
             </div>
           </Row>
         </div>

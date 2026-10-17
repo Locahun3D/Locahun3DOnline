@@ -50,13 +50,18 @@ export default function PropertyCardLite({
           <div className="w-full h-full flex items-center justify-center mono text-[10px] opacity-40">no cover</div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none" />
-        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+        {/* 右上の 3DGS / 写真のみ バッジと重ならないよう右端を空けて、長い種類名は省略する
+            （「住宅 · マンション / レジデンス」が 3DGS に重なっていた。2026-10-17） */}
+        <div className="absolute top-2 left-2 right-[5.25rem] flex items-center gap-1.5 min-w-0">
           {isNewProperty(property) && (
             <div className="mono text-[10px] tracking-[0.24em] uppercase bg-[#e8443a] text-white px-2 py-1 font-bold">
               New
             </div>
           )}
-          <div className="mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line">
+          <div
+            className="mono text-[10px] tracking-[0.24em] uppercase bg-bg/70 backdrop-blur px-2 py-1 border border-line min-w-0 truncate"
+            title={categoryLabel(property.category, lc) + (property.studioType ? ` · ${property.studioType}` : "")}
+          >
             {categoryLabel(property.category, lc)}
             {/* EN変換でカテゴリと同語になる場合（Warehouse · Warehouse）は重複表示しない */}
             {property.studioType && property.studioType.toLowerCase() !== categoryLabel(property.category, lc).toLowerCase()
@@ -75,7 +80,7 @@ export default function PropertyCardLite({
                   : `1 回視聴で ${property.tokenCost} ポイント消費 — ${tokenCostLabel(property.tokenCost, "ja")}`
               }
             >
-              {property.tokenCost}T ·{" "}
+              {property.tokenCost}pt ·{" "}
               {en
                 ? property.tokenCost === 1 ? "House" : property.tokenCost === 2 ? "Mid" : "Large"
                 : property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}

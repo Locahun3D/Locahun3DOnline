@@ -68,7 +68,7 @@ export default function PropertyCard({
               className="mono text-[9px] tracking-[0.22em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
               title={en ? `${property.tokenCost} point(s) — ${tokenCostLabel(property.tokenCost, "en")}` : `${property.tokenCost} ポイント消費 — ${tokenCostLabel(property.tokenCost, "ja")}`}
             >
-              {property.tokenCost}T
+              {property.tokenCost}pt
             </div>
           </div>
         )}
