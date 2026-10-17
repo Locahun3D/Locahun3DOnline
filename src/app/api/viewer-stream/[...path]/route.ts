@@ -55,36 +55,44 @@ function toR2Range(header: string): { offset: number; length: number } | { suffi
 // ・ZIP 内の位置: R2 のキーは上書きしない運用（差し替えは毎回新しいキー）なので 10分。ETag も一緒に覚える。
 const PROPS_TTL_MS = 30_000;
 const ENTRY_TTL_MS = 10 * 60_000;
-let propsCache: { at: number; list: Awaited<ReturnType<typeof propertyRepo.list>> } | null = null;
+// ⚠ 結果ではなく「実行中の Promise」を覚える。取り始めの十数本は同時に届くので、結果を覚えるだけだと
+//   全員が未登録を見て一斉に読み込み・検証し、CPU を取り合って 1本あたり 1秒以上待たされていた
+//   （本番 Server-Timing 実測 2026-10-17）。1本目の Promise を残りが待って使い回す。
+type PropList = Awaited<ReturnType<typeof propertyRepo.list>>;
+let propsCache: { at: number; list: Promise<PropList> } | null = null;
 async function listPropertiesCached() {
   // テストは同じモジュールのまま公開範囲を切り替えて判定を見るので、キャッシュを使わない。
   if (process.env.VITEST) return propertyRepo.list();
   const now = Date.now();
   if (propsCache && now - propsCache.at < PROPS_TTL_MS) return propsCache.list;
-  const list = await propertyRepo.list();
+  const list = propertyRepo.list();
   propsCache = { at: now, list };
+  list.catch(() => { if (propsCache?.list === list) propsCache = null; });
   return list;
 }
 const entryCache = new Map<string, { at: number; entry: StoredEntry; etag: string }>();
+const entryInflight = new Map<string, Promise<{ entry: StoredEntry | null; etag: string }>>();
 // サイト設定（無料期間）と、埋め込み・共有・限定プレビューのトークン判定も 30秒覚える。
 // 取り始めに十数本が同時に来ると、そのたびに D1 を読みに行っていた。
-let settingsCache: { at: number; value: Awaited<ReturnType<typeof getSettings>> } | null = null;
+let settingsCache: { at: number; value: ReturnType<typeof getSettings> } | null = null;
 async function getSettingsCached() {
   if (process.env.VITEST) return getSettings();
   if (settingsCache && Date.now() - settingsCache.at < PROPS_TTL_MS) return settingsCache.value;
-  const value = await getSettings();
+  const value = getSettings();
   settingsCache = { at: Date.now(), value };
+  value.catch(() => { if (settingsCache?.value === value) settingsCache = null; });
   return value;
 }
-const grantCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof viewerStreamTokenGrant>> }>();
+const grantCache = new Map<string, { at: number; value: ReturnType<typeof viewerStreamTokenGrant> }>();
 async function grantCached(tokens: { preview: string; embed: string; share: string }) {
   if (process.env.VITEST || (!tokens.preview && !tokens.embed && !tokens.share)) return viewerStreamTokenGrant(tokens);
   const k = `${tokens.preview}|${tokens.embed}|${tokens.share}`;
   const hit = grantCache.get(k);
   if (hit && Date.now() - hit.at < PROPS_TTL_MS) return hit.value;
-  const value = await viewerStreamTokenGrant(tokens);
+  const value = viewerStreamTokenGrant(tokens);
   if (grantCache.size > 500) grantCache.clear();
   grantCache.set(k, { at: Date.now(), value });
+  value.catch(() => { if (grantCache.get(k)?.value === value) grantCache.delete(k); });
   return value;
 }
 // 3Dデータは本人のブラウザにだけ1日保存させる（2026-10-17。同じ物件を開き直すたびに 158MB を取り直していた）。
@@ -210,16 +218,26 @@ export async function GET(
         entry = hit.entry;
         objectEtag = hit.etag;
       } else {
-        entry = await readStoredRadEntry(async (offset, length) => {
-          const head = await bucket.get(key, { range: { offset, length } });
-          if (!head?.body) return null;
-          if (head.httpEtag) objectEtag = head.httpEtag;
-          return new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer());
-        });
-        if (entry) {
-          if (entryCache.size > 200) entryCache.clear();
-          entryCache.set(key, { at: Date.now(), entry, etag: objectEtag });
+        let pending = entryInflight.get(key);
+        if (!pending) {
+          pending = (async () => {
+            let etag = "";
+            const found = await readStoredRadEntry(async (offset, length) => {
+              const head = await bucket.get(key, { range: { offset, length } });
+              if (!head?.body) return null;
+              if (head.httpEtag) etag = head.httpEtag;
+              return new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer());
+            });
+            if (found) {
+              if (entryCache.size > 200) entryCache.clear();
+              entryCache.set(key, { at: Date.now(), entry: found, etag });
+            }
+            return { entry: found, etag };
+          })();
+          entryInflight.set(key, pending);
+          pending.finally(() => entryInflight.delete(key)).catch(() => {});
         }
+        ({ entry, etag: objectEtag } = await pending);
       }
       if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
       mark("entry");
