@@ -6,7 +6,7 @@ import { canViewBackyard, canViewNdaOnly } from "@/lib/account-schema";
 import { getSettings } from "@/lib/site-settings";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { viewerStreamTokenGrant } from "@/lib/viewer-stream-grant";
-import { readStoredRadEntry, mapRangeIntoEntry } from "@/lib/zip-stored-entry";
+import { readStoredRadEntry, mapRangeIntoEntry, type StoredEntry } from "@/lib/zip-stored-entry";
 import { streamContentEtag } from "@/lib/stream-content-etag";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,6 +45,27 @@ function toR2Range(header: string): { offset: number; length: number } | { suffi
   if (m3) return { suffix: parseInt(m3[1], 10) };
   return null;
 }
+
+// ── 断片リクエストごとのやり直しを減らすキャッシュ（2026-10-17 本人「データの読み込み遅くない？」）
+// ビューアー（Spark）は RAD を細かい Range で何十〜何百回も取りに来る。1回ごとに
+// 全物件の読み込み＋検証（D1）と、ZIP 内の RAD 位置の割り出し（R2 を数回読む）をやり直していて、
+// 本番実測で 1回あたり約 0.12 秒が上乗せされていた（R2 直読 0.13s に対し 0.25s）。
+// どちらも同じ Worker の中で短時間だけ覚えておく。
+// ・物件一覧: 30秒。公開範囲の変更が最大30秒遅れて効くだけで、認証・権限の判定は毎回行う。
+// ・ZIP 内の位置: R2 のキーは上書きしない運用（差し替えは毎回新しいキー）なので 10分。ETag も一緒に覚える。
+const PROPS_TTL_MS = 30_000;
+const ENTRY_TTL_MS = 10 * 60_000;
+let propsCache: { at: number; list: Awaited<ReturnType<typeof propertyRepo.list>> } | null = null;
+async function listPropertiesCached() {
+  // テストは同じモジュールのまま公開範囲を切り替えて判定を見るので、キャッシュを使わない。
+  if (process.env.VITEST) return propertyRepo.list();
+  const now = Date.now();
+  if (propsCache && now - propsCache.at < PROPS_TTL_MS) return propsCache.list;
+  const list = await propertyRepo.list();
+  propsCache = { at: now, list };
+  return list;
+}
+const entryCache = new Map<string, { at: number; entry: StoredEntry; etag: string }>();
 
 async function getBucket(): Promise<AnyBucket> {
   const { env } = await getCloudflareContext();
@@ -97,7 +118,7 @@ export async function GET(
   // splatItem まで防げない（/api/viewer-asset は元々ここまでチェックしている）。
   // この route は管理画面のキャプチャ/差し替えフローからも使われるため、admin は
   // canViewBackyard/canViewNdaOnly で常に通る（下の関数を参照）。
-  const props = await propertyRepo.list();
+  const props = await listPropertiesCached();
   let matchedItem: (typeof props)[number]["splatItems"][number] | null = null;
   let matchedProperty: (typeof props)[number] | null = null;
   for (const p of props) {
@@ -149,12 +170,23 @@ export async function GET(
     if (wantsStream && /\.zip$/i.test(key)) {
       // 当たり判定キャッシュの識別用に、中身だけで決まる ETag を返す（lib/stream-content-etag.ts）。
       let objectEtag = "";
-      const entry = await readStoredRadEntry(async (offset, length) => {
-        const head = await bucket.get(key, { range: { offset, length } });
-        if (!head?.body) return null;
-        if (head.httpEtag) objectEtag = head.httpEtag;
-        return new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer());
-      });
+      let entry: StoredEntry | null = null;
+      const hit = entryCache.get(key);
+      if (hit && Date.now() - hit.at < ENTRY_TTL_MS) {
+        entry = hit.entry;
+        objectEtag = hit.etag;
+      } else {
+        entry = await readStoredRadEntry(async (offset, length) => {
+          const head = await bucket.get(key, { range: { offset, length } });
+          if (!head?.body) return null;
+          if (head.httpEtag) objectEtag = head.httpEtag;
+          return new Uint8Array(await new Response(head.body as ReadableStream).arrayBuffer());
+        });
+        if (entry) {
+          if (entryCache.size > 200) entryCache.clear();
+          entryCache.set(key, { at: Date.now(), entry, etag: objectEtag });
+        }
+      }
       if (!entry) return NextResponse.json({ error: "Not found" }, { status: 404 });
       const asked = rangeHeader ? toR2Range(rangeHeader) : undefined;
       if (rangeHeader && !asked) return new NextResponse("Bad Range", { status: 400 });
