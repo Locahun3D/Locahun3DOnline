@@ -37,7 +37,7 @@ const ticket = await api("/sign_in_tokens", { method: "POST", body: JSON.stringi
 if (!ticket.token) { console.error("サインインチケットの発行に失敗:", JSON.stringify(ticket).slice(0, 300)); process.exit(2); }
 
 const VIEWPORTS = [["pc", 1440, 900], ["ipad-land", 1180, 820], ["ipad-port", 820, 1180]];
-const PATHS = (arg("--paths") || "/admin/properties,/admin/notifications,/admin/accounts,/admin/analytics,/admin/subscriptions,/admin/assets,/admin/workflow,/admin/inquiries,/admin/contact-requests,/admin/marketing,/admin/purchases,/admin/submissions,/admin/payouts,/admin/works").split(",");
+const PATHS = (arg("--paths") || "/admin/properties,/admin/notifications,/admin/accounts,/admin/analytics,/admin/subscriptions,/admin/assets,/admin/inquiries,/admin/contact-requests,/admin/marketing,/admin/purchases,/admin/submissions,/admin/payouts,/admin/works").split(",");
 mkdirSync(OUT, { recursive: true });
 
 const b = await chromium.launch({ headless: false, channel: "chrome" });

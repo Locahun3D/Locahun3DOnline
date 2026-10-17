@@ -66,11 +66,12 @@ main:has(> .theme-online) + footer {
 /* ライトテーマのページで、画面左端に 15px の黒い帯が出る問題（2026-10-17 本人指摘・24インチ）。
    html の scrollbar-gutter: stable both-edges（ヘッダー中央そろえのため。site-header.css）が左にも
    15px を予約し、そこは中身が描けずキャンバス（html の背景＝黒）がそのまま見える。
-   ライトテーマのページだけキャンバスをライト背景にし、固定ヘッダーの高さ分だけ黒を残す
-   （fixed なのでスクロールしてもヘッダー横は黒のまま）。フッター横は明るい細線になるが、
-   ページ全体の黒帯よりはるかに目立たない。 */
+   ライトテーマのページだけキャンバスをライト背景にする。 */
 html:has(.theme-online) {
-  background: linear-gradient(#000 0 calc(var(--header-h) / var(--z)), #f6f8fa calc(var(--header-h) / var(--z))) fixed;
+  /* ⚠ 予約領域にはページの中身（ヘッダーの影も含む）を描けず、塗れるのは html の背景色だけ。
+     背景画像（グラデーション）は予約領域に届かず白が出た（2026-10-17 本人指摘）ので、色1つで塗る。
+     そのためヘッダー横の 15px もライト色になる。 */
+  background-color: #f6f8fa;
 }
 
 /* Clerk のポップオーバーのズレは JS 側で補正する（src/components/clerk-popover-zoom-fix.tsx）。

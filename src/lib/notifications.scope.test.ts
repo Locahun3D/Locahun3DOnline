@@ -37,15 +37,17 @@ it("D1 read updates bind the recipient and selected notification IDs only", asyn
   state.local = false;
   state.notifications = [notice("u"), notice("a", "publish_request"), notice("other", "policy_update", "other")];
   await markAllRead("owner", "admin");
-  expect(state.updates).toHaveLength(1);
+  // 2本目は「同じ通知を他の管理者の分も既読にする」更新（2026-10-17）。選ぶ元は同じ本人・同じID。
+  expect(state.updates).toHaveLength(2);
   expect(state.updates[0].slice(1)).toEqual(["owner", "a"]);
+  expect(state.updates[1].slice(1)).toEqual(["owner", "a"]);
 });
 it("sends more than ninety read updates in one D1 transaction, not independent writes", async () => {
   state.local = false;
   state.notifications = Array.from({ length: 91 }, (_, i) => notice(`a${i}`, "publish_request"));
   await markAllRead("owner", "admin");
-  expect(state.batchSizes).toEqual([2]);
-  expect(state.updates.flatMap(u => u.slice(2))).toHaveLength(91);
+  expect(state.batchSizes).toEqual([4]);
+  expect(state.updates.slice(0, 2).flatMap(u => u.slice(2))).toHaveLength(91);
 });
 it("propagates a failed D1 transaction without independent partial read writes", async () => {
   state.local = false; state.batchFailure = true;

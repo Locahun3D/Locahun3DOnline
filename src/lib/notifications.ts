@@ -179,6 +179,18 @@ export async function markAllRead(userId: string, scope: NotificationScope): Pro
     const batch = ids.slice(offset, offset + 90);
     statements.push(db.prepare(`UPDATE ${TABLE} SET read = 1 WHERE user_id = ? AND read = 0 AND id IN (${batch.map(() => "?").join(",")})`).bind(userId, ...batch));
   }
+  // 管理者宛の通知は管理者ごとに1行ずつ作られる（2026-10-17 時点で管理者2人）。1人が既読にしても
+  // もう1人のアカウントでは未読のまま残り「既読にしたのにまた出る」になっていたので、同じ通知
+  // （種類・リンク・本文が同じ行）は全管理者分まとめて既読にする。
+  if (scope === "admin") {
+    for (let offset = 0; offset < ids.length; offset += 90) {
+      const batch = ids.slice(offset, offset + 90);
+      statements.push(db.prepare(
+        `UPDATE ${TABLE} SET read = 1 WHERE read = 0 AND (type || char(31) || link || char(31) || body) IN ` +
+        `(SELECT type || char(31) || link || char(31) || body FROM ${TABLE} WHERE user_id = ? AND id IN (${batch.map(() => "?").join(",")}))`,
+      ).bind(userId, ...batch));
+    }
+  }
   // D1 batch is transactional: a later chunk failing must not partially mark
   // earlier chunks as read while the UI reports that the operation failed.
   await db.batch(statements);

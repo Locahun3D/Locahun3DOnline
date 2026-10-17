@@ -65,8 +65,9 @@ export default function NotificationList({
         )}
       </div>
       {readError && <p role="alert" className="mb-3 text-xs text-red-600">{en ? "Could not mark as read. Please try again." : "既読にできませんでした。もう一度お試しください。"}</p>}
+      {/* 管理画面は未読だけを並べ、既読は畳む（既読にしても同じ一覧に残り「また表示される」と見えていた。2026-10-17 本人指摘） */}
       <ul className="divide-y divide-[#e2e7ec]">
-        {(scope === "admin" ? notifications : notifications.slice(0, 8)).map((n) => (
+        {(scope === "admin" ? notifications.filter((n) => !n.read) : notifications.slice(0, 8)).map((n) => (
           <li key={n.id} className="py-3 first:pt-0 last:pb-0">
             <Link href={lh(n.link)} className="block group">
               <div className="flex items-start gap-2">
@@ -90,8 +91,26 @@ export default function NotificationList({
           </li>
         ))}
       </ul>
-      {notifications.length === 0 && (
-        <p className="text-sm text-muted">{en ? "No admin notifications." : "管理者向け通知はありません。"}</p>
+      {scope === "admin" && unreadCount === 0 && (
+        <p className="text-sm text-muted">{en ? "No unread notifications." : "未読の通知はありません。"}</p>
+      )}
+      {scope === "admin" && notifications.some((n) => n.read) && (
+        <details className="mt-4 border-t border-[#e2e7ec] pt-3">
+          <summary className="cursor-pointer mono text-[10px] tracking-[0.18em] text-[#7b8794]">
+            {en ? `Read (${notifications.filter((n) => n.read).length})` : `既読（${notifications.filter((n) => n.read).length}件）`}
+          </summary>
+          <ul className="mt-2 divide-y divide-[#e2e7ec] opacity-70">
+            {notifications.filter((n) => n.read).map((n) => (
+              <li key={n.id} className="py-2.5">
+                <Link href={lh(n.link)} className="block group">
+                  <div className="text-[12px] text-[#14181c] group-hover:text-[#1ea0c4] transition leading-[1.6]">{n.title}</div>
+                  <div className="text-[11px] text-[#7b8794] leading-[1.6] line-clamp-1">{n.body}</div>
+                  <div className="mono text-[10px] text-[#7b8794] mt-0.5">{fmtDateTimeLocaleJST(n.createdAt, en ? "en-US" : "ja-JP")}</div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );

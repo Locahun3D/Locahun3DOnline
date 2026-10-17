@@ -27,7 +27,6 @@ export default async function AdminLayout({
         { title: "物件", items: [
           { href: "/admin/properties", label: "物件一覧" },
           { href: "/admin/assets", label: "アセット" },
-          { href: "/admin/workflow", label: "下書きデータ転送" },
           { href: "/admin/submissions", label: "持ち込みスキャン" },
         ] },
         { title: "連絡", items: [
