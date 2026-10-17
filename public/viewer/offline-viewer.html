@@ -25685,7 +25685,7 @@ function _onlineStreamBaseProject(text){
 // シーン名: ファイル名のままの名前（例: 0_ShinjukuKabukiGate.rad）は、物件側のシーン名に置き換える。
 // パイプラインが自動で付けた英数字だけの名前（例: ShinjukuKabukiGate）も同じ扱い。人が付けた名前はそのまま残す。
 function _onlineSceneDisplayName(current,fileName,label){
-  const name=typeof current==='string'?current.trim():'';
+  const name=typeof current==='string'?_cleanSceneName(current):'';
   const fileBase=String(fileName||'').replace(/\.[^.]+$/,'');
   const looksLikeFile=!name||name==='Untitled Project'||/^[A-Za-z0-9_.-]+$/.test(name)||/\.(rad|zip|ply|splat|ksplat|spz|sog)$/i.test(name)||name===fileName||name===fileBase;
   return looksLikeFile&&label?label:(name||label||fileName);
@@ -26199,7 +26199,7 @@ async function restoreProject(project, opts = {}) {
   }
   _layerNextId=project.layerNextId||100;
   if(project.projectName){
-    _projectName=project.projectName;
+    _projectName=_cleanSceneName(project.projectName);
     const pnEl=document.getElementById('tb-project-name');
     if(pnEl) pnEl.textContent=_projectName;
     document.title=_projectName+' - ロケハン3D';
@@ -31298,6 +31298,14 @@ document.querySelectorAll('#gizmo input[type=number]').forEach(inp=>{
 // PROJECT NAME
 const _PROJECT_NAME_DEFAULT = 'Untitled Project';
 let _projectName = _PROJECT_NAME_DEFAULT;
+// シーン名の末尾に付いた書き出し日時（例: スタジオバロック_2026-10-06-102348）は外して見せる（2026-10-17 本人）。
+// 3DGS を書き出したソフトがファイル名に付ける作業用の日時で、公開ページのビューアーにそのまま出ていた。
+function _cleanSceneName(name){
+  const raw=String(name||'').trim();
+  const cleaned=raw.replace(/[\s_-]*\d{4}-?\d{2}-?\d{2}[\s_-]?\d{6}$/,'').trim();
+  return cleaned||raw;
+}
+try{window._cleanSceneName=_cleanSceneName;}catch(_){}
 // 最初に読み込んだ 3DGS のファイル名をそのままプロジェクト名にする (user 2026-08-13)。
 // 従来は毎回 RAD のファイル名をコピペして書き換えていた手作業。既にユーザーが
 // 名前を付けている場合（＝既定値以外）は絶対に上書きしない。ZIP プロジェクトの
@@ -31305,7 +31313,7 @@ let _projectName = _PROJECT_NAME_DEFAULT;
 window.setProjectNameFromFile = function(fileName){
   if(!fileName) return;
   if(_projectName && _projectName !== _PROJECT_NAME_DEFAULT) return;
-  const base = String(fileName).replace(/\.[^.]+$/, '').trim();
+  const base = _cleanSceneName(String(fileName).replace(/\.[^.]+$/, ''));
   if(!base) return;
   _projectName = base;
   const el = document.getElementById('tb-project-name');
