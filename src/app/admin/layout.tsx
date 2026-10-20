@@ -50,7 +50,7 @@ export default async function AdminLayout({
     : [{ title: "物件", items: [{ href: "/admin/properties", label: "物件一覧" }] }];
 
   return (
-    <div className="theme-online min-h-screen grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-rows-1 lg:grid-cols-[208px_1fr] border-t border-line">
+    <div className="theme-online min-h-screen grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-rows-1 lg:grid-cols-[208px_1fr]">
       <AdminNav groups={groups} heading={isAdmin ? "Admin" : "Studio"} />
       <div className="min-w-0">{children}</div>
     </div>
