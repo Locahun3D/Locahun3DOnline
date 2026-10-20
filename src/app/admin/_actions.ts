@@ -176,8 +176,12 @@ export async function cleanupReplacedFileAction(
     return;
   }
 
+  // 保存済みのどの物件（この物件を含む）からもまだ参照されていれば消さない（2026-10-20）。
+  // 以前は「1件まで＝この物件の古い参照」として消していたが、差し替え後の保存が衝突で
+  // 通らないと、DBに残った URL の実体だけが消えてプレビュー動画が空になった。
+  // 呼び出し側（エディター）は保存成功後に呼ぶので、正常時はここで 0 件になる。
   const usages = await countOtherUrlUsages(oldUrl);
-  if (usages > 1) return; // 他のフィールド/物件でまだ使用中
+  if (usages > 0) return;
   await deleteFileAsset(oldUrl);
 }
 

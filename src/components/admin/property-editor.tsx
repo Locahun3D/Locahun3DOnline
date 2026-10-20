@@ -47,13 +47,13 @@ import {
   withdrawReviewAction,
   archiveAction,
   deleteAction,
-  cleanupReplacedFileAction,
 } from "@/app/admin/_actions";
 import FileDropzone from "@/components/admin/file-dropzone";
 import AssetPickerModal from "./asset-picker-modal";
 import SlugEditor from "./slug-editor";
 import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
+import { deferCleanup, flushCleanups } from "./deferred-cleanup";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness, reviewReadiness } from "@/lib/publish-readiness";
 import PublishFlowPanel from "@/components/admin/publish-flow-panel";
@@ -236,6 +236,7 @@ export default function PropertyEditor({
           return;
         }
         baseUpdatedAtRef.current = res.updatedAt;
+        flushCleanups(initial.id);
         setSavedAt(new Date().toISOString());
         setSaveError(null);
         // ⚠ ここで router.refresh() を呼んではいけない（2026-08-13 に撤去）。
@@ -265,7 +266,7 @@ export default function PropertyEditor({
         }
       }
     });
-  }, [getValues, startSave, stopForConflict]);
+  }, [getValues, startSave, stopForConflict, initial.id]);
   // onSaveDraft を finally から自己参照するための ref（宣言順の循環を避ける）。
   const onSaveDraftRef = useRef<typeof onSaveDraft>(onSaveDraft);
   useEffect(() => { onSaveDraftRef.current = onSaveDraft; }, [onSaveDraft]);
@@ -450,11 +451,11 @@ export default function PropertyEditor({
         const res = await saveDraftAction(getValues(), {
           expectedUpdatedAt: baseUpdatedAtRef.current,
         });
-        if (res.ok) baseUpdatedAtRef.current = res.updatedAt;
+        if (res.ok) { baseUpdatedAtRef.current = res.updatedAt; flushCleanups(initial.id); }
         else conflictRef.current = true;
       }).catch(() => {});
     };
-  }, [getValues]);
+  }, [getValues, initial.id]);
 
   // タブを閉じる・リロード・外部サイトへ移動する場合はアンマウントの後始末が
   // 走らない（かつ非同期の保存も完了しない）ので、待機中の変更があるときだけ
@@ -475,7 +476,7 @@ export default function PropertyEditor({
       triggerAutoSave();
       clearResult();
       if (prevUrl && prevUrl !== capturedUrl) {
-        cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
+        deferCleanup(initial.id, prevUrl);
       }
     }
   }, [capturedUrl, capturedIdx, setValue, getValues, triggerAutoSave, clearResult, initial.id]);
@@ -541,6 +542,7 @@ export default function PropertyEditor({
           const res = await publishAction(data, { expectedUpdatedAt: baseUpdatedAtRef.current });
           if (!res.ok) { stopForConflict(); return; }
           baseUpdatedAtRef.current = res.updatedAt;
+          flushCleanups(initial.id);
           // Publication generates EN fields on the server. Reconcile those
           // before autosave resumes without resetting edits made in flight.
           {
@@ -577,6 +579,7 @@ export default function PropertyEditor({
             return;
           }
           baseUpdatedAtRef.current = res.updatedAt;
+          flushCleanups(initial.id);
           setValue("status", res.status);
           // 公開停止で申請まわりはサーバー側で白紙に戻る（resetReview）。画面も合わせる。
           setValue("publishRequestedAt", null);
@@ -618,6 +621,7 @@ export default function PropertyEditor({
             return;
           }
           baseUpdatedAtRef.current = res.updatedAt;
+          flushCleanups(initial.id);
           setValue("publishRequestedAt", res.property.publishRequestedAt);
           setValue("publishFlow", res.property.publishFlow);
           setFlowNotice(onDone(res.property, before));
@@ -1889,7 +1893,7 @@ export default function PropertyEditor({
                   if (pickImageFor === "cover") {
                     const prevSrc = getValues("cover.src");
                     setValue("cover.src", a.url, { shouldDirty: true, shouldValidate: true });
-                    if (prevSrc && prevSrc !== a.url) cleanupReplacedFileAction(initial.id, prevSrc).catch(() => {});
+                    if (prevSrc && prevSrc !== a.url) deferCleanup(initial.id, prevSrc);
                     setValue("cover.alt", a.label, { shouldDirty: true });
                     if (a.width) setValue("cover.width", a.width, { shouldDirty: true });
                     if (a.height) setValue("cover.height", a.height, { shouldDirty: true });
@@ -1940,7 +1944,7 @@ export default function PropertyEditor({
                         const prevSrc = getValues("cover.src");
                         setValue("cover.src", "", { shouldDirty: true });
                         setValue("cover.alt", "", { shouldDirty: true });
-                        if (prevSrc) cleanupReplacedFileAction(initial.id, prevSrc).catch(() => {});
+                        if (prevSrc) deferCleanup(initial.id, prevSrc);
                       }}
                       className="absolute top-3 right-3 mono text-[10px] tracking-[0.22em] uppercase border border-line bg-bg/80 px-2 py-1 hover:border-accent hover:text-accent transition"
                     >
@@ -2034,7 +2038,7 @@ export default function PropertyEditor({
                           onClick={() => {
                             const src = watch(`gallery.${i}.src`);
                             galleryArray.remove(i);
-                            if (src) cleanupReplacedFileAction(initial.id, src).catch(() => {});
+                            if (src) deferCleanup(initial.id, src);
                           }}
                           className="absolute top-1.5 right-1.5 mono text-[9px] tracking-[0.22em] uppercase border border-line bg-bg/80 px-1.5 py-0.5 hover:border-accent hover:text-accent transition"
                         >
@@ -2117,7 +2121,7 @@ export default function PropertyEditor({
                           onClick={() => {
                             const url = watch(`blueprints.${idx}.url`);
                             blueprintsArray.remove(idx);
-                            if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                            if (url) deferCleanup(initial.id, url);
                           }}
                           className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
                         >
@@ -2145,7 +2149,7 @@ export default function PropertyEditor({
                               if (!window.confirm("現在のファイルを差し替えます。\n差し替えると元のファイルは削除され、元に戻せません。\n\n続けますか？")) return;
                               const url = watch(`blueprints.${idx}.url`);
                               setValue(`blueprints.${idx}.url`, "", { shouldDirty: true });
-                              if (url) cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                              if (url) deferCleanup(initial.id, url);
                             }}
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                           >
@@ -2303,7 +2307,7 @@ export default function PropertyEditor({
                               ...(item.downloadFiles ?? []).map((f) => f.url),
                             ].filter(Boolean) as string[];
                             for (const url of urls) {
-                              cleanupReplacedFileAction(initial.id, url).catch(() => {});
+                              deferCleanup(initial.id, url);
                             }
                           }}
                           className="mono text-[10px] text-muted hover:text-red-400 transition px-2"
@@ -2411,7 +2415,7 @@ export default function PropertyEditor({
                               setValue(`splatItems.${idx}.splatUrl`, "", { shouldDirty: true });
                               setValue(`splatItems.${idx}.sizeMb`, 0, { shouldDirty: true });
                               if (previewItemIdx === idx) setPreviewItemIdx(null);
-                              if (prevUrl) cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
+                              if (prevUrl) deferCleanup(initial.id, prevUrl);
                             }}
                             className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                           >
@@ -2598,7 +2602,7 @@ export default function PropertyEditor({
                                       const prevUrl = getValues(`splatItems.${idx}.downloadFileUrl`);
                                       setValue(`splatItems.${idx}.downloadFileUrl`, "", { shouldDirty: true });
                                       setValue(`splatItems.${idx}.downloadFileSizeMb`, 0, { shouldDirty: true });
-                                      if (prevUrl) cleanupReplacedFileAction(initial.id, prevUrl).catch(() => {});
+                                      if (prevUrl) deferCleanup(initial.id, prevUrl);
                                     }}
                                     className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                                   >
@@ -3144,7 +3148,7 @@ function DownloadFilesEditor({
                 type="button"
                 onClick={() => {
                   fa.remove(fi);
-                  if (url) cleanupReplacedFileAction(propertyId, url).catch(() => {});
+                  if (url) deferCleanup(propertyId, url);
                 }}
                 className="mono text-[12px] border border-line px-2 py-2 hover:border-red-400 hover:text-red-400 transition"
                 aria-label="削除"
@@ -3164,7 +3168,7 @@ function DownloadFilesEditor({
                   onClick={() => {
                     setValue(`splatItems.${idx}.downloadFiles.${fi}.url`, "", { shouldDirty: true });
                     setValue(`splatItems.${idx}.downloadFiles.${fi}.sizeMb`, 0, { shouldDirty: true });
-                    if (url) cleanupReplacedFileAction(propertyId, url).catch(() => {});
+                    if (url) deferCleanup(propertyId, url);
                   }}
                   className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                 >
@@ -3270,7 +3274,7 @@ function DownloadVersionsEditor({
                 type="button"
                 onClick={() => {
                   fa.remove(fi);
-                  if (url) cleanupReplacedFileAction(propertyId, url).catch(() => {});
+                  if (url) deferCleanup(propertyId, url);
                 }}
                 className="mono text-[12px] border border-line px-2 py-2 hover:border-red-400 hover:text-red-400 transition"
                 aria-label="削除"
@@ -3290,7 +3294,7 @@ function DownloadVersionsEditor({
                   onClick={() => {
                     setValue(`splatItems.${idx}.downloadVersions.${fi}.url`, "", { shouldDirty: true });
                     setValue(`splatItems.${idx}.downloadVersions.${fi}.sizeMb`, 0, { shouldDirty: true });
-                    if (url) cleanupReplacedFileAction(propertyId, url).catch(() => {});
+                    if (url) deferCleanup(propertyId, url);
                   }}
                   className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                 >
