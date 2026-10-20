@@ -175,7 +175,7 @@ export default async function SiteHeader() {
       //    ヘッダーの真上に、同じ色の帯（::before・高さ160px・レイアウト外）を常に貼っておく。
       //    隙間が生じてもそこに見えるのは本文ではなくヘッダー色になる。寸法・配置・zoom は一切変えない。
       //    ⚠ この before: 群を消さないこと。横向きの追従解除も static ではなく relative（::before の基準を保つ）。
-      className="sticky [@media(max-height:480px)_and_(orientation:landscape)]:relative top-0 z-50 border-b border-line bg-bg before:content-[''] before:absolute before:inset-x-0 before:bottom-full before:h-[160px] before:bg-bg before:pointer-events-none"
+      className="sticky [@media(max-height:480px)_and_(orientation:landscape)]:relative top-0 z-50 border-b border-transparent bg-bg before:content-[''] before:absolute before:inset-x-0 before:bottom-full before:h-[160px] before:bg-bg before:pointer-events-none"
     >
       {/* ══ PC/タブレット(720px+) — 1行 ══
           720–1023px（iPad縦）だけ左をハンバーガー、中央をブランド絶対中央寄せに
