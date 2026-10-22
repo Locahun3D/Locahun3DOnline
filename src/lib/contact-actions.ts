@@ -19,6 +19,7 @@ import {
   spamReason,
 } from "./inquiry-guard";
 import { verifyTurnstile, TURNSTILE_ERROR } from "./turnstile";
+import { allowByEdgeRate } from "@/lib/edge-rate";
 
 const inputSchema = z.object({
   type: z.enum(CONTACT_TYPES),
@@ -148,7 +149,7 @@ export async function submitContactRequestAction(
   if (!(await verifyTurnstile(str("cf-turnstile-response"), ip))) {
     return { ok: false, error: TURNSTILE_ERROR };
   }
-  if (!allowByRate(source, `contact:${d.type}`)) {
+  if (!allowByRate(source, `contact:${d.type}`) || !(await allowByEdgeRate("RL_FORMS", source, "contact"))) {
     return {
       ok: false,
       error: "短時間に送信が集中しています。しばらく時間をおいて再度お試しください。",

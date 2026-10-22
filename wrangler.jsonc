@@ -23,6 +23,12 @@
   // 旧マーケサイト Worker (`locahun3dwebsite`) が使っていたネームスペースを
   // そのまま流用する（既存データを引き継ぐ）。キーは `works:<slug>`。
   // → src/lib/works-gating.ts / src/app/admin/works
+  // 2026-10-23 セキュリティ監査: 公開フォーム・写真提出の連打を Cloudflare 側で数えて止める
+  // （src/lib/edge-rate.ts）。namespace_id はアカウント内で一意の任意の数字。
+  "ratelimits": [
+    { "name": "RL_FORMS", "namespace_id": "2310231", "simple": { "limit": 3, "period": 60 } },
+    { "name": "RL_UPLOADS", "namespace_id": "2310232", "simple": { "limit": 20, "period": 60 } }
+  ],
   "kv_namespaces": [
     {
       "binding": "WORKS_KV",

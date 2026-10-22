@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { findSimilarProperties } from "@/lib/find-similar";
 import { allowByRate } from "@/lib/inquiry-guard";
+import { allowByEdgeRate } from "@/lib/edge-rate";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       { status: 401 },
     );
   }
-  if (!allowByRate(source, "similar-search")) {
+  if (!allowByRate(source, "similar-search") || !(await allowByEdgeRate("RL_FORMS", source, "similar"))) {
     return NextResponse.json(
       { ok: false, error: "短時間に検索が集中しています。しばらく時間をおいて再度お試しください。" },
       { status: 429 },

@@ -23,6 +23,7 @@ import {
   studioPublicKey,
   type StudioPhotoOp,
 } from "@/lib/studio-photo-edit";
+import { allowByEdgeRate } from "@/lib/edge-rate";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
   if (!guard.ok) return bad(403, guard.code, guard.error);
 
   const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
-  if (!allowByRate(ip, `studio-photo-edit:${property.id}`, PHOTO_RATE_MAX)) {
+  if (!allowByRate(ip, `studio-photo-edit:${property.id}`, PHOTO_RATE_MAX) || !(await allowByEdgeRate("RL_UPLOADS", ip, "studio-photo"))) {
     return bad(429, "rate", "短時間に操作が集中しています。しばらくしてからお試しください。");
   }
 

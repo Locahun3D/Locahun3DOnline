@@ -18,6 +18,7 @@ import {
   quarantineKey,
   validateStudioPhoto,
 } from "@/lib/studio-photo-intake";
+import { allowByEdgeRate } from "@/lib/edge-rate";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     req.headers.get("cf-connecting-ip") ??
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "";
-  if (!allowByRate(ip, `studio-photo:${property.id}`, PHOTO_RATE_MAX)) {
+  if (!allowByRate(ip, `studio-photo:${property.id}`, PHOTO_RATE_MAX) || !(await allowByEdgeRate("RL_UPLOADS", ip, "studio-photo"))) {
     return bad(429, "rate", "短時間に送信が集中しています。しばらくしてからお試しください。");
   }
 
