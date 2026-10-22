@@ -9250,7 +9250,8 @@ async function _capLodWarmup(capPR){
   try{
     // 細かさ: 画質「高」の 4 倍（A/B 計測の上限実行と同じ）。予算: 強い端末は VRAM 上限 maxPagedSplats の 9 割まで、
     // 弱い端末は 2 倍まで。静止画なので FPS は捨てて、データが持つ細かさを全部読む（本人「最高画質で」）。
-    const hi = _radLodScaleForStride(_splatStride()) * _radLodScaleForQuality(2) * 4;
+    // iPad など弱い端末は ×4 だと読み込みが落ち着かず 60 秒待たされる（2026-10-23 本人報告）。×1.5 に抑える。
+    const hi = _radLodScaleForStride(_splatStride()) * _radLodScaleForQuality(2) * (strong ? 4 : 1.5);
     meshes.forEach((m, i)=>{ m.lodScale = Math.max(saved.scales[i], hi); });
     const base = sr.lodSplatCount ?? (typeof sr.defaultSplatTarget === 'function' ? sr.defaultSplatTarget() : undefined);
     if(typeof base === 'number' && base > 0){
@@ -9304,7 +9305,7 @@ async function _capLodWarmup(capPR){
       const sec = (now - t0) / 1000;
       badge.textContent = T('cap-warmup').replace('{n}', (n / 10000).toFixed(0)).replace('{s}', sec.toFixed(1));
       if((fetched || now - t0 > 3000) && now - stableSince > 1500) break;
-      if(now - t0 > 60000){ timedOut = true; break; }
+      if(now - t0 > (strong ? 60000 : 20000)){ timedOut = true; break; }
     }
   } finally {
     badge.remove();
@@ -29015,7 +29016,7 @@ function _pinchEnd(e){
   // 残った1本指が回転ゾーンにあれば、そのまま視点回転へ
   if(e && e.touches && e.touches.length === 1){
     const t = e.touches[0];
-    if(t.identifier !== _lpvTouchId && t.identifier !== _handleTouchId && t.clientX > innerWidth * 0.3){ tlId = t.identifier; tlX = t.clientX; tlY = t.clientY; }
+    if(t.identifier !== _lpvTouchId && t.identifier !== _handleTouchId){ tlId = t.identifier; tlX = t.clientX; tlY = t.clientY; }
   }
 }
 let _pinchBadgeTimer = null;
@@ -29195,8 +29196,10 @@ canvas.addEventListener('touchstart',e=>{
   // more of the view. Safe vs the joystick/arrows: those are separate elements
   // (z-index 60, pointer-events) that capture their own touches before the canvas
   // sees them, so the only thing the wider zone claims is empty canvas left-of-centre.
+  // 2026-10-23: 左の不感帯を撤廃（iPad で左側を触っても回らないと本人報告）。スティックと▲▼は
+  // 自分の要素がタッチを取るので、キャンバスに来るタッチは全面で回転に使ってよい。
   for(const t of e.changedTouches)
-    if(t.identifier!==_lpvTouchId && t.identifier!==_handleTouchId && t.clientX>innerWidth*0.3){tlId=t.identifier;tlX=t.clientX;tlY=t.clientY;}
+    if(t.identifier!==_lpvTouchId && t.identifier!==_handleTouchId){tlId=t.identifier;tlX=t.clientX;tlY=t.clientY;}
   if(_pinchIds)return;
   if(typeof _clickPointerArm==='function'&&_handleTouchId===-1&&_lpvTouchId===-1&&_msrPlacingId===-1&&_plcPlacingId===-1)_clickPointerArm('touch',e);
 },{passive:true});
