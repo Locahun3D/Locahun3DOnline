@@ -18,6 +18,7 @@ import {
   type ScanSubmissionStatus,
 } from "./scan-submissions";
 import { scanSubmissionRepo } from "./scan-submissions-repo";
+import { sniffImageType } from "./studio-photo-intake";
 
 /*
  * サーバーアクション用の admin チェック。requireAdmin()（redirect版）は
@@ -39,6 +40,18 @@ async function assertAdmin(): Promise<void> {
 const MAX_SAMPLE_IMAGES = 5;
 const MAX_SAMPLE_IMAGE_BYTES = 25 * 1024 * 1024; // 25MB（既存の画像アップロード上限と揃える）
 const SAMPLE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+/** 1人あたり 24 時間に受け付ける申請の上限（2026-10-23 セキュリティ監査: 容量荒らし・通知スパム対策）。 */
+const MAX_SUBMISSIONS_PER_DAY = 5;
+
+/** 申告の file.type ではなく、先頭バイトで画像の種類を決める。画像でなければ null。 */
+async function detectSampleImageType(file: File): Promise<string | null> {
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const sniffed = sniffImageType(head);
+  if (sniffed && sniffed !== "image/heic") return sniffed;
+  const sig = String.fromCharCode(...Array.from(head.slice(0, 6)));
+  if (sig === "GIF87a" || sig === "GIF89a") return "image/gif";
+  return null;
+}
 
 const submitFormSchema = z.object({
   locationName: z.string().trim().min(1, "施設・場所名を入力してください").max(120),
@@ -104,8 +117,23 @@ export async function submitScanSubmissionAction(
   if (files.length > MAX_SAMPLE_IMAGES) {
     return { ok: false, error: `サンプル画像は最大 ${MAX_SAMPLE_IMAGES} 枚までです。` };
   }
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  const recent = (await scanSubmissionRepo.list({ userId: user.id })).filter(
+    (x) => Date.parse(x.createdAt) > since,
+  );
+  if (recent.length >= MAX_SUBMISSIONS_PER_DAY) {
+    return { ok: false, error: "本日の申請数の上限に達しました。明日以降に改めてお送りください。" };
+  }
+  const detected: string[] = [];
   for (const file of files) {
-    if (!SAMPLE_IMAGE_TYPES.includes(file.type)) {
+    const t = await detectSampleImageType(file);
+    if (!t) {
+      return { ok: false, error: "添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。" };
+    }
+    detected.push(t);
+  }
+  for (const file of files) {
+    if (!SAMPLE_IMAGE_TYPES.includes(file.type) && !file.type.startsWith("image/")) {
       return { ok: false, error: "添付できるのは画像（JPEG / PNG / WebP / GIF）のみです。" };
     }
     if (file.size > MAX_SAMPLE_IMAGE_BYTES) {
@@ -118,9 +146,9 @@ export async function submitScanSubmissionAction(
 
   const id = `sub-${nanoid(12)}`;
   const sampleImages: { src: string; alt: string }[] = [];
-  for (const file of files) {
+  for (const [i, file] of files.entries()) {
     try {
-      const saved = await saveScanSubmissionImage(id, file);
+      const saved = await saveScanSubmissionImage(id, file, detected[i]);
       sampleImages.push({ src: saved.url, alt: d.locationName });
     } catch (e) {
       console.error("[scan-submission] sample image save failed", e);

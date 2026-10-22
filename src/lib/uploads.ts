@@ -316,17 +316,22 @@ export async function saveContactAttachment(
 export async function saveScanSubmissionImage(
   submissionId: string,
   file: File,
+  /** 先頭バイトで判定した画像の種類（呼び出し側で検証済み）。拡張子と Content-Type はこれで決める。 */
+  detectedType: string,
 ): Promise<{ url: string }> {
   if ((await getUploadMode()) !== "r2") {
     const saved = await saveLocalUpload(`scan-${submissionId}`, file);
     return { url: saved.url };
   }
 
-  const ext = path.extname(file.name).toLowerCase();
-  const stem = path.basename(file.name, path.extname(file.name));
-  const key = `scan-submissions/${safeName(submissionId)}/${nanoid(6)}-${safeName(stem)}${ext}`;
+  // 2026-10-23 セキュリティ監査: 以前はファイル名の拡張子と申告の file.type をそのまま使っていた
+  // （.html なども保存できた）。種類は中身から決め、ファイル名は使わない。
+  const EXT: Record<string, string> = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif" };
+  const ext = EXT[detectedType];
+  if (!ext) throw new Error(`unsupported image type: ${detectedType}`);
+  const key = `scan-submissions/${safeName(submissionId)}/${nanoid(10)}${ext}`;
   const buf = await file.arrayBuffer();
-  const contentType = file.type || "application/octet-stream";
+  const contentType = detectedType;
 
   // 1) Workers binding（本番経路）
   try {

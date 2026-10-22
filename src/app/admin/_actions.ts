@@ -983,6 +983,15 @@ export async function saveStudioPageAction(id: string, blocks: unknown) {
   const existing = await repo.get(id);
   if (!existing) return { ok: false as const, reason: "not_found" as const };
   const pageBlocks = z.array(pageBlockSchema).max(60).parse(blocks);
+  // 2026-10-23 セキュリティ監査: ボタンのリンク先と画像の URL を形式チェックなしで保存していた。
+  // 自サイトのパスか https のみ（ボタンは mailto:/tel: も可）。// で始まる外部指定も断る。
+  const okPath = (v: string) => v === "" || (v.startsWith("/") && !v.startsWith("//")) || /^https:\/\/[^\s]+$/i.test(v);
+  for (const b of pageBlocks) {
+    if (b.kind === "cta" && !(okPath(b.href) || /^(mailto|tel):[^\s]+$/i.test(b.href))) {
+      return { ok: false as const, reason: "invalid_url" as const };
+    }
+    if (b.kind === "image" && !okPath(b.src)) return { ok: false as const, reason: "invalid_url" as const };
+  }
   await repo.upsert({ ...existing, pageBlocks });
   revalidatePath(`/admin/properties/${id}/page`);
   revalidatePath(`/properties/${id}`);

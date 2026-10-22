@@ -57,6 +57,21 @@ function cacheControlFor(totalSize: number): string {
  * Single R2 call per Range request — avoids head()+get() double-call
  * that caused 503s under Spark's 12-parallel-fetcher load.
  */
+/**
+ * 2026-10-23 セキュリティ監査: 保存された Content-Type をそのまま返していたため、将来 HTML や SVG が
+ * 置かれると locahun3d.com 上で実行される（保存型XSS）。文書として開かれたときに何も実行できないよう
+ * CSP の sandbox を付け、スクリプトを含み得る種類はダウンロード扱いにする。<img>/<video> での表示には
+ * 影響しない。PDF だけはブラウザの表示が sandbox で止まるので CSP を付けない。
+ */
+const ACTIVE_CONTENT = /^(text\/html|application\/xhtml\+xml|image\/svg\+xml|text\/xml|application\/xml|text\/javascript|application\/javascript|application\/ecmascript)/i;
+function hardenServedFile(headers: Headers, contentType: string): void {
+  headers.set("X-Content-Type-Options", "nosniff");
+  if (!/^application\/pdf/i.test(contentType)) {
+    headers.set("Content-Security-Policy", "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox");
+  }
+  if (ACTIVE_CONTENT.test(contentType)) headers.set("Content-Disposition", "attachment");
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
@@ -125,6 +140,7 @@ export async function GET(
 
       const headers = new Headers();
       headers.set("Content-Type", obj.httpMetadata?.contentType || "application/octet-stream");
+      hardenServedFile(headers, obj.httpMetadata?.contentType || "application/octet-stream");
       headers.set("Content-Length", String(length));
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
@@ -150,6 +166,7 @@ export async function GET(
 
     const headers = new Headers();
     headers.set("Content-Type", obj.httpMetadata?.contentType || "application/octet-stream");
+      hardenServedFile(headers, obj.httpMetadata?.contentType || "application/octet-stream");
     headers.set("Content-Length", String(obj.size));
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", cacheControlFor(size));

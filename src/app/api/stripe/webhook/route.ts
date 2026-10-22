@@ -7,7 +7,7 @@ import { track } from "@/lib/analytics";
 import { notifyPurchase } from "@/lib/email";
 import { recordPayoutAccruals } from "@/lib/payouts";
 import { PLAN_TOKEN_BUDGET, TOKEN_PACK } from "@/lib/schemas";
-import { grantTokenPack } from "@/lib/token-pack-actions";
+import { grantTokenPack } from "@/lib/token-pack-grant";
 import { oneYearFrom, oneMonthFrom, type AccountPlan } from "@/lib/account-schema";
 import { jstDayKey } from "@/lib/date-format";
 

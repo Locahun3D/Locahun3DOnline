@@ -78,7 +78,12 @@ export default function StudioPageBuilder({ property }: { property: Property }) 
     try {
       const res = await saveStudioPageAction(property.id, blocks);
       if (res.ok) setSavedAt(new Date().toLocaleTimeString("ja-JP"));
-      else setError("保存に失敗しました（物件が見つかりません）");
+      else
+        setError(
+          res.reason === "invalid_url"
+            ? "ボタンのリンク先か画像のURLが正しくありません（/ で始まるパスか https:// の URL にしてください）"
+            : "保存に失敗しました（物件が見つかりません）",
+        );
     } catch {
       setError("保存中にエラーが発生しました");
     } finally {

@@ -18,19 +18,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "URLを入力してください。" }, { status: 400 });
   }
 
+  // 2026-10-23 セキュリティ監査: 未ログインでも Claude（web_fetch つき）を呼べ、API 課金の踏み台に
+  // なっていた。ログインを必須にし、回数制限もユーザー単位にする。
   let source = "";
   try {
     const { userId } = await auth();
-    if (userId) {
-      source = `u:${userId}`;
-    } else {
-      source =
-        req.headers.get("cf-connecting-ip") ??
-        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        "";
-    }
+    if (userId) source = `u:${userId}`;
   } catch {
-    // 認証コンテキストが取れない環境ではレート制限をスキップ。
+    /* 認証が取れない＝未ログイン扱い */
+  }
+  if (!source) {
+    const en = (req.headers.get("referer") ?? "").includes("/en/");
+    return NextResponse.json(
+      { ok: false, error: en ? "Please sign in to use this search." : "この検索はログインしてご利用ください（無料登録で使えます）。" },
+      { status: 401 },
+    );
   }
   if (!allowByRate(source, "similar-search")) {
     return NextResponse.json(

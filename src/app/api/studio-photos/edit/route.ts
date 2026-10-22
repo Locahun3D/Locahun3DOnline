@@ -42,6 +42,12 @@ export const dynamic = "force-dynamic";
  * 同時編集: 画面が持っている updatedAt と違えば 409 で最新の写真を返し、上書きしない。
  */
 export async function POST(req: NextRequest) {
+  // 2026-10-23 セキュリティ監査: 鍵を確かめる前に本体を全部メモリへ読ませられたので、
+  // 写真1枚の上限＋余裕を超える申告サイズ・サイズ不明の送信は読む前に断る。
+  const declared = Number(req.headers.get("content-length") ?? NaN);
+  if (!Number.isFinite(declared) || declared > MAX_STUDIO_PHOTO_BYTES + 1024 * 1024) {
+    return bad(413, "too_large", `1枚あたり ${Math.floor(MAX_STUDIO_PHOTO_BYTES / 1024 / 1024)}MB までです。`);
+  }
   const form = await req.formData().catch(() => null);
   if (!form) return bad(400, "bad_request", "送信内容を読み取れませんでした。");
 
