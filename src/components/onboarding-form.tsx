@@ -11,6 +11,7 @@ import {
   type AccountRole,
 } from "@/lib/account-schema";
 import { useLocale } from "@/components/locale-provider";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 const FIELD =
   "w-full bg-bg border border-line px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-accent focus:outline-none transition";
@@ -110,10 +111,10 @@ export default function OnboardingForm({
         </>
       )}
       {state?.errors?.nda && (
-        <p className="text-[11px] text-red-400">{state.errors.nda.join(" / ")}</p>
+        <p className="text-[11px] text-red-400">{state.errors.nda.map((m) => localizeActionError(m, en)).join(" / ")}</p>
       )}
       {state?.errors?.email && (
-        <p className="text-[11px] text-red-400">{state.errors.email.join(" / ")}</p>
+        <p className="text-[11px] text-red-400">{state.errors.email.map((m) => localizeActionError(m, en)).join(" / ")}</p>
       )}
 
       {/* 配信同意: 特定電子メール法のオプトイン原則により既定は必ずOFF。

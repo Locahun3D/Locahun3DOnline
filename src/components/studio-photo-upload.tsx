@@ -6,6 +6,7 @@ import {
   MAX_PHOTO_NOTE,
   MAX_STUDIO_PHOTO_BYTES,
 } from "@/lib/studio-photo-intake";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 /**
  * 送る前にブラウザで縮小する（2026-09-26 本人指示「25MB制限とって、入れ込むときに最適化」）。
@@ -174,7 +175,7 @@ export default function StudioPhotoUpload({
         if (!res.ok || !json?.ok) {
           patch(i, {
             state: "error",
-            error: json?.error || (en ? "Upload failed." : "送信できませんでした。"),
+            error: (json?.error && localizeActionError(json.error, en)) || (en ? "Upload failed." : "送信できませんでした。"),
           });
           continue;
         }

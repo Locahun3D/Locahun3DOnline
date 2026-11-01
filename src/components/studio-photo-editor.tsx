@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MAX_CAPTION, MAX_GALLERY, type PhotoSlot } from "@/lib/studio-photo-edit";
+import { localizeActionError } from "@/lib/i18n/action-errors";
 
 /**
  * スタジオが確認ページで掲載写真を直接編集する欄（2026-10-02 本人指示
@@ -80,7 +81,7 @@ export default function StudioPhotoEditor({
     const res = await fetch("/api/studio-photos/edit", { method: "POST", body });
     const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string; photos?: Photos } | null;
     if (json?.photos) setPhotos(json.photos);
-    if (!res.ok || !json?.ok) throw new Error(json?.error || t("保存できませんでした。", "Could not save."));
+    if (!res.ok || !json?.ok) throw new Error((json?.error && localizeActionError(json.error, en)) || t("保存できませんでした。", "Could not save."));
     return json.photos as Photos;
   }
 
