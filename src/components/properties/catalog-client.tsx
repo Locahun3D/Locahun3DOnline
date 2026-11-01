@@ -225,8 +225,15 @@ function useRecentFilters() {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (Array.isArray(parsed)) setRecent(parsed.slice(0, RECENT_MAX));
+        // 2026-11-01: 以前は距離の既定値「200km以内」も条件として保存・自動復元され、再訪問でも大阪の物件が
+        // 隠れたままになった。旧既定の 200km は「制限なし」に読み替え、それだけの条件になる履歴は捨てる。
+        if (Array.isArray(parsed)) {
+          const migrated = (parsed as FilterSnapshot[])
+            .map((x) => (x && x.maxKmFromRef === 200 ? { ...x, maxKmFromRef: "" as const } : x))
+            .filter((x) => x && describeSnapshot(x));
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setRecent(migrated.slice(0, RECENT_MAX));
+        }
       }
     } catch {
       /* ignore corrupt storage */
@@ -293,7 +300,8 @@ export default function CatalogClient({
   const [maxDailyPrice, setMaxDailyPrice] = useState<number | "">("");
   const [minCeiling, setMinCeiling] = useState<number | "">("");
   const [maxCeiling, setMaxCeiling] = useState<number | "">("");
-  const [maxKmFromRef, setMaxKmFromRef] = useState<number | "">(200);
+  // 2026-11-01: 既定の「渋谷から200km以内」で大阪の物件が最初から隠れていた（37件 / 42）。既定は制限なし。
+  const [maxKmFromRef, setMaxKmFromRef] = useState<number | "">("");
   const [requiresDaily, setRequiresDaily] = useState(false);
   const [requiresParking, setRequiresParking] = useState(false);
   const [requires200V, setRequires200V] = useState(false);
@@ -315,7 +323,7 @@ export default function CatalogClient({
     setMinPrice(""); setMaxPrice("");
     setMinDailyPrice(""); setMaxDailyPrice("");
     setMinCeiling(""); setMaxCeiling("");
-    setMaxKmFromRef(200);
+    setMaxKmFromRef("");
     setRequiresDaily(false); setRequiresParking(false); setRequires200V(false); setRequires3D(false); setDataSale("all");
     setFacilities([]);
     setHoursFrom(""); setHoursTo("");
@@ -1294,7 +1302,7 @@ function SortBar({
       <div className="flex items-baseline gap-1.5 sm:gap-2 font-sans">
         <span className="brand text-xl sm:text-2xl text-accent">{resultCount.toLocaleString(en ? "en-US" : "ja-JP")}</span>
         <span className="text-[11px] sm:text-[12px] font-medium opacity-70">{en ? "results" : "件"}</span>
-        <span className="text-[11px] sm:text-[12px] opacity-50">/ {totalCount} {en ? "total" : "全"}</span>
+        <span className="text-[11px] sm:text-[12px] opacity-50">{en ? `of ${totalCount}` : `／ 全${totalCount}件`}</span>
       </div>
 
       <div className="flex flex-wrap items-stretch gap-x-2 sm:gap-x-3 gap-y-1 ml-auto">
