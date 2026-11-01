@@ -22307,7 +22307,8 @@ setTimeout(async ()=>{
     let autoUrl = decodeURIComponent(m[1]);
     // 2026-11-01 セキュリティ監査（オンライン版のみ）: 外部サイトの ZIP を読ませて、その中のプロジェクトで
     // スクリプトを動かす攻撃の入口になるので、別オリジンの絶対 URL は読まない。
-    try{ if(/^https?:\/\//i.test(autoUrl) && new URL(autoUrl).origin !== location.origin){ console.warn('[autoload] cross-origin URL ignored'); autoUrl = null; } }catch(_){ autoUrl = null; }
+    // 例外は自社 R2 の署名付き URL（/api/viewer-asset が発行し、ビューアーはそれを直接読む）。
+    try{ if(/^https?:\/\//i.test(autoUrl) && new URL(autoUrl).origin !== location.origin && new URL(autoUrl).origin !== 'https://9ad06a76157fb2f40dfef1f4b7a14a93.r2.cloudflarestorage.com'){ console.warn('[autoload] cross-origin URL ignored'); autoUrl = null; } }catch(_){ autoUrl = null; }
     if(autoUrl){
     // Online SaaS only: stored asset URLs are the public R2-proxy path
     // (e.g. /api/r2/assets/splat/foo.zip). Under ?protected=1 the
