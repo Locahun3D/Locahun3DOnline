@@ -28,10 +28,9 @@ const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 /** Generate a friendly code like "LH3D-7QX4-K2M9". */
 export function generateGiftCode(): string {
+  // 推測されないよう暗号論的な乱数を使う（2026-11-01 セキュリティ監査: 以前は Math.random）。
   const block = () =>
-    Array.from({ length: 4 }, () =>
-      ALPHABET[Math.floor(Math.random() * ALPHABET.length)],
-    ).join("");
+    Array.from(crypto.getRandomValues(new Uint32Array(4)), (n) => ALPHABET[n % ALPHABET.length]).join("");
   return `LH3D-${block()}-${block()}`;
 }
 

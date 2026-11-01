@@ -168,7 +168,8 @@ export async function GET(
       // 参照元の RAD を直接指された場合も、同じシーンの公開範囲（制限あり／NDA限定）を当てる。
       if (
         (item.splatUrl && toR2Key(item.splatUrl) === key) ||
-        (!wantsStream && item.streamUrl && toR2Key(item.streamUrl) === key)
+        (!wantsStream && item.streamUrl && toR2Key(item.streamUrl) === key) ||
+        (!wantsStream && item.sceneTextEn?.source && toR2Key(item.sceneTextEn.source) === key)
       ) {
         matchedItem = item;
         matchedProperty = p;
@@ -176,6 +177,25 @@ export async function GET(
       }
     }
     if (matchedItem) break;
+  }
+  // 2026-11-01 セキュリティ監査: 以前は物件のシーンに一致しないキーも、そのまま配っていた。
+  // 有料会員なら販売用 ZIP（downloadFiles）や R2 の任意の .json まで、購入なしで取れた。
+  // 一致しないキーは、管理者（キャプチャ・差し替え）か、編集履歴（editVersions）を開く物件の担当者だけに限る。
+  if (!matchedItem) {
+    const isAdmin = user?.role === "admin";
+    let editOwner = false;
+    if (!isAdmin && user && !wantsStream) {
+      for (const p of props) {
+        const hit = p.splatItems.some((it) => (it.editVersions ?? []).some((v) => toR2Key(v.url) === key));
+        if (hit) {
+          editOwner = p.ownerId === user.id || (user.linkedPropertyIds ?? []).includes(p.id);
+          break;
+        }
+      }
+    }
+    if (!isAdmin && !editOwner) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
   }
   if (wantsStream) {
     const streamKey = matchedItem?.streamUrl ? toR2Key(matchedItem.streamUrl) : null;

@@ -38,6 +38,18 @@ const BLOCKED_3DGS_RE =
 const QUARANTINE_RE = /^quarantine\//i;
 
 /**
+ * 2026-11-01 セキュリティ監査: この無認証の口は「拒否リスト」だけだったため、同じバケットに残っていた
+ * D1 移行前の旧データ（users/<id>.json の会員情報、inquiries/、_properties/、_assets/、
+ * site-settings.json 等）が誰でも読めた。配ってよい接頭辞と種類だけを通す「許可リスト」にする。
+ * 物件・素材の画像／動画／図面は assets/ と uploads/、持ち込みスキャンの見本画像は scan-submissions/。
+ */
+const PUBLIC_PREFIX_RE = /^(assets|uploads|scan-submissions)\//;
+const PUBLIC_EXT_RE = /\.(jpe?g|png|webp|gif|avif|svg|mp4|webm|mov|m4v|pdf)$/i;
+function isPublicKey(key: string): boolean {
+  return PUBLIC_PREFIX_RE.test(key) && PUBLIC_EXT_RE.test(key) && !key.split("/").some((seg) => seg === ".." || seg === ".");
+}
+
+/**
  * 大きいボディは Cache-Control: public を付けない。
  * Workers 経由の大容量ストリームは途中切断されることがあり（実測: 116MB zip が
  * 56MB/40KB で truncate）、切れた本体が public キャッシュに保存されると、その URL は
@@ -86,6 +98,11 @@ export async function GET(
   if (BLOCKED_3DGS_RE.test(key)) {
     return NextResponse.json({ error: "Use /api/viewer-asset for 3DGS data" }, { status: 403 });
   }
+
+  if (!isPublicKey(key)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
 
   const rangeHeader = req.headers.get("range");
 

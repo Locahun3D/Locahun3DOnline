@@ -86,6 +86,8 @@ export async function POST(req: Request) {
     // salePrice<=0 では除外しない（単品購入と同様、¥0固定の無料配布アイテムを
     // 正当な購入対象として扱う。forSale が販売対象であることの唯一の判定条件）。
     if (!property || !item || !item.forSale) continue;
+    // 2026-11-01 セキュリティ監査: 単品購入と同じく、公開中・閲覧制限なしのデータだけ。
+    if (property.status !== "published" || item.accessLevel === "restricted" || item.accessLevel === "nda_only") continue;
     if (isDataSaleDisabled(item.freePeriod, nowIso)) continue;
     // DLファイル未設定の項目は代金だけ取って何も渡せない事故になるため除外。
     if (resolveDownloadFiles(item).length === 0) continue;

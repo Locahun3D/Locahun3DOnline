@@ -52,7 +52,7 @@ export default async function DataSalesPage() {
       {/* 検索エンジンに「商品の一覧」と伝える。価格・在庫はページの表示と同じ値を入れる。 */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd(entries, en)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd(entries, en)).replace(/</g, "\\u003c") }}
       />
 
       <header className="ui-page-header">

@@ -334,7 +334,8 @@ export async function GET(req: Request) {
     }
     return NextResponse.json(await withStream(signed), { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: "internal", detail: msg }, { status: 500 });
+    // 2026-11-01 セキュリティ監査: 例外の中身（内部のキー・設定）を利用者へ返さない。ログにだけ残す。
+    console.error("[viewer-asset]", e);
+    return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

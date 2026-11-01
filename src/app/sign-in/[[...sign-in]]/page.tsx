@@ -17,9 +17,12 @@ function internalPath(raw?: string): string {
   if (!raw) return "/";
   try {
     const url = new URL(raw, "http://x");
-    return (url.pathname || "/") + url.search;
+    const out = (url.pathname || "/") + url.search;
+    // 2026-11-01 セキュリティ監査: https://a//evil.com/x の pathname は //evil.com/x になり、
+    // ブラウザは別サイトとして扱う（protocol-relative）。// や /\ で始まる結果はトップへ。
+    return /^\/[\/\\]/.test(out) ? "/" : out;
   } catch {
-    return raw.startsWith("/") ? raw : "/";
+    return raw.startsWith("/") && !/^\/[\/\\]/.test(raw) ? raw : "/";
   }
 }
 

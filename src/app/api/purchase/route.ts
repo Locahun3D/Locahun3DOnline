@@ -61,7 +61,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "物件が見つかりません" }, { status: 404 });
   }
 
+  // 2026-11-01 セキュリティ監査: 公開中の物件だけ。閲覧制限（制限あり／NDA限定）のデータは
+  // このセルフ購入の口では売らない（個別対応）。
+  if (property.status !== "published") {
+    return NextResponse.json({ error: "物件が見つかりません" }, { status: 404 });
+  }
   const item = property.splatItems[splatItemIndex];
+  if (item && (item.accessLevel === "restricted" || item.accessLevel === "nda_only")) {
+    return NextResponse.json({ error: "このデータはお問い合わせのうえでのご案内です" }, { status: 403 });
+  }
   // salePrice === 0 は「無料配布」として許可する（forSale=true が販売対象である
   // ことの唯一の判定条件。以前は price<=0 も弾いていたため¥0を設定できなかった）。
   if (!item || !item.forSale) {

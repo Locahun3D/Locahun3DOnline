@@ -98,7 +98,7 @@ it("HEAD retains legitimate free-period, active admin and approved production ac
 it("general R2 GET cache still receives actual body and matching identity",async()=>{
   const cache={match:vi.fn().mockResolvedValue(undefined),put:vi.fn()};
   vi.stubGlobal("caches",{default:cache});
-  const res=await r2.GET(request("r2","image.png","GET"),context("image.png"));
+  const res=await r2.GET(request("r2","uploads/image.png","GET"),context("uploads/image.png"));
   expect(cache.put).toHaveBeenCalledOnce();
   const cached=cache.put.mock.calls[0][1] as Response;
   expect(cached.headers.get("etag")).toBe(res.headers.get("etag"));
@@ -134,7 +134,14 @@ it("HEAD bypasses stale GET Cache API entries and never writes a bodyless cache 
   expect(r2.HEAD).toBeTypeOf("function");
   const cache={match:vi.fn().mockResolvedValue(new Response("old",{headers:{ETag:'"stale"'}})),put:vi.fn()};
   vi.stubGlobal("caches",{default:cache});
-  const res=await r2.HEAD(request("r2","image.png","HEAD"),context("image.png"));
+  const res=await r2.HEAD(request("r2","uploads/image.png","HEAD"),context("uploads/image.png"));
   expect(res.headers.get("etag")).toBe('"multipart-6"');
   expect(cache.match).not.toHaveBeenCalled(); expect(cache.put).not.toHaveBeenCalled();
 });
+
+// 2026-11-01 セキュリティ監査: D1 移行前の旧データ（会員情報の JSON など）を無認証の口から出さない。
+it.each(["users/user_abc.json", "inquiries/x.json", "site-settings.json", "_analytics.json", "uploads/../users/u.json", "assets/image/a.html"])(
+  "r2 GET refuses non-public key %s", async (key) => {
+    const res = await r2.GET(request("r2", key, "GET"), context(key));
+    expect(res.status).toBe(404);
+  });

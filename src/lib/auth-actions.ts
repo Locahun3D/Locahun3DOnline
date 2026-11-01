@@ -53,6 +53,19 @@ export async function onboardingAction(
   await getCurrentUser();
   const u = await userRepo.get(userId);
   if (!u) redirect("/sign-in");
+  // 2026-11-01 セキュリティ監査: 初回登録用のアクションを登録済みの人が再送すると、停止中のアカウントが
+  // active に戻り、会社メール必須のスタジオにもなれた。登録済み・停止中は受け付けない。
+  if (u.onboarded || u.status === "suspended") redirect("/account");
+  // スタジオも会社メール必須（convertToStudioAction と同じ条件）。
+  if (d.role === "studio" && isFreeEmailDomain(u.email)) {
+    return {
+      errors: {
+        email: [
+          "スタジオアカウントの登録には会社（施設）のメールアドレスが必要です。Gmail・Outlook・Yahooメール等の個人向けメールアドレスでは登録できません。",
+        ],
+      },
+    };
+  }
 
   // NDA(制作会社)アカウントは会社実在の裏付けとして会社メールドメインを必須化。
   // フォーム上のロール選択時点では気づけないため、送信時にここで弾く
