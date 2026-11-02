@@ -58,8 +58,8 @@ it('returns 403 for another property or revoked access and prevents actor replay
  const one=await reserve();mocks.access.mockRejectedValue(new Error('forbidden'));expect((await verify(one.key)).status).toBe(403);
  mocks.access.mockResolvedValue({id:'other',role:'admin'});mocks.user.mockResolvedValue({id:'other'});expect((await verify(one.key)).status).toBe(403);
 });
-it('rejects missing, duplicate, archived and deleted targets',async()=>{
- for(const property of [{...initial,splatItems:[]},{...initial,splatItems:[initial.splatItems[0],initial.splatItems[0]]},{...initial,status:'archived'}]){
+it('rejects missing, duplicate and deleted targets',async()=>{
+ for(const property of [{...initial,splatItems:[]},{...initial,splatItems:[initial.splatItems[0],initial.splatItems[0]]}]){
   replace(property);expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(409);
  }
  sqlite.exec('DELETE FROM properties');expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(409);
@@ -111,4 +111,12 @@ it('names the streamable file so the editor can page the RAD, but not for a scen
  replace({...initial,updatedAt:'2026-09-15T00:00:00.000Z',splatItems:[{...initial.splatItems[0],splatUrl:'/api/r2/assets/splat/wf_x-project.zip',streamUrl:old},initial.splatItems[1]]} as typeof initial);
  const edited=await (await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).json();
  expect(edited.streamFileName).toBe('');
+});
+
+// 2026-11-02: アーカイブ中の物件も管理者は編集できる（本人報告「開けない」）。担当者は従来どおり不可。
+it('lets only admins open archived listings',async()=>{
+ replace({...initial,status:'archived'});
+ expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(200);
+ mocks.access.mockResolvedValue({id:'owner',role:'studio'});
+ expect((await POST(request({action:'target',propertyId:'p',sceneId:'s'}))).status).toBe(403);
 });

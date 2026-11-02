@@ -3,7 +3,7 @@ const hex=z.string().regex(/^[a-f0-9]{64}$/);
 const id=z.string().min(1).max(200);
 export const sceneEditTargetSchema=z.object({
  propertyId:id,sceneId:id,expectedUpdatedAt:z.string().datetime(),previousUrl:z.string().min(1).max(2048),
- propertyRevision:hex,expiresAt:z.string().datetime(),sessionKey:hex,status:z.enum(['draft','published']),
+ propertyRevision:hex,expiresAt:z.string().datetime(),sessionKey:hex,status:z.enum(['draft','published','archived']),
 }).strict();
 export const sceneEditDigestSchema=z.object({
  revision:z.number().int().nonnegative(),projectSha256:hex,archiveSha256:hex,

@@ -16,7 +16,7 @@ export async function sceneEditAccess(propertyId:string){
 }
 export async function sceneEditSnapshot(db:D1,propertyId:string,sceneId:string){
  const row=await db.prepare('SELECT data,status,updated_at FROM properties WHERE id=?').bind(propertyId).first();
- if(!row||!['draft','published'].includes(row.status)||typeof row.data!=='string')throw new SceneEditError(409,'scene_changed');
+ if(!row||!['draft','published','archived'].includes(row.status)||typeof row.data!=='string')throw new SceneEditError(409,'scene_changed');
  const property=JSON.parse(row.data),scenes=property.splatItems?.filter((s:{id?:string}|null)=>s?.id===sceneId);
  if(property.id!==propertyId||property.status!==row.status||property.updatedAt!==row.updated_at||scenes?.length!==1||!sceneEditSourceKey(scenes[0].splatUrl))throw new SceneEditError(409,'scene_changed');
  z.string().datetime().parse(row.updated_at);
@@ -39,5 +39,5 @@ export async function loadSceneEditSession(db:D1,sessionKey:string,actorId:strin
 }
 /** Published scenes change what every viewer sees immediately; only administrators may save them. */
 export function sceneEditPublishPolicy(user:{role?:string}|null|undefined,status:string){
- if(status==='published'&&user?.role!=='admin')throw new SceneEditError(403,'published_admin_only');
+ if((status==='published'||status==='archived')&&user?.role!=='admin')throw new SceneEditError(403,'published_admin_only');
 }
