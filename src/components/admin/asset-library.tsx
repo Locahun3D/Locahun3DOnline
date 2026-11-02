@@ -252,15 +252,22 @@ export default function AssetLibrary({ initialAssets, usage, properties }: Props
     assetApi({ action: "thumbnail", id: a.id, thumbnailUrl: url });
   }
 
+  // シーン編集の保存途中のファイル（wf_…・アップロード中）は、編集の期限＋猶予の計 48 時間はサーバーが削除を断る
+  // （編集中の保存を壊さないため）。数えると「消せない 1 件」が残って見えるので、その間は対象に入れない（2026-11-02）。
+  const [loadedAt] = useState(() => Date.now());
+  const isEditReservation = (a: { id: string; status?: string; uploadedAt?: string }) =>
+    /^wf_[a-f0-9]{64}$/.test(a.id) && a.status === "uploading"
+    && loadedAt - Date.parse(a.uploadedAt ?? "") < 48 * 60 * 60 * 1000;
   // 現在の検索/種類/タグ絞り込みは維持しつつ、対象は常に「未使用」に限定する
   // 二重ガード（onlyUnused チェックのON/OFFに関係なく、削除実行はこの計算結果のみ
   // を使う。誤って使用中アセットを一括削除に巻き込まないための安全策）。
   const unusedInFiltered = useMemo(
-    () => filtered.filter((a) => (usage[a.url]?.length ?? 0) === 0),
+    () => filtered.filter((a) => (usage[a.url]?.length ?? 0) === 0 && !isEditReservation(a)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isEditReservation は loadedAt だけに依存し、loadedAt は変わらない
     [filtered, usage],
   );
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const allUnused = assets.filter(a => (usage[a.url]?.length ?? 0) === 0);
+  const allUnused = assets.filter(a => (usage[a.url]?.length ?? 0) === 0 && !isEditReservation(a));
 
   async function onBulkDeleteUnused(targets = unusedInFiltered) {
     if (targets.length === 0) return;
