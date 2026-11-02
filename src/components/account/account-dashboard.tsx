@@ -294,7 +294,7 @@ export default function AccountDashboard({
         </div>
         <div className={styles.devices} data-account-region="devices" data-account-slot="devices">{loginDevices}</div>
       </div>
-      {/* ── 右列: トークン / ギフトコード / プラン / NDA / 請求書＋配信設定 ──
+      {/* ── 右列: ギフトコード / プラン（ポイント込み） / NDA / 請求書＋配信設定 ──
           ⚠ 2026-10-16: NDA とギフトコードは以前ページ最下部に全幅2枚で並べていたが、右列の下が
             大きく空き、左右の列の下端もそろわなかった（本人「ここのデザイン枠に収めて」）。右列へ移した。
             ポイントの買い足しカードは 2026-08-13 に廃止済み（月額プランの付与のみ）。
@@ -304,20 +304,7 @@ export default function AccountDashboard({
             「請求書のタブの中に説明付きで」というご指定に合わせて中へ移した
             （2026-07-30）。 */}
       <aside className={styles.subscriptionColumn} data-account-region="subscription" aria-label={en ? "Subscription and balance" : "契約と残高"}>
-        {/* TOKENS */}
-        <div data-account-slot="tokens" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
-          <div className={styles.cardTitle}>
-            {en ? "Points" : "ポイント"}
-          </div>
-          <div className="text-2xl sm:text-3xl font-bold text-[#1ea0c4]">{tokens}</div>
-          {resetNote.length > 0 && (
-            <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
-              {resetNote.join(en ? " · " : "・")}
-            </div>
-          )}
-        </div>
-
-        {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード）。トークンのすぐ下に置く */}
+        {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード） */}
         <div data-account-slot="gift"><RedeemGift /></div>
 
         {/* PLAN */}
@@ -355,6 +342,16 @@ export default function AccountDashboard({
                 : en
                   ? "Active subscription"
                   : "契約中"}
+          </div>
+          {/* ポイントはプランで付与されるので同じカードに入れる（2026-11-02 本人指定。以前は独立カード）。 */}
+          <div data-account-slot="tokens" className="mt-4 pt-4 border-t border-[#e2e7ec]">
+            <div className="mono text-[10px] tracking-[0.2em] uppercase text-[#7b8794]">{en ? "Points" : "ポイント"}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#1ea0c4] mt-1">{tokens}</div>
+            {resetNote.length > 0 && (
+              <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
+                {resetNote.join(en ? " · " : "・")}
+              </div>
+            )}
           </div>
           <Link
             href={lh("/pricing")}

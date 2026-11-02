@@ -5,6 +5,7 @@ import { localizedHref } from "@/lib/i18n/dictionaries";
 import { listDataSales, summarizeDataSales, type DataSaleEntry } from "@/lib/data-catalog";
 import { categoryLabel, dataLicenseLabel } from "@/lib/schemas";
 import TitleText from "@/components/title-text";
+import Jp from "@/components/jp";
 
 export const dynamic = "force-dynamic";
 
@@ -117,12 +118,14 @@ export default async function DataSalesPage() {
         </ul>
       )}
 
-      <section className="mt-12 border-t border-line pt-8 max-w-[68ch] space-y-4 text-[14px] leading-[1.9]">
+      <section className="mt-12 border-t border-line pt-8 max-w-[56em] space-y-4 text-[14px] leading-[1.9]">
         <h2 className="ui-section-title">{en ? "How it works" : "購入の流れと使い道"}</h2>
         <p className="text-muted">
           {en ? (
             <>
               Each scene is scanned on location, not modelled by hand.
+              <br />
+              The data is 3D Gaussian Splatting (3DGS), which records a place as millions of soft, coloured points, so it keeps the look of the real space.
               <br />
               You can walk it in the browser first, then buy the data and download it as files.
               <br />
@@ -130,11 +133,15 @@ export default async function DataSalesPage() {
             </>
           ) : (
             <>
-              どのシーンも現地で撮影した実写の3Dスキャンで、手作業のCGモデルではありません。
+              <Jp>どのシーンも現地で撮影した実写の3Dスキャンで、手作業のCGモデルではありません。</Jp>
               <br />
-              購入前にブラウザで歩いて確認でき、購入後はファイルとしてダウンロードできます。
+              <Jp>データは3DGS（3D Gaussian Splatting）です。</Jp>
               <br />
-              使える範囲は選んだライセンスで決まります。
+              <Jp>色のついた数百万個の小さな粒で空間を記録するので、実写の見た目のまま立体で扱えます。</Jp>
+              <br />
+              <Jp>購入前にブラウザで歩いて確認でき、購入後はファイルとしてダウンロードできます。</Jp>
+              <br />
+              <Jp>使える範囲は選んだライセンスで決まります。</Jp>
             </>
           )}
         </p>
@@ -219,11 +226,6 @@ function DataSaleCard({
         </div>
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>
-          {e.formats.length > 0 && (
-            <div className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5">
-              {e.formats.join(" · ")}
-            </div>
-          )}
         </div>
         {e.sizeMb > 0 && (
           <div className="absolute bottom-2 right-2 mono text-[10px] tracking-[0.2em] uppercase bg-bg/80 backdrop-blur px-2 py-1 border border-line">

@@ -10,6 +10,7 @@
  *
  * 触るのは容量の欄だけ（sizeMb / streamSizeMb と、素材一覧の size）。他の欄が変わる差分なら書かない。
  * 編集後の入れ物（…-project.zip）は数KBが正しいので、その sizeMb は直さない。
+ * アーカイブ中の物件も対象（2026-11-02: 除外していたので、なんば南海通りなどが 1 MB のまま残った。公開に戻すとそのまま出る）。
  */
 type Stmt = { bind(...v: unknown[]): Stmt; all(): Promise<{ results?: unknown[] }>; run(): Promise<{ meta?: { changes?: number } }> };
 export type SceneSizeDb = { prepare(sql: string): Stmt };
@@ -61,7 +62,7 @@ export async function runSceneSizeFix(
   bucket: SceneSizeBucket,
   now = Date.now(),
 ): Promise<{ fixed: number; report: SceneSizeReport[] }> {
-  const rows = ((await db.prepare("SELECT id, updated_at, data FROM properties WHERE status != 'archived'").all()).results ?? []) as Row[];
+  const rows = ((await db.prepare("SELECT id, updated_at, data FROM properties").all()).results ?? []) as Row[];
   const report: SceneSizeReport[] = [];
   const sizes = new Map<string, number | null>();
   const head = async (key: string) => {
