@@ -3,7 +3,7 @@
 import SiteLink from "@/components/site-link";
 import { onlineHref } from "@/lib/online-href";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { markNotificationsReadAction } from "@/lib/notification-actions";
+import { markNotificationReadAction, markNotificationsReadAction } from "@/lib/notification-actions";
 import type { Notification } from "@/lib/notifications";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
 import { fmtDateTimeLocaleJST } from "@/lib/date-format";
@@ -132,7 +132,7 @@ export default function NotificationBell({
                 <li key={n.id}>
                   <SiteLink absolute={absolute}
                     href={lh(n.link)}
-                    onClick={() => setOpen(false)}
+                    onClick={() => { setOpen(false); if (!n.read) void markNotificationReadAction(n.id).catch(() => {}); }}
                     className="block px-4 py-3 hover:bg-[#f5f8fa] transition group"
                   >
                     <div className="flex items-start gap-2">

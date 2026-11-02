@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { markNotificationsReadAction } from "@/lib/notification-actions";
+import { markNotificationsReadAction, markNotificationReadAction } from "@/lib/notification-actions";
 import type { Notification } from "@/lib/notifications";
 import type { NotificationScope } from "@/lib/notification-scope";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
@@ -69,7 +69,7 @@ export default function NotificationList({
       <ul className="divide-y divide-[#e2e7ec]">
         {(scope === "admin" ? notifications.filter((n) => !n.read) : notifications.slice(0, 8)).map((n) => (
           <li key={n.id} className="py-3 first:pt-0 last:pb-0">
-            <Link href={lh(n.link)} className="block group">
+            <Link href={lh(n.link)} onClick={() => { if (!n.read) void markNotificationReadAction(n.id).catch(() => {}); }} className="block group">
               <div className="flex items-start gap-2">
                 {!n.read && (
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#1ea0c4] shrink-0" />
@@ -102,7 +102,7 @@ export default function NotificationList({
           <ul className="mt-2 divide-y divide-[#e2e7ec] opacity-70">
             {notifications.filter((n) => n.read).map((n) => (
               <li key={n.id} className="py-2.5">
-                <Link href={lh(n.link)} className="block group">
+                <Link href={lh(n.link)} onClick={() => { if (!n.read) void markNotificationReadAction(n.id).catch(() => {}); }} className="block group">
                   <div className="text-[12px] text-[#14181c] group-hover:text-[#1ea0c4] transition leading-[1.6]">{n.title}</div>
                   <div className="text-[11px] text-[#7b8794] leading-[1.6] line-clamp-1">{n.body}</div>
                   <div className="mono text-[10px] text-[#7b8794] mt-0.5">{fmtDateTimeLocaleJST(n.createdAt, en ? "en-US" : "ja-JP")}</div>

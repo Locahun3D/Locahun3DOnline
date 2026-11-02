@@ -5,7 +5,7 @@ vi.mock("./fs-safe", () => ({ canAccessLocalFs: () => state.local, safeWriteFile
 vi.mock("./contact-requests", () => ({ contactRequestRepo: { list: async () => state.contacts } }));
 vi.mock("./inquiries", () => ({ inquiryRepo: { list: async () => [] } }));
 vi.mock("./d1", () => ({ getD1: async () => ({ batch: async (statements: { run: () => Promise<void> }[]) => { state.batchSizes.push(statements.length); if (state.batchFailure) throw Error("transaction rolled back"); for (const s of statements) await s.run(); }, prepare: (sql: string) => ({ bind: (...values: unknown[]) => ({ all: async () => ({ results: state.notifications.filter(n => n.userId === values[0]).map(n => ({ ...n, user_id: n.userId, created_at: n.createdAt })) }), run: async () => { state.updates.push([sql, ...values]); for (const n of state.notifications) if (n.userId === values[0] && values.slice(1).includes(n.id)) n.read = true; } }) }) }) }));
-import { getNotificationSummary, markAllRead } from "./notifications";
+import { getNotificationSummary, markAllRead, markOneRead } from "./notifications";
 const notice = (id: string, type = "policy_update", userId = "owner") => ({ id, userId, type, title: id, body: "A さん: hello", link: type === "contact_request" ? `/admin/contact-requests#${id}` : type === "publish_request" ? "/admin/properties/p/edit" : "/account", read: false, createdAt: id });
 beforeEach(() => { state.notifications = []; state.contacts = []; state.local = true; state.updates = []; state.batchSizes = []; state.batchFailure = false; });
 it("separates personal and admin notices before limits and counts beyond thirty", async () => {
@@ -55,4 +55,15 @@ it("propagates a failed D1 transaction without independent partial read writes",
   await expect(markAllRead("owner", "admin")).rejects.toThrow("transaction rolled back");
   expect(state.updates).toEqual([]);
   expect(state.notifications.every(n => n.read === false)).toBe(true);
+});
+it("marks one notification read for its recipient only, sharing admin notices", async () => {
+  state.notifications = [notice("p1"), notice("p2"), notice("x", "policy_update", "other")];
+  await markOneRead("owner", "x");
+  expect(state.notifications.every(n => n.read === false)).toBe(true);
+  await markOneRead("owner", "p1");
+  expect(state.notifications.map(n => n.read)).toEqual([true, false, false]);
+  const adminA = notice("a1", "publish_request"); const adminB = { ...notice("a2", "publish_request", "admin2"), link: adminA.link, body: adminA.body };
+  state.notifications = [adminA, adminB];
+  await markOneRead("owner", "a1");
+  expect(state.notifications.map(n => n.read)).toEqual([true, true]);
 });

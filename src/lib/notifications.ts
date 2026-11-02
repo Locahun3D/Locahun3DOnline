@@ -195,3 +195,33 @@ export async function markAllRead(userId: string, scope: NotificationScope): Pro
   // earlier chunks as read while the UI reports that the operation failed.
   await db.batch(statements);
 }
+
+/**
+ * 1 件だけ既読にする（2026-11-02: 通知を開いても未読のままで、バッジが「すべて既読」を押すまで消えなかった）。
+ * 本人宛の行だけを対象にする。管理者宛は markAllRead と同じく、全管理者の同じ通知をまとめて既読にする。
+ */
+export async function markOneRead(userId: string, id: string): Promise<void> {
+  if (!id) return;
+  if (canAccessLocalFs()) {
+    const s = await readStore();
+    const n = s.notifications.find((x) => x.id === id && x.userId === userId);
+    if (!n || n.read) return;
+    const shared = notificationScope(n) === "admin";
+    for (const x of s.notifications) {
+      if (x === n || (shared && x.type === n.type && x.link === n.link && x.body === n.body)) x.read = true;
+    }
+    await writeStore(s);
+    return;
+  }
+  const db = await getD1();
+  if (!db) return;
+  const row = (await db.prepare(`SELECT * FROM ${TABLE} WHERE id = ? AND user_id = ?`).bind(id, userId).first()) as Record<string, unknown> | null;
+  if (!row) return;
+  const n = rowToNotification(row);
+  if (n.read) return;
+  if (notificationScope(n) === "admin") {
+    await db.prepare(`UPDATE ${TABLE} SET read = 1 WHERE read = 0 AND type = ? AND link = ? AND body = ?`).bind(n.type, n.link, n.body).run();
+  } else {
+    await db.prepare(`UPDATE ${TABLE} SET read = 1 WHERE id = ? AND user_id = ?`).bind(id, userId).run();
+  }
+}
