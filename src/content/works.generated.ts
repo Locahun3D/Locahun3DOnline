@@ -8,6 +8,7 @@ import p_ja_3dgs_blender_workflow from "../../content/works/ja/3dgs-blender-work
 import p_ja_3dgs_codex_hall_modeling from "../../content/works/ja/3dgs-codex-hall-modeling.json";
 import p_ja_3dgs_file_formats from "../../content/works/ja/3dgs-file-formats.json";
 import p_ja_3dgs_lidar_denoise from "../../content/works/ja/3dgs-lidar-denoise.json";
+import p_ja_3dgs_scan_ai_background_forest from "../../content/works/ja/3dgs-scan-ai-background-forest.json";
 import p_ja_3dgs_software_comparison from "../../content/works/ja/3dgs-software-comparison.json";
 import p_ja_blender_53_native_3dgs from "../../content/works/ja/blender-53-native-3dgs.json";
 import p_ja_blender_lcc2_vfx from "../../content/works/ja/blender-lcc2-vfx.json";
@@ -27,6 +28,7 @@ import p_en_3dgs_blender_workflow from "../../content/works/en/3dgs-blender-work
 import p_en_3dgs_codex_hall_modeling from "../../content/works/en/3dgs-codex-hall-modeling.json";
 import p_en_3dgs_file_formats from "../../content/works/en/3dgs-file-formats.json";
 import p_en_3dgs_lidar_denoise from "../../content/works/en/3dgs-lidar-denoise.json";
+import p_en_3dgs_scan_ai_background_forest from "../../content/works/en/3dgs-scan-ai-background-forest.json";
 import p_en_3dgs_software_comparison from "../../content/works/en/3dgs-software-comparison.json";
 import p_en_blender_53_native_3dgs from "../../content/works/en/blender-53-native-3dgs.json";
 import p_en_blender_lcc2_vfx from "../../content/works/en/blender-lcc2-vfx.json";
@@ -49,6 +51,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "3dgs-codex-hall-modeling": p_ja_3dgs_codex_hall_modeling as WorksPage,
   "3dgs-file-formats": p_ja_3dgs_file_formats as WorksPage,
   "3dgs-lidar-denoise": p_ja_3dgs_lidar_denoise as WorksPage,
+  "3dgs-scan-ai-background-forest": p_ja_3dgs_scan_ai_background_forest as WorksPage,
   "3dgs-software-comparison": p_ja_3dgs_software_comparison as WorksPage,
   "blender-53-native-3dgs": p_ja_blender_53_native_3dgs as WorksPage,
   "blender-lcc2-vfx": p_ja_blender_lcc2_vfx as WorksPage,
@@ -70,6 +73,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "3dgs-codex-hall-modeling": p_en_3dgs_codex_hall_modeling as WorksPage,
   "3dgs-file-formats": p_en_3dgs_file_formats as WorksPage,
   "3dgs-lidar-denoise": p_en_3dgs_lidar_denoise as WorksPage,
+  "3dgs-scan-ai-background-forest": p_en_3dgs_scan_ai_background_forest as WorksPage,
   "3dgs-software-comparison": p_en_3dgs_software_comparison as WorksPage,
   "blender-53-native-3dgs": p_en_blender_53_native_3dgs as WorksPage,
   "blender-lcc2-vfx": p_en_blender_lcc2_vfx as WorksPage,

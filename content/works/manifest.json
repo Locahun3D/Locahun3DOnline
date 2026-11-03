@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-02T07:24:31.297Z",
+ "generatedAt": "2026-11-03T03:13:23.941Z",
  "pages": {
   "3dgs-ai-video-camera-comparison": {
    "locales": [
@@ -35,6 +35,13 @@
     "en"
    ],
    "title": "Isaac Sim向けに3DGSシミュレーション環境をセットアップする｜ロケハン3D 技術ブログ"
+  },
+  "3dgs-scan-ai-background-forest": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "3DGSスキャンからAIで背景制作を行う｜ロケハン3D"
   },
   "3dgs-software-comparison": {
    "locales": [
