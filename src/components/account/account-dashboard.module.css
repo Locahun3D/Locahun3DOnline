@@ -18,6 +18,8 @@
 .columns { display: grid; grid-template-columns: minmax(0,1.9fr) minmax(280px,1fr); gap: 20px; align-items: start; }
 .workColumn, .subscriptionColumn { display: grid; gap: 16px; min-width: 0; align-content: start; }
 .workColumn > div, .subscriptionColumn > div { min-width: 0; }
+.planPoints { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 16px; }
+.planPoints > div { min-width: 0; }
 .cardTitle { font-size: 18px; font-weight: 700; line-height: 1.5; color: #14181c; margin-bottom: 14px; }
 .subscriptionColumn > [data-account-slot="gift"] > div { background: white; height: 100%; }
 .subscriptionColumn > [data-account-slot="gift"] > div > div:first-child { font-size: 18px; font-weight: 700; letter-spacing: normal; color: #14181c; opacity: 1; }
