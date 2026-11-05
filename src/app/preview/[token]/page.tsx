@@ -131,7 +131,7 @@ export default async function PreviewPage({
       preview
       sharePreview
       previewToken={token}
-      previewExpiresAt={preview.expiresAt}
+      previewExpiresAt={preview.expiresAt.startsWith("9999") ? undefined : preview.expiresAt}
       locale={locale}
       signedIn={false}
       hasViewerAccess

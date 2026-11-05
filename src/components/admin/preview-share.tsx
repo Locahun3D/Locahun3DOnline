@@ -136,7 +136,9 @@ export default function PreviewShare({
               >
                 {expired
                   ? "⚠ 期限切れ（再発行してください）"
-                  : `有効期限: ${fmtDate(preview.expiresAt)}`}
+                  : preview.expiresAt.startsWith("9999")
+                    ? "有効期限: 無期限"
+                    : `有効期限: ${fmtDate(preview.expiresAt)}`}
               </div>
               <div className="flex gap-2">
                 <button

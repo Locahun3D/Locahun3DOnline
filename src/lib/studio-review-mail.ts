@@ -64,6 +64,7 @@ const esc = (s: string) =>
 
 /** 期限は日本時間の日付で案内する（ISO の slice は UTC になり1日ズレ得る）。 */
 export function formatExpiryJst(iso: string): string {
+  if (iso.startsWith("9999")) return ""; // 無期限リンクは期限を案内しない
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const parts = new Intl.DateTimeFormat("ja-JP", {
