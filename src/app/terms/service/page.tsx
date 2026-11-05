@@ -109,13 +109,13 @@ export default async function TermsServicePage() {
           </p>
           <ul className="opacity-80 space-y-1.5 list-disc pl-5 mb-3">
             <li>
-              <strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限ります。広告等の商用利用はできません。公開時に権利表記が必要です。
+              <strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限ります。1件の提供につき1案件までです。広告等の商用利用はできません。公開時に権利表記が必要です。
             </li>
             <li>
-              <strong>標準ライセンス</strong> — 商用・非商用の制作物（映像・画像等の制作）に利用できます。データ自体の再配布・再販はできません。
+              <strong>標準ライセンス</strong> — 商用・非商用の制作物（映像・画像等の制作）に利用できます。1件の購入につき1案件までです。データ自体の再配布・再販はできません。
             </li>
             <li>
-              <strong>拡張ライセンス</strong> — 標準の範囲に加え、テンプレートやソフトウェア製品への同梱・改変配布ができます。ゲーム・アプリケーション等に組み込む場合はこの分類が必要です。
+              <strong>拡張ライセンス</strong> — 利用できる案件の数に制限はありません。標準の範囲に加え、テンプレートやソフトウェア製品への同梱・改変配布ができます。ゲーム・アプリケーション等に組み込む場合はこの分類が必要です。
             </li>
             <li>
               <strong>カスタム</strong> — 上記に当てはまらない利用範囲を個別に取り決めます。購入前にお問い合わせください。
@@ -211,6 +211,7 @@ export default async function TermsServicePage() {
             改定日: 2026年9月19日（第6条にエディトリアル限定のライセンス分類を追記）<br />
             改定日: 2026年9月21日（物件掲示板・通報機能の廃止に伴い、第4条の禁止事項と第5条の投稿コンテンツの記載を整理）<br />
             改定日: 2026年10月8日（第5条に、購入せずに閲覧で取得したプレビュー画像の利用範囲を追加／第7条のホスティング商品を無償とし、2027年以降の年額料金と3年未満解約時のスキャン費用の精算を削除、埋め込みの条件を追加／第8条から通報による自動非表示の記載を削除／運営者の商号を正式名称で表記）<br />
+            改定日: 2026年11月6日（第6条に、標準ライセンス・エディトリアル限定は1案件まで、拡張ライセンスは案件数の制限なしである旨を追記）<br />
             ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
@@ -318,13 +319,13 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
           </p>
           <ul className="opacity-80 space-y-1.5 list-disc pl-5 mb-3">
             <li>
-              <strong>Editorial only</strong> (free) — limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.
+              <strong>Editorial only</strong> (free) — limited to news, education and personal use, on one project per copy provided. Commercial use such as advertising is not permitted. A rights credit is required when published.
             </li>
             <li>
-              <strong>Standard license</strong> — use in commercial and non-commercial productions (film, imagery, etc.). Redistribution or resale of the data itself is not permitted.
+              <strong>Standard license</strong> — use in commercial and non-commercial productions (film, imagery, etc.), on one project per purchase. Redistribution or resale of the data itself is not permitted.
             </li>
             <li>
-              <strong>Extended license</strong> — in addition to the Standard scope, bundling into templates or software products and modified redistribution. Embedding into games, applications, and similar products requires this category.
+              <strong>Extended license</strong> — no limit on the number of projects. In addition to the Standard scope, bundling into templates or software products and modified redistribution. Embedding into games, applications, and similar products requires this category.
             </li>
             <li>
               <strong>Custom</strong> — scopes not covered above are arranged individually. Please contact us before purchasing.
@@ -408,6 +409,7 @@ function TermsServiceEN({ locale }: { locale: "ja" | "en" }) {
             Revised: August 10, 2026 (changed the Hosting Product fee in Article 7 to an ad valorem annual fee of 20% of the 3D data sale price from 2027 onward; added the scan-fee waiver for hosting subscribers and the settlement due on cancellation within three years)<br />
             Revised: September 21, 2026 (the location board and report functions were discontinued; tidied the prohibited acts in Article 4 and the wording on user-submitted content in Article 5)<br />
             Revised: October 8, 2026 (added to Article 5 the permitted uses of Preview Images obtained by viewing without purchase; made the Hosting Product in Article 7 free of charge, removing the annual fee from 2027 and the scan-fee settlement on cancellation within three years, and added embedding conditions; removed the automatic hiding of reported posts from Article 8; operator shown by its registered name)<br />
+            Amended: November 6, 2026 (Article 6: the standard license and Editorial only are limited to one project, and the extended license has no limit on the number of projects)<br />
             Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>

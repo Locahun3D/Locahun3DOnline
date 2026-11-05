@@ -63,9 +63,9 @@ export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
 };
 
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
-  standard: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
-  editorial: "無料。報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。",
-  extended: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
+  standard: "商用・非商用の制作物に利用可（1購入につき1案件まで）。データ自体の再配布・再販は不可。",
+  editorial: "無料。報道・教育・個人利用に限定（1件の提供につき1案件まで）。広告等の商用利用は不可。公開時に権利表記が必要です。",
+  extended: "利用できる案件数の制限なし。商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
 
@@ -77,9 +77,9 @@ export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
 };
 
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
-  standard: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
-  editorial: "Free. Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.",
-  extended: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
+  standard: "Use in commercial & non-commercial productions (one project per purchase). Redistribution or resale of the data itself is not permitted.",
+  editorial: "Free. Limited to news, education and personal use (one project per copy provided). Commercial use such as advertising is not permitted. A rights credit is required when published.",
+  extended: "Unlimited number of projects. Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
 
@@ -115,6 +115,13 @@ export const DATA_LICENSE_MATRIX: {
     by: { standard: "yes", extended: "yes", custom: "ask", editorial: "no" },
   },
   {
+    // 規約 第2条6項: 標準以下は1購入につき1案件、拡張は案件数の制限なし（2026-11-06〜）。
+    key: "multipleProjects",
+    labelJa: "2つ目以降の案件にも使う",
+    labelEn: "Use on more than one project",
+    by: { standard: "no", extended: "yes", custom: "ask", editorial: "no" },
+  },
+  {
     key: "embedding",
     labelJa: "ゲーム・アプリ等への組込／テンプレートへの同梱・改変配布",
     labelEn: "Embedding in games & apps / bundling into templates",
@@ -144,6 +151,42 @@ export const DATA_LICENSE_MATRIX_NOTE_JA =
   "再配布・転売・貸与、AI学習利用は、いずれのライセンスも事前のご相談・個別合意が必要です。ご希望の場合はお気軽にお問い合わせください。本データには撮影対象の空間に写り込んだ第三者の看板・広告・ロゴ・美術品等が含まれる場合があります。制作物として公開・納品・配布する際は、ライセンス区分によらず、それらを削除・加工したうえでご利用ください（詳細はデータ購入規約第3条）。";
 export const DATA_LICENSE_MATRIX_NOTE_EN =
   "Redistribution/resale and AI-training use require prior consultation and a separate agreement, regardless of license. Please contact us if you're interested. The data may include third-party signage, advertisements, logos, or artwork captured within the scanned space. Before publishing, delivering, or distributing any work you create, please remove or edit out such material — this applies to every license tier (see Article 3 of the data purchase terms for details).";
+
+/**
+ * 案件数の条件を入れた規約（2026-11-06 改定）の適用開始。これより前に同意した購入は、
+ * 購入時の説明のまま表示する（規約 第9条2項: 購入済み分へ不利益に遡及しない）。
+ * 領収書と利用規約テキストは過去の購入でも今の本文で再生成されるため、ここで出し分ける。
+ */
+export const LICENSE_PROJECT_LIMIT_FROM = "2026-11-05T15:00:00.000Z"; // 2026-11-06 00:00 JST
+
+const DATA_LICENSE_DESC_BEFORE_PROJECT_LIMIT: Partial<Record<DataLicense, { ja: string; en: string }>> = {
+  standard: {
+    ja: "商用・非商用の制作物に利用可。データ自体の再配布・再販は不可。",
+    en: "Use in commercial & non-commercial productions. Redistribution or resale of the data itself is not permitted.",
+  },
+  editorial: {
+    ja: "無料。報道・教育・個人利用に限定。広告等の商用利用は不可。公開時に権利表記が必要です。",
+    en: "Free. Limited to news, education and personal use. Commercial use such as advertising is not permitted. A rights credit is required when published.",
+  },
+  extended: {
+    ja: "商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
+    en: "Commercial use plus bundling into templates / embedded products and modified redistribution.",
+  },
+};
+
+/** 購入済みデータの区分説明。同意（なければ購入）の時点で効いていた条件を返す。 */
+export function purchasedLicenseDesc(
+  l: DataLicense,
+  purchase: { termsAgreedAt?: string; completedAt?: string; createdAt?: string },
+  locale?: string,
+): string {
+  const at = purchase.termsAgreedAt || purchase.completedAt || purchase.createdAt || "";
+  const before = DATA_LICENSE_DESC_BEFORE_PROJECT_LIMIT[l];
+  if (at && before && new Date(at).getTime() < new Date(LICENSE_PROJECT_LIMIT_FROM).getTime()) {
+    return locale === "en" ? before.en : before.ja;
+  }
+  return dataLicenseDesc(l, locale);
+}
 
 export function dataLicenseLabel(l: DataLicense, locale?: string): string {
   return locale === "en" ? DATA_LICENSE_LABEL_EN[l] : DATA_LICENSE_LABEL[l];

@@ -267,6 +267,21 @@ export default async function ContactHubPage() {
               ],
             },
             {
+              q: ["購入データは何案件に使えますか？", "How many projects can I use the purchased data on?"],
+              a: [
+                <>
+                  標準ライセンスは1購入につき1案件まで、拡張ライセンスは案件数の制限なしです。
+                  <br />
+                  別の案件にも使う場合は、改めて購入するか拡張ライセンスをお選びください。
+                </>,
+                <>
+                  One project per purchase under the standard license; no limit on projects under
+                  the extended license. To use the data on another project, purchase it again or
+                  choose the extended license.
+                </>,
+              ],
+            },
+            {
               q: [
                 "購入データをVRChat等に組み込んで公開したり、再配布・AI学習に使ったりできますか？",
                 "Can I embed the data in VRChat, redistribute it, or use it for AI training?",

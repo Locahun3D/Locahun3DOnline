@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
-import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
+import { dataLicenseLabel, purchasedLicenseDesc, type DataLicense } from "@/lib/schemas";
 import { generateLicenseText } from "@/lib/license-file";
 import { getLocale } from "@/lib/i18n/server";
 
@@ -50,7 +50,7 @@ export async function GET(
     propertyTitle: purchase.propertyTitle,
     itemLabel: purchase.itemLabel,
     licenseLabel: dataLicenseLabel(license, locale),
-    licenseDesc: dataLicenseDesc(license, locale),
+    licenseDesc: purchasedLicenseDesc(license, purchase, locale),
     priceYen: purchase.priceYen,
     createdAt: purchase.createdAt,
     completedAt: purchase.completedAt,

@@ -1,6 +1,6 @@
 import "server-only";
 import { generateReceiptHtml } from "./receipt";
-import { DATA_LICENSE_LABEL, DATA_LICENSE_DESC, PLAN_TOKEN_BUDGET, type DataLicense } from "./schemas";
+import { DATA_LICENSE_LABEL, purchasedLicenseDesc, PLAN_TOKEN_BUDGET, type DataLicense } from "./schemas";
 import type { AccountPlan } from "./account-schema";
 import type { Purchase } from "./purchases";
 import { buildStudioReviewMail } from "./studio-review-mail";
@@ -139,7 +139,7 @@ export async function notifyPurchase(p: Purchase): Promise<void> {
       {
         ...p,
         licenseLabel: DATA_LICENSE_LABEL[license],
-        licenseDesc: DATA_LICENSE_DESC[license],
+        licenseDesc: purchasedLicenseDesc(license, p),
       },
       { forEmail: true },
     );

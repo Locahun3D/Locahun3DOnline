@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/dal";
 import { purchaseRepo } from "@/lib/purchases";
-import { dataLicenseLabel, dataLicenseDesc, type DataLicense } from "@/lib/schemas";
+import { dataLicenseLabel, purchasedLicenseDesc, type DataLicense } from "@/lib/schemas";
 import { generateReceiptHtml } from "@/lib/receipt";
 import { getLocale } from "@/lib/i18n/server";
 
@@ -43,7 +43,7 @@ export async function GET(
   const html = generateReceiptHtml({
     ...purchase,
     licenseLabel: dataLicenseLabel(license, locale),
-    licenseDesc: dataLicenseDesc(license, locale),
+    licenseDesc: purchasedLicenseDesc(license, purchase, locale),
     en,
   });
   return new Response(html, {
