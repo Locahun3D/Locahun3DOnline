@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { repo } from "@/lib/store";
 import { propertyEmbedRepo } from "@/lib/property-embeds";
-import EmbedPlayer from "@/components/embed-player";
+import EmbedPlayer, { EmbedSceneLink } from "@/components/embed-player";
 import EmbedReferrerGuard from "@/components/embed-referrer-guard";
 import { sanitizeAllowedDomains } from "@/lib/embed-domains";
 import { getLocale } from "@/lib/i18n/server";
@@ -124,14 +124,7 @@ export default async function EmbedPage({
           autoplay={autoplay}
           en={en}
         />
-        {/* 埋め込みは外部サイトに露出するため、スクレイピング/AI学習への抑止表記を常設する。
-            ⚠ 画面に fixed で置くと、狭い枠（スマホ幅の16:9＝約342px）で下端の帯の
-            「物件名／Powered by」と重なって三重に潰れる（2026-09-21 別オリジンの
-            検証ページで実測）。ビューアー領域の中に収めれば、どの幅でも重ならない。 */}
-        {/* ビューアー(暗)とゲート(明)のどちらの背景でも読めるよう、白文字+影にする */}
-        <div className="pointer-events-none absolute bottom-2 right-3 z-50 mono text-[9px] tracking-[0.12em] text-white/60 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-          © ロケハン3D — 無断転載・AI学習利用禁止
-        </div>
+        {/* 2026-11-05 本人指示で、ビューアーに重ねていた転載禁止の表記は廃止。 */}
       </div>
       {/* 掲載者サイト上での出所表示。埋め込みを配ることが当社への導線になる
           （掲載者には無料の集客ツール、当社にはブランド露出という交換）。 */}
@@ -141,14 +134,14 @@ export default async function EmbedPage({
           {sceneLinks.length > 0 && (
             <nav aria-label={en ? "Scenes" : "シーン"} className="flex items-center gap-1 overflow-x-auto shrink-0 max-w-[60vw]">
               {sceneLinks.map((s) => (
-                <a
+                <EmbedSceneLink
                   key={s.id}
                   href={sceneHref(s.id)}
-                  aria-current={s.current ? "page" : undefined}
+                  current={s.current}
                   className={`whitespace-nowrap text-[11px] px-2.5 py-1 border transition ${s.current ? "border-accent text-accent" : "border-line text-ink/70 hover:text-accent hover:border-accent"}`}
                 >
                   {s.label}
-                </a>
+                </EmbedSceneLink>
               ))}
             </nav>
           )}

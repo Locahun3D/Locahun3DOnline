@@ -14,7 +14,49 @@ import { buildViewerUrl } from "@/lib/viewer";
  * 重いデータ（数百MB）なので、既定では**押してから**読み込む（Matterport の play=1 と同じ考え方）。
  * ページを開いただけで全員ぶん転送すると、先方のサイトの表示も当社の転送量も重くなる。
  * `autoplay` を付けたときだけ、最初から読み込む。
+ *
+ * 2026-11-05 本人指示「共有してる埋め込みリンク、クリックしたら全画面表示に」「別タブでひらくように」:
+ * 貼られた枠の中で押されたら、枠では動かさず同じ埋め込みページを別タブで開いて、そちらで開始する。
+ * 別タブ側は枠の外なのでその場で動く。ポップアップが止められた枠（sandbox 等）では、従来どおり枠の中で動かす。
  */
+
+/** 貼られた枠の中なら別タブで開く。開けたら true（呼び出し側はその場で動かさない）。 */
+function openInNewTabIfFramed(href: string): boolean {
+  if (window.self === window.top) return false;
+  const url = new URL(href, window.location.href);
+  url.searchParams.set("autoplay", "1");
+  const opened = window.open(url.toString(), "_blank");
+  if (!opened) return false;
+  opened.opener = null;
+  return true;
+}
+
+/** 複数シーンの切り替え。枠の中では押したシーンを別タブで開く。別タブ側では同じタブで切り替える。 */
+export function EmbedSceneLink({
+  href,
+  current,
+  className,
+  children,
+}: {
+  href: string;
+  current: boolean;
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      aria-current={current ? "page" : undefined}
+      className={className}
+      onClick={(e) => {
+        if (openInNewTabIfFramed(href)) e.preventDefault();
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function EmbedPlayer({
   splatUrl,
   embedToken,
@@ -78,7 +120,9 @@ export default function EmbedPlayer({
   return (
     <button
       type="button"
-      onClick={() => void start()}
+      onClick={() => {
+        if (!openInNewTabIfFramed(window.location.href)) void start();
+      }}
       className="group relative block w-full h-full overflow-hidden bg-[#141414] text-left"
       aria-label={en ? `Start the 3D tour: ${label}` : `3Dツアーを開始: ${label}`}
     >

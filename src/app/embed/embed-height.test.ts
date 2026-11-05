@@ -21,12 +21,8 @@ describe("埋め込みページの高さ", () => {
     expect(src).not.toContain("h-[100dvh]");
   });
 
-  /**
-   * 転載禁止の表記は画面に fixed で置かない。狭い枠（スマホ幅の16:9＝約342px）で
-   * 下端の帯の「物件名／Powered by」と重なって三重に潰れる（2026-09-21 実測）。
-   */
-  it("転載禁止の表記はビューアー領域の中に置く（下端の帯と重ねない）", () => {
-    expect(src).toContain("absolute bottom-2 right-3");
-    expect(src).not.toContain("fixed bottom-2 right-3");
+  /** 2026-11-05 本人指示で廃止。ビューアーの操作ボタンと重なるので戻さない。 */
+  it("ビューアーに転載禁止の表記を重ねない", () => {
+    expect(src).not.toContain("— 無断転載・AI学習利用禁止");
   });
 });
