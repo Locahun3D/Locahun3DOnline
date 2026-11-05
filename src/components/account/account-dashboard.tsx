@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import styles from "./account-dashboard.module.css";
 import type { PublicUser } from "@/lib/account-schema";
-import { totalTokens, publicDisplayName } from "@/lib/account-schema";
+import { totalTokens, publicDisplayName, roleLabel } from "@/lib/account-schema";
 import DisplayNameEditor from "@/components/account/display-name-editor";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
 import type { Property } from "@/lib/schemas";
@@ -309,6 +309,9 @@ export default function AccountDashboard({
 
         {/* PLAN */}
         <div data-account-slot="plan" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5 flex flex-col">
+          {/* プランとポイントは横並び（2026-11-05 本人「無駄な空間」）。狭い幅では折り返して縦積みになる。 */}
+          <div className="flex flex-wrap gap-x-8 gap-y-4">
+          <div className="flex-1 min-w-[180px]">
           <div className={styles.cardTitle}>
             {en ? "Plan" : "プラン"}
           </div>
@@ -330,6 +333,15 @@ export default function AccountDashboard({
               </span>
             )}
           </div>
+          {/* プラン名だけでは個人か制作会社か分からないので、アカウント種別を出す（2026-11-05 本人指定）。 */}
+          <div className="mt-2">
+            <span
+              data-account-role={user.role}
+              className="inline-block text-[11px] leading-[1.6] border border-[#e2e7ec] text-[#3a4550] px-1.5 py-0.5"
+            >
+              {en ? `${roleLabel(user.role, "en")} account` : `${roleLabel(user.role, "ja")}アカウント`}
+            </span>
+          </div>
           <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
             {planFree
               ? en
@@ -343,15 +355,17 @@ export default function AccountDashboard({
                   ? "Active subscription"
                   : "契約中"}
           </div>
+          </div>
           {/* ポイントはプランで付与されるので同じカードに入れる（2026-11-02 本人指定。以前は独立カード）。 */}
-          <div data-account-slot="tokens" className="mt-4 pt-4 border-t border-[#e2e7ec]">
-            <div className="mono text-[10px] tracking-[0.2em] uppercase text-[#7b8794]">{en ? "Points" : "ポイント"}</div>
-            <div className="text-2xl sm:text-3xl font-bold text-[#1ea0c4] mt-1">{tokens}</div>
+          <div data-account-slot="tokens" className="flex-1 min-w-[180px]">
+            <div className={styles.cardTitle}>{en ? "Points" : "ポイント"}</div>
+            <div className="text-xl sm:text-2xl font-bold text-[#1ea0c4]">{tokens}</div>
             {resetNote.length > 0 && (
               <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
                 {resetNote.join(en ? " · " : "・")}
               </div>
             )}
+          </div>
           </div>
           <Link
             href={lh("/pricing")}
