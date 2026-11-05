@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-03T03:13:23.941Z",
+ "generatedAt": "2026-11-05T02:29:11.306Z",
  "pages": {
   "3dgs-ai-video-camera-comparison": {
    "locales": [
@@ -133,6 +133,13 @@
     "en"
    ],
    "title": "UE5 × XGRIDs SDKで3DGSから素材を出力する｜ロケハン3D 技術ブログ"
+  },
+  "unreal-fest-tokyo-2026-xgrids-booth": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "Unreal Fest Tokyo 2026 XGRIDSブース展示 — ロケハン3D 制作実績"
   },
   "vectorworks-3dgs-mesh": {
    "locales": [

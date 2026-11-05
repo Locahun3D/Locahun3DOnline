@@ -22,6 +22,7 @@ import p_ja_portalcam_drone_ai_workflow from "../../content/works/ja/portalcam-d
 import p_ja_portalcam_xbin_raw_extraction from "../../content/works/ja/portalcam-xbin-raw-extraction.json";
 import p_ja_shibuya_ten_simulations from "../../content/works/ja/shibuya-ten-simulations.json";
 import p_ja_ue5_xgrids_3dgs_aerial_ai from "../../content/works/ja/ue5-xgrids-3dgs-aerial-ai.json";
+import p_ja_unreal_fest_tokyo_2026_xgrids_booth from "../../content/works/ja/unreal-fest-tokyo-2026-xgrids-booth.json";
 import p_ja_vectorworks_3dgs_mesh from "../../content/works/ja/vectorworks-3dgs-mesh.json";
 import p_en_3dgs_ai_video_camera_comparison from "../../content/works/en/3dgs-ai-video-camera-comparison.json";
 import p_en_3dgs_blender_workflow from "../../content/works/en/3dgs-blender-workflow.json";
@@ -42,6 +43,7 @@ import p_en_portalcam_drone_ai_workflow from "../../content/works/en/portalcam-d
 import p_en_portalcam_xbin_raw_extraction from "../../content/works/en/portalcam-xbin-raw-extraction.json";
 import p_en_shibuya_ten_simulations from "../../content/works/en/shibuya-ten-simulations.json";
 import p_en_ue5_xgrids_3dgs_aerial_ai from "../../content/works/en/ue5-xgrids-3dgs-aerial-ai.json";
+import p_en_unreal_fest_tokyo_2026_xgrids_booth from "../../content/works/en/unreal-fest-tokyo-2026-xgrids-booth.json";
 import p_en_vectorworks_3dgs_mesh from "../../content/works/en/vectorworks-3dgs-mesh.json";
 
 export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
@@ -65,6 +67,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "portalcam-xbin-raw-extraction": p_ja_portalcam_xbin_raw_extraction as WorksPage,
   "shibuya-ten-simulations": p_ja_shibuya_ten_simulations as WorksPage,
   "ue5-xgrids-3dgs-aerial-ai": p_ja_ue5_xgrids_3dgs_aerial_ai as WorksPage,
+  "unreal-fest-tokyo-2026-xgrids-booth": p_ja_unreal_fest_tokyo_2026_xgrids_booth as WorksPage,
   "vectorworks-3dgs-mesh": p_ja_vectorworks_3dgs_mesh as WorksPage,
  },
  en: {
@@ -87,6 +90,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "portalcam-xbin-raw-extraction": p_en_portalcam_xbin_raw_extraction as WorksPage,
   "shibuya-ten-simulations": p_en_shibuya_ten_simulations as WorksPage,
   "ue5-xgrids-3dgs-aerial-ai": p_en_ue5_xgrids_3dgs_aerial_ai as WorksPage,
+  "unreal-fest-tokyo-2026-xgrids-booth": p_en_unreal_fest_tokyo_2026_xgrids_booth as WorksPage,
   "vectorworks-3dgs-mesh": p_en_vectorworks_3dgs_mesh as WorksPage,
  },
 };
