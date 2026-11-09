@@ -3360,19 +3360,26 @@ const _macKind = _gpu.macKind;     // 'none' | 'silicon' | 'intel' | 'unknown'
 // ══════════════════════════════════════════════════
 //  低スペック端末の段階（2026-11-10 低スペック対策 4）
 // ══════════════════════════════════════════════════
-// タッチ端末（phone/tablet）以外を、GPU 名・メモリ量・コア数で 3 段階に分ける。
+// タッチ端末（phone/tablet）以外を、GPU 名・メモリ量・コア数で段階に分ける。
 //   desktop     : 今までどおり（値は一切変えない）
 //   laptop_weak : 弱い内蔵GPU（UHD 620 等）・メモリ 4GB 以下・4 コア以下
-//   very_weak   : ソフトウェア描画（SwiftShader / llvmpipe / Microsoft Basic Render）・古い内蔵GPU
-//                 （HD 2000〜5xxx 番台・UHD 600/605/610）・PC 上の Mali/Adreno 3〜5xx/PowerVR・メモリ 2GB 以下
+//   very_weak   : Microsoft Basic Render Driver（WARP）・古い内蔵GPU（HD 2000〜5xxx 番台・UHD 600/605/610）・
+//                 PC 上の Mali/Adreno 3〜5xx/PowerVR・メモリ 2GB 以下
+//   software    : GPU なし＝CPU で WebGL を描く（SwiftShader / llvmpipe 等、または failIfMajorPerformanceCaveat で
+//                 WebGL が作れない＝ハードウェアアクセラレーションがオフ）。タッチ端末でも判定する。
+//                 1 枚 約200ms＋約10µs/点（6万点で 0.5〜0.9 秒）かかり、どの設定でも動かしながらは描けないので
+//                 「静止画モード」: 動かしている間は描かず直前の画を CSS でずらして見せ、止まったら描く。
+//                 移動中に画質を切り替える仕組みではない（描く・描かないだけ）。
 // 強い GPU（RTX / Radeon RX / Apple M 系 = _gpuTier 'strong'）はコア数・メモリが少なくても desktop のまま。
-// 確認・切り替え: ?tier=desktop|laptop_weak|very_weak（コンソールに [Locahun][Tier] で理由を出す）。
+// 確認・切り替え: ?tier=desktop|laptop_weak|very_weak|software、?softgl=1/0（software の強制／解除）。
+// コンソールに [Locahun][Tier] で理由を出す。
 // 判定は純粋関数（scratch の tier-test.cjs が下の印の間を切り出して見本の GPU 名で検査する）。
 // <low-tier-classify>
 function _classifyLowTier(info){
   const s = ((info.renderer || '') + ' ' + (info.vendor || '')).toLowerCase();
   const dm = info.deviceMemory, hc = info.hardwareConcurrency;
-  if(/swiftshader|llvmpipe|softpipe|software rasterizer|basic render driver/.test(s)) return 'very_weak';
+  if(/swiftshader|llvmpipe|softpipe|lavapipe|software rasterizer/.test(s) || info.caveat) return 'software';
+  if(/basic render driver/.test(s)) return 'very_weak';   // WARP（D3D の CPU 実装だが SwiftShader よりかなり速い）
   if(/intel.*\bhd graphics ([2-5]\d{3})\b|intel.*\buhd graphics (600|605|610)\b/.test(s)) return 'very_weak';
   if(/mali-[gt]?[0-7]\d\b|adreno[^0-9]*[3-5]\d\d\b|powervr/.test(s)) return 'very_weak';
   if(typeof dm === 'number' && dm > 0 && dm <= 2) return 'very_weak';
@@ -3386,13 +3393,26 @@ function _classifyLowTier(info){
 // </low-tier-classify>
 const _lowTier = (function(){
   try{
-    const m = /[?&]tier=(desktop|laptop_weak|very_weak)\b/.exec(location.search);
+    const m = /[?&]tier=(desktop|laptop_weak|very_weak|software)\b/.exec(location.search);
     if(m){ console.info('[Locahun][Tier] ' + m[1] + ' (URL ?tier=)'); return m[1] === 'desktop' ? null : m[1]; }
-    if(isMobile) return null;   // phone / tablet は従来の判定のまま
-    const t = _classifyLowTier({ renderer:_gpu.renderer, vendor:_gpu.vendor, deviceMemory:navigator.deviceMemory,
-                                 hardwareConcurrency:navigator.hardwareConcurrency, gpuTier:_gpuTier });
+    const sg = /[?&]softgl=([01])/.exec(location.search);
+    if(sg && sg[1] === '1'){ console.info('[Locahun][Tier] software (URL ?softgl=1)'); return 'software'; }
+    // ハードウェアアクセラレーションがオフだと failIfMajorPerformanceCaveat 付きの WebGL が作れない（SwiftShader や WARP を
+    // 明示して起動した場合は作れてしまうので、GPU 名の判定と併用する）。
+    let caveat = false;
+    try{
+      const ok = document.createElement('canvas').getContext('webgl2');
+      const strict = document.createElement('canvas').getContext('webgl2', { failIfMajorPerformanceCaveat:true });
+      caveat = !!ok && !strict;
+      for(const g of [ok, strict]){ try{ const e = g && g.getExtension('WEBGL_lose_context'); if(e) e.loseContext(); }catch(_){} }
+    }catch(_){}
+    const info = { renderer:_gpu.renderer, vendor:_gpu.vendor, deviceMemory:navigator.deviceMemory,
+                   hardwareConcurrency:navigator.hardwareConcurrency, gpuTier:_gpuTier, caveat };
+    let t = _classifyLowTier(info);
+    if(isMobile && t !== 'software') t = null;   // phone / tablet は従来の判定のまま（GPU なしだけは software）
+    if(t === 'software' && sg && sg[1] === '0') t = 'very_weak';
     console.info('[Locahun][Tier] ' + (t || 'desktop') + ' (gpu="' + _gpu.renderer + '" gpuTier=' + _gpuTier +
-                 ' mem=' + navigator.deviceMemory + ' cores=' + navigator.hardwareConcurrency + ')');
+                 ' mem=' + navigator.deviceMemory + ' cores=' + navigator.hardwareConcurrency + (caveat ? ' caveat' : '') + ')');
     return t;
   }catch(_){ return null; }
 })();
@@ -3409,6 +3429,7 @@ const _lowTier = (function(){
 //   fetchers    : 並列フェッチ数の上限（null = 回線速度で決める既定の動き）
 //   minAlpha    : これより薄い点を描かない（null = Spark 既定 0.5/255）
 //   maxStdDev   : 点の裾をどこで切るか（null = Spark 既定 √8≈2.83）。小さいほど1点の描画面積が減る
+//   stillMode   : true = 動かしている間は描かない（software 用。較正・ウォッチドッグも止める＝CPU 側の時間で誤判定するため）
 // very_weak（2026-11-10 WARP=Microsoft Basic Render Driver を弱い内蔵GPUの代わりに計測）:
 //   予算 15万点（上限 25万点）・描画解像度 0.75（prCap 1.0 × 低の倍率 0.75）・minAlpha 2/255 + maxStdDev 2.0 で
 //   描画コスト約 40% 減（見た目はほぼ同じ）・ページ 32 で JS ヒープ 341→128MB。較正で上げない・先読み巡回なし。
@@ -3417,9 +3438,14 @@ const _LOW_TIER_TABLE = {
                  pagedPages:256, fetchers:null, minAlpha:null, maxStdDev:null },
   very_weak:   { startQual:0, qualCeil:0, prCap:1.0,  budget:[150000, 200000, 250000],    lodScale:[0.45, 0.85, 1.0],
                  pagedPages:32,  fetchers:4,    minAlpha:2/255, maxStdDev:2.0 },
+  // software: 実測（SwiftShader・24 スレッド）3万点 510ms / 6万点 820ms / 10万点 1190ms。解像度・minAlpha は効かない。
+  software:    { startQual:0, qualCeil:0, prCap:1.0,  budget:[60000, 60000, 60000],       lodScale:[0.45, 0.45, 0.45],
+                 pagedPages:32,  fetchers:4,    minAlpha:null, maxStdDev:null, stillMode:true },
 };
 const _LOW = _lowTier ? _LOW_TIER_TABLE[_lowTier] : null;
 window.__l3dTier = _lowTier || null;
+const _stillMode = !!(_LOW && _LOW.stillMode);
+if(_stillMode) window._gpuWatchdog = Object.assign(window._gpuWatchdog || {}, { manualOverride: true });
 
 // Initial qualScale per environment (runtime watchdog can step down further):
 //   mobile (touch)  : 0.75
@@ -3596,6 +3622,7 @@ const _SPLAT_TIERS = {
   // sortIntervalMs — minimum ms between splat sorts (0 = every frame)
   phone:       { maxStdDev: 1.3, apparentRadius: 1.0,  opacityThreshold: 16/255, sortIntervalMs: 33 },
   tablet:      { maxStdDev: 1.4, apparentRadius: 1.1,  opacityThreshold: 12/255, sortIntervalMs: 16 },
+  software:    { maxStdDev: 1.3, apparentRadius: 1.0,  opacityThreshold: 16/255, sortIntervalMs: 33 },
   very_weak:   { maxStdDev: 1.3, apparentRadius: 1.0,  opacityThreshold: 16/255, sortIntervalMs: 33 },
   laptop_weak: { maxStdDev: 1.4, apparentRadius: 1.1,  opacityThreshold: 12/255, sortIntervalMs: 16 },
   laptop_ok:   { maxStdDev: 1.5, apparentRadius: 1.15, opacityThreshold:  8/255, sortIntervalMs:  0 },
@@ -19089,6 +19116,9 @@ let _nextFrameDue = 0; // carry-based 60-fps gate target (see animate loop)
 //   ?smooth=1 : force enable (e.g. to test on a touchscreen laptop)
 //   ?smooth=0 : force disable
 let _reprojectionEnabled = (function(){
+  // 静止画モード（software）: 動かしている間は描かないので、直前の画をこのずらしで動かして見せる
+  // （描くのは止まって補間が収まった後＝ずれは常に正確）。
+  if(_stillMode) return true;
   if(/[?&]smooth=1/.test(location.search)) return true;
   // Default OFF everywhere (was: ON for touch devices). The predict-then-snap
   // offset is computed from _yawTarget, but the camera LERPS toward that target
@@ -19618,6 +19648,8 @@ function animate(now) {
   // black for the surrounding "letterbox" look; the scissor then keeps
   // subsequent draws inside the frame. camera.aspect also tracks the
   // frame so the projected view fits the frame exactly.
+  // 静止画モード（software）: 操作中は描かない（1 枚 0.5〜数秒かかり、描いている間は操作も UI も固まる）。止まったら描く。
+  if(_stillMode && (hasCamKey || hasDrag || hasJoy || hasGamepad || hasMsrInteract || motion)){ markDirty(2); return; }
   const _t0 = performance.now();
   const _camActiveNow = (cam && cam.active);
   let _camViewportRect = null;
@@ -28886,7 +28918,7 @@ let _calibLongTaskMs = 0;
 try { new PerformanceObserver((l) => { for(const e of l.getEntries()) _calibLongTaskMs += e.duration; }).observe({ type:'longtask', buffered:true }); } catch(_){}
 (function(){
   const q = new URLSearchParams(location.search);
-  if(['capture','orbit','headless','qual'].some(k => q.has(k))) return;
+  if(_stillMode || ['capture','orbit','headless','qual'].some(k => q.has(k))) return;
   let since = 0, done = false;
   const iv = setInterval(() => {
     if(done || window._qualManual){ clearInterval(iv); return; }
