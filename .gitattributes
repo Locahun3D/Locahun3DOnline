@@ -6,3 +6,7 @@ src/content/works.generated.ts text eol=lf
 # Viewer release digests require byte-identical generated HTML and vendor assets.
 public/viewer/offline-viewer.html -text
 public/viewer/vendor/*.js -text
+public/viewer/scene-editor.html -text
+# Sidecar payloads split out of the viewer HTML are verified by SHA-256 at runtime.
+public/viewer/figures/* -text
+public/vendor/*.mjs -text
