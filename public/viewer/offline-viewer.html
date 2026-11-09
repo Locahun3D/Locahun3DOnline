@@ -1930,8 +1930,6 @@ body.immersive #immersive-exit{ display:inline-block; }
   </div>
 
   <!-- 北方位スライダーは廃止。代わりに 3D シーン内にコンパス＋太陽軌道を表示 -->
-  <div style="display:none;color:#777;font-size:.82em;margin-bottom:10px;line-height:1.4" id="sun-viz-hint"
-    data-i18n="sun-viz-hint">🧭 ビュー内に方位コンパスと一日の太陽軌道を表示中。北はシーンの固定軸（−Z）です。</div>
 
   <!-- 読み出し -->
   <div id="sun-readout" style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;
@@ -14583,7 +14581,7 @@ async function _arEnter(orientPermP){
   }
   const lbl = document.getElementById('lbl-ar');
   if(lbl) lbl.textContent = T('lbl-ar-exit');
-  showUndoToast((window._lang==='en'?'📱 AR on — tilt the device to look around':'📱 AR (WebGL 統合) ON — 端末を傾けて視点を変えられます'));
+  showUndoToast((window._lang==='en'?'📱 AR on':'📱 AR ON'));
   markDirty(10);
 }
 
@@ -16685,7 +16683,6 @@ function renderTransformPanel(){
   if(L.type==='path'){
     let ph='<div style="margin-top:8px;padding:6px 5px;background:rgba(255,255,255,.03);border-radius:5px;border:1px solid rgba(255,255,255,.07)">';
     ph+='<div style="font-size:.7em;color:#606060;margin-bottom:4px">'+T('lt-path')+'</div>';
-    ph+='<div style="font-size:.66em;color:#7a8aa0;margin-bottom:6px">'+T('lt-path-hint')+'</div>';
     ph+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">';
     ph+='<label for="path-color-'+L.id+'" style="font-size:.68em;color:#c0c0c0">'+T('lt-path-color')+'</label>';
     ph+='<input id="path-color-'+L.id+'" type="color" title="'+T('tt-path-color')+'" value="'+_layerText(L.pathColor||'#00d0ff')+'" oninput="setPathColor('+L.id+',this.value)" style="width:36px;height:22px;padding:1px;border:1px solid rgba(255,255,255,.2);background:#1a1a00;border-radius:3px;cursor:pointer">';
@@ -24810,7 +24807,7 @@ function _finalizePath(){
   pushGlobalUndo({type:'layer-add', id:L.id});  // Ctrl+Z removes the created path
   _cancelPath();
   selectLayer(L.id);
-  showUndoToast((window._lang==='en'?'🛣 Path created — add its text in the object info':'🛣 パスを作成しました — オブジェクト情報でテキストを入力できます'));
+  showUndoToast((window._lang==='en'?'🛣 Path created':'🛣 パスを作成しました'));
 }
 
 window.addPathLayer=function(){
@@ -25361,7 +25358,6 @@ Object.assign(I18N.ja,{
   'sun-fetch-wx':'🌐 実際の天気予報を取得（オンライン時）','immersive-exit':'⤢ 表示','tb-brand':'ロケハン3D',
   'sun-l-date':'📅 日付','sun-btn-now':'今',
   'sun-l-time':'🕐 時刻',
-  'sun-viz-hint':'🧭 ビュー内に方位コンパスと一日の太陽軌道を表示中。北はシーンの固定軸（−Z）です。',
   'sun-rl-rise':'🌅 日の出','sun-rl-set':'🌇 日の入り','sun-rl-noon':'☀ 南中',
   'sun-rl-len':'⏱ 昼の長さ','sun-rl-alt':'↕ 高度','sun-rl-az':'↗ 方位',
   'sun-city-custom':'カスタム','env-sun-lock-txt':'日照モード中 — プリセットを押すと手動に戻ります',
@@ -25451,7 +25447,7 @@ Object.assign(I18N.ja,{
   'lbl-ar-exit':'AR 終了',
   'tt-ar':'AR モード（背面カメラ越しに 3DGS を重ねて表示）',
   'tt-ar-exit':'AR モードを終了',
-  'ar-on':'📱 AR モード ON — 端末を傾けて視点を変えられます',
+  'ar-on':'📱 AR モード ON',
   'ar-off':'AR モードを終了しました',
   'ar-unsupported':'⚠ この端末では AR モードが利用できません',
   'ar-permission-denied':'⚠ カメラ / モーションセンサの許可が必要です',
@@ -25610,7 +25606,6 @@ Object.assign(I18N.en,{
   'sun-fetch-wx':'🌐 Get live weather forecast (online)','immersive-exit':'⤢ View','tb-brand':'LOCAHUN 3D',
   'sun-l-date':'📅 Date','sun-btn-now':'Now',
   'sun-l-time':'🕐 Time',
-  'sun-viz-hint':'🧭 Compass and the day\'s sun path are shown in the view. North is the scene\'s fixed axis (−Z).',
   'sun-rl-rise':'🌅 Sunrise','sun-rl-set':'🌇 Sunset','sun-rl-noon':'☀ Solar noon',
   'sun-rl-len':'⏱ Day length','sun-rl-alt':'↕ Altitude','sun-rl-az':'↗ Azimuth',
   'sun-city-custom':'Custom','env-sun-lock-txt':'Sun mode active — pick a preset to return to manual',
@@ -25700,7 +25695,7 @@ Object.assign(I18N.en,{
   'lbl-ar-exit':'Exit AR',
   'tt-ar':'AR mode (rear camera passthrough with the 3DGS overlaid)',
   'tt-ar-exit':'Exit AR mode',
-  'ar-on':'📱 AR mode ON — tilt your device to change the view',
+  'ar-on':'📱 AR mode ON',
   'ar-off':'AR mode ended',
   'ar-unsupported':'⚠ This device does not support AR mode',
   'ar-permission-denied':'⚠ Camera / motion sensor permission required',
@@ -25836,7 +25831,7 @@ Object.assign(I18N.ja,{
   'tt-fullscreen':'全画面表示','tt-fullscreen-exit':'全画面を終了','tt-immersive-exit':'全画面表示を終了',
   'tt-msr-close':'測定を閉じる',
   'tt-ev-zoom':'クリックで拡大','lt-ev-guide':'🗒 イベントガイド','ph-ev-guide':'ガイドテキスト...',
-  'lt-path':'🛣 パス情報','lt-path-hint':'黄色い4点をドラッグで形を調整できます',
+  'lt-path':'🛣 パス情報',
   'lt-path-color':'色','tt-path-color':'パスの色','lt-path-opacity':'不透明度',
   'lt-path-width':'太さ (m)','aria-path-width':'パスの太さ (m)',
   'lt-path-label':'🅿 中央テキスト','ph-path-label':'例: 来客用 P1 / 搬入車両 ...',
@@ -25853,7 +25848,7 @@ Object.assign(I18N.en,{
   'tt-fullscreen':'Fullscreen','tt-fullscreen-exit':'Exit fullscreen','tt-immersive-exit':'Exit fullscreen',
   'tt-msr-close':'Close Measure',
   'tt-ev-zoom':'Click to enlarge','lt-ev-guide':'🗒 Event guide','ph-ev-guide':'Guide text...',
-  'lt-path':'🛣 Path info','lt-path-hint':'Drag the four yellow points to adjust the shape',
+  'lt-path':'🛣 Path info',
   'lt-path-color':'Color','tt-path-color':'Path color','lt-path-opacity':'Opacity',
   'lt-path-width':'Width (m)','aria-path-width':'Path width (m)',
   'lt-path-label':'🅿 Center text','ph-path-label':'e.g. Visitor P1 / Loading vehicles ...',
