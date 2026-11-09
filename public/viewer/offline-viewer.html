@@ -19174,6 +19174,19 @@ if(_protected){
 // 収束)に置換。回転後のチャンク補充中は再び true になるので「読込/精細化が
 // 進行中」というセマンティクスは保たれる。総数到達できる小型RADは従来どおり
 // 即確定する。animate と 420 の較正ポーラーの両方から呼ばれる。
+// 2026-11-10 低スペック対策 A: 取得中・取得済みで未処理のチャンクが残っている間は「読込中」とみなす。
+// プラトー判定だけだと、遅い回線ではチャンクの到着間隔が 1.5 秒を超えた時点で描画が止まり、
+// LOD の走査（renderer.render の中でしか回らない）も止まるため、届いたデータが画面に出ないまま
+// 0.8〜1.1M 点で 60〜70 秒固まっていた（low4・20Mbps 実測）。共有ページャーの待ち行列を見る。
+function _pagerBusy(){
+  try{
+    const pg = (typeof sparkRenderer !== 'undefined' && sparkRenderer) ? sparkRenderer.pager : null;
+    if(!pg) return false;
+    return (pg.fetchers && pg.fetchers.length > 0) || (pg.fetched && pg.fetched.length > 0) ||
+           (pg.lodTreeUpdates && pg.lodTreeUpdates.length > 0) ||
+           (pg.newUploads && pg.newUploads.length > 0) || (pg.readyUploads && pg.readyUploads.length > 0);
+  }catch(_){ return false; }
+}
 function _pagedStreamActive(now){
   if(typeof layers === 'undefined' || !layers || !layers.length) return false;
   for(let i=0;i<layers.length;i++){
@@ -19181,6 +19194,7 @@ function _pagedStreamActive(now){
     const _mesh = _L && _L.mesh;
     const _pm = _mesh && _mesh.paged;
     if(!_pm || _L.visible === false || _mesh.visible === false) continue;
+    if(_pagerBusy()) return true;
     const _n = _pm.numSplats || 0;
     const _target = _mesh._radTargetCount || 0;
     if(_target > 0 && _n >= _target) continue;          // 総数到達＝確定完了
