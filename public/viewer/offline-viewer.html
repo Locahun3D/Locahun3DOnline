@@ -3658,6 +3658,47 @@ const _numLodFetchers = isMobile ? 6 : 16;
 const _lodTraverseMode = (()=>{ try{ const m=/[?&]lodTraverse=(standard|dynamic)/.exec(location.search); return m?m[1]:'dynamic'; }catch(_){ return 'dynamic'; } })();
 const sparkRenderer = new SparkRenderer({ renderer, numLodFetchers: _numLodFetchers, lodTraverseMode: _lodTraverseMode });
 scene.add(sparkRenderer);
+// 2026-11-10 低スペック対策 B: 遅い回線では並列フェッチ数を減らす。
+// 16本同時だと帯域を16等分するため、最初の画に要る粗いチャンクも含めて全部が約10秒後に一斉に届いていた
+// （low4・20Mbps 実測: 9/11/13秒時点の点数 16本=49〜110k/49〜110k/109〜143k → 4本=267〜334k/428〜478k/570〜638k）。
+// 回線速度は、最初に1本だけ取る大きな断片（ルートチャンク・約1.4MB）の本文の受信時間から測る
+// （navigator.connection.downlink は Chrome で 10Mbps 上限・Safari に無いので使わない）。
+// 速い回線（デスクトップ実測で数百Mbps）は 16 のまま。端末に保存済み（Cache Storage）の再訪は計測対象が出ないので 16 のまま。
+// ?fetchers=N で固定できる（検証用）。
+const _LOD_FETCHERS_BY_MBPS = [ [40, 4], [80, 8] ]; // [この Mbps 未満なら, この本数]。どれにも当たらなければ _numLodFetchers
+function _setLodFetchers(n){
+  sparkRenderer.numLodFetchers = n;
+  if(sparkRenderer.pager) sparkRenderer.pager.numFetchers = n;
+}
+(function _adaptLodFetchers(){
+  try{
+    const forced = /[?&]fetchers=(\d+)/.exec(location.search);
+    if(forced){ const n = Math.max(1, Math.min(32, +forced[1])); _setLodFetchers(n); window.__lodFetchers = { n, why:'url' }; return; }
+    const c = navigator.connection;
+    if(c && (c.saveData || /(^|-)(2g|3g)$/.test(c.effectiveType || ''))){
+      _setLodFetchers(4); window.__lodFetchers = { n:4, why:'connection' };
+      console.info('[Locahun][Fetchers] 4 (connection ' + (c.saveData ? 'saveData' : c.effectiveType) + ')');
+      return;
+    }
+    if(typeof PerformanceObserver !== 'function') return;
+    const po = new PerformanceObserver((list) => {
+      for(const e of list.getEntries()){
+        if(!/\/api\/viewer-stream\//.test(e.name) || !(e.encodedBodySize > 400000)) continue;
+        const ms = e.responseEnd - e.responseStart;
+        if(!(ms > 0)) continue;
+        po.disconnect();
+        const mbps = e.encodedBodySize * 8 / ms / 1000;
+        let n = _numLodFetchers;
+        for(const [lim, k] of _LOD_FETCHERS_BY_MBPS){ if(mbps < lim){ n = Math.min(n, k); break; } }
+        window.__lodFetchers = { n, mbps: Math.round(mbps) };
+        console.info('[Locahun][Fetchers] ' + n + ' (' + Math.round(mbps) + ' Mbps)');
+        if(n !== _numLodFetchers) _setLodFetchers(n);
+        return;
+      }
+    });
+    po.observe({ type:'resource', buffered:true });
+  }catch(_){}
+})();
 
 // ── Spark file-type lookup (extension → SplatFileType enum) ──
 // Spark 2.0.0 ships with 7 splat file types:
