@@ -24745,9 +24745,15 @@ function _pathHint(on){
   if(on){
     if(!el){ el=document.createElement('div'); el.id='path-hint'; el.className='guide-banner';
       el.style.background='rgba(0,150,205,.94)';
+      // タッチは Esc キーが無いので、バナーをタップして中止する。
+      if(isMobile){ el.style.pointerEvents='auto'; el.style.cursor='pointer'; el.addEventListener('click',()=>_cancelPath()); }
       document.body.appendChild(el); }
-    el.textContent=(window._lang==='en')
-      ? '🛣 Path: long-press to place 4 points (hold to aim, release to confirm / '+(4-_pathPts.length)+' left)  |  Esc to cancel'
+    el.textContent=isMobile
+      ? ((window._lang==='en')
+        ? '🛣 Long-press 4 points ('+(4-_pathPts.length)+' left)  |  ✕ Cancel'
+        : '🛣 4点を長押しで配置（残り '+(4-_pathPts.length)+'）  ｜  ✕ 中止')
+      : (window._lang==='en')
+      ? '🛣 Path: right-click long-press to place 4 points (hold to aim, release to confirm / '+(4-_pathPts.length)+' left)  |  Esc to cancel'
       : '🛣 パス: 4点を右クリック長押しで配置（押して位置を探り、離して確定 / 残り '+(4-_pathPts.length)+'）  ｜  Esc で中止';
     el.style.display='block';
   } else if(el){ el.style.display='none'; }
@@ -24861,9 +24867,15 @@ function _placeHint(on){
   if(on){
     if(!el){ el=document.createElement('div'); el.id='place-hint'; el.className='guide-banner';
       el.style.background='rgba(200,150,0,.95)';
+      // タッチは Esc キーが無いので、バナーをタップして中止する。
+      if(isMobile){ el.style.pointerEvents='auto'; el.style.cursor='pointer'; el.addEventListener('click',()=>_cancelPlace()); }
       document.body.appendChild(el); }
-    el.textContent=(window._lang==='en')
-      ? '📍 Long-press to place (hold to aim, release to confirm) | Esc to cancel'
+    el.textContent=isMobile
+      ? ((window._lang==='en')
+        ? '📍 Long-press to place  |  ✕ Cancel'
+        : '📍 置く場所を長押し（離して確定）  ｜  ✕ 中止')
+      : (window._lang==='en')
+      ? '📍 Right-click long-press to place (hold to aim, release to confirm) | Esc to cancel'
       : '📍 配置する場所を右クリック長押し（押して探り、離して確定） ｜ Esc で中止';
     el.style.display='block';
   } else if(el){ el.style.display='none'; }
