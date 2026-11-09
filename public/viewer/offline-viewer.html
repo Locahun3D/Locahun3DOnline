@@ -3357,6 +3357,67 @@ const _gpu = _probeGpu();
 const _gpuTier = _gpu.tier;
 const _macKind = _gpu.macKind;     // 'none' | 'silicon' | 'intel' | 'unknown'
 
+// ══════════════════════════════════════════════════
+//  低スペック端末の段階（2026-11-10 低スペック対策 4）
+// ══════════════════════════════════════════════════
+// タッチ端末（phone/tablet）以外を、GPU 名・メモリ量・コア数で 3 段階に分ける。
+//   desktop     : 今までどおり（値は一切変えない）
+//   laptop_weak : 弱い内蔵GPU（UHD 620 等）・メモリ 4GB 以下・4 コア以下
+//   very_weak   : ソフトウェア描画（SwiftShader / llvmpipe / Microsoft Basic Render）・古い内蔵GPU
+//                 （HD 2000〜5xxx 番台・UHD 600/605/610）・PC 上の Mali/Adreno 3〜5xx/PowerVR・メモリ 2GB 以下
+// 強い GPU（RTX / Radeon RX / Apple M 系 = _gpuTier 'strong'）はコア数・メモリが少なくても desktop のまま。
+// 確認・切り替え: ?tier=desktop|laptop_weak|very_weak（コンソールに [Locahun][Tier] で理由を出す）。
+// 判定は純粋関数（scratch の tier-test.cjs が下の印の間を切り出して見本の GPU 名で検査する）。
+// <low-tier-classify>
+function _classifyLowTier(info){
+  const s = ((info.renderer || '') + ' ' + (info.vendor || '')).toLowerCase();
+  const dm = info.deviceMemory, hc = info.hardwareConcurrency;
+  if(/swiftshader|llvmpipe|softpipe|software rasterizer|basic render driver/.test(s)) return 'very_weak';
+  if(/intel.*\bhd graphics ([2-5]\d{3})\b|intel.*\buhd graphics (600|605|610)\b/.test(s)) return 'very_weak';
+  if(/mali-[gt]?[0-7]\d\b|adreno[^0-9]*[3-5]\d\d\b|powervr/.test(s)) return 'very_weak';
+  if(typeof dm === 'number' && dm > 0 && dm <= 2) return 'very_weak';
+  if(info.gpuTier === 'strong') return null;
+  if(info.gpuTier === 'weak') return 'laptop_weak';
+  if(/intel.*\b(hd|uhd) graphics\b/.test(s)) return 'laptop_weak';   // 番号なし・5xx/6xx の HD/UHD（Iris Xe は含めない）
+  if(typeof dm === 'number' && dm > 0 && dm <= 4) return 'laptop_weak';
+  if(typeof hc === 'number' && hc > 0 && hc <= 4) return 'laptop_weak';
+  return null;
+}
+// </low-tier-classify>
+const _lowTier = (function(){
+  try{
+    const m = /[?&]tier=(desktop|laptop_weak|very_weak)\b/.exec(location.search);
+    if(m){ console.info('[Locahun][Tier] ' + m[1] + ' (URL ?tier=)'); return m[1] === 'desktop' ? null : m[1]; }
+    if(isMobile) return null;   // phone / tablet は従来の判定のまま
+    const t = _classifyLowTier({ renderer:_gpu.renderer, vendor:_gpu.vendor, deviceMemory:navigator.deviceMemory,
+                                 hardwareConcurrency:navigator.hardwareConcurrency, gpuTier:_gpuTier });
+    console.info('[Locahun][Tier] ' + (t || 'desktop') + ' (gpu="' + _gpu.renderer + '" gpuTier=' + _gpuTier +
+                 ' mem=' + navigator.deviceMemory + ' cores=' + navigator.hardwareConcurrency + ')');
+    return t;
+  }catch(_){ return null; }
+})();
+// 段階ごとの値の表（調整はここだけ）。desktop / phone / tablet の行は置かない＝今までの値をそのまま使う。
+//   startQual   : 最初の画質（0=低 1=中 2=高）
+//   qualCeil    : 自動で上げてよい上限（0/1/2）。起動直後の GPU 較正とウォッチドッグの両方に効く
+//   prCap       : 描画解像度（devicePixelRatio）の上限
+//   budget      : 画質ごとの描画点数 [低, 中, 高]（Spark の lodSplatCount）
+//   lodScale    : 画質ごとの細かさ [低, 中, 高]（RAD の lodScale）
+//   pagedPages  : 端末側に置く点のページ数（1ページ=65536点。CPU と GPU にそれぞれ約1MB/ページを先に確保する。
+//                 desktop は Spark 既定の 256 ページ=約1677万点・約268MB）。budget×2（撮影時）より大きくする
+//                 laptop_weak は既定の 256 のまま: 128 にすると、この物件（studio-union・全体約890万点）が入りきらず
+//                 回転中に入れ替えが起きて 42〜45fps（256 なら 50fps。low4・RTX 5090 で計測）。
+//   fetchers    : 並列フェッチ数の上限（null = 回線速度で決める既定の動き）
+//   minAlpha    : これより薄い点を描かない（null = Spark 既定 0.5/255。2/255 で GPU 時間 約35%減の計測 1 回あり・見た目未確認）
+// very_weak の値は仮置き（ソフトウェア描画・GPUなし端末の計測で別途調整予定）。
+const _LOW_TIER_TABLE = {
+  laptop_weak: { startQual:0, qualCeil:1, prCap:1.25, budget:[1250000, 2500000, 3250000], lodScale:[0.6, 1.05, 1.3],
+                 pagedPages:256, fetchers:null, minAlpha:null },
+  very_weak:   { startQual:0, qualCeil:0, prCap:1.0,  budget:[600000, 1000000, 1500000],  lodScale:[0.45, 0.85, 1.0],
+                 pagedPages:64,  fetchers:4,    minAlpha:null },
+};
+const _LOW = _lowTier ? _LOW_TIER_TABLE[_lowTier] : null;
+window.__l3dTier = _lowTier || null;
+
 // Initial qualScale per environment (runtime watchdog can step down further):
 //   mobile (touch)  : 0.75
 //   anything else   : 1.0
@@ -3385,8 +3446,8 @@ const _qualTouchLike = (function(){
 })();
 // iPad など画面の短辺が 700px 以上のタッチ端末は「中」で始める（2026-10-20。戻すときは _qualStartLow を _qualTouchLike に）
 const _qualStartLow = _qualTouchLike && !(Math.min(screen.width||0, screen.height||0) >= 700);
-let qualScale = _qualStartLow ? 0.75 : 1.0;
-let qualIdx   = _qualStartLow ? 0    : 1;
+let qualScale = _LOW ? [0.75, 1.0, 1.5][_LOW.startQual] : (_qualStartLow ? 0.75 : 1.0);
+let qualIdx   = _LOW ? _LOW.startQual : (_qualStartLow ? 0    : 1);
 // "Preferred" quality — the CEILING the continuous-watchdog up-steps toward
 // after a downgrade. setQuality() (via applyQualityTier, source:'manual')
 // overwrites it when the user manually picks a level, so the watchdog won't
@@ -3405,7 +3466,7 @@ let qualIdx   = _qualStartLow ? 0    : 1;
 // (phones/tablets can't sustain 高 comfortably) — so auto-quality can
 // actually exploit spare GPU headroom. Manual picks still overwrite this
 // (and become the new cap in both directions).
-let _qualPreferred = _qualTouchLike ? 1.0 : 1.5;
+let _qualPreferred = _LOW ? [0.75, 1.0, 1.5][_LOW.qualCeil] : (_qualTouchLike ? 1.0 : 1.5);
 // Sync the always-visible top-right quality badge to whichever preset we
 // just auto-selected. Runs once DOM is ready since the badge element is
 // emitted later in the body.
@@ -3523,7 +3584,7 @@ const _splatPerfTier = (function(){
   if(isMobile){
     return _shortEdge < 700 ? 'phone' : 'tablet';
   }
-  return 'desktop';
+  return _lowTier || 'desktop';   // laptop_weak / very_weak（_classifyLowTier）
 })();
 const _SPLAT_TIERS = {
   // maxStdDev      — Gaussian tail clipping (smaller = smaller quad per splat)
@@ -3532,6 +3593,7 @@ const _SPLAT_TIERS = {
   // sortIntervalMs — minimum ms between splat sorts (0 = every frame)
   phone:       { maxStdDev: 1.3, apparentRadius: 1.0,  opacityThreshold: 16/255, sortIntervalMs: 33 },
   tablet:      { maxStdDev: 1.4, apparentRadius: 1.1,  opacityThreshold: 12/255, sortIntervalMs: 16 },
+  very_weak:   { maxStdDev: 1.3, apparentRadius: 1.0,  opacityThreshold: 16/255, sortIntervalMs: 33 },
   laptop_weak: { maxStdDev: 1.4, apparentRadius: 1.1,  opacityThreshold: 12/255, sortIntervalMs: 16 },
   laptop_ok:   { maxStdDev: 1.5, apparentRadius: 1.15, opacityThreshold:  8/255, sortIntervalMs:  0 },
   desktop:     { maxStdDev: 1.6, apparentRadius: 1.2,  opacityThreshold:  6/255, sortIntervalMs:  0 },
@@ -3607,7 +3669,8 @@ renderer = new THREE.WebGLRenderer({
 // (PR 1.5 vs PR 2) drops the per-frame composition cost below Chrome's
 // rAF-throttle threshold. Visible quality difference is small because
 // Retina output at PR 1.5 (= 1.5× native) still oversamples the panel.
-const _PR_CAP = (_splatPerfTier === 'phone')  ? 1.5
+const _PR_CAP = _LOW ? Math.min(_LOW.prCap, (typeof _isMac !== 'undefined' && _isMac) ? 1.5 : 2)
+              : (_splatPerfTier === 'phone')  ? 1.5
               : (_splatPerfTier === 'tablet') ? 1.75
               : (typeof _isMac !== 'undefined' && _isMac) ? 1.5
               :                                 2;
@@ -3651,12 +3714,15 @@ scene = new THREE.Scene();
 // プールは vendored Spark (vendor/spark-2.0.0-workers16.module.js) により
 // 4固定→hardwareConcurrency-2(上限16)へ拡大済み。デスクトップはプールを
 // フルに使えるよう16に合わせる。
-const _numLodFetchers = isMobile ? 6 : 16;
+const _numLodFetchers = (_LOW && _LOW.fetchers) ? _LOW.fetchers : isMobile ? 6 : 16;
 // 2026-09-27 Spark 2.2: LoD 走査は新しい "dynamic"（実験的）を既定にする。perf-rad-turn.mjs の A/B で、振り向き後の収束が
 // 2.0改（heap319）の 1.9〜4.5s → 0.2〜1.7s、読込は同等、perf-edge-lod の端の精細さは同一だった（docs/perf-20260927-spark22.md）。
 // ?lodTraverse=standard で従来の走査に戻せる。2.0 系のバンドル（単体配布版）では未知の指定として無視される。
 const _lodTraverseMode = (()=>{ try{ const m=/[?&]lodTraverse=(standard|dynamic)/.exec(location.search); return m?m[1]:'dynamic'; }catch(_){ return 'dynamic'; } })();
-const sparkRenderer = new SparkRenderer({ renderer, numLodFetchers: _numLodFetchers, lodTraverseMode: _lodTraverseMode });
+const sparkRenderer = new SparkRenderer({ renderer, numLodFetchers: _numLodFetchers, lodTraverseMode: _lodTraverseMode,
+  // 低スペック段階だけページ数・薄い点の閾値を表（_LOW_TIER_TABLE）の値にする。undefined は Spark 既定（desktop は今までどおり）。
+  maxPagedSplats: (_LOW && _LOW.pagedPages) ? _LOW.pagedPages * 65536 : undefined,
+  minAlpha: (_LOW && _LOW.minAlpha != null) ? _LOW.minAlpha : undefined });
 scene.add(sparkRenderer);
 // 2026-11-10 低スペック対策 B: 遅い回線では並列フェッチ数を減らす。
 // 16本同時だと帯域を16等分するため、最初の画に要る粗いチャンクも含めて全部が約10秒後に一斉に届いていた
@@ -11459,6 +11525,7 @@ function _radLodScaleForStride(stride){
 //   tablet:      低0.5 / 中0.8 / 高1.2
 //   phone:       低0.45/ 中0.7 / 高1.0
 function _radLodScaleForQuality(idx){
+  if(typeof _LOW !== 'undefined' && _LOW) return _LOW.lodScale[Math.max(0, Math.min(2, idx|0))];
   const tier = (typeof _splatPerfTier !== 'undefined') ? _splatPerfTier : 'laptop_ok';
   let lo, mid, hi;
   if(tier === 'desktop')          { lo=0.8;  mid=2.0; hi=3.0; }
@@ -28715,6 +28782,7 @@ let _qualTop = false;
 function _qualBudget(i){
   const base = (sparkRenderer && typeof sparkRenderer.defaultSplatTarget === 'function') ? sparkRenderer.defaultSplatTarget() : 2500000;
   const tier = (typeof _splatPerfTier !== 'undefined') ? _splatPerfTier : 'desktop';
+  if(typeof _LOW !== 'undefined' && _LOW && i >= 0 && i <= 2) return { count: _LOW.budget[i], renderScale: i === 0 ? 1.25 : 1 };
   if(i === 0) return { count: Math.round(base * 0.5), renderScale: 1.25 };
   // 中も端末別既定の1.3倍まで描く（2026-10-20 中画質を引き上げ。戻すときはこの行と mid 値を戻す）
   if(i === 1) return { count: Math.round(base * 1.3), renderScale: 1 };
@@ -28845,6 +28913,7 @@ try { if(typeof sparkRenderer !== 'undefined' && sparkRenderer){ const B=_qualBu
       let next = cur;
       if(desktop && cur === 1){ if(m <= 3){ _qualTop = true; next = 2; } else if(m <= 6) next = 2; else if(m >= 14) next = 0; }
       else if(!desktop && cur === 0 && m <= 3) next = 1;
+      if(typeof _LOW !== 'undefined' && _LOW) next = Math.min(next, Math.max(cur, _LOW.qualCeil));   // 低スペック段階は表の上限まで
       console.info('[Locahun][AutoQuality] GPU ' + m.toFixed(2) + ' ms at ' + ['低','中','高'][cur] + ' → ' + ['低','中','高'][next] + (_qualTop ? '+' : ''));
       window.__qualCalib = { gpuMs: m, from: cur, to: next, top: _qualTop };
       if(next !== cur){ applyQualityTier(next, { source:'calibration' }); _qualPreferred = Math.max(_qualPreferred, _QUALITY_SCALES[next]); }
