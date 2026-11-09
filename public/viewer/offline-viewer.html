@@ -13821,6 +13821,7 @@ function _walkAutoImport(epoch=walkSetup.epoch,mesh=null) {
 // まず保存済み・手元の記録だけで判定を探し（通信は小さい確認だけ）、見つかればすぐ使う。
 // 無いときだけ、表示の読み込みが落ち着くのを待ってから作る（最長8秒。先読みの巡回が続いて「落ち着いた」にならなくても、見えている範囲は数秒でそろうため）。
 const _WALK_WAIT_VIEW_MS=8000;
+const _WALK_WAIT_IDLE_MAX_MS=120000;
 // 検証用: 当たり判定の状態をブラウザのテストから読めるようにする（値を読むだけ）。
 try{window.__walkState=()=>({status:walkSetup.status,busy:!!walkSetup.busy,deferred:!!walkSetup.deferredSignature,
   deferredIsCurrent:walkSetup.deferredSignature===_walkSourceSignature(),whole:!!walkSetup.wholeIndex,boxes:walkSetup.wholeIndex?.total||0});}catch(_){}
@@ -13831,8 +13832,22 @@ async function _walkAutoImportPrepared(epoch){
   // （その場合は変わった後のシーンで改めて確認が走る）。
   const signature=walkSetup.deferredSignature;
   if(!signature || signature!==_walkSourceSignature())return false;
-  const until=performance.now()+_WALK_WAIT_VIEW_MS;
-  while(performance.now()<until && epoch===walkSetup.epoch && typeof _sceneSettledForCalibration==='function' && !_sceneSettledForCalibration()){
+  // 2026-11-10 低スペック対策 3b: 遅い回線（並列フェッチ数を減らした＝_adaptLodFetchers）では、表示用の取得
+  // （共有ページャー）が空くまで待つ。8 秒で打ち切ると読み込みの最中に全体を読み直し始め、回線と CPU を
+  // 取り合っていた（low4・20Mbps 実測で 8〜13 秒に開始）。2 秒続けて空いたら始める（安全弁: 最長 _WALK_WAIT_IDLE_MAX_MS）。
+  // 速い回線は従来どおり（落ち着くまで・最長 8 秒）。デスクトップは数秒で読み終わるので待つ意味が無く、待つと
+  // 先読みの巡回の後ろまで遅れて、操作し始める頃に重なる。
+  const t0=performance.now();let idleSince=0;
+  const slowLink=()=>!!(window.__lodFetchers && window.__lodFetchers.n < _numLodFetchers);
+  while(epoch===walkSetup.epoch){
+    const now=performance.now();
+    const unsettled=now-t0<_WALK_WAIT_VIEW_MS && typeof _sceneSettledForCalibration==='function' && !_sceneSettledForCalibration();
+    if(!slowLink()){ if(!unsettled)break; }
+    else{
+      if(now-t0>=_WALK_WAIT_IDLE_MAX_MS)break;
+      if((typeof _pagerBusy==='function'&&_pagerBusy()) || unsettled)idleSince=0;else if(!idleSince)idleSince=now;
+      if(idleSince && now-idleSince>=2000)break;
+    }
     await new Promise(resolve=>setTimeout(resolve,500));
   }
   if(epoch!==walkSetup.epoch || walkSetup.deferredSignature!==signature || _walkSourceSignature()!==signature)return false;
