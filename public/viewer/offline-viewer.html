@@ -28876,6 +28876,10 @@ try { if(typeof sparkRenderer !== 'undefined' && sparkRenderer){ const B=_qualBu
 //   PC の「中」で ≤3ms → 高（1000万点＋細かさ 2 倍。実測で中の約 3.7 倍）/ ≤6ms → 高（約 1.9 倍）/ ≥14ms → 低。
 //   どれも 60fps（16.7ms）に収まる見込みの範囲。タッチ端末の「低」で ≤3ms → 中。
 //   GPU 時間が測れない環境（Safari 等）は今までどおり。
+// 較正で「高」へ上げない条件（対策 E）: 回線（ルートチャンクの実測。_adaptLodFetchers）・読み込み中の長いタスクの合計。
+const _CALIB_MIN_MBPS = 30, _CALIB_MAX_LONGTASK_MS = 3000;
+let _calibLongTaskMs = 0;
+try { new PerformanceObserver((l) => { for(const e of l.getEntries()) _calibLongTaskMs += e.duration; }).observe({ type:'longtask', buffered:true }); } catch(_){}
 (function(){
   const q = new URLSearchParams(location.search);
   if(['capture','orbit','headless','qual'].some(k => q.has(k))) return;
@@ -28914,6 +28918,17 @@ try { if(typeof sparkRenderer !== 'undefined' && sparkRenderer){ const B=_qualBu
       if(desktop && cur === 1){ if(m <= 3){ _qualTop = true; next = 2; } else if(m <= 6) next = 2; else if(m >= 14) next = 0; }
       else if(!desktop && cur === 0 && m <= 3) next = 1;
       if(typeof _LOW !== 'undefined' && _LOW) next = Math.min(next, Math.max(cur, _LOW.qualCeil));   // 低スペック段階は表の上限まで
+      // 2026-11-10 低スペック対策 E: GPU だけ速くて CPU か回線が遅い端末は「中」より上げない。
+      // GPU 時間だけで「高+」（1000万点）に上げると、遅い回線で 200MB 超を取り直し、回転が 18〜37fps・
+      // 回転中の長いタスク 2〜3 秒になっていた（low4/low6 実測。同じ条件で「中」固定なら 46〜60fps）。
+      if(next > 1){
+        const lf = window.__lodFetchers, hc = navigator.hardwareConcurrency;
+        const why = (lf && typeof lf.mbps === 'number' && lf.mbps < _CALIB_MIN_MBPS) ? 'net ' + lf.mbps + 'Mbps'
+                  : (typeof hc === 'number' && hc > 0 && hc <= 4) ? 'cores ' + hc
+                  : (_calibLongTaskMs > _CALIB_MAX_LONGTASK_MS) ? 'longtasks ' + Math.round(_calibLongTaskMs) + 'ms'
+                  : '';
+        if(why){ console.info('[Locahun][AutoQuality] 高への引き上げを見送り (' + why + ')'); next = 1; _qualTop = false; }
+      }
       console.info('[Locahun][AutoQuality] GPU ' + m.toFixed(2) + ' ms at ' + ['低','中','高'][cur] + ' → ' + ['低','中','高'][next] + (_qualTop ? '+' : ''));
       window.__qualCalib = { gpuMs: m, from: cur, to: next, top: _qualTop };
       if(next !== cur){ applyQualityTier(next, { source:'calibration' }); _qualPreferred = Math.max(_qualPreferred, _QUALITY_SCALES[next]); }
