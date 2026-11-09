@@ -26679,7 +26679,8 @@ canvas.addEventListener('touchstart',e=>{
   // measure mode and only when a figure widget is actually pickable. Previously
   // these had NO touch wiring, so iPad/phone users couldn't rotate bones or
   // drag IK targets.
-  if(_handleTouchId === -1 && _lpvTouchId === -1 && !(msr && msr.active) && e.changedTouches.length){
+  // 配置・パスモード中はハンドルを掴まない（デスクトップの mousedown も配置を先に処理する）。
+  if(_handleTouchId === -1 && _lpvTouchId === -1 && !(msr && msr.active) && !_plcModeActive() && e.changedTouches.length){
     const tg = e.changedTouches[0];
     const cx = tg.clientX, cy = tg.clientY;
     let grabbed = false;
@@ -26703,7 +26704,7 @@ canvas.addEventListener('touchstart',e=>{
   // and drag instead of rotating the camera. The fat invisible hit-shafts make
   // the small arrows touch-friendly.
   if(_handleTouchId === -1 && _lpvTouchId === -1 && typeof lpv!=='undefined' && lpv.group && lpv.group.visible
-     && !(msr && msr.active) && e.changedTouches.length){
+     && !(msr && msr.active) && !_plcModeActive() && e.changedTouches.length){
     const tg = e.changedTouches[0];
     const hit = checkLpvHandle(tg.clientX, tg.clientY);
     if(hit){
