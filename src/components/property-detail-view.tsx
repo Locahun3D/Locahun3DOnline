@@ -147,16 +147,6 @@ function renderOverview(text: string) {
   );
 }
 
-/**
- * 「データ利用のご相談」のリンク（2026-09-26 本人指示「押したらどのページのどのデータかわかるように」）。
- * どの物件・どのシーンから来たのかを付けて、問い合わせフォームに自動で入れる。
- * 画面に出ている GS-01 等の番号もそのまま渡す（人が口頭で照合できるように）。
- */
-function licenseHref(propertyId: string, sceneId: string, sceneNo: number): string {
-  const q = new URLSearchParams({ property: propertyId, scene: sceneId, no: String(sceneNo) });
-  return `/contact/license?${q.toString()}`;
-}
-
 export default function PropertyDetailView({
   property,
   others,
@@ -843,7 +833,7 @@ export default function PropertyDetailView({
           </section>
         ) : visibleSplatItems.length === 0 ? (
           <section className="mb-16">
-            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
+            <Eyebrow en="3DGS" jp={en ? "Locahun 3D" : "ロケハン3D"} />
             <div className="border border-dashed border-line py-16 text-center bg-white">
               <p className="text-ink/40 text-[14px]">
                 {en ? "3DGS data is coming soon." : "3DGSデータは準備中です。"}
@@ -852,8 +842,8 @@ export default function PropertyDetailView({
           </section>
         ) : (
           <section className="mb-16">
-            <Eyebrow en="3DGS" jp={en ? "Walkthrough" : "ウォークスルー"} />
-            {property.scannedAt && <p className="text-[13px] text-muted mb-4">{en ? "Captured: " : "撮影日："}{property.scannedAt}</p>}
+            {/* 見出しは「ロケハン3D」だけ。撮影日・GS番号・容量・データ相談の文は出さない（2026-11-10 本人「ロケハン3Dの記載以外消して」） */}
+            <Eyebrow en="3DGS" jp={en ? "Locahun 3D" : "ロケハン3D"} />
             {/* ⚠ 件数に関わらず常に2カラムのグリッドに置く（2026-08-13）。
                 以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
                 `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
@@ -881,16 +871,6 @@ export default function PropertyDetailView({
                    実画面基準の vh は必ず var(--z) で割る（CLAUDE.md の規約）。
                    高さ 45vh 相当 → 幅 45vh × 16/9。 */
                 <section key={origIndex} data-scene-card={item.id} id={i === initialSceneIndex ? "walkthrough" : `scene-${origIndex}`} className={styles.legacyScene}>
-                  <div className="flex flex-wrap items-baseline gap-3 mb-4 mono text-[11px] tracking-[0.16em] uppercase">
-                    <span className="text-accent font-medium">
-                      GS-{String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="text-ink/80 normal-case tracking-[0.02em] font-sans text-[13px] font-bold">
-                      {item.label || (en ? "Virtual Walkthrough" : "3Dウォークスルー")}
-                    </span>
-                    <span className="flex-1 h-px bg-current opacity-20" />
-                    <span className="text-muted">{displaySceneSizeMb(item)} MB</span>
-                  </div>
                   <ViewerGate
                     splatUrl={item.splatUrl}
                     propertyId={property.id}
@@ -944,27 +924,6 @@ export default function PropertyDetailView({
                       「data販売の問い合わせフォーム、販売してなくても書いておいて」）。
                       宛先は施設ではなく当社なので、物件の問い合わせフォーム(#inquiry)ではなく
                       /contact/license（データ利用・提携のご相談）へ送る。 */}
-                  {!item.forSale && (
-                    <p className="mt-4 text-[13px] text-muted leading-[1.8]">
-                      {en ? (
-                        <>
-                          Need the 3D data (PLY / OBJ) of this scene?{" "}
-                          <Link href={lh(licenseHref(property.id, item.id, i + 1))} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
-                            Ask us about data licensing
-                          </Link>
-                          .
-                        </>
-                      ) : (
-                        <>
-                          このシーンの3Dデータ（PLY・OBJ）が必要な場合は、
-                          <Link href={lh(licenseHref(property.id, item.id, i + 1))} className="text-accent underline underline-offset-2 hover:opacity-75 transition">
-                            データ利用のご相談
-                          </Link>
-                          からお問い合わせください。
-                        </>
-                      )}
-                    </p>
-                  )}
                 </section>
                 );
               })}

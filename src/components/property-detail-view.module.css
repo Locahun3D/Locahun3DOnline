@@ -107,6 +107,7 @@
 .legacySceneGrid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start; }
 .legacyScene,.legacySingleScene { min-width:0;max-width:100%; }
 .legacyScene { scroll-margin-top:90px; }
-.legacySingleScene { width:min(100%,640px);margin-inline:auto; }
+/* 1件だけのときは全幅。高さは実画面の約7割で止める（幅＝70vh×16/9。--z は html の zoom）。2026-11-10 本人「案A」 */
+.legacySingleScene { width:min(100%,calc(70vh / var(--z) * 16 / 9));margin-inline:auto; }
 .legacyScene :global(button),.legacyScene :global(a) { overflow-wrap:break-word; }
 @media(max-width:900px) { .legacySceneGrid { grid-template-columns:minmax(0,1fr);gap:28px; } }
