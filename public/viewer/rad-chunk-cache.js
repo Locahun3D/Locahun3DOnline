@@ -28,8 +28,18 @@
   const checked = new Map(); // path -> Promise (ETag 確認を1回だけ)
   let cachePromise = null;
   const openCache = () => (cachePromise ||= caches.open(NAME));
-  const stats = { hit: 0, miss: 0, bytesHit: 0 };
+  const stats = { hit: 0, miss: 0, bytesHit: 0, shared: 0 };
   self.__l3dRadCacheStats = stats;
+  const inflight = new Map(); // cacheKey -> Promise<{ buf, headers } | null>（取得中の断片）
+  function waitShared(p, signal) {
+    return new Promise((resolve, reject) => {
+      if (signal && signal.aborted) { reject(new DOMException("Aborted", "AbortError")); return; }
+      const onAbort = () => reject(new DOMException("Aborted", "AbortError"));
+      if (signal) signal.addEventListener("abort", onAbort, { once: true });
+      p.then((v) => { if (signal) signal.removeEventListener("abort", onAbort); resolve(v); },
+             () => { if (signal) signal.removeEventListener("abort", onAbort); resolve(null); });
+    });
+  }
 
   function readIndex() { try { return JSON.parse(localStorage.getItem(INDEX_KEY) || "{}"); } catch (_) { return {}; } }
   function writeIndex(ix) { try { localStorage.setItem(INDEX_KEY, JSON.stringify(ix)); } catch (_) {} }
@@ -79,6 +89,27 @@
       return origFetch(input, init);
     }
     const key = cacheKey(url, range);
+    // 同じ断片を取りに行っている途中なら、その結果を待って使い回す（2026-11-10 低スペック対策 3a）。
+    // 当たり判定の生成が、表示用に取得中の断片をもう一度取りに行き、初回で 30〜36 本・40〜46MB 余分に
+    // 落としていた（20Mbps 実測）。取得に失敗した・中断されたときは通常どおり自分で取りに行く。
+    const shared = inflight.get(key);
+    if (shared) {
+      const got = await waitShared(shared, init && init.signal ? init.signal : (input instanceof Request ? input.signal : null));
+      if (got) {
+        stats.shared++;
+        const headers = new Headers(got.headers);
+        headers.set("X-L3D-Cache", "shared");
+        return new Response(got.buf, { status: 206, statusText: "Partial Content", headers });
+      }
+    }
+    let settle = null;
+    if (!inflight.has(key)) {
+      const mine = new Promise((resolve) => { settle = resolve; });
+      inflight.set(key, mine);
+      const s = settle;
+      settle = (v) => { s(v); if (inflight.get(key) === mine) inflight.delete(key); };
+    }
+    const finish = (v) => { if (settle) { settle(v); settle = null; } };
     try {
       const c = await openCache();
       const hit = await c.match(key);
@@ -90,23 +121,31 @@
         stats.hit++; stats.bytesHit += body.byteLength;
         const headers = new Headers(hit.headers);
         headers.set("X-L3D-Cache", "hit");
+        finish({ buf: body, headers });
         return new Response(body, { status: 206, statusText: "Partial Content", headers });
       }
     } catch (_) { /* 保存領域が使えない（プライベートモード等）→ 通常の取得 */ }
-    const res = await origFetch(input, init);
+    let res;
+    try { res = await origFetch(input, init); } catch (e) { finish(null); throw e; }
     stats.miss++;
-    if (res.status === 206 && res.headers.get("ETag")) {
+    if (res.status === 206) {
       try {
         const copy = res.clone();
-        checked.set(url.pathname, Promise.resolve());
+        const etag = res.headers.get("ETag");
+        if (etag) checked.set(url.pathname, Promise.resolve());
         copy.arrayBuffer().then(async (buf) => {
           const headers = new Headers(copy.headers);
           headers.set("Content-Length", String(buf.byteLength));
-          const c = await openCache();
-          await c.put(key, new Response(buf, { status: 200, headers }));
-          touch(url.pathname);
-        }).catch(() => {});
-      } catch (_) {}
+          if (!etag) { finish({ buf, headers }); return; }
+          try {
+            const c = await openCache();
+            await c.put(key, new Response(buf, { status: 200, headers }));
+            touch(url.pathname);
+          } finally { finish({ buf, headers }); }
+        }).catch(() => finish(null));
+      } catch (_) { finish(null); }
+    } else {
+      finish(null);
     }
     return res;
   };
