@@ -33,6 +33,8 @@ interface ViewerUrlOptions {
   streamRef?: string | null;
   /** スタジオのサイトに貼る埋め込み（/embed/）から開くとき。シーンレイヤーと共有URLボタンを出さない（2026-10-09）。 */
   embed?: boolean;
+  /** 見るだけモード（道具のボタンとショートカットを出さない）。無料プランの視聴で付ける（2026-11-10）。埋め込みは embed だけで同じになる。 */
+  viewOnly?: boolean;
   /** 英語ページから開くとき "en"。ビューアーを英語表示で始める（2026-10-16）。 */
   lang?: "en";
   /** 注釈の英訳 JSON の URL（/api/scene-text-en/...）。lang が "en" のときだけ使われる。 */
@@ -58,6 +60,7 @@ export function buildViewerUrl(
   if (options?.protected) params.set("protected", "1");
   if (options?.streamRef) params.set("streamref", options.streamRef);
   if (options?.embed) params.set("embed", "1");
+  if (options?.viewOnly) params.set("viewonly", "1");
   if (options?.lang === "en") {
     params.set("lang", "en");
     if (options.sceneTextEn) params.set("sceneTextEn", options.sceneTextEn);

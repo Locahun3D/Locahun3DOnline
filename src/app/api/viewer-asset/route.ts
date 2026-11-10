@@ -332,7 +332,10 @@ export async function GET(req: Request) {
     if (!signed) {
       return NextResponse.json({ error: "署名に失敗しました" }, { status: 500 });
     }
-    return NextResponse.json(await withStream(signed), { headers: { "Cache-Control": "no-store" } });
+    // 2026-11-10 本人指示「無課金ではボタン非表示で、機能使えないようにしたい」: 無料プランの視聴は
+    // 見るだけモード（ビューアーの道具のボタンとショートカットを出さない）。管理者・自分の物件は除く。
+    const viewOnly = user.plan === "free" && !isFreeViewer;
+    return NextResponse.json({ ...(await withStream(signed)), viewOnly }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     // 2026-11-01 セキュリティ監査: 例外の中身（内部のキー・設定）を利用者へ返さない。ログにだけ残す。
     console.error("[viewer-asset]", e);
