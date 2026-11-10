@@ -222,6 +222,9 @@ body{position:fixed;top:0;left:0;}
 body.protected-mode #tb-save-btn,
 body.protected-mode #em-export-splat,
 body.protected-mode #em-save-zip { display:none !important; }
+/* アカウントに編集を保存（2026-11-10）: サイトから開いた課金プランのビューアーだけに出す（/api/viewer-entitlement が full）。 */
+#tb-acct-btn{display:none}
+body.acct-edits:not(.viewonly-mode):not(.embed-mode) #tb-acct-btn{display:inline-block}
 /* スタジオのサイトに貼る埋め込み（?embed=1）ではシーンレイヤーを出さない（2026-10-08 本人指示。2026-10-09「消すのは埋め込みだけ」で物件ページには戻した）。 */
 body.embed-mode #layer-panel { display:none !important; }
 /* 見るだけモード（2026-11-10 本人指示「埋め込みURL、ボタン表示をすべて非表示」「無課金ではボタン非表示で、機能使えないように」）。
@@ -2186,6 +2189,7 @@ body.immersive #immersive-exit{ display:inline-block; }
 <div id="topbar">
   <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
     <button id="tb-save-btn" onclick="saveProjectZip()" style="background:rgba(100,255,150,.08);border:1px solid rgba(100,255,150,.2);color:rgba(100,255,150,.7);border-radius:5px;padding:2px 8px;font-size:.72em;cursor:pointer;transition:all .15s;white-space:nowrap" onmouseover="this.style.background='rgba(100,255,150,.18)'" onmouseout="this.style.background='rgba(100,255,150,.08)'" title="ZIP Save"><span id="tb-save-lbl">Zip保存</span></button>
+    <button id="tb-acct-btn" onclick="openAccountEdits()" style="background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);color:#ffb454;border-radius:5px;padding:2px 8px;font-size:.72em;cursor:pointer;white-space:nowrap" title="Account"><span id="tb-acct-lbl">☁ 編集の保存</span></button>
     <!-- 読込 (load project ZIP) button removed: project ZIPs are now imported
          via the layer panel "📁 インポート" button (dispatchFiles routes
          .zip → _loadProjectZipFromFile automatically) or via drag-and-drop. -->
@@ -2972,7 +2976,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7132350,"fatSha256":"bab47d44098ad729aacb672aad1fb091fa99d243fe8732bf0952e9622cae9cfd","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7144493,"fatSha256":"f77b7c40f5d66c5d58fb998170cea2810644835ba044321d46363d862c82a2b8","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -15900,7 +15904,7 @@ function applyI18n(){
   // 日照パネルの都市ドロップダウンを言語に合わせて翻訳
   if(typeof _sunApplyCityI18n==='function') _sunApplyCityI18n();
   // HUD labels
-  ['lbl-pos','lbl-spd','lbl-rot','lbl-measure','lbl-flip','lbl-addobj','lbl-quality','lbl-settings','lbl-file','lbl-cam-reset','qp-init-h','lbl-set-init-view','lbl-auto-init-view','lbl-camtool','lbl-env','orient-lock-msg','orient-lock-sub','lbl-addobj-top','lbl-addfig-top','tb-save-lbl','tb-load-lbl','fp-btn-import-lbl','fp-btn-export-lbl','csp-shot-info','csp-cam-info','csp-meta-info','csp-shot-name','csp-rig','csp-env','csp-note','csp-capture','csp-burnin','csp-burnin-grid','csp-capture-btn','csp-salvage','csp-salvage-drop','csp-salvage-sub','ct-tool','ct-lens','ct-focal','ct-sensor','ct-sensor-ff','ct-sensor-apsc','ct-sensor-apsh','ct-sensor-mft','ct-sensor-1inch','ct-sensor-phone13','ct-sensor-phone17','ct-sensor-phone23','ct-sensor-m65','ct-sensor-s35','ct-sensor-bm','ct-sensor-cust','ct-sensor-w','ct-sensor-h','ct-cam-angle','ct-pan','ct-tilt','ct-roll','ct-roll-level','ct-wb','ct-wb-temp','ct-aspect','ct-aspect-sensor','ct-aspect-cust','ct-aspect-apply','ct-margin','ct-grid','ct-grid-multi','ct-grid-guide','ct-grid-off','ct-grid-thirds','ct-grid-cross','ct-grid-diag','ct-grid-safe-cust','ct-grid-action','ct-grid-title','ct-grid-center','ct-grid-custom','ct-grid-cols','ct-grid-rows','ct-grid-opacity','dz-manual-text','dz-ar-label','env-h-title','env-p-off','env-p-day','env-p-morning','env-p-evening','env-p-night','env-p-cloudy','env-p-rain','env-p-overcast','env-p-twilight','env-l-rot','env-l-int','msr-active-lbl','msr-end-lbl','lp-h-scene','lp-empty','qt-title','qt-low','qt-mid','qt-high','qp-perf-t','qp-l-frame','qp-l-gpu','qp-l-head','qp-l-dc','qp-l-tris','qp-l-geos','qp-l-texs','dist-l','msr-clear','msr-undo','em-3dgs','em-3dgs-d','em-zip-save','em-zip-save-d','em-zip-load','em-zip-load-d','em-zip-lite','em-zip-lite-d','rm-title','rm-pick','rm-skip','em-json','em-json-d','em-glb','em-glb-d','em-obj','em-obj-d','em-cancel','em-recommended','em-h-title','qp-settings-t','qp-lbl-lowpoly-main','qp-lbl-lowpoly-hint','qp-lbl-grid','qp-lbl-show','qp-lbl-fov','qp-lbl-spd','cl-title','cl-sub','cl-tag-init','cl-tag-v003','lbl-save-camera','lbl-view-rec','lbl-view-rec-phone','lbl-cam-anim','giz-pt-a','giz-pt-b','giz-pt-c','giz-height-lbl','height-l','csp-jpeg-q','csp-4k-lbl','obj-add-cube','obj-add-sphere','obj-add-light','obj-add-event','obj-add-path','msr-end-lbl-init'].forEach(id=>{
+  ['lbl-pos','lbl-spd','lbl-rot','lbl-measure','lbl-flip','lbl-addobj','lbl-quality','lbl-settings','lbl-file','lbl-cam-reset','qp-init-h','lbl-set-init-view','lbl-auto-init-view','lbl-camtool','lbl-env','orient-lock-msg','orient-lock-sub','lbl-addobj-top','lbl-addfig-top','tb-save-lbl','tb-acct-lbl','tb-load-lbl','fp-btn-import-lbl','fp-btn-export-lbl','csp-shot-info','csp-cam-info','csp-meta-info','csp-shot-name','csp-rig','csp-env','csp-note','csp-capture','csp-burnin','csp-burnin-grid','csp-capture-btn','csp-salvage','csp-salvage-drop','csp-salvage-sub','ct-tool','ct-lens','ct-focal','ct-sensor','ct-sensor-ff','ct-sensor-apsc','ct-sensor-apsh','ct-sensor-mft','ct-sensor-1inch','ct-sensor-phone13','ct-sensor-phone17','ct-sensor-phone23','ct-sensor-m65','ct-sensor-s35','ct-sensor-bm','ct-sensor-cust','ct-sensor-w','ct-sensor-h','ct-cam-angle','ct-pan','ct-tilt','ct-roll','ct-roll-level','ct-wb','ct-wb-temp','ct-aspect','ct-aspect-sensor','ct-aspect-cust','ct-aspect-apply','ct-margin','ct-grid','ct-grid-multi','ct-grid-guide','ct-grid-off','ct-grid-thirds','ct-grid-cross','ct-grid-diag','ct-grid-safe-cust','ct-grid-action','ct-grid-title','ct-grid-center','ct-grid-custom','ct-grid-cols','ct-grid-rows','ct-grid-opacity','dz-manual-text','dz-ar-label','env-h-title','env-p-off','env-p-day','env-p-morning','env-p-evening','env-p-night','env-p-cloudy','env-p-rain','env-p-overcast','env-p-twilight','env-l-rot','env-l-int','msr-active-lbl','msr-end-lbl','lp-h-scene','lp-empty','qt-title','qt-low','qt-mid','qt-high','qp-perf-t','qp-l-frame','qp-l-gpu','qp-l-head','qp-l-dc','qp-l-tris','qp-l-geos','qp-l-texs','dist-l','msr-clear','msr-undo','em-3dgs','em-3dgs-d','em-zip-save','em-zip-save-d','em-zip-load','em-zip-load-d','em-zip-lite','em-zip-lite-d','rm-title','rm-pick','rm-skip','em-json','em-json-d','em-glb','em-glb-d','em-obj','em-obj-d','em-cancel','em-recommended','em-h-title','qp-settings-t','qp-lbl-lowpoly-main','qp-lbl-lowpoly-hint','qp-lbl-grid','qp-lbl-show','qp-lbl-fov','qp-lbl-spd','cl-title','cl-sub','cl-tag-init','cl-tag-v003','lbl-save-camera','lbl-view-rec','lbl-view-rec-phone','lbl-cam-anim','giz-pt-a','giz-pt-b','giz-pt-c','giz-height-lbl','height-l','csp-jpeg-q','csp-4k-lbl','obj-add-cube','obj-add-sphere','obj-add-light','obj-add-event','obj-add-path','msr-end-lbl-init'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.textContent=T(id);
   });
   // HUD info-box edit tooltip + dropzone titles
@@ -16876,8 +16880,8 @@ const _ARMS_RELAXED = {
   upperArmL:{x:75}, upperArmR:{x:75},
   lowerArmL:{x:10}, lowerArmR:{x:10},
 };
-// Pose preset thumbnails (rendered from the Mixamo figure, 210x180 webp).
-const FIGURE_POSE_THUMBS = {"basic": "data:image/webp;base64,UklGRioEAABXRUJQVlA4IB4EAACQHwCdASrSALQAPpVKoEwlpKMiJHWYkLASiWdu3k4Wt/kv8MUhS3XDatYBZcXSk9kkuiFtLxgL5/kOEBcj5Kb6KFcb/6Vqu8sbyYRCI48CBqhbWXLfwbrkV9Z2ppGDj5V/BX4ZYeXo4bsE0dbBW4uUrIQqwdWy6Sce2F19J3OtQOT/0QSCvwdvvryHWxqncZqauZ1sk01qtx98Ej2gNmWsa9VeozFn8RmjKyuicpIACTc/POUME65u/gqdxePzoLMSr0bjM+7fjOYz2nI8qZMfOQOYJX8WKD92AfN+AHIgdgnx13H+Qn7ud9zTce7jxlG6cLUccyS6IWMHFWmyu6nvGyQ33gAA/uyg6n+rvzt+p53f8V/KruwwNaADsGTGV5g0AG63dj+ImsZhtu6o+g46Bo/J82YOHvdISoGk26xwxjQdB64zQe7K+I6MwrerJz0wchjPYwMt6FIasRkHP9vzazFPvQYFjbQZH0LHmUHHz2w1YARWZVzViYCl89G3O4gSO6cGrXjVlCYo2ungfwGlxw0F72y1ODFwjeUXSXylVHWzT35MGT5zZfT7y1qBRQ00joMkxR4EjW5Hmk1r97OeL64DGRS9/1gHBS8uClRd4LcYaFXfpyuDP226khGz+4G3x9gCvfm2Ppg3kOlrtY07mSELkAi+kgrvhJVh7QxDHNbxWmNZLHM9Ivu0kJkQKryG+rF/gYsYRdZA4ikneTSioELBC0FiBsVjm2Ql8kE+b1urF4/wwL5etRrAh2UzHdngZ2HH68yyIuWTIU9CbizT7QElQVlZFfQ0twyQEMuyTc4G6QQYbUMMEEaloklC/Cno0Tbx5KuXA9Rb7lh11NkJSjdTLVjuW2HgHdkiO0R9k4iy29jjawx49kMO1CNBjTWMoOr8x/OaKtgBuk17uYoNQ4kHs/8nemt2zoRDzcs1jCzOC7x91rXA/EoohdacvDFsBjS6N5I+OuJABiAOsRUihRc1aZreRZjdv3r+IfIv2/kfQCkY5rSQx7P9t7mAsEJ4AsZ3Y2ldLvhvAwS1p+da+G+nRw6/bgFml0ma6cZdDEdWl3SuiafAJ4r/pjWXPDWvIN+hxW0O2QKKZLBMOf+58GVeWArH40s+oCZM76MOSW7UKUfKw5d3oLd+uJjJZQIR7S+j/vvg3N5Eca3ONO9wqZTYd66JtJlXdg4VEvgvGr7kjngt7DwUXqA5WfNtnTDCQyVN5+y0B49AGndjhcDAnE3jpowqSQ1yZt5RfKbh4Y3Hi/e/N5wjRnnoK0NKnNsPlqACxeuB2wvgVYYHaMHN/D4Yk4unaVAxBqET6l8LOKN7v8fICXbfyyDPbz2h5B1Z3W5dnDcMky4XpSIW7WVmvDfblXKZTVuM4SS6D3C0AkkVF1jBikrFagAAAAAA", "tpose": "data:image/webp;base64,UklGRh4FAABXRUJQVlA4IBIFAADQIwCdASrSALQAPpVKn0ulpKKhppj4WLASiWdu4AYH+laE1j5j/UsXsh73+z0HvPAHkJq0ANRGQPtFv4eGY4cdsPP9JNfVX5iTDvbp5pqZU1iwJsjxuxD2ikhS5V5MEttIOqFWxaWhRFeUmOJHoOJEtSjJW22KOZldlO5iq/ZOR2I4QebwZXRPUXHcNg/phgDhOny+8f3X3BegrOfzYgS/Tc8bG960xKQgabVKqc1SrlPWEYLDMc+0Hab+S0GEi4DokzUS8Qgvaiqtxla4BdEmkzMaf57zAndwykaE/cmpGS/zHBfxbx0mzB6Hn1iADE3y0pTRxJgdk1btWMLrY8angpJrZdR531HTvxMhEZxSOzAmwkqnZYI876qJ4yE14wQWJXDhp9kwAP7sqpP/Dn2x+9jH/8V/KruwwXd7IQqYVqbGGUlZ4OpeDxTMFJoueXpDUJYebTwOwKcd/e5DfNYmGOInTwkWgL/tgGRon9ywjjdr/TBzQR3Rv1FRGDCr79yvkCFImhR9pKJNb5yLlFFJ+RHWkVstWNA9jgqYljreNNtaWKxL/IZDhVC/S/nIbrXuI6/8WcQPo5AtNvSc5gnTcUTetM0r4YqQWvZ+4J6uPdSN7ScZzAXa+O4wmxWbaMKyLZAkPx0YF5iixdONb3/CvvzUJZmXzBVNx1b3QKfYQTEvUWYTE76XbJBvtU4ubeU1vFGqcB9J+ag6fn1yY42pLtaUKZ9vq6p/3H6BzTOh/FchU3A5oIZc09JojCsruD5vykKyySI1UQKljCzT4BtBm0+g/45AKPVKRwgBrfo2CubVUV1wFrnvsMZfASXqJVJVc/t5S4y3mEuzutdvGVS/hYD3HV0augicVg+aSqpuqUW8fpfuPDzSbVyyncg8tDKY8SJ/OVhb0P8MG51Gfdvx10jQIb9vd+JozkTIMVPPfR/cXjQlGVDdwIVUls4Pj8qG2Ewhhq45lCanVCGQTiBJ14IfuYQke0XMzODqlZGViIVfk8eFS9PWz/1SZP0ADwrB6QLdY5y3QbubuKpO8DZx0g+8Q7K6YVqpA3KcRx3DyIahB+lRfstGb8mDwuzEzkz2K3NnYyVT2ndTD/4ZP7R4ulOhpDaQ60UGnQr5Jr1RLJjBxgsm0R9P9AikGE2tK0reCK4w1s5EAcJyBhLc19D5G/ZJaEQyGL2iEVhEXUiGoMwekbFQNkbXK7XASy18NIKaZ62EwcHcFSGRYAmZQbPdTLVjt1ttZkR3/PaWO16x8tAYDOAYZ1vTboUSjcf7sDK41te8/Hy0i7O1z0t0y9usJ942aRSzIo5G6agSyyibIGuFT4D2G7uIqMeOfE+gFIy01aIYg1rjKuem0i3+khQ3vVjlf8nTtHTBecGb84nWmApnr9cTFrb3WOKDWSXOqohyNWG6srmIw8OEkeqQ70Bda7Py446ilWFGvS3Qmmf83pdNCx5P9e7ACYAiWhKZBC2mf3RQJ7YXTan2+oaN558aNweNL8Nle5easD4+Wfcqbzb7JB3EUWYma8K3kObap6LM3uBZTQ4WHUmwWwoTYpGLrCAf9qnmocZ7OGyXIn9e5RdaEh1Ff2GUWIXtE4GXxAWawo9YSc266XhXjEk6RT2bv6f12WFYzMC2T25joaHEnbcub/HeYBw0uXa+6Y2Jdv2vuSXnX7Y8G3Lt5Gt1+QAUqMrv2lxJRofVsJJc9Bv930F9Znqrb+/FvBOvIAL6QAAAAA==", "sit": "data:image/webp;base64,UklGRiYEAABXRUJQVlA4IBoEAACwHgCdASrSALQAPpVKoEwlpKMipNeoSLASiWdu3nn/ZRrd1OIAp2LpSet9LkdSr9XXqjQtb3jgSR/yqej6GMyyaAlFTacyURx17Dph8zoI2EitH7oNRk+hDD33y/gJyv66vNfEOGbXfnoIql5pNal9ppz7GqyPe+zdCEGOvvXIaDyiHyVXbK8SCSeSA01K2M30uFGsqAiP8zdRZs16CirqEKBsRJkDpuyeKR6souQMTElooGJ5OK4gPqW3jW8E/QGlPhCfb+ZoaflBXIEGAEwSTrOHA6EKjcNido/7TxnB5ptW69sIg6lJMB0IzbajbLUesggk39LndEbPwHNu4AD+7KnT/4c+2P3sY//oV6y+T7hYiAMm+Uww+tjOTskFFr8ugrL6Kl4S/4AmV3nlUywTQdmY+Tk1E5GbuYITavwlEx/MQr4Hv/vsj5bl4RN6f+mwh237OurE0AuskEO0RgVocAzXRXHyihy/3m9nZIUFwgO/tWt9pdVMAfg+qKMkJdT/DV10iIVxPPbXlg/8bHw6ftk+WqQTHHdnn3puhwh58J6IyGGrnC+zeYeLqRvmhQlnFaxTZicxj2wzD/vfY8vvfDtmjIhzyf9kU2D5dQmBlKvTsApnIJo2kC4y286j1v3kP70fT8ZfW/JSP4TcBmMU480AqDwasGAULZE3PsmyepWRsOhsIkAvTF7ZXsJtbYm3ewYPV5HgCUPsXoYlYVetRwKBCxxUQniM7rD94hQXAD19jDavbFPhe0vnSHzqetzXSBuqxkPlgXAGg8p8dzw4QMhBjVhztFYyinZzKk1NHP9WCXfnYCA+mUNYzv5MNVUNHotGQER8yEDJuplqx3LbDwDuyRJXPjUdIBzbyP91gycBVrAf46VXLBVR/RCOzuN+UyHCRrlN6YB51jFrSYma5ZcfgDsyf0Y10hnbnhi7kvXi65mobSN62U0nPY8HHCLeyNSmIJg8qQuTBAO6cI5yFEe09YjH1s0l4zfIhmKslNMQS/F1vKaqu71/wLv5c5tCwgn51Bo1iDhw389QW4w9gxfD9gqDKMjpMyvLEqjDJYUoHN1Qe6DRjR/zfZ2qmsJGqz29g31WTh0hWLT4YdFTnZBG5vUdyZtgh/hxwFyiUERipbyJ72iO4SAUYyk32SyECVD9682O1M3mse2bRjiGvOv56TdnHl85dBmzssFbZVIqp6ELJH1mVzABUyhBmjo1a99IMmbq85rzAQq07IbEiYUT/M2PozxAgi/XGC6eIYk6PNhQXF9r+sCEljdJRKCbnwJihNEWEcEZ5Jrfz4O/cw2SHfevD0EFgfQj9XZyKGxBmDYipUmtkMz4qZzjyVARhz2vMt5U9fBkhrdqeYTgQjtH5ko3LcnBO/qP08YSauaQARUD6AAAAAA=", "walk": "data:image/webp;base64,UklGRkIEAABXRUJQVlA4IDYEAADwHwCdASrSALQAPpVKn0wlpKKiJPToKLASiWdu3nn/Zerf9z/nyryJ4NnWTFUFKBk1Ax63M6UStL3ebCPzdhWxbhZec6qWeb/ukjj+mpGwA1ps3b6M0nm+eDOiSPY0nO4vhh/V8Qth3rrlMdjlvO9X15G1Rdk6iXcBD6296ubvoE9BdtCJ6EjHOyvCWdwSdpnrIWVljG+yCaTg/5EacP1QYvzDK3eIKCTsORaXEngi3u2QrxBW1X9YM+cYvWKjb0QEE9Myz1aGnVX4wLAsYTMt/CX9F2TIiYirDK+IXX8kgQMMR9IBMNShoLfLtlf5ADrJ90vyTUH5qmhnv9Z4RG1DyXhMcIlXGQAA/uyqUP9Xfnb9Tzu/4r+VXdhgbaRqWVNkmYesO1vaZyH2Gep4pIIhHv3AZPuYw5SDY8ilSRhgu0LLVkxgg1OPsWGgSSWMtv5xbLJXXGkX9dw37zTu65uKd056Hu+nNHeluBWhwDNdFcfKKHLshg589nDuSQd9n6D2uKKlG3HkVlvS6crIyT4vT8XZwW9L4FFRXyqm6N7566JhXJeZ0j+BIBH8BZL1H//TOr6zHjWz2NopKvUzjTjaoe0Oj/y80xXy+51W10KJH3wolUq7Wk2Bsl85paDRX9uW0iLq+NOEBRQYaWV1fCPP0fU2Sls4hMvFSUEklPNwjisBIRJK8Zr3SN+8i77EfvJ95EXPj/LBqHx0dwh8Rl0vBDuIHMaSRsnBd21MVOGYWJUbQzQWIRsV3B6kdwUykwAHXa/nsFMcU7WZ2YPc5RHj7A4h+dcEijraFjOXumu6TBUMa8H1JCCLj9OeD3TuUgoIQ7mX8O1Ji/5x8xym8rHDvBOJYPD+IXsM3OQhze22rKGZrSkhx3I2sLudLW4ZDzqe8FGJmxtk3Uy1Y7ltigFEReKBBGLibKoZurd/Z/KdTxDhns1ljnRg2oDVDuio1fGEe5qxgy8TZLmGoWs+KnWjPPEQjxaJhpH67ivWMCBvDPPc1QrkVk/i6+x9asO9AnxnAe3Qk0O3GIb4m09IMaVYJCNyFQXrxARgkRWTKBEL5l5shawm7uNJduLiOfZi4xCnuiH7X4gYzYDrV3c8lCWcbsfjTtbDZBzeCzPGe8q6KV26N7LgwlM/MOx/f4sSk0ArRpxiAUADkaNAID13PxfRuQIP/tVh4yXAphRu4M+mwpv3RVBs+ctGYQAndtkVmekzHukdog/vvOSR+3i9BP1CYSIVtHOcC1+Bnw8D8ZU/HP04Jqsxm8jn/HW/ZrbiBbnS+NGjFczL9xJyrk7kx0f51Bblf5mJOCGKH1kpxXpfYRlmhlEqEQAtfvOlsjXShz+Qh2rqSToBHgPV1Qn5HG1Q6COg2dgzo9cmZSZ6qI/Ebp5INNmYwBN9mG9OmiAxaXy1+pwKOaXBchPyEkbukQAjiIEAAAAA", "run": "data:image/webp;base64,UklGRq4EAABXRUJQVlA4IKIEAABQIACdASrSALQAPpVKoUylpCMtoxMIobASiWdu3nn/d3/JVv8mNB224A0Noegy9LLTrzb+6/tjxlgx+bsKh1a4zYgDpIXHXzvh+dQpYR+LRUZrHxI8Tzf0JTeOYxjRVTnkGaTTuLZS43bqKf+oEs0gZJ8MRml8RRY6NhMSpHv6fEavHeuF6kT/bZe8aV0TiSlRl1EAS8CIJpELE7Qn8vsumvgYRjMKFjhgsLMNY+ViGhMN3x7aZFUeHGHUhGmzEInytn328fblIMgesNw5p/RxvBUCXbR+wG6vvEbPwzCF7myIPvt9OchEFRZDnY6sf6vNvJc8NWQ63vY+WZwZVk8rVSmoCFq6SFFNzgAA/uymp/5m/Cj5OgP/oV6y+T7hVsdYUvkvaNwiBBMVA6NRIpbNGTsDfVgAl3gvhhr362WaYAdbazUzzuKNYUePqRtgkjMim9tzt1WLb775FtTfquePayKZuMsgP30yIDxNk2M+dgVeL8PhyuWhpKkpthSY8nWuZo/uyt3aVT07JPs4JiVqAwWpYXhZRubpLgWjO/XZ7dDINxTFYePtjhLjANFsGObvvLjPHCVgFyPycC7GuypqoVA8Uu610Xy+Kn+YlGwMZI2gNyuYzpK09rU03N+zBOoVpZLLMMU5pVRafRXNs7anFSMhERxMudkzz91E9qujZWd6r0zelLMQcEqC2Ya1qprMSDPHb4G2owL2S2Sn9MopWNxwkQu5rN87kZfPvqU6OpnYe+wqtVaEyTR9yAaqK2oYo0mZq1fSrFiXbDfy/NKSK8E3WKqeItknPp1G2LcIRujFiznHUbZ9ixuYF1c1iFdvD16NjaYfRWvEiXH3bzTUcq3sxlhQ6LVBx9iY2uFhwyb5t0tZxMzzwCYbAv69yrbUi96cId27UgOt0kg3BhNnisJ00PsZAdenfINiQ0U0eHGgtZ+v8BFnKz6zOV3Nc3xRns1ACVHVvt62keioF0kJs6W3z+ElnuZxj3ibhU40tUh6Fb+y8GQlbQF2jFmvadGGobxYoaFDyws28ntL+Q4naBIRbXMb+Kqn0tyNe+pbu7Gyxsbxsyf9sVtyiEXsga1xheBHCbNeM/YnWavt4oMhKSMvm/wSiHXDHa5fE0yZ3gMIo4cUtZQLaQJ2wu9ZEndNN2GDI2aavi32DCGGui2aJiiBxVOfQQim61M5PGgxq0Kz7Zb/RQVSQjTjsM6TCXt6s9OS1+Ex2fQaY4kxcZaLIVUm1UpdtFaCkFHSOhu/uNMoSLf2lbrVEyE+lDqqegGof3MbT+MVQ2lW5DLd/+C5zG+v1R9ijVDEOgi5Faa1IooU+mmNuF5vBwv9ur9NkVIWNbVxATMxYnhAukev5lvsHJSirLgCeRs/VLA2aPJM69SNgo6tFM8wV8kDzi2YdchaLN9GaiA6QmSWmiiPHIuLqpjTilMkuiYLUjhM+BEhQu4bcPi5pJvqqnW8finliiUkBNyF5O2L/czm5drLzPSK3mKAMo7ugG+AOitecU5pL8CEgKwj2ZwvFcGhKdcR3xxl1vPQKLjXPtOgfdYZ4R8/pKwe9zhuSjFT0UAMfzggAAAA", "look_up": "data:image/webp;base64,UklGRmYEAABXRUJQVlA4IFoEAADQHwCdASrSALQAPpVKoEwlpKMipTTIWLASiWdu3k5Kt/k3rYGfVFtUgWEF0pPZJLofXK8XkssaklKXQ/itGijFOBLOygCRJUWddDUcvIY/LycC4Tr0ycE2HZ0tDSM3FHlQS+4kQBWh+uqtP2c4sE0InBJm2JtF6i8XyQUSFZ7L1AX02jfN9bBHCeKqJHHbVifrWW9jnatQyQQkNUailoP9zodwu8jeCnutTSYBVWXvEc9eKlB93KrFsHIcVy+GZjPbSkzewIqrXWhEpnO/CWuvBMU+GuB15nk3feW+MwhSzkbjIvpdOAvjIp7wqni/pzGVRKbiUAGGpnI/+kd4/CtmPime1KbAAAD+7KEX/6u/O36nnd/0K9ZfJ9wrw/vksBsq4aEga6R+2ORrtls4PVCsVSwFXCbuTL4xHQrUmVTFYqe+YB7YbMWyNphSpDwV/IsejDntlxAtgScOYRwUxqoe5Ip0SfB8rzV+f20nVvt2JifrCR7k90ULHVqCsbpGrCGf7n9o7d4zQVKKrI94qO8ZtHrxKiXOpyaF2lrhUPe53VJ9LXn961QpASj4otgVRbwVSOm/EXsZWnyP3Vx+mXpulYgdTajZRAQxG4oO5guc0v2e6ZyfujjCtkP/VbsxRUxJLMKGkLA+Q1ApbngOxSshJecnKmF22gVw20lfcEgRZ5sNlohiM9O32AZDIeIDsoc4SdFvOCKNTOXODq4ccWyT6rTtSyK4lQ5gvCKcDa8fbwPHIyWrrSb8d+CM1m/vmYCrugP8epMxlM/NI81+iDSLEt3uUVGhN1r+tDp8rx5QGw6SFlQH9DiDjLPdckuKSbdRfsGWzqtvtbAWtQJU9EfCr813nCmEvpB9U0FLRbSP7rUkvKtomOyEpRuplqyGJzFRfKwPU2qtAq4MqBKRP6pA8GoJIfrqEz6DokP9izDnZxqfbF46riOqAaD3EVuXkiPQpChlZ2Ug4p22hhwPLbdY9OKjgsA23t+yZkjdmT0zcFbRY4jP4XH7Yr9BAo6fA8PTMAjq5h7FxIKqpcQPFO43LAhiO2xvzYf3SyJQ6xBwGwhF5X0DHt0TgvLgDJyhmFxavp0esG2LzbCYQjmWTd15hWMYbHMA5G1l8IqLmg3H8br4dfy1JkAnAjFYUZBHLgGhjeZSYAAzdTp4kg1Qihy+Q1AXRPvCCbxI1tBsC+PaTshGN1pB835U/Xrz0AplbHZ/yAwFakeF7K+cM3TqQuJeDW6byHatRmuxbeDth/ZwGsPYN8VsjrzloOxVq2raW276wXwSsA+xW3P0yjzGOFu/Y9KWBg2SAY6NgyTxstp+PhGgFyWwmjFvvD7SBiiEHLmHFZ83B2KGkXj2KrN0vh67Xp965sPNAnqqjo2aw0uzDLfULZ6AxfdxBD7yTGmj6+ml+FLQz4q7iJ9M92SrivqaYEWBgGu21q59Ekz+PEjmQsTaapLJWEkuhibLAX13t8q6PZ6dT8CMYAAA", "dance": "data:image/webp;base64,UklGRroEAABXRUJQVlA4IK4EAAAwIQCdASrSALQAPpVKokylpCMio3K4sLASiWVu/HxaAOMtb/arwVa1Lbdc7TpzoBoy9tRGVeBRaMr5hsaPVwibRqimEAiiPgq4x6Qi8ioSeKJxWfKxqcmd0sXMV+WDKIxTnfmBwYt87X/PeV7UZipzn27qvrnW+fEB26i3SYuc2+hv1rothZsOE+S/Kt8Ef3KvALd/sDoAP2pT5Qdjf4bDxIMsbmMghMgdBqrnGAMO3hOq5Pmx7QkM0L7DHCCV8khqeqabTtJv7W8m2iUr9BBBSzwSPNW1U/SOq81ZL9pU0FoGuGIhaOdbc66dep1maFvEVqmaaWu4bH4CjD1GKa6UfMcOI63PrJMLdO29JZ894NyAAP7soH7/q787fqed3/Ffyq7sMDWgAblz4w1MMVLZfrNZ2fHYo49G9wRunt09JUlO8KkV029l+UbxL152f3c8WLTCNmfR3dPJJBUF6Ox1XPlqYaqwAaZ2xGKpSJiiL41XZdwsmvFWiGwrgctNTmIAfJRqKPGq8rp6jIQWhAnsbGVYSN2ciBvyJRC48kg8XVMnchvYvbbnsooghV1+dCorb1FGf+Gn82eEj9xMMg64rcfhDgPPNQLdMWxZG5Y5O5h8nqHvps98WrWTqdEzfGi0B7xhCBioQw5lMTxhP8LiWbJI5kpaJkWxLnit7B+FhLI5vHWKtZ21A3yLbyr83rSncMC9lSwC6+VGQ0ksbWEvuQuahmU+zQx9VTzjwaQTA3DHcPm2B0TpFvpx2Tm7awF8hIN0qq8mj2PDzXcSdbzex0gbPiWHyTkQTWELawoRqQllbe6uRBkWURu5PPHghp/5+RKpx2vY2Quu+rJ/y5APETO9AqRkSnOEtSixlV8L5M41g1WqKlP+VMVO4xt9h7t0pfViLkEcVY8CQ4tZ4PMtetAu4QJx9FI6zvy9lhNy9fGv6uA22GIJiotK0gbl35efWJ5CBkyNuJDU8MRbVGF/fXOjnZJQdrKbIwLoxYs5ZgHxUwnK1N+mfrJAUhp8cFs9IqQLFEoI1XC/PS7sjPtRzcsPcA6Ox+KVT3LU/Q2oFk1wqJchCIyRcv+nVbS/o9LnX6WQicpGNxgUj3wQ4WtBJkqFcauEQmiTiPDW91tkldMgPIBrCbHIQHlECZvtvBpXHWymJmPeA7/hmQZx4quy62Ttpr91AtmG7PU1e+EWDpzYk6OxOYgtIEnQ/tFffYo/+bE5p8xiIr5yKcDyLyXkgv0aX7CMMa/ITtop7qvnfwEQrSYM1vORYPwAttvC1TwGrfFPrnozQWXs98eVRofSj3rJgRXKmEKCaSV7SUTJROzvK5yN/cZpAEPCDTz6pbCcwVIAzgwfeo1iZeaGiRqGnAAYum0f0hvF/NdTorosPU/ZcDNqfDqp2O7N3rtj+QamHA3DeSrY+ldyW0WJxNzNerGlQQY+u9x8U8tcJbqOiz5isJ/5GqPNgz5uQ6P93KCljEoWrkYsm/dsir8I36VQ4jBw2vEjC6rAHc4BrRWuJS3sDh3j9zSEsR0ORQ/VaOC+yRCCUcx/3d+2PMnkAZqGrtWh27S+LZ5O8cOhToHoLCnpwgQUQ7KKOykgAAAA"};
+// Pose preset thumbnails (rendered from the Mixamo figure, 210x180 webp, each cropped centred on the figure).
+const FIGURE_POSE_THUMBS = {"basic": "data:image/webp;base64,UklGRkoEAABXRUJQVlA4ID4EAACQHwCdASrSALQAPpFIoEwlpKMiI7UYmLASCWdu3+bMr/df9put6nP+evOxlf7VIZ3dgmdFaEI/4/S5HWvAywK2orBtjSclIu7EikQ5bun37iuDbbY9agAbrMn3WjoZRsy8mWXXKCFeno0wSJruHkePJyq3rZP2olM+/u7LYNJLBg+rp7J0MtGtlrvXMyrJprzs0IWObpQzb5HS1SacRaqdDLZlv0gs4DrxObftOOX/GBZPRyr4fbWM+qvaHUmmWbJj1HcCP7yKU5WTGBdY2nc0rkatEK3TZlRJ2VI9rKFq1G/3r/WpzyFl62Jy2q2u2T9LerOGnr6ufjD+lyy8KVaMzRYGNcAA/u42b/9Xfnb7v0//zh3Z52ZOKXh+DAXYv/WATkGBGy8pyerNTH1VgnlG5pJjjG6nkQsH/F7nvY3aX58BLmpLja/9Mtca2us+uNHoMhN+GYSia/iN+uEinrBImQvK1yMJUKhg+SR4a9LMpaVTMHGX+HwsWNkKk5T5lIbwOMGv8/pOCjjpG4ZmuqpKf2yKt7HrYR7MxaGxJeMO7GDgip4ArUqsJ9sfwswmjIdvgI+B90Zrya5Bkvc1fqd+yMjlSnI2F2+4Xz6YVZeWw9NpPlorMHyqOTVgAJuCCcJKGH2lg/l2xBCu1DoxI2SWLt7rwgfdRB+JPqYmx0lwO2T6m7KOFCm7m8hXk36xBGwm0E0eqoIYTDgctPAKEwp8wOi1jzHZWmXn1DwrUu7gSH34LqUsb+U8yOZQ8o1H6Oe4Ead9ZIIMWpvGrAzE3kAzSMseXndIeJMwSMeVnKadabdrkOxxmZurULg6gRl2EEoWrGpGE5DNAlcJRIITEa22eltYMzaGiaNe98Jkefa6WlYNCzfprZcXvWFgKqcNoJ5n2umshyeMj82PFesiKGlquoqI7fCAWvw6OwKBbVL3cc8ncKqneyAh1eKEgneV1nRbVLajzUA8H+WfVc+dXGwK/3TTGNNwCkCuFXgfD7E74KGpNFjcrO4BEFQHsloih95ywZBzuECX7YSeZoKQJNsT0NcZSeG1c8E7QoF2KVPKG5kSTVCphsJTbiLeTMDZk7Z+wsZK0sYLxg6jWGUT9KABIbVZoqhCeIvcUAhWLbIwCmYQbXRIqBlI/JcTKikhG4lu1tLcf5P9nWLD8eY/QTrN+zHoHXd2xD1xdlhc3EsZ3Q+F7DfQOTMFYXi0sGHarvvI4WUu7llOprfry0qDEdkExAuSVHJUAXE8+fg1z5pMkoSQkQbgLbtUYlEJg+bUcpX3UVTslYrF2uVDBwAmVpBBhb3r6x86jfCtwXer2LinauQ+vuCr6f33W27xU9zsGlnWHhjQ2esWoJMsz9oTwjrZW5goAFsviXu+A9n/JUbju/+SAxjvbBtDHzt5a3K8KSTDZ0lsNbtJRWoFeNCbNyo6tQicRxGRP9RJ8DAAAAA=", "tpose": "data:image/webp;base64,UklGRjgFAABXRUJQVlA4ICwFAAAwIgCdASrSALQAPpFIoUslpKOnpPdouPASCWdu3lIz8gk66HsptCJzvT6MBF8DZT9FPw+6wi1JiEj7pZ8UDrcKqwmOi/OmnK1nwy4MULrSPf/pgq59b9NTCfd1Yq5qayQUmP65U8BgyDvliqwFwMmgnN8EN07PoguK8HPEpYvMExr3U5AhcKQxC9pkeiwvs+olgSSJo9l/poU8Ejuz+8ME5D1W/Ie7fKcLLKBQxheyiz7e+I6e6/UUzQLs1NwLrz2rtXKDL6FzEPXsu+u+HtwAHNgEuoeIOx9RNhhi+B1ACoi+drtJarQ7lg/Zqm7tqLzzvtc9rsjkkcCdYyMqeuC1ilM/uu1LKPI0G6KdscIvLZ1bc54JUorHEAAA/u3zDf+rvzt+p53f6+8odiXTGCbigGbVGQwxGvAvY10JXLpNVgTdhRot/JnsB7Fmni/0yg1QexYWVvbQ53CUYttpWuBWX0+SwrtUMQCQJj0V77+i1zd4doOSalwHAW4sccfQJM4QiCu3L6SeFEp4S9u7KMTSRf8kBeutVXlhzfxnTzvHK1E5ElEDqEhbl92MxVTOtGDS+Iu8GpI874d62CCG7ttTRFB5A/gLIdpm86Q6LLV7qeDRW7Ob5340vOdhJgOOtOkW5pIIhvBSa/ir8nXHdVXfLLH1GeYkttRpzIvTE3EyeQKQHXuYEK1GjXvOzP56wrTHGy7+3X89IUejGG3fThqFmKDoCBxOTxC1FDvtQgcYY4DkMnnAS0du7QmgVI6Q3FqLGoEg7/fmr85g+8yJ3jN57nayxYPnbW/1vJWzeIZxOO9CAYwr3NpUw5vZesjdtpoKfx9LfI1CxEybBN/ytvEciSiJjH18PXP5AsiYIo0t7mxpHbbM03NnCZjwA06CQnbxHz9PwnxV/XA5pT01YS84HcEOdpkRvA9/FVhYzAROn80xe0pE/J4kONiS+4dfJeQVVD/VnoxDC6jL7VI7GYknRH1xvDgyPKF/dsbYm3lcxtcx7OHGbEjcDYyK1Y+ACjCXTsgUhipKsVG53FG/eU/A/A4l5eDb7Ltq4DLYqwplklyKZnQxzLDevTI4/LJkAwIluc4fxd4oTT45BeOzf3yJD1jwv5ZQ/k5je3wrZbL4CnOEFn98GC+L0D1+GBYruKjzsopGQ8BsXLjENxj8Msr3GfONJ8/GO52Ndmvw5/csNgAMypLSJU01lRcPmXhVj7qP4YkvJkKqw4C1dKy6PBJm2u4yMr+NpR3vZnZaxwiICNAT+xmHeFH2IXpNNcN0Zt9NWylNuyygdJJS46RHGJBu28Q9Xb2xVW03QQxIxxppSlQGoPARO/xpD+1hJ+2CRLNx9hPtddXH03Y4d/vQgtqrdWw+RRricugWi4z039/3DDEqmA+01HJ0PkzIvsU6S1Kz6nRmoOxwwYWhmotwa0LM+l3Gvrhb6YTtvlQvLOW6oxSVf3d+NXgjFD95RRBOP6Cg4fLISa0MUg/UUEpBGLZpDoa4WRyqZT2Fv1Ev2GNNKegGGmE0c/imLFRchYqNYcYlMVjVztmSjs1RjsXScWxamsiVRwXsWTStbXbw7E53D8wgf0KhHuXJnWu6+MVjuKjaWbeNwHSBB/N4zWXiZJqQC+gTgWTJ+y4BbNDOl/ORqI7T9JkQsYYKub+gkJBHD10LtyY3mRrrm4mIA93aKtFpZUn/vBlhvotU8LMz8ZnRFCrvjqoklUWG15lHeBn8wJD2hwmfDtR9CnO5HB3P9nUAOt8WYwwsJ4HwAAAA", "sit": "data:image/webp;base64,UklGRl4EAABXRUJQVlA4IFIEAACQIgCdASrSALQAPpFInEulpCKhpNUpALASCWdu3+dyF/2jq3+6dFH/LQfrlo6nWn8wTcuTk+RfHWYM/C/Iv5puxA49ZoabvJtn9gAs3IBct2CJVBreVvu2Op2DuAn5f8KO43CrqijSVCMsXUYRIcWULstAg4/oy0WuhG5CmiVFWTZ8cC9LxJveHTgL/eviM1q9WM/Buwvw6yOyfpqjlR4r3JvOWvCKLwxQ7EJiwKExOC3zsd2PXRvmKPrPrOYNsH8sgxi2I3LHbwJ2YEIG06tsSHQuq5b0/f9OMddE1jeBPspdjzIKS526lu7OxePqM/HRkfAt1T7hiITyhCW7xFLU0tj2DjbCv7wOWhhifpPh6AmdrfDjz+8gbSC40AAA/u2BO/9Xfnb9T3sf6Fesvk+5NgpiijZrsDAsYz4wv43Uvh7xYnGALtIZNgjKlW3L5rwQmsZuEAgB1sjwQRWAKZRynx0d/AGGLok5qo5egpytptig7AUSE3IyUpqcc6nLAiKblfHuoszxojJ35scaHv6MfF5WtXNI9zYMBkUVM7L65yt0hDzU48pnHlHBpnROhm34k6RndtljvusUoT4VMWITczCv00lsZlnad+iv42Knwi1swSW+x/0vNierNV2kw9JHNeDQ84dLscm/hkuroyK1+OZV8Q2uJZfuUKELPcsKEvB96xwcDHifNvi7KM3GmegFAh/Y/E/w7Vuvz2jo9/p7u62Oiyk8suqpYKQJWuaJE4zNI0DzU6CcgCjio/zQTjkhyUEwD97jJwy1s4hrdelbzwu9CSdHA6V4r0wrGTiSMK4l2ku2tu7B6tVrbnm4pgzOdus25QrZfY9wOSa3FXv+ZAuv7r4J2G2Zi7+mZ3jBZi3gLgSSiUI3xKWWgNJTf5xNVD1FV2nbxvBDA1GF0KEAw2nBP2pN6b3xHoqMj9DiML1EiyEmMDjTCx33g2EdGJdnFraostzMd/MrIt5VkbwO347b7A8Xy7skikPVx0kT09YOUKXZGWAdtZ8HnMdvYHiyAAKoykiPYF90N3XUqVgkiOhCeDZiav5f6paUAhk9KAhFWks3E+jl+9z9roAlkt9sI1TYiCdll372z+5xvByLD2AolPErSEijJKvwS+hgEJ0UsS+9sy4JzD61Id6FInZu3AJnSm1Miw10sG2TG3gOK+3SqtV/5tBZEXjP/kqmjyZzgEa4Yuu58LHejDXhOyBNjUvNSiR4anYYMDbzWsm/O24R23KIdMkloL1DSgE9ip0KMqh1qVkhvsxpFUfOv9Zh0OUX1mg5b+KuVL8OD081yI0MdewGBV/pEHCEBbp/D5lpcNPTKC+aeDNF1dU1UCJaxObd1GRkyDq+M4dXdbq0vR14Ho2eh2pAX0cLqn5vys3mXrNJaa/K7iEtqfZlHDFl9l+eZT2zk6JHkZpTppotaj103gqzd0UpfIYswaETlKkoTQI3T7mXrLYx0kbMAAAAAA==", "walk": "data:image/webp;base64,UklGRm4EAABXRUJQVlA4IGIEAADQIQCdASrSALQAPpFIoEulpKMspHWYYZASCWdu3w/91/W/7UBEnIW5ujoVm9Tis3Y7mmCmKpmjQte1NBIk7WtAfzIWZK9/Qj2zWEUeeEsShZFvS0oD40wFmYv+S5IOsfSG1MVlR7TEW+HLvfIjIU8/OLKVO+dgGnUvzfHWnPFQzOWSggpuBtMgbBTRE7DLkgjyx+ylSD2GLYcyeHBybhpMk0MaMxvmxQscKKoY8XGN4vtmfyrus2dhIwarE/pErlSz5r+mqhbb2+bTOkpy15XPUwQliGbaZRV2e8/ReHCDxajgL6Zi5MiWJcSX9wHrqUlfqBnMudYfQh9XIiGi3BHbJ1drcoGZov9uEUq62GhRBkPHGoFgZwAA/u44b/8zfhR6kxA/195Q7EsPynbBHyT/VmU2LuO5BMtc+8p88Xn8pSjZP8GKUoYGtwRX2eDsyladJNbkNqUHkUqQlonUxf/UmeUZ7sT1r3WOQGNepYAvbG54LC/Z7K0V+3ynX06kN3DTzwWg31GXiklqxiFKRIhRxHAhstcmbE3ROB3XiptbrFKsNI90ADCXlzq5azpPPkjsWiujlOCd80LtfwxPBLI/mu86/xJ+gHMKFuqHJuRlAFF5O53igSxkd26ylkBywM6YQ7ZF71LOfcUGNXtYQc4p03hYR8zLVSyBETDUtMXrfisJ1gEOHRZNB7OFXov6IGRMrqn80qYaPdgArQKDPDfNNs7PUm8Hrr0kASCTO27G0+ytMvhKDIa3U15alDSAvYOBw0B/NNu0yuo/43aPU9n1+Xeh7coSP830JPYykKZ1TXkesm70wJWx16XMLUspfoWIlDd85eDJ4xy0zuv/Yfk1tUPXLHorZXBx+lO6edw04BdOnMTr35sxd/IadWiiWQC7p/RvXvXAZOFBm5T9mBlw3bBmbQ0T5gt3WLEn2qcghSb5M1qOhMTDrkWXlmcXoT82U5UzdzwHUhAakE5EtIKLEo80JqmpcsF0i2EmiyPFKQutR56xGcR7x5YXJ+ZJGo/WLUj3sWo+NNo72Jg89WQymqfk/rFyLHXzgHUQ/ZZW4Sw6sJvrFZJTrYCV0CoUGC6sSF+anF951dh6ER8UsmjJnzPRmVL7qo85w0kzDBwVXMETxy6WXePcNBIrfJbJYgfWi6qBbsv+7vQr0vy2OMRqAAuPoOmyV4DelxoaWMe74gXfKGoggTx7rG+Pf5W/PBkvUPZqlmKpwBdjUlQbxSgLeZcj5NOg4NcGMMQVkez0j0+ubnA6/ltrkDY/mN5eFPlyyyDmtcmguQC0lD1pRKES696J2u2SMbvFzMVPqE4hdAifth7oaIEF3wPbWef5YN5dBKjPJuNL9sFkroByW9i895La33rgQsBMBFBWBGHJTQ75u/mGOY4iykr2BlFh2lJaoOVBvLa3AOC1O/3MExXrmxQxbBWEky883MY4mxrLxW17e4B0Vaukw62zm4+XcxPF1kXDWxQ5G1vqhi0rwAAAAAA=", "run": "data:image/webp;base64,UklGRswEAABXRUJQVlA4IMAEAADwIgCdASrSALQAPpFIn0wlpCKiJDLomLASCWdu3k3ut/tP4R/7srKFPb2j8oBfo628KxrJ4C6EqvzAZMV5IvIXPZ3x+LMBRPfOYkLu5SVTMtmUWiJLJ4oJx1FgFTwaqBAGOYoB5bhkQggQGye604SMgehQiy8HnJU5ERhorNpJuk8FPaDIKK654KrRt8qxTEKcIyJkpVgFyiiqNXL3aGa01id6gnGoRPB8oc0CzOhf2cljuMmXkXYs0IjgkeBCIT5gTX2AwfA86WnwhU45gGfaWxPUPZV8gBT3oIm/rg8fBBTTLECUcbwycy/9oM1Rcgc/0Qe+627b+fAXjnykQtHKJYCMQmjkuxhopzgKbPirA09HPz1xhBiE5fbhTab3xagA/u4t5JH/Dn2x+Vf5f5w7s86ol5R21Fj97xEZd30Rmx6i3v87noLcKOsif92hsSRo8DgnIu4XV6IbfvYpGNadSHdOJx+ypaBAfLOjInzqoacXWOkKfkGPpECZ/yQN2QyJqPHhTjiHbyjvWW6EGtRZXMDHgcabxdvvz8HvqHzcw91Wz2C6CL7tu7h3UlaBT9+MjTuDaGlbA1tiHbPYcht/IxivSRFG3qgExKkdV2GQy1XhV+AR2FWMzTs+P1QH14uGy9Y0YszGEf1fn0RvFB5UMYiX4TUdmg1+OcBsbbclM/4U7QwrjoX2FoiVWX4kAiDBAHE/Rc09M0LDnUXPLWu0N3+8JnC5WBNDFUNgzSml2pZNvhAq4xklRzFT3dlPIIHa37ZZlzRblMOmIJL/yNvPji6aHjY10VVIdJ1PXL9faAsAQ0+4bYz6ya2KZO1PWF6XR/C9X0Py0W2PnzUOtVJp1+fxwYbgpQe3LYTmsLQCCBrTWk7BMzDUD2tklztMQBKZoWOTuIwgIaA2L0lkyNIw1pNiPMBpqPtfiYczHvIOyAjcJ8LmI3wmSYz9k8gdIJoAIvJSJAGV1TTg/K9rj5xB+x4kEnGPa+A/Gj0s+NeXLE5TIdOvRR5sIrSnt52s8wu6MCCxBH0XXrzFLfFcsKVmLrJ2+o6F1oiP0q9Bbr6S4uJo4WhuHeQ1KuQsbZLkuVFfhyTweyOBVayQ5/gKwUtXKoS//rrOKL8famGa6qvCaJ7/uoGKnWr+a2Srx5mhMKct8WZFOVGNF45D41+EbF7dMIt92rBWM9OTzWHfwar4tiseLKrUM9GDe0CzGVooFArgrlcsjfALq8L6xwVrfFhBDQapQwa48w4Ts8Ytlue5kVfEgRiCFMjmMQ+kUr+thRTnBB7ZqZBeWXY87xslaeryhyP7jvnTZUbng1yj6Is5VEgr7XwpkG+o5qJlUALTeHqBz0fC0wNUGRt5G9YFHHjbFQoPzJPKWDKQcL0RatimF3cppBx52fNYlSr46AbvAsyJzuHadKy1dABBhAqE+tEH3KecBJXz1iidupspm1RFYICHzp7QLjPpjg1ouC2TmqlRgd0jHFpdQpzaTlw1GWAa2va2wNbi4QvsFZE0/y9fAU+q6GF9CpxX+noR3ZSQE9jlspn1hreMkpFLJlqbGMuO+wYO7Is5BW3Rs3sUoHvbLnXpQr7Qg4twFXUmZt3zRa5IagDs2RXHjgGCSUhRgAAA", "look_up": "data:image/webp;base64,UklGRnwEAABXRUJQVlA4IHAEAACQIQCdASrSALQAPpFIoEulpKMvJDUYgeASCWdu3+UlaJrf5OybKWb+ardV3d2sh/Wm4+ADjWogl3t8EU0V+UBSOqT0YAz2nm9TZxspgMvWBV2QKy1h090ubMvxss6WHIZynPFoJ9KVRgHKFfHEj/1kbfSqiuiDvc15zMRF0boLgbAMmJ7tgiGbZIFQ5JUEL4yGGyY8n14R4XfonSrY8jt+YSGzlCSzYyPDWPQSe1PB0F7kvYXd5sjlG8Rol9lDAGr//5O56R7WRnegtlJG2yZneVaeSZndEo2A3t3hXmHM8/1HFwnDC67++zERDiWwayUVd4xDLblgx4ZrhiXW+IwvvTX+wVQnzov31wcZNB+77wsvivQAAP7uLgsz/1d2x20GV/nCY5PNCPgxeKVShmG+R4BCAKhOV87gpOhoHhfUPmFLXxBX3qIfvHeXGB+A95FR4Nwf6WiO29CGzJE9iLEL/KQG0p/8QZL/lFnUBI4DskLRV5aLeMLRrFcpeeoCIt/Wyz4rAnMDzX+U9frwTk8wNgbl89tPYDLHVx5yp5rfkwp37ElXx4HlM8xH+EsLGbYnuI0OHfWUgTTcJQZfgNYSBae6Nz4ygdH3nCSoIvBhop9uTaCED84ektBCS/qsl+mIERf5a8Wg+k8DIVKov1TeIqkNl1SRvEaKRW8o4U5mYe6eya0lsmemOp4COaracX6Gp+mZ9H2d/jRKIq6LqGMj6+YxYJQVYiuAjMCROc0gwmaYbDnpojxVa1enzUhDWqYBA1714NV41HVB4/aTiGHveO6aSCLrmarJn+qI7PSugye+SaGI/QzpOTLwGzd4j8knjoDo2b8PM7TyyzYn7tjvwcLyP6BKQaaJtb2aob/waAEAOYxo5XjTbRyS15V5tlO24ObomxQ5tXl9aj+qJFx03fOIba/vEofsz/ZtLdAvl5z9YoWpAF6oHAyo2YD3ItRevrjZYDCaqtGirnXQRp61BpzdJB81eOzCdkAbpQ1ThUQ1BZA1wQz2C1qT0M6ziw301TEsBX/PvLMydVtTHneHX9/7mpCNhDPprsizSZUxAkeGSwNUIRxZLqtSQZu4DPx7djhun7JfmZUKartLPUkuP9uVA48bPY7IPjYYpv4SAaEbRGlef5BIaFrfyEmpziVwGM7Su+AwoHlY9IXDafLcw7g3PcKt5NpUR5c5M2CHcqXlC+BZ7AO/euAHuTfYyfu0GhQOu5bw3yaY5dipKME0HdHRbHmSvxyQ1rwxaW9TDU5ZG1zQSp5rvoTzhE6EbHDyfqCQmvwfX3d39mqsoO95Nw/Vdk9IaohxIhrH19lUaVH6mPk8WKfayJtjoMtDIBrrmWoYhSXd2o3Mj3Axqxy/1yLfmoIkxLxIcFejvpIBEt2AzenBLyPoIb+VpIznn4V1oVNpuQnUd6tmaENJlCG5uQzkI9WTT7OWsGy4SLIZm7t8QTI4lZ18OsOhJG1/l50CnG83ymOsz5TVXfuaU7US2yGJEYLozmMgltIvZAAAAA==", "dance": "data:image/webp;base64,UklGRhYFAABXRUJQVlA4IAoFAADQIQCdASrSALQAPpFIoEulpKMho1S5ALASCWVu3nmvb3U/goA42ufpX24l3MkgiHnfBeKlruMB14EIsVnA2ox3NHa6Jpde7Ysh2lmb4ejPE1yDYvK56VvzBl7Kx3hazYrIT38EcklLO1aWdnHiNBbEG/LKgxKYqs2C0pmHkVIgQDzVX6XCvLUFXojVD8O9pIyZzKGP82ffDD3XJ2h4RPUU432eJZ13xXVOoydob/c1LEgmRc5BJByUexGbzzv/behzICIzwxS47nNaMgYRIm8RS+rAwlCiamoEr6EXj8nRwc29d6WQFj0RhBjat/cUGC+Da89VAkTLRUn5bNZilKk7LRMwFIPSIZ5bmAqUZYF/kSD6ICOO0SAA/u0/cf8OfbH72LG/0K9ZffR06RiqtwXPpESMU9bsO8rIt4Ugs5xqAEsWS1F02bwdYZwYSqZ77Fn1DNEkoifxrSPcyHNc4WZl80SSoX07C/EaT0Yhw/rJTOPQK9WCecCrL6RaOenEDhisxf+pJAb0k72N7veqfCNxgfNzC9GQJOz6Q8h+KqnKk9zKq0aZn9kDS5rCbTdKj4UcWVwsLJO4KN/uimYuZjNLnMNGUTJ8ajpGyFCqULpRaUiTwnnbB4SjvRGH9m80tbeQP+Lu/KaHA6WQZbVgGL0mj61A58xF6H7iBKA1n33z7ToDuMlmFkXzHrwQ5CNpbCQAkKFom43yfq5J0B9/rePjceTkrPzIJW0FvPCZGp0nI0c4kmjzt78t+4D84HnZMi0w6Ni3LZqGtTL7wQL3pqy03NxSADaRbGOZWPgNrrMhWf1nm8df+5oroZCrBZqrVWtca84zFo55B+kP+R3fXM1BL/4804CHhz4NuO8IJ0rLuRfmsY0yYKXlE0r4TUiQ+9h7dgiFm5eyc3jF0tv2I9cztrisfvL8WxkMULTA/DS5uPnY9Hvb6MJGnsSq8WAGcjjp4lWH41BoMqMlv0GHHjVMr6FzDz2NRkdXnWnTADjt3lds+nrQVDqqjHU43VH4hB7JyCLgGDqQEcTrvsuvAXWRuX2tBUvBPskt2iRL3VnjCBPNsDy7sPTlP7GdDnehFntug7ej6Mb17fwZU/qZlYXzk8Z5bxz08KmD3jAaWlBLkc1flF5IvbnnOImomJeO1GyzGgyLsungZpUBKEr8yqaWXG9Rr7gzqN/2w2JoTrLoypbyKrdktiEmeEhnydlRnWiAzchzBsCQAnNJnMDmz3Uy1Y9XyA6XNB+yplF4WO7IqaA5HJtLehr8CEIL50oOuvaaxaKvaws90MdHgLiLB9GGlu+OvOzYfjydXVHQGHvJQ8REnjfkPUm7stE3jueoKOSi2mkTi4xZOFuOHHOPrQutpe5EV7Fswc4rW8tK+qh7KuDjRUlHsjBBDN/75J1l4N8xcwJhrDue7nfgyvNzSjzYkLeFhk6sqwsXne30l3bZINvvEAUASDkZIWto/hLGubEMisn0K8SOXNP0ZvCvvqWTGfatjZMC2N2g7qnpPEyrui2NfyrKKeoxOp+2q0NQN/VJ1puZFIMY1UbAlPCxqvsFdyI+tpalJ3y51xp4N+00N620xAY0J6oZ7mSCAml7svAt8p0iX5gmtNs9qp+Ck0er1JeGKlx8MT5rXOQvbvq0Z8dDDl1nJg3O+TEXeVwD/ksdf6hmLLmP1uMTo8974972azxb6xclWq+YFF3F4qiwe8vjxeAGXGAAAAA="};
 const FIGURE_POSES = {
   // 基本 — neutral standing pose, slight forward lean, arms relaxed at sides
   basic: {
@@ -19237,7 +19241,7 @@ if(_protected && !/[?&]embed=1(&|$)/.test(location.search)){
   const _voUnlock = () => { _viewOnly = false; document.body.classList.remove('viewonly-mode'); };
   if(/[?&]shared=1(&|$)/.test(location.search)) _voUnlock();
   else fetch('/api/viewer-entitlement', {cache:'no-store', credentials:'same-origin'})
-    .then(r => r.ok ? r.json() : null).then(j => { if(j && j.full === true) _voUnlock(); }).catch(() => {});
+    .then(r => r.ok ? r.json() : null).then(j => { if(j && j.full === true){ _voUnlock(); document.body.classList.add('acct-edits'); } }).catch(() => {});
 }
 if(_viewOnly){
   const _VO_MOVE = new Set(['KeyW','KeyS','KeyA','KeyD','KeyQ','KeyE','KeyR','KeyF',
@@ -23225,7 +23229,12 @@ window.saveProjectZip = async function(forceLite, opts){
           } catch(e){ if(opts.strictOnline)throw e; console.error(`[saveZIP] GLTFExporter失敗 "${L.name}":`,e); }
         }
       } else if(L.type==='splat'){
-        if(opts.localProject){
+        if(opts.accountSave){
+          // アカウント保存: 3DGS 本体は入れず「表示中のシーン」を指すだけ（開くときは今のシーンをそのまま使う）。
+          entry.streamRef='source';
+          entry.rawExt=L._rawExt||'rad';
+          entry.isMain=L._isMain||false;
+        } else if(opts.localProject){
           entry.file=await opts.localProject.resolveAsset(L);
           entry.rawExt=entry.file.split('.').pop();
           entry.isMain=L._isMain||false;
@@ -23364,7 +23373,7 @@ window.saveProjectZip = async function(forceLite, opts){
       sun:{ city:sun.city },
     };
     if(opts.localProject) return project;
-    if(project.walk.navigationRegions){
+    if(project.walk.navigationRegions && !opts.accountSave){
       const regional=await _collectRegionalNavigationFiles(project.walk.navigationRegions);
       for(const [name,bytes] of regional.files)files[name]=bytes;
     }
@@ -23390,7 +23399,7 @@ window.saveProjectZip = async function(forceLite, opts){
     // play anything standalone anyway, and re-fetching+re-zipping the whole
     // viewer on every checkpoint save is exactly the "why is this so slow"
     // cost a lite save exists to avoid.
-    if(!_skipSplatData) if(!opts.strictOnline) try {
+    if(!_skipSplatData) if(!opts.strictOnline && !opts.accountSave) try {
       if(window.__locahunWeb){
         files['Locahun3D_OfflineViewer.html']=await _fetchOfflineViewerForZip();
         _bundledHtml=true;
@@ -23464,7 +23473,7 @@ window.saveProjectZip = async function(forceLite, opts){
              :`✅ ZIP保存完了 (${fileCount}ファイル + project.json${_offlineNote}${_streamNote})`));
     }
   } catch(e){
-    if(opts.localProject || opts.strictOnline) throw e;
+    if(opts.localProject || opts.strictOnline || opts.accountSave) throw e;
     console.error(e); showUndoToast(T('zip-fail')+e.message);
   } finally { _zipSaving = false; }
 };
@@ -23789,6 +23798,105 @@ async function _loadProjectZipFromFile(file){
   }
 }
 
+// ══════════════════════════════════════════════════
+//  アカウントに編集を保存・呼び出し（2026-11-10 本人指示「課金版で編集を保存して残せるようにしたい
+//  アカウントにひもづいて編集を保存してよびだせるようにしたい」）。
+//  サイトから開いたビューアーで /api/viewer-entitlement が full のときだけボタンが出る（body.acct-edits）。
+//  保存の中身は Zip 保存と同じ形式（project.json＋置いたモデル）で、3DGS 本体は入れない（accountSave）。
+//  開くときは表示中のシーン（3DGS）はそのまま残し、置いたもの・視点だけ入れ替える（restoreProject keepSplats）。
+//  サイトのビューアーは allow-modals の無い iframe なので confirm() は使えない → 2度押しで確定する。
+// ══════════════════════════════════════════════════
+// 閲覧モード（protected）は後で window.saveProjectZip を「保存できません」に差し替えるので、本物をここで控える。
+// accountSave は 3DGS 本体を入れない（シーンを指すだけ）ので、閲覧モードのデータ流出防止とは両立する。
+const _acctSaveZip=window.saveProjectZip;
+function _acctSceneSrc(){
+  const L=layers.find(l=>l&&l.type==='splat'&&l._isMain&&l._streamUrl)||layers.find(l=>l&&l.type==='splat'&&l._streamUrl);
+  return L?L._streamUrl:'';
+}
+async function _loadAccountEdit(blob){
+  const fflate=await getFflate();
+  const files=fflate.unzipSync(new Uint8Array(await blob.arrayBuffer()));
+  const pj=files['project.json']; if(!pj) throw new Error('project.json');
+  const project=JSON.parse(fflate.strFromU8(pj));
+  if(!project||!Array.isArray(project.layers)) throw new Error('format');
+  for(const e of project.layers){
+    if(!e||e.type==='splat'||!e.file) continue;
+    const u8=files[String(e.file).replace(/\\/g,'/')];
+    if(u8&&u8.length){ const o=new Uint8Array(u8.length); o.set(u8); e._buf=o.buffer; e._ext=String(e.file).split('.').pop().toLowerCase(); }
+  }
+  await restoreProject(project,{keepSplats:true});
+}
+window.openAccountEdits=async function(){
+  const en=window._lang==='en';
+  let box=document.getElementById('acct-edits-pop');
+  if(box){ box.remove(); return; }
+  const src=_acctSceneSrc();
+  if(!src){ showUndoToast(en?'Open a scene first':'シーンを開いてから使えます'); return; }
+  box=document.createElement('div'); box.id='acct-edits-pop';
+  box.style.cssText='position:fixed;top:48px;left:50%;transform:translateX(-50%);z-index:10050;width:min(360px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:#141414;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:12px;color:#D8D8D8;font-size:13px;line-height:1.5;box-shadow:0 8px 30px rgba(0,0,0,.5)';
+  document.body.appendChild(box);
+  const api=(q,init)=>fetch('/api/viewer-edits?src='+encodeURIComponent(src)+q,Object.assign({credentials:'same-origin',cache:'no-store'},init||{}));
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt=iso=>{ try{ return new Date(iso).toLocaleString(en?'en-US':'ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } };
+  const errText=j=>j&&j.error==='too_large'?(en?'too large (max 30 MB)':'大きすぎます（上限30MB）')
+    :j&&j.error==='limit'?(en?`up to ${j.max} saves per scene — delete an old one`:`1シーン${j.max}件までです。古い保存を削除してください`)
+    :j&&j.error==='plan_required'?(en?'paid plan required':'有料プランで使えます')
+    :j&&j.error==='login_required'?(en?'please sign in':'ログインしてください')
+    :String((j&&j.error)||'error');
+  // 2度押しで確定（1回目で文言が変わり、3秒で戻る）
+  const arm=(b,label)=>{ if(b.dataset.armed){ return true; } const t=b.textContent; b.dataset.armed='1'; b.textContent=label; setTimeout(()=>{ if(b.isConnected){ delete b.dataset.armed; b.textContent=t; } },3000); return false; };
+  async function render(){
+    const defName=(typeof _projectName==='string'&&_projectName&&_projectName!=='Untitled Project')?_projectName:'';
+    box.innerHTML=`<div style="display:flex;align-items:center;margin-bottom:8px"><b style="flex:1">${en?'Saved edits (your account)':'アカウントに保存した編集'}</b><button data-x style="background:none;border:0;color:#888;font-size:16px;cursor:pointer;padding:0 4px">✕</button></div>
+<div style="color:#888;font-size:11px;margin-bottom:8px">${en?'Saves the models, figures, notes, paths and view you placed in this scene.':'このシーンに置いたモデル・人物・注釈・経路と視点を保存します。'}</div>
+<div style="display:flex;gap:6px;margin-bottom:10px"><input data-name maxlength="60" placeholder="${en?'Name':'名前'}" value="${esc(defName)}" style="flex:1;min-width:0;background:#1f1f1f;border:1px solid rgba(255,255,255,.15);color:#ddd;border-radius:4px;padding:5px 7px;font-size:12px"><button data-save style="background:#ffb454;color:#111;border:0;border-radius:4px;padding:5px 10px;font-weight:600;cursor:pointer;font-size:12px;white-space:nowrap">${en?'Save current':'今の編集を保存'}</button></div>
+<div data-list style="font-size:12px;color:#999">${en?'Loading…':'読み込み中…'}</div>`;
+    box.querySelector('[data-x]').onclick=()=>box.remove();
+    box.querySelector('[data-save]').onclick=save;
+    let items=[];
+    try{ const r=await api(''); const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(errText(j)); items=j.items||[]; }
+    catch(e){ box.querySelector('[data-list]').textContent=(en?'Could not load: ':'一覧を読み込めませんでした: ')+e.message; return; }
+    const list=box.querySelector('[data-list]');
+    if(!items.length){ list.textContent=en?'Nothing saved for this scene yet.':'このシーンの保存はまだありません。'; return; }
+    list.innerHTML=items.map(it=>`<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07)"><div style="flex:1;min-width:0"><div style="color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</div><div style="color:#777;font-size:11px">${esc(fmt(it.savedAt))} · ${(it.size/1048576).toFixed(1)} MB</div></div><button data-open="${esc(it.id)}" style="background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.4);color:#ffb454;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;white-space:nowrap">${en?'Open':'開く'}</button><button data-del="${esc(it.id)}" style="background:none;border:1px solid rgba(255,255,255,.15);color:#999;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;white-space:nowrap">${en?'Delete':'削除'}</button></div>`).join('');
+    list.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEdit(b));
+    list.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delEdit(b));
+  }
+  async function save(){
+    const btn=box.querySelector('[data-save]'); if(btn.disabled) return; btn.disabled=true;
+    try{
+      const blob=await _acctSaveZip(false,{accountSave:true,returnBlob:true});
+      if(!blob) throw new Error(en?'another save is running':'別の保存が進行中です');
+      const name=box.querySelector('[data-name]').value.trim()||(typeof _projectName==='string'?_projectName:'');
+      const r=await api('&name='+encodeURIComponent(name),{method:'POST',headers:{'content-type':'application/zip'},body:blob});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(errText(j));
+      showUndoToast(en?'✅ Saved to your account':'✅ アカウントに保存しました');
+      if(box.isConnected) render();
+    }catch(e){ showUndoToast((en?'⚠ Save failed: ':'⚠ 保存できませんでした: ')+e.message); btn.disabled=false; }
+  }
+  async function openEdit(b){
+    if(layers.some(l=>l&&l.type!=='splat') && !arm(b,en?'Replace?':'置き換える?')) return;
+    b.disabled=true;
+    try{
+      const r=await api('&id='+encodeURIComponent(b.dataset.open));
+      if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(errText(j)); }
+      await _loadAccountEdit(await r.blob());
+      box.remove();
+      showUndoToast(en?'✅ Opened the saved edit':'✅ 保存した編集を開きました');
+    }catch(e){ showUndoToast((en?'⚠ Could not open: ':'⚠ 開けませんでした: ')+e.message); b.disabled=false; }
+  }
+  async function delEdit(b){
+    if(!arm(b,en?'Delete?':'本当に削除')) return;
+    b.disabled=true;
+    try{
+      const r=await api('&id='+encodeURIComponent(b.dataset.del),{method:'DELETE'});
+      if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error(errText(j)); }
+      render();
+    }catch(e){ showUndoToast((en?'⚠ Could not delete: ':'⚠ 削除できませんでした: ')+e.message); b.disabled=false; }
+  }
+  render();
+};
 window.loadProjectZip = function(){
   const input=document.createElement('input');
   input.type='file'; input.accept='.zip';
@@ -23983,15 +24091,33 @@ async function restoreProject(project, opts = {}) {
   if(opts.strict){
     if(!Array.isArray(project.layers) || project.layers.some(L=>!['folder','cube','sphere','obj','splat','light','figure','event','path'].includes(L.type)))throw new Error('Unsupported project layer');
   }
-  _walkRestoreSettings(project.walk);
-  const walkImportEpoch=_walkBeginImport();
+  // keepSplats（アカウント保存を開く）: 表示中の 3DGS と歩行の設定はそのまま。置いたもの・視点だけ入れ替える。
+  if(!opts.keepSplats) _walkRestoreSettings(project.walk);
+  const walkImportEpoch=opts.keepSplats ? walkSetup.epoch : _walkBeginImport();
   try {
   // Clear scene
+  const _keptSplats = opts.keepSplats ? layers.filter(L=>L && L.type==='splat') : [];
   for(const L of [...layers]){
+    if(_keptSplats.includes(L)) continue;
     if(L.mesh) scene.remove(L.mesh);
     if(L.wireMesh) scene.remove(L.wireMesh);
   }
   layers.length=0; selectedLayerId=null;
+  if(opts.keepSplats){
+    for(const L of _keptSplats){ L.parentId=null; layers.push(L); }
+    // 保存側のレイヤー番号が残したシーンの番号とぶつかったら振り直す（親子のつながりも追従）。
+    const taken=new Set(_keptSplats.map(L=>L.id));
+    const entries=project.layers.filter(e=>e && e.type!=='splat');
+    let next=Math.max(project.layerNextId||100, ..._keptSplats.map(L=>(+L.id||0)+1), ...entries.map(e=>(+e.id||0)+1));
+    const remap=new Map();
+    for(const e of entries){ if(taken.has(e.id)) remap.set(e.id, next++); }
+    const ids=new Set(entries.map(e=>remap.has(e.id)?remap.get(e.id):e.id));
+    for(const e of entries){
+      if(remap.has(e.id)) e.id=remap.get(e.id);
+      if(e.parentId!=null){ const p=remap.has(e.parentId)?remap.get(e.parentId):e.parentId; e.parentId=ids.has(p)?p:null; }
+    }
+    project={...project, layers:entries, layerNextId:next};
+  }
 
   // Camera
   if(project.camera){
@@ -24000,11 +24126,13 @@ async function restoreProject(project, opts = {}) {
     if(typeof py==='number') yaw=py;
     if(typeof pp==='number') pitch=pp;
     // Save as initial camera state for reset button
+    if(!opts.keepSplats){
     _initCamPos.copy(camPos);
     _initYaw=yaw; _initPitch=pitch;
+    } else if(typeof setCamRotImmediate==='function') setCamRotImmediate(yaw,pitch);
   }
   // 明示的に確定された初期視点があればそれを優先し、開いた直後の視点も揃える。
-  if(project.cameraInit && project.cameraInit.pos){
+  if(!opts.keepSplats && project.cameraInit && project.cameraInit.pos){
     const ci=project.cameraInit;
     _initCamPos.set(ci.pos.x,ci.pos.y,ci.pos.z);
     if(typeof ci.yaw==='number') _initYaw=ci.yaw;
@@ -24014,7 +24142,7 @@ async function restoreProject(project, opts = {}) {
     if(typeof setCamRotImmediate==='function') setCamRotImmediate(_initYaw,_initPitch);
   }
   _layerNextId=project.layerNextId||100;
-  if(project.projectName){
+  if(project.projectName && !opts.keepSplats){
     _projectName=project.projectName;
     const pnEl=document.getElementById('tb-project-name');
     if(pnEl) pnEl.textContent=_projectName;
@@ -24348,7 +24476,7 @@ async function restoreProject(project, opts = {}) {
   }
 
   renderLayerList(); renderTransformPanel();
-  _walkAutoImport(walkImportEpoch);
+  if(!opts.keepSplats) _walkAutoImport(walkImportEpoch);
 
   // Show HUD / hide drop zone (same as normal file load)
   if(layers.filter(L=>L.type!=='folder').length>0){
@@ -25693,6 +25821,7 @@ Object.assign(I18N.ja,{
   'ct-grid-rows':'行',
   'ct-grid-opacity':'不透明度',
   'tb-save-lbl':'Zip保存',
+  'tb-acct-lbl':'☁ 編集の保存',
   'tb-load-lbl':'読込',
   'tt-qibadge':'画質と設定',
   'cl-title':'更新履歴',
@@ -25941,6 +26070,7 @@ Object.assign(I18N.en,{
   'ct-grid-rows':'Rows',
   'ct-grid-opacity':'Opacity',
   'tb-save-lbl':'Zip Save',
+  'tb-acct-lbl':'☁ Saved edits',
   'tb-load-lbl':'Load',
   'tt-qibadge':'Quality & settings',
   'cl-title':'Changelog',

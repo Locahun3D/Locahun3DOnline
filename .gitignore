@@ -125,3 +125,4 @@ credentials*.json
 
 # collision-check.mjs の結果（state.json / runs.jsonl）
 /artifacts/collision*/
+.viewer-edits-local/
