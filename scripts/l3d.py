@@ -9,6 +9,7 @@
   python scripts/l3d.py prepare2 <slug> ...         # 料金・他社サイト補完・FC写真を反映用にまとめる（ローカルのみ）
   python scripts/l3d.py official <slug> ...         # result.json を下書き物件へ反映（--swap-cover / --rollback）
   python scripts/l3d.py check                       # 公開前チェック
+  python scripts/l3d.py north <Site/YYMMDD/Scene>|--all [--apply]   # 北合わせ（GNSS→図面→外観重ね→OSM道路）。--apply で台帳へ
   python scripts/l3d.py documents <slug> --blueprint "ラベル=画像" ...   # 図面を平面図へ追加
   python scripts/l3d.py place <slug> <ZIP|フォルダ> --captions <txt>   # もらった写真を番号順に配置
   python scripts/l3d.py basics <slug> --summary "…" --confirm-url   # 掲載の基本欄（公開申請の必須項目）
@@ -56,6 +57,7 @@ TOOLS = {
     "prepare2": "official_prepare2.py",    # 料金・他社サイト補完・FC写真 → result.json（ローカルのみ）
     "official": "import_official.py",
     "check": "publish_check.py",
+    "north": "north_align.py",             # 北合わせ（自動採用は GNSS のみ・他は要確認＋確認画像。登録済みは回さず手順を表示）
     "documents": "add_documents.py",       # 先方の図面などを下書き物件の平面図へ追加（既存は消さない）
     "intake": "intake_scans.py",          # 撮影データ置き場（02_撮影データ置き場）のスキャンを案件フォルダの形に移す（--apply）
     "new": "new_draft.py",                 # カレンダーの撮影予定から下書きを先に作る（既存 id は上書きしない）
