@@ -8,6 +8,9 @@ type AnyBucket = any;
 // 配信を許可する R2 キーをここに固定ホワイトリストする（デモ用ファイルのみ）。
 const ALLOWED_KEYS = new Set<string>([
   "Kousaten_ForDemo_point_cloud.rad",
+  // 2026-11-11 デモを歌舞伎町に（プロジェクトZIP＋本体RAD）。旧デモも残す。
+  "Kabukicho_ForDemo_project.zip",
+  "Kabukicho_ForDemo_point_cloud.rad",
 ]);
 
 function toR2Range(
