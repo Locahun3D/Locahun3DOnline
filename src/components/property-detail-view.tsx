@@ -874,11 +874,17 @@ export default function PropertyDetailView({
                    実画面基準の vh は必ず var(--z) で割る（CLAUDE.md の規約）。
                    高さ 45vh 相当 → 幅 45vh × 16/9。 */
                 <section key={origIndex} data-scene-card={item.id} id={i === initialSceneIndex ? "walkthrough" : `scene-${origIndex}`} className={styles.legacyScene}>
-                  {item.label && (
-                    <h3 className="mb-3 text-[14px] font-bold text-ink/85">
-                      <TitleText text={item.label} />
-                    </h3>
-                  )}
+                  {/* シーンの見出し行は 2026-11-09 以前の表示に戻した（2026-11-10 本人指示）: GS番号・シーン名・罫線・容量。 */}
+                  <div className="flex flex-wrap items-baseline gap-3 mb-4 mono text-[11px] tracking-[0.16em] uppercase">
+                    <span className="text-accent font-medium">
+                      GS-{String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-ink/80 normal-case tracking-[0.02em] font-sans text-[13px] font-bold">
+                      <TitleText text={item.label || (en ? "Virtual Walkthrough" : "3Dウォークスルー")} />
+                    </span>
+                    <span className="flex-1 h-px bg-current opacity-20" />
+                    <span className="text-muted">{displaySceneSizeMb(item)} MB</span>
+                  </div>
                   {/* 1シーンでデータ販売があるときは、ビューアーの右に購入の説明を置く（2026-11-10 本人指示）。
                       sceneSaleRow が PC 幅だけ2列になり、それ以下は従来どおり縦に積む。 */}
                   <div className={visibleSplatItems.length === 1 && item.forSale ? styles.sceneSaleRow : undefined}>

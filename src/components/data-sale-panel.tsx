@@ -145,11 +145,6 @@ export default function DataSalePanel({
   };
 
   const yen = price.toLocaleString(en ? "en-US" : "ja-JP");
-  // 閲覧用の容量は、購入に含まれるファイル一覧と分ける。
-  const meta = [
-    splatSizeMb > 0 && `${en ? "Viewer preview" : "閲覧用プレビュー"} ${splatSizeMb} MB`,
-    captureDevice || "",
-  ].filter(Boolean).join(" / ");
 
   return (
     <div data-property-presentation={propertyPresentation || undefined} className="mt-4 min-w-0 space-y-3">
@@ -164,7 +159,7 @@ export default function DataSalePanel({
         {description && (
           <p className="text-[11px] max-[720px]:text-[12px] opacity-60 mt-0.5 max-[720px]:line-clamp-none line-clamp-1">{description}</p>
         )}
-        <div className="mono text-[10px] tracking-[0.1em] opacity-40 mt-1">{meta}</div>
+        {/* 「閲覧用プレビュー◯MB / 機材」「ライセンスを選択」は出さない（2026-11-10 本人指示） */}
         <p className="text-[13px] text-muted mt-2">{en ? "Captured: " : "撮影日："}{scannedAt || (en ? "Not registered" : "未登録")}</p>
         <PurchaseContents files={purchaseContents} en={en} />
       </div>
@@ -177,9 +172,6 @@ export default function DataSalePanel({
 <p>{en ? dataLicenseDesc(o.license, lc) : <Jp>{dataLicenseDesc(o.license, lc)}</Jp>}</p>
 </label>)}</div>) : licenseOptions.length > 1 ? (
           <div className="mt-1.5">
-            <div className="mono text-[9px] tracking-[0.18em] uppercase text-muted mb-1">
-              {en ? "Select license" : "ライセンスを選択"}
-            </div>
             <div className="flex flex-wrap gap-1.5">
               {licenseOptions.map((o) => (
                 <label

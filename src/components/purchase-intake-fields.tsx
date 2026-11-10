@@ -90,19 +90,7 @@ export function PurchaseIntakeFields({
           className={field}
         />
       </label>
-      <label className="flex items-start gap-2 cursor-pointer text-[12px] text-muted sm:col-span-2 min-h-[44px] sm:min-h-0">
-        <input
-          type="checkbox"
-          checked={value.marketingConsent}
-          onChange={(e) => update({ marketingConsent: e.target.checked })}
-          className="w-4 h-4 mt-0.5 accent-accent shrink-0"
-        />
-        <span>
-          {en
-            ? "Email me when new 3D data is released (you can unsubscribe at any time)"
-            : "新しい3Dデータの公開をメールで受け取る（いつでも停止できます）"}
-        </span>
-      </label>
+      {/* 配信の同意チェックは購入フォームに出さない（2026-11-10 本人指示で削除。marketingConsent は false のまま送る） */}
     </div>
   );
 }
