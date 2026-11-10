@@ -184,7 +184,7 @@ export default async function PricingPage({
           ポイントは月額プランの付与のみで、買い足す導線はサイトのどこにも無い。 */}
 
       {/* Footer notes */}
-      <div className="mt-16 grid md:grid-cols-3 gap-6 text-[12px] text-muted">
+      <div className="mt-16 grid md:grid-cols-2 gap-6 text-[12px] text-muted">
         <div className="border-t border-line pt-5">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
             {en ? "Point expiry" : "ポイントの有効期限"}
@@ -205,25 +205,7 @@ export default async function PricingPage({
             )}
           </p>
         </div>
-        <div className="border-t border-line pt-5">
-          <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
-            {en ? "Payment / upgrades" : "支払 / アップグレード"}
-          </div>
-          <p>
-            {en ? (
-              "Credit card (Stripe). Team supports invoice billing. Individual ↔ Studio ↔ Team switch in one click, prorated by the day."
-            ) : (
-              /* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。全端末共通なので素の <br />。 */
-              <>
-                クレジットカード (Stripe)。
-                <br />
-                Team は請求書払い対応。
-                <br />
-                Individual ↔ Studio ↔ Team はワンクリック切替、差額は日割り。
-              </>
-            )}
-          </p>
-        </div>
+        {/* 「支払 / アップグレード」の注記は 2026-11-10 本人指示で削除 */}
         <div className="border-t border-line pt-5">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
             {en ? "For studio operators" : "スタジオ運営者向け"}
