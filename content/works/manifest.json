@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-10T19:49:29.240Z",
+ "generatedAt": "2026-11-10T19:57:51.615Z",
  "pages": {
   "3dgs-ai-video-camera-comparison": {
    "locales": [
@@ -161,6 +161,13 @@
     "en"
    ],
    "title": "3DGSをVectorworksで使う現実的な方法｜ロケハン3D 技術ブログ"
+  },
+  "waters-takeshiba-scan": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "ウォーターズ竹芝 3Dスキャン — ロケハン3D 制作実績"
   }
  }
 }

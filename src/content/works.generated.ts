@@ -26,6 +26,7 @@ import p_ja_shibuya_ten_simulations from "../../content/works/ja/shibuya-ten-sim
 import p_ja_ue5_xgrids_3dgs_aerial_ai from "../../content/works/ja/ue5-xgrids-3dgs-aerial-ai.json";
 import p_ja_unreal_fest_tokyo_2026_xgrids_booth from "../../content/works/ja/unreal-fest-tokyo-2026-xgrids-booth.json";
 import p_ja_vectorworks_3dgs_mesh from "../../content/works/ja/vectorworks-3dgs-mesh.json";
+import p_ja_waters_takeshiba_scan from "../../content/works/ja/waters-takeshiba-scan.json";
 import p_en_3dgs_ai_video_camera_comparison from "../../content/works/en/3dgs-ai-video-camera-comparison.json";
 import p_en_3dgs_blender_workflow from "../../content/works/en/3dgs-blender-workflow.json";
 import p_en_3dgs_codex_hall_modeling from "../../content/works/en/3dgs-codex-hall-modeling.json";
@@ -49,6 +50,7 @@ import p_en_shibuya_ten_simulations from "../../content/works/en/shibuya-ten-sim
 import p_en_ue5_xgrids_3dgs_aerial_ai from "../../content/works/en/ue5-xgrids-3dgs-aerial-ai.json";
 import p_en_unreal_fest_tokyo_2026_xgrids_booth from "../../content/works/en/unreal-fest-tokyo-2026-xgrids-booth.json";
 import p_en_vectorworks_3dgs_mesh from "../../content/works/en/vectorworks-3dgs-mesh.json";
+import p_en_waters_takeshiba_scan from "../../content/works/en/waters-takeshiba-scan.json";
 
 export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
  ja: {
@@ -75,6 +77,7 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "ue5-xgrids-3dgs-aerial-ai": p_ja_ue5_xgrids_3dgs_aerial_ai as WorksPage,
   "unreal-fest-tokyo-2026-xgrids-booth": p_ja_unreal_fest_tokyo_2026_xgrids_booth as WorksPage,
   "vectorworks-3dgs-mesh": p_ja_vectorworks_3dgs_mesh as WorksPage,
+  "waters-takeshiba-scan": p_ja_waters_takeshiba_scan as WorksPage,
  },
  en: {
   "3dgs-ai-video-camera-comparison": p_en_3dgs_ai_video_camera_comparison as WorksPage,
@@ -100,5 +103,6 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "ue5-xgrids-3dgs-aerial-ai": p_en_ue5_xgrids_3dgs_aerial_ai as WorksPage,
   "unreal-fest-tokyo-2026-xgrids-booth": p_en_unreal_fest_tokyo_2026_xgrids_booth as WorksPage,
   "vectorworks-3dgs-mesh": p_en_vectorworks_3dgs_mesh as WorksPage,
+  "waters-takeshiba-scan": p_en_waters_takeshiba_scan as WorksPage,
  },
 };
