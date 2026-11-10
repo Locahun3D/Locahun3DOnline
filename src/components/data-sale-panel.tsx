@@ -95,10 +95,10 @@ export default function DataSalePanel({
   const toggleCart = () => {
     if (displaySimulation) return;
     if (inCart) removeFromCart(propertyId, splatItemIndex);
-    // 規約に同意していない状態ではカートに入れられない（2026-08-14 本人指示。
-    // 「購入する」は元から同意必須だったが、カート経由だと同意なしで決済まで
-    // 進めてしまう抜け道になっていた）。ボタン側の disabled と二重にガードする。
-    else if (agreedTerms)
+    // 2026-11-10 本人指示: 用途・会社名・規約同意はカートの購入手続きで確認する。
+    // カートの checkout は同意と用途が無いと進めない（cart-client / api/purchase/cart で二重に検証）ので、
+    // ここでは同意なしでカートに入れてよい。
+    else
       addToCart({
         propertyId,
         splatItemIndex,
@@ -109,8 +109,18 @@ export default function DataSalePanel({
       });
   };
 
+  // 有料は「購入する」＝カートに入れてカートへ移動（確認項目はカート側）。
+  // 無料配布(price 0)は Stripe を通らない即時完了なので、従来どおりこの場で同意・用途を聞いて完了させる。
+  const goToCart = () => {
+    if (displaySimulation) return;
+    if (!isInCart(propertyId, splatItemIndex))
+      addToCart({ propertyId, splatItemIndex, title: propertyTitle, label: itemLabel, price, license });
+    window.location.href = en ? "/en/cart" : "/cart";
+  };
+
   const handlePurchase = async () => {
     if (displaySimulation) return;
+    if (price > 0) return goToCart();
     if (!agreedTerms) {
       alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
@@ -250,12 +260,12 @@ export default function DataSalePanel({
             )}
           </div>
 
-          {!displaySimulation && (
+          {!displaySimulation && price === 0 && (
             <PurchaseIntakeFields value={intake} onChange={setIntake} en={en} className="w-full basis-full min-w-0" />
           )}
 
           <div className="flex flex-wrap items-center gap-3 min-w-0">
-            <label className="flex items-center gap-1.5 cursor-pointer text-[10px] max-[720px]:text-[12px] max-[720px]:gap-2 max-[720px]:min-h-[44px] opacity-60 hover:opacity-80 transition">
+            {price === 0 && <label className="flex items-center gap-1.5 cursor-pointer text-[10px] max-[720px]:text-[12px] max-[720px]:gap-2 max-[720px]:min-h-[44px] opacity-60 hover:opacity-80 transition">
               <input
                 type="checkbox"
                 checked={agreedTerms}
@@ -265,7 +275,7 @@ export default function DataSalePanel({
               <Link href={en ? "/en/terms/data-download" : "/terms/data-download"} target="_blank" className="underline max-[720px]:inline-flex max-[720px]:items-center max-[720px]:min-h-[44px]">
                 {en ? "Agree to terms" : "規約同意"}
               </Link>
-            </label>
+            </label>}
             {/* プラン切替では再マウントされない。実カート状態が残っても表示には使わない。
                 2026-09-21: カートのボタンは隣の「購入する」と同じ寸法・書体に揃えた（固定幅152px・常時44pxだと1つだけ大きく見えた）。 */}
             {inCart && !displaySimulation ? (
@@ -279,14 +289,6 @@ export default function DataSalePanel({
               <button
                 type="button"
                 onClick={toggleCart}
-                disabled={!agreedTerms}
-                title={
-                  !agreedTerms
-                    ? en
-                      ? "Agree to the terms first"
-                      : "先に規約に同意してください"
-                    : undefined
-                }
                 className="min-w-[116px] shrink-0 inline-flex items-center justify-center px-4 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border transition whitespace-nowrap border-line text-muted hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:text-muted"
               >
                 {en ? "Add to cart" : "カートに入れる"}
@@ -294,8 +296,8 @@ export default function DataSalePanel({
             )}
             <button
               onClick={handlePurchase}
-              disabled={loading || !agreedTerms || (!displaySimulation && !intake.usePurpose)}
-              title={agreedTerms && !intake.usePurpose && !displaySimulation ? (en ? "Choose how you will use it first" : "先に用途を選択してください") : undefined}
+              disabled={loading || (price === 0 && (!agreedTerms || (!displaySimulation && !intake.usePurpose)))}
+              title={price === 0 && agreedTerms && !intake.usePurpose && !displaySimulation ? (en ? "Choose how you will use it first" : "先に用途を選択してください") : undefined}
               className="px-4 py-1.5 max-[720px]:min-h-[44px] mono text-[10px] max-[720px]:text-[11px] tracking-[0.2em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-30 disabled:cursor-wait"
             >
               {loading

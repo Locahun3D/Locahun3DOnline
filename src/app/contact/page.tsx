@@ -142,25 +142,7 @@ export default async function ContactHubPage() {
         })}
       </div>
 
-      {/* 持ち込みスキャン導線 — 問い合わせ種別ではなく専用申請フォームへ誘導 */}
-      <Link
-        href={lh("/submit-scan")}
-        className="block max-w-[1040px] mx-auto mt-4 bg-white border border-line px-6 py-6 hover:border-accent transition"
-      >
-        <div className="ui-card-title mb-2">
-          {en ? "Bring your own scan" : "持ち込みスキャン"}
-        </div>
-        <p className="text-[12px] text-muted leading-[1.8] mb-3 max-w-[56ch]">
-          {sentenceBreaks(
-            en
-              ? "Captured a scan of a real space yourself? We negotiate rights with the facility and sell it on Locahun 3D, sharing the revenue with you."
-              : "あなたが撮影したスキャンデータを、ロケハン3Dが施設と権利調整のうえ販売し、売上を分配するプログラムです。"
-          )}
-        </p>
-        <div className="mono text-[10px] tracking-[0.24em] uppercase text-accent">
-          {en ? "Apply" : "申請フォームへ"} →
-        </div>
-      </Link>
+      {/* 持ち込みスキャンの導線カードは 2026-11-10 本人指示で削除（/submit-scan 自体は残る） */}
 
       {/* よくある疑問（Q&A）— 2026-07-25に /about から移設 */}
       <section className="max-w-[760px] mx-auto mt-16">
