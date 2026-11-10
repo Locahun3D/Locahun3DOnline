@@ -238,67 +238,6 @@ const SERVICE_SEGMENTS: Array<{
   },
 ];
 
-/** 中核技術（/about の CORE） */
-const CORE: Array<{ title: Bi; desc: Bi }> = [
-  {
-    title: ["ブラウザだけで閲覧できる", "Runs in the browser alone"],
-    desc: [
-      "アプリのインストールは不要。ドラッグで見回し、WASD／タッチで移動できます。",
-      "No app install needed. Drag to look around, WASD / touch to move.",
-    ],
-  },
-  {
-    title: ["実寸での距離測定", "Measure at true scale"],
-    desc: [
-      "ビューア内で 2 点間の距離を測れます。CG ではなく実寸・実際の質感を記録しているためです。",
-      "Measure point-to-point distances in the viewer — it records real dimensions and textures, not CG.",
-    ],
-  },
-  {
-    title: ["カメラツールで構図を検討", "Frame shots with camera tools"],
-    desc: [
-      "焦点距離 14〜200mm・アスペクト比・セーフフレーム・構図グリッドを、実際の画角で確認できます。",
-      "Check focal lengths of 14–200mm, aspect ratios, safe frames and composition grids at real angles of view.",
-    ],
-  },
-];
-
-/** 利用の流れ（/about の FLOW） */
-const FLOW: Array<{ key: string; title: Bi; desc: Bi }> = [
-  {
-    key: "search",
-    title: ["探す", "Search"],
-    desc: [
-      "エリア・カテゴリ・料金・天井高・面積・電源・駐車場・利用時間帯で絞り込み。駅や現在地からの距離順にも並べ替えられます。",
-      "Filter by area, category, price, ceiling height, floor area, power, parking and time slots. Sort by distance from any station or your location.",
-    ],
-  },
-  {
-    key: "walk",
-    title: ["歩く", "Walk"],
-    desc: [
-      "物件ページからそのままウォークスルー。視聴はポイント制で、Free 登録で 6 ポイントが付きます。",
-      "Open a walkthrough right from the property page. Viewing uses points — 6 are granted at Free signup.",
-    ],
-  },
-  {
-    key: "assess",
-    title: ["検討する", "Assess"],
-    desc: [
-      "距離を実寸で測り、焦点距離 14〜200mm で構図を確認。必要なら 3D データ（PLY / RAD / OBJ）そのものを購入できます。",
-      "Measure distances at true scale and frame shots at 14–200mm. Buy the 3D data itself (PLY / RAD / OBJ) when you need it.",
-    ],
-  },
-  {
-    key: "share",
-    title: ["共有する", "Share"],
-    desc: [
-      "物件を名前付きボードに保存。Studio / Team プランは読み取り専用の共有 URL を発行できます。",
-      "Save properties into named boards. Studio / Team plans can publish read-only share links.",
-    ],
-  },
-];
-
 /** 仕組み3ステップ（/about の STEPS） */
 const STEPS: Array<{ no: string; img: { src: string; alt: Bi }; title: Bi; desc: Bi }> = [
   {
@@ -581,77 +520,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── 中核技術（旧 /about の FEATURES） ── */}
-      <section>
-        <div className="wrap">
-          <div className="chapter-rule">
-            <span className="opacity-60">FEATURES</span>
-            <span>{en ? "What you can do" : "できること"}</span>
-            <span className="flex-1 h-px bg-current opacity-25" />
-          </div>
-          <div className="product">
-            <div className="screen">
-              {/* next/image は本構成で最適化404になるためプレーン <img>（クリックで拡大） */}
-              <LightboxImage
-                src="/about/walkthrough.webp"
-                alt={
-                  en
-                    ? "Walking a published 3DGS capture in the viewer"
-                    : "公開された3DGSデータをビューアで歩いている画面"
-                }
-              />
-            </div>
-            <div className="feature-list">
-              {CORE.map((c) => (
-                <article className="feature" key={c.title[0]}>
-                  <h3>{t(c.title)}</h3>
-                  <p>{sentenceBreaks(t(c.desc))}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 利用の流れ（旧 /about の FLOW） ── */}
-      <section className="soft">
-        <div className="wrap">
-          <div className="chapter-rule">
-            <span className="opacity-60">FLOW</span>
-            <span>{en ? "How you use it" : "利用の流れ"}</span>
-            <span className="flex-1 h-px bg-current opacity-25" />
-          </div>
-          <div className="section-head">
-            <h2 className="section-title">
-              {en ? (
-                <>Search, walk, assess, share.</>
-              ) : (
-                <>
-                  <span className="w">探して、</span>
-                  <span className="w">歩いて、</span>
-                  <span className="w">検討して、</span>
-                  <span className="w">共有する。</span>
-                </>
-              )}
-            </h2>
-            <p>
-              {sentenceBreaks(
-                en
-                  ? "From catalog search to sharing with your team, the steps that come before a shoot can all be handled online."
-                  : "カタログ検索からチーム共有まで、撮影前の候補地検討に必要な流れをオンラインで進められます。"
-              )}
-            </p>
-          </div>
-          <div className="flow">
-            {FLOW.map((f) => (
-              <div className="flow-item" key={f.key}>
-                <strong>{t(f.title)}</strong>
-                <p>{sentenceBreaks(t(f.desc))}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* 「できること」(FEATURES) と「利用の流れ」(FLOW) は 2026-11-10 本人指示で削除 */}
 
       {/* ── 仕組み3ステップ（旧 /about の HOW IT WORKS） ── */}
       <section>
