@@ -4,6 +4,9 @@ import { emailEnabled } from "@/lib/email";
 import { giftCodeRepo } from "@/lib/gift-codes";
 import AdminPageHeader, { AdminPageShell } from "@/components/admin/admin-page-header";
 import MarketingComposer from "@/components/admin/marketing-composer";
+import NoticeComposer from "@/components/admin/notice-composer";
+import { purchaseRepo } from "@/lib/purchases";
+import { selectNoticeRecipients } from "@/lib/notice-mail";
 import GiftCodeAdmin from "@/components/admin/gift-code-admin";
 import StudioRevenueShareNotice from "@/components/admin/studio-revenue-share-notice";
 import ViewerFreePeriod from "@/components/admin/viewer-free-period";
@@ -22,7 +25,10 @@ export const metadata = { title: "マーケティング" };
  */
 export default async function AdminMarketingPage() {
   await requireAdmin();
-  const [users, codes, settings] = await Promise.all([userRepo.list(), giftCodeRepo.list(), getSettings()]);
+  const [users, codes, settings, purchases] = await Promise.all([
+    userRepo.list(), giftCodeRepo.list(), getSettings(), purchaseRepo.list({ status: "completed" }),
+  ]);
+  const noticeCount = selectNoticeRecipients(purchases, users).length;
   const consentedCount = users.filter((u) => u.marketingConsent && u.status === "active").length;
 
   return (
@@ -43,6 +49,13 @@ export default async function AdminMarketingPage() {
       )}
 
       <MarketingComposer disabled={!emailEnabled()} />
+
+      {/* 2026-11-11: 同意の有無に関係なく、3Dデータを入手した会員全員に送る「お知らせ」（取引上の通知）。 */}
+      <section id="notice" className="space-y-2 scroll-mt-24">
+        <h2 className="text-[16px] font-bold">お知らせ（3Dデータを入手した会員全員）</h2>
+        <p className="text-[13px] text-muted">利用条件の改定など、取引に関わる通知だけに使います。</p>
+        <NoticeComposer disabled={!emailEnabled()} recipientCount={noticeCount} log={settings.noticeLog} />
+      </section>
 
       <ViewerFreePeriod initial={settings.freePeriod} />
 

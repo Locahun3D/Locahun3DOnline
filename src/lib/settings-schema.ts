@@ -56,12 +56,28 @@ export const siteSettingsSchema = z.object({
     endAt: null,
     note: "",
   }),
+  /**
+   * ダウンロード経験者への「お知らせ」（取引上の通知）の送信記録（2026-11-11）。
+   * 同じ件名の二重送信を止めるために使う。新しい順・最大50件。
+   */
+  noticeLog: z
+    .array(
+      z.object({
+        subject: z.string(),
+        sentAt: z.string(),
+        sent: z.number().int(),
+        failed: z.number().int(),
+        total: z.number().int(),
+      }),
+    )
+    .default([]),
 });
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 export const DEFAULT_SETTINGS: SiteSettings = {
   version: 1,
   freePeriod: { enabled: false, startAt: null, endAt: null, note: "" },
+  noticeLog: [],
 };
 
 /** Is the free period active at `nowIso`? */
