@@ -32,7 +32,7 @@ export const PLANS: Plan[] = [
     desc: "plan.free.desc",
     // 2026-10-16 本人「実体にあうように」: 実装と照合して書き直した。「問い合わせ 月 1 件まで」は削除（制限は無い）。
     // 図面・ブックマーク・再視聴無料は全プラン共通なので Free 側に置く（有料の特典のように見せない）。
-    features: ["plan.free.f1", "plan.free.f2", "plan.free.f5", "plan.free.f6", "plan.free.f4", "plan.free.f7", "plan.free.f8"],
+    features: ["plan.free.f1", "plan.free.f2", "plan.free.f5", "plan.free.f6", "plan.free.f4", "plan.free.f8"],
     cta: "Sign up",
     href: "/sign-up",
     accent: false,
@@ -45,10 +45,8 @@ export const PLANS: Plan[] = [
     desc: "plan.ind.desc",
     features: [
       "plan.ind.f1",
-      "plan.ind.f2",
       "plan.ind.f8",
       "plan.ind.f5",
-      "plan.ind.f7",
     ],
     cta: "Subscribe",
     href: "/sign-up?plan=individual",

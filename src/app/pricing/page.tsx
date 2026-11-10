@@ -1,7 +1,6 @@
 import Link from "next/link";
 import PlanCards from "@/components/pricing/plan-cards";
 import FreeDemoFunnel from "@/components/pricing/free-demo-funnel";
-import RoiCalculator from "@/components/pricing/roi-calculator";
 import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
@@ -129,27 +128,7 @@ export default async function PricingPage({
 
       {/* 4 plans + billing mode toggle */}
       <PlanCards signedIn={!!user} currentPlan={user?.plan} currentRole={user?.role} />
-      <p className="text-center text-[11px] text-muted mt-5 leading-[1.7]">
-        {en ? (
-          <>
-            Every paid plan comes with{" "}
-            <strong className="text-ink">qualified invoices issued via Stripe</strong>{" "}
-            (monthly, or once a year on annual billing). Your
-            registration (T) number can be entered at signup and is applied to
-            invoices automatically.
-          </>
-        ) : (
-          <>
-            {/* 句点ごとに改行（本人指示 2026-08-27）。全端末共通なので素の <br />。 */}
-            すべての有料プランで、Stripe から<strong className="text-ink">適格請求書</strong>を発行します（月払いは毎月・年払いは年 1 回）。
-            <br />
-            登録番号(T番号)は申込時に入力でき、請求書へ自動反映されます。
-          </>
-        )}
-      </p>
-
-      {/* ROI calculator — how much a subscription saves vs. on-site scouting */}
-      <RoiCalculator en={en} />
+      {/* カード下の適格請求書の注記と ROI 計算機（浮く予算を、30秒で。）は 2026-11-10 本人指示で削除 */}
 
       {/* Comparison table */}
       <section className="mt-16">
