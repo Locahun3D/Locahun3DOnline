@@ -15,6 +15,7 @@
   python scripts/l3d.py basics <slug> --summary "…" --confirm-url   # 掲載の基本欄（公開申請の必須項目）
   python scripts/l3d.py sell <slug> [--allow-published]   # データ販売を有効化（ZIP作成→R2→販売設定）
   python scripts/l3d.py formats <slug>|--all [--rebuild]  # 販売データに Blender・形式別ZIP・使い方txt を付ける
+  python scripts/l3d.py indie [--apply]             # 販売中の全シーンにインディーライセンス（20万→9,800）
   python scripts/l3d.py datasale <slug> --answer granted --price 150000   # 3Dデータ販売の許諾を記録
   python scripts/l3d.py restore <slug>              # 閉じた下書きを元に戻す（まとめ方を変えたとき）
   python scripts/l3d.py upscale <slug> [--allow-published] [--dry-run|--rollback]   # 小さい写真を忠実な超解像で FHD に
@@ -71,6 +72,7 @@ TOOLS = {
     "archive": "archive_property.py",           # 不要になった下書きを閉じる（status=archived・戻せる）
     "restore": "restore_property.py",           # 閉じた下書きを元に戻す（まとめ方を変えたとき）
     "datasale": "set_data_sale.py",             # 3Dデータ販売の許諾を記録（口頭でOKをもらった物件）
+    "indie": "sale_indie.py",                  # 販売中の全シーンにインディーライセンスを足す（標準の1/20・20万→9,800。--apply で書く）
     "cover": "set_cover.py",                    # カバーをギャラリーの写真と入れ替える（解像度の高い方へ）
     "labels": "scene_labels.py",              # シーン名が英語・ローマ字のままなのを日本語にする（登録時も自動）
     "catch": "title_catch.py",                  # タイトルに「｜エリア キャッチ」を付ける（basics でも自動）
