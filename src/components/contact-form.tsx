@@ -47,10 +47,13 @@ export default function ContactForm({
   prefill,
   licenseTarget,
   estimateSummary,
+  requestPrefill,
 }: {
   type: ContactType;
   prefill?: ContactPrefill;
   licenseTarget?: LicenseTarget;
+  /** request（ほしい物件追加）専用。カタログ AI 検索の「未掲載」候補から来たときの初期値。 */
+  requestPrefill?: { area: string; message: string };
   /** scan（制作側スキャン依頼）専用。概算シミュレーターの選択内容。
    *  ⚠ ここには**入れずに** hidden で送り、サーバー側で本文の先頭へ足す。
    *  本文欄へ直接書き込むと、利用者が書いた文章と混ざるうえ、書いた後に
@@ -145,13 +148,14 @@ export default function ContactForm({
         {type === "request" && (
           <>
             <Field en={en} label={en ? "Preferred area / property type" : "希望エリアや物件"} required>
-              <input name="area" type="text" placeholder={en ? "e.g. around Setagaya, Tokyo / warehouse, traditional house" : "例: 東京都 世田谷区 周辺 / 倉庫・古民家など"} className={inputClass} />
+              <input name="area" type="text" defaultValue={requestPrefill?.area ?? ""} placeholder={en ? "e.g. around Setagaya, Tokyo / warehouse, traditional house" : "例: 東京都 世田谷区 周辺 / 倉庫・古民家など"} className={inputClass} />
             </Field>
             <Field en={en} label={en ? "Intended use & requirements" : "撮影の用途・ほしい条件"} required>
               <textarea
                 name="message"
                 rows={4}
                 required
+                defaultValue={requestPrefill?.message ?? ""}
                 placeholder={en ? "e.g. Looking for an abandoned-factory-style location for a music video. Ideally 4m+ ceilings with a load-in route." : "例: MV撮影で使える廃工場系のロケ地を探しています。天井高4m以上・搬入経路があると理想です。"}
                 className={`${inputClass} leading-relaxed resize-y`}
               />

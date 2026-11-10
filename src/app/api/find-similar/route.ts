@@ -6,17 +6,25 @@ import { allowByEdgeRate } from "@/lib/edge-rate";
 
 export const runtime = "nodejs";
 
+/** 1ユーザーあたり1時間の上限（isolate ごと）。RL_FORMS（60秒3回）と二重にかける。 */
+const HOURLY_MAX = 15;
+
 /**
- * suggest-summary/suggest-tags と同じくRoute Handlerとして実装する。
+ * カタログの AI 検索（URL または言葉）。suggest-summary/suggest-tags と同じく Route Handler。
  * Server Action("use server")内では getCloudflareContext() 経由の
  * ANTHROPIC_API_KEY 取得が実機で機能しなかった（常にheuristicへ落ちる不具合を
  * 確認済み）ため、確実に動くRoute Handlerパターンに合わせている。
+ * 入力は `query`。旧クライアント互換で `url` も受ける。
  */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const url = String(body.url ?? "").trim();
-  if (!url) {
-    return NextResponse.json({ ok: false, error: "URLを入力してください。" }, { status: 400 });
+  const body = (await req.json().catch(() => ({}))) as { query?: unknown; url?: unknown; locale?: unknown };
+  const en = body.locale === "en" || (req.headers.get("referer") ?? "").includes("/en/");
+  const query = String(body.query ?? body.url ?? "").trim();
+  if (!query) {
+    return NextResponse.json(
+      { ok: false, error: en ? "Enter a URL or a few words." : "URLか、探したい場所の言葉を入れてください。" },
+      { status: 400 },
+    );
   }
 
   // 2026-10-23 セキュリティ監査: 未ログインでも Claude（web_fetch つき）を呼べ、API 課金の踏み台に
@@ -29,19 +37,23 @@ export async function POST(req: Request) {
     /* 認証が取れない＝未ログイン扱い */
   }
   if (!source) {
-    const en = (req.headers.get("referer") ?? "").includes("/en/");
     return NextResponse.json(
       { ok: false, error: en ? "Please sign in to use this search." : "この検索はログインしてご利用ください（無料登録で使えます）。" },
       { status: 401 },
     );
   }
-  if (!allowByRate(source, "similar-search") || !(await allowByEdgeRate("RL_FORMS", source, "similar"))) {
+  if (!allowByRate(source, "similar-search", HOURLY_MAX) || !(await allowByEdgeRate("RL_FORMS", source, "similar"))) {
     return NextResponse.json(
-      { ok: false, error: "短時間に検索が集中しています。しばらく時間をおいて再度お試しください。" },
+      {
+        ok: false,
+        error: en
+          ? "Too many searches in a short time. Please try again later."
+          : "短時間に検索が集中しています。しばらく時間をおいて再度お試しください。",
+      },
       { status: 429 },
     );
   }
 
-  const result = await findSimilarProperties(url);
+  const result = await findSimilarProperties(query, { en });
   return NextResponse.json(result);
 }

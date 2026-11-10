@@ -146,10 +146,10 @@ export default async function ContactTypePage({
   searchParams,
 }: {
   params: Promise<{ type: string }>;
-  searchParams: Promise<{ property?: string; scene?: string; no?: string }>;
+  searchParams: Promise<{ property?: string; scene?: string; no?: string; area?: string; msg?: string }>;
 }) {
   const { type } = await params;
-  const { property: propertyParam, scene: sceneParam, no: sceneNoParam } = await searchParams;
+  const { property: propertyParam, scene: sceneParam, no: sceneNoParam, area: areaParam, msg: msgParam } = await searchParams;
   // 受付終了した種別（バグ報告など）はここで404になる。
   if (!(CONTACT_TYPES as readonly string[]).includes(type)) notFound();
   const t = type as (typeof CONTACT_TYPES)[number];
@@ -388,7 +388,18 @@ export default async function ContactTypePage({
             **問い合わせと公開申請を同時に**成立させる。
             申請前の人には、上の導線カード（アカウント作成／掲載ページを作成）だけを見せる。 */}
         {t !== "listing" || prefill ? (
-          <ContactForm type={t} prefill={prefill} licenseTarget={licenseTarget} />
+          <ContactForm
+            type={t}
+            prefill={prefill}
+            licenseTarget={licenseTarget}
+            // ほしい物件追加は、カタログの AI 検索の「未掲載」候補から ?area=&msg= 付きで来る
+            // （2026-11-11）。入力欄の初期値にするだけ（本人が書き換えて送る）。長さだけ切る。
+            requestPrefill={
+              t === "request" && (areaParam || msgParam)
+                ? { area: String(areaParam ?? "").slice(0, 120), message: String(msgParam ?? "").slice(0, 600) }
+                : undefined
+            }
+          />
         ) : null}
       </div>
     </div>
