@@ -17,6 +17,7 @@
   python scripts/l3d.py formats <slug>|--all [--rebuild]  # 販売データに Blender・形式別ZIP・使い方txt を付ける
   python scripts/l3d.py datasale <slug> --answer granted --price 150000   # 3Dデータ販売の許諾を記録
   python scripts/l3d.py restore <slug>              # 閉じた下書きを元に戻す（まとめ方を変えたとき）
+  python scripts/l3d.py upscale <slug> [--allow-published] [--dry-run|--rollback]   # 小さい写真を忠実な超解像で FHD に
 
 1行の単純なコマンドにしてあるのは、Claude Code の許可ルール（.claude/settings.local.json の
 `Bash(python scripts/l3d.py *)`）に一致させ、自動モードのまま最後まで通すため（2026-09-20）。
@@ -78,6 +79,7 @@ TOOLS = {
     "fields": "set_fields.py",               # 料金・許可など決まった欄を1つずつ入れる（下書きのみ）
     "basics": "set_basics.py",              # エリア・都道府県・市区町村・紹介文・公開URL確認（公開申請の必須欄）
     "english": "apply_english.py",          # 物件の英語欄（…En）を en.json から埋める（空欄のみ。--force で上書き）
+    "upscale": "upscale_photos.py",         # 長辺1920未満の写真を Real-ESRGAN(GPU)で FHD にして差し替え（公開中は --allow-published）
 }
 R2_KEYS = ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_ENDPOINT", "R2_BUCKET")
 
