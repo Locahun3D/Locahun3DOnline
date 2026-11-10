@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@opennextjs/cloudflare", () => ({ getCloudflareContext: async () => ({ env: {} }) }));
 vi.mock("./properties", () => ({ getPublishedProperties: async () => [] }));
 
-import { normalizeQuery, parseResult, reconcile } from "./find-similar";
+import { foldKana, heuristicMatch, normalizeQuery, parseResult, reconcile } from "./find-similar";
 
 const rows = [
   { id: "studio-a", title: "スタジオ A" },
@@ -41,5 +41,14 @@ describe("find-similar AI 検索", () => {
     const out = reconcile(raw, rows, seen);
     expect(out.matches).toEqual([{ id: "snack-b", title: "スナック B", reason: "昭和" }]);
     expect(out.outside.map((o) => o.name)).toEqual(["実在バー"]);
+  });
+  it("ひらがな・言い換えでもカタログに当たる（白ほり→白ホリ／ホリゾント）", () => {
+    expect(foldKana("白ほり")).toBe("白ホリ");
+    const cat = [
+      { id: "w1", title: "スタジオW", category: "撮影スタジオ", area: "東京都", tags: ["白ホリ"], summary: "" },
+      { id: "w2", title: "スタジオZ", category: "撮影スタジオ", area: "東京都", tags: [], summary: "広いホリゾントがある。" },
+      { id: "k1", title: "黒の部屋", category: "撮影スタジオ", area: "東京都", tags: ["黒ホリ"], summary: "" },
+    ];
+    expect(heuristicMatch("白ほり", cat, false).map((m) => m.id).sort()).toEqual(["w1", "w2"]);
   });
 });

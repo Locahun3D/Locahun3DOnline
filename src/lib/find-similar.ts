@@ -49,6 +49,7 @@ export type AiSearchResult =
   | { ok: false; error: string };
 
 const MODEL = "claude-opus-5-5";
+const FALLBACK_MODEL = "claude-opus-4-8";
 const MAX_QUERY = 300;
 const CACHE_TTL_S = 60 * 60 * 24 * 7;
 const CACHE_PREFIX = "aisearch:v1:";
@@ -84,7 +85,7 @@ export function normalizeQuery(raw: string): string {
   return isHttpUrl(s) ? s : s.toLowerCase();
 }
 
-interface CatalogRow {
+export interface CatalogRow {
   id: string;
   title: string;
   category: string;
@@ -134,12 +135,40 @@ function queryWords(query: string): string[] {
 }
 
 /** API キー無し／AI 失敗時: 語がタイトル・タグ・紹介文に含まれる数で並べる。 */
-function heuristicMatch(query: string, rows: CatalogRow[], en: boolean): SimilarMatch[] {
-  const words = queryWords(query);
+/** ひらがな→カタカナ・全角英数→半角・小文字。「白ほり」と「白ホリ」を同じ語として比べる。 */
+export function foldKana(s: string): string {
+  return s
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+}
+
+/** 撮影業界の言い換え（カタカナ化した後の表記で書く）。 */
+const SYNONYMS: string[][] = [
+  ["白ホリ", "ホリゾント", "白ホリゾント", "白スタジオ", "ホワイトスタジオ", "白壁"],
+  ["黒ホリ", "黒スタジオ", "ブラックスタジオ"],
+  ["キッチン", "台所", "厨房"],
+  ["屋上", "ルーフトップ"],
+  ["レトロ", "昭和"],
+];
+
+function expandWords(words: string[]): string[] {
+  const base = [...new Set(words.map(foldKana))];
+  // 「白ホリ」があるときの断片「ホリ」は落とす（「黒ホリ」に当たってしまう）。
+  const out = new Set(base.filter((w) => !base.some((o) => o !== w && o.includes(w))));
+  for (const w of [...out]) {
+    for (const g of SYNONYMS) if (g.some((s) => w.includes(s) || (w.length >= 3 && s.includes(w)))) g.forEach((s) => out.add(s));
+  }
+  return [...out].filter((w) => w.length >= 2);
+}
+
+export function heuristicMatch(query: string, rows: CatalogRow[], en: boolean): SimilarMatch[] {
+  // 語に分けると「白ほり」が「白」「ほり」に割れるので、入力全体も語として足す。
+  const words = expandWords([...queryWords(query), ...(isHttpUrl(query) ? [] : query.split(" "))]);
   if (!words.length) return [];
   return rows
     .map((r) => {
-      const hay = `${r.title} ${r.category} ${r.area} ${r.tags.join(" ")} ${r.summary}`.toLowerCase();
+      const hay = foldKana(`${r.title} ${r.category} ${r.area} ${r.tags.join(" ")} ${r.summary}`);
       return { r, score: words.reduce((acc, w) => acc + (hay.includes(w) ? 1 : 0), 0) };
     })
     .filter((x) => x.score > 0)
@@ -292,40 +321,61 @@ async function callClaude(apiKey: string, prompt: string, isUrl: boolean): Promi
   // 400（ツール未対応など）のときは次の組み合わせへ。最後はツール無し
   // （その場合 outside は出典が照合できないので必ず空になる）。
   const TOOL_SETS: unknown[][] = isUrl ? [[search, fetchTool], [fetchTool], []] : [[search], []];
-  for (const tools of TOOL_SETS) {
-    const base: Record<string, unknown> = {
+  // 2026-11-11: 本番で毎回 0.5 秒で heuristic に落ちていた（「白ほり」で0件）。本番の鍵で
+  // 実績のある claude-opus-4-8（他の AI ヘルパーと同じ・fallbacks なし）を予備に置く。
+  const MODELS: Array<{ model: string; extra: Record<string, unknown>; headers: Record<string, string> }> = [
+    {
       model: MODEL,
-      max_tokens: 4000,
-      output_config: { effort: "low" },
-      fallbacks: "default",
-    };
-    if (tools.length) base.tools = tools;
-    let messages: Array<{ role: string; content: unknown }> = [{ role: "user", content: prompt }];
-    const all: AnthropicBlock[] = [];
-    let bad = false;
-    for (let i = 0; i < 4; i++) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-beta": "server-side-fallback-2026-07-01",
-        },
-        body: JSON.stringify({ ...base, messages }),
-      });
-      if (res.status === 400) {
-        bad = true;
-        break;
+      extra: { output_config: { effort: "low" }, fallbacks: "default" },
+      headers: { "anthropic-beta": "server-side-fallback-2026-07-01" },
+    },
+    { model: FALLBACK_MODEL, extra: { output_config: { effort: "low" } }, headers: {} },
+  ];
+  for (const m of MODELS) {
+    for (const tools of TOOL_SETS) {
+      const base: Record<string, unknown> = { model: m.model, max_tokens: 8000, ...m.extra };
+      if (tools.length) base.tools = tools;
+      let messages: Array<{ role: string; content: unknown }> = [{ role: "user", content: prompt }];
+      const all: AnthropicBlock[] = [];
+      let bad = false;
+      for (let i = 0; i < 4; i++) {
+        let res: Response;
+        try {
+          res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+              ...m.headers,
+            },
+            body: JSON.stringify({ ...base, messages }),
+          });
+        } catch (e) {
+          console.error("[ai-search] fetch failed", m.model, String(e).slice(0, 200));
+          bad = true;
+          break;
+        }
+        if (!res.ok) {
+          // 本文は鍵を含まない（API のエラー説明）。wrangler tail で原因を見るために残す。
+          const body = await res.text().catch(() => "");
+          console.error("[ai-search]", m.model, `tools=${tools.length}`, res.status, body.slice(0, 400));
+          bad = true;
+          break;
+        }
+        const data = (await res.json()) as AnthropicResponse;
+        if (data.stop_reason === "refusal") {
+          console.error("[ai-search] refusal", m.model);
+          bad = true;
+          break;
+        }
+        all.push(...data.content);
+        if (data.stop_reason !== "pause_turn") return all;
+        messages = [...messages, { role: "assistant", content: data.content }];
       }
-      if (!res.ok) throw new Error(`anthropic ${res.status}`);
-      const data = (await res.json()) as AnthropicResponse;
-      if (data.stop_reason === "refusal") return null;
-      all.push(...data.content);
-      if (data.stop_reason !== "pause_turn") return all;
-      messages = [...messages, { role: "assistant", content: data.content }];
+      if (!bad) return all; // pause_turn が続いたまま上限 → 手元にある分で判定
+      // 失敗したら次のツール組（最後はツール無し）、それも駄目なら次のモデルへ。
     }
-    if (!bad) return all; // pause_turn が続いたまま上限 → 手元にある分で判定
   }
   return null;
 }
@@ -434,12 +484,14 @@ export async function findSimilarProperties(rawQuery: string, opts: { en?: boole
       const raw = parseResult(text);
       if (raw) {
         const value: AiSearchResult = { ok: true, ...reconcile(raw, rows, collectToolUrls(blocks)), source: "ai" };
-        await cachePut(key, value);
+        // 0件はたまたまの可能性があるので7日間固定しない（次の検索でもう一度 AI に聞く）。
+        if (value.matches.length || value.outside.length) await cachePut(key, value);
         return value;
       }
+      console.error("[ai-search] unparsable reply", text.slice(-300));
     }
-  } catch {
-    /* heuristic へ */
+  } catch (e) {
+    console.error("[ai-search] error", String(e).slice(0, 300));
   }
   return { ok: true, matches: heuristicMatch(query, rows, en), outside: [], source: "heuristic" };
 }
