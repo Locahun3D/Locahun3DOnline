@@ -40,13 +40,14 @@ export default async function DataDownloadTermsPage() {
           <h2 className="ui-section-title mb-4">第2条（利用許諾）</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本規約に基づく本データの購入契約は、購入者が本サービス上で購入手続き（決済代行事業者を通じた決済を含む）を完了した時点で成立します。対価は日本円建てとし、購入手続き画面に表示される金額（消費税込み）とします。</li>
-            <li>購入者は、本データを映像・映画・CM・ドラマ・MV等の制作における<strong>ロケーション検証・プリビズ・バーチャルプロダクション</strong>の目的で利用できます。</li>
+            <li>購入者は、本データを映像・映画・CM・ドラマ・MV等の制作における<strong>ロケーション検証・プリビズ・バーチャルプロダクション</strong>の目的、および購入時に選択したライセンス区分が認めるその他の制作の目的で利用できます。</li>
             <li>本データの利用は、購入者の所属する制作チームおよび第6項により利用できる案件の関係者の範囲内に限定されます。</li>
             <li>利用許諾は非独占的であり、同一データを他の購入者にも提供する場合があります。</li>
             <li>
               具体的な利用範囲は、購入時に選択したライセンス区分により異なります。区分は購入完了時の領収書に記載されます。
               {/* schemas.ts の DATA_LICENSE_LABEL/DATA_LICENSE_DESC と内容を一致させること */}
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
+                <li><strong>インディーライセンス</strong> — 個人、または直近1年の売上が1,000万円未満の事業者向け（自己申告・1購入につき1案件まで）。収益化動画・同人/インディーゲーム・VRChatワールドなど商用利用可。自作のゲーム・ワールド・アプリへの組込可。データを取り出せる形での配布や、アセットとしての再配布・再販は不可。権利表記は不要です。</li>
                 <li><strong>標準ライセンス</strong> — 商用・非商用の制作物に利用可（1購入につき1案件まで）。データ自体の再配布・再販は不可。</li>
                 <li><strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限定（1件の提供につき1案件まで）。広告等の商用利用は不可。公開時に権利表記が必要です。</li>
                 <li><strong>拡張ライセンス</strong> — 利用できる案件数の制限なし。商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。</li>
@@ -54,10 +55,13 @@ export default async function DataDownloadTermsPage() {
               </ul>
             </li>
             <li>
-              標準ライセンスおよびエディトリアル限定で本データを利用できるのは、<strong>1件の購入（無償提供を含みます）につき1案件</strong>に限ります。「案件」とは、同一の企画として制作される1つの制作物（映画1作品、ドラマ・番組1シリーズ、CM・広告1キャンペーン、MV1作品等）をいい、その再編集版・予告編・他言語版等は同じ案件に含みます。別の案件に利用する場合は、改めて本データを購入するか、拡張ライセンスを購入してください。拡張ライセンスでは、利用できる案件の数に制限はありません。ただし、第4条の禁止事項は案件の数にかかわらず適用されます。本項は2026年11月6日以降に同意された購入に適用し、それより前の購入には購入時の条件を適用します。
+              標準ライセンス、インディーライセンスおよびエディトリアル限定で本データを利用できるのは、<strong>1件の購入（無償提供を含みます）につき1案件</strong>に限ります。「案件」とは、同一の企画として制作される1つの制作物（映画1作品、ドラマ・番組1シリーズ、CM・広告1キャンペーン、MV1作品、ゲーム1タイトル、ワールド1つ、アプリケーション1本等）をいい、その再編集版・予告編・他言語版等は同じ案件に含みます。別の案件に利用する場合は、改めて本データを購入するか、拡張ライセンスを購入してください。拡張ライセンスでは、利用できる案件の数に制限はありません。ただし、第4条の禁止事項は案件の数にかかわらず適用されます。本項は2026年11月6日以降に同意された購入に適用し、それより前の購入には購入時の条件を適用します。
             </li>
             <li>
-              本データを<strong>ゲーム（Web/PC/その他プラットフォームを問わない）・アプリケーション等のソフトウェア製品に組み込み、当該製品の一部として第三者に提供する形態</strong>（以下「組込利用」）には、拡張ライセンスが必要です。標準ライセンスは、本データを用いて映像・画像等の制作物を作成する利用に限られ、本データ自体をソフトウェア製品に同梱して配布する利用は含みません。
+              本データを<strong>ゲーム（Web/PC/その他プラットフォームを問わない）・アプリケーション等のソフトウェア製品に組み込み、当該製品の一部として第三者に提供する形態</strong>（以下「組込利用」）には、拡張ライセンスが必要です。標準ライセンスは、本データを用いて映像・画像等の制作物を作成する利用に限られ、本データ自体をソフトウェア製品に同梱して配布する利用は含みません。ただし、インディーライセンスの購入者は、<strong>購入者自身が制作・公開する1つのゲーム・ワールド・アプリケーション</strong>に限り、組込利用を行うことができます。この場合、当該製品から本データを取り出して利用できる形（素材ファイルの同梱、アセットとしての書き出し機能の提供等）で配布してはなりません。
+            </li>
+            <li>
+              インディーライセンスは、<strong>個人、または購入日の直前1年間の売上高が1,000万円未満の法人・個人事業主</strong>に限り購入できます。購入者は購入時にこれに該当することを申告するものとし、当社は必要に応じて確認を求めることができます。申告が事実と異なる場合、当社は当該購入を標準ライセンスの購入とみなし、差額の支払いを求めることができます。
             </li>
             <li>キャンペーン等により本データを<strong>無償で提供する場合にも、本規約を準用します</strong>。この場合、本規約中の「購入者」は無償提供を受けた者と読み替えます。</li>
             <li>
@@ -89,7 +93,7 @@ export default async function DataDownloadTermsPage() {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>本データの第三者への再配布・転売・貸与（本サービスの事前の書面による許諾がある場合を除く。用途によって条件が異なるため、ご希望の場合はお問い合わせください）</li>
             <li>
-              拡張ライセンスに基づき組込利用を行う場合、当該ソフトウェア製品の利用者が技術的な解析等により本データを抽出しうる状態にあること自体は、前号の禁止事項に該当しません。ただし、抽出されたデータを本データそのものとして別途配布・転売・貸与する行為は、前号の禁止事項に該当します。
+              拡張ライセンスまたはインディーライセンスに基づき組込利用を行う場合、当該ソフトウェア製品の利用者が技術的な解析等により本データを抽出しうる状態にあること自体は、前号の禁止事項に該当しません。ただし、抽出されたデータを本データそのものとして別途配布・転売・貸与する行為は、前号の禁止事項に該当します。
             </li>
             <li>本データを用いたスタジオ施設の無断複製・模倣</li>
                         <li>本データの改変物を、元のスタジオと誤認させる形で公開する行為</li>
@@ -167,6 +171,7 @@ export default async function DataDownloadTermsPage() {
             改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開／第4条から競合施設への情報提供の禁止を削除し、施設の名誉毀損・実在事件の表現・物件ごとの施設の利用条件への違反を禁止事項に追加）<br />
             改定日: 2026年10月8日（第1条の本データに、撮影者から販売の許諾を受けた持ち込みスキャンのデータを含める旨を明記し、運営者を正式な商号で表記／第2条に、閲覧で取得したプレビュー画像と埋め込みの条件は利用規約によることを追加／第6条の返金を、当社に起因する不具合が確認された場合は購入日から1か月以内に返金または代替データの提供を求められる形に改定）<br />
             改定日: 2026年11月6日（第2条に、標準ライセンス・エディトリアル限定は1件の購入につき1案件まで、拡張ライセンスは案件数の制限なしとする項を第6項として新設し、以降の項を繰り下げ。第3項を同項に合わせて変更。同日以降に同意された購入に適用）<br />
+            改定日: 2026年11月11日（第2条5項にインディーライセンスを追加し、2項の利用目的・6項の案件・7項の組込利用を同区分に合わせて変更、対象者を定める項を第8項として新設し以降の項を繰り下げ／第4条2号の組込利用の取り扱いをインディーライセンスにも適用。同日以降に同意された購入に適用）<br />
             ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
@@ -218,12 +223,13 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
           <h2 className="ui-section-title mb-4">Article 2 (License)</h2>
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>The purchase agreement for the Data under these terms is formed when the Purchaser completes the purchase process on the Service, including payment through a payment processor. The price is denominated in Japanese yen and is the amount shown at checkout (tax included).</li>
-            <li>The Purchaser may use the Data for <strong>location review, previs and virtual production</strong> in the production of video, film, commercials, drama, music videos and the like.</li>
+            <li>The Purchaser may use the Data for <strong>location review, previs and virtual production</strong> in the production of video, film, commercials, drama, music videos and the like, and for other production purposes permitted by the license tier selected at purchase.</li>
             <li>Use of the Data is limited to the Purchaser&apos;s own production team and the people involved in the projects permitted under paragraph 6.</li>
             <li>The license is non-exclusive; the same Data may be provided to other purchasers.</li>
             <li>
               The specific scope of use depends on the license tier selected at purchase. The tier is shown on the purchase receipt.
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
+                <li><strong>Indie license</strong> — For individuals or businesses with revenue under JPY 10 million in the past 12 months (self-declared; one project per purchase). Commercial use OK, including monetized videos, indie games and VRChat worlds. May be embedded in your own games, worlds and apps. Distributing the data in an extractable form, or redistributing/reselling it as an asset, is not permitted. No rights credit required.</li>
                 <li><strong>Standard license</strong> — Use in commercial &amp; non-commercial productions (one project per purchase). Redistribution or resale of the data itself is not permitted.</li>
                 <li><strong>Editorial only</strong> (free) — Limited to news, education and personal use (one project per copy provided). Commercial use such as advertising is not permitted. A rights credit is required when published.</li>
                 <li><strong>Extended license</strong> — Unlimited number of projects. Commercial use plus bundling into templates / embedded products and modified redistribution.</li>
@@ -231,10 +237,13 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               </ul>
             </li>
             <li>
-              Under the standard license and Editorial only, the Data may be used on <strong>one project per purchase (including Data provided free of charge)</strong>. A &quot;project&quot; means a single work produced under the same concept (such as one film, one drama or program series, one commercial or advertising campaign, or one music video), and includes its re-edits, trailers and other-language versions. To use the Data on another project, purchase the Data again or purchase the extended license. The extended license has no limit on the number of projects, but the Article 4 prohibitions apply regardless of the number of projects. This paragraph applies to purchases agreed on or after November 6, 2026; earlier purchases remain subject to the conditions in effect at the time of purchase.
+              Under the standard license, the Indie license and Editorial only, the Data may be used on <strong>one project per purchase (including Data provided free of charge)</strong>. A &quot;project&quot; means a single work produced under the same concept (such as one film, one drama or program series, one commercial or advertising campaign, one music video, one game title, one world or one application), and includes its re-edits, trailers and other-language versions. To use the Data on another project, purchase the Data again or purchase the extended license. The extended license has no limit on the number of projects, but the Article 4 prohibitions apply regardless of the number of projects. This paragraph applies to purchases agreed on or after November 6, 2026; earlier purchases remain subject to the conditions in effect at the time of purchase.
             </li>
             <li>
-              <strong>Embedding the Data into a software product — such as a game (web, PC or any other platform) or application — that is provided to third parties as part of that product</strong> (&quot;Embedded Use&quot;) requires the extended license. The standard license covers using the Data to produce works such as video and images only; it does not cover distributing the Data itself bundled inside a software product.
+              <strong>Embedding the Data into a software product — such as a game (web, PC or any other platform) or application — that is provided to third parties as part of that product</strong> (&quot;Embedded Use&quot;) requires the extended license. The standard license covers using the Data to produce works such as video and images only; it does not cover distributing the Data itself bundled inside a software product. However, a purchaser of the Indie license may make Embedded Use <strong>only in one game, world or application that the purchaser itself creates and publishes</strong>. In that case the product must not be distributed in a form that allows the Data to be taken out and reused (such as bundling the source files or providing an asset-export feature).
+            </li>
+            <li>
+              The Indie license may be purchased only by <strong>individuals, or corporations and sole proprietors whose revenue for the 12 months immediately before the purchase date is under JPY 10 million</strong>. The Purchaser declares at purchase that it meets this condition, and we may ask for confirmation as needed. If the declaration is untrue, we may treat the purchase as a purchase of the standard license and request payment of the difference.
             </li>
             <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
             <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the <span data-i18n-audit-ignore>#ロケハン3D</span> tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>
@@ -258,7 +267,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
           <ol className="list-decimal pl-6 space-y-2 opacity-80">
             <li>redistribute, resell or lend the Data to third parties;</li>
             <li>
-              (Where Embedded Use is made under the extended license, the mere fact that users of the software product could extract the Data through technical analysis does not itself constitute a breach of the preceding item. However, separately distributing, reselling or lending the extracted Data as the Data itself does constitute such a breach.)
+              (Where Embedded Use is made under the extended license or the Indie license, the mere fact that users of the software product could extract the Data through technical analysis does not itself constitute a breach of the preceding item. However, separately distributing, reselling or lending the extracted Data as the Data itself does constitute such a breach.)
             </li>
             <li>reproduce or imitate the Studio facility without permission using the Data;</li>
                         <li>publish a modified version of the Data in a way that could be mistaken for the original Studio;</li>
@@ -331,6 +340,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             Amended: September 19, 2026 (resumed sales of the Editorial tier in Article 2.5; removed the prohibition on providing information to competing facilities from Article 4, and added prohibitions on harming the venue&apos;s reputation, depicting real incidents at an identifiable venue, and breaching per-property venue conditions)<br />
             Amended: October 8, 2026 (Article 1: the Data includes scan-submitted data whose submitter has granted us permission to sell it, and the operator is shown by its registered name; Article 2: preview images and embedding are governed by the Terms of Service; Article 6: where a defect attributable to us is confirmed, the Purchaser may request a refund or replacement data within one month of purchase)<br />
             Amended: November 6, 2026 (added Article 2.6: the standard license and Editorial only are limited to one project per purchase, and the extended license has no limit on the number of projects; renumbered later paragraphs and aligned Article 2.3; applies to purchases agreed on or after this date)<br />
+            Amended: November 11, 2026 (added the Indie license to Article 2.5 and aligned Article 2.2 (purpose of use), 2.6 (projects) and 2.7 (Embedded Use) with it; added Article 2.8 on who may purchase the Indie license and renumbered later paragraphs; extended Article 4 item 2 to the Indie license; applies to purchases agreed on or after this date)<br />
             Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>
