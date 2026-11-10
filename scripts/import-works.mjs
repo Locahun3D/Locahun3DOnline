@@ -33,7 +33,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
-const SRC_ROOT = resolve(ROOT, "../digiroke3d_Web");
+const SRC_ROOT = process.env.WORKS_SRC_ROOT ? resolve(process.env.WORKS_SRC_ROOT) : resolve(ROOT, "../digiroke3d_Web");
 const SRC = { ja: join(SRC_ROOT, "works"), en: join(SRC_ROOT, "en/works") };
 const OUT = join(ROOT, "content/works");
 const GENERATED = join(ROOT, "src/content/works.generated.ts");
