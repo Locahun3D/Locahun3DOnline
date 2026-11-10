@@ -129,7 +129,8 @@ async function detectEndpoint() {
 
 // ── ブラウザ ──
 const ANCHOR = 'const camPos  = new THREE.Vector3(0, 1.7, 4);';
-const HOOK = `;window.__cc={toasts:[],
+// PC で事前に作るときだけ升の上限を 2,000万へ（閲覧者のブラウザは 200万のまま）。広い屋外シーン用（2026-11-11）。
+const HOOK = `;window.__l3dBakeMaxCells=20000000;window.__cc={toasts:[],
  n:()=>window.__nSplat?window.__nSplat():-1,
  walk:()=>window.__walkState?window.__walkState():null,
  whole:()=>walkSetup.wholeIndex&&walkSetup.settings.whole?{key:walkSetup.settings.whole.key,data:walkSetup.settings.whole.data}:null,
@@ -282,6 +283,8 @@ for (const s of scenes) {
         if (req.status === 200) {
           const chk = await r2Verify(key);
           if (!chk.ok) { r.status = 'broken'; r.why = chk.why; }
+          // source=cache: プロジェクトZIPに同じキーの判定が保存されていて、それを先に使った（金龍ラーメン前 2026-11-11。本番で 3.5 秒で準備完了）。壊れてはいない。
+          else if (o.rec.source === 'cache') { r.status = 'project'; }
           else if (o.rec.source !== 'prebaked') { r.status = 'broken'; r.why = 'ビューアーが受け付けない（source=' + o.rec.source + '）'; }
           else r.status = 'present';
         } else {
