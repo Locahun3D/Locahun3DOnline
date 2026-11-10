@@ -68,7 +68,7 @@ const upstream = (key, range) => fetch(presign(key), {headers: range ? {Range: r
 // ── 手元の配信（/api/viewer-stream と同じ振る舞い） ──
 const hook = `;function core_roomy(c,x,f,z){return !c.raycastSurface({x,y:f+.05,z},{x:0,y:1,z:0},1.95);}
 window.__audit={
- EYE:String(_clickNavigateAt).includes('eyeHeight=1.2)')?1.2:1.8,
+ EYE:String(_clickNavigateAt).includes('eyeHeight=1.3)')?1.3:String(_clickNavigateAt).includes('eyeHeight=1.2)')?1.2:1.8,
  ready:()=>layers.some(L=>L.type==='splat'&&L.mesh),
  prep:async()=>{try{return await globalThis.prepareCameraCollision({force:true});}catch(e){return String(e);}},
  col:()=>globalThis.getCameraCollisionState(),

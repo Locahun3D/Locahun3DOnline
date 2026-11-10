@@ -229,12 +229,22 @@ body.embed-mode #layer-panel { display:none !important; }
    埋め込み（?embed=1）と、無料プランの視聴（サイトが ?viewonly=1 を付ける）で使う。歩き回る操作（クリック移動・ドラッグ・
    スティック・上下ボタン）だけ残し、道具のボタンは全部隠す。ロゴは表示のみ（押すとファイル選択の画面に戻るため押せなくする）。 */
 body.viewonly-mode #layer-panel,
-body.viewonly-mode #view-tl-btns,
+body.viewonly-mode #view-tl-btns > :not(#btn-cam-reset),
+body.viewonly-mode #qi-badge,
+body.viewonly-mode #quality-panel,
 body.viewonly-mode #hud .cbar,
 body.viewonly-mode #tb-share-btn,
-body.viewonly-mode #tb-lang-btn,
 body.viewonly-mode #tb-fullscreen-btn { display:none !important; }
 body.viewonly-mode #tb-home-btn { pointer-events:none !important; cursor:default !important; }
+/* 無料プラン（2026-11-10 本人指示「カメラリセット以外のボタン、レイヤー、URL共有機能を課金限定に」「英語訳はそのままで」）:
+   カメラリセットと EN 切り替えだけ残す。埋め込みはこの2つも出さない。 */
+body.embed-mode #view-tl-btns,
+body.embed-mode #tb-lang-btn { display:none !important; }
+/* サイトから開いたビューアーのホーム画面（ロゴを押すと出る）: ファイルを落とす枠・空プロジェクト・更新履歴は出さない
+   （2026-11-10 本人指示「この表示全部消して」）。 */
+body.protected-mode #dropzone,
+body.protected-mode #emptyBtn,
+body.protected-mode #dz-changelog { display:none !important; }
 /* タッチ操作でボタンが押しにくい（2026-10-08 本人指示「見た目より少し当たり判定を大きく」）。
    見た目は変えず、押せる範囲だけ周囲 8px 広げる（下の touch-hit の処理が、タッチ端末でだけ付ける）。 */
 body.touch-hit button.hit-pad::after{content:'';position:absolute;inset:-8px;}
@@ -2970,7 +2980,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7132356,"fatSha256":"da0a549799866cb43dfa55f76bccac520c4f57605156f70a40223bc670d7fafb","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7135264,"fatSha256":"21310c32f249ca74854299748d07efaeb8c582c8c5402ee6b45e6e8af906ebf1","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -19377,23 +19387,34 @@ const _protected = /[?&]protected=1/.test(location.search);
 if(_protected){
   document.body.classList.add('protected-mode');
   if(/[?&]embed=1(&|$)/.test(location.search)) document.body.classList.add('embed-mode');
-  if(/[?&](embed|viewonly)=1(&|$)/.test(location.search)) document.body.classList.add('viewonly-mode');
+  // 見るだけモードは、埋め込みと、ログインしていない・無料プランの人。サイトから開いたビューアーは
+  // 最初は見るだけで始め、/api/viewer-entitlement で課金プラン（または管理者・スタジオ）と分かったら道具を出す
+  // （2026-11-10 本人指示「無料プランでの切り分け全然できてない」。以前はサイトが URL に ?viewonly=1 を付けたときだけで、
+  //  付かない入口（共有・再読み込み・URL を消す）では全部使えた）。共有URLで受け取った人（shared=1）は共有した人のプランで見る。
+  document.body.classList.add('viewonly-mode');
 }
 // 見るだけモードでは、移動に使うキー以外のショートカット（測定 M・元に戻す・保存・複製など）を効かなくする。
 // window の capture で先に止めるので、後ろの document / window の処理には届かない。ブラウザ自体の動作は止めない。
-const _viewOnly = _protected && /[?&](embed|viewonly)=1(&|$)/.test(location.search);
+let _viewOnly = _protected;
+if(_protected && !/[?&]embed=1(&|$)/.test(location.search)){
+  const _voUnlock = () => { _viewOnly = false; document.body.classList.remove('viewonly-mode'); };
+  if(/[?&]shared=1(&|$)/.test(location.search)) _voUnlock();
+  else fetch('/api/viewer-entitlement', {cache:'no-store', credentials:'same-origin'})
+    .then(r => r.ok ? r.json() : null).then(j => { if(j && j.full === true) _voUnlock(); }).catch(() => {});
+}
 if(_viewOnly){
   const _VO_MOVE = new Set(['KeyW','KeyS','KeyA','KeyD','KeyQ','KeyE','KeyR','KeyF',
     'ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Equal','Minus','NumpadAdd','NumpadSubtract',
     'ControlLeft','ControlRight','MetaLeft','MetaRight','ShiftLeft','ShiftRight','Escape']);
   const _voKey = e => {
+    if(!_viewOnly) return;
     const mod = e.ctrlKey || e.metaKey || e.altKey;
     const ok = _VO_MOVE.has(e.code) && (!mod || e.code.startsWith('Arrow') || /^(Control|Meta|Shift)/.test(e.code));
     if(!ok) e.stopImmediatePropagation();
   };
   window.addEventListener('keydown', _voKey, true);
   // ファイルを落として別のシーンを開く操作も止める（document の drop より先に捕まえる）。
-  window.addEventListener('drop', e => { e.preventDefault(); e.stopImmediatePropagation(); }, true);
+  window.addEventListener('drop', e => { if(!_viewOnly) return; e.preventDefault(); e.stopImmediatePropagation(); }, true);
 }
 // ── Paged(RAD) ストリーム活動判定 ──
 // 旧判定「numSplats が総数(_radTargetCount)に達したらロード完了」は、ヘッダ総数
@@ -26690,8 +26711,8 @@ window.addEventListener('mouseup',e=>{
           // 長押しで行き先を探ったとき・カメラツール中は移動が目的なので選択を挟まない（2026-09-27。カメラツール中は
           // 選択が先にクリックを取ってしまい移動しなかった）。
           const consumed=(navigationTap?.held||(typeof cam!=='undefined'&&cam.active))?false:_trySelectByClick(e.clientX,e.clientY);
-          // 右クリック長押し（探ってから離す）での移動は目線 100cm（2026-09-26 本人指示）。普通のクリック・タップは 120cm（2026-10-08 本人指示。以前は 1.8m）。
-          if(!consumed&&navigationTap)_clickNavigateAt(navigationTap.x,navigationTap.y,false,null,navigationTap.held?1.0:1.2);
+          // 右クリック長押し（探ってから離す）での移動は目線 110cm、普通のクリック・タップは 130cm（2026-11-10 本人指示で両方 10cm 上げた。以前は 100cm・120cm）。
+          if(!consumed&&navigationTap)_clickNavigateAt(navigationTap.x,navigationTap.y,false,null,navigationTap.held?1.1:1.3);
         }
       }
     }
@@ -27839,7 +27860,7 @@ function _clickWallClearance(core,hit,from,eyeHeight){
 // ⚠ 大きいシーンの当たり判定はタイルを場所ごとに読み込む（walkSetup.wholeIndex）。以前は「目に見えた点のまわり」しか
 //   読まず、手すりの隙間から下の床が見えると階段のタイルが無いまま判定して下の階へ素通りした・天井が無い扱いで天井すれすれに
 //   止まった（有明 非常階段・清澄SOHO）。今はカメラの真下→視線に沿って 4m ずつ→行き先のまわり、の順に読みながら判定する。
-function _clickResolveTarget(clientX,clientY,eyeHeight=1.2,preparedHit=null){
+function _clickResolveTarget(clientX,clientY,eyeHeight=1.3,preparedHit=null){
   const rect=canvas.getBoundingClientRect(),core=walkSetup.core,whole=!!walkSetup.wholeIndex;
   const cover=(a,b,o)=>{if(whole&&typeof _walkWholeCoverage==='function')_walkWholeCoverage(a,b,o);};
   const pickCamera=_useOrtho?_orthoCamera:camera;
@@ -27932,7 +27953,24 @@ function _clickSplatFloorTarget(clientX,clientY,eyeHeight){
     return {hit:{point:{x:p.x,y:p.y,z:p.z},normal:{x:0,y:1,z:0}}};
   }finally{if(typeof msr!=='undefined')msr.placeDepth=depth;}
 }
-function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeight=1.2){
+// 押した点がちょうど立てない所（判定の箱が細かく欠けた床・家具の脇・植物の根元など）でも、すぐ近くに立てる床があれば
+// そこへ行く（2026-11-10 本人「左クリックの移動が反応しづらい」。計測で床を押しても 3 割近くが無反応だった）。
+// 押した点を中心に半径 14→28→44px の輪を 8 方向ずつ調べ、近い輪から順に調べ、最初に見つかった所を使う。
+function _clickResolveNear(clientX,clientY,eyeHeight,preparedHit){
+  const first=_clickResolveTarget(clientX,clientY,eyeHeight,preparedHit);
+  if(!first.fail||preparedHit||first.fail==='behind-visible-surface'||first.fail==='no-visible-point')return first;
+  const rect=canvas.getBoundingClientRect();
+  for(const R of [14,28,44]){
+    for(let k=0;k<8;k++){
+      const a=k*Math.PI/4,x=clientX+Math.cos(a)*R,y=clientY+Math.sin(a)*R;
+      if(x<rect.left||x>rect.right||y<rect.top||y>rect.bottom)continue;
+      const r=_clickResolveTarget(x,y,eyeHeight,null);
+      if(!r.fail)return r;
+    }
+  }
+  return first;
+}
+function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeight=1.3){
   // 移動中のクリック・タップは無視して今の移動を最後まで終える（2026-10-08 全シーン検査で、移動中に押し直すと
   // 壁を抜けて建物の外へ出る・家具に埋まって止まる、を再現）。移動中の画面は1つ前の描画なので、行き先の見え方の
   // 判定（壁の向こうを指していないか）が合わない。移動は直線（当たり判定なし）なので、途中で止めると物の中に残る。
@@ -27960,7 +27998,7 @@ function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeig
     return false;
   }
   try{
-    const r=floorOnly?.hit?floorOnly:_clickResolveTarget(clientX,clientY,eyeHeight,preparedHit);
+    const r=floorOnly?.hit?floorOnly:_clickResolveNear(clientX,clientY,eyeHeight,preparedHit);
     if(r.fail)return preview&&r.point?{point:r.point,valid:false}:false;
     const hit=r.hit;
     const controller=LocahunClickNavigation.create({
