@@ -17,7 +17,7 @@ export async function generateMetadata() {
 
 /**
  * ビューアーの共有URL（ログイン不要・2週間）。Team プランの利用者がビューアー左上の「共有」から発行する。
- * ここではトークンを検証し、物件名だけ見せてビューアーへ入る（署名URLの取得は launcher が
+ * ここではトークンを検証し、すぐビューアーへ入る（署名URLの取得は launcher が
  * /api/viewer-asset?share=<token> で行う。トークン検証はサーバー側でもう一度行われる）。
  */
 export default async function SharePage({ params }: { params: Promise<{ token: string }> }) {
@@ -58,15 +58,10 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   const item = property?.splatItems.find((it) => it.id === share.splatItemId);
   if (!property || !item?.splatUrl) notFound();
 
+  // 中継画面は出さずにすぐビューアーへ移る（2026-11-10 本人指示）。開けなかったときだけ物件名と押し直すボタンが出る。
   return (
     <div className="frame ui-page-shell pb-24 text-center">
-      <div className="mono text-[11px] tracking-[0.3em] uppercase text-muted mb-4">Shared 3D view</div>
-      <header className="ui-page-header">
-        <h1 className="ui-page-title">{property.title.split(/[｜|\n]/)[0]}</h1>
-        <p className="ui-page-lead text-[14px] text-muted max-w-[40ch] mx-auto">
-          {en ? "A 3D walkthrough has been shared with you." : "3Dウォークスルーが共有されました。"}
-        </p>
-      </header>
+      <h1 className="sr-only">{property.title.split(/[｜|\n]/)[0]}</h1>
       <ShareViewerLauncher token={token} assetKey={share.assetKey} en={en} />
     </div>
   );
