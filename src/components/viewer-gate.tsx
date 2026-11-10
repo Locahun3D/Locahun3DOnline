@@ -6,6 +6,7 @@ import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 import type { TokenCost } from "@/lib/schemas";
 import { useLocale, useHref } from "@/components/locale-provider";
 import { VIEWING_IS_FREE } from "@/lib/view-pricing";
+import { PanoPreview } from "@/components/pano-preview";
 
 /**
  * 1物件に複数シーンがあると ViewerGate が並ぶ分だけ自動再生プレビュー動画も
@@ -38,6 +39,30 @@ function LazyPreviewVideo({ src, className }: { src: string; className?: string 
         <video src={src} autoPlay loop muted playsInline className={className} />
       )}
     </div>
+  );
+}
+
+/**
+ * カードの背景: 開始位置の 360° 画像があればそれを回して見せ（pano-preview.tsx）、無ければ従来のプレビュー動画、
+ * それも無ければグラデーション（2026-11-10 本人「プレビュー動画、最初の3Dから用意した画像を回転させて表示させるのはどうか」）。
+ */
+function ScenePreview({ splatUrl, previewVideoUrl, fallback }: { splatUrl: string; previewVideoUrl?: string; fallback: React.ReactNode }) {
+  const [noPano, setNoPano] = useState(false);
+  // ビューアーの autoload と同じ配信経路（/api/viewer-stream/<R2 キー>）。キーの計算に使う HEAD をここへ送る。
+  const streamUrl = /^(https?:|blob:)/.test(splatUrl)
+    ? null
+    : "/api/viewer-stream/" + splatUrl.replace(/^\/+/, "").replace(/^api\/(r2|viewer-stream)\//, "");
+  if (streamUrl && !noPano) {
+    return (
+      <>
+        <PanoPreview streamUrl={streamUrl} onMissing={() => setNoPano(true)} />
+      </>
+    );
+  }
+  return previewVideoUrl ? (
+    <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
+  ) : (
+    <>{fallback}</>
   );
 }
 
@@ -116,9 +141,10 @@ export default function ViewerGate({
   if (!effectiveSubscription) {
     return (
       <div className="group relative aspect-video w-full border border-line overflow-hidden">
-        {previewVideoUrl ? (
-          <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
+        <ScenePreview
+          splatUrl={splatUrl}
+          previewVideoUrl={previewVideoUrl}
+          fallback={
           <div
             className="absolute inset-0 bg-[#222]"
             style={{
@@ -127,7 +153,8 @@ export default function ViewerGate({
               filter: "blur(1px)",
             }}
           />
-        )}
+          }
+        />
         {/* タップ/クリックで登録ポップアップを開く（ホバー非依存＝モバイルでも機能する）。 */}
         <button
           type="button"
@@ -382,9 +409,10 @@ export default function ViewerGate({
         発火せず「未ログインでしか表示が出ない」ように見える（2026-08-14 実害）。
         未ログイン側(上)の外枠と同じく必ず group を付けること。 */}
     <div className="group relative aspect-video w-full border border-line overflow-hidden bg-[#141414]">
-      {previewVideoUrl ? (
-        <LazyPreviewVideo src={previewVideoUrl} className="absolute inset-0 w-full h-full object-cover" />
-      ) : (
+      <ScenePreview
+        splatUrl={splatUrl}
+        previewVideoUrl={previewVideoUrl}
+        fallback={
         <div
           className="absolute inset-0"
           style={{
@@ -392,7 +420,8 @@ export default function ViewerGate({
               "radial-gradient(ellipse at center, rgba(94,200,232,.10) 0%, transparent 65%), radial-gradient(circle at 30% 70%, rgba(255,255,255,.04) 0%, transparent 50%)",
           }}
         />
-      )}
+        }
+      />
 
       {/* ⚠ 2026-08-13: ここは以前「白い箱＋ボタン」の独自UIだったが、背後のシーンを
           隠すうえに未ログイン時と見た目が別物で分かりづらかった。本人指示により
