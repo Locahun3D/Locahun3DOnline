@@ -122,3 +122,6 @@ token.json
 credentials*.json
 *.key
 !.env.example
+
+# collision-check.mjs の結果（state.json / runs.jsonl）
+/artifacts/collision*/
