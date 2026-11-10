@@ -225,6 +225,16 @@ body.protected-mode #em-export-splat,
 body.protected-mode #em-save-zip { display:none !important; }
 /* スタジオのサイトに貼る埋め込み（?embed=1）ではシーンレイヤーを出さない（2026-10-08 本人指示。2026-10-09「消すのは埋め込みだけ」で物件ページには戻した）。 */
 body.embed-mode #layer-panel { display:none !important; }
+/* 見るだけモード（2026-11-10 本人指示「埋め込みURL、ボタン表示をすべて非表示」「無課金ではボタン非表示で、機能使えないように」）。
+   埋め込み（?embed=1）と、無料プランの視聴（サイトが ?viewonly=1 を付ける）で使う。歩き回る操作（クリック移動・ドラッグ・
+   スティック・上下ボタン）だけ残し、道具のボタンは全部隠す。ロゴは表示のみ（押すとファイル選択の画面に戻るため押せなくする）。 */
+body.viewonly-mode #layer-panel,
+body.viewonly-mode #view-tl-btns,
+body.viewonly-mode #hud .cbar,
+body.viewonly-mode #tb-share-btn,
+body.viewonly-mode #tb-lang-btn,
+body.viewonly-mode #tb-fullscreen-btn { display:none !important; }
+body.viewonly-mode #tb-home-btn { pointer-events:none !important; cursor:default !important; }
 /* タッチ操作でボタンが押しにくい（2026-10-08 本人指示「見た目より少し当たり判定を大きく」）。
    見た目は変えず、押せる範囲だけ周囲 8px 広げる（下の touch-hit の処理が、タッチ端末でだけ付ける）。 */
 body.touch-hit button.hit-pad::after{content:'';position:absolute;inset:-8px;}
@@ -2960,7 +2970,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7115530,"fatSha256":"8569e0b558f92eabd2e903f2671fbe5d40c9663341b72ba013a4dc30a1734ee2","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7125218,"fatSha256":"f8d7d4b8c73cd1f615b3e80f743b759d86cd17c4aa474463aee15aec9760a842","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -3258,6 +3268,11 @@ function _trySelectByClick(clientX, clientY){
       // ⚠ 「選択中をもう一度触ったら出す」は不可: 選択すると同じ場所に移動用の矢印が重なり、
       //    2回目のクリックは矢印に取られて届かない（ブラウザで確認）。
       const hitLayer = findLayer(hitLayerId);
+      // 見るだけモード: 選んで動かす操作はさせない。写真つきイベントだけ写真を出す。
+      if(_viewOnly){
+        if(hitLayer && hitLayer.type==='event' && hitLayer.eventImage && typeof window.showEventImage==='function'){ window.showEventImage(hitLayerId); return true; }
+        return false;
+      }
       window.selectLayer(hitLayerId);
       if(hitLayer && hitLayer.type==='event' && hitLayer.eventImage && typeof window.showEventImage==='function'){
         window.showEventImage(hitLayerId);
@@ -10707,8 +10722,8 @@ function _guideRows(){
   // 操作方法の行。端末（タッチ／PC）と言語で内容を変える。読み込み画面とホームのドロップ枠で共用。
   const touch=typeof isMobile!=='undefined'&&isMobile,en=typeof _en==='function'&&_en();
   return touch
-    ?(en?[['Move','Tap a spot to go there'],['Look','Drag with one finger'],['Walk','Bottom-left stick']]
-        :[['移動方法','タッチでその場所に移動'],['見回す','1本指でドラッグ'],['歩く','左下のスティック']])
+    ?(en?[['Move','Tap a spot to go there'],['Look','Drag with one finger'],['Stick move','Bottom-left stick']]
+        :[['移動方法','タッチでその場所に移動'],['見回す','1本指でドラッグ'],['スティック移動','左下のスティック']])
     :(en?[['Move','Click a spot to go there'],['Look','Left-drag'],['Keys','W A S D move / E up, Q down'],['Dash','Shift']]
         :[['移動方法','クリックでその場所に移動'],['見回す','左ドラッグ'],['キー移動','W A S D 前後左右 ／ E 上昇・Q 下降'],['ダッシュ','Shift']]);
 }
@@ -19321,6 +19336,23 @@ const _protected = /[?&]protected=1/.test(location.search);
 if(_protected){
   document.body.classList.add('protected-mode');
   if(/[?&]embed=1(&|$)/.test(location.search)) document.body.classList.add('embed-mode');
+  if(/[?&](embed|viewonly)=1(&|$)/.test(location.search)) document.body.classList.add('viewonly-mode');
+}
+// 見るだけモードでは、移動に使うキー以外のショートカット（測定 M・元に戻す・保存・複製など）を効かなくする。
+// window の capture で先に止めるので、後ろの document / window の処理には届かない。ブラウザ自体の動作は止めない。
+const _viewOnly = _protected && /[?&](embed|viewonly)=1(&|$)/.test(location.search);
+if(_viewOnly){
+  const _VO_MOVE = new Set(['KeyW','KeyS','KeyA','KeyD','KeyQ','KeyE','KeyR','KeyF',
+    'ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Equal','Minus','NumpadAdd','NumpadSubtract',
+    'ControlLeft','ControlRight','MetaLeft','MetaRight','ShiftLeft','ShiftRight','Escape']);
+  const _voKey = e => {
+    const mod = e.ctrlKey || e.metaKey || e.altKey;
+    const ok = _VO_MOVE.has(e.code) && (!mod || e.code.startsWith('Arrow') || /^(Control|Meta|Shift)/.test(e.code));
+    if(!ok) e.stopImmediatePropagation();
+  };
+  window.addEventListener('keydown', _voKey, true);
+  // ファイルを落として別のシーンを開く操作も止める（document の drop より先に捕まえる）。
+  window.addEventListener('drop', e => { e.preventDefault(); e.stopImmediatePropagation(); }, true);
 }
 // ── Paged(RAD) ストリーム活動判定 ──
 // 旧判定「numSplats が総数(_radTargetCount)に達したらロード完了」は、ヘッダ総数
@@ -19589,6 +19621,8 @@ function animate(now) {
     if(show) skyMoon.position.copy(camPos).addScaledVector(skyMoon.userData.dir, _SKY_MOON_DIST);
   }
 
+  // -- カーソルを乗せたモデルの縁の太さ（距離に合わせる）--
+  _updateHoverOutline();
   // -- Billboard (event objects face camera) --
   // Gated on a counter that's only > 0 when an event-layer with isBillboard
   // exists in the scene. Without an event placed, this loop is skipped
@@ -19597,6 +19631,7 @@ function animate(now) {
     for(const L of layers){
       if(L.type==='event' && L.mesh && L.mesh.userData.isBillboard && L.visible){
         L.mesh.quaternion.copy(camera.quaternion);
+        _eventLiftTowardCamera(L.mesh);
       }
     }
   }
@@ -24477,7 +24512,8 @@ window._applySceneTextEn=function(){
   // 以降に組み立てる UI が英語で作られるよう、言語だけは先に決めておく。
   window._lang='en';
   const start=()=>{ try{ applyI18n(); if(typeof _dzGuide==='function')_dzGuide(); }catch(_){} };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+  // 文言の一覧（I18N の追記分）はこの後ろで登録されるので、同じ実行の中では書き換えない（?lang=en で管理用の名前が出ていた）。
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else setTimeout(start,0);
   const src=q.get('sceneTextEn'); if(!src) return;
   fetch(src,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{
     if(!j) return; window._sceneTextEn=j; window._applySceneTextEn();
@@ -24620,6 +24656,22 @@ window.openEventColorPicker = function(id, ev){
   });
 };
 
+// 2026-11-10 本人指摘「イベントが隠れちゃう・微妙にかぶってしまう」: 目印は壁や棚に付けて置くので、
+// 3DGS の面と少し重なって半分隠れる。描くときだけ中身（輪・アイコン・当たり球）をカメラ側へ最大35cm
+// （距離の4割まで）浮かせ、近づいた分だけ縮めて見た目の大きさは変えない。グループ自体の位置
+// （保存・移動の基準）は動かさないので、壁の向こうの目印は今までどおり壁に隠れる。
+const _evLiftWorld=new THREE.Vector3(), _evLiftCam=new THREE.Vector3();
+function _eventLiftTowardCamera(group){
+  group.getWorldPosition(_evLiftWorld); camera.getWorldPosition(_evLiftCam);
+  const d=_evLiftWorld.distanceTo(_evLiftCam), sg=group.scale.x||1;
+  if(!(d>1e-3)) return;
+  const off=Math.min(.35,d*.4), k=(d-off)/d;
+  for(const c of group.children){
+    if(c.userData.evBaseZ===undefined){ c.userData.evBaseZ=c.position.z; c.userData.evBaseS=c.scale.x; }
+    c.position.z=c.userData.evBaseZ+off/sg;
+    c.scale.setScalar(c.userData.evBaseS*k);
+  }
+}
 // ══════════════════════════════════════════════════
 //  EVENT OBJECT
 // ══════════════════════════════════════════════════
@@ -25465,6 +25517,90 @@ function _clearPanelHover(){
     _panelHoverLayerId=null;
   }
 }
+// ── カーソルを乗せたモデル・イベントの縁を光らせる（2026-11-10 本人指示「カーソルオーバーしたらアウトライン発光」）──
+// モデルは「裏面だけを少し膨らませて描く」縁取り（画面上でほぼ一定の太さ 3px）。スキンつき（人の模型）は骨も共有する。
+// イベントは平たい目印なので、外側に光る輪を1本足す。外したら全部片付ける（毎フレームの負荷はなし）。
+const _HOVER_OUTLINE_TYPES=new Set(['event','obj','generic','cube','sphere','figure']);
+const _HOVER_OUTLINE_COLOR=0xffb454, _HOVER_OUTLINE_PX=3;
+let _hoverOutlineL=null, _hoverOutlineParts=[];
+const _hoWs=new THREE.Vector3(), _hoWp=new THREE.Vector3(), _hoCam=new THREE.Vector3();
+// 角で法線が分かれている形（箱など）は、そのまま膨らませると角で縁が切れる。同じ位置の頂点の法線を平均した
+// 「縁取り用の法線」を作る（形ごとに1回だけ作って覚える）。位置は元の形と共有する。
+const _hoverSmoothGeo=new WeakMap();
+function _hoverOutlineGeometry(geo){
+  if(_hoverSmoothGeo.has(geo)) return _hoverSmoothGeo.get(geo);
+  const pos=geo.attributes.position, nor=geo.attributes.normal, n=pos.count;
+  let out=geo;
+  if(n<=300000){
+    const sum=new Map(), key=new Array(n), q=1e4;
+    for(let i=0;i<n;i++){
+      const k=Math.round(pos.getX(i)*q)+','+Math.round(pos.getY(i)*q)+','+Math.round(pos.getZ(i)*q); key[i]=k;
+      const a=sum.get(k)||[0,0,0]; a[0]+=nor.getX(i); a[1]+=nor.getY(i); a[2]+=nor.getZ(i); sum.set(k,a);
+    }
+    const arr=new Float32Array(n*3);
+    for(let i=0;i<n;i++){ const a=sum.get(key[i]); const l=Math.hypot(a[0],a[1],a[2])||1; arr[i*3]=a[0]/l; arr[i*3+1]=a[1]/l; arr[i*3+2]=a[2]/l; }
+    out=new THREE.BufferGeometry();
+    for(const name in geo.attributes) if(name!=='normal') out.setAttribute(name,geo.attributes[name]);
+    out.setAttribute('normal',new THREE.BufferAttribute(arr,3));
+    if(geo.index) out.setIndex(geo.index);
+    for(const g of geo.groups) out.addGroup(g.start,g.count,g.materialIndex);
+    out.userData.hoverSmooth=true;
+  }
+  _hoverSmoothGeo.set(geo,out); return out;
+}
+function _hoverOutlineMaterial(){
+  const mat=new THREE.MeshBasicMaterial({color:_HOVER_OUTLINE_COLOR,side:THREE.BackSide}); // 不透明で奥行きも書く（書かないと後から描く3DGSに塗りつぶされる）
+  mat.userData.uOutline={value:0};
+  mat.onBeforeCompile=sh=>{
+    sh.uniforms.uOutline=mat.userData.uOutline;
+    sh.vertexShader='uniform float uOutline;'+String.fromCharCode(10)+sh.vertexShader.replace('#include <begin_vertex>','vec3 transformed = vec3( position ) + normalize( normal ) * uOutline;');
+  };
+  return mat;
+}
+function _clearHoverOutline(){
+  for(const o of _hoverOutlineParts){ o.parent&&o.parent.remove(o); o.material.dispose(); if(o.userData.ownGeo)o.geometry.dispose(); }
+  _hoverOutlineParts=[]; _hoverOutlineL=null;
+}
+function _setHoverOutline(L){
+  if(L===_hoverOutlineL) return;
+  _clearHoverOutline();
+  if(L&&L.mesh){
+    _hoverOutlineL=L;
+    if(L.type==='event'){
+      const glow=new THREE.Mesh(new THREE.RingGeometry(.45,.68,40),
+        new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));
+      glow.userData.ownGeo=true; glow.userData.hoverOutline=true; glow.raycast=()=>{};
+      glow.position.z=-.001; L.mesh.add(glow); _hoverOutlineParts.push(glow);
+    } else {
+      const src=[];
+      L.mesh.traverse(m=>{ if(m.isMesh&&!m.userData.hoverOutline&&m.visible!==false&&m.material&&m.material.visible!==false&&m.geometry&&m.geometry.attributes.normal) src.push(m); });
+      for(const m of src.slice(0,400)){
+        const mat=_hoverOutlineMaterial();
+        let o;
+        const hg=_hoverOutlineGeometry(m.geometry);
+        if(m.isSkinnedMesh){ o=new THREE.SkinnedMesh(hg,mat); o.bind(m.skeleton,m.bindMatrix); o.bindMode=m.bindMode; }
+        else o=new THREE.Mesh(hg,mat);
+        o.userData.hoverOutline=true; o.raycast=()=>{}; o.renderOrder=(m.renderOrder||0)-1; o.frustumCulled=false;
+        m.add(o); _hoverOutlineParts.push(o);
+      }
+    }
+    _updateHoverOutline();
+  }
+  markDirty(2);
+}
+// 太さを画面上でほぼ一定に保つ（カメラとの距離と、モデル自体の縮尺で割る）。描く前に毎回呼ぶ。
+function _updateHoverOutline(){
+  if(!_hoverOutlineParts.length) return;
+  const cam=_useOrtho?_orthoCamera:camera; cam.getWorldPosition(_hoCam);
+  const h=Math.max(1,(canvas.clientHeight||window.innerHeight));
+  for(const o of _hoverOutlineParts){
+    const u=o.material.userData.uOutline; if(!u) continue;
+    o.parent.getWorldPosition(_hoWp); o.parent.getWorldScale(_hoWs);
+    const d=_hoWp.distanceTo(_hoCam);
+    const perPx=cam.isPerspectiveCamera?2*d*Math.tan(THREE.MathUtils.degToRad(cam.fov)/2)/h:(cam.top-cam.bottom)/cam.zoom/h;
+    u.value=_HOVER_OUTLINE_PX*perPx/Math.max(1e-6,Math.abs(_hoWs.x));
+  }
+}
 function updateEventPanelHover(cx,cy){
   const rect=canvas.getBoundingClientRect();
   _panelHoverV2.set(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
@@ -25476,6 +25612,11 @@ function updateEventPanelHover(cx,cy){
     L.mesh.traverse(function(ch){ if(ch.isMesh) meshMap.set(ch, L); });
   }
   const hits=_panelHoverRay.intersectObjects([...meshMap.keys()], false);
+  // 見るだけモードでは、触れるのは写真つきイベントだけ（モデルは選べない）なので、光らせるのもイベントだけ。
+  const _hovL=hits.length?meshMap.get(hits[0].object):null;
+  const _hovOk=_hovL&&_HOVER_OUTLINE_TYPES.has(_hovL.type)&&(!_viewOnly||_hovL.type==='event');
+  _setHoverOutline(_hovOk?_hovL:null);
+  if(_viewOnly&&!_hovOk){ _clearPanelHover(); canvas.style.cursor=''; return; }
   if(hits.length>0){
     const hitL=meshMap.get(hits[0].object);
     if(hitL && hitL.id !== _panelHoverLayerId){
@@ -26523,6 +26664,8 @@ window.addEventListener('mousemove',e=>{
   if(typeof _clickPointerMove==='function'&&_clickPointerMove('mouse',e))return;
   // -- Event panel hover (v26: replaced viewport glow with panel highlight) --
   if(!msr.active && !dragOn && !lpv.dragging) updateEventPanelHover(e.clientX, e.clientY);
+  // 縁の発光は 3D の上にカーソルがあるときだけ（パネルやボタンの上・ドラッグ中・測定中は消す）。
+  if(msr.active || dragOn || lpv.dragging || !(e.target===canvas || (e.target&&e.target.id==='overlay'))) _setHoverOutline(null);
   // ── Bone marker / IK handle hover (highlight + pointer cursor) ──
   _updateFigureHover(e.clientX, e.clientY);
   // ── Bone rotation drag (highest priority) ──
