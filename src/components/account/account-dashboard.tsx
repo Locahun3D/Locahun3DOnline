@@ -304,9 +304,6 @@ export default function AccountDashboard({
             「請求書のタブの中に説明付きで」というご指定に合わせて中へ移した
             （2026-07-30）。 */}
       <aside className={styles.subscriptionColumn} data-account-region="subscription" aria-label={en ? "Subscription and balance" : "契約と残高"}>
-        {/* ギフトコード（RedeemGift 自体が border/padding 込みのカード） */}
-        <div data-account-slot="gift"><RedeemGift /></div>
-
         {/* PLAN */}
         {/* プランとポイントは別の枠で横並び（2026-11-05 本人「無駄な空間」「枠区切って」）。スマホは縦積み。 */}
         <div className={styles.planPoints}>
@@ -427,6 +424,9 @@ export default function AccountDashboard({
           <div className={styles.cardTitle}>
             {en ? "Invoices & purchases" : "請求書・購入履歴"}
           </div>
+          {/* 左＝請求書、右＝ギフトコード（2026-11-10 本人指示: ギフトコードを上の独立カードからここへ）。スマホは縦積み。 */}
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+          <div className="flex flex-col sm:w-[42%] shrink-0">
           <div className="flex items-center gap-3 mb-2">
             {/* CSS 描画のミニ書類プレビュー */}
             <div className="w-10 h-12 shrink-0 bg-white border border-[#e2e7ec] relative">
@@ -459,6 +459,11 @@ export default function AccountDashboard({
           >
             {en ? "View list →" : "一覧を見る →"}
           </Link>
+          </div>
+          <div data-account-slot="gift" className="flex-1 min-w-0 sm:border-l sm:border-[#e2e7ec] sm:pl-6 border-t sm:border-t-0 border-[#e2e7ec] pt-4 sm:pt-0">
+            <RedeemGift inline />
+          </div>
+          </div>
 
           {/* 配信設定はこのカードの中。枠を二重にしないため inline で描く。 */}
           <MarketingConsentToggle initialConsent={user.marketingConsent} en={en} inline />

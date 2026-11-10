@@ -110,4 +110,9 @@
 /* 1件だけのときは全幅。高さは実画面の約7割で止める（幅＝70vh×16/9。--z は html の zoom）。2026-11-10 本人「案A」 */
 .legacySingleScene { width:min(100%,calc(70vh / var(--z) * 16 / 9));margin-inline:auto; }
 .legacyScene :global(button),.legacyScene :global(a) { overflow-wrap:break-word; }
+/* 1シーン＋データ販売: ビューアー（高さ 70vh 上限）の右に購入パネル（2026-11-10）。1100px 未満は縦積み。 */
+.legacySingleSceneSale { min-width:0;max-width:100%; }
+.sceneSaleRow { display:grid;grid-template-columns:minmax(0,1fr);gap:20px; }
+.sceneSaleRow > div:last-child > *:first-child { margin-top:0; }
+@media(min-width:1100px) { .sceneSaleRow { grid-template-columns:minmax(0,calc(70vh / var(--z) * 16 / 9)) minmax(320px,400px);gap:28px;align-items:start;justify-content:center; } }
 @media(max-width:900px) { .legacySceneGrid { grid-template-columns:minmax(0,1fr);gap:28px; } }

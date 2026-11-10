@@ -1,3 +1,4 @@
+import TitleText from "@/components/title-text";
 import Link from "next/link";
 import { displaySceneSizeMb } from "@/lib/scene-size";
 import styles from "./property-detail-view.module.css";
@@ -833,7 +834,7 @@ export default function PropertyDetailView({
           </section>
         ) : visibleSplatItems.length === 0 ? (
           <section className="mb-16">
-            <Eyebrow en="3DGS" jp={en ? "Locahun 3D" : "ロケハン3D"} />
+            <Eyebrow en="3DGS" jp={en ? "3D Tour" : "3D内見"} />
             <div className="border border-dashed border-line py-16 text-center bg-white">
               <p className="text-ink/40 text-[14px]">
                 {en ? "3DGS data is coming soon." : "3DGSデータは準備中です。"}
@@ -842,8 +843,8 @@ export default function PropertyDetailView({
           </section>
         ) : (
           <section className="mb-16">
-            {/* 見出しは「ロケハン3D」だけ。撮影日・GS番号・容量・データ相談の文は出さない（2026-11-10 本人「ロケハン3Dの記載以外消して」） */}
-            <Eyebrow en="3DGS" jp={en ? "Locahun 3D" : "ロケハン3D"} />
+            {/* 見出しは「3D内見」（2026-11-10 本人指示で「ロケハン3D」から変更）。撮影日・GS番号・容量・データ相談の文は出さない（同日「ロケハン3Dの記載以外消して」）。シーン名だけは各ビューアーの上に出す（どこがどの場所か分かるように）。 */}
+            <Eyebrow en="3DGS" jp={en ? "3D Tour" : "3D内見"} />
             {/* ⚠ 件数に関わらず常に2カラムのグリッドに置く（2026-08-13）。
                 以前は1件のときだけ `space-y-10` の全幅にしており、ビューアーが
                 `aspect-video` なのでページ幅いっぱい＝縦もページからはみ出す
@@ -856,7 +857,9 @@ export default function PropertyDetailView({
               className={
                 visibleSplatItems.length > 1
                   ? styles.legacySceneGrid
-                  : styles.legacySingleScene
+                  : visibleSplatItems[0].it.forSale
+                    ? styles.legacySingleSceneSale
+                    : styles.legacySingleScene
               }
             >
               {visibleSplatItems.map(({ it: item, origIndex }, i) => {
@@ -871,6 +874,15 @@ export default function PropertyDetailView({
                    実画面基準の vh は必ず var(--z) で割る（CLAUDE.md の規約）。
                    高さ 45vh 相当 → 幅 45vh × 16/9。 */
                 <section key={origIndex} data-scene-card={item.id} id={i === initialSceneIndex ? "walkthrough" : `scene-${origIndex}`} className={styles.legacyScene}>
+                  {item.label && (
+                    <h3 className="mb-3 text-[14px] font-bold text-ink/85">
+                      <TitleText text={item.label} />
+                    </h3>
+                  )}
+                  {/* 1シーンでデータ販売があるときは、ビューアーの右に購入の説明を置く（2026-11-10 本人指示）。
+                      sceneSaleRow が PC 幅だけ2列になり、それ以下は従来どおり縦に積む。 */}
+                  <div className={visibleSplatItems.length === 1 && item.forSale ? styles.sceneSaleRow : undefined}>
+                  <div className="min-w-0">
                   <ViewerGate
                     splatUrl={item.splatUrl}
                     propertyId={property.id}
@@ -887,6 +899,8 @@ export default function PropertyDetailView({
                     freeViewer={isAdminUser}
                     alreadyUnlocked={unlockedItemIds.includes(item.id)}
                   />
+                  </div>
+                  <div className="min-w-0">
                   {/* 販売中でも配布ファイルが未設定の項目は「購入する」を出さない。
                       出すと必ずサーバ側 409 になる壊れた導線になる（購入ゲートと整合）。
                       salePrice===0 は「無料配布」として許可する（api/purchase 側で
@@ -920,6 +934,8 @@ export default function PropertyDetailView({
                   {item.forSale && !itemDataSaleDisabled && resolveDownloadFiles(item).length === 0 && (
                     <PurchaseContents files={resolvePurchaseContents(item)} en={en} />
                   )}
+                  </div>
+                  </div>
                   {/* 販売していないシーンにも、データ販売の窓口だけは置く（2026-09-26 本人指示
                       「data販売の問い合わせフォーム、販売してなくても書いておいて」）。
                       宛先は施設ではなく当社なので、物件の問い合わせフォーム(#inquiry)ではなく

@@ -844,7 +844,7 @@ export const propertySchema = z.object({
   /**
    * 初回公開時刻 (ISO)。publish 系アクションが「未設定のときだけ」刻む
    * サーバ管理フィールド（下書き⇄公開を往復しても最初の公開日を保持）。
-   * カタログの "New" バッジ（公開から2ヶ月間）の基準。旧データは未設定
+   * カタログの "New" バッジ（公開から2週間）の基準。旧データは未設定
    * のため、判定側は createdAt にフォールバックする。
    */
   publishedAt: z.string().datetime().optional(),
@@ -861,7 +861,7 @@ export function listedAt(p: { publishedAt?: string; createdAt?: string }): strin
   return p.publishedAt || p.createdAt || "";
 }
 
-/** 公開(初回)から2ヶ月以内なら true — カタログの "New" バッジ判定。 */
+/** 公開(初回)から2週間以内なら true — カタログ・物件ページの "New" バッジ判定（2026-11-10 本人指示で2ヶ月→2週間）。 */
 export function isNewProperty(
   p: { publishedAt?: string; createdAt?: string },
   now: Date = new Date(),
@@ -870,9 +870,7 @@ export function isNewProperty(
   if (!base) return false;
   const d = new Date(base);
   if (Number.isNaN(d.getTime())) return false;
-  const cutoff = new Date(d);
-  cutoff.setMonth(cutoff.getMonth() + 2);
-  return now < cutoff;
+  return now.getTime() < d.getTime() + 14 * 24 * 60 * 60 * 1000;
 }
 
 /**

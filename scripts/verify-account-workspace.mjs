@@ -24,7 +24,7 @@ const bundle = await build({ bundle:true,write:false,outdir:'fixture',format:'es
     else if(p.endsWith('/notifications'))contents='export const getNotificationSummary=async(id,scope)=>({notifications:scope==="user"?window.fixture.notices:[],unreadCount:scope==="user"?2:7});';
     else if(p.endsWith('/server'))contents='export const getLocale=async()=>window.fixture.locale;';
     else if(p.endsWith('/locale-provider'))contents='export const useLocale=()=>window.fixture.locale;';
-    else if(p.endsWith('-actions'))contents=`const record=(name,...args)=>{window.fixtureCalls.push({name,args:args.map(v=>v instanceof FormData?Object.fromEntries(v):v)})};export const updateDisplayNameAction=async(s,f)=>{record('displayName',f);return{ok:true,displayName:f.get('displayName')}};export const revokeMySessionAction=async(f)=>record('revoke',f);export const acceptNdaAction=async()=>record('nda');export const openBillingPortalAction=async()=>record('billing');export const updateMarketingConsentAction=async(v)=>record('marketing',v);export const markNotificationsReadAction=async(scope)=>{record('read',scope);if(window.failRead)throw Error('Fixture read failure')};export const redeemGiftCodeAction=async(s,f)=>{record('gift',f);return{ok:false,error:'Fixture: no gift code redeemed'}};`;
+    else if(p.endsWith('-actions'))contents=`const record=(name,...args)=>{window.fixtureCalls.push({name,args:args.map(v=>v instanceof FormData?Object.fromEntries(v):v)})};export const updateDisplayNameAction=async(s,f)=>{record('displayName',f);return{ok:true,displayName:f.get('displayName')}};export const revokeMySessionAction=async(f)=>record('revoke',f);export const acceptNdaAction=async()=>record('nda');export const openBillingPortalAction=async()=>record('billing');export const updateMarketingConsentAction=async(v)=>record('marketing',v);export const markNotificationsReadAction=async(scope)=>{record('read',scope);if(window.failRead)throw Error('Fixture read failure')};export const markNotificationReadAction=async(id)=>record('readOne',id);export const redeemGiftCodeAction=async(s,f)=>{record('gift',f);return{ok:false,error:'Fixture: no gift code redeemed'}};`;
     else throw Error('Unmocked boundary '+p);
     return{contents,loader:'jsx',resolveDir:process.cwd()};
   });
@@ -73,7 +73,7 @@ try{
       return{regions,slots,boards,boardLines,nameText,nameWords,giftCard:giftCard?rect(giftCard):null,escaped,scrollWidth:document.documentElement.scrollWidth};
     });
     for(const name of ['work','subscription','contracts','profile'])if(!geometry.regions[name])errors.push('Missing region '+name);
-    for(const [slot,region]of Object.entries({saved:'work',history:'work',devices:'work',tokens:'subscription',plan:'subscription',invoices:'subscription',nda:'contracts',gift:'contracts'}))if(geometry.slots[slot]?.region!==region)errors.push('Wrong/missing slot '+slot);
+    for(const [slot,region]of Object.entries({saved:'work',history:'work',devices:'work',tokens:'subscription',plan:'subscription',invoices:'subscription',nda:'contracts',gift:'subscription'}))if(geometry.slots[slot]?.region!==region)errors.push('Wrong/missing slot '+slot);
     if(geometry.escaped.length)errors.push('Parent/viewport overflow');
     if(geometry.nameText!==user.displayName)errors.push('Display name text changed');
     if(long&&locale==='ja'&&!scenario.endsWith('-english')&&geometry.nameWords.length!==4)errors.push('Required display name words missing');
@@ -90,7 +90,6 @@ try{
       const a=geometry.boards[i],b=geometry.boards[j];
       if(Math.abs(a.card.y-b.card.y)<2&&Math.abs(a.image.y-b.image.y)>2)errors.push('Same-row saved thumbnails have different tops');
     }
-    if(width>700&&geometry.giftCard&&Math.abs(geometry.giftCard.bottom-geometry.slots.nda.bottom)>2)errors.push('Contract card bottoms not aligned');
     const key=`${locale}-${width}-${scenario}`;
     await page.screenshot({path:`${out}/${key}-initial.png`});await page.screenshot({path:`${out}/${key}-full.png`,fullPage:true});
     if(expired&&await page.locator('a[href$="/properties/p1"]').count())errors.push('Expired unlock revisit shown');

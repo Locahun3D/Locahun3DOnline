@@ -5,7 +5,7 @@ import { redeemGiftCodeAction, type RedeemState } from "@/lib/gift-actions";
 import { GIFT_BUCKET_LABEL } from "@/lib/gift-schema";
 import { useLocale } from "@/components/locale-provider";
 
-export default function RedeemGift() {
+export default function RedeemGift({ inline = false }: { inline?: boolean } = {}) {
   const en = useLocale() === "en";
   const [state, formAction, pending] = useActionState<RedeemState, FormData>(
     redeemGiftCodeAction,
@@ -13,8 +13,9 @@ export default function RedeemGift() {
   );
 
   return (
-    <div className="border border-line p-5">
-      <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3">
+    // inline = マイページの「請求書・購入履歴」カードの中に置くとき（2026-11-10 本人指示で移動）。枠を二重にしない。
+    <div className={inline ? "" : "border border-line p-5"}>
+      <div className={inline ? "text-[12px] font-bold text-[#14181c] mb-2" : "mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-3"}>
         {en ? "Redeem a gift code" : "ギフトコードを引き換え"}
       </div>
       <form action={formAction} className="flex flex-wrap gap-2">

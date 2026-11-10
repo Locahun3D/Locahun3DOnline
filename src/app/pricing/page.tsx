@@ -39,6 +39,9 @@ const COMPARE_ROWS: Array<{
   // 付与数は PLAN_TOKEN_BUDGET / SIGNUP_BONUS_TOKENS から導出する。以前ここは
   // 数値べた書きで、定数側を変更しても料金表が古い数字のまま残る状態だった。
   { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} ポイント`, `${SIGNUP_BONUS_TOKENS} points at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} ポイント`, `${PLAN_TOKEN_BUDGET.individual} points / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} ポイント`, `${PLAN_TOKEN_BUDGET.studio} points / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} ポイント`, `${PLAN_TOKEN_BUDGET.team} points / mo`] },
+  // 2026-11-10: ビューアーは Free だと「見るだけ」（カメラリセットと EN のみ）。測定・日照・カメラワーク・レイヤー・AR などのツールは有料プランから
+  //   （/api/viewer-entitlement で判定）。スマホはプランに関係なく視点操作だけの画面になる。
+  { label: ["3Dビューの操作ツール", "3D viewer tools"], free: ["見るだけ（カメラリセット）", "View only (camera reset)"], individual: ["✓ 測定・日照・カメラワーク・レイヤー など", "✓ Measure, sun, camera paths, layers, etc."], studio: ["✓", "✓"], team: ["✓", "✓"] },
   // ⚠ 以前は「制限あり / NDA 限定シーンの閲覧」だったが、「制限あり」が何の制限か
   //   一瞬迷う（2026-08-01 レビュー）。行の意味は「NDA限定シーンの閲覧」だけなので短縮。
   { label: ["NDA 限定シーンの閲覧", "NDA-only scenes"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（制作会社アカウント＋NDA締結）", "✓ (production account + NDA)"] },
