@@ -64,7 +64,7 @@ import { missingEnglishFields } from "@/lib/property-english";
 import { EMPTY_DATA_SALE_CONSENT } from "@/lib/data-sale-consent";
 import { createPropertyWriteQueue } from "@/lib/property-write-queue";
 import { publishedEnglishUpdates } from "@/lib/published-english-updates";
-import { applyExtendedLicensePricing } from "@/lib/license-options";
+import { applyExtendedLicensePricing, suggestIndiePrice } from "@/lib/license-options";
 import { receiveSceneAttachment, sceneRefreshDecision, sceneRequest, SceneHttpError, sourceRefreshDecision, type SceneSession } from "@/lib/scene-edit-client";
 import styles from "./property-editor.module.css";
 import SceneEditor, { type SceneAttached } from "./scene-editor";
@@ -3802,6 +3802,22 @@ function LicenseOptionsEditor({
                 <p className="text-[11px] text-muted">
                   {hasStandard ? "標準価格の2倍（自動）" : "標準ライセンスを選ぶと価格の2倍に自動設定"}
                 </p>
+              </div>
+            ) : opt && license === "indie" ? (
+              <div className="text-right">
+                <SalePriceInput
+                  value={opt.price}
+                  onChange={(v) => setPrice(license, v)}
+                />
+                {suggestIndiePrice(options) !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setPrice(license, suggestIndiePrice(options)!)}
+                    className="mt-1 text-[11px] text-muted underline hover:text-accent"
+                  >
+                    目安: 標準の1/20 ＝ ¥{suggestIndiePrice(options)!.toLocaleString("ja-JP")}（クリックで入力）
+                  </button>
+                )}
               </div>
             ) : opt && (
               <SalePriceInput

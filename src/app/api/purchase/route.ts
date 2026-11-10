@@ -114,6 +114,14 @@ export async function POST(req: Request) {
     );
   }
   const license = matchedOption.license;
+  // インディーは「個人、または直近1年の売上1,000万円未満の事業者」の自己申告が必須（2026-11-11）。
+  if (license === "indie" && body.indieEligible !== true) {
+    return NextResponse.json(
+      { error: "インディーライセンスの対象者であることの申告が必要です" },
+      { status: 400 },
+    );
+  }
+  const indieEligibilityDeclaredAt = license === "indie" ? termsAgreedAt : undefined;
   const editorialRightsCredit = license === "editorial" ? item.editorialRightsCredit : "";
 
   const purchaseId = randomUUID();
@@ -140,6 +148,7 @@ export async function POST(req: Request) {
       license,
       editorialRightsCredit,
       termsAgreedAt,
+      indieEligibilityDeclaredAt,
       usePurpose: intake.usePurpose,
       buyerCompany: intake.buyerCompany,
       priceYen: price,
@@ -201,6 +210,7 @@ export async function POST(req: Request) {
     license,
     editorialRightsCredit,
     termsAgreedAt,
+    indieEligibilityDeclaredAt,
     usePurpose: intake.usePurpose,
     buyerCompany: intake.buyerCompany,
     priceYen: price,

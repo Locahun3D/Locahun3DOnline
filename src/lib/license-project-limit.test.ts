@@ -12,7 +12,7 @@ describe("案件数の条件", () => {
 
   it("可否表は標準以下が不可、拡張が可", () => {
     const row = DATA_LICENSE_MATRIX.find((r) => r.key === "multipleProjects")!;
-    expect(row.by).toEqual({ standard: "no", extended: "yes", custom: "ask", editorial: "no" });
+    expect(row.by).toEqual({ standard: "no", extended: "yes", custom: "ask", editorial: "no", indie: "no" });
   });
 
   it("適用開始より前に同意した購入は旧条件のまま", () => {

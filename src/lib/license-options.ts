@@ -31,6 +31,16 @@ export function applyExtendedLicensePricing(options: LicenseOption[]): LicenseOp
   });
 }
 
+/**
+ * インディー価格の目安（管理画面で提案表示するだけ。強制しない）。
+ * 標準価格の1/20を百円単位で切り上げる。標準価格が無い/0なら null。
+ */
+export function suggestIndiePrice(options: LicenseOption[]): number | null {
+  const standard = options.find((option) => option.license === "standard");
+  if (!standard || standard.price <= 0) return null;
+  return Math.ceil(standard.price / 20 / 100) * 100;
+}
+
 export function resolveLicenseOptions(item: LicenseSource): LicenseOption[] {
   // エディトリアルは 2026-09-19 に販売再開（施設契約で「エディトリアルのみ許諾」を
   // 選べるようにしたため）。どの区分を売るかは物件エディターの設定に従う。

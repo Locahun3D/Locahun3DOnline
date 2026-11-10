@@ -20,6 +20,8 @@ export interface LicenseFileInput {
   createdAt: string;
   completedAt?: string;
   termsAgreedAt?: string;
+  /** インディーライセンス購入時のみ。対象者であることの自己申告日時。 */
+  indieEligibilityDeclaredAt?: string;
   userEmail: string;
   purchaseId: string;
   /** エディトリアルライセンス購入時のみ設定。公開時に必須の権利者クレジット表記。 */
@@ -62,7 +64,9 @@ Scene           : ${p.itemLabel || "(not set)"}
 Price           : ${fmtPrice(p.priceYen, true)}
 Purchased at    : ${fmtDateTime(p.completedAt || p.createdAt, true)}
 Terms agreed at : ${fmtDateTime(p.termsAgreedAt, true)}
-Purchaser       : ${p.userEmail}
+${p.indieEligibilityDeclaredAt ? `Indie eligibility declared at : ${fmtDateTime(p.indieEligibilityDeclaredAt, true)}
+  (individual, or business revenue under JPY 10 million in the past 12 months)
+` : ""}Purchaser       : ${p.userEmail}
 
 ----------------------------------------------------------------
 ■ License tier: ${p.licenseLabel}
@@ -153,7 +157,9 @@ export function generateLicenseText(p: LicenseFileInput): string {
 価格　　　　　: ${fmtPrice(p.priceYen, false)}
 購入日時　　　: ${fmtDateTime(p.completedAt || p.createdAt, false)}
 規約同意日時　: ${fmtDateTime(p.termsAgreedAt, false)}
-購入者　　　　: ${p.userEmail}
+${p.indieEligibilityDeclaredAt ? `対象者申告日時: ${fmtDateTime(p.indieEligibilityDeclaredAt, false)}
+（個人、または直近1年の売上1,000万円未満の事業者であることの自己申告）
+` : ""}購入者　　　　: ${p.userEmail}
 
 ----------------------------------------------------------------
 ■ 適用ライセンス区分: ${p.licenseLabel}

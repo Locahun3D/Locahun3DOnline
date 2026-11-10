@@ -71,6 +71,7 @@ export async function POST(req: Request) {
     label: string;
     license: string;
     editorialRightsCredit: string;
+    indieEligibilityDeclaredAt?: string;
     price: number;
   }[] = [];
   const seen = new Set<string>();
@@ -108,10 +109,19 @@ export async function POST(req: Request) {
       label: item.label,
       license: matchedOption.license,
       editorialRightsCredit: matchedOption.license === "editorial" ? item.editorialRightsCredit : "",
+      indieEligibilityDeclaredAt: matchedOption.license === "indie" ? termsAgreedAt : undefined,
       // クライアントは価格を送ってこない（サーバの item.salePrice をそのまま
       // 信用しない設計）。無料期間中は単品購入と同じく¥0に統一する。
       price: isDataSaleFree(item.freePeriod, nowIso) ? 0 : matchedOption.price,
     });
+  }
+
+  // インディーは「個人、または直近1年の売上1,000万円未満の事業者」の自己申告が必須（2026-11-11。単品購入と同じ）。
+  if (resolved.some((r) => r.license === "indie") && body?.indieEligible !== true) {
+    return NextResponse.json(
+      { error: "インディーライセンスの対象者であることの申告が必要です" },
+      { status: 400 },
+    );
   }
 
   if (resolved.length === 0) {
@@ -137,6 +147,7 @@ export async function POST(req: Request) {
         itemLabel: r.label,
         license: r.license,
         editorialRightsCredit: r.editorialRightsCredit,
+        indieEligibilityDeclaredAt: r.indieEligibilityDeclaredAt,
         termsAgreedAt,
         usePurpose: intake.usePurpose,
         buyerCompany: intake.buyerCompany,
@@ -207,6 +218,7 @@ export async function POST(req: Request) {
       itemLabel: r.label,
       license: r.license,
       editorialRightsCredit: r.editorialRightsCredit,
+      indieEligibilityDeclaredAt: r.indieEligibilityDeclaredAt,
       termsAgreedAt,
       usePurpose: intake.usePurpose,
       buyerCompany: intake.buyerCompany,

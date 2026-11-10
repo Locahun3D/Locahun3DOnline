@@ -48,16 +48,18 @@ export const SPLAT_ACCESS_LABEL: Record<SplatAccessLevel, string> = {
 };
 
 // 3Dデータ販売ライセンス（TurboSquid風）。グレード順（利用範囲が狭い→広い順）で
-// 並べる: editorial(報道・教育・個人限定) < standard(商用可・再配布不可) <
+// 並べる: editorial(報道・教育・個人限定) < indie(個人・年商1千万円未満の事業者、
+// 自作作品への組込まで・2026-11-11追加) < standard(商用可・再配布不可) <
 // extended(同梱・改変配布まで許諾) < custom(個別合意)。この配列順が
 // license-options.ts のソート・管理画面のチェックボックス/既定選択プルダウンの
 // 表示順すべてに反映される。
-export const DATA_LICENSES = ["editorial", "standard", "extended", "custom"] as const;
+export const DATA_LICENSES = ["editorial", "indie", "standard", "extended", "custom"] as const;
 export type DataLicense = (typeof DATA_LICENSES)[number];
 
 export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
   standard: "標準ライセンス",
   editorial: "エディトリアル限定",
+  indie: "インディーライセンス",
   extended: "拡張ライセンス",
   custom: "カスタム（要相談）",
 };
@@ -65,6 +67,7 @@ export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   standard: "商用・非商用の制作物に利用可（1購入につき1案件まで）。データ自体の再配布・再販は不可。",
   editorial: "無料。報道・教育・個人利用に限定（1件の提供につき1案件まで）。広告等の商用利用は不可。公開時に権利表記が必要です。",
+  indie: "個人、または直近1年の売上が1,000万円未満の事業者向け（自己申告・1購入につき1案件まで）。収益化動画・同人/インディーゲーム・VRChatワールドなど商用利用可。自作のゲーム・ワールド・アプリへの組込可。データを取り出せる形での配布や、アセットとしての再配布・再販は不可。権利表記は不要です。",
   extended: "利用できる案件数の制限なし。商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
@@ -72,6 +75,7 @@ export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
 export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
   standard: "Standard license",
   editorial: "Editorial only",
+  indie: "Indie license",
   extended: "Extended license",
   custom: "Custom (by arrangement)",
 };
@@ -79,6 +83,7 @@ export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   standard: "Use in commercial & non-commercial productions (one project per purchase). Redistribution or resale of the data itself is not permitted.",
   editorial: "Free. Limited to news, education and personal use (one project per copy provided). Commercial use such as advertising is not permitted. A rights credit is required when published.",
+  indie: "For individuals or businesses with revenue under JPY 10 million in the past 12 months (self-declared; one project per purchase). Commercial use OK, including monetized videos, indie games and VRChat worlds. May be embedded in your own games, worlds and apps. Distributing the data in an extractable form, or redistributing/reselling it as an asset, is not permitted. No rights credit required.",
   extended: "Unlimited number of projects. Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
@@ -107,25 +112,28 @@ export const DATA_LICENSE_MATRIX: {
   labelJa: string;
   labelEn: string;
   by: Record<DataLicense, LicenseAllowance>;
+  /** 区分ごとの但し書き（「○」に条件が付くとき）。表のセルに小さく添える。 */
+  notes?: Partial<Record<DataLicense, { ja: string; en: string }>>;
 }[] = [
   {
     key: "production",
     labelJa: "映像・画像などの制作物に使う（商用可）",
     labelEn: "Use in film / image productions (commercial OK)",
-    by: { standard: "yes", extended: "yes", custom: "ask", editorial: "no" },
+    by: { standard: "yes", extended: "yes", custom: "ask", editorial: "no", indie: "yes" },
   },
   {
     // 規約 第2条6項: 標準以下は1購入につき1案件、拡張は案件数の制限なし（2026-11-06〜）。
     key: "multipleProjects",
     labelJa: "2つ目以降の案件にも使う",
     labelEn: "Use on more than one project",
-    by: { standard: "no", extended: "yes", custom: "ask", editorial: "no" },
+    by: { standard: "no", extended: "yes", custom: "ask", editorial: "no", indie: "no" },
   },
   {
     key: "embedding",
     labelJa: "ゲーム・アプリ等への組込／テンプレートへの同梱・改変配布",
     labelEn: "Embedding in games & apps / bundling into templates",
-    by: { standard: "no", extended: "yes", custom: "ask", editorial: "no" },
+    by: { standard: "no", extended: "yes", custom: "ask", editorial: "no", indie: "yes" },
+    notes: { indie: { ja: "自作の作品への組込のみ", en: "Own works only" } },
   },
   {
     // 規約 第4条:「本データの第三者への再配布・転売・貸与」＝原則禁止だが、
@@ -133,7 +141,7 @@ export const DATA_LICENSE_MATRIX: {
     key: "resale",
     labelJa: "データ自体の再配布・転売・貸与",
     labelEn: "Redistributing, reselling or lending the data itself",
-    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask" },
+    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask", indie: "ask" },
   },
   {
     // 規約 第4条:「機械学習・生成AIモデルの学習データとして利用する行為
@@ -142,7 +150,7 @@ export const DATA_LICENSE_MATRIX: {
     key: "aiTraining",
     labelJa: "機械学習・生成AIの学習データとして使う",
     labelEn: "Using as training data for machine learning / generative AI",
-    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask" },
+    by: { standard: "ask", extended: "ask", custom: "ask", editorial: "ask", indie: "ask" },
   },
 ];
 

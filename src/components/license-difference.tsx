@@ -93,6 +93,11 @@ export default function LicenseDifference({
                           className={`border-b border-line/50 px-2 py-1.5 text-center ${tone(v)}`}
                         >
                           {mark(v)}
+                          {row.notes?.[o.license] && (
+                            <span className="block text-[9px] leading-snug text-muted">
+                              {en ? row.notes[o.license]!.en : row.notes[o.license]!.ja}
+                            </span>
+                          )}
                         </td>
                       );
                     })}

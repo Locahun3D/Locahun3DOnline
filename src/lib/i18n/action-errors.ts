@@ -39,6 +39,7 @@ const EXACT: Record<string, string> = {
   "カートが空です": "Your cart is empty.",
   "3Dデータ利用規約への同意が必要です": "Please agree to the 3D data terms.",
   "ご利用の用途を選択してください": "Please choose how you plan to use the data.",
+  "インディーライセンスの対象者であることの申告が必要です": "Please confirm you are eligible for the Indie license.",
   "購入可能な項目がありません（購入済み/販売停止の可能性）": "Nothing in the cart can be purchased (already purchased, or no longer on sale).",
   "撮影スタジオアカウントはデータ購入の対象外です": "Studio accounts can't purchase data.",
   "物件が見つかりません": "We couldn't find that location.",

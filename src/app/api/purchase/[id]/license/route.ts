@@ -55,6 +55,7 @@ export async function GET(
     createdAt: purchase.createdAt,
     completedAt: purchase.completedAt,
     termsAgreedAt: purchase.termsAgreedAt,
+    indieEligibilityDeclaredAt: purchase.indieEligibilityDeclaredAt,
     userEmail: purchase.userEmail,
     purchaseId: purchase.id,
     editorialRightsCredit: purchase.editorialRightsCredit,

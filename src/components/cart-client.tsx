@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { IndieEligibilityCheck } from "@/components/indie-eligibility-check";
 import {
   getCart,
   removeFromCart,
@@ -25,6 +26,7 @@ export default function CartClient() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [indieEligible, setIndieEligible] = useState(false);
   const [intake, setIntake] = useState<IntakeValue>(EMPTY_INTAKE);
   const [mounted, setMounted] = useState(false);
   const [removedItems, setRemovedItems] = useState<RemovedCartItem[]>([]);
@@ -101,7 +103,15 @@ export default function CartClient() {
     setRemovedItems(previous => previous.slice(0, -1));
   };
 
+  const hasIndie = items.some(
+    (i) => (details[`${i.propertyId}:${i.splatItemIndex}`]?.license ?? i.license) === "indie",
+  );
+
   const checkout = async () => {
+    if (hasIndie && !indieEligible) {
+      alert(en ? "Please confirm you are eligible for the Indie license." : "インディーライセンスの対象者であることを確認してください");
+      return;
+    }
     if (!agreed) {
       alert(en ? "Please agree to the purchase terms" : "購入規約に同意してください");
       return;
@@ -123,6 +133,7 @@ export default function CartClient() {
           })),
           // サーバー側でも必須検証され、同意時刻が購入レコードに記録される。
           agreedTerms: agreed,
+          indieEligible: hasIndie ? indieEligible : undefined,
           ...intake,
         }),
       });
@@ -282,6 +293,7 @@ export default function CartClient() {
           </div>
         </div>
         <PurchaseIntakeFields value={intake} onChange={setIntake} en={en} className="sm:!grid-cols-1" />
+        {hasIndie && <IndieEligibilityCheck checked={indieEligible} onChange={setIndieEligible} en={en} />}
         <label className="flex items-start gap-2 cursor-pointer text-[13px] text-muted">
           <input
             type="checkbox"
@@ -310,7 +322,7 @@ export default function CartClient() {
         <button
           type="button"
           onClick={checkout}
-          disabled={loading || !agreed || !intake.usePurpose}
+          disabled={loading || !agreed || !intake.usePurpose || (hasIndie && !indieEligible)}
           className="w-full min-h-[48px] px-4 py-3 mono text-[11px] tracking-[0.24em] uppercase border border-accent text-accent hover:bg-accent hover:text-bg transition disabled:opacity-40 disabled:cursor-wait"
         >
           {loading ? (en ? "Processing..." : "処理中...") : en ? "Buy all" : "まとめて購入"}

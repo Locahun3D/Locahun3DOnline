@@ -42,6 +42,11 @@ export const purchaseSchema = z.object({
    */
   termsAgreedAt: z.string().optional(),
   /**
+   * インディーライセンスの対象者（個人、または直近1年の売上1,000万円未満の事業者）
+   * であることの自己申告日時。2026-11-11 追加。インディー以外・旧レコードは未記録。
+   */
+  indieEligibilityDeclaredAt: z.string().optional(),
+  /**
    * 受け取るときに聞いた用途（lib/use-purpose.ts の key）と、会社名・所属（任意）。
    * 2026-10-13 追加。それ以前のレコードは未記録のため optional。
    */
