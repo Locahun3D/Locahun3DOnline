@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
 import { categoryLabel, tokenCostLabel, isNewProperty, type Property } from "@/lib/schemas";
 import { formatKm } from "@/lib/distance";
 import BookmarkButton from "@/components/bookmark-button";
@@ -72,7 +73,8 @@ export default function PropertyCardLite({
         {hasSplat ? (
           <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
             <div className="mono text-[10px] tracking-[0.24em] uppercase bg-accent text-bg px-2 py-1">3DGS</div>
-            <div
+            {/* 閲覧が無料の間（VIEWING_IS_FREE）はポイントの目印を出さない（2026-11-11） */}
+            {!VIEWING_IS_FREE && <div
               className="mono text-[9px] tracking-[0.2em] uppercase bg-bg/85 backdrop-blur border border-line px-1.5 py-0.5"
               title={
                 en
@@ -84,7 +86,7 @@ export default function PropertyCardLite({
               {en
                 ? property.tokenCost === 1 ? "House" : property.tokenCost === 2 ? "Mid" : "Large"
                 : property.tokenCost === 1 ? "ハウス" : property.tokenCost === 2 ? "中規模" : "大規模"}
-            </div>
+            </div>}
           </div>
         ) : (
           /* 写真のみ掲載。3Dを探している利用者が一覧で判別できるよう明示する
