@@ -45,10 +45,12 @@ CHECKS = [
      r'className="group relative aspect-video w-full border border-line overflow-hidden bg-\[#141414\]"', True),
     ("トークン単発購入ボタンを復活させない（2026-08-13 全廃）",
      "src/components/viewer-gate.tsx", r"buyTokenPackAction", False),
-    ("カート投入は規約同意ガード（処理側）",
-     "src/components/data-sale-panel.tsx", r"else if \(agreedTerms\)", True),
-    ("＋カートは同意まで disabled（UI側）",
-     "src/components/data-sale-panel.tsx", r"disabled=\{!agreedTerms\}", True),
+    # 2026-11-10 本人指示で、規約同意・用途はカートの購入手続きで確認する形に変更（物件ページでは聞かない）。
+    # 同意なしで決済に進めないことは、カートの checkout とサーバー側で守る。
+    ("カートの購入手続きは規約同意ガード（UI側）",
+     "src/components/cart-client.tsx", r"disabled=\{loading \|\| !agreed", True),
+    ("カートの購入手続きは規約同意ガード（処理側）",
+     "src/components/cart-client.tsx", r"if \(!agreed\) \{", True),
     ("3DGS行の開閉キーはデータ側id（field.id は setValue のたび再生成される）",
      "src/components/admin/property-editor.tsx", r"watch\(`splatItems\.\$\{idx\}\.id`\) \|\| field\.id", True),
     ("自動保存成功時に router.refresh を呼ばない（スクロールが先頭へ戻る）",
