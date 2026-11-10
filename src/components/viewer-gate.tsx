@@ -293,6 +293,8 @@ export default function ViewerGate({
   }
 
   const trackOpen = () => {
+    // 自動操作のブラウザ（検証スクリプト等）は数えない（2026-11-11）。
+    if (navigator.webdriver) return;
     fetch("/api/track", {
       method: "POST",
       headers: { "content-type": "application/json" },

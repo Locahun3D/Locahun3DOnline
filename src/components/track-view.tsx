@@ -8,6 +8,8 @@ import { useEffect } from "react";
  */
 export default function TrackView({ propertyId }: { propertyId: string }) {
   useEffect(() => {
+    // 自動操作のブラウザ（検証スクリプト・メールのリンク検査など）は数えない（2026-11-11）。
+    if (navigator.webdriver) return;
     const key = `tv_${propertyId}`;
     try {
       if (sessionStorage.getItem(key)) return;

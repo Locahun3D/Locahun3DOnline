@@ -38,8 +38,17 @@ export async function POST(req: Request) {
     // 運営の動作確認アクセスが「誰が/どこから見たか」の集計カウンタと
     // 個別イベントログ双方を汚染しないよう、集計・記録の前でスキップする。
     // view_unlocks（本人の視聴履歴）は別経路なので影響しない。
-    if (user?.role === "admin") {
-      return NextResponse.json({ ok: true, skipped: "admin" });
+    // 2026-11-11 本人指示「adminアカウントの閲覧はノーカウントに」: サインアウト中・別タブの
+    // 確認でも数えないよう、管理者として一度計測を通ったブラウザに1年の印（Cookie）を付け、
+    // 以後その印があるブラウザは未ログインでも数えない。印を自分で付けても「数えられない」
+    // だけなので、偽装されて困ることはない。
+    const staffMarked = /(?:^|;\s*)l3d_no_track=1(?:;|$)/.test(req.headers.get("cookie") ?? "");
+    if (user?.role === "admin" || staffMarked) {
+      const res = NextResponse.json({ ok: true, skipped: "admin" });
+      if (user?.role === "admin") {
+        res.cookies.set("l3d_no_track", "1", { maxAge: 60 * 60 * 24 * 365, path: "/", sameSite: "lax", secure: true, httpOnly: true });
+      }
+      return res;
     }
 
     await track(propertyId, type, referrer, day, device);
