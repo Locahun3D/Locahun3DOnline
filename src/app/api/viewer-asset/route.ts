@@ -10,6 +10,7 @@ import {
   oneYearFrom,
 } from "@/lib/view-unlocks";
 import { getSettings } from "@/lib/site-settings";
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
 import { isFreePeriodActive } from "@/lib/settings-schema";
 import { presignViewerAsset, presignConfigured } from "@/lib/r2-presign";
 import { allowAssetDownload } from "@/lib/asset-rate-limit";
@@ -242,7 +243,9 @@ export async function GET(req: Request) {
      */
     const isAdmin = user.role === "admin";
     // 自分の物件は admin と同じ「無料・記録あり」扱い（掲載内容の確認用）。
-    const isFreeViewer = isAdmin || isOwnStudioProperty;
+    // VIEWING_IS_FREE（2026-11-11〜）: ログインしていれば誰でもポイントを使わずに見られる。
+    // 記録は tokensSpent: 0 で残る（下の upsert）。
+    const isFreeViewer = isAdmin || isOwnStudioProperty || VIEWING_IS_FREE;
     if (!freeAccess) {
       const propertyId = matchedProperty.id;
       const splatItemIndex = matchedIndex;

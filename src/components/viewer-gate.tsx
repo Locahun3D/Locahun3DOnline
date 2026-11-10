@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { buildViewerUrl, proxySplatUrl } from "@/lib/viewer";
 import type { TokenCost } from "@/lib/schemas";
 import { useLocale, useHref } from "@/components/locale-provider";
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
 
 /**
  * 1物件に複数シーンがあると ViewerGate が並ぶ分だけ自動再生プレビュー動画も
@@ -135,9 +136,11 @@ export default function ViewerGate({
           className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-center px-6 cursor-pointer backdrop-blur-md bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         >
           <div className="mono text-[11px] font-semibold tracking-[0.3em] uppercase text-accent mb-4 drop-shadow">
-            {en
-              ? `● Free account required · ${tokenCost} point(s)`
-              : `● 無料登録が必要 · ${tokenCost} ポイント消費`}
+            {VIEWING_IS_FREE
+              ? en ? "● Free account required" : "● 無料登録で見られます"
+              : en
+                ? `● Free account required · ${tokenCost} point(s)`
+                : `● 無料登録が必要 · ${tokenCost} ポイント消費`}
           </div>
           <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
             {en ? (
@@ -187,9 +190,11 @@ export default function ViewerGate({
                 <ul className="space-y-1.5 text-[13px] leading-[1.8] text-ink">
                   <li className="flex gap-2.5">
                     <span className="text-accent font-bold shrink-0">✓</span>
-                    {en
-                      ? "3DGS walkthroughs (6 points on signup)"
-                      : "3DGS ウォークスルー視聴（6ポイント付与）"}
+                    {VIEWING_IS_FREE
+                      ? en ? "3DGS walkthroughs, as often as you like" : "3DGS ウォークスルーを何度でも視聴"
+                      : en
+                        ? "3DGS walkthroughs (6 points on signup)"
+                        : "3DGS ウォークスルー視聴（6ポイント付与）"}
                   </li>
                   <li className="flex gap-2.5">
                     <span className="text-accent font-bold shrink-0">✓</span>
@@ -403,7 +408,7 @@ export default function ViewerGate({
       >
         <div
           className={`mono text-[11px] font-semibold tracking-[0.3em] uppercase mb-4 drop-shadow ${
-            previewToken || embedToken || freeAccess || freeViewer || alreadyUnlocked
+            previewToken || embedToken || freeAccess || freeViewer || alreadyUnlocked || VIEWING_IS_FREE
               ? "text-green-400"
               : "text-accent"
           }`}
@@ -418,9 +423,11 @@ export default function ViewerGate({
                 ? en ? "● Free period · no points used" : "● 限定無料期間中 · ポイント消費なし"
                 : alreadyUnlocked
                   ? en ? "● Unlocked · free re-view" : "● 視聴済み · 無料で再視聴"
-                  : en
-                    ? `● ${tokenCost} point${tokenCost > 1 ? "s" : ""}`
-                    : `● ${tokenCost} ポイント消費`}
+                  : VIEWING_IS_FREE
+                    ? en ? "● Free to view" : "● 無料で見られます"
+                    : en
+                      ? `● ${tokenCost} point${tokenCost > 1 ? "s" : ""}`
+                      : `● ${tokenCost} ポイント消費`}
         </div>
         <div className="serif text-2xl md:text-3xl font-bold leading-[1.5] max-w-[26ch] text-white drop-shadow-lg">
           {previewToken || embedToken || freeViewer
@@ -429,8 +436,10 @@ export default function ViewerGate({
               ? en ? (<>Watch the 3DGS walkthrough<br />free of charge.</>) : (<>無料で 3DGS<br />ウォークスルーが見られます。</>)
               : alreadyUnlocked
                 ? en ? (<>Watch the 3DGS<br />walkthrough again.</>) : (<>3DGS ウォークスルーを<br />もう一度見られます。</>)
-                : en ? (<>Use {tokenCost} point{tokenCost > 1 ? "s" : ""} to see<br />the 3DGS walkthrough.</>)
-                     : (<>{tokenCost} ポイントで<br />3DGS ウォークスルーが見られます。</>)}
+                : VIEWING_IS_FREE
+                  ? en ? (<>Open the 3DGS<br />walkthrough.</>) : (<>3DGS ウォークスルーを<br />開きます。</>)
+                  : en ? (<>Use {tokenCost} point{tokenCost > 1 ? "s" : ""} to see<br />the 3DGS walkthrough.</>)
+                       : (<>{tokenCost} ポイントで<br />3DGS ウォークスルーが見られます。</>)}
         </div>
       </a>
     </div>
