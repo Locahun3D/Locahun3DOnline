@@ -14,10 +14,12 @@ import p_ja_blender_53_native_3dgs from "../../content/works/ja/blender-53-nativ
 import p_ja_blender_lcc2_vfx from "../../content/works/ja/blender-lcc2-vfx.json";
 import p_ja_blog from "../../content/works/ja/blog.json";
 import p_ja_chevron_rokunowa_mv from "../../content/works/ja/chevron-rokunowa-mv.json";
+import p_ja_hectorvfx_kabukicho_blender53 from "../../content/works/ja/hectorvfx-kabukicho-blender53.json";
 import p_ja_houdini_comfyui_gsplat_workflow from "../../content/works/ja/houdini-comfyui-gsplat-workflow.json";
 import p_ja_index from "../../content/works/ja/index.json";
 import p_ja_isaacsim_3dgs_import from "../../content/works/ja/isaacsim-3dgs-import.json";
 import p_ja_isaacsim_3dgs_robot_demos from "../../content/works/ja/isaacsim-3dgs-robot-demos.json";
+import p_ja_pairpics_iphone_app from "../../content/works/ja/pairpics-iphone-app.json";
 import p_ja_portalcam_drone_ai_workflow from "../../content/works/ja/portalcam-drone-ai-workflow.json";
 import p_ja_portalcam_xbin_raw_extraction from "../../content/works/ja/portalcam-xbin-raw-extraction.json";
 import p_ja_shibuya_ten_simulations from "../../content/works/ja/shibuya-ten-simulations.json";
@@ -35,10 +37,12 @@ import p_en_blender_53_native_3dgs from "../../content/works/en/blender-53-nativ
 import p_en_blender_lcc2_vfx from "../../content/works/en/blender-lcc2-vfx.json";
 import p_en_blog from "../../content/works/en/blog.json";
 import p_en_chevron_rokunowa_mv from "../../content/works/en/chevron-rokunowa-mv.json";
+import p_en_hectorvfx_kabukicho_blender53 from "../../content/works/en/hectorvfx-kabukicho-blender53.json";
 import p_en_houdini_comfyui_gsplat_workflow from "../../content/works/en/houdini-comfyui-gsplat-workflow.json";
 import p_en_index from "../../content/works/en/index.json";
 import p_en_isaacsim_3dgs_import from "../../content/works/en/isaacsim-3dgs-import.json";
 import p_en_isaacsim_3dgs_robot_demos from "../../content/works/en/isaacsim-3dgs-robot-demos.json";
+import p_en_pairpics_iphone_app from "../../content/works/en/pairpics-iphone-app.json";
 import p_en_portalcam_drone_ai_workflow from "../../content/works/en/portalcam-drone-ai-workflow.json";
 import p_en_portalcam_xbin_raw_extraction from "../../content/works/en/portalcam-xbin-raw-extraction.json";
 import p_en_shibuya_ten_simulations from "../../content/works/en/shibuya-ten-simulations.json";
@@ -59,10 +63,12 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "blender-lcc2-vfx": p_ja_blender_lcc2_vfx as WorksPage,
   "blog": p_ja_blog as WorksPage,
   "chevron-rokunowa-mv": p_ja_chevron_rokunowa_mv as WorksPage,
+  "hectorvfx-kabukicho-blender53": p_ja_hectorvfx_kabukicho_blender53 as WorksPage,
   "houdini-comfyui-gsplat-workflow": p_ja_houdini_comfyui_gsplat_workflow as WorksPage,
   "index": p_ja_index as WorksPage,
   "isaacsim-3dgs-import": p_ja_isaacsim_3dgs_import as WorksPage,
   "isaacsim-3dgs-robot-demos": p_ja_isaacsim_3dgs_robot_demos as WorksPage,
+  "pairpics-iphone-app": p_ja_pairpics_iphone_app as WorksPage,
   "portalcam-drone-ai-workflow": p_ja_portalcam_drone_ai_workflow as WorksPage,
   "portalcam-xbin-raw-extraction": p_ja_portalcam_xbin_raw_extraction as WorksPage,
   "shibuya-ten-simulations": p_ja_shibuya_ten_simulations as WorksPage,
@@ -82,10 +88,12 @@ export const WORKS_PAGES: Record<"ja" | "en", Record<string, WorksPage>> = {
   "blender-lcc2-vfx": p_en_blender_lcc2_vfx as WorksPage,
   "blog": p_en_blog as WorksPage,
   "chevron-rokunowa-mv": p_en_chevron_rokunowa_mv as WorksPage,
+  "hectorvfx-kabukicho-blender53": p_en_hectorvfx_kabukicho_blender53 as WorksPage,
   "houdini-comfyui-gsplat-workflow": p_en_houdini_comfyui_gsplat_workflow as WorksPage,
   "index": p_en_index as WorksPage,
   "isaacsim-3dgs-import": p_en_isaacsim_3dgs_import as WorksPage,
   "isaacsim-3dgs-robot-demos": p_en_isaacsim_3dgs_robot_demos as WorksPage,
+  "pairpics-iphone-app": p_en_pairpics_iphone_app as WorksPage,
   "portalcam-drone-ai-workflow": p_en_portalcam_drone_ai_workflow as WorksPage,
   "portalcam-xbin-raw-extraction": p_en_portalcam_xbin_raw_extraction as WorksPage,
   "shibuya-ten-simulations": p_en_shibuya_ten_simulations as WorksPage,

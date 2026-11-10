@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-10T19:08:21.315Z",
+ "generatedAt": "2026-11-10T19:49:29.240Z",
  "pages": {
   "3dgs-ai-video-camera-comparison": {
    "locales": [
@@ -78,6 +78,13 @@
    ],
    "title": "Chevon「六ノ輪」MV — ロケハン3D 制作実績"
   },
+  "hectorvfx-kabukicho-blender53": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "hectorVFX「歌舞伎町」再現（Blender 5.3） — ロケハン3D 制作実績"
+  },
   "houdini-comfyui-gsplat-workflow": {
    "locales": [
     "ja",
@@ -105,6 +112,13 @@
     "en"
    ],
    "title": "渋谷の3DGSでロボットを走らせてみました｜ロケハン3D 技術ブログ"
+  },
+  "pairpics-iphone-app": {
+   "locales": [
+    "ja",
+    "en"
+   ],
+   "title": "pairPics（iPhoneアプリ） — ロケハン3D 制作実績"
   },
   "portalcam-drone-ai-workflow": {
    "locales": [
