@@ -47,7 +47,7 @@ export default async function DataDownloadTermsPage() {
               具体的な利用範囲は、購入時に選択したライセンス区分により異なります。区分は購入完了時の領収書に記載されます。
               {/* schemas.ts の DATA_LICENSE_LABEL/DATA_LICENSE_DESC と内容を一致させること */}
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
-                <li><strong>インディーライセンス</strong> — 個人、または直近1年の売上が1,000万円未満の事業者向け（自己申告・1購入につき1案件まで）。収益化動画・同人/インディーゲーム・VRChatワールドなど商用利用可。自作のゲーム・ワールド・アプリへの組込可。データを取り出せる形での配布や、アセットとしての再配布・再販は不可。権利表記は不要です。</li>
+                <li><strong>インディーライセンス</strong> — 個人、または直近1年の売上が1,000万円未満の事業者向け（1購入につき1案件まで）。収益化動画・同人/インディーゲーム・VRChatワールドなど商用利用可。アセットとしての再配布・再販は不可。権利表記は必須です（第8項）。</li>
                 <li><strong>標準ライセンス</strong> — 商用・非商用の制作物に利用可（1購入につき1案件まで）。データ自体の再配布・再販は不可。</li>
                 <li><strong>エディトリアル限定</strong>（無料） — 報道・教育・個人利用に限定（1件の提供につき1案件まで）。広告等の商用利用は不可。公開時に権利表記が必要です。</li>
                 <li><strong>拡張ライセンス</strong> — 利用できる案件数の制限なし。商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。</li>
@@ -61,7 +61,7 @@ export default async function DataDownloadTermsPage() {
               本データを<strong>ゲーム（Web/PC/その他プラットフォームを問わない）・アプリケーション等のソフトウェア製品に組み込み、当該製品の一部として第三者に提供する形態</strong>（以下「組込利用」）には、拡張ライセンスが必要です。標準ライセンスは、本データを用いて映像・画像等の制作物を作成する利用に限られ、本データ自体をソフトウェア製品に同梱して配布する利用は含みません。ただし、インディーライセンスの購入者は、<strong>購入者自身が制作・公開する1つのゲーム・ワールド・アプリケーション</strong>に限り、組込利用を行うことができます。この場合、当該製品から本データを取り出して利用できる形（素材ファイルの同梱、アセットとしての書き出し機能の提供等）で配布してはなりません。
             </li>
             <li>
-              インディーライセンスは、<strong>個人、または購入日の直前1年間の売上高が1,000万円未満の法人・個人事業主</strong>に限り購入できます。購入者は購入時にこれに該当することを申告するものとし、当社は必要に応じて確認を求めることができます。申告が事実と異なる場合、当社は当該購入を標準ライセンスの購入とみなし、差額の支払いを求めることができます。
+              インディーライセンスは、<strong>個人、または購入日の直前1年間の売上高が1,000万円未満の法人・個人事業主</strong>に限り購入できます。購入者は購入時にこれに該当することを申告するものとし、当社は必要に応じて確認を求めることができます。申告が事実と異なる場合、当社は当該購入を標準ライセンスの購入とみなし、差額の支払いを求めることができます。インディーライセンスで利用した制作物を公開する場合、購入者は、概要欄・クレジット・作品やワールドの説明ページ等のいずれか1か所に「3D scan: Locahun 3D（locahun3d.com）」等の権利表記を掲載するものとします。
             </li>
             <li>キャンペーン等により本データを<strong>無償で提供する場合にも、本規約を準用します</strong>。この場合、本規約中の「購入者」は無償提供を受けた者と読み替えます。</li>
             <li>
@@ -171,7 +171,7 @@ export default async function DataDownloadTermsPage() {
             改定日: 2026年9月19日（第2条5項のエディトリアル限定区分の販売を再開／第4条から競合施設への情報提供の禁止を削除し、施設の名誉毀損・実在事件の表現・物件ごとの施設の利用条件への違反を禁止事項に追加）<br />
             改定日: 2026年10月8日（第1条の本データに、撮影者から販売の許諾を受けた持ち込みスキャンのデータを含める旨を明記し、運営者を正式な商号で表記／第2条に、閲覧で取得したプレビュー画像と埋め込みの条件は利用規約によることを追加／第6条の返金を、当社に起因する不具合が確認された場合は購入日から1か月以内に返金または代替データの提供を求められる形に改定）<br />
             改定日: 2026年11月6日（第2条に、標準ライセンス・エディトリアル限定は1件の購入につき1案件まで、拡張ライセンスは案件数の制限なしとする項を第6項として新設し、以降の項を繰り下げ。第3項を同項に合わせて変更。同日以降に同意された購入に適用）<br />
-            改定日: 2026年11月11日（第2条5項にインディーライセンスを追加し、2項の利用目的・6項の案件・7項の組込利用を同区分に合わせて変更、対象者を定める項を第8項として新設し以降の項を繰り下げ／第4条2号の組込利用の取り扱いをインディーライセンスにも適用。同日以降に同意された購入に適用）<br />
+            改定日: 2026年11月11日（第2条5項にインディーライセンスを追加し、2項の利用目的・6項の案件・7項の組込利用を同区分に合わせて変更、対象者を定める項を第8項として新設し以降の項を繰り下げ／第4条2号の組込利用の取り扱いをインディーライセンスにも適用。第8項にインディーライセンスの権利表記を定める。同日以降に同意された購入に適用）<br />
             ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
@@ -229,7 +229,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
             <li>
               The specific scope of use depends on the license tier selected at purchase. The tier is shown on the purchase receipt.
               <ul className="mt-3 space-y-2 border-l-2 border-line pl-4">
-                <li><strong>Indie license</strong> — For individuals or businesses with revenue under JPY 10 million in the past 12 months (self-declared; one project per purchase). Commercial use OK, including monetized videos, indie games and VRChat worlds. May be embedded in your own games, worlds and apps. Distributing the data in an extractable form, or redistributing/reselling it as an asset, is not permitted. No rights credit required.</li>
+                <li><strong>Indie license</strong> — For individuals or businesses with revenue under JPY 10 million in the past 12 months (one project per purchase). Commercial use OK, including monetized videos, indie games and VRChat worlds. Redistributing or reselling the data as an asset is not permitted. A rights credit is required (paragraph 8).</li>
                 <li><strong>Standard license</strong> — Use in commercial &amp; non-commercial productions (one project per purchase). Redistribution or resale of the data itself is not permitted.</li>
                 <li><strong>Editorial only</strong> (free) — Limited to news, education and personal use (one project per copy provided). Commercial use such as advertising is not permitted. A rights credit is required when published.</li>
                 <li><strong>Extended license</strong> — Unlimited number of projects. Commercial use plus bundling into templates / embedded products and modified redistribution.</li>
@@ -243,7 +243,7 @@ function DataDownloadTermsEN({ locale }: { locale: "ja" | "en" }) {
               <strong>Embedding the Data into a software product — such as a game (web, PC or any other platform) or application — that is provided to third parties as part of that product</strong> (&quot;Embedded Use&quot;) requires the extended license. The standard license covers using the Data to produce works such as video and images only; it does not cover distributing the Data itself bundled inside a software product. However, a purchaser of the Indie license may make Embedded Use <strong>only in one game, world or application that the purchaser itself creates and publishes</strong>. In that case the product must not be distributed in a form that allows the Data to be taken out and reused (such as bundling the source files or providing an asset-export feature).
             </li>
             <li>
-              The Indie license may be purchased only by <strong>individuals, or corporations and sole proprietors whose revenue for the 12 months immediately before the purchase date is under JPY 10 million</strong>. The Purchaser declares at purchase that it meets this condition, and we may ask for confirmation as needed. If the declaration is untrue, we may treat the purchase as a purchase of the standard license and request payment of the difference.
+              The Indie license may be purchased only by <strong>individuals, or corporations and sole proprietors whose revenue for the 12 months immediately before the purchase date is under JPY 10 million</strong>. The Purchaser declares at purchase that it meets this condition, and we may ask for confirmation as needed. If the declaration is untrue, we may treat the purchase as a purchase of the standard license and request payment of the difference. When publishing a work that uses the Data under the Indie license, the Purchaser shall include a rights credit such as &quot;3D scan: Locahun 3D (locahun3d.com)&quot; in at least one place, such as the description, credits, or the page describing the work or world.
             </li>
             <li>Where the Data is provided <strong>free of charge</strong> (e.g. through a campaign), these terms apply mutatis mutandis, with &quot;Purchaser&quot; read as the recipient of the free Data.</li>
             <li>The Purchaser may <strong>publish still images and videos rendered from the Data on social media</strong>. When publishing, please include a credit to Locahun 3D (e.g. the <span data-i18n-audit-ignore>#ロケハン3D</span> tag or a mention of locahun3d.com). This is subject to the Article 3 obligation to remove Third-Party Material and the Article 4 prohibitions (such as confidential areas).</li>

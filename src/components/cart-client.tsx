@@ -256,7 +256,7 @@ export default function CartClient() {
                   ここまで名称だけで来ると、買った後で「使えない用途だった」に
                   なりかねない。 */}
               {selectedLicense && (
-                <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                <p className="mt-1 text-[12px] leading-relaxed text-muted whitespace-pre-line">
                   {dataLicenseDesc(selectedLicense, en ? "en" : "ja")}
                 </p>
               )}

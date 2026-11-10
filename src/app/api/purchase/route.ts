@@ -8,6 +8,7 @@ import { notifyPurchase } from "@/lib/email";
 import { recordPayoutAccruals } from "@/lib/payouts";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
+import { INDIE_RIGHTS_CREDIT } from "@/lib/schemas";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
 import { isStudioPurchaseRestricted } from "@/lib/account-schema";
@@ -122,7 +123,8 @@ export async function POST(req: Request) {
     );
   }
   const indieEligibilityDeclaredAt = license === "indie" ? termsAgreedAt : undefined;
-  const editorialRightsCredit = license === "editorial" ? item.editorialRightsCredit : "";
+  // インディーは権利表記が必須（2026-11-11）。購入時点の表記を同じ欄に控え、ライセンス証書・領収書・メールに出す。
+  const editorialRightsCredit = license === "editorial" ? item.editorialRightsCredit : license === "indie" ? INDIE_RIGHTS_CREDIT : "";
 
   const purchaseId = randomUUID();
   const price = isDataSaleFree(item.freePeriod, nowIso) ? 0 : matchedOption.price;

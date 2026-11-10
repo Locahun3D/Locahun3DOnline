@@ -12,6 +12,7 @@ import {
 import {
   dataLicenseLabel,
   dataLicenseDesc,
+  INDIE_RIGHTS_CREDIT,
   type DataLicense,
   type TokenCost,
   usageRestrictionLines,
@@ -185,7 +186,7 @@ export default function DataSalePanel({
 <input type="radio" name={`license-${propertyId}-${splatItemIndex}`} checked={selectedLicense === o.license} onChange={() => setSelectedLicense(o.license)} />
 <strong>{dataLicenseLabel(o.license, lc)}</strong>
 <div data-property-license-price>{o.price === 0 ? (en ? "Free" : "無料") : `¥${o.price.toLocaleString(en ? "en-US" : "ja-JP")}`} <small>{en ? "tax incl." : "税込"}</small></div>
-<p>{en ? dataLicenseDesc(o.license, lc) : <Jp>{dataLicenseDesc(o.license, lc)}</Jp>}</p>
+<p className="whitespace-pre-line">{en ? dataLicenseDesc(o.license, lc) : <Jp>{dataLicenseDesc(o.license, lc)}</Jp>}</p>
 </label>)}</div>) : licenseOptions.length > 1 ? (
           <div className="mt-1.5">
             <div className="flex flex-wrap gap-1.5">
@@ -224,10 +225,10 @@ export default function DataSalePanel({
         )}
         {/* 違いはツールチップに隠さず常時表示する（スマホではホバーできない） */}
         {!propertyPresentation && <LicenseDescription selected={license} locale={lc} />}
-        {license === "editorial" && editorialRightsCredit && (
+        {((license === "editorial" && editorialRightsCredit) || license === "indie") && (
           <p className="text-[10px] text-amber-500/90 mt-1 leading-snug">
             {en ? "Publishing requires this credit: " : "公開時は権利表記が必要です："}
-            {editorialRightsCredit}
+            {license === "indie" ? INDIE_RIGHTS_CREDIT : editorialRightsCredit}
           </p>
         )}
         {restrictionLines.length > 0 && (

@@ -8,6 +8,7 @@ import { notifyPurchase } from "@/lib/email";
 import { recordPayoutAccruals } from "@/lib/payouts";
 import { resolveDownloadFiles } from "@/lib/downloads";
 import { resolveLicenseOptions } from "@/lib/license-options";
+import { INDIE_RIGHTS_CREDIT } from "@/lib/schemas";
 import { isDataSaleFree, isDataSaleDisabled } from "@/lib/settings-schema";
 import { jstDayKey } from "@/lib/date-format";
 import { randomUUID } from "node:crypto";
@@ -108,7 +109,8 @@ export async function POST(req: Request) {
       title: property.title,
       label: item.label,
       license: matchedOption.license,
-      editorialRightsCredit: matchedOption.license === "editorial" ? item.editorialRightsCredit : "",
+      // インディーは権利表記が必須（2026-11-11）。単品購入と同じ。
+      editorialRightsCredit: matchedOption.license === "editorial" ? item.editorialRightsCredit : matchedOption.license === "indie" ? INDIE_RIGHTS_CREDIT : "",
       indieEligibilityDeclaredAt: matchedOption.license === "indie" ? termsAgreedAt : undefined,
       // クライアントは価格を送ってこない（サーバの item.salePrice をそのまま
       // 信用しない設計）。無料期間中は単品購入と同じく¥0に統一する。

@@ -67,10 +67,14 @@ export const DATA_LICENSE_LABEL: Record<DataLicense, string> = {
 export const DATA_LICENSE_DESC: Record<DataLicense, string> = {
   standard: "商用・非商用の制作物に利用可（1購入につき1案件まで）。データ自体の再配布・再販は不可。",
   editorial: "無料。報道・教育・個人利用に限定（1件の提供につき1案件まで）。広告等の商用利用は不可。公開時に権利表記が必要です。",
-  indie: "個人、または直近1年の売上が1,000万円未満の事業者向け（自己申告・1購入につき1案件まで）。収益化動画・同人/インディーゲーム・VRChatワールドなど商用利用可。自作のゲーム・ワールド・アプリへの組込可。データを取り出せる形での配布や、アセットとしての再配布・再販は不可。権利表記は不要です。",
+  // 2026-11-11 本人指定の文言（改行も本人の指定。表示側は whitespace-pre-line）。
+  indie: "個人、または直近1年の売上が1,000万円未満の事業者向け（1購入につき1案件まで）\n収益化動画・同人/インディーゲーム・VRChatワールドなど商用利用可。\nアセットとしての再配布・再販は不可。権利表記は必須です。",
   extended: "利用できる案件数の制限なし。商用利用に加え、テンプレート/組込製品への同梱・改変配布を許諾。",
   custom: "利用範囲を個別に取り決め。購入前にお問い合わせください。",
 };
+
+/** インディーライセンスの権利表記（2026-11-11 必須化）。購入時に editorialRightsCredit 欄へ控える。 */
+export const INDIE_RIGHTS_CREDIT = "3D scan: Locahun 3D（locahun3d.com）";
 
 export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
   standard: "Standard license",
@@ -83,7 +87,7 @@ export const DATA_LICENSE_LABEL_EN: Record<DataLicense, string> = {
 export const DATA_LICENSE_DESC_EN: Record<DataLicense, string> = {
   standard: "Use in commercial & non-commercial productions (one project per purchase). Redistribution or resale of the data itself is not permitted.",
   editorial: "Free. Limited to news, education and personal use (one project per copy provided). Commercial use such as advertising is not permitted. A rights credit is required when published.",
-  indie: "For individuals or businesses with revenue under JPY 10 million in the past 12 months (self-declared; one project per purchase). Commercial use OK, including monetized videos, indie games and VRChat worlds. May be embedded in your own games, worlds and apps. Distributing the data in an extractable form, or redistributing/reselling it as an asset, is not permitted. No rights credit required.",
+  indie: "For individuals or businesses with revenue under JPY 10 million in the past 12 months (one project per purchase).\nCommercial use OK, including monetized videos, indie games and VRChat worlds.\nRedistributing or reselling the data as an asset is not permitted. A rights credit is required.",
   extended: "Unlimited number of projects. Commercial use plus bundling into templates / embedded products and modified redistribution.",
   custom: "Scope arranged individually. Please contact us before purchasing.",
 };
