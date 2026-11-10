@@ -1206,6 +1206,13 @@ body.cam-active #view-tl-btns{
        (pointer:coarse) and (any-hover:none) and (max-height:699px){
   #layer-panel, #lp-footer-bar, #obj-type-menu-top, #qi-badge{display:none!important;}
   :root{--lp-width:0px!important;}
+  /* スマホはジョイスティックと上下ボタンを出さない（2026-11-10 本人指示）。移動はタップ、見回しは1本指ドラッグ。 */
+  #joy, #joy-vert{display:none!important;}
+  /* スマホのサイトのビューアーは、プランに関係なくカメラリセットと EN 切り替えだけ（2026-11-10 本人指示）。 */
+  body.protected-mode #view-tl-btns > :not(#btn-cam-reset),
+  body.protected-mode #hud .cbar,
+  body.protected-mode #tb-share-btn,
+  body.protected-mode #tb-fullscreen-btn{display:none!important;}
 }
 @media (pointer:coarse) and (any-hover:none) and (max-width:699px) and (orientation:portrait){
   body #sun-panel, body #gizmo{max-height:calc(100dvh - 360px)!important;overflow-y:auto!important;}
@@ -2985,7 +2992,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7135679,"fatSha256":"1125fe9b9b2a52ea2d0a47115991a21635a8584e0014b2ff1aa1b5e032e3f487","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7137876,"fatSha256":"d31185d039370211e5fd9825cdfb048be517045a9d4220fac633c4a6dbade008","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -10736,9 +10743,11 @@ function _ldPaint(){
 function _guideRows(){
   // 操作方法の行。端末（タッチ／PC）と言語で内容を変える。読み込み画面とホームのドロップ枠で共用。
   const touch=typeof isMobile!=='undefined'&&isMobile,en=typeof _en==='function'&&_en();
+  // スマホ（短辺 700px 未満）はスティックを出さないので、スティックの行も出さない（2026-11-10）。
+  const stick=!(touch&&Math.min(innerWidth,innerHeight)<700);
   return touch
-    ?(en?[['Move','Tap a spot to go there'],['Look','Drag with one finger'],['Stick move','Bottom-left stick']]
-        :[['移動方法','タッチでその場所に移動'],['見回す','1本指でドラッグ'],['スティック移動','左下のスティック']])
+    ?(en?[['Move','Tap a spot to go there'],['Look','Drag with one finger'],...(stick?[['Stick move','Bottom-left stick']]:[])]
+        :[['移動方法','タッチでその場所に移動'],['見回す','1本指でドラッグ'],...(stick?[['スティック移動','左下のスティック']]:[])])
     :(en?[['Move','Click a spot to go there'],['Look','Left-drag'],['Keys','W A S D move / E up, Q down'],['Dash','Shift']]
         :[['移動方法','クリックでその場所に移動'],['見回す','左ドラッグ'],['キー移動','W A S D 前後左右 ／ E 上昇・Q 下降'],['ダッシュ','Shift']]);
 }
@@ -19444,6 +19453,7 @@ function _pagerBusy(){
            (pg.newUploads && pg.newUploads.length > 0) || (pg.readyUploads && pg.readyUploads.length > 0);
   }catch(_){ return false; }
 }
+let _lodProbeUntil = 0, _lodProbeAt = 0, _lodProbeCam = '';
 function _pagedStreamActive(now){
   if(typeof layers === 'undefined' || !layers || !layers.length) return false;
   for(let i=0;i<layers.length;i++){
@@ -19455,7 +19465,7 @@ function _pagedStreamActive(now){
     const _n = _pm.numSplats || 0;
     const _target = _mesh._radTargetCount || 0;
     if(_target > 0 && _n >= _target) continue;          // 総数到達＝確定完了
-    if(_n !== _mesh._lastPagedN){ _mesh._lastPagedN = _n; _mesh._lastPagedNAt = now; }
+    if(_n !== _mesh._lastPagedN){ _mesh._lastPagedN = _n; _mesh._lastPagedNAt = now; _lodProbeUntil = now + 20000; }
     if(_n === 0 || (now - (_mesh._lastPagedNAt || now)) < 1500) return true;
   }
   return false;
@@ -19549,7 +19559,14 @@ function animate(now) {
   // predicate never completed on big RADs / URL streams). After it plateaus,
   // we stop the continuous tick so the page goes idle; camera motion wakes it
   // back up via the regular shouldRender path.
-  const hasPagedLoading = _pagedStreamActive(now);
+  // 2026-11-10 LOD 止まり対策: 上限に達すると粗→細の入れ替えでも点数が変わらず、プラトー判定で描画が止まる。
+  // LOD の走査は render の中でしか回らないので、止まった後も 20 秒間は 0.5 秒に 1 回だけ描画して
+  // 次のチャンク要求を出させる（要求が出ればページャーが busy になり通常の連続描画に戻る）。
+  const _cp = camera.position, _cq = camera.quaternion;
+  const _camKey = _cp.x.toFixed(2)+_cp.y.toFixed(2)+_cp.z.toFixed(2)+_cq.x.toFixed(3)+_cq.y.toFixed(3)+_cq.w.toFixed(3);
+  if(_camKey !== _lodProbeCam){ _lodProbeCam = _camKey; _lodProbeUntil = now + 20000; }
+  let hasPagedLoading = _pagedStreamActive(now);
+  if(!hasPagedLoading && now < _lodProbeUntil && now - _lodProbeAt >= 500 && layers.some(L=>L && L.mesh && L.mesh.paged)){ _lodProbeAt = now; hasPagedLoading = true; }
 
   const shouldRender = hasCamKey||hasDrag||hasJoy||hasMsrInteract||hasGamepad||
                        splatStreaming||_renderDirtyTimer>0||hasPagedLoading;
@@ -29141,6 +29158,9 @@ function _qualBudget(i){
   const base = (sparkRenderer && typeof sparkRenderer.defaultSplatTarget === 'function') ? sparkRenderer.defaultSplatTarget() : 2500000;
   const tier = (typeof _splatPerfTier !== 'undefined') ? _splatPerfTier : 'desktop';
   if(typeof _LOW !== 'undefined' && _LOW && i >= 0 && i <= 2) return { count: _LOW.budget[i], renderScale: i === 0 ? 1.25 : 1 };
+  // スマホは最高画質の上限を下げる（2026-11-10 本人指示「スマホ読み込みがとても遅い」「最高画質になるまで遅すぎる」）。
+  // 中 130万点 → 80万点、高 160万点 → 100万点。読む量が減るので最高画質に届くまでが短くなる。戻すときはこの行を消す。
+  if(tier === 'phone' && i >= 1 && i <= 2) return { count: Math.round(base * (i === 1 ? 0.8 : 1.0)), renderScale: 1 };
   if(i === 0) return { count: Math.round(base * 0.5), renderScale: 1.25 };
   // 中も端末別既定の1.3倍まで描く（2026-10-20 中画質を引き上げ。戻すときはこの行と mid 値を戻す）
   if(i === 1) return { count: Math.round(base * 1.3), renderScale: 1 };
