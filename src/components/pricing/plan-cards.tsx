@@ -6,6 +6,8 @@ import { subscribeAction } from "@/lib/subscribe-actions";
 import type { AccountPlan } from "@/lib/account-schema";
 import { useT, useHref, useLocale } from "@/components/locale-provider";
 import type { DictKey } from "@/lib/i18n/dictionaries";
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
+import { propertyTitleSegments } from "@/lib/property-presentation";
 
 type BillingMode = "monthly" | "annual";
 
@@ -29,10 +31,13 @@ export const PLANS: Plan[] = [
     code: "FREE",
     name: "Free",
     monthly: 0,
-    desc: "plan.free.desc",
+    desc: VIEWING_IS_FREE ? "plan.free.descFree" : "plan.free.desc",
     // 2026-10-16 本人「実体にあうように」: 実装と照合して書き直した。「問い合わせ 月 1 件まで」は削除（制限は無い）。
     // 図面・ブックマーク・再視聴無料は全プラン共通なので Free 側に置く（有料の特典のように見せない）。
-    features: ["plan.free.f1", "plan.free.f2", "plan.free.f5", "plan.free.f6", "plan.free.f4", "plan.free.f8"],
+    // 2026-11-11: 閲覧無料（VIEWING_IS_FREE）ではポイントの文言を出さず「見放題」を先頭に。
+    features: VIEWING_IS_FREE
+      ? ["plan.free.fView", "plan.free.f1", "plan.free.f2", "plan.free.f5", "plan.free.f6", "plan.free.f8"]
+      : ["plan.free.f1", "plan.free.f2", "plan.free.f5", "plan.free.f6", "plan.free.f4", "plan.free.f8"],
     cta: "Sign up",
     href: "/sign-up",
     accent: false,
@@ -42,12 +47,8 @@ export const PLANS: Plan[] = [
     name: "Individual",
     monthly: 5200,
     annualMonthly: Math.round(5200 * (1 - ANNUAL_DISCOUNT)),
-    desc: "plan.ind.desc",
-    features: [
-      "plan.ind.f1",
-      "plan.ind.f8",
-      "plan.ind.f5",
-    ],
+    desc: VIEWING_IS_FREE ? "plan.ind.descFree" : "plan.ind.desc",
+    features: VIEWING_IS_FREE ? ["plan.ind.f8", "plan.ind.f5"] : ["plan.ind.f1", "plan.ind.f8", "plan.ind.f5"],
     cta: "Subscribe",
     href: "/sign-up?plan=individual",
     accent: false,
@@ -57,30 +58,62 @@ export const PLANS: Plan[] = [
     name: "Studio",
     monthly: 9800,
     annualMonthly: Math.round(9800 * (1 - ANNUAL_DISCOUNT)),
-    desc: "plan.studio.desc",
-    features: [
-      "plan.studio.f1",
-      "plan.studio.f2",
-      "plan.studio.f3",
-      "plan.studio.f4",
-    ],
+    desc: VIEWING_IS_FREE ? "plan.studio.descFree" : "plan.studio.desc",
+    features: VIEWING_IS_FREE
+      ? ["plan.studio.f1", "plan.studio.f3", "plan.studio.f4"]
+      : ["plan.studio.f1", "plan.studio.f2", "plan.studio.f3", "plan.studio.f4"],
     cta: "Subscribe",
     href: "/sign-up?plan=studio",
-    accent: true,
-    badge: "RECOMMENDED",
+    accent: !VIEWING_IS_FREE,
+    badge: VIEWING_IS_FREE ? undefined : "RECOMMENDED",
   },
   {
     code: "TEAM",
     name: "Team",
     monthly: 29800,
     annualMonthly: Math.round(29800 * (1 - ANNUAL_DISCOUNT)),
-    desc: "plan.team.desc",
-    features: ["plan.team.f1", "plan.team.f2", "plan.team.f5", "plan.team.f3"],
+    desc: VIEWING_IS_FREE ? "plan.team.descFree" : "plan.team.desc",
+    // 閲覧無料では Team が主役（2026-11-11 本人方針「導入は簡単に、慣れたら使うツール」）。
+    // Individual/Studio を畳むので「Studio の全機能」ではなく中身を直接並べる。
+    features: VIEWING_IS_FREE
+      ? ["plan.team.fTools", "plan.team.f5", "plan.studio.f4", "plan.team.f3", "plan.team.fNda"]
+      : ["plan.team.f1", "plan.team.f2", "plan.team.f5", "plan.team.f3"],
     cta: "Subscribe",
     href: "/sign-up?plan=team",
-    accent: false,
+    accent: VIEWING_IS_FREE,
+    badge: VIEWING_IS_FREE ? "FOR PRODUCTIONS" : undefined,
   },
 ];
+
+/**
+ * カードの日本語を語の途中で折らない（CLAUDE.md: iPhone Safari は auto-phrase 非対応）。
+ * TitleText と同じ Intl.Segmenter だが、Segmenter が「レ|イヤー」のようにカタカナ語を割ることがあるので、
+ * 連続するカタカナの断片はつなげてから inline-block にする。
+ */
+const KATAKANA = /^[ァ-ヺー]+$/; // 中黒（・ U+30FB）は区切りなので含めない
+function CardText({ text }: { text: string }) {
+  const merged: string[] = [];
+  for (const part of propertyTitleSegments(text)) {
+    const last = merged[merged.length - 1];
+    // 「カメラ|ワーク・」のように後ろに中黒が付いた断片もつなぐ（語の切れ目は中黒の後ろだけにする）。
+    if (last && KATAKANA.test(last) && KATAKANA.test(part.replace(/・$/, ""))) merged[merged.length - 1] = last + part;
+    else merged.push(part);
+  }
+  return (
+    <>
+      {merged.map((part, i) =>
+        /^\s+$/.test(part) ? (
+          <span key={i}> </span>
+        ) : (
+          <span key={i} className="inline-block max-w-full align-baseline [overflow-wrap:anywhere]">{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+const PRIMARY_CODES = ["FREE", "TEAM"];
+const SECONDARY_CODES = ["INDIVIDUAL", "STUDIO"];
 
 function priceFor(plan: Plan, mode: BillingMode): number {
   if (plan.monthly === 0) return 0;
@@ -129,9 +162,12 @@ export default function PlanCards({
         </div>
       </div>
 
-      {/* モバイルは2列で横並び比較（1列だと1画面1プランで比較しづらい実害） */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5 md:gap-y-9 lg:gap-y-5">
-        {PLANS.map((p) => {
+      {/* モバイルは2列で横並び比較（1列だと1画面1プランで比較しづらい実害）。
+          閲覧無料のときは Free と Team の2枚を主役にし、Individual/Studio は下に畳む（2026-11-11）。 */}
+      {(VIEWING_IS_FREE ? [PRIMARY_CODES, SECONDARY_CODES] : [PLANS.map((p) => p.code)]).map((codes, group) => {
+        const grid = (
+      <div className={VIEWING_IS_FREE ? "grid grid-cols-2 gap-2 sm:gap-5 max-w-[880px] mx-auto" : "grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5 md:gap-y-9 lg:gap-y-5"}>
+        {PLANS.filter((p) => codes.includes(p.code)).map((p) => {
           const price = priceFor(p, mode);
           const monthlyEquivalent = price > 0 ? price : 0;
           const annualTotal =
@@ -150,7 +186,7 @@ export default function PlanCards({
               }
             >
               {p.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-bg mono text-[9px] tracking-[0.28em] uppercase px-3 py-1">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-accent text-bg mono text-[9px] tracking-[0.12em] sm:tracking-[0.28em] uppercase px-2 sm:px-3 py-1">
                   {p.badge}
                 </div>
               )}
@@ -200,7 +236,10 @@ export default function PlanCards({
                 {/* ⚠ スマホは 12px / 行間 1.6 を下回らせない（10.5px×zoom0.7＝7.35px
                     だった名残。zoom 1.0 では 10.5px がそのまま出て読めない）。 */}
                 <p className="text-[10.5px] max-[720px]:text-[12px] sm:text-[12px] text-muted mt-2 sm:mt-3 leading-[1.55] max-[720px]:leading-[1.65] sm:leading-[1.65]">
-                  {t(p.desc)}
+                  {/* 句点ごとに改行（CLAUDE.md 日本語タイポルール）。EN は自然折り返し。 */}
+                  {locale === "en"
+                    ? t(p.desc)
+                    : t(p.desc).split(/(?<=。)/).filter(Boolean).map((s, i) => <span key={i}>{i > 0 && <br />}<CardText text={s} /></span>)}
                 </p>
               </div>
 
@@ -208,7 +247,7 @@ export default function PlanCards({
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-1.5 sm:gap-2">
                     <span className="text-accent mt-0.5">▸</span>
-                    <span>{t(f)}</span>
+                    <span>{locale === "en" ? t(f) : <CardText text={t(f)} />}</span>
                   </li>
                 ))}
               </ul>
@@ -296,6 +335,17 @@ export default function PlanCards({
           );
         })}
       </div>
+        );
+        if (group === 0) return <div key="primary">{grid}</div>;
+        return (
+          <details key="others" data-plan-others className="mt-8 max-w-[880px] mx-auto">
+            <summary className="cursor-pointer min-h-[44px] flex items-center justify-center text-center text-[13px] text-muted underline hover:text-accent">
+              {t("plan.others")}
+            </summary>
+            <div className="mt-6">{grid}</div>
+          </details>
+        );
+      })}
     </>
   );
 }

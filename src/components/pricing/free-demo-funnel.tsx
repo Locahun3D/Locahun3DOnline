@@ -1,3 +1,5 @@
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
+
 // showcase=1 = 自動機能ツアー（本人指示 2026-08-16。未対応ビューアーでは無視され通常デモ）
 const DEMO_URL = "https://viewer.locahun3d.com/Locahun3D_OfflineViewer?demo=1&showcase=1";
 
@@ -63,8 +65,8 @@ export default function FreeDemoFunnel({
                   className="block text-center px-4 py-3 mono text-[11px] tracking-[0.22em] uppercase border border-line text-ink hover:border-ink/60 transition"
                 >
                   {en
-                    ? "Sign up free — get 6 points"
-                    : "無料登録して 6 ポイントを受け取る"}
+                    ? VIEWING_IS_FREE ? "Sign up free — walk every scene" : "Sign up free — get 6 points"
+                    : VIEWING_IS_FREE ? "無料登録して、全シーンを歩く" : "無料登録して 6 ポイントを受け取る"}
                 </a>
                 <span className="text-center text-[10.5px] max-[720px]:text-[12px] text-muted">
                   {en

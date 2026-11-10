@@ -85,6 +85,15 @@ const ja = {
   "plan.team.f3": "30 端末まで同時ログイン",
   // 2026-09-20: ビューアーの共有URL（/share/<token>）は最上位プランの機能
   "plan.team.f5": "3Dビューの共有URLを発行（ログイン不要・2週間）",
+  // 閲覧無料（VIEWING_IS_FREE、2026-11-11）のときの文言。ポイントの文言は戻すとき用に残す。
+  "plan.free.descFree": "ログインするだけで、3DGS を無料で歩ける。図面・写真・地図検索もそのまま使える。",
+  "plan.free.fView": "3DGS ウォークスルー ログインで見放題",
+  "plan.ind.descFree": "個人クリエイター向け。3Dビューの道具をひと通り使える。",
+  "plan.studio.descFree": "小規模チーム向け。道具に加えて、10 端末で共有できる。",
+  "plan.team.descFree": "制作会社向け。計測・レイヤー・共有URLで、チーム全員の下見をそろえる。",
+  "plan.team.fTools": "3Dビューの全ツール（測定・日照・カメラワーク・レイヤー など）",
+  "plan.team.fNda": "NDA 限定シーンの閲覧（制作会社アカウント）",
+  "plan.others": "個人・小規模チーム向けのプラン（Individual / Studio）",
 } satisfies Dict;
 
 const en: Record<keyof typeof ja, string> = {
@@ -139,6 +148,14 @@ const en: Record<keyof typeof ja, string> = {
   "plan.team.f2": "3DGS walkthrough — 120 points every month",
   "plan.team.f3": "Up to 30 devices signed in",
   "plan.team.f5": "Share links for 3D views (no sign-in, 14 days)",
+  "plan.free.descFree": "Just sign in to walk every 3DGS scene for free. Floor plans, photos and map search included.",
+  "plan.free.fView": "3DGS walkthroughs — unlimited once signed in",
+  "plan.ind.descFree": "For individual creators. The full set of 3D viewer tools.",
+  "plan.studio.descFree": "For small teams. Viewer tools plus sharing across 10 devices.",
+  "plan.team.descFree": "For production companies. Measure, layers and share links keep the whole team's scouting in sync.",
+  "plan.team.fTools": "All 3D viewer tools (measure, sun, camera paths, layers, etc.)",
+  "plan.team.fNda": "NDA-only scenes (production accounts)",
+  "plan.others": "Plans for individuals and small teams (Individual / Studio)",
 };
 
 export type DictKey = keyof typeof ja;

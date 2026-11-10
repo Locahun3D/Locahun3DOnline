@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { getLocale } from "@/lib/i18n/server";
 import { localizedHref } from "@/lib/i18n/dictionaries";
 import { PLAN_TOKEN_BUDGET, SIGNUP_BONUS_TOKENS } from "@/lib/schemas";
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
 
 export async function generateMetadata() {
   const locale = await getLocale();
@@ -12,12 +13,16 @@ export async function generateMetadata() {
     ? {
         title: "Pricing & Demo",
         description:
-          "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus points-based 3DGS walkthroughs. Save 20% with annual billing. Walk the demo scene with no sign-up.",
+          VIEWING_IS_FREE
+            ? "Locahun 3D Online pricing. Walk every 3DGS scene free once signed in; the Team plan adds measure, layers and share links for production companies. Save 20% with annual billing."
+            : "Locahun 3D Online pricing. Free / Individual / Studio / Team plans plus points-based 3DGS walkthroughs. Save 20% with annual billing. Walk the demo scene with no sign-up.",
       }
     : {
         title: "料金・デモ",
         description:
-          "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + ポイント制 3DGS ウォークスルー。年払で -20%。登録不要のデモ体験つき。",
+          VIEWING_IS_FREE
+            ? "ロケハン3D オンラインの料金。3DGS はログインするだけで無料で歩ける。計測・レイヤー・共有URLは制作会社向けの Team プランで。年払で -20%。"
+            : "ロケハン3D オンラインの料金。Free / Individual / Studio / Team の 4 段 + ポイント制 3DGS ウォークスルー。年払で -20%。登録不要のデモ体験つき。",
       };
 }
 
@@ -37,7 +42,9 @@ const COMPARE_ROWS: Array<{
   { label: ["3Dビューの共有URL", "Share links for 3D views"], free: ["—", "—"], individual: ["—", "—"], studio: ["—", "—"], team: ["✓（ログイン不要・2週間）", "✓ (no sign-in, 14 days)"] },
   // 付与数は PLAN_TOKEN_BUDGET / SIGNUP_BONUS_TOKENS から導出する。以前ここは
   // 数値べた書きで、定数側を変更しても料金表が古い数字のまま残る状態だった。
-  { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} ポイント`, `${SIGNUP_BONUS_TOKENS} points at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} ポイント`, `${PLAN_TOKEN_BUDGET.individual} points / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} ポイント`, `${PLAN_TOKEN_BUDGET.studio} points / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} ポイント`, `${PLAN_TOKEN_BUDGET.team} points / mo`] },
+  VIEWING_IS_FREE
+    ? { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: ["ログインで見放題", "Unlimited when signed in"], individual: ["見放題", "Unlimited"], studio: ["見放題", "Unlimited"], team: ["見放題", "Unlimited"] }
+    : { label: ["3DGS ウォークスルー", "3DGS walkthrough"], free: [`登録時 ${SIGNUP_BONUS_TOKENS} ポイント`, `${SIGNUP_BONUS_TOKENS} points at signup`], individual: [`月 ${PLAN_TOKEN_BUDGET.individual} ポイント`, `${PLAN_TOKEN_BUDGET.individual} points / mo`], studio: [`月 ${PLAN_TOKEN_BUDGET.studio} ポイント`, `${PLAN_TOKEN_BUDGET.studio} points / mo`], team: [`月 ${PLAN_TOKEN_BUDGET.team} ポイント`, `${PLAN_TOKEN_BUDGET.team} points / mo`] },
   // 2026-11-10: ビューアーは Free だと「見るだけ」（カメラリセットと EN のみ）。測定・日照・カメラワーク・レイヤー・AR などのツールは有料プランから
   //   （/api/viewer-entitlement で判定）。スマホはプランに関係なく視点操作だけの画面になる。
   { label: ["3Dビューの操作ツール", "3D viewer tools"], free: ["見るだけ（カメラリセット）", "View only (camera reset)"], individual: ["✓ 測定・日照・カメラワーク・レイヤー など", "✓ Measure, sun, camera paths, layers, etc."], studio: ["✓", "✓"], team: ["✓", "✓"] },
@@ -102,7 +109,21 @@ export default async function PricingPage({
 
       <header className="ui-page-header text-center">
         <h1 className="serif ui-page-title">
-          {en ? (
+          {VIEWING_IS_FREE ? (
+            en ? (
+              <>
+                Walk every location
+                <br />
+                <em className="not-italic text-accent">free</em> — just sign in.
+              </>
+            ) : (
+              <>
+                ロケ地は、ログインだけで
+                <br />
+                <em className="not-italic text-accent">無料</em>で歩ける。
+              </>
+            )
+          ) : en ? (
             <>
               Every site visit,
               <br />
@@ -116,6 +137,13 @@ export default async function PricingPage({
             </>
           )}
         </h1>
+        {VIEWING_IS_FREE && (
+          <p className="ui-page-lead mt-4 text-muted">
+            {en
+              ? "Measure, layers, share links and multi-device use come with the Team plan for production companies."
+              : "計測・レイヤー・共有URL・複数端末は、制作会社向けの Team プランで。"}
+          </p>
+        )}
       </header>
 
       {/* Free demo funnel — walk a real scanned property, no sign-up required */}
@@ -154,10 +182,10 @@ export default async function PricingPage({
                 <th className="px-3 py-3 mono text-[10px] tracking-[0.22em] uppercase font-normal">
                   Individual
                 </th>
-                <th className="px-3 py-3 mono text-[10px] tracking-[0.22em] uppercase text-accent font-normal">
+                <th className={`px-3 py-3 mono text-[10px] tracking-[0.22em] uppercase font-normal ${VIEWING_IS_FREE ? "" : "text-accent"}`}>
                   Studio
                 </th>
-                <th className="px-3 py-3 mono text-[10px] tracking-[0.22em] uppercase font-normal">
+                <th className={`px-3 py-3 mono text-[10px] tracking-[0.22em] uppercase font-normal ${VIEWING_IS_FREE ? "text-accent" : ""}`}>
                   Team
                 </th>
               </tr>
@@ -171,8 +199,8 @@ export default async function PricingPage({
                   <td className="px-3 py-2.5 text-left text-ink/90">{c(row.label)}</td>
                   <td className="px-3 py-2.5 text-center text-muted">{c(row.free)}</td>
                   <td className="px-3 py-2.5 text-center text-muted">{c(row.individual)}</td>
-                  <td className="px-3 py-2.5 text-center text-accent">{c(row.studio)}</td>
-                  <td className="px-3 py-2.5 text-center">{c(row.team)}</td>
+                  <td className={`px-3 py-2.5 text-center ${VIEWING_IS_FREE ? "text-muted" : "text-accent"}`}>{c(row.studio)}</td>
+                  <td className={`px-3 py-2.5 text-center ${VIEWING_IS_FREE ? "text-accent" : ""}`}>{c(row.team)}</td>
                 </tr>
               ))}
             </tbody>
@@ -185,7 +213,7 @@ export default async function PricingPage({
 
       {/* Footer notes */}
       <div className="mt-16 grid md:grid-cols-2 gap-6 text-[12px] text-muted">
-        <div className="border-t border-line pt-5">
+        {!VIEWING_IS_FREE && <div className="border-t border-line pt-5">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">
             {en ? "Point expiry" : "ポイントの有効期限"}
           </div>
@@ -204,7 +232,7 @@ export default async function PricingPage({
               </>
             )}
           </p>
-        </div>
+        </div>}
         {/* 「支払 / アップグレード」の注記は 2026-11-10 本人指示で削除 */}
         <div className="border-t border-line pt-5">
           <div className="mono text-[10px] tracking-[0.28em] uppercase opacity-60 mb-2">

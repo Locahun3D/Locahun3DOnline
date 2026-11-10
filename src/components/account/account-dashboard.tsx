@@ -5,6 +5,7 @@ import type { PublicUser } from "@/lib/account-schema";
 import { totalTokens, publicDisplayName } from "@/lib/account-schema";
 import DisplayNameEditor from "@/components/account/display-name-editor";
 import { PLAN_TOKEN_BUDGET } from "@/lib/schemas";
+import { VIEWING_IS_FREE } from "@/lib/view-pricing";
 import type { Property } from "@/lib/schemas";
 import type { ViewUnlock } from "@/lib/view-unlocks";
 import { localizedHref, type Locale } from "@/lib/i18n/dictionaries";
@@ -333,9 +334,13 @@ export default function AccountDashboard({
           {(planFree || (billing?.periodEnd ?? user.tokenRefillAt)) && (
             <div className="mono text-[11px] text-[#7b8794] mt-2 leading-[1.7]">
               {planFree
-                ? en
-                  ? `Sign up bonus only — upgrade for ${planBudget || 16}+ points/mo`
-                  : "登録時ボーナスのみ・有料プランで毎月ポイント付与"
+                ? VIEWING_IS_FREE
+                  ? en
+                    ? "3DGS walkthroughs are free. Tools like measure and layers come with a paid plan."
+                    : "3DGS はログインで無料で見られます。計測・レイヤーなどの道具は有料プランで。"
+                  : en
+                    ? `Sign up bonus only — upgrade for ${planBudget || 16}+ points/mo`
+                    : "登録時ボーナスのみ・有料プランで毎月ポイント付与"
                 : en
                   ? `Next renewal ${fmtDateOnlyJST((billing?.periodEnd ?? user.tokenRefillAt)!)}`
                   : `次回更新 ${fmtDateOnlyJST((billing?.periodEnd ?? user.tokenRefillAt)!)}`}
@@ -348,7 +353,8 @@ export default function AccountDashboard({
             {en ? "Change plan →" : "プラン変更 →"}
           </Link>
         </div>
-        <div data-account-slot="tokens" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
+        {/* 閲覧無料（VIEWING_IS_FREE）のあいだはポイントを使う場面が無いので、残高の枠ごと出さない（2026-11-11）。 */}
+        {!VIEWING_IS_FREE && <div data-account-slot="tokens" className="bg-white border border-[#e2e7ec] p-3.5 sm:p-5">
           <div className={styles.cardTitle}>{en ? "Points" : "ポイント"}</div>
           <div className="text-xl sm:text-2xl font-bold text-[#1ea0c4]">{tokens}</div>
           {resetNote.length > 0 && (
@@ -356,7 +362,7 @@ export default function AccountDashboard({
               {resetNote.join(en ? " · " : "・")}
             </div>
           )}
-        </div>
+        </div>}
         </div>
 
         {/* NDA */}
