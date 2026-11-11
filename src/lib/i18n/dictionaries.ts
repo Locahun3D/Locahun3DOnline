@@ -93,7 +93,7 @@ const ja = {
   "plan.team.descFree": "制作会社向け。計測・レイヤー・共有URLで、チーム全員の下見をそろえる。",
   "plan.team.fTools": "3Dビューの全ツール（測定・日照・カメラワーク・レイヤー など）",
   "plan.team.fNda": "NDA 限定シーンの閲覧（制作会社アカウント）",
-  "plan.others": "個人・小規模チーム向けのプラン（Individual / Studio）",
+  "plan.others": "小規模チーム向けのプラン（Studio）",
 } satisfies Dict;
 
 const en: Record<keyof typeof ja, string> = {
@@ -155,7 +155,7 @@ const en: Record<keyof typeof ja, string> = {
   "plan.team.descFree": "For production companies. Measure, layers and share links keep the whole team's scouting in sync.",
   "plan.team.fTools": "All 3D viewer tools (measure, sun, camera paths, layers, etc.)",
   "plan.team.fNda": "NDA-only scenes (production accounts)",
-  "plan.others": "Plans for individuals and small teams (Individual / Studio)",
+  "plan.others": "Plan for small teams (Studio)",
 };
 
 export type DictKey = keyof typeof ja;

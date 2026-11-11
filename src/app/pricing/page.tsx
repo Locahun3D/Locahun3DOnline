@@ -140,8 +140,8 @@ export default async function PricingPage({
         {VIEWING_IS_FREE && (
           <p className="ui-page-lead mt-4 text-muted">
             {en
-              ? "Measure, layers, share links and multi-device use come with the Team plan for production companies."
-              : "計測・レイヤー・共有URL・複数端末は、制作会社向けの Team プランで。"}
+              ? "Measure, layers and the other 3D tools start with Individual. Share links and team-wide devices come with Team for production companies."
+              : <>計測・レイヤーなどの3Dビューの道具は、Individual から使えます。<br />共有URLとチームでの複数端末は、制作会社向けの Team プランで。</>}
           </p>
         )}
       </header>

@@ -112,8 +112,9 @@ function CardText({ text }: { text: string }) {
   );
 }
 
-const PRIMARY_CODES = ["FREE", "TEAM"];
-const SECONDARY_CODES = ["INDIVIDUAL", "STUDIO"];
+// 2026-11-11 本人「5000円はあってもいいのでは」: Individual（月¥5,200）を畳みから出して Free と Team の間に置く。Studio は畳んだまま。
+const PRIMARY_CODES = ["FREE", "INDIVIDUAL", "TEAM"];
+const SECONDARY_CODES = ["STUDIO"];
 
 function priceFor(plan: Plan, mode: BillingMode): number {
   if (plan.monthly === 0) return 0;
@@ -163,10 +164,10 @@ export default function PlanCards({
       </div>
 
       {/* モバイルは2列で横並び比較（1列だと1画面1プランで比較しづらい実害）。
-          閲覧無料のときは Free と Team の2枚を主役にし、Individual/Studio は下に畳む（2026-11-11）。 */}
+          閲覧無料のときは Free・Individual・Team の3枚を主役にし（スマホは Team を2列ぶち抜き）、Studio は下に畳む（2026-11-11）。 */}
       {(VIEWING_IS_FREE ? [PRIMARY_CODES, SECONDARY_CODES] : [PLANS.map((p) => p.code)]).map((codes, group) => {
         const grid = (
-      <div className={VIEWING_IS_FREE ? "grid grid-cols-2 gap-2 sm:gap-5 max-w-[880px] mx-auto" : "grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5 md:gap-y-9 lg:gap-y-5"}>
+      <div className={!VIEWING_IS_FREE ? "grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-5 md:gap-y-9 lg:gap-y-5" : group === 0 ? "grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-5 md:gap-y-9 lg:gap-y-5 max-w-[1200px] mx-auto" : "grid grid-cols-1 gap-2 sm:gap-5 max-w-[430px] mx-auto"}>
         {PLANS.filter((p) => codes.includes(p.code)).map((p) => {
           const price = priceFor(p, mode);
           const monthlyEquivalent = price > 0 ? price : 0;
@@ -180,6 +181,7 @@ export default function PlanCards({
                 //    html zoom 0.7 のときの実効 7px を前提にした値で、zoom 1.0 では
                 //    カード内が窮屈すぎた（2026-08-27 計測 minPad=10px）。
                 "relative border p-2.5 max-[720px]:p-4 sm:p-6 flex flex-col gap-2.5 sm:gap-4 " +
+                (VIEWING_IS_FREE && group === 0 && p.code === "TEAM" ? "max-lg:col-span-2 " : "") +
                 (p.accent
                   ? "border-accent bg-[#0e1a20]"
                   : "border-line bg-[#222]")
