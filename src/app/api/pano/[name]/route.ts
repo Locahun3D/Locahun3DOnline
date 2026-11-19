@@ -15,8 +15,10 @@ type AnyBucket = any;
  * - R2 キーは `pano/<key>.json` と `pano/<key>-<面>.jpg`。`scripts/bake-pano.mjs` が公開シーンを実ブラウザで開いて作り、
  *   新しいキーとして追加する（上書きしない）。シーンを作り直すと ETag が変わり、別のキーになる。
  * - 中身はキーで決まるので長期キャッシュしてよい。キーは 3DGS 本体の ETag から作るハッシュで、本体を見られない人には分からない。公開シーンだけを置く。
+ * - 3D を読み終わるまでの 360° 写真ツアー（2026-11-19）: `<key>.points.json`（自動で選んだ地点の一覧）と
+ *   `<key>-p<番号>-<面>.jpg`（各地点の 6 方向）。bake-pano.mjs --points が作る。
  */
-const NAME_RE = /^([a-f0-9]{64})(\.json|-[frbldu]\.jpg)$/;
+const NAME_RE = /^([a-f0-9]{64})(\.json|\.points\.json|(?:-p\d{1,2})?-[frbldu]\.jpg)$/;
 const MAX_BYTES = 4_000_000;
 
 async function getBucket(): Promise<AnyBucket> {
@@ -41,7 +43,7 @@ async function handle(req: NextRequest, name: string, head: boolean) {
     return notFound();
   }
   const headers = new Headers();
-  headers.set("Content-Type", match[2] === ".json" ? "application/json" : "image/jpeg");
+  headers.set("Content-Type", match[2].endsWith(".json") ? "application/json" : "image/jpeg");
   headers.set("Content-Length", String(obj.size));
   headers.set("Cache-Control", "public, max-age=31536000, immutable");
   headers.set("ETag", obj.httpEtag);

@@ -17,6 +17,12 @@
 // ビューアーは json を見てから画像を取るので、途中で止まっても半端な状態は使われない。既にあるキーは上書きしない。
 // R2 の鍵は Windows のユーザー環境変数 R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT / R2_BUCKET（表示しない）。
 // 撮影中は /api/pano を 404 にして画像を出さず（3D そのものを撮る）、?nopano は付けない（キーの計算は要る）。
+//
+// --points（2026-11-19 本人「360画像と3DGSの移行の仕組みをロケハン3Dでも」「地点は自動で選ぶ」）:
+//   3D を読み終わるまでの 360° 写真ツアー用に、開始位置の周りの地点も撮る。地点はビューアーの __startPano.pickPoints()
+//   （床の当たり判定から、歩けて見通せる所を 2.5m 以上離して最大 8 か所）が選ぶ。
+//   R2 は pano/<key>-<地点>-<面>.jpg を先に、最後に pano/<key>.points.json（これがあれば使われる）。開始位置の画像が既にあれば、その位置から選ぶ。
+//   node scripts/bake-pano.mjs --property <slug> --points --local   試し撮り（artifacts/pano/<key先頭16桁>/ に p1-f.jpg … points.json）
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -26,6 +32,7 @@ import { chromium } from 'playwright';
 
 const require = createRequire(import.meta.url);
 const { S3Client, HeadObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+const sharp = require('sharp');
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const ORIGIN = 'https://locahun3d.com';
@@ -33,6 +40,7 @@ const argv = process.argv.slice(2);
 const flag = (k) => argv.includes(k);
 const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d; };
 const FIX = flag('--fix') || flag('--local');
+const POINTS = flag('--points');   // ツアーの地点も撮る
 const LOCAL = flag('--local');   // R2 に書かず artifacts/pano/ にだけ作る（試し撮り・見比べ用）
 const LIMIT = Number(arg('--limit', 0)) || Infinity;
 const SIZE = Number(arg('--size', 1024));
@@ -93,6 +101,7 @@ const ANCHOR = 'const camPos  = new THREE.Vector3(0, 1.7, 4);';
 const HOOK = `;window.__pb={
  n:()=>window.__nSplat?window.__nSplat():-1,
  pose:()=>({x:camPos.x,y:camPos.y,z:camPos.z,yaw:yaw,pitch:pitch}),
+ walk:()=>{try{return !!(walkSetup.core&&!walkSetup.importPending);}catch(_){return false;}},
  busy:()=>{try{return sparkRenderer&&sparkRenderer.pager?sparkRenderer.pager.fetchers.filter(f=>f.chunk>=0).length:0;}catch(_){return 0;}},
  budget:(n)=>{try{window._gpuWatchdog=window._gpuWatchdog||{};window._gpuWatchdog.manualOverride=true;sparkRenderer.lodSplatCount=n;return sparkRenderer.lodSplatCount;}catch(_){return -1;}},
  aim:(p,yw,pt)=>{const T=window.__dbg.THREE;if(!window.__pbCam){window.__pbCam=new T.PerspectiveCamera(90,1,0.01,5000);const R=renderer,orig=R.render.bind(R);R.render=(sc,cam)=>orig(sc,cam===camera?window.__pbCam:cam);}
@@ -138,6 +147,32 @@ async function settle(page, maxMs) {
   return false;
 }
 
+// 写りのはっきりさ（4 方向の横の面の、輪郭の強さ＝ラプラシアンの分散の平均）。3D の撮影範囲の外れはぼやけて小さくなる
+async function sharpness(faces) {
+  let sum = 0;
+  for (const k of ['f', 'r', 'b', 'l']) {
+    const data = await sharp(faces[k]).greyscale().resize(256, 256).convolve({ width: 3, height: 3, kernel: [0, 1, 0, 1, -4, 1, 0, 1, 0], offset: 128 }).raw().toBuffer();
+    let m = 0; for (const v of data) m += v; m /= data.length;
+    let q = 0; for (const v of data) q += (v - m) ** 2;
+    sum += q / data.length;
+  }
+  return sum / 4;
+}
+const SHARP_MIN = Number(arg('--sharp-min', 0.45));   // 開始位置の何割未満の地点を外すか（会議室の試しで、見てぼやけていた 4 か所が 0.14〜0.34、良い所が 0.59〜0.86）
+
+// 1 か所の 6 方向（各 90°）を撮る
+async function capture(page, pos, yaw0, pitch0, r, tag) {
+  const faces = {};
+  for (const [k, [dy, p]] of Object.entries(FACES)) {
+    await page.evaluate(([pos, yw, pt]) => window.__pb.aim(pos, yw, pt), [pos, yaw0 + dy, p + (k === 'u' || k === 'd' ? 0 : pitch0)]);
+    const ok = await settle(page, 90000);
+    if (!ok) r.slow = (r.slow || '') + tag + k + ' ';
+    await page.waitForTimeout(400);
+    faces[k] = await page.locator('canvas').first().screenshot({ type: 'jpeg', quality: QUALITY });
+  }
+  return faces;
+}
+
 async function bake(browser, s) {
   const r = { scene: s.scene, property: s.property, at: new Date().toISOString() };
   const { ctx, page, errors } = await openScene(browser, s.scene);
@@ -148,36 +183,75 @@ async function bake(browser, s) {
       const st = await page.evaluate(() => window.__startPano?.state).catch(() => null); if (st === 'none' && !key) break; }
     if (!key) { r.status = 'error'; r.why = 'キーが出ない: ' + JSON.stringify(await page.evaluate(async (u) => { const res = await fetch(u, { method: 'HEAD', cache: 'no-cache' }); return { sp: window.__startPano, s: res.status, e: res.headers.get('etag'), l: res.headers.get('content-length'), href: location.href.slice(0, 60) }; }, s.scene).catch((e) => String(e))) + (errors[0] ? ' ' + errors[0] : ''); return r; }
     r.key = key;
-    if (!LOCAL && await r2Head(`pano/${key}.json`)) { r.status = 'ok'; return r; }
-    r.status = 'missing';
+    const hasStart = !LOCAL && !!await r2Head(`pano/${key}.json`);
+    const hasPoints = !POINTS || (!LOCAL && !!await r2Head(`pano/${key}.points.json`));
+    if (hasStart && hasPoints) { r.status = 'ok'; return r; }
+    r.status = hasStart ? 'missing-points' : 'missing';
     if (!FIX) return r;
     // シーンが出て、ビューアーが開始位置を置き終えるまで待つ
     const t1 = Date.now(); while (Date.now() - t1 < 120000 && (await page.evaluate(() => window.__pb.n()).catch(() => -1)) <= 0) await page.waitForTimeout(500);
     await page.waitForTimeout(3000);
-    const pose = await page.evaluate(() => window.__pb.pose());
+    let pose = await page.evaluate(() => window.__pb.pose());
+    if (hasStart) {
+      // 開始位置の画像は既にある: その位置・向きから地点を選ぶ（画像とツアーの起点をそろえる）
+      const m = await (await fetch(`${ORIGIN}/api/pano/${key}.json`)).json();
+      pose = { x: m.pos.x, y: m.pos.y, z: m.pos.z, yaw: m.yaw, pitch: Number.isFinite(m.pitch) ? m.pitch : 0 };
+    }
     if (![pose.x, pose.y, pose.z, pose.yaw, pose.pitch].every(Number.isFinite)) { r.status = 'error'; r.why = '開始位置が取れない'; return r; }
     await page.evaluate(() => window.__pb.budget(8000000));
     // 画面の飾り（ボタン・色味の重ね・案内）を消し、3D のキャンバスだけを撮る（色味の重ねはビューアーが画像の上にも同じく重ねる）
     await page.addStyleTag({ content: 'body>*:not(canvas){visibility:hidden!important} canvas{visibility:visible!important}' });
-    const faces = {};
-    for (const [k, [dy, p]] of Object.entries(FACES)) {
-      await page.evaluate(([pos, yw, pt]) => window.__pb.aim(pos, yw, pt), [pose, pose.yaw + dy, p]);
-      const ok = await settle(page, 90000);
-      if (!ok) r.slow = (r.slow || '') + k;
-      await page.waitForTimeout(400);
-      faces[k] = await page.locator('canvas').first().screenshot({ type: 'jpeg', quality: QUALITY });
-    }
-    // 手元にも残す（見返し用）
     const dir = path.join(OUT, key.slice(0, 16)); fs.mkdirSync(dir, { recursive: true });
-    for (const [k, b] of Object.entries(faces)) fs.writeFileSync(path.join(dir, `${k}.jpg`), b);
-    const meta = { v: 1, pos: { x: pose.x, y: pose.y, z: pose.z }, yaw: pose.yaw, pitch: pose.pitch, size: SIZE, bakedAt: r.at, scene: s.scene,
-      faces: Object.fromEntries(Object.entries(faces).map(([k, b]) => [k, sha(b)])) };
-    const metaBody = Buffer.from(JSON.stringify(meta));
-    fs.writeFileSync(path.join(dir, 'meta.json'), metaBody);
+    const uploads = []; let metaBody = null, pointsBody = null;
+    let startCaptured = null;
+    if (!hasStart) {
+      const faces = startCaptured = await capture(page, pose, pose.yaw, 0, r, '');
+      for (const [k, b] of Object.entries(faces)) { fs.writeFileSync(path.join(dir, `${k}.jpg`), b); uploads.push([`pano/${key}-${k}.jpg`, b]); }
+      const meta = { v: 1, pos: { x: pose.x, y: pose.y, z: pose.z }, yaw: pose.yaw, pitch: pose.pitch, size: SIZE, bakedAt: r.at, scene: s.scene,
+        faces: Object.fromEntries(Object.entries(faces).map(([k, b]) => [k, sha(b)])) };
+      metaBody = Buffer.from(JSON.stringify(meta));
+      fs.writeFileSync(path.join(dir, 'meta.json'), metaBody);
+    }
+    if (!hasPoints) {
+      // 床の当たり判定ができるまで待つ（事前に作った判定があればすぐ）
+      const t2 = Date.now(); while (Date.now() - t2 < 180000 && !(await page.evaluate(() => window.__pb.walk()).catch(() => false))) await page.waitForTimeout(1000);
+      // 開始位置の写りのはっきりさ（地点の良し悪しの基準）
+      let startFaces = startCaptured;
+      if (!startFaces) { startFaces = {}; for (const k of ['f', 'r', 'b', 'l']) startFaces[k] = Buffer.from(await (await fetch(`${ORIGIN}/api/pano/${key}-${k}.jpg`)).arrayBuffer()); }
+      const base = await sharpness(startFaces);
+      // 多めに選んで（最大 16 か所・見通しの表つき）→ 撮る → ぼやけた所を外す → 開始位置から見通しをたどって行ける所だけ残す（最大 8 か所）。
+      // 撮ったあとに選び直さないのは、遠くを撮ると開始位置の周りの床の当たり判定が外れ、選び直せなくなるため（会議室で確認）
+      let pick = null;
+      for (let t = 0; t < 30 && !(pick && pick.points); t++) {
+        if (await page.evaluate(() => window.__pb.walk()).catch(() => false)) pick = await page.evaluate((o) => window.__startPano.pickPoints(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, yaw: pose.yaw, max: 16 });
+        if (!(pick && pick.points)) await page.waitForTimeout(1000);
+      }
+      const shot = [];
+      for (const p of pick?.points || []) {
+        const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':');
+        shot.push({ p, faces, score: await sharpness(faces) / base });
+      }
+      // 見通しの表の番号: 0 = 開始位置、i + 1 = pick.points[i]
+      const keep = new Set([0]), good = (i) => shot[i - 1] && shot[i - 1].score >= SHARP_MIN;
+      for (let grew = true; grew;) { grew = false; for (let i = 1; i <= shot.length; i++) if (!keep.has(i) && good(i) && [...keep].some(j => pick.vis[j][i])) { keep.add(i); grew = true; } }
+      const kept = shot.filter((_, i) => keep.has(i + 1)).slice(0, 8);
+      const pts = kept.map((x, i) => ({ ...x.p, id: 'p' + (i + 1), sharp: +x.score.toFixed(2) }));
+      r.pick = { n: pts.length, cand: pick?.cand, error: pick?.error, shots: shot.length, blurry: shot.filter(x => x.score < SHARP_MIN).length };
+      const shas = {};
+      for (const [i, p] of pts.entries()) {
+        const sh = kept[i];
+        for (const [k, b] of Object.entries(sh.faces)) { fs.writeFileSync(path.join(dir, `${p.id}-${k}.jpg`), b); uploads.push([`pano/${key}-${p.id}-${k}.jpg`, b]); }
+        shas[p.id] = Object.fromEntries(Object.entries(sh.faces).map(([k, b]) => [k, sha(b)]));
+      }
+      pointsBody = Buffer.from(JSON.stringify({ v: 1, points: pts, start: { x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw }, eye: pick?.eye, size: SIZE, bakedAt: r.at, scene: s.scene, faces: shas }));
+      fs.writeFileSync(path.join(dir, 'points.json'), pointsBody);
+    }
     if (LOCAL) { r.status = 'local'; r.dir = dir; return r; }
-    for (const [k, b] of Object.entries(faces)) if (!await r2Head(`pano/${key}-${k}.jpg`)) await r2PutNew(`pano/${key}-${k}.jpg`, b, 'image/jpeg');
-    await r2PutNew(`pano/${key}.json`, metaBody, 'application/json');   // 最後に置く（これがあれば使われる）
-    r.status = 'fixed'; r.bytes = Object.values(faces).reduce((a, b) => a + b.length, 0) + metaBody.length;
+    for (const [k, b] of uploads) if (!await r2Head(k)) await r2PutNew(k, b, 'image/jpeg');
+    if (metaBody) await r2PutNew(`pano/${key}.json`, metaBody, 'application/json');   // 最後に置く（これがあれば使われる）
+    if (pointsBody && pointsBody.length) await r2PutNew(`pano/${key}.points.json`, pointsBody, 'application/json');
+    r.bytes = uploads.reduce((a, [, b]) => a + b.length, 0) + (metaBody?.length || 0) + (pointsBody?.length || 0);
+    r.status = 'fixed';
     return r;
   } catch (e) { r.status = 'error'; r.why = String(e?.message || e).slice(0, 200); return r; }
   finally { await ctx.close(); }
@@ -192,9 +266,9 @@ for (const s of scenes) {
   const r = await bake(browser, s);
   results.push(r);
   fs.appendFileSync(path.join(OUT, 'runs.jsonl'), JSON.stringify(r) + '\n');
-  const color = ['ok', 'fixed', 'local'].includes(r.status) ? C.green : r.status === 'missing' ? C.yellow : C.red;
-  console.log(color(`[${r.status}] ${s.property || ''} ${s.scene.split('/').pop()}${r.key ? ' ' + r.key.slice(0, 12) : ''}${r.slow ? ' 遅い面:' + r.slow : ''}${r.why ? ' — ' + r.why : ''}`));
+  const color = ['ok', 'fixed', 'local'].includes(r.status) ? C.green : r.status.startsWith('missing') ? C.yellow : C.red;
+  console.log(color(`[${r.status}] ${s.property || ''} ${s.scene.split('/').pop()}${r.key ? ' ' + r.key.slice(0, 12) : ''}${r.pick ? ' 地点' + r.pick.n + (r.pick.error ? '(' + r.pick.error + ')' : '') : ''}${r.slow ? ' 遅い面:' + r.slow : ''}${r.why ? ' — ' + r.why : ''}`));
 }
 await browser.close();
-const bad = results.filter((r) => !['ok', 'fixed', 'local'].includes(r.status) && !(r.status === 'missing' && !FIX));
+const bad = results.filter((r) => !['ok', 'fixed', 'local'].includes(r.status) && !(r.status.startsWith('missing') && !FIX));
 process.exit(bad.length ? 1 : 0);
