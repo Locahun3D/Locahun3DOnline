@@ -4,6 +4,147 @@
 <head>
 <meta charset="UTF-8">
 <script src="/viewer/rad-chunk-cache.js"></script><!-- 3Dデータを端末に保存（2026-10-17）。戻すときはこの行を消す -->
+<script>
+// ══════════════════════════════════════════════════
+//  START PANO — 最初の静止画（<head> で一番先に動く小さな script。2026-11-19）
+//  本人「この360画像と3DGSの移行の仕組みをロケハン3Dでも」（内見版 naiken の ?poster= と同じ考え方）。
+//  ビューアーの HTML と JS は大きく、スマホでは読み終えて動き出すまで数秒かかる。その間に、シーンの開始位置の 360° 画像
+//  （292b と同じ /api/pano/<key>-{f,r,b,l,u,d}.jpg）から、開始位置の見え方を 2D の canvas に描いて全面に出しておく。画角はビューアーの標準と同じ。
+//  292b が同じ画像を 3D の上にかぶせた時点で、これを一瞬で外す（同じ絵なので切り替わりは見えない）。
+//  キーの計算（中身の識別子 → sha256）は 292b と同じ。結果を window.__startPanoEarly に渡し、292b はもう一度計算しない。
+//  弱い端末・遅い回線の見分け（軽量表示）もここで先に行う（window.__l3dLite。3D を読み始める前に分かるもの）。
+//  ?nopano=1 で使わない。?lite=1 で必ず軽量表示、?lite=0 で使わない。
+// ══════════════════════════════════════════════════
+(function(){
+  var q = location.search, d = document.documentElement;
+  var m = /[?&]autoload=([^&]+)/.exec(q);
+  if(!m || /[?&]nopano=1/.test(q)) return;
+  // ── 軽量表示の先読み判定: ソフトウェア描画（GPU なし）・データセーバー・2G 表示 ──
+  var lite = null;
+  if(/[?&]lite=1/.test(q)) lite = 'url';
+  else if(!/[?&]lite=0/.test(q)){
+    try {
+      var gc = document.createElement('canvas').getContext('webgl');
+      if(!gc) lite = 'gpu';
+      else {
+        var ge = gc.getExtension('WEBGL_debug_renderer_info'), gr = ge ? String(gc.getParameter(ge.UNMASKED_RENDERER_WEBGL)) : '';
+        if(/swiftshader|llvmpipe|softpipe|basic render|software/i.test(gr)) lite = 'gpu';
+        var lc = gc.getExtension('WEBGL_lose_context'); if(lc) lc.loseContext();
+      }
+    } catch(e){}
+    if(!lite){ var cn = navigator.connection; if(cn && (cn.saveData || /2g/.test(cn.effectiveType || ''))) lite = 'net'; }
+  }
+  if(lite) window.__l3dLite = lite;
+
+  var url = decodeURIComponent(m[1]);
+  // 292 の autoload と同じ読み替え（オンライン版の ?protected=1 では /api/viewer-stream/ を通す）
+  if(/[?&]protected=1/.test(q) && !/^https?:\/\//.test(url) && url.indexOf('blob:') !== 0)
+    url = '/api/viewer-stream/' + url.replace(/^\/+/, '').replace(/^api\/(r2|viewer-stream)\//, '');
+  if(url.indexOf('blob:') === 0) return;
+
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  async function identity(){
+    var res = await fetch(url, { method: 'HEAD', credentials: 'same-origin', cache: 'no-cache' });
+    var etag = res.headers.get('etag') || '', len = res.headers.get('content-length') || '';
+    if(!res.ok) return null;
+    var asset = new URL(url, location.href);
+    if(asset.origin !== location.origin || !/^\d+$/.test(len)) return null;
+    var mm = /^"l3d-content-([A-Za-z0-9_-]{8,200})"$/.exec(etag);
+    if(mm) return 'content:' + mm[1] + ':' + len;
+    var r2 = /^"([A-Za-z0-9_-]{8,200})"$/.exec(etag);
+    return r2 ? 'etag:' + r2[1] + ':' + len : null;
+  }
+  async function sha256hex(s){
+    var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.prototype.map.call(new Uint8Array(b), function(n){ return n.toString(16).padStart(2, '0'); }).join('');
+  }
+  var FACES = ['f', 'r', 'b', 'l', 'u', 'd'];
+
+  // 結果: { key, meta } または null（画像が無い・確かめられない）
+  window.__startPanoEarly = (async function(){
+    var id = null;
+    // 開いた直後の 1 回目はサイトの認証の受け渡しなどで中身の応答にならないことがあるので、少し待って 3 回まで試す（292b と同じ）
+    for(var i = 0; i < 3 && !id; i++){ if(i) await wait(700 * i); try { id = await identity(); } catch(e){ id = null; } }
+    if(!id) return null;
+    var key = await sha256hex('l3d-pano-v1:' + id);
+    var r = await fetch('/api/pano/' + key + '.json', { cache: 'no-cache' });
+    if(!r.ok) return { key: key, meta: null };
+    var meta = await r.json();
+    if(!meta || meta.v !== 1 || !meta.pos || ![meta.pos.x, meta.pos.y, meta.pos.z, meta.yaw].every(Number.isFinite)) return { key: key, meta: null };
+    return { key: key, meta: meta };
+  })().catch(function(){ return null; });
+
+  // ── 最初の静止画（6 枚から開始位置の見え方を 2D の canvas に描く）──
+  // CSS の 3D（立方体）は WebKit で面の裏表・奥行きが崩れた（iPhone 相当で裏返しの面が小さく映った。2026-11-19）ので、
+  // 画面の画素ごとに視線の向きを求めて 6 面の画像から色を拾う。カメラの向きは開始位置と同じ（正面 = f の面、上下は meta.pitch）。
+  // 面の向き（見る人の右 = +x、上 = +y、正面 = +z として）: f +z / r +x / l -x / b -z / u +y / d -y（292b の build と同じ並び）。
+  var FACE_AXES = {   // [正面, 右, 上]
+    f: [[0, 0, 1], [1, 0, 0], [0, 1, 0]],   r: [[1, 0, 0], [0, 0, -1], [0, 1, 0]],
+    l: [[-1, 0, 0], [0, 0, 1], [0, 1, 0]],  b: [[0, 0, -1], [-1, 0, 0], [0, 1, 0]],
+    u: [[0, 1, 0], [1, 0, 0], [0, 0, -1]],  d: [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
+  };
+  window.__startPanoEarly.then(function(res){
+    if(!res || !res.meta) return;
+    var imgs = {}, left = FACES.length, failed = false;
+    FACES.forEach(function(f){
+      var img = new Image();
+      img.onload = function(){ imgs[f] = img; if(--left === 0 && !failed) show(res, imgs); };
+      img.onerror = function(){ failed = true; };
+      img.src = '/api/pano/' + res.key + '-' + f + '.jpg';
+    });
+  });
+  function show(res, imgs){
+    if(window.__startPanoPosterOff) return;   // 292b がもう 3D の上に画像を出した・やめた
+    var go = function(){
+      if(window.__startPanoPosterOff || document.getElementById('sp-poster')) return;
+      var S = 512, px = {};
+      try {
+        var tc = document.createElement('canvas'); tc.width = tc.height = S; var tx = tc.getContext('2d', { willReadFrequently: true });
+        FACES.forEach(function(f){ tx.drawImage(imgs[f], 0, 0, S, S); px[f] = tx.getImageData(0, 0, S, S).data; });
+      } catch(e){ return; }
+      var pitch = Number.isFinite(res.meta.pitch) ? res.meta.pitch : 0, cp = Math.cos(pitch), sp = Math.sin(pitch);
+      var root = document.createElement('canvas'); root.id = 'sp-poster'; root.setAttribute('aria-hidden', 'true');
+      function draw(){
+        var W = innerWidth, H = innerHeight, dpr = Math.min(1.5, window.devicePixelRatio || 1);
+        var cw = Math.max(1, Math.round(W * dpr)), ch = Math.max(1, Math.round(H * dpr));
+        root.width = cw; root.height = ch;
+        // ビューアーの標準の画角（020 の _autoFovFor と同じ。縦 90〜110°）
+        var v = Math.round(Math.min(110, Math.max(90, 2 * Math.atan(1 / Math.max(.2, W / Math.max(1, H))) * 180 / Math.PI)));
+        var fp = ch / 2 / Math.tan(v * Math.PI / 360);
+        var ctx = root.getContext('2d'), out = ctx.createImageData(cw, ch), o = out.data, k = 0;
+        for(var y = 0; y < ch; y++){
+          var cy = -(y + 0.5 - ch / 2) / fp;
+          for(var x = 0; x < cw; x++, k += 4){
+            var cx = (x + 0.5 - cw / 2) / fp;
+            // 上下の向き（pitch）だけ回す: 正面 (0, sin p, cos p)
+            var dx = cx, dy = cy * cp + sp, dz = -cy * sp + cp;
+            var ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy, az = dz < 0 ? -dz : dz, f;
+            if(ax >= ay && ax >= az) f = dx > 0 ? 'r' : 'l'; else if(ay >= az) f = dy > 0 ? 'u' : 'd'; else f = dz > 0 ? 'f' : 'b';
+            var A = FACE_AXES[f], fw = dx * A[0][0] + dy * A[0][1] + dz * A[0][2];
+            var u = (dx * A[1][0] + dy * A[1][1] + dz * A[1][2]) / fw, w = (dx * A[2][0] + dy * A[2][1] + dz * A[2][2]) / fw;
+            var ix = Math.min(S - 1, Math.max(0, ((u + 1) / 2 * S) | 0)), iy = Math.min(S - 1, Math.max(0, ((1 - w) / 2 * S) | 0));
+            var q = (iy * S + ix) * 4, P = px[f];
+            o[k] = P[q]; o[k + 1] = P[q + 1]; o[k + 2] = P[q + 2]; o[k + 3] = 255;
+          }
+        }
+        ctx.putImageData(out, 0, 0);
+      }
+      draw();
+      var rt = null; function onResize(){ clearTimeout(rt); rt = setTimeout(draw, 120); }
+      addEventListener('resize', onResize);
+      document.body.appendChild(root);
+      d.classList.add('sp-poster');
+      window.__startPanoPoster = { remove: function(fade){
+        removeEventListener('resize', onResize); d.classList.remove('sp-poster');
+        if(!fade){ root.remove(); return; }
+        root.style.transition = 'opacity .35s'; root.style.opacity = '0'; setTimeout(function(){ root.remove(); }, 400);
+      } };
+    };
+    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+  }
+})();
+</script>
+<style>#sp-poster{position:fixed;inset:0;width:100vw;height:100vh;z-index:1;pointer-events:none;background:#000}html.sp-poster #ld,html.sp-poster #dz{display:none!important}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ロケハン3D</title>
 <!-- Favicon / SEO: 実ファイル参照（Google検索はdata-URIを無視するため /favicon.* を配信） -->
@@ -495,6 +636,8 @@ body.demo-mode #em-save-zip { display:none !important; }
   background:rgba(22,22,24,.98);z-index:200;
 }
 #ld.hidden{display:none;}
+/* 開始位置の 360° 画像（292b）を出している間は読み込み画面を出さない（画像の裏で 3D を読む） */
+body.start-pano #ld,body.start-pano #dropzone,body.start-pano #dz{display:none!important;}
 #ld .lt{font-size:1.05em;color:#C0C0C0;letter-spacing:.04em;font-weight:300;}
 #ld .lt.ld-guide{display:grid;gap:7px;width:min(420px,calc(100vw - 48px));font-size:.92em;margin-bottom:6px;}
 #ld .lt.ld-guide>div{display:grid;grid-template-columns:7.5em 1fr;gap:12px;align-items:baseline;text-align:left;}
@@ -724,6 +867,15 @@ body.cam-active #view-tl-btns{
 #dz .dz-guide .k{color:#ffb454;font-size:.74em;letter-spacing:.08em;white-space:nowrap;}
 #dz .dz-guide .v{color:#d8d8d8;font-size:.86em;line-height:1.5;}
 @media (max-width:600px){#dz .dz-guide{padding:10px 12px;} #dz .dz-guide>div{grid-template-columns:5.5em 1fr;}}
+/* 360° 写真ツアー（292b。3D を読み終わるまで・軽量表示）: 床の丸と軽量表示の案内（内見版 naiken と同じ見た目） */
+.sp-spot{display:none;position:fixed;left:0;top:0;width:64px;height:64px;margin:-32px 0 0 -32px;padding:0;border-radius:50%;
+  border:3px solid rgba(255,255,255,.92);background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 2px 10px rgba(0,0,0,.35);
+  z-index:40;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%}
+.sp-spot:hover{background:rgba(255,255,255,.32)}
+.sp-lite-chip{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;gap:10px;align-items:center;
+  padding:6px 6px 6px 14px;border-radius:999px;background:rgba(12,12,13,.82);color:#fafaf6;font:500 13px/1.4 "Noto Sans JP",sans-serif;letter-spacing:.04em;white-space:nowrap;
+  box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.sp-lite-chip button{border:0;border-radius:999px;padding:6px 12px;background:#ffb454;color:#000;font:600 13px/1.2 "Noto Sans JP",sans-serif;cursor:pointer}
 /* ══════ LAYER PANEL ══════ */
 #layer-panel{
   position:fixed;left:0;top:var(--v1-header-bottom,45px);bottom:0;width:285px;
@@ -3030,7 +3182,7 @@ globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a00
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="c701ba264d84ede99fac2bac229d0cd2f8619ad26d676de4ab137ab869c42bb1";
+window.__locahunBuildRelease="87669a71934a98990f7729b8384bfb031c7d4657b42cd3708f4f6dfe5de4d891";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -20437,6 +20589,12 @@ setTimeout(async ()=>{
     // blob: URL is auto-loaded (no extension to sniff), this supplies a
     // filename so format detection still works.
     const an = location.search.match(/[?&]autoname=([^&]+)/);
+    // 軽量表示（GPU なし・遅い回線と先に分かった端末。src/head/start_pano_early.js）で 360° 画像があるシーンは、
+    // 3D を読まずに写真ツアーだけにする（292b。2026-11-19 本人「弱い端末は写真ツアーのまま」）。画像が無ければ今までどおり 3D を読む。
+    if(window.__l3dLite && window.__startPanoEarly){
+      const pr = await Promise.race([window.__startPanoEarly, new Promise(r => setTimeout(() => r(null), 8000))]);
+      if(pr && pr.meta){ if(typeof hideDZ === 'function') hideDZ(); window.__l3dLiteSkipped3D = true; return; }
+    }
     await loadFromURL(autoUrl, an ? decodeURIComponent(an[1]) : undefined);
     }
   } else if(dm && DEMO_SCENE_URL){
@@ -21285,6 +21443,569 @@ function updateLightHalos(){
       return;
     }
   }, 100);
+})();
+// ══════════════════════════════════════════════════
+//  RAD LOD FETCH WATCHDOG (2026-11-10)
+//  実機 iPhone (iOS 27.2 Safari) で、Spark pager の fetchDecodeChunk の promise が
+//  終わらないまま残り（chunk 11/5/7 の3本）、LOD がその chunk を待ち続けて
+//  点数が 647,128 のまま8分止まった。同じ chunk を取り直すと 240ms で成功し、
+//  pager.driveFetchers() を呼ぶと 51/51 そろって約100万点まで増えた。
+//  → 一定時間終わらない取得を「止まった」とみなし、同じ chunk を取り直させる。
+//
+//  Spark 側の fetcher は finally で fetchers.indexOf(fetcher) を使って自分を外すため、
+//  配列から直接消すと遅れて終わったときに別の fetcher を外してしまう。
+//  そこで止まった fetcher は配列に残したまま chunk を -1 に変え（driveFetchers が
+//  「取得中」と数えなくなる）、その分だけ numFetchers を一時的に増やして並列数を保つ。
+//  遅れて届いた結果は、すでにページがある chunk なら fetched.push で捨てる（ページの二重確保を防ぐ）。
+//  vendor の Spark（固定URL・ハッシュ検証つき）は変更しない。
+//
+//  止まりの判定（2026-11-10 改: 実機 iPhone は開いた直後に毎回数本止まり、固定10〜12秒待ちが初回表示の遅れになっていた）:
+//   ・後から始まった取得がもう終わっているのに、自分だけ MIN_MS 以上かつ最近の所要時間の SLOW_X 倍以上かかっている
+//     → 止まったとみなす（一様に遅い回線では、後発も終わらないので誤判定しない）
+//   ・それでも HARD_MS（遅い回線では所要時間中央値の3倍）を超えたら止まったとみなす
+//  見限った取得は abort しないので、元の取得が先に届けばそれが使われ、取り直しは捨てられる（実質「保険の重複取得」）。
+(function(){
+  if(/[?&]nowatchdog=1/.test(location.search)) return;   // 比較試験用
+  const MIN_MS  = +(new URLSearchParams(location.search).get('wdmin')) || 1000;     // これより短い取得は止まり扱いしない（2026-11-10: 2.5秒→1秒。通常の取得は0.2秒前後、iPhone 実機で収束5秒→短縮狙い）
+  const SLOW_X  = 4;        // 最近の所要時間（中央値）の何倍で止まりとみなすか
+  const HARD_MS = 12000;    // 後発の完了が無くても、これを超えたら止まりとみなす
+  const TICK_MS = 250;
+  const MAX_BOOST = 8;      // 並列数の上乗せ上限
+  const MAX_STALE = 4;      // 同時に見限っておける数（これを超えたら HARD 以外では見限らない）
+  // 見限った取得が後から届いた（＝止まっていたのではなく遅かっただけ）ら、判定を2倍ずつ慎重にする。
+  // 揺れる遅い回線（ホテル Wi-Fi・弱い4G）で正常な取得まで重複取得し、帯域を食うのを防ぐ
+  // （内見版の試験: 0.4MB/s 時に見限り16回・遅れ着12で、見張りなしの半分以下の点数）。
+  // iPhone の本当に止まる取得は届かない（遅れ着0）ので、速い判定はそのまま効く。20秒遅れ着がなければ半分に戻す。
+  let penalty = 1, lastLateAt = 0;
+  const st = { stalls: 0, late: 0, dropped: 0, boost: 0, base: 0, lastSet: 0, medianMs: 0, penalty: 1 };
+  window.__lodFetchWatchdog = st;   // diag 用
+  const seen = new WeakMap();       // fetcher → 最初に見た時刻
+  const stale = new Set();          // 止まったとみなした fetcher
+  let active = new Set();           // 前回見えていた（止まり扱いでない）fetcher
+  const durs = [];                  // 最近終わった取得の所要時間
+  let lastDoneStart = -1;           // 終わった取得のうち、最も遅く始まったものの開始時刻
+
+  function guardFetched(pg){
+    if(pg.__nkFetchGuard) return;
+    const arr = pg.fetched;
+    if(!Array.isArray(arr)) return;
+    arr.push = function(...items){
+      for(const it of items){
+        const dup = it && (pg.getSplatsChunk(it.splats, it.chunk) ||
+          Array.prototype.some.call(this, x => x.splats === it.splats && x.chunk === it.chunk));
+        if(dup){ st.dropped++; continue; }
+        Array.prototype.push.call(this, it);
+      }
+      return this.length;
+    };
+    pg.__nkFetchGuard = true;
+  }
+
+  function tick(){
+    const sr = (typeof sparkRenderer !== 'undefined' && sparkRenderer) ? sparkRenderer : null;
+    const pg = sr && sr.pager;
+    if(!pg || !Array.isArray(pg.fetchers)) return;
+    guardFetched(pg);
+    const now = performance.now();
+    // アプリ側が numFetchers を変えたら、それを新しい基準にする
+    if(pg.numFetchers !== st.lastSet){ st.base = pg.numFetchers; st.boost = 0; }
+
+    // 遅れて終わった（配列から消えた）止まり fetcher を片付ける
+    for(const f of stale){ if(!pg.fetchers.includes(f)){ stale.delete(f); st.late++; penalty = Math.min(penalty * 2, 16); lastLateAt = now; } }
+    if(penalty > 1 && now - lastLateAt > 20000){ penalty /= 2; lastLateAt = now; }
+    st.penalty = penalty;
+
+    // 普通に終わった取得の所要時間を記録
+    const cur = new Set(pg.fetchers);
+    for(const f of active){
+      if(cur.has(f) || stale.has(f)) continue;
+      const t = seen.get(f);
+      if(t !== undefined){
+        durs.push(now - t); if(durs.length > 24) durs.shift();
+        if(t > lastDoneStart) lastDoneStart = t;
+      }
+    }
+    if(durs.length){ const s = durs.slice().sort((a, b) => a - b); st.medianMs = Math.round(s[s.length >> 1]); }
+    active = new Set();
+
+    let found = false;
+    for(const f of pg.fetchers){
+      if(stale.has(f)) continue;
+      active.add(f);
+      const t = seen.get(f);
+      if(t === undefined){ seen.set(f, now); continue; }
+      const age = now - t;
+      const overtaken = lastDoneStart >= t && stale.size < MAX_STALE &&   // 同時に始まった取得が先に終わった場合も含む
+        age > MIN_MS * penalty && age > SLOW_X * penalty * (st.medianMs || 0);
+      if(overtaken || age > Math.max(HARD_MS, 3 * (st.medianMs || 0)) * penalty){
+        active.delete(f);
+        console.warn('[lod-watchdog] fetch stalled', Math.round((now - t) / 1000) + 's', 'chunk', f.chunk, '→ retry');
+        f.chunk = -1;           // driveFetchers がこの chunk を取得中と数えないようにする
+        stale.add(f); st.stalls++; found = true;
+      }
+    }
+    const boost = Math.min(stale.size, MAX_BOOST);
+    if(boost !== st.boost || pg.numFetchers !== st.base + boost){
+      st.boost = boost;
+      pg.numFetchers = st.base + boost;
+    }
+    st.lastSet = pg.numFetchers;
+    if(found && sr.enableLodFetching !== false){
+      try { pg.driveFetchers(); } catch(e){ console.warn('[lod-watchdog] driveFetchers', e); }
+      if(typeof markDirty === 'function') markDirty(240);
+      if(typeof window.__keepAlive === 'function') window.__keepAlive(6000);
+    }
+  }
+  setInterval(tick, TICK_MS);
+})();
+// ══════════════════════════════════════════════════
+//  START PANO — 開始位置の 360° 画像と、3D を読み終わるまでの 360° 写真ツアー
+//  オンライン版の物件シーンを開いた直後、開始位置から撮った 360° 画像（6 方向・各 90°）を 3D の上にかぶせる。
+//  その場で見回している間は画像のまま（裏で 3D を読み続ける）、位置が動いたら（歩く・移動・ツアー・AR など）
+//  画像を消して 3D に切り替える（2026-11-10 本人「この静止画を最初に挟むの、locahunでも採用」。内見版 naiken.js と同じ考え方）。
+//
+//  2026-11-19 本人「この360画像と3DGSの移行の仕組みをロケハン3Dでも同じ仕組みで」→ 内見版の次の 3 つも入れた:
+//   ① 最初の静止画: src/head/start_pano_early.js が <head> で同じ画像から開始位置の見え方を canvas に先に描く。ここで 3D の上に画像を出したら外す。
+//   ② （?pre=1 のときだけ）3D を読み終わるまでは 360° 写真ツアー。2026-11-20 本人「ヒルトンの仕組みとは違う。読み込み時はレンダリング絵で、
+//      読み込むまでマターポートのように静止画で動く仕組みではない」→ 標準では使わない（内見版と同じ: 静止画 → その場で見回す 360° → 歩くと 3D）。
+//      ツアー: シーンの周りで自動で選んで撮った地点（<key>.points.json）の画像の間を、
+//      床の丸・画面のタップで移って見て回れる。読み込みが落ち着いたら、今いる地点のまま 3D に切り替える。
+//      床の当たり判定ができるまでは、丸とタップで地点へ（3D のまま）移る。できたら普通の「床をタップして移動」に戻す。
+//   ③ 軽量表示: GPU の無い・弱い端末（先読み判定、または画面の動きが毎秒 12 コマ未満）、遅い回線（3D の届き方が毎秒 150KB 未満）では
+//      3D を捨てて写真ツアーを続ける。画面下の「3D で見る」で 3D に戻せる（?lite=0 で開き直す）。
+//
+//  画像はサイトの /api/pano/<key>.json・<key>-{f,r,b,l,u,d}.jpg（開始位置）、<key>.points.json・<key>-<地点>-{面}.jpg（ツアーの地点）。
+//  無ければ 404 で何もしない（地点が無いシーンは開始位置の 1 枚だけ。今までどおり）。
+//  key = sha256('l3d-pano-v1:' + 中身の識別子)。中身の識別子は autoload の配信応答の ETag と長さ
+//  （?ref=stream の RAD は "l3d-content-…" → 'content:<id>:<長さ>'、ZIP は R2 の ETag → 'etag:<etag>:<長さ>'）。シーン（ZIP）を作り直すと ETag が変わるので、古い画像は使われない。
+//  画像はオンライン版の scripts/bake-pano.mjs が公開シーンを実ブラウザで開いて作る（このファイルの __startPano.key と pickPoints() を使う）。
+//  ?nopano=1 で使わない（撮影時・比較用）。?pre=1 で読み込み中の写真ツアーを使う（標準は使わない）。?lite=1 / ?lite=0 で軽量表示を固定。
+(function(){
+  const qs = location.search;
+  const st = { key: null, state: 'off', why: '', points: [], tour: null };
+  window.__startPano = st;
+  // ?posterhold=1: 最初の静止画を外さない（3D の上の画像と重なり具合を見比べる試験用）
+  const posterOff = (fade) => { if(/[?&]posterhold=1/.test(qs)) return; window.__startPanoPosterOff = true; if(window.__startPanoPoster) window.__startPanoPoster.remove(fade); };
+  const m = /[?&]autoload=([^&]+)/.exec(qs);
+  if(!m || /[?&]nopano=1/.test(qs)){ posterOff(false); return; }
+  let url = decodeURIComponent(m[1]);
+  // 292 の autoload と同じ読み替え（オンライン版の ?protected=1 では /api/viewer-stream/ を通す）
+  if(typeof _protected !== 'undefined' && _protected && !/^https?:\/\//.test(url) && !url.startsWith('blob:')){
+    url = '/api/viewer-stream/' + url.replace(/^\/+/, '').replace(/^api\/(r2|viewer-stream)\//, '');
+  }
+  if(url.startsWith('blob:')){ posterOff(false); return; }
+  const FACES = { f: [0, 0], r: [-Math.PI / 2, 0], b: [Math.PI, 0], l: [Math.PI / 2, 0], u: [0, Math.PI / 2], d: [0, -Math.PI / 2] };
+  let group = null, at = null, tex = [], gone = false, sceneSeen = false;
+
+  async function identity(){
+    const res = await fetch(url, { method: 'HEAD', credentials: 'same-origin', cache: 'no-cache' });
+    const etag = res.headers.get('etag') || '', len = res.headers.get('content-length') || '';
+    st.head = { url, status: res.status, etag, len };   // 診断用（キーが出ないときに見る）
+    if(!res.ok) return null;
+    const page = new URL(location.href), asset = new URL(url, page);
+    if(asset.origin !== page.origin || !/^\d+$/.test(len)) return null;
+    // ?ref=stream の RAD は中身の ETag、ZIP そのもの（物件ページの autoload）は R2 の強い ETag（サイトは同じ値をサーバー側でも計算できる）
+    const mm = /^"l3d-content-([A-Za-z0-9_-]{8,200})"$/.exec(etag);
+    if(mm) return 'content:' + mm[1] + ':' + len;
+    const r2 = /^"([A-Za-z0-9_-]{8,200})"$/.exec(etag);
+    return r2 ? 'etag:' + r2[1] + ':' + len : null;
+  }
+  async function sha256hex(s){
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map(n => n.toString(16).padStart(2, '0')).join('');
+  }
+  function loadTex(src){
+    return new Promise((ok, ng) => new THREE.TextureLoader().load(src, t => { t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; ok(t); }, undefined, ng));
+  }
+  const loadFaces = (prefix) => Promise.all(Object.keys(FACES).map(k => loadTex('/api/pano/' + prefix + '-' + k + '.jpg')));
+  function build(pos, yaw0, maps){
+    const g = new THREE.Group(); g.position.set(pos.x, pos.y, pos.z);
+    Object.keys(FACES).forEach((k, i) => {
+      const [dy, p] = FACES[k];
+      const pivot = new THREE.Object3D(); pivot.rotation.set(p, yaw0 + dy + Math.PI, 0, 'YXZ');
+      const mat = new THREE.MeshBasicMaterial({ map: maps[i], depthTest: false, depthWrite: false, transparent: true, toneMapped: false, side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.004, 2.004), mat);
+      mesh.position.set(0, 0, -1); mesh.renderOrder = 1e6; mesh.frustumCulled = false;
+      pivot.add(mesh); g.add(pivot);
+    });
+    return g;
+  }
+  const disposeGroup = (g) => { scene.remove(g); g.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); }); };
+  function remove(why){
+    if(gone) return; gone = true; st.state = 'removed'; st.why = why;
+    document.body.classList.remove('start-pano');
+    posterOff(true);
+    tour.stop();
+    if(!group) return;
+    const g = group, t0 = performance.now();
+    const step = () => {
+      const a = Math.max(0, 1 - (performance.now() - t0) / 350);
+      g.traverse(o => { if(o.material) o.material.opacity = a; });
+      if(typeof markDirty === 'function') markDirty(4);
+      if(a > 0) return requestAnimationFrame(step);
+      disposeGroup(g); tex.forEach(t => t.dispose()); group = null;
+      for(const p of Object.values(tour.cache)) p.then(ts => ts.forEach(t => t.dispose())).catch(() => {});
+    };
+    requestAnimationFrame(step);
+  }
+  const moved = () => {
+    if(typeof walkMode !== 'undefined' && walkMode.active) return 'walk';
+    if(typeof arMode !== 'undefined' && arMode.active) return 'ar';
+    if(document.body.classList.contains('orbit-preview')) return 'orbit';
+    if(camPos.distanceTo(at) > 0.03) return 'move';
+    return '';
+  };
+  const walkReady = () => typeof walkSetup !== 'undefined' && !!(walkSetup.core && !walkSetup.importPending);
+  const has3d = () => typeof layers !== 'undefined' && layers.some(L => L && L.type === 'splat' && L.mesh);
+
+  // ── 写真ツアー（3D を読み終わるまで・軽量表示）──
+  const tour = (() => {
+    const T = { pre: false, lite: false, bridge: false, why: '', cur: 'start', busy: false, spots: [], navOrig: null, cache: {}, chip: null };
+    st.tour = T;
+    const pts = () => st.points;
+    const facesOf = (p) => T.cache[p.id] ||= loadFaces(st.key + '-' + p.id);
+    const near = (pos, r) => pts().filter(q => q.id !== T.cur && Math.hypot(q.pos.x - pos.x, q.pos.z - pos.z) < r);
+    function hookNav(withFallback){
+      if(typeof _clickNavigateAt !== 'function') return;
+      T.navOrig ||= _clickNavigateAt;
+      const orig = T.navOrig;
+      _clickNavigateAt = withFallback
+        ? (x, y, preview, ...r) => preview ? orig(x, y, preview, ...r) : (tapAt(x, y) || orig(x, y, preview, ...r))
+        : (x, y, preview) => preview ? false : tapAt(x, y);
+    }
+    function unhookNav(){ if(T.navOrig){ _clickNavigateAt = T.navOrig; T.navOrig = null; } }
+    // 床の丸（HTML。画面に映る位置へ毎フレーム置く）
+    function makeSpots(){
+      if(T.spots.length) return;
+      T.spots = pts().map(p => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-spot';
+        b.setAttribute('aria-label', typeof _lang !== 'undefined' && _lang === 'en' ? 'Move here' : 'ここへ移動');
+        // タッチではビューアーの入力処理が click を出さないことがあるので、押して離したとき（pointerup）に移る。click は二重にならないよう 0.5 秒は無視
+        let downAt = 0, firedAt = 0;
+        const fire = () => { const now = performance.now(); if(now - firedAt < 500) return; firedAt = now; go(p.id); };
+        b.addEventListener('pointerdown', e => { e.stopPropagation(); downAt = performance.now(); });
+        b.addEventListener('pointerup', e => { e.stopPropagation(); if(performance.now() - downAt < 800) fire(); });
+        for(const ev of ['mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, e => e.stopPropagation(), { passive: true });
+        b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); fire(); });
+        document.body.append(b);
+        return { p, el: b };
+      });
+      requestAnimationFrame(placeSpots);
+    }
+    const v = new THREE.Vector3(), vc = new THREE.Vector3();
+    function placeSpots(){
+      const on = T.pre || T.lite || T.bridge;
+      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; return; }
+      camera.updateMatrixWorld();
+      for(const s of T.spots){
+        const p = s.p, floor = Number.isFinite(p.floorY) ? p.floorY : p.pos.y - 1.5;
+        const d = Math.hypot(p.pos.x - camPos.x, p.pos.z - camPos.z);
+        if(p.id === T.cur || d > 8 || d < 0.3){ s.el.style.display = 'none'; continue; }
+        v.set(p.pos.x, floor, p.pos.z);
+        vc.copy(v).applyMatrix4(camera.matrixWorldInverse);
+        if(vc.z > -0.4){ s.el.style.display = 'none'; continue; }
+        v.project(camera);
+        const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight;
+        if(x < -40 || x > innerWidth + 40 || y < -40 || y > innerHeight + 40){ s.el.style.display = 'none'; continue; }
+        const sc = Math.max(0.45, Math.min(1.6, 2.2 / Math.max(0.5, -vc.z)));
+        s.el.style.display = 'block'; s.el.style.left = x + 'px'; s.el.style.top = y + 'px';
+        s.el.style.transform = 'scale(' + sc.toFixed(3) + ') scaleY(.55)';
+      }
+      requestAnimationFrame(placeSpots);
+    }
+    // 次の地点へ: 画像がそろったら、新しい画像を古い画像の上に 0.3 秒で重ねてから古い方を消す（2 枚とも見る人の位置に置くので歪まない）
+    async function go(id){
+      const p = id === 'start' ? { id: 'start', pos: st.meta.pos, yaw: st.meta.yaw } : pts().find(q => q.id === id);
+      if(!p || T.busy || id === T.cur) return false;
+      if(T.bridge || !group){
+        // 3D 表示中で床の当たり判定がまだ無いとき: 写真ではなく 3D のまま、その地点へ 0.6 秒で移る
+        T.busy = true; T.cur = id;
+        const a = camPos.clone(), b = new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z), t0 = performance.now();
+        await new Promise(done => { const step = () => {
+          const k = Math.min(1, (performance.now() - t0) / 600), e = k * k * (3 - 2 * k);
+          camPos.lerpVectors(a, b, e); markDirty(2);
+          if(k < 1) requestAnimationFrame(step); else done();
+        }; requestAnimationFrame(step); });
+        T.busy = false; return true;
+      }
+      T.busy = true;
+      try {
+        const maps = id === 'start' ? tex : await facesOf(p);
+        if(gone || !group){ T.busy = false; return false; }
+        const old = group, pos = new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z);
+        const g = build(pos, Number(p.yaw) || 0, maps);
+        g.traverse(o => { if(o.material){ o.material.opacity = 0; o.renderOrder = 1e6 + 1; } });
+        scene.add(g);
+        camPos.copy(pos); old.position.copy(pos); group = g; at = pos.clone(); T.cur = id;
+        const t0 = performance.now();
+        await new Promise(done => { const step = () => {
+          const a = Math.min(1, (performance.now() - t0) / 300);
+          g.traverse(o => { if(o.material) o.material.opacity = a; }); markDirty(2);
+          if(a < 1) requestAnimationFrame(step); else done();
+        }; requestAnimationFrame(step); });
+        scene.remove(old); old.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });   // 画像（テクスチャ）は使い回すので消さない
+        g.traverse(o => { if(o.material) o.renderOrder = 1e6; });
+        // 近くの地点の画像は先に読んでおく（次の移動を待たせない）
+        for(const q of near(pos, 5)) facesOf(q).catch(() => {});
+      } catch(e){ console.warn('[start-pano] point', id, e); }
+      T.busy = false; markDirty(4);
+      return true;
+    }
+    // 画面のタップ: 指した向き（水平の角度）に一番近い地点へ。30° 以内に無ければ動かない
+    function tapAt(x, y){
+      camera.updateMatrixWorld();
+      const dir = new THREE.Vector3((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1, 0.5).unproject(camera).sub(camera.position);
+      const ang = Math.atan2(dir.x, dir.z);
+      let best = null, bestScore = Infinity;
+      const all = [...pts(), { id: 'start', pos: st.meta.pos }];
+      for(const p of all){
+        if(p.id === T.cur) continue;
+        const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z, d = Math.hypot(dx, dz);
+        if(d < 0.3 || d > 8) continue;
+        let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
+        if(da > 30 * Math.PI / 180) continue;
+        const score = da * 3 + d * 0.15;
+        if(score < bestScore){ bestScore = score; best = p; }
+      }
+      if(!best) return false;
+      go(best.id); return true;
+    }
+    // 軽量表示: 3D を捨て、写真ツアー（地点が無ければ開始位置の見回しだけ）を続ける
+    function startLite(why){
+      if(T.lite || gone || !group) return;
+      T.lite = true; T.pre = false; T.why = why; st.lite = why;
+      document.documentElement.classList.add('sp-lite'); document.documentElement.classList.remove('sp-pre');
+      for(let i = layers.length - 1; i >= 0; i--){
+        const Ly = layers[i];
+        if(Ly && Ly.type === 'splat'){ try { scene.remove(Ly.mesh); Ly.mesh.dispose?.(); } catch(_){} layers.splice(i, 1); }
+      }
+      hookNav(false); makeSpots();
+      for(const q of pts()) facesOf(q).catch(() => {});
+      // 案内と「3D で見る」（?lite=0 で開き直す）
+      const en = typeof _lang !== 'undefined' && _lang === 'en';
+      const chip = document.createElement('div'); chip.className = 'sp-lite-chip';
+      chip.innerHTML = '<span></span><button type="button"></button>';
+      chip.firstChild.textContent = en ? 'Light mode (360° photos)' : '軽量表示（360°写真）';
+      chip.lastChild.textContent = en ? 'View in 3D' : '3D で見る';
+      chip.lastChild.addEventListener('click', () => { const u = new URL(location.href); u.searchParams.set('lite', '0'); location.replace(u.href); });
+      document.body.append(chip); T.chip = chip;
+      if(typeof markDirty === 'function') markDirty(10);
+      console.log('[start-pano] light mode:', why);
+    }
+    function startPre(){
+      if(T.lite || T.pre || gone || !group || !pts().length || !/[?&]pre=1/.test(qs)) return;
+      T.pre = true; document.documentElement.classList.add('sp-pre');
+      hookNav(false); makeSpots();
+      for(const q of near(at, 5)) facesOf(q).catch(() => {});
+    }
+    // 読み込みが落ち着いたら、今いる地点のまま 3D に切り替える
+    function endPre(){
+      if(!T.pre) return;
+      T.pre = false; document.documentElement.classList.remove('sp-pre');
+      if(walkReady()) unhookNav();
+      else {
+        // 床の当たり判定は端末によって数十秒かかる。それを待たずに 3D にし、できるまでは地点の丸とタップで地点へ移る
+        T.bridge = true; hookNav(true);
+        const t = setInterval(() => {
+          if(T.lite){ clearInterval(t); return; }
+          if(!walkReady() || T.busy) return;
+          clearInterval(t); T.bridge = false; unhookNav();
+        }, 300);
+      }
+      markDirty(4);
+      console.log('[start-pano] 3D ready at', T.cur, walkReady() ? '' : '(walk pending)');
+    }
+    // 画面の動き（毎秒のコマ数）
+    let frames = 0, lastT = performance.now();
+    (function tick(){ frames++; if(!gone && !T.lite) requestAnimationFrame(tick); })();
+    let low = 0, since = 0, since3d = 0, quiet = 0;
+    T.mon = setInterval(() => {
+      const now = performance.now(), fps = frames * 1000 / (now - lastT); frames = 0; lastT = now;
+      if(gone || T.lite){ clearInterval(T.mon); return; }
+      if(document.hidden || !group){ low = 0; return; }
+      T.fps = fps;
+      if(T.pre || /[?&]lite=0/.test(qs) || !has3d()) return;   // 写真ツアー中は、3D に切り替える時点で判定する
+      since ||= now;
+      if(now - since < 2000) return;
+      if(now - since > 60000){ clearInterval(T.mon); return; }
+      low = fps < 12 ? low + 1 : 0;
+      if(low >= 3) startLite('fps ' + fps.toFixed(1));
+    }, 1000);
+    // 回線: 3D データの届き方を最初の取得から 8〜30 秒の間に見る。毎秒 150KB（約 1.2Mbps）に届かなければ写真ツアーのままにする
+    const streamPath = new URL(url, location.href).pathname;
+    T.net = setInterval(() => {
+      if(gone || T.lite || /[?&]lite=0/.test(qs)){ clearInterval(T.net); return; }
+      if(document.hidden) return;
+      const rs = performance.getEntriesByType('resource').filter(e => { try { return new URL(e.name).pathname === streamPath; } catch(_){ return false; } });
+      if(!rs.length) return;
+      const t0 = Math.min(...rs.map(e => e.startTime)), el = performance.now() - t0;
+      if(el < 8000) return;
+      if(el > 30000 || !T.pre){ clearInterval(T.net); return; }
+      const sized = rs.filter(e => (e.transferSize || e.encodedBodySize) > 0);
+      if(sized.length < 3) return;   // 大きさが取れないブラウザでは判定しない
+      // 通信していた時間（各取得の 開始〜受信完了 を重ね合わせた長さ）だけで割る。ZIP を解く間など取得が止まっている時間を数えると、
+      // 速い回線でも遅く見える（iPhone 相当で 85KB/s と誤判定した。2026-11-19）
+      const iv = sized.map(e => [e.startTime, e.responseEnd || performance.now()]).sort((a, b) => a[0] - b[0]);
+      let busy = 0, cs = -1, ce = -1;
+      for(const [a0, a1] of iv){ if(a0 > ce){ if(ce > cs) busy += ce - cs; cs = a0; ce = a1; } else ce = Math.max(ce, a1); }
+      if(ce > cs) busy += ce - cs;
+      const span = Math.max(1000, busy);
+      const bytes = sized.reduce((a, e) => a + Math.max(e.transferSize || 0, e.encodedBodySize || 0), 0);
+      T.kbps = Math.round(bytes / span);
+      if(T.kbps < 150) startLite('net ' + T.kbps + 'KB/s');
+    }, 1000);
+    // 写真ツアーから 3D へ切り替える条件: 読み込みが 1.5 秒止まった / 点が予算の 8 割に届いた / 3D が出てから 20 秒たった
+    // そのうえで画面の動きが毎秒 12 コマ未満なら、3D は重すぎるので写真ツアーのままにする
+    T.preMon = setInterval(() => {
+      if(gone || T.lite){ clearInterval(T.preMon); return; }
+      if(!T.pre || T.busy) return;
+      const now = performance.now();
+      if(!has3d()){ quiet = 0; return; }
+      since3d ||= now;
+      const streaming = typeof _pagedStreamActive !== 'function' || _pagedStreamActive(now);
+      if(streaming) quiet = 0; else quiet ||= now;
+      const budget = (typeof sparkRenderer !== 'undefined' && sparkRenderer && sparkRenderer.lodSplatCount) || 1500000;
+      // 細切れで読む 3D（RAD）は今出ている点の数。一度に読む形式（paged でない）は、出た時点で読み終わっているので予算いっぱいとみなす
+      let n = typeof window.__nSplat === 'function' ? window.__nSplat() : -1;
+      if(n < 0){ const L0 = layers.find(Ly => Ly && Ly.type === 'splat' && Ly.mesh); n = L0 && !L0.mesh.paged ? budget : 0; }
+      // 点がほとんど出ていないうちは切り替えない（iPhone 相当で、20 秒たっても点 0 のまま 3D にしかけた。2026-11-19）
+      const enough = n >= Math.min(200000, budget * 0.3);
+      const loaded = enough && ((quiet && now - quiet > 1500) || n >= budget * 0.8 || now - since3d > 20000);
+      T.state = { n, budget, walk: walkReady(), quiet: quiet ? Math.round(now - quiet) : 0, t3d: Math.round(now - since3d), fps: T.fps, kbps: T.kbps };
+      if(!loaded) return;
+      clearInterval(T.preMon);
+      if(Number.isFinite(T.fps) && T.fps < 12 && !/[?&]lite=0/.test(qs)){ startLite('fps ' + T.fps.toFixed(1)); return; }
+      endPre();
+    }, 250);
+    T.stop = () => { T.pre = false; if(!T.bridge) unhookNav(); document.documentElement.classList.remove('sp-pre'); };
+    T.go = go; T.tapAt = tapAt; T.startLite = startLite; T.startPre = startPre; T.endPre = endPre;
+    return T;
+  })();
+
+  // ── 写真ツアーの地点を自動で選ぶ（bake-pano.mjs が撮る前に呼ぶ。2026-11-19 本人「自動で選ぶ」）──
+  // 3DGS から作った床の当たり判定は細かい穴・凹凸が多く、隣のマスへ順に広げる方法では 1 歩も進めなかった（会議室で開始位置の真下も穴）。
+  // そこで: 開始位置の周り R 以内を 0.5m 刻みで調べ、開始位置と同じ高さ（±30cm）の床があり、目の高さの周りが空いている
+  // （上下・8 方向に 0.5m）マスを候補にする。その中から、すでに選んだ地点のどれかから 8m 以内・目の高さで見通せて、
+  // 選んだ地点から一番遠いマスを gap 以上離れている限り順に選ぶ（最大 max か所）。見通せる＝写真ツアーでタップして移れる。
+  // 目の高さは開始位置と床の差（1.0〜2.0m）。向きは開始位置と同じ。床の当たり判定（walkSetup.core）が要る。
+  st.pickPoints = (opts = {}) => {
+    const core = typeof walkSetup !== 'undefined' && walkSetup.core;
+    if(!core) return { error: 'no collision' };
+    const max = opts.max ?? 8, gap = opts.gap ?? 2.5, R = opts.radius ?? 14, cell = 0.5, reach = opts.reach ?? 8;
+    const s = opts.pos || { x: camPos.x, y: camPos.y, z: camPos.z }, yaw0 = opts.yaw ?? yaw;
+    const exclude = Array.isArray(opts.exclude) ? opts.exclude : [];   // 撮ってみて写りが悪かった所（bake-pano.mjs が渡す。[x, z]）
+    const DOWN = { x: 0, y: -1, z: 0 }, UP = { x: 0, y: 1, z: 0 };
+    const hitAt = (o, d, L) => { const h = core.raycast(o, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+    const covered = (p) => !walkSetup.wholeIndex || typeof _walkWholeCoverage !== 'function' || _walkWholeCoverage(p, p, { drop: 22 }) !== false;
+    // 開始位置の床: 真下が穴のこともあるので、周り 1m の床の高さの中央値
+    const fl = [];
+    for(let i = -2; i <= 2; i++) for(let j = -2; j <= 2; j++){ const h = hitAt({ x: s.x + i * cell, y: s.y, z: s.z + j * cell }, DOWN, 4); if(h !== null) fl.push(s.y - h); }
+    if(fl.length < 3) return { error: 'no floor near start', n: fl.length };
+    fl.sort((a, b) => a - b);
+    const floor0 = fl[fl.length >> 1], eye = Math.min(2, Math.max(1, s.y - floor0));
+    const see = (a, b) => {   // 目の高さで a から b が見通せるか
+      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz);
+      if(L < 1e-3) return true;
+      return hitAt(a, { x: dx / L, y: dy / L, z: dz / L }, L - 0.05) === null;
+    };
+    const why = { cover: 0, nofloor: 0, level: 0, tight: 0 };
+    const cand = [];
+    const n = Math.ceil(R / cell);
+    for(let i = -n; i <= n; i++) for(let j = -n; j <= n; j++){
+      const x = s.x + i * cell, z = s.z + j * cell, r = Math.hypot(x - s.x, z - s.z);
+      if(r > R || r < gap) continue;
+      const top = { x, y: floor0 + eye + 0.3, z };
+      if(!covered(top)){ why.cover++; continue; }
+      const h = hitAt(top, DOWN, eye + 1);
+      if(h === null){ why.nofloor++; continue; }
+      const f = top.y - h;
+      if(Math.abs(f - floor0) > 0.3){ why.level++; continue; }
+      const o = { x, y: f + eye, z };
+      let ok = hitAt({ x, y: f + 0.3, z }, UP, eye - 0.1) === null && hitAt(o, UP, 0.4) === null;
+      for(let a = 0; ok && a < 8; a++) if(hitAt(o, { x: Math.sin(a * Math.PI / 4), y: 0, z: Math.cos(a * Math.PI / 4) }, 0.5) !== null) ok = false;
+      if(!ok){ why.tight++; continue; }
+      if(exclude.some(([ex, ez]) => Math.hypot(ex - x, ez - z) < 0.3)) continue;
+      cand.push({ x, z, f, o });
+    }
+    const chosen = [{ x: s.x, z: s.z, o: { x: s.x, y: floor0 + eye, z: s.z } }], out = [];
+    const dmin = (c) => Math.min(...chosen.map(q => Math.hypot(c.x - q.x, c.z - q.z)));
+    const blocked = new Set();
+    while(out.length < max){
+      let best = null, bd = -1;
+      for(const c of cand){ if(blocked.has(c)) continue; const dd = dmin(c); if(dd > bd){ bd = dd; best = c; } }
+      if(!best || bd < gap) break;
+      // すでに選んだ地点のどれかから見通せること（見通せない所は、今は選ばず次へ。後で別の地点から見えれば選べる）
+      if(!chosen.some(q => Math.hypot(best.x - q.x, best.z - q.z) <= reach && see(q.o, best.o))){
+        blocked.add(best);
+        // 後から選んだ地点で見えるようになることがあるので、選べたら blocked を空にして続ける
+        if(blocked.size > cand.length) break;
+        continue;
+      }
+      chosen.push(best); blocked.clear();
+      out.push({ id: 'p' + (out.length + 1), pos: { x: best.x, y: best.f + eye, z: best.z }, yaw: yaw0, floorY: best.f });
+    }
+    // 地点どうしの見通し（[開始位置, 地点…] の組ごとに reach 以内で見通せるか）。bake-pano.mjs が、撮ってみて写りの悪い地点を外したあと、
+    // 開始位置から見通しをたどって行ける地点だけを残すのに使う（撮影中は当たり判定の読み込み範囲が動くので、ここで先に計算しておく）
+    const nodes = chosen.map(q => q.o), vis = nodes.map((a, i) => nodes.map((b, j) => i !== j && Math.hypot(a.x - b.x, a.z - b.z) <= reach && see(a, b)));
+    return { points: out, vis, cand: cand.length, eye, floor0, why };
+  };
+
+  (async () => {
+    try {
+      st.state = 'identity';
+      let res = window.__startPanoEarly ? await window.__startPanoEarly : undefined;
+      if(res === undefined){
+        // 先読み（<head>）が無いとき: ここで計算する
+        let id = null;
+        for(let i = 0; i < 3 && !id; i++){ if(i) await new Promise(r => setTimeout(r, 700 * i)); id = await identity().catch(() => null); }
+        if(id){
+          const key = await sha256hex('l3d-pano-v1:' + id);
+          const r = await fetch('/api/pano/' + key + '.json', { cache: 'no-cache' });
+          const meta = r.ok ? await r.json().catch(() => null) : null;
+          res = { key, meta: meta && meta.v === 1 && meta.pos && [meta.pos.x, meta.pos.y, meta.pos.z, meta.yaw].every(Number.isFinite) ? meta : null };
+        } else res = null;
+      }
+      if(!res){ st.state = 'none'; st.why = 'no content id'; posterOff(true); return; }
+      st.key = res.key;
+      if(!res.meta){ st.state = 'none'; st.why = 'no pano'; posterOff(true); return; }
+      const meta = st.meta = res.meta;
+      st.state = 'faces';
+      // ツアーの地点（無ければ開始位置の 1 枚だけ）
+      const ptsP = fetch('/api/pano/' + st.key + '.points.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
+      tex = await loadFaces(st.key);
+      if(gone) return;
+      at = new THREE.Vector3(meta.pos.x, meta.pos.y, meta.pos.z);
+      // 開始位置・向きを画像と同じにしてから重ねる（シーンの読み込みも同じ開始位置を置く）
+      camPos.copy(at); setCamRotImmediate(meta.yaw, Number.isFinite(meta.pitch) ? meta.pitch : 0);
+      group = build(meta.pos, meta.yaw, tex); scene.add(group);
+      document.body.classList.add('start-pano');
+      st.state = 'shown';
+      if(typeof markDirty === 'function') markDirty(10);
+      // 3D の上に同じ画像が出たので、最初の静止画（CSS）を一瞬で外す（フェードさせると 2 枚が重なって光ったように見える）
+      requestAnimationFrame(() => requestAnimationFrame(() => posterOff(false)));
+      const pj = await ptsP;
+      if(pj && pj.v === 1 && Array.isArray(pj.points)){
+        st.points = pj.points.filter(p => p && /^p\d{1,2}$/.test(p.id) && p.pos && [p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite)).slice(0, 24);
+      }
+      if(window.__l3dLite) tour.startLite(window.__l3dLite);
+      else if(st.points.length) tour.startPre();
+      const timer = setInterval(() => {
+        if(gone){ clearInterval(timer); return; }
+        if(tour.lite || tour.pre){
+          // 写真ツアー中は位置を今の地点に留める（読み込み側がカメラを置き直しても画像とずれない。向きは見る人が回したまま）
+          if(!tour.busy && camPos.distanceTo(at) > 1e-4){ camPos.copy(at); markDirty(2); }
+          // 歩行・AR・回り込み表示に入ったら写真ツアーをやめて 3D に
+          if(tour.pre && (moved() === 'walk' || moved() === 'ar' || moved() === 'orbit')) remove(moved());
+          return;
+        }
+        // シーンの読み込みが開始位置を置き直す（同じ位置）まで動き判定はしない。読み込み前に歩かれたら消す
+        // （読み込み直後はビューアーが一度カメラを置き直すことがあるので 1.5 秒待ち、そこで開始位置が違えば消す）
+        if(!sceneSeen){ if(has3d()) sceneSeen = performance.now(); return; }
+        if(performance.now() - sceneSeen < 1500) return;
+        const why = moved(); if(why) remove(why);
+      }, 50);
+    } catch(e){ st.state = 'error'; st.why = String(e && e.message || e); posterOff(true); }
+  })();
 })();
 // ══════════════════════════════════════════════════
 //  ?showcase=1 — 機能ツアー（自動おさらい再生）
