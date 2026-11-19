@@ -53,6 +53,7 @@ import AssetPickerModal from "./asset-picker-modal";
 import SlugEditor from "./slug-editor";
 import PropertyOwnerPanel from "./property-owner-panel";
 import { usePreviewCapture } from "./use-preview-capture";
+import { PanoPreview } from "@/components/pano-preview";
 import { deferCleanup, flushCleanups } from "./deferred-cleanup";
 import { buildViewerUrl } from "@/lib/viewer";
 import { publishReadiness, reviewReadiness } from "@/lib/publish-readiness";
@@ -469,7 +470,34 @@ export default function PropertyEditor({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
+  // 360° プレビュー（開始位置の 6 面画像）があるか。シーン（ZIP）ごとにサーバーへ聞く（2026-11-19 動画から切り替え）。
+  //   true = あり / false = なし / null = 対応していない形式（ZIP 以外）。未取得の間は undefined。
+  const [panoHave, setPanoHave] = useState<Record<string, boolean | null>>({});
+  const splatUrlsKey = (watch("splatItems") ?? []).map((it) => it?.splatUrl || "").join("\n");
   useEffect(() => {
+    let alive = true;
+    for (const u of splatUrlsKey.split("\n")) {
+      if (!u || u in panoHave) continue;
+      fetch(`/api/admin/pano-upload?splatUrl=${encodeURIComponent(u)}`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { exists?: boolean; supported?: boolean } | null) => {
+          if (!alive || !j) return;
+          setPanoHave((m) => ({ ...m, [u]: j.supported ? !!j.exists : null }));
+        })
+        .catch(() => {});
+    }
+    return () => { alive = false; };
+    // panoHave は「まだ聞いていない URL」の判定にだけ使う（入れると結果が来るたびに聞き直す）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splatUrlsKey]);
+
+  useEffect(() => {
+    if (capturedUrl?.startsWith("pano:") && capturedIdx !== null) {
+      const u = getValues(`splatItems.${capturedIdx}.splatUrl`);
+      if (u) setPanoHave((m) => ({ ...m, [u]: true }));
+      clearResult();
+      return;
+    }
     if (capturedUrl && capturedIdx !== null) {
       const prevUrl = getValues(`splatItems.${capturedIdx}.previewVideoUrl`);
       setValue(`splatItems.${capturedIdx}.previewVideoUrl`, capturedUrl, { shouldDirty: true });
@@ -481,21 +509,22 @@ export default function PropertyEditor({
     }
   }, [capturedUrl, capturedIdx, setValue, getValues, triggerAutoSave, clearResult, initial.id]);
 
-  // Auto-queue video capture for splatItems missing previewVideoUrl
+  // 360° プレビューが無いシーンは開いたときに自動で撮る（2026-11-19 動画から切り替え。サーバーの答えが揃ってから 1 回だけ）
   const autoQueuedRef = useRef(false);
   useEffect(() => {
     if (autoQueuedRef.current) return;
     const items = initial.splatItems ?? [];
+    if (items.some((it) => it.splatUrl && !(it.splatUrl in panoHave))) return;
     const missing = items
       .map((it, idx) => ({ ...it, idx }))
-      .filter((it) => it.splatUrl && !it.previewVideoUrl);
+      .filter((it) => it.splatUrl && panoHave[it.splatUrl] === false);
     if (missing.length > 0) {
       autoQueuedRef.current = true;
       queueCaptures(
         missing.map((it) => ({ splatUrl: it.splatUrl, propertyId: initial.id, itemIdx: it.idx })),
       );
     }
-  }, [initial.splatItems, initial.id, queueCaptures]);
+  }, [initial.splatItems, initial.id, queueCaptures, panoHave]);
 
   // Debounced auto-save: any form change triggers save after 1.5s of inactivity
   // ⚠ react-hooks/incompatible-library はここでは想定内。react-hook-form の
@@ -2244,7 +2273,10 @@ export default function PropertyEditor({
                     //   再レンダーでも保存でもぶれない。
                     const itemKey = watch(`splatItems.${idx}.id`) || field.id;
                     const itemHasSplat = !!watch(`splatItems.${idx}.splatUrl`);
-                    const itemHasVideo = !!watch(`splatItems.${idx}.previewVideoUrl`);
+                    const itemSplatUrl = watch(`splatItems.${idx}.splatUrl`) || "";
+                    const itemPano = itemSplatUrl ? panoHave[itemSplatUrl] : undefined;
+                    // 360° 画像が作れない形式（ZIP 以外）は従来の動画で完了扱い
+                    const itemHasVideo = itemPano === true || (itemPano === null && !!watch(`splatItems.${idx}.previewVideoUrl`));
                     const itemRunning =
                       capture.capturedIdx === idx &&
                       (capture.state === "loading" ||
@@ -2263,11 +2295,11 @@ export default function PropertyEditor({
                         : "border-line bg-[#141414]";
                     // 色だけでは読めない人・読み上げ向けに状態をテキストでも持たせる
                     const rowState = itemRunning
-                      ? "プレビュー動画を生成中"
+                      ? "360°プレビューを作成中"
                       : itemDone
-                        ? "完了（プレビュー動画あり）"
+                        ? "完了（360°プレビューあり）"
                         : itemHasSplat
-                          ? "プレビュー動画なし"
+                          ? "360°プレビューなし"
                           : "未アップロード";
                     return (
                     <div
@@ -2392,6 +2424,7 @@ export default function PropertyEditor({
                               → 「この行で今まさにキャプチャ実行中」のときだけ隠す。
                                  他行は常に表示し、実行中なら startCapture がキューへ積む。 */}
                           {watch(`splatItems.${idx}.splatUrl`) &&
+                            itemPano === false &&
                             !(
                               capture.capturedIdx === idx &&
                               (capture.state === "loading" ||
@@ -2403,7 +2436,7 @@ export default function PropertyEditor({
                               onClick={() => capture.startCapture(watch(`splatItems.${idx}.splatUrl`), initial.id, idx, captureWarmupMs)}
                               className="mono text-[10px] tracking-[0.22em] uppercase border border-line px-3 py-1.5 hover:border-accent hover:text-accent transition"
                             >
-                              {watch(`splatItems.${idx}.previewVideoUrl`) ? "再撮影" : "動画生成"}
+                              360°生成
                             </button>
                           )}
                           <button
@@ -2505,7 +2538,14 @@ export default function PropertyEditor({
 
                       {previewItemIdx === idx && watch(`splatItems.${idx}.splatUrl`) && (
                         <div className="border border-line bg-black overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                          {watch(`splatItems.${idx}.previewVideoUrl`) ? (
+                          {itemPano === true ? (
+                            <div className="relative w-full h-full">
+                              <PanoPreview
+                                streamUrl={"/api/viewer-stream/" + itemSplatUrl.replace(/^\/+/, "").replace(/^api\/(r2|viewer-stream)\//, "")}
+                                onMissing={() => {}}
+                              />
+                            </div>
+                          ) : watch(`splatItems.${idx}.previewVideoUrl`) ? (
                             <video
                               src={watch(`splatItems.${idx}.previewVideoUrl`)}
                               className="w-full h-full object-cover"

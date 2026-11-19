@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { buildViewerUrl } from "@/lib/viewer";
+import { PanoPreview } from "@/components/pano-preview";
 
 /**
  * 掲載スタジオのサイトに貼られた iframe の中で、3Dツアーを**その場で**動かすための部品
@@ -75,6 +76,10 @@ export default function EmbedPlayer({
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const started = useRef(false);
+  const [noPano, setNoPano] = useState(false);
+  const streamUrl = /^(https?:|blob:)/.test(splatUrl)
+    ? null
+    : "/api/viewer-stream/" + splatUrl.replace(/^\/+/, "").replace(/^api\/(r2|viewer-stream)\//, "");
 
   const start = async () => {
     if (started.current) return;
@@ -126,7 +131,10 @@ export default function EmbedPlayer({
       className="group relative block w-full h-full overflow-hidden bg-[#141414] text-left"
       aria-label={en ? `Start the 3D tour: ${label}` : `3Dツアーを開始: ${label}`}
     >
-      {previewVideoUrl ? (
+      {streamUrl && !noPano ? (
+        // 開始位置の 360° 画像を回してサムネイルにする（2026-11-19 動画から切り替え。無ければ下の動画）。
+        <PanoPreview streamUrl={streamUrl} onMissing={() => setNoPano(true)} />
+      ) : previewVideoUrl ? (
         // 回転プレビュー動画をサムネイルにする（音は無し・端末の判断で自動再生）。
         <video
           src={previewVideoUrl}

@@ -106,14 +106,14 @@ function openCaptureWindow(): Window | null {
     const height = Math.round((width * FRAME_H) / FRAME_W) + 64;
     const w = window.open("", "locahun-preview-capture", `popup,width=${width},height=${height}`);
     if (!w) return null;
-    w.document.title = "プレビュー動画を生成中 — ロケハン3D";
+    w.document.title = "360°プレビューを作成中 — ロケハン3D";
     w.document.body.style.cssText = "margin:0;background:#111;color:#ffb454;font:12px/1.6 ui-monospace,monospace;overflow:hidden;";
     // ⚠ 2026-09-21 本番で確認: 隠れたウィンドウは Chrome が描画を止めるため、
     //    このウィンドウが後ろに回ると1フレームも録画されない（0/240 のまま）。
     //    画面内の枠で録画する従来の方法でも、Chrome 自体が他のアプリの後ろだと同じ。
     //    止めようがないので、隠さないよう案内し、進まないときは下の見張りが知らせる。
     w.document.body.innerHTML =
-      '<div id="cap-msg" style="padding:8px 12px;letter-spacing:.08em;">プレビュー動画を生成しています。終わると自動で閉じます。<br>' +
+      '<div id="cap-msg" style="padding:8px 12px;letter-spacing:.08em;">360°プレビューを作っています。終わると自動で閉じます。<br>' +
       '<span style="color:#ff9a8a;">このウィンドウを前面のままにしてください（隠れると録画が止まります）。</span></div>';
     return w;
   } catch {
@@ -392,6 +392,8 @@ export function usePreviewCapture(): UseCaptureResult {
       const zipKey = /\.zip(\?|#|$)/i.test(splatUrl) ? splatUrl.match(/^\/api\/r2\/(.+)$/i)?.[1] : undefined;
       let url = buildViewerUrl(directSplatUrl, { orbit: true, capture: true, orbitSec: 10, warmupExtraMs: warmupRef.current,
         streamRef: zipKey ? `/api/viewer-stream/${zipKey}?ref=stream` : undefined });
+      // 2026-11-19 本人「360画像一枚キャプチャして、それが回っている表示に」: 動画ではなく開始位置の 360° 画像（6 面）を撮る。
+      url += "&pano=1";
       // blob: URL は拡張子を持たないため、ファイル名を autoname で渡して
       // ビューアー側の形式判定（zip/ply/splat…）に使わせる。
       if (blobUrl && fileName) url += `&autoname=${encodeURIComponent(fileName)}`;
@@ -468,6 +470,60 @@ export function usePreviewCapture(): UseCaptureResult {
           if (abortRef.current) return;
           setState("recording");
           setProgress("録画中…");
+        }
+
+        if (d.type === "capture-done" && d.kind === "pano" && d.faces && typeof d.faces === "object") {
+          clearTimeout(timeout);
+          clearInterval(stallWatch);
+          if (abortRef.current) { cleanup(); return; }
+          window.removeEventListener("message", handler);
+          frame.popup?.removeEventListener("message", handler);
+          // ウィンドウを閉じる前にこちらのレルムの Blob へ写す（動画のときと同じ理由）。
+          const faces: Record<string, Blob> = {};
+          for (const k of ["f", "r", "b", "l", "u", "d"]) {
+            const b = (d.faces as Record<string, unknown>)[k];
+            if (!isBlobLike(b)) { cleanup(); setState("error"); setProgress("360°画像が揃いませんでした"); processQueue(); return; }
+            faces[k] = new Blob([b], { type: "image/jpeg" });
+          }
+          destroyCaptureFrame(frame, queueRef.current.length > 0);
+          if (frameRef.current === frame) frameRef.current = null;
+          if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch {} blobUrl = null; }
+          setState("uploading");
+          setProgress("360°画像をアップロード中…");
+          (async () => {
+            for (let i = 0; i < 3; i++) {
+              if (i > 0) await new Promise((r) => setTimeout(r, 5000 * (i + 1)));
+              const fd = new FormData();
+              fd.append("splatUrl", splatUrl);
+              fd.append("pose", JSON.stringify(d.pose));
+              fd.append("size", String(d.size || 1024));
+              for (const [k, b] of Object.entries(faces)) fd.append(k, b, `${k}.jpg`);
+              try {
+                const res = await fetch("/api/admin/pano-upload", { method: "POST", body: fd });
+                if (res.ok) return ((await res.json()) as { key: string }).key;
+                console.log("[preview-capture] pano upload", res.status, await res.text().catch(() => ""));
+              } catch (e) {
+                console.log("[preview-capture] pano upload network error:", e);
+              }
+            }
+            throw new Error("pano upload failed");
+          })()
+            .then((key) => {
+              busyRef.current = false;
+              if (abortRef.current) return;
+              setState("done");
+              setProgress("360°プレビューを作りました");
+              setCapturedUrl(`pano:${key}`);
+              processQueue();
+            })
+            .catch((err) => {
+              busyRef.current = false;
+              console.error("[preview-capture] pano upload error:", err);
+              setState("error");
+              setProgress("アップロード失敗");
+              processQueue();
+            });
+          return;
         }
 
         if (d.type === "capture-done" && isBlobLike(d.blob)) {
