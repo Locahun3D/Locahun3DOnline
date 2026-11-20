@@ -278,6 +278,8 @@ async function bake(browser, s) {
       const link = (i, j) => !!(pick.vis[i] && pick.vis[i][j]) || fromOf(i) === j || fromOf(j) === i;
       const keep = new Set([0]);
       for (let grew = true; grew;) { grew = false; for (let i = 1; i <= shot.length; i++) if (!keep.has(i) && good(shot[i - 1]) && [...keep].some((j) => link(i, j))) { keep.add(i); grew = true; } }
+      // AI が配置図と画像を見て採用したものはつながりで落とさない（広い屋外では候補どうしが 10m 以上離れ、見通しだけだと渋谷SQ で 13→0 になった。2026-11-21）
+      if (aiOk) for (let i = 1; i <= shot.length; i++) if (good(shot[i - 1])) keep.add(i);
       let kept = shot.filter((_, i) => keep.has(i + 1));
       if (aiOk && Array.isArray(ai.order)) { const o = ai.order.map(String); kept.sort((a, b) => ((o.indexOf(a.p.id) + 1) || 99) - ((o.indexOf(b.p.id) + 1) || 99)); }
       kept = kept.slice(0, limits(pick?.area).keep);   // 広さに見合う数まで（25㎡ に 1 か所、4〜24）
