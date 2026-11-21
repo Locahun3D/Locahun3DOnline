@@ -48,8 +48,9 @@ const AI_MODEL = arg('--ai-model', '');   // 空なら Claude は fable、Codex 
 const AI_ENGINE = arg('--ai-engine', 'auto');   // auto = Claude Code → だめなら Codex
 const LOCAL = flag('--local');   // R2 に書かず artifacts/pano/ にだけ作る（試し撮り・見比べ用）
 const LIMIT = Number(arg('--limit', 0)) || Infinity;
-const SIZE = Number(arg('--size', 1024));
+const SIZE = Number(arg('--size', 1536));   // 2026-11-21 本人「360°画像、荒いところあるかも」: 1024 → 1536、2 倍で描いて縮める
 const QUALITY = Number(arg('--quality', 82));
+const SS = Number(arg('--ss', 2));   // 何倍で描いてから縮めるか（2 = 2 倍の解像度で描いて SIZE に縮める。輪郭のギザギザ・ざらつきが減る）
 const OUT = path.resolve(ROOT, arg('--out', 'artifacts/pano'));
 const VIEWER = arg('--viewer', path.join(ROOT, 'public/viewer/offline-viewer.html'));
 fs.mkdirSync(OUT, { recursive: true });
@@ -127,7 +128,7 @@ async function getViewerHtml() {
 }
 
 async function openScene(browser, scene) {
-  const ctx = await browser.newContext({ viewport: { width: SIZE, height: SIZE }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: SIZE, height: SIZE }, deviceScaleFactor: SS });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
@@ -177,7 +178,8 @@ async function capture(page, pos, yaw0, pitch0, r, tag) {
     const ok = await settle(page, 90000);
     if (!ok) r.slow = (r.slow || '') + tag + k + ' ';
     await page.waitForTimeout(400);
-    faces[k] = await page.locator('canvas').first().screenshot({ type: 'jpeg', quality: QUALITY });
+    if (SS > 1) { const png = await page.locator('canvas').first().screenshot({ type: 'png' }); faces[k] = await sharp(png).resize(SIZE, SIZE, { kernel: 'lanczos3' }).jpeg({ quality: QUALITY, mozjpeg: true }).toBuffer(); }
+    else faces[k] = await page.locator('canvas').first().screenshot({ type: 'jpeg', quality: QUALITY });
   }
   return faces;
 }
