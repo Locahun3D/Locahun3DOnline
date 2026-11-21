@@ -46,6 +46,7 @@ const AI = !flag('--no-ai');   // 地点を AI に判定させる（scripts/tour
 const REDO = flag('--redo-points');   // 地点を選び直す（今の points.json は R2 に控えを残して置き換える）
 const AI_MODEL = arg('--ai-model', '');   // 空なら Claude は fable、Codex は gpt-6-astra
 const AI_ENGINE = arg('--ai-engine', 'auto');   // auto = Claude Code → だめなら Codex
+const RESHOOT = flag('--reshoot');   // 画像だけ今の画質で撮り直す（地点・判定はそのまま。reshoot() 参照）
 const LOCAL = flag('--local');   // R2 に書かず artifacts/pano/ にだけ作る（試し撮り・見比べ用）
 const LIMIT = Number(arg('--limit', 0)) || Infinity;
 const SIZE = Number(arg('--size', 1536));   // 2026-11-21 本人「360°画像、荒いところあるかも」: 1024 → 1536、2 倍で描いて縮める
@@ -184,6 +185,57 @@ async function capture(page, pos, yaw0, pitch0, r, tag) {
   return faces;
 }
 
+// 撮り直し（--reshoot、2026-11-21 本人「360°画像、荒いところあるかも」→「作り直して」）:
+// 地点の位置・向き・AI の判定はそのままに、画像だけを今の画質（SIZE・SS 倍）で撮り直す。
+// 画像は 1 年キャッシュなので名前を変える: 開始位置は <key>-r<N>-{面}.jpg（meta.r = N）、地点はまだ使っていない番号 p<N>。
+// 置き換える meta.json・points.json は R2 に控え（.bak-<時刻>.json）を残す。済んだもの（size >= SIZE）は飛ばすので途中から再開できる
+async function reshoot(page, s, key, oldPoints, r) {
+  const meta = await r2Json(`pano/${key}.json`);
+  const needStart = (meta.size || 1024) < SIZE;
+  const needPts = !!(oldPoints && oldPoints.points?.length && (oldPoints.size || 1024) < SIZE);
+  if (!needStart && !needPts) { r.status = 'ok'; r.why = '撮り直し済み'; return r; }
+  r.status = 'reshoot'; r.need = { start: needStart, points: needPts ? oldPoints.points.length : 0 };
+  if (!FIX) return r;
+  const t1 = Date.now(); while (Date.now() - t1 < 120000 && (await page.evaluate(() => window.__pb.n()).catch(() => -1)) <= 0) await page.waitForTimeout(500);
+  await page.waitForTimeout(3000);
+  await page.evaluate(() => window.__pb.budget(8000000));
+  await page.addStyleTag({ content: 'body>*:not(canvas){visibility:hidden!important} canvas{visibility:visible!important}' });
+  const dir = path.join(OUT, key.slice(0, 16), 'reshoot'); fs.mkdirSync(dir, { recursive: true });
+  const uploads = []; let newMeta = null, newPts = null;
+  if (needStart) {
+    const rv = (Number(meta.r) || 1) + 1;
+    const faces = await capture(page, meta.pos, meta.yaw, 0, r, 'S:');
+    for (const [k, b] of Object.entries(faces)) { fs.writeFileSync(path.join(dir, `r${rv}-${k}.jpg`), b); uploads.push([`pano/${key}-r${rv}-${k}.jpg`, b]); }
+    newMeta = { ...meta, r: rv, size: SIZE, bakedAt: r.at, faces: Object.fromEntries(Object.entries(faces).map(([k, b]) => [k, sha(b)])) };
+  }
+  if (needPts) {
+    let n0 = 0; for (let t = 1; t <= 99; t++) if (await r2Head(`pano/${key}-p${t}-f.jpg`)) n0 = t;
+    if (n0 + oldPoints.points.length > 99) { r.status = 'error'; r.why = '地点の番号が 99 を超える'; return r; }
+    const pts = [], shas = {};
+    for (const [i, p] of oldPoints.points.entries()) {
+      const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':');
+      const id = 'p' + (n0 + i + 1);
+      for (const [k, b] of Object.entries(faces)) { fs.writeFileSync(path.join(dir, `${id}-${k}.jpg`), b); uploads.push([`pano/${key}-${id}-${k}.jpg`, b]); }
+      shas[id] = Object.fromEntries(Object.entries(faces).map(([k, b]) => [k, sha(b)]));
+      pts.push({ ...p, id, was: p.id });
+    }
+    newPts = { ...oldPoints, points: pts, faces: shas, size: SIZE, bakedAt: r.at };
+  }
+  if (LOCAL) { r.status = 'local'; r.dir = dir; return r; }
+  for (const [k, b] of uploads) if (!await r2Head(k)) await r2PutNew(k, b, 'image/jpeg');
+  // 画像を置き終えてから JSON を差し替える（これを見て新しい画像を使う）
+  const swap = async (k, old, body) => {
+    await r2PutNew(k.replace(/\.json$/, `.bak-${Date.now()}.json`), Buffer.from(JSON.stringify(old)), 'application/json');
+    const buf = Buffer.from(JSON.stringify(body));
+    await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: buf, ContentType: 'application/json', Metadata: { sha256: sha(buf) } }));
+  };
+  if (newMeta) await swap(`pano/${key}.json`, meta, newMeta);
+  if (newPts) await swap(`pano/${key}.points.json`, oldPoints, newPts);
+  r.bytes = uploads.reduce((a, [, b]) => a + b.length, 0);
+  r.status = 'fixed'; r.reshot = { start: needStart, points: needPts ? newPts.points.length : 0 };
+  return r;
+}
+
 async function bake(browser, s) {
   const r = { scene: s.scene, property: s.property, at: new Date().toISOString() };
   const { ctx, page, errors } = await openScene(browser, s.scene);
@@ -194,6 +246,11 @@ async function bake(browser, s) {
       const st = await page.evaluate(() => window.__startPano?.state).catch(() => null); if (st === 'none' && !key) break; }
     if (!key) { r.status = 'error'; r.why = 'キーが出ない: ' + JSON.stringify(await page.evaluate(async (u) => { const res = await fetch(u, { method: 'HEAD', cache: 'no-cache' }); return { sp: window.__startPano, s: res.status, e: res.headers.get('etag'), l: res.headers.get('content-length'), href: location.href.slice(0, 60) }; }, s.scene).catch((e) => String(e))) + (errors[0] ? ' ' + errors[0] : ''); return r; }
     r.key = key;
+    if (RESHOOT) {
+      if (!await r2Head(`pano/${key}.json`)) { r.status = 'ok'; r.why = '開始位置の画像なし（撮り直し対象外）'; return r; }
+      const op = await r2Head(`pano/${key}.points.json`) ? await r2Json(`pano/${key}.points.json`) : null;
+      return await reshoot(page, s, key, op, r);
+    }
     const hasStart = !LOCAL && !!await r2Head(`pano/${key}.json`);
     const oldPoints = POINTS && !LOCAL && await r2Head(`pano/${key}.points.json`) ? await r2Json(`pano/${key}.points.json`) : null;
     // AI の判定が無い地点（2026-11-20 より前に作ったもの）は作り直す対象
