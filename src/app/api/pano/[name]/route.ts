@@ -17,9 +17,10 @@ type AnyBucket = any;
  * - 中身はキーで決まるので長期キャッシュしてよい。キーは 3DGS 本体の ETag から作るハッシュで、本体を見られない人には分からない。公開シーンだけを置く。
  * - 3D を読み終わるまでの 360° 写真ツアー（2026-11-19）: `<key>.points.json`（自動で選んだ地点の一覧）と
  *   `<key>-p<番号>-<面>.jpg`（各地点の 6 方向）。bake-pano.mjs --points が作る。
+ * - 動線グラフ（--graph、2026-11-21）: `<key>.graph.json` と `<key>-g<set>-n<番号>-<面>.jpg`（1536px）・`<面>.s.jpg`（640px）。
  * - 撮り直し（--reshoot、2026-11-21）の開始位置は `<key>-r<N>-<面>.jpg`（meta.json の r = N）。
  */
-const NAME_RE = /^([a-f0-9]{64})(\.json|\.points\.json|(?:-[pr]\d{1,2})?-[frbldu]\.jpg)$/;
+const NAME_RE = /^([a-f0-9]{64})(\.json|\.points\.json|\.graph\.json|(?:-[pr]\d{1,2})?-[frbldu]\.jpg|-g[0-9a-f]{6}-n\d{1,3}-[frbldu](?:\.s)?\.jpg)$/;
 const MAX_BYTES = 4_000_000;
 
 async function getBucket(): Promise<AnyBucket> {

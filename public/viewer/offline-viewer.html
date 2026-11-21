@@ -872,6 +872,12 @@ body.cam-active #view-tl-btns{
   border:3px solid rgba(255,255,255,.92);background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 2px 10px rgba(0,0,0,.35);
   z-index:40;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%}
 .sp-spot:hover{background:rgba(255,255,255,.32)}
+/* 動線グラフの行き先の矢印（画面の下の輪。つながった地点の方向。行き先が背中側で床の丸が見えない時も迷わない。2026-11-21） */
+.sp-arrow{position:fixed;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,.92);
+  background:rgba(12,12,13,.62);color:#fafaf6;z-index:41;cursor:pointer;display:flex;align-items:center;justify-content:center;font:600 15px/1 sans-serif;
+  box-shadow:0 2px 8px rgba(0,0,0,.45);-webkit-tap-highlight-color:transparent}
+.sp-arrow:hover{background:#ffb454;color:#000;border-color:#ffb454}
+.sp-arrow span{display:block;line-height:1;pointer-events:none}
 .sp-lite-chip{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;gap:10px;align-items:center;
   padding:6px 6px 6px 14px;border-radius:999px;background:rgba(12,12,13,.82);color:#fafaf6;font:500 13px/1.4 "Noto Sans JP",sans-serif;letter-spacing:.04em;white-space:nowrap;
   box-shadow:0 2px 12px rgba(0,0,0,.4)}
@@ -3148,7 +3154,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7213818,"fatSha256":"87f1fb32899a9d2f1f70b40880bb849a4212b92bf8b3d24639cacefc582cdd10","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7220276,"fatSha256":"f55d54d1e68d19dc4575ddda97da6eb1093a2ab069b2e68d762141a78846ace7","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -21503,7 +21509,8 @@ function updateLightHalos(){
   function loadTex(src){
     return new Promise((ok, ng) => new THREE.TextureLoader().load(src, t => { t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; ok(t); }, undefined, ng));
   }
-  const loadFaces = (prefix) => Promise.all(Object.keys(FACES).map(k => loadTex('/api/pano/' + prefix + '-' + k + '.jpg')));
+  // small = 動線グラフの地点の小さい画像（640px、<面>.s.jpg）。軽量表示（遅い回線・弱い端末）で使う
+  const loadFaces = (prefix, small) => Promise.all(Object.keys(FACES).map(k => loadTex('/api/pano/' + prefix + '-' + k + (small ? '.s.jpg' : '.jpg'))));
   function build(pos, yaw0, maps){
     const g = new THREE.Group(); g.position.set(pos.x, pos.y, pos.z);
     Object.keys(FACES).forEach((k, i) => {
@@ -21549,8 +21556,16 @@ function updateLightHalos(){
     const T = { pre: false, lite: false, bridge: false, why: '', cur: 'start', busy: false, spots: [], navOrig: null, cache: {}, chip: null };
     st.tour = T;
     const pts = () => st.points;
-    const facesOf = (p) => T.cache[p.id] ||= loadFaces(st.key + '-' + p.id);
-    const near = (pos, r) => pts().filter(q => q.id !== T.cur && Math.hypot(q.pos.x - pos.x, q.pos.z - pos.z) < r);
+    const facesOf = (p) => { const sm = !!(p.img && T.lite); return T.cache[p.id + (sm ? 's' : '')] ||= loadFaces(p.img || (st.key + '-' + p.id), sm); };
+    // 移れる先: 動線グラフ（<key>.graph.json、2026-11-21）なら今の地点とつながった地点＋見える地点。以前の地点（points.json）は近くの全部
+    const byId = (id) => id === 'start' ? st.startNode : pts().find(q => q.id === id);
+    const cands = () => {
+      if(!st.graph) return pts().filter(q => q.id !== T.cur);
+      const c = byId(T.cur); if(!c) return [];
+      const ids = new Set([...(c.nb || []), ...(c.see || [])]);
+      return [...pts(), st.startNode].filter(q => q && q.id !== T.cur && ids.has(q.id));
+    };
+    const near = (pos, r) => st.graph ? cands().filter(q => q.id !== 'start' && (byId(T.cur)?.nb || []).includes(q.id)) : pts().filter(q => q.id !== T.cur && Math.hypot(q.pos.x - pos.x, q.pos.z - pos.z) < r);
     function hookNav(withFallback){
       if(typeof _clickNavigateAt !== 'function') return;
       T.navOrig ||= _clickNavigateAt;
@@ -21560,19 +21575,42 @@ function updateLightHalos(){
         : (x, y, preview) => preview ? false : tapAt(x, y);
     }
     function unhookNav(){ if(T.navOrig){ _clickNavigateAt = T.navOrig; T.navOrig = null; } }
+    // 押して離したとき（pointerup）に移る。タッチではビューアーの入力処理が click を出さないことがある。click は二重にならないよう 0.5 秒は無視
+    function tapButton(b, id){
+      let downAt = 0, firedAt = 0;
+      const fire = () => { const now = performance.now(); if(now - firedAt < 500) return; firedAt = now; go(id); };
+      b.addEventListener('pointerdown', e => { e.stopPropagation(); downAt = performance.now(); });
+      b.addEventListener('pointerup', e => { e.stopPropagation(); if(performance.now() - downAt < 800) fire(); });
+      for(const ev of ['mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, e => e.stopPropagation(), { passive: true });
+      b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); fire(); });
+    }
+    // 行き先の矢印（動線グラフのとき）: 今の地点とつながった地点の方向を、画面の下の輪の上に出す
+    function placeArrows(on){
+      T.arrows ||= new Map();
+      const c = on && st.graph ? byId(T.cur) : null, ids = new Set(c?.nb || []);
+      for(const [id, el] of T.arrows) if(!ids.has(id)){ el.remove(); T.arrows.delete(id); }
+      if(!c) return;
+      const en = typeof _lang !== 'undefined' && _lang === 'en';
+      const cx = innerWidth / 2, cy = innerHeight - (T.chip ? 118 : 84), R = Math.min(52, innerWidth * 0.12);
+      for(const id of ids){
+        const p = byId(id); if(!p) continue;
+        let el = T.arrows.get(id);
+        if(!el){ el = document.createElement('button'); el.type = 'button'; el.className = 'sp-arrow'; el.setAttribute('aria-label', en ? 'Move this way' : 'この方向へ移動');
+          el.innerHTML = '<span>&#9650;</span>'; tapButton(el, id); document.body.append(el); T.arrows.set(id, el); }
+        v.set(p.pos.x - camPos.x, 0, p.pos.z - camPos.z).transformDirection(camera.matrixWorldInverse);
+        const L = Math.hypot(v.x, v.z); if(L < 1e-4){ el.style.display = 'none'; continue; }
+        const nx = v.x / L, nz = v.z / L;
+        el.style.display = 'flex'; el.style.left = (cx + R * nx).toFixed(1) + 'px'; el.style.top = (cy + R * nz).toFixed(1) + 'px';
+        el.firstChild.style.transform = 'rotate(' + Math.atan2(nx, -nz).toFixed(3) + 'rad)';
+      }
+    }
     // 床の丸（HTML。画面に映る位置へ毎フレーム置く）
     function makeSpots(){
       if(T.spots.length) return;
       T.spots = pts().map(p => {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-spot';
         b.setAttribute('aria-label', typeof _lang !== 'undefined' && _lang === 'en' ? 'Move here' : 'ここへ移動');
-        // タッチではビューアーの入力処理が click を出さないことがあるので、押して離したとき（pointerup）に移る。click は二重にならないよう 0.5 秒は無視
-        let downAt = 0, firedAt = 0;
-        const fire = () => { const now = performance.now(); if(now - firedAt < 500) return; firedAt = now; go(p.id); };
-        b.addEventListener('pointerdown', e => { e.stopPropagation(); downAt = performance.now(); });
-        b.addEventListener('pointerup', e => { e.stopPropagation(); if(performance.now() - downAt < 800) fire(); });
-        for(const ev of ['mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, e => e.stopPropagation(), { passive: true });
-        b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); fire(); });
+        tapButton(b, p.id);
         document.body.append(b);
         return { p, el: b };
       });
@@ -21581,18 +21619,20 @@ function updateLightHalos(){
     const v = new THREE.Vector3(), vc = new THREE.Vector3();
     function placeSpots(){
       const on = T.pre || T.lite || T.bridge;
-      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; return; }
+      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeArrows(false); return; }
       camera.updateMatrixWorld();
+      placeArrows(true);
+      const allow = st.graph ? new Set(cands().map(q => q.id)) : null;
       for(const s of T.spots){
         const p = s.p, floor = Number.isFinite(p.floorY) ? p.floorY : p.pos.y - 1.5;
         const d = Math.hypot(p.pos.x - camPos.x, p.pos.z - camPos.z);
-        if(p.id === T.cur || d > 8 || d < 0.3){ s.el.style.display = 'none'; continue; }
+        if(p.id === T.cur || d > (allow ? 12 : 8) || d < 0.3 || (allow && !allow.has(p.id))){ s.el.style.display = 'none'; s.el.dataset.why = 'far'; continue; }
         v.set(p.pos.x, floor, p.pos.z);
         vc.copy(v).applyMatrix4(camera.matrixWorldInverse);
-        if(vc.z > -0.4){ s.el.style.display = 'none'; continue; }
+        if(vc.z > -0.4){ s.el.style.display = 'none'; s.el.dataset.why = 'behind'; continue; }
         v.project(camera);
         const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight;
-        if(x < -40 || x > innerWidth + 40 || y < -40 || y > innerHeight + 40){ s.el.style.display = 'none'; continue; }
+        if(x < -40 || x > innerWidth + 40 || y < -40 || y > innerHeight + 40){ s.el.style.display = 'none'; s.el.dataset.why = 'off ' + Math.round(x) + ',' + Math.round(y); continue; }
         const sc = Math.max(0.45, Math.min(1.6, 2.2 / Math.max(0.5, -vc.z)));
         s.el.style.display = 'block'; s.el.style.left = x + 'px'; s.el.style.top = y + 'px';
         s.el.style.transform = 'scale(' + sc.toFixed(3) + ') scaleY(.55)';
@@ -21601,7 +21641,7 @@ function updateLightHalos(){
     }
     // 次の地点へ: 画像がそろったら、新しい画像を古い画像の上に 0.3 秒で重ねてから古い方を消す（2 枚とも見る人の位置に置くので歪まない）
     async function go(id){
-      const p = id === 'start' ? { id: 'start', pos: st.meta.pos, yaw: st.meta.yaw } : pts().find(q => q.id === id);
+      const p = id === 'start' ? (st.startNode || { id: 'start', pos: st.meta.pos, yaw: st.meta.yaw }) : pts().find(q => q.id === id);
       if(!p || T.busy || id === T.cur) return false;
       if(T.bridge || !group){
         // 3D 表示中で床の当たり判定がまだ無いとき: 写真ではなく 3D のまま、その地点へ 0.6 秒で移る
@@ -21643,14 +21683,15 @@ function updateLightHalos(){
       const dir = new THREE.Vector3((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1, 0.5).unproject(camera).sub(camera.position);
       const ang = Math.atan2(dir.x, dir.z);
       let best = null, bestScore = Infinity;
-      const all = [...pts(), { id: 'start', pos: st.meta.pos }];
+      const all = st.graph ? cands() : [...pts(), { id: 'start', pos: st.meta.pos }];
+      const nb = st.graph ? new Set(byId(T.cur)?.nb || []) : null;
       for(const p of all){
         if(p.id === T.cur) continue;
         const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z, d = Math.hypot(dx, dz);
-        if(d < 0.3 || d > 8) continue;
+        if(d < 0.3 || d > (st.graph ? 12 : 8)) continue;
         let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
-        if(da > 30 * Math.PI / 180) continue;
-        const score = da * 3 + d * 0.15;
+        if(da > (st.graph ? 35 : 30) * Math.PI / 180) continue;
+        const score = da * 3 + d * 0.15 - (nb && nb.has(p.id) ? 0.3 : 0);
         if(score < bestScore){ bestScore = score; best = p; }
       }
       if(!best) return false;
@@ -21778,6 +21819,20 @@ function updateLightHalos(){
       endPre();
     }, 250);
     T.stop = () => { T.pre = false; if(!T.bridge) unhookNav(); document.documentElement.classList.remove('sp-pre'); };
+    // キーボード（↑ / W）: 見ている向きに一番近い、つながった地点へ（動線グラフのとき。2026-11-21）
+    addEventListener('keydown', e => {
+      if(!st.graph || !(T.pre || T.lite || T.bridge) || e.altKey || e.ctrlKey || e.metaKey) return;
+      if(e.code !== 'ArrowUp' && e.code !== 'KeyW') return;
+      const t = e.target; if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault(); e.stopPropagation();
+      const fw = new THREE.Vector3(); camera.getWorldDirection(fw); const ang = Math.atan2(fw.x, fw.z);
+      const nb = new Set(byId(T.cur)?.nb || []);
+      let best = null, bs = Infinity;
+      for(const p of cands()){ if(!nb.has(p.id)) continue;
+        const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z; let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
+        if(da < 90 * Math.PI / 180 && da < bs){ bs = da; best = p; } }
+      if(best) go(best.id);
+    }, true);
     T.go = go; T.tapAt = tapAt; T.startLite = startLite; T.startPre = startPre; T.endPre = endPre;
     return T;
   })();
@@ -21872,6 +21927,8 @@ function updateLightHalos(){
       st.state = 'faces';
       // ツアーの地点（無ければ開始位置の 1 枚だけ）
       const ptsP = fetch('/api/pano/' + st.key + '.points.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
+      // 動線グラフ（あれば points.json より優先。?graph=0 で使わない）
+      const grP = /[?&]graph=0/.test(qs) ? Promise.resolve(null) : fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
       tex = await loadFaces(st.key + (meta.r > 1 ? '-r' + meta.r : ''));   // 撮り直した画像は <key>-r<N>-{面}.jpg
       if(gone) return;
       at = new THREE.Vector3(meta.pos.x, meta.pos.y, meta.pos.z);
@@ -21883,8 +21940,22 @@ function updateLightHalos(){
       if(typeof markDirty === 'function') markDirty(10);
       // 3D の上に同じ画像が出たので、最初の静止画（CSS）を一瞬で外す（フェードさせると 2 枚が重なって光ったように見える）
       requestAnimationFrame(() => requestAnimationFrame(() => posterOff(false)));
-      const pj = await ptsP;
-      if(pj && pj.v === 1 && Array.isArray(pj.points)){
+      const pj = await ptsP, gj = await grP;
+      const fin = (p) => p && p.pos && [p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite);
+      if(gj && gj.v === 2 && /^[0-9a-f]{6}$/.test(gj.set) && Array.isArray(gj.nodes) && gj.nodes.length){
+        // 動線グラフ: つながり（edges）と見通し（see）は nodes の並び順の番号
+        const list = gj.nodes.map(p => fin(p) && /^n\d{1,3}$/.test(p.id) ? { ...p, img: st.key + '-g' + gj.set + '-' + p.id, nb: [], see: [] } : null);
+        const pair = (arr, f) => { for(const e of Array.isArray(arr) ? arr : []){ const a = list[e && e[0]], b = list[e && e[1]]; if(a && b && a !== b){ f(a).push(b.id); f(b).push(a.id); } } };
+        pair(gj.edges, p => p.nb); pair(gj.see, p => p.see);
+        st.points = list.filter(Boolean).slice(0, 400);
+        // 開始位置（高い所から見下ろすこともある）: 近い地点 3 つとつなぐ。一番近い地点からは開始位置へ戻れる
+        const sp = meta.pos, by = st.points.map(p => [p, Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z) + Math.abs(p.pos.y - sp.y) * 0.5]).sort((a, b) => a[1] - b[1]);
+        const nb0 = by.slice(0, 3).map(x => x[0]);
+        st.startNode = { id: 'start', pos: meta.pos, yaw: meta.yaw, floorY: by[0] ? by[0][0].floorY : undefined, nb: nb0.map(p => p.id),
+          see: [...new Set(nb0.flatMap(p => p.nb))].filter(id => { const q = st.points.find(x => x.id === id); return q && Math.hypot(q.pos.x - sp.x, q.pos.z - sp.z) < 8; }) };
+        if(by[0]) by[0][0].nb.push('start');
+        st.graph = { set: gj.set, n: st.points.length, edges: (gj.edges || []).length };
+      } else if(pj && pj.v === 1 && Array.isArray(pj.points)){
         st.points = pj.points.filter(p => p && /^p\d{1,2}$/.test(p.id) && p.pos && [p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite)).slice(0, 24);
       }
       if(window.__l3dLite) tour.startLite(window.__l3dLite);
