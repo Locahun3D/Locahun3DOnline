@@ -30,7 +30,16 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
   const cov = (bx, bz, by) => { const k = bx + ',' + bz + ',' + by; if(k === covKey || !W) return; covKey = k; covN++;
     try { core.setTileCoverage(W, { min: [bx * B - 2, by * 4 - 4, bz * B - 2], max: [bx * B + B + 2, by * 4 + 8, bz * B + B + 2] }); } catch(e) {} };
   // 床: 今の床（yRef）の 0.6m 上から下へ。段を上る・下る（0.9m まで）床を拾う
-  const floorAt = (x, z, yRef) => { const top = yRef + STEP + 0.03, h = hit({ x, y: top, z }, DOWN, STEP + 0.95); return h === null ? null : top - h; };
+  // 床はそろっていること: 升の中の 4 点（±0.12m）の床の高さが真ん中と 0.25m 以上ずれる点が 2 つ以上なら床にしない。
+  // 植え込み・木の当たり判定（升目の当たり判定なので面の向きは常に真上）は高さがばらつき、段差として登ってしまった
+  // （牧之下ハウスで木の上に地点ができた。2026-11-21）。階段の踏み面は 0.25m 以上の奥行きがあり、蹴上げ 0.2m 前後なので通る
+  let steep = 0;
+  const floorAt = (x, z, yRef) => { const top = yRef + STEP + 0.03, L = STEP + 0.95;
+    const h = hit({ x, y: top, z }, DOWN, L); if(h === null) return null;
+    const f = top - h; let off = 0;
+    for(const [dx, dz] of [[0.12, 0], [-0.12, 0], [0, 0.12], [0, -0.12]]){ const hh = hit({ x: x + dx, y: top, z: z + dz }, DOWN, L); if(hh === null || Math.abs(top - hh - f) > 0.25) off++; }
+    if(off >= 2){ steep++; return null; }
+    return f; };
   // 体が入る: ひざ（段の上）から目の高さ＋0.1m まで、半径 0.2m
   const bodyOk = (x, z, f) => { try { return core.isCapsuleClear({ x, y: f + 0.35, z }, eye - 0.25, 0.2); } catch(e) { return false; } };
   // 間に壁が無い: ひざ・胸の高さで升の中心どうしを水平に結ぶ
@@ -99,11 +108,17 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
     }
   }
   return { cells: cells.map(c => [+c.x.toFixed(2), +c.z.toFixed(2), +c.f.toFixed(3)]), adj, seed, eye, timeout, capped: cells.length >= MAX,
-    ms: Math.round(performance.now() - t0), covN, whole: !!W, why, seeds, floors };
+    ms: Math.round(performance.now() - t0), covN, whole: !!W, why: { ...why, steep }, seeds, floors };
 };
 ;window.__pbDiag=(o)=>{ const core = walkSetup.core, W = walkSetup.wholeIndex; try { if(W) core.setTileCoverage(W, { min: [o.x - 7, o.y - 5, o.z - 7], max: [o.x + 7, o.y + 1, o.z + 7] }); } catch(e) {}
   const rows = []; for(let j = -12; j <= 12; j++){ let row = ''; for(let i = -12; i <= 12; i++){ const h = core.raycast({ x: o.x + i * 0.5, y: o.y + 0.3, z: o.z + j * 0.5 }, { x: 0, y: -1, z: 0 }, 5);
     row += h === null || !Number.isFinite(h) ? '  .' : String(Math.round((o.y + 0.3 - h) * 10)).padStart(4); } rows.push(row); } return rows.join(String.fromCharCode(10)); };
+;window.__pbNormals=(o)=>{ const core = walkSetup.core, W = walkSetup.wholeIndex; try { if(W) core.setTileCoverage(W, { min: [o.x - 7, o.y - 8, o.z - 7], max: [o.x + 7, o.y + 2, o.z + 7] }); } catch(e) {}
+  const h = {}; let err = '', sample = null;
+  for(let i = -12; i <= 12; i++) for(let j = -12; j <= 12; j++){ let r; try { r = core.raycastSurface({ x: o.x + i * 0.5, y: o.y + 0.3, z: o.z + j * 0.5 }, { x: 0, y: -1, z: 0 }, 8); } catch(e) { err = String(e).slice(0, 80); continue; }
+    if(!r){ h.none = (h.none || 0) + 1; continue; } if(!sample) sample = JSON.stringify(r).slice(0, 200);
+    const n = r.normal ? Math.abs(r.normal.y) / Math.hypot(r.normal.x, r.normal.y, r.normal.z) : -1; const b = n < 0 ? 'nonormal' : (Math.floor(n * 10) / 10).toFixed(1); h[b] = (h[b] || 0) + 1; }
+  return { h, err, sample }; };
 ;window.__pbLos=(o)=>{
   const core = walkSetup.core, W = walkSetup.wholeIndex;
   const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };

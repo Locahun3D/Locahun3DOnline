@@ -209,6 +209,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   if (g.error) { r.status = 'error'; r.why = '動線: ' + g.error; return null; }
   if (flag('--diag')) {
     const d = await page.evaluate((o) => window.__pbDiag(o), { x: pose.x, y: pose.y, z: pose.z });
+    console.log('normals', JSON.stringify(await page.evaluate((o) => window.__pbNormals(o), { x: pose.x, y: pose.y, z: pose.z })));
     console.log('floor heights (dm) around start, y=' + pose.y.toFixed(2) + ' floor0=' + base.floor0 + String.fromCharCode(10) + d);
   }
   { const lc = largestComponent(g.cells, g.adj, { x: pose.x, z: pose.z, floor: base.floor0 }); g.rawCells = g.cells.length; g.parts = lc.parts; g.cells = lc.cells; g.adj = lc.adj; g.seed = lc.seed; }
