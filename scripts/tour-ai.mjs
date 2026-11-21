@@ -108,11 +108,11 @@ export const PAGE_CANDS = `;window.__pbCands=(o)=>{
 // ── AI に見せる画像 ──
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // 4 方向の横の面を左から L F R B に並べた 360° の帯（中央が F = その地点の向き）
-export async function strip(faces, label, file) {
-  const W = 320;
-  const tiles = await Promise.all(['l', 'f', 'r', 'b'].map((k) => sharp(faces[k]).resize(W, W).toBuffer()));
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * 4}" height="${W}">${['L', 'F', 'R', 'B'].map((t, i) => `<text x="${i * W + 8}" y="${W - 10}" font-family="Arial" font-size="20" font-weight="bold" fill="#ff0" stroke="#000" stroke-width="1">${t}</text>`).join('')}<rect x="0" y="0" width="${16 + label.length * 15}" height="32" fill="#000" opacity="0.7"/><text x="8" y="24" font-family="Arial" font-size="22" font-weight="bold" fill="#fff">${esc(label)}</text></svg>`;
-  await sharp({ create: { width: W * 4, height: W, channels: 3, background: '#000' } })
+export async function strip(faces, label, file, { down = false } = {}) {
+  const W = 320, keys = down ? ['l', 'f', 'r', 'b', 'd'] : ['l', 'f', 'r', 'b'], N = keys.length;
+  const tiles = await Promise.all(keys.map((k) => sharp(faces[k]).resize(W, W).toBuffer()));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * N}" height="${W}">${keys.map((k) => k.toUpperCase()).map((t, i) => `<text x="${i * W + 8}" y="${W - 10}" font-family="Arial" font-size="20" font-weight="bold" fill="#ff0" stroke="#000" stroke-width="1">${t}</text>`).join('')}<rect x="0" y="0" width="${16 + label.length * 15}" height="32" fill="#000" opacity="0.7"/><text x="8" y="24" font-family="Arial" font-size="22" font-weight="bold" fill="#fff">${esc(label)}</text></svg>`;
+  await sharp({ create: { width: W * N, height: W, channels: 3, background: '#000' } })
     .composite([...tiles.map((b, i) => ({ input: b, left: i * W, top: 0 })), { input: Buffer.from(svg), left: 0, top: 0 }])
     .jpeg({ quality: 78 }).toFile(file);
 }
@@ -218,14 +218,15 @@ const NODE_PROMPT = (dir, ids, total) => `あなたはロケハンサイト Loca
 
 ファイル（${dir} にある。添付の順番は map.png, ${ids.map((i) => i + '.jpg').join(', ')}）:
 - map.png: 上から見た図。色の付いた升＝歩ける床（色は床の高さ。青＝低い→黄〜赤＝高い）、青い点と赤い番号＝地点、オレンジの点＝階段・段差の上の地点、線＝移動できるつながり、オレンジの輪＝開始位置。
-- 各 <番号>.jpg: その地点の 360° 帯（左から L・F・R・B の 4 方向、目の高さ）。
+- 各 <番号>.jpg: その地点の 360° 帯（左から L・F・R・B の 4 方向、目の高さ）と、右端に D＝真下（足元）。
 
-外す（ok:false）のは次のどれかがはっきりしている地点だけ:
-- 壁・家具・物の中に入っている（画面の大半が物の内側・色の塊）
+外す（ok:false）のは次のどれかに当たる地点（2026-11-21 本人「空中やめり込んでるところを除外」）:
+- 空中にいる: D（真下）に地面・床・階段がはっきり写らない（空・遠くの地面・崩れた点・ぼやけた色の塊が足元にある）、または L/F/R/B で足元の高さより下に建物や道路が広く見える（屋上の縁の外・吹き抜けの上）
+- めり込んでいる: 壁・家具・柱・植え込み・崩れた点の塊の中や至近にいて、どれかの方向の画面の 3 割以上がぼやけた色の塊・物の内側で塞がれている
 - 撮影範囲の外・端で、画面の大半が黒・空白・ちぎれた点でつぶれている
 - 崩れがひどく、そこがどんな場所か分からない
-- 人が立てない場所にいる: 木・植え込みの上や中、屋根・塀・手すり・家具・車の上（足元に地面・床・階段が写らず、枝葉や物の上から見下ろしている）
-似た画が続く・地味・通路の途中・少しのにじみは外さない（移動の途中の地点として必要）。迷ったら ok:true。
+- 人が立てない場所にいる: 木・植え込みの上や中、屋根・塀・手すり・家具・車の上
+似た画が続く・地味・通路の途中は外さない。地点は約 2.4m おきに密に置いてあり、外しても近くの地点で移動は途切れないので、上に当たるか迷ったら外す（ok:false）。
 
 あわせて、写真に「歩いて行けそうな場所（階段・通路・ドアの先・別の部屋）」がはっきり写っているのに、図で近くに地点も歩ける床も無い所があれば missing に書く（最大 5 件）。
 

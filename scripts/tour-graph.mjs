@@ -119,6 +119,21 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
     if(!r){ h.none = (h.none || 0) + 1; continue; } if(!sample) sample = JSON.stringify(r).slice(0, 200);
     const n = r.normal ? Math.abs(r.normal.y) / Math.hypot(r.normal.x, r.normal.y, r.normal.z) : -1; const b = n < 0 ? 'nonormal' : (Math.floor(n * 10) / 10).toFixed(1); h[b] = (h[b] || 0) + 1; }
   return { h, err, sample }; };
+;window.__pbNodeCheck=(o)=>{
+  // 地点の形の検査（2026-11-21 本人「こういう空中やめり込んでるところを除外」）:
+  //  tight = 目の高さの 16 方向で 0.35m 以内に当たる方向の数（崩れた点の塊・壁にめり込み）
+  //  air = 目から斜め下 30° の 8 方向で、目の高さの 3 倍以内に何も当たらない方向の数（空中・スキャンの端・崩れの上）
+  const core = walkSetup.core, W = walkSetup.wholeIndex;
+  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  return o.pts.map(p => {
+    if(W){ try { core.setTileCoverage(W, { min: [p.x - 6, p.floorY - 6, p.z - 6], max: [p.x + 6, p.y + 2, p.z + 6] }); } catch(e) {} }
+    const eye = p.y - p.floorY; let tight = 0, air = 0, minC = 9;
+    for(let k = 0; k < 16; k++){ const a = k * Math.PI / 8, d = { x: Math.sin(a), y: 0, z: Math.cos(a) }; const h = hit(p, d, 2); const c = h === null ? 2 : h; minC = Math.min(minC, c); if(c < 0.35) tight++; }
+    const c30 = Math.cos(Math.PI / 6), s30 = Math.sin(Math.PI / 6);
+    for(let k = 0; k < 8; k++){ const a = k * Math.PI / 4, d = { x: Math.sin(a) * c30, y: -s30, z: Math.cos(a) * c30 }; if(hit(p, d, eye * 3 + 0.5) === null) air++; }
+    return { tight, air, minC: +minC.toFixed(2) };
+  });
+};
 ;window.__pbLos=(o)=>{
   const core = walkSetup.core, W = walkSetup.wholeIndex;
   const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
@@ -207,6 +222,15 @@ export function buildGraph(cells, adj, { seed = 0, eye = 1.5, spacing = 0, maxNo
   }
   const maxGap = Math.max(...Array.from(dist).filter(Number.isFinite));
   return { S, area, clr, nodeCells, maxGap, eye };
+}
+
+// 置き換え先の候補: 元の升から歩いて min〜max m、ほかの地点から 1.2m 以上離れた升を、壁から離れている順に
+export function alternatives(cells, adj, clr, cell, takenPos, { min = 0.6, max = 2.2 } = {}) {
+  const seen = new Map([[cell, 0]]), qq = [cell], out = [];
+  for (let k = 0; k < qq.length; k++) { const i = qq[k];
+    for (const j of adj[i]) { const d = seen.get(i) + wlen(cells, i, j); if (d > max || seen.has(j)) continue; seen.set(j, d); qq.push(j);
+      if (d >= min && !takenPos.some((p) => Math.hypot(p.x - cells[j][0], p.z - cells[j][1]) < 1.2 && Math.abs(p.y - cells[j][2]) < 1.5)) out.push(j); } }
+  return out.sort((a, b) => clr[b] - clr[a]);
 }
 
 // 地点の情報（位置・床・向き・段差）。向き = 開始位置から離れる向き（写真は 360° なので見た目には影響しない。AI に見せる帯の正面）

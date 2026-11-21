@@ -29,7 +29,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
-import { PAGE_GRAPH, largestComponent, buildGraph, voronoi, nodeInfo, levels, drawGraph } from './tour-graph.mjs';
+import { PAGE_GRAPH, largestComponent, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives } from './tour-graph.mjs';
 import { PAGE_CANDS, strip, map as drawMap, review as aiReview, reviewNodes, gapPositions, limits } from './tour-ai.mjs';
 
 const require = createRequire(import.meta.url);
@@ -214,30 +214,70 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   }
   { const lc = largestComponent(g.cells, g.adj, { x: pose.x, z: pose.z, floor: base.floor0 }); g.rawCells = g.cells.length; g.parts = lc.parts; g.cells = lc.cells; g.adj = lc.adj; g.seed = lc.seed; }
   const built = buildGraph(g.cells, g.adj, { seed: g.seed, eye: g.eye });
-  const nodes = nodeInfo(g.cells, g.adj, built.nodeCells, g.eye, built.clr);
+  let nodes = nodeInfo(g.cells, g.adj, built.nodeCells, g.eye, built.clr);
   nodes.forEach((p, i) => { p.id = 'n' + (i + 1); });
   const rdir = path.join(dir, 'graph'); fs.rmSync(rdir, { recursive: true, force: true }); fs.mkdirSync(rdir, { recursive: true });
-  let vor = voronoi(g.cells, g.adj, built.nodeCells);
-  r.graph = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: nodes.length, edges: vor.edges.length,
+  // 形の検査（撮る前。2026-11-21 本人「空中やめり込んでるところを除外」）: めり込み（目の高さの周りが塞がる）・空中（斜め下に地面が見えない）
+  // の地点は、近くの良い升へ移す。移せなければ置かない（升の割り当て直しで残りはつながったまま）
+  const shapeOk = (c) => c && c.tight < 3 && c.air < 4;
+  const check = (list) => list.length ? page.evaluate((o) => window.__pbNodeCheck(o), { pts: list.map((p) => ({ ...p.pos, floorY: p.floorY })) }) : [];
+  const relocate = async (p, ok) => {
+    const taken = nodes.filter((q) => q !== p && !q.gone).map((q) => ({ x: q.pos.x, y: q.floorY, z: q.pos.z }));
+    const alts = nodeInfo(g.cells, g.adj, alternatives(g.cells, g.adj, built.clr, p.cell, taken).slice(0, 10), g.eye, built.clr);
+    const ch = await check(alts);
+    for (let k = 0; k < alts.length; k++) if (shapeOk(ch[k]) && (!ok || ok(alts[k]))) return { ...alts[k], check: ch[k] };
+    return null;
+  };
+  const geo = { moved: [], removed: [] };
+  { const ch = await check(nodes); nodes.forEach((p, i) => { p.check = ch[i]; }); }
+  for (const p of nodes) if (!shapeOk(p.check)) {
+    const alt = await relocate(p);
+    if (alt) { Object.assign(p, { cell: alt.cell, pos: alt.pos, floorY: alt.floorY, clr: alt.clr, stair: alt.stair, check: alt.check }); geo.moved.push(p.id); }
+    else { p.gone = true; geo.removed.push(p.id); }
+  }
+  nodes = nodes.filter((p) => !p.gone);
+  let vor = voronoi(g.cells, g.adj, nodes.map((p) => p.cell));
+  r.graph = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: nodes.length, edges: vor.edges.length, geoMoved: geo.moved.length, geoRemoved: geo.removed.length,
     levels: levels(g.cells), stair: nodes.filter((p) => p.stair).length, why: g.why, floors: g.floors, parts: g.parts, rawCells: g.rawCells, floor0: base.floor0, eye: base.eye, ms: g.ms, timeout: g.timeout, capped: g.capped };
   await drawGraph(g.cells, nodes, vor.edges, path.join(rdir, 'map.png'), { start: pose });
-  fs.writeFileSync(path.join(rdir, 'graph-probe.json'), JSON.stringify({ ...r.graph, nodes: nodes.map(({ cell, ...p }) => p), edges: vor.edges }));
+  fs.writeFileSync(path.join(rdir, 'graph-probe.json'), JSON.stringify({ ...r.graph, geo, nodes: nodes.map(({ cell, ...p }) => p), edges: vor.edges }));
   if (PROBE) return null;
   const set = crypto.randomBytes(3).toString('hex');
   const shots = {};
   const tc = Date.now();
-  for (const p of nodes) {
-    const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':', 250);
-    shots[p.id] = faces;
-    await strip(faces, p.id, path.join(rdir, p.id + '.jpg'));
+  const shoot = async (p) => { const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':', 250); shots[p.id] = faces; await strip(faces, p.id, path.join(rdir, p.id + '.jpg'), { down: true }); };
+  for (const p of nodes) await shoot(p);
+  // AI の監視: 空中・めり込み・崩れ・人が立てない地点を外す。外した地点は近くの良い升へ移して撮り直し、もう一度だけ判定する
+  let ai = null, ai2 = null; const badList = [], replaced = [];
+  if (AI) {
+    ai = reviewNodes(rdir, nodes.map((p) => p.id), { engine: AI_ENGINE, model: AI_MODEL });
+    if (!ai.error) {
+      badList.push(...ai.bad);
+      const retry = []; let nextId = Math.max(0, ...nodes.map((p) => Number(p.id.slice(1)) || 0));
+      for (const b of ai.bad) {
+        const p = nodes.find((q) => q.id === b.id); if (!p) continue;
+        const far = (a) => Math.hypot(a.pos.x - p.pos.x, a.pos.z - p.pos.z) >= 0.9;   // 元の場所からは離す（同じ崩れを撮らない）
+        const alt = await relocate(p, far);
+        if (!alt) continue;
+        const q = { ...p, id: 'n' + (++nextId), cell: alt.cell, pos: alt.pos, floorY: alt.floorY, clr: alt.clr, stair: alt.stair, check: alt.check, was: p.id };
+        await shoot(q); retry.push(q);
+      }
+      if (retry.length) {
+        ai2 = reviewNodes(rdir, retry.map((q) => q.id), { engine: AI_ENGINE, model: AI_MODEL });
+        const bad2 = new Set(ai2.error ? retry.map((q) => q.id) : ai2.bad.map((b) => b.id));
+        for (const q of retry) if (!bad2.has(q.id)) replaced.push(q);
+        if (!ai2.error) badList.push(...ai2.bad);
+      }
+    }
+    fs.writeFileSync(path.join(rdir, 'ai.json'), JSON.stringify({ round1: ai, round2: ai2 }, null, 1));
   }
-  r.graph.captureSec = Math.round((Date.now() - tc) / 1000);
-  // AI の監視: 壊れた地点だけ外す（多くても 35%。外しても升の割り当て直しで残りはつながったまま）
-  let ai = null;
-  if (AI) { ai = reviewNodes(rdir, nodes.map((p) => p.id), { engine: AI_ENGINE, model: AI_MODEL }); fs.writeFileSync(path.join(rdir, 'ai.json'), JSON.stringify(ai, null, 1)); }
-  const badList = ai && !ai.error ? ai.bad : [];
-  const badIds = new Set(badList.slice(0, Math.floor(nodes.length * 0.35)).map((b) => b.id));
-  const keepN = nodes.filter((p) => !badIds.has(p.id)), dropped = nodes.filter((p) => badIds.has(p.id));
+  // AI が外すと言った地点は全部外す（上限を付けると壊れた地点が残った: 4F Studio の屋上。2026-11-21）。
+  // 外した割合が多いシーンは tour-audit.mjs が「スキャンの質」として出す
+  const badIds = new Set((ai && !ai.error ? ai.bad : []).map((b) => b.id));
+  const repl = new Map(replaced.filter((q) => badIds.has(q.was)).map((q) => [q.was, q]));
+  const dropped = nodes.filter((p) => badIds.has(p.id) && !repl.has(p.id));
+  const keepN = nodes.flatMap((p) => !badIds.has(p.id) ? [p] : repl.has(p.id) ? [repl.get(p.id)] : []);
+  r.graph.aiReplaced = repl.size;
   vor = voronoi(g.cells, g.adj, keepN.map((p) => p.cell));
   // 見通し（8m 以内、つながりは別に持つ）
   const ek = new Set(vor.edges.map(([a, b]) => a + ',' + b)), pairs = [];
@@ -253,9 +293,16 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   const audit = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: keepN.length, dropped: dropped.length, edges: vor.edges.length, see: see.length,
     maxGap: +Math.max(0, ...fin).toFixed(2), coverage: +(fin.filter((d) => d <= built.S * 1.25).length / Math.max(1, g.cells.length)).toFixed(3),
     components: new Set(keepN.map((_, i) => root(i))).size, levels: levels(g.cells), stairNodes: keepN.filter((p) => p.stair).length,
-    timeout: !!g.timeout, capped: !!g.capped, ai: ai ? (ai.error ? 'error' : 'ok') : 'off' };
+    timeout: !!g.timeout, capped: !!g.capped, ai: ai ? (ai.error ? 'error' : 'ok') : 'off', geoMoved: geo.moved.length, geoRemoved: geo.removed.length, aiReplaced: repl.size };
   Object.assign(r.graph, { kept: keepN.length, dropped: dropped.length, see: see.length, maxGap: audit.maxGap, coverage: audit.coverage, ai: audit.ai });
   await drawGraph(g.cells, keepN, vor.edges, path.join(rdir, 'map-final.png'), { start: pose, dropped });
+  // 動線シート（人が見て確かめる用）: 残した地点の帯（L F R B D）を 24 か所ずつ 1 枚に
+  for (let k = 0; k * 24 < keepN.length; k++) {
+    const part = keepN.slice(k * 24, k * 24 + 24), Wt = 800, Ht = 160;
+    const tiles = await Promise.all(part.map((p) => sharp(path.join(rdir, p.id + '.jpg')).resize(Wt, Ht).toBuffer()));
+    await sharp({ create: { width: Wt * 2, height: Ht * Math.ceil(part.length / 2), channels: 3, background: '#222' } })
+      .composite(tiles.map((b, i) => ({ input: b, left: (i % 2) * Wt, top: Math.floor(i / 2) * Ht }))).jpeg({ quality: 72 }).toFile(path.join(rdir, `sheet-${k + 1}.jpg`));
+  }
   const shas = {};
   for (const p of keepN) {
     shas[p.id] = {};
@@ -271,7 +318,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     start: { x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw },
     nodes: keepN.map((p) => ({ id: p.id, pos: { x: +p.pos.x.toFixed(3), y: +p.pos.y.toFixed(3), z: +p.pos.z.toFixed(3) }, floorY: +p.floorY.toFixed(3), yaw: +p.yaw.toFixed(4), ...(p.stair ? { stair: true } : {}) })),
     edges: vor.edges, see, audit, faces: shas,
-    review: ai ? (ai.error ? { error: String(ai.error).slice(0, 300), at } : { by: ai.by, at, bad: badList, dropped: dropped.map((p) => p.id), missing: ai.missing, summary: ai.summary }) : null };
+    review: ai ? (ai.error ? { error: String(ai.error).slice(0, 300), at } : { by: ai.by, at, bad: badList, dropped: dropped.map((p) => p.id), replaced: [...repl.keys()], missing: ai.missing, summary: ai.summary }) : null };
   const buf = Buffer.from(JSON.stringify(body));
   fs.writeFileSync(path.join(rdir, 'graph.json'), buf);
   return buf;

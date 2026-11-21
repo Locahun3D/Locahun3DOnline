@@ -27,11 +27,12 @@ export const RULES = [
   ['coverage', (a) => a.graph && a.audit.coverage < 0.9, '地点から遠い床が 1 割を超える'],
   ['components', (a) => a.graph && a.audit.components > 1, 'つながりが途切れている'],
   ['gap', (a) => a.graph && a.audit.maxGap > a.audit.S * 2 + 0.5, '地点の間が空きすぎる所がある'],
-  ['dropped', (a) => a.graph && a.audit.dropped / Math.max(1, a.audit.nodes + a.audit.dropped) > 0.3, '壊れた地点が 3 割を超える（スキャンの質）'],
+  ['dropped', (a) => a.graph && a.audit.dropped / Math.max(1, a.audit.nodes + a.audit.dropped) > 0.3, '空中・めり込み・崩れで外した地点が 3 割を超える（スキャンの質）'],
+  ['few', (a) => a.graph && a.audit.area >= 30 && a.audit.nodes < 3, '写真ツアーに使える地点がほとんど無い（スキャンの質）'],
   ['ai', (a) => a.graph && (!a.review || a.review.error), 'AI の監視が済んでいない'],
   ['missing', (a) => a.graph && (a.review?.missing || []).length > 0, '写真に写った先に地点が無い（AI の指摘）'],
-  ['reach', (a) => a.graph && a.reach && a.reach.reached < a.reach.total, 'ビューアーで開始位置から行けない地点がある'],
-  ['move', (a) => a.graph && a.walk && (a.walk.ok < a.walk.tried || a.bad.length), '移動できない・画像が出ない'],
+  ['reach', (a) => a.graph && a.reach && a.reach.total > 0 && a.reach.reached < a.reach.total, 'ビューアーで開始位置から行けない地点がある'],
+  ['move', (a) => a.graph && a.audit.nodes >= 2 && a.walk && (a.walk.ok < a.walk.tried || a.bad.length), '移動できない・画像が出ない'],
   ['error', (a) => a.errors.length > 0, 'ページのエラー'],
 ];
 
