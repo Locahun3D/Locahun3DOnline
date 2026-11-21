@@ -127,11 +127,11 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
   const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   return o.pts.map(p => {
     if(W){ try { core.setTileCoverage(W, { min: [p.x - 6, p.floorY - 6, p.z - 6], max: [p.x + 6, p.y + 2, p.z + 6] }); } catch(e) {} }
-    const eye = p.y - p.floorY; let tight = 0, air = 0, minC = 9;
-    for(let k = 0; k < 16; k++){ const a = k * Math.PI / 8, d = { x: Math.sin(a), y: 0, z: Math.cos(a) }; const h = hit(p, d, 2); const c = h === null ? 2 : h; minC = Math.min(minC, c); if(c < 0.35) tight++; }
+    const eye = p.y - p.floorY; let tight = 0, near = 0, air = 0, minC = 9;
+    for(let k = 0; k < 16; k++){ const a = k * Math.PI / 8, d = { x: Math.sin(a), y: 0, z: Math.cos(a) }; const h = hit(p, d, 2); const c = h === null ? 2 : h; minC = Math.min(minC, c); if(c < 0.35) tight++; if(c < 0.6) near++; }
     const c30 = Math.cos(Math.PI / 6), s30 = Math.sin(Math.PI / 6);
     for(let k = 0; k < 8; k++){ const a = k * Math.PI / 4, d = { x: Math.sin(a) * c30, y: -s30, z: Math.cos(a) * c30 }; if(hit(p, d, eye * 3 + 0.5) === null) air++; }
-    return { tight, air, minC: +minC.toFixed(2) };
+    return { tight, near, air, minC: +minC.toFixed(2) };
   });
 };
 ;window.__pbLos=(o)=>{
@@ -176,6 +176,39 @@ export function largestComponent(cells, adj, start) {
   return { cells: nc, adj: na, seed, parts: sizes.length, dropped: cells.length - nc.length };
 }
 
+// 家具の上を外す（2026-11-22 TKナイトクラブ: ソファの座面・テーブルの上に地点が乗った）。控えめに: 確かなものだけ。
+// まわり 1.6m の一番低い床より 0.3m 以上高い升をつなげた「高い所」のうち、中に 4㎡を超える平らな所が無く、
+// 外側がすべて低い床のもの（上へ続かない台）を家具とみなして外す。階段・上の階・舞台は残る。
+// 取りこぼし（背もたれ付きの席など）は、撮った後の AI が外し、近くの低い床へ置き直す（lowFloor）。
+export function lowFloor(cells) {
+  const key = (x, z) => Math.round(x / CELL) + ',' + Math.round(z / CELL), at = new Map();
+  cells.forEach((c, i) => { const k = key(c[0], c[1]); (at.get(k) || at.set(k, []).get(k)).push(i); });
+  const R = Math.round(1.6 / CELL), up = new Float32Array(cells.length);
+  for (let i = 0; i < cells.length; i++) { const cx = Math.round(cells[i][0] / CELL), cz = Math.round(cells[i][1] / CELL); let lo = cells[i][2];
+    for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) { if (dx * dx + dz * dz > R * R) continue; for (const j of at.get((cx + dx) + ',' + (cz + dz)) || []) if (Math.abs(cells[j][2] - cells[i][2]) < 1.2) lo = Math.min(lo, cells[j][2]); }
+    up[i] = cells[i][2] - lo; }
+  return up;   // 近くの一番低い床からの高さ m
+}
+export function removeFurniture(cells, adj) {
+  const n = cells.length, pl = new Int32Array(n).fill(-1), psize = [];
+  for (let i = 0; i < n; i++) { if (pl[i] >= 0) continue; const g = [i]; pl[i] = psize.length;
+    for (let h = 0; h < g.length; h++) for (const j of adj[g[h]]) if (pl[j] < 0 && Math.abs(cells[j][2] - cells[g[h]][2]) <= 0.12) { pl[j] = psize.length; g.push(j); }
+    psize.push(g.length); }
+  const BIG = Math.ceil(4 / (CELL * CELL)), up = lowFloor(cells);
+  const drop = new Uint8Array(n), seen = new Uint8Array(n); let removed = 0;
+  for (let i = 0; i < n; i++) { if (up[i] < 0.3 || seen[i]) continue; const g = [i]; seen[i] = 1; let big = psize[pl[i]] > BIG;
+    for (let h = 0; h < g.length; h++) for (const j of adj[g[h]]) {
+      if (up[j] >= 0.3) { if (!seen[j]) { seen[j] = 1; g.push(j); if (psize[pl[j]] > BIG) big = true; } }
+      else if (cells[j][2] > cells[g[h]][2] - 0.2) big = true; }   // 外に同じ高さ以上の床が続く＝別の階・段の上へ行ける
+    if (!big) { for (const k of g) drop[k] = 1; removed += g.length; } }
+  if (!removed) return { cells, adj, removed: 0 };
+  const map = new Int32Array(n).fill(-1), nc = [];
+  for (let i = 0; i < n; i++) if (!drop[i]) { map[i] = nc.length; nc.push(cells[i]); }
+  const na = nc.map(() => []);
+  for (let i = 0; i < n; i++) if (map[i] >= 0) for (const j of adj[i]) if (map[j] >= 0) na[map[i]].push(map[j]);
+  return { cells: nc, adj: na, removed };
+}
+
 // 壁（行けない所）までの距離 m: 4 方向の隣が 4 つそろっていない升を 0 として升をたどる
 export function clearance(cells, adj) {
   const d = new Float32Array(cells.length).fill(Infinity), qq = [];
@@ -200,13 +233,13 @@ export function buildGraph(cells, adj, { seed = 0, eye = 1.5, spacing = 0, maxNo
   const n = cells.length, area = n * CELL * CELL;
   // 間隔: 2.4m が基本（部屋の中を歩く感覚。2m だと 285㎡ で 94 か所になり撮るのに時間がかかる）。広い屋外などは最大の数に収まるよう広げる（最大 5m）
   const S = spacing || Math.max(2.4, Math.min(5, Math.sqrt(area / (maxNodes * 0.55))));
-  const clr = clearance(cells, adj);
+  const clr = clearance(cells, adj), up = lowFloor(cells);
   const dist = new Float64Array(n).fill(Infinity), h = new Heap();
   const relax = (c) => { dist[c] = 0; h.push(0, c); while (h.size) { const i = h.pop(); for (const j of adj[i]) { const nd = dist[i] + wlen(cells, i, j); if (nd < dist[j]) { dist[j] = nd; h.push(nd, j); } } } };
   // 置く場所: 選んだ升から歩いて 0.8m 以内で、一番壁から離れた升（通路・部屋の真ん中へ寄せる）
   const snap = (c) => {
-    const seen = new Map([[c, 0]]), qq = [c]; let best = c, bv = clr[c];
-    for (let k = 0; k < qq.length; k++) { const i = qq[k]; for (const j of adj[i]) { const d = seen.get(i) + wlen(cells, i, j); if (d > 0.8 || seen.has(j)) continue; seen.set(j, d); qq.push(j); if (clr[j] > bv + 1e-6) { bv = clr[j]; best = j; } } }
+    const seen = new Map([[c, 0]]), qq = [c]; let best = c, bv = clr[c] - (up[c] >= 0.25 ? 9 : 0);
+    for (let k = 0; k < qq.length; k++) { const i = qq[k]; for (const j of adj[i]) { const d = seen.get(i) + wlen(cells, i, j); if (d > 0.8 || seen.has(j)) continue; seen.set(j, d); qq.push(j); const v = clr[j] - (up[j] >= 0.25 ? 9 : 0); if (v > bv + 1e-6) { bv = v; best = j; } } }   // 家具の上らしい升（近くの床より 0.25m 以上高い）は避ける
     return best;
   };
   const nodeCells = [seed];
@@ -230,7 +263,8 @@ export function alternatives(cells, adj, clr, cell, takenPos, { min = 0.6, max =
   for (let k = 0; k < qq.length; k++) { const i = qq[k];
     for (const j of adj[i]) { const d = seen.get(i) + wlen(cells, i, j); if (d > max || seen.has(j)) continue; seen.set(j, d); qq.push(j);
       if (d >= min && !takenPos.some((p) => Math.hypot(p.x - cells[j][0], p.z - cells[j][1]) < 1.2 && Math.abs(p.y - cells[j][2]) < 1.5)) out.push(j); } }
-  return out.sort((a, b) => clr[b] - clr[a]);
+  const up = lowFloor(cells);   // 家具の上より近くの低い床を先に（AI に家具の上と言われた地点の置き直し）
+  return out.sort((a, b) => (up[a] >= 0.25) - (up[b] >= 0.25) || clr[b] - clr[a]);
 }
 
 // 地点の情報（位置・床・向き・段差）。向き = 開始位置から離れる向き（写真は 360° なので見た目には影響しない。AI に見せる帯の正面）

@@ -23,13 +23,14 @@
 //   （床の当たり判定から、歩けて見通せる所を 2.5m 以上離して最大 8 か所）が選ぶ。
 //   R2 は pano/<key>-<地点>-<面>.jpg を先に、最後に pano/<key>.points.json（これがあれば使われる）。開始位置の画像が既にあれば、その位置から選ぶ。
 //   node scripts/bake-pano.mjs --property <slug> --points --local   試し撮り（artifacts/pano/<key先頭16桁>/ に p1-f.jpg … points.json）
+import { routeLocalZips } from './local-zip-route.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
-import { PAGE_GRAPH, largestComponent, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives } from './tour-graph.mjs';
+import { PAGE_GRAPH, largestComponent, removeFurniture, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives } from './tour-graph.mjs';
 import { PAGE_CANDS, strip, map as drawMap, review as aiReview, reviewNodes, gapPositions, limits } from './tour-ai.mjs';
 
 const require = createRequire(import.meta.url);
@@ -56,6 +57,7 @@ const SIZE = Number(arg('--size', 1536));   // 2026-11-21 本人「360°画像�
 const QUALITY = Number(arg('--quality', 82));
 const SS = Number(arg('--ss', 2));   // 何倍で描いてから縮めるか（2 = 2 倍の解像度で描いて SIZE に縮める。輪郭のギザギザ・ざらつきが減る）
 const OUT = path.resolve(ROOT, arg('--out', 'artifacts/pano'));
+const ZIPDIR = arg('--zipdir', '');   // 登録前のシーンを手元の ZIP で（--local と一緒に）
 const VIEWER = arg('--viewer', path.join(ROOT, 'public/viewer/offline-viewer.html'));
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -144,6 +146,7 @@ async function openScene(browser, scene) {
     return route.fulfill({ status: 200, body: html, headers: { 'content-type': 'text/html; charset=utf-8' } });
   });
   // 撮影中は画像を出さない（3D そのものを撮る）
+  await routeLocalZips(page, ZIPDIR);   // --zipdir: 登録前の手元の ZIP（/api/viewer-stream/local/<名前>.zip）
   await page.route((u) => u.host === 'locahun3d.com' && u.pathname.startsWith('/api/pano/'), (route) => route.fulfill({ status: 404, headers: { 'cache-control': 'no-store' }, body: '' }));
   await page.goto(`${ORIGIN}/viewer/offline-viewer.html?autoload=${encodeURIComponent(scene)}&protected=1`, { waitUntil: 'domcontentloaded' });
   return { ctx, page, errors };
@@ -200,8 +203,8 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   const t2 = Date.now(); while (Date.now() - t2 < 180000 && !(await page.evaluate(() => window.__pb.walk()).catch(() => false))) await page.waitForTimeout(1000);
   // 開始位置の床と目の高さ（PAGE_CANDS の床の探し方を使う。周り 3m だけ）
   let base = null;
-  for (let t = 0; t < 30 && !(base && base.floor0 != null); t++) {
-    if (await page.evaluate(() => window.__pb.walk()).catch(() => false)) base = await page.evaluate((o) => window.__pbCands(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, radius: 3, max: 1 });
+  for (let t = 0; t < 60 && !(base && base.floor0 != null); t++) {   // 当たり判定の読み込みが遅いシーンがある（TK Entrance）。後半は探す範囲を広げる
+    if (await page.evaluate(() => window.__pb.walk()).catch(() => false)) base = await page.evaluate((o) => window.__pbCands(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, radius: t < 30 ? 3 : 6, max: 1 });
     if (!(base && base.floor0 != null)) await page.waitForTimeout(1000);
   }
   if (!base || base.floor0 == null) { r.status = 'error'; r.why = '動線: 開始位置の床が見つからない ' + String(base?.error || ''); return null; }
@@ -212,14 +215,16 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     console.log('normals', JSON.stringify(await page.evaluate((o) => window.__pbNormals(o), { x: pose.x, y: pose.y, z: pose.z })));
     console.log('floor heights (dm) around start, y=' + pose.y.toFixed(2) + ' floor0=' + base.floor0 + String.fromCharCode(10) + d);
   }
-  { const lc = largestComponent(g.cells, g.adj, { x: pose.x, z: pose.z, floor: base.floor0 }); g.rawCells = g.cells.length; g.parts = lc.parts; g.cells = lc.cells; g.adj = lc.adj; g.seed = lc.seed; }
+  if (PROBE) { fs.mkdirSync(path.join(dir, "graph"), { recursive: true }); fs.writeFileSync(path.join(dir, "raw-cells.json"), JSON.stringify({ cells: g.cells, adj: g.adj })); }
+  { const fu = removeFurniture(g.cells, g.adj); g.furniture = fu.removed; g.cells = fu.cells; g.adj = fu.adj;   // 家具の上（座面・テーブル）を外してから
+    const lc = largestComponent(g.cells, g.adj, { x: pose.x, z: pose.z, floor: base.floor0 }); g.rawCells = g.cells.length; g.parts = lc.parts; g.cells = lc.cells; g.adj = lc.adj; g.seed = lc.seed; }
   const built = buildGraph(g.cells, g.adj, { seed: g.seed, eye: g.eye });
   let nodes = nodeInfo(g.cells, g.adj, built.nodeCells, g.eye, built.clr);
   nodes.forEach((p, i) => { p.id = 'n' + (i + 1); });
   const rdir = path.join(dir, 'graph'); fs.rmSync(rdir, { recursive: true, force: true }); fs.mkdirSync(rdir, { recursive: true });
   // 形の検査（撮る前。2026-11-21 本人「空中やめり込んでるところを除外」）: めり込み（目の高さの周りが塞がる）・空中（斜め下に地面が見えない）
   // の地点は、近くの良い升へ移す。移せなければ置かない（升の割り当て直しで残りはつながったまま）
-  const shapeOk = (c) => c && c.tight < 3 && c.air < 4;
+  const shapeOk = (c) => c && c.tight < 3 && c.air < 4 && c.near < 4;   // near: 0.6m 以内に柱・壁が 4 方向以上（AI に柱が近すぎると外された 11-22）
   const check = (list) => list.length ? page.evaluate((o) => window.__pbNodeCheck(o), { pts: list.map((p) => ({ ...p.pos, floorY: p.floorY })) }) : [];
   const relocate = async (p, ok) => {
     const taken = nodes.filter((q) => q !== p && !q.gone).map((q) => ({ x: q.pos.x, y: q.floorY, z: q.pos.z }));
@@ -238,7 +243,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   nodes = nodes.filter((p) => !p.gone);
   let vor = voronoi(g.cells, g.adj, nodes.map((p) => p.cell));
   r.graph = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: nodes.length, edges: vor.edges.length, geoMoved: geo.moved.length, geoRemoved: geo.removed.length,
-    levels: levels(g.cells), stair: nodes.filter((p) => p.stair).length, why: g.why, floors: g.floors, parts: g.parts, rawCells: g.rawCells, floor0: base.floor0, eye: base.eye, ms: g.ms, timeout: g.timeout, capped: g.capped };
+    levels: levels(g.cells), stair: nodes.filter((p) => p.stair).length, why: g.why, floors: g.floors, parts: g.parts, furniture: g.furniture, rawCells: g.rawCells, floor0: base.floor0, eye: base.eye, ms: g.ms, timeout: g.timeout, capped: g.capped };
   await drawGraph(g.cells, nodes, vor.edges, path.join(rdir, 'map.png'), { start: pose });
   fs.writeFileSync(path.join(rdir, 'graph-probe.json'), JSON.stringify({ ...r.graph, geo, nodes: nodes.map(({ cell, ...p }) => p), edges: vor.edges }));
   if (PROBE) return null;
