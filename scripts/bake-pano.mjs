@@ -426,6 +426,12 @@ async function bake(browser, s) {
     if (!hasPoints && GRAPH) {
       graphBody = await graphPoints(page, pose, key, dir, r, uploads);
       if (PROBE) { r.status = 'probe'; r.dir = dir; return r; }
+      // 歩ける床が取れなかった（当たり判定が細切れ・開始位置が家具の上など）時は graph.json を置かない。今の points.json の写真ツアーを残す
+      const ga = graphBody && JSON.parse(graphBody.toString()).audit;
+      if (graphBody && !(ga?.nodes > 0) && !(ga?.area >= 15)) {
+        graphBody = null; r.status = 'error'; r.why = `歩ける床が取れない（${ga?.area ?? 0}㎡）`;
+        for (let i = uploads.length - 1; i >= 0; i--) if (/-g[0-9a-f]{6}-n\d+-/.test(uploads[i][0])) uploads.splice(i, 1);
+      }
     } else if (!hasPoints) {
       // 床の当たり判定ができるまで待つ（事前に作った判定があればすぐ）
       const t2 = Date.now(); while (Date.now() - t2 < 180000 && !(await page.evaluate(() => window.__pb.walk()).catch(() => false))) await page.waitForTimeout(1000);
