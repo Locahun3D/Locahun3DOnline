@@ -31,9 +31,23 @@ export const PAGE_CANDS = `;window.__pbCands=(o)=>{
   cov(s.x - 3, s.z - 3, s.x + 3, s.z + 3, s.y - 6, s.y + 2);
   const fl = [];
   for(let i = -2; i <= 2; i++) for(let j = -2; j <= 2; j++){ const h = hitAt({ x: s.x + i * cell, y: s.y, z: s.z + j * cell }, DOWN, 4); if(h !== null) fl.push(s.y - h); }
+  // 開始位置が高い（屋外の見下ろし）・真下が抜けている時は、広く深く探す（経堂西通り・有明で 'no floor near start'。2026-11-21）
+  if(fl.length < 3){ cov(s.x - 8, s.z - 8, s.x + 8, s.z + 8, s.y - 40, s.y + 2); for(let i = -12; i <= 12; i += 2) for(let j = -12; j <= 12; j += 2){ const h = hitAt({ x: s.x + i * cell, y: s.y, z: s.z + j * cell }, DOWN, 40); if(h !== null) fl.push(s.y - h); } }
   if(fl.length < 3) return { error: 'no floor near start', n: fl.length };
   fl.sort((a, b) => a - b);
-  const floor0 = fl[fl.length >> 1], eye = Math.min(2, Math.max(1, s.y - floor0));
+  let floor0 = fl[fl.length >> 1];
+  // 開始位置の真下が台・ステージ・家具の上のことがある（See You Tomorrow 4F: 床 104㎡ なのに同じ高さの升が 0 で候補なし。2026-11-21）。
+  // 周り 16m 四方を 1m おきに見て、一番多い床の高さ（10cm 刻み）が開始位置の真下より多ければそちらを床にする
+  {
+    cov(s.x - 9, s.z - 9, s.x + 9, s.z + 9, floor0 - 3, s.y + 2);
+    const bins = new Map(); const top = Math.max(s.y, floor0 + 2.3);
+    for(let i = -8; i <= 8; i++) for(let j = -8; j <= 8; j++){ const h = hitAt({ x: s.x + i, y: top, z: s.z + j }, DOWN, top - floor0 + 2); if(h === null) continue; const f = top - h; if(Math.abs(f - floor0) > 2) continue; const b = Math.round(f * 10); bins.set(b, (bins.get(b) || 0) + 1); }
+    const near = (b) => (bins.get(b - 1) || 0) + (bins.get(b) || 0) + (bins.get(b + 1) || 0);
+    let bb = Math.round(floor0 * 10), bn = near(bb);
+    for(const b of bins.keys()) if(near(b) > bn * 1.5 + 3){ bn = near(b); bb = b; }
+    if(bb !== Math.round(floor0 * 10)) floor0 = bb / 10;
+  }
+  const eye = Math.min(2, Math.max(1, s.y - floor0));
   const see = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz); if(L < 1e-3) return true; covSeg(a, b); return hitAt(a, { x: dx / L, y: dy / L, z: dz / L }, L - 0.05) === null; };
   const yLo = floor0 - 1.5, yHi = floor0 + eye + 1.5;
   const DIRS = Array.from({ length: ND }, (_, k) => { const a = k * 2 * Math.PI / ND; return { a, v: { x: Math.sin(a), y: 0, z: Math.cos(a) } }; });
