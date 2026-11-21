@@ -29,7 +29,8 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
-import { PAGE_CANDS, strip, map as drawMap, review as aiReview, gapPositions, limits } from './tour-ai.mjs';
+import { PAGE_GRAPH, largestComponent, buildGraph, voronoi, nodeInfo, levels, drawGraph } from './tour-graph.mjs';
+import { PAGE_CANDS, strip, map as drawMap, review as aiReview, reviewNodes, gapPositions, limits } from './tour-ai.mjs';
 
 const require = createRequire(import.meta.url);
 const { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
@@ -47,7 +48,9 @@ const REDO = flag('--redo-points');   // 地点を選び直す（今の points.j
 const AI_MODEL = arg('--ai-model', '');   // 空なら Claude は fable、Codex は gpt-6-astra
 const AI_ENGINE = arg('--ai-engine', 'auto');   // auto = Claude Code → だめなら Codex
 const RESHOOT = flag('--reshoot');   // 画像だけ今の画質で撮り直す（地点・判定はそのまま。reshoot() 参照）
-const LOCAL = flag('--local');   // R2 に書かず artifacts/pano/ にだけ作る（試し撮り・見比べ用）
+const LOCAL = flag('--local');
+const GRAPH = flag('--graph');   // 動線グラフ方式の地点（scripts/tour-graph.mjs。<key>.graph.json）。2026-11-21〜
+const PROBE = flag('--probe');   // --graph で、地点の配置図だけ作って撮らない（確かめ用）   // R2 に書かず artifacts/pano/ にだけ作る（試し撮り・見比べ用）
 const LIMIT = Number(arg('--limit', 0)) || Infinity;
 const SIZE = Number(arg('--size', 1536));   // 2026-11-21 本人「360°画像、荒いところあるかも」: 1024 → 1536、2 倍で描いて縮める
 const QUALITY = Number(arg('--quality', 82));
@@ -124,7 +127,7 @@ async function getViewerHtml() {
   const html = VIEWER === 'prod' ? await text(`${ORIGIN}/viewer/offline-viewer.html`) : fs.readFileSync(VIEWER, 'utf8');
   if (!html.includes(ANCHOR)) throw new Error('viewer anchor not found');
   if (!html.includes('__startPano')) throw new Error('この viewer は 360° 画像のキー計算に対応していない（Locahun3D の sync-online-viewer.sh を先に）');
-  viewerHtml = html.replace(ANCHOR, ANCHOR + HOOK + PAGE_CANDS);
+  viewerHtml = html.replace(ANCHOR, ANCHOR + HOOK + PAGE_CANDS + PAGE_GRAPH);
   return viewerHtml;
 }
 
@@ -147,12 +150,12 @@ async function openScene(browser, scene) {
 }
 
 // 3D が落ち着く（点数が変わらず取得も止まる）まで待つ
-async function settle(page, maxMs) {
+async function settle(page, maxMs, iv = 700) {
   const t0 = Date.now(); let last = -2, same = 0;
   while (Date.now() - t0 < maxMs) {
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(iv);
     const s = await page.evaluate(() => ({ n: window.__pb.n(), busy: window.__pb.busy() })).catch(() => null);
-    if (s && s.n > 0 && s.n === last && s.busy === 0) { if (++same >= 3) return true; } else same = 0;
+    if (s && s.n > 0 && s.n === last && s.busy === 0) { if (++same >= (iv < 700 ? 2 : 3)) return true; } else same = 0;
     last = s ? s.n : -2;
   }
   return false;
@@ -172,17 +175,105 @@ async function sharpness(faces) {
 const SHARP_MIN = Number(arg('--sharp-min', 0.45));   // 開始位置の何割未満の地点を外すか（会議室の試しで、見てぼやけていた 4 か所が 0.14〜0.34、良い所が 0.59〜0.86）
 
 // 1 か所の 6 方向（各 90°）を撮る
-async function capture(page, pos, yaw0, pitch0, r, tag) {
+async function capture(page, pos, yaw0, pitch0, r, tag, iv = 700) {
   const faces = {};
   for (const [k, [dy, p]] of Object.entries(FACES)) {
     await page.evaluate(([pos, yw, pt]) => window.__pb.aim(pos, yw, pt), [pos, yaw0 + dy, p + (k === 'u' || k === 'd' ? 0 : pitch0)]);
-    const ok = await settle(page, 90000);
+    const t0 = Date.now();
+    const ok = await settle(page, 90000, iv);
     if (!ok) r.slow = (r.slow || '') + tag + k + ' ';
-    await page.waitForTimeout(400);
-    if (SS > 1) { const png = await page.locator('canvas').first().screenshot({ type: 'png' }); faces[k] = await sharp(png).resize(SIZE, SIZE, { kernel: 'lanczos3' }).jpeg({ quality: QUALITY, mozjpeg: true }).toBuffer(); }
+    await page.waitForTimeout(iv < 700 ? 150 : 400);
+    const t1 = Date.now();
+    // 2 倍で描いた画面は PNG だと取り込みが遅い（3072px で 1 枚 1 秒以上）。高画質の JPEG で取り込んでから縮める（縮めるので差は見えない）
+    if (SS > 1) { const png = await page.locator('canvas').first().screenshot(iv < 700 ? { type: 'jpeg', quality: 95 } : { type: 'png' }); faces[k] = await sharp(png).resize(SIZE, SIZE, { kernel: 'lanczos3' }).jpeg({ quality: QUALITY, mozjpeg: true }).toBuffer(); }
     else faces[k] = await page.locator('canvas').first().screenshot({ type: 'jpeg', quality: QUALITY });
+    r.tSettle = (r.tSettle || 0) + (t1 - t0); r.tShot = (r.tShot || 0) + (Date.now() - t1);
   }
   return faces;
+}
+
+// ── 動線グラフ方式の地点（--graph、scripts/tour-graph.mjs の説明を参照）──
+// 画像の名前は <key>-g<set>-n<番号>-<面>.jpg（1536px）と <面>.s.jpg（640px、遅い回線・弱い端末の軽量表示用）。set は撮るたびに変える（1 年キャッシュ）。
+// 結果は <key>.graph.json（v:2）。古い points.json は残す（今のビューアーはそちらを読む。新しいビューアーは graph.json を先に読む）
+const GRAPH_SMALL = 640;
+async function graphPoints(page, pose, key, dir, r, uploads) {
+  const t2 = Date.now(); while (Date.now() - t2 < 180000 && !(await page.evaluate(() => window.__pb.walk()).catch(() => false))) await page.waitForTimeout(1000);
+  // 開始位置の床と目の高さ（PAGE_CANDS の床の探し方を使う。周り 3m だけ）
+  let base = null;
+  for (let t = 0; t < 30 && !(base && base.floor0 != null); t++) {
+    if (await page.evaluate(() => window.__pb.walk()).catch(() => false)) base = await page.evaluate((o) => window.__pbCands(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, radius: 3, max: 1 });
+    if (!(base && base.floor0 != null)) await page.waitForTimeout(1000);
+  }
+  if (!base || base.floor0 == null) { r.status = 'error'; r.why = '動線: 開始位置の床が見つからない ' + String(base?.error || ''); return null; }
+  const g = await page.evaluate((o) => window.__pbGraph(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, floor0: base.floor0, eye: base.eye });
+  if (g.error) { r.status = 'error'; r.why = '動線: ' + g.error; return null; }
+  if (flag('--diag')) {
+    const d = await page.evaluate((o) => window.__pbDiag(o), { x: pose.x, y: pose.y, z: pose.z });
+    console.log('floor heights (dm) around start, y=' + pose.y.toFixed(2) + ' floor0=' + base.floor0 + String.fromCharCode(10) + d);
+  }
+  { const lc = largestComponent(g.cells, g.adj, { x: pose.x, z: pose.z, floor: base.floor0 }); g.rawCells = g.cells.length; g.parts = lc.parts; g.cells = lc.cells; g.adj = lc.adj; g.seed = lc.seed; }
+  const built = buildGraph(g.cells, g.adj, { seed: g.seed, eye: g.eye });
+  const nodes = nodeInfo(g.cells, g.adj, built.nodeCells, g.eye, built.clr);
+  nodes.forEach((p, i) => { p.id = 'n' + (i + 1); });
+  const rdir = path.join(dir, 'graph'); fs.rmSync(rdir, { recursive: true, force: true }); fs.mkdirSync(rdir, { recursive: true });
+  let vor = voronoi(g.cells, g.adj, built.nodeCells);
+  r.graph = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: nodes.length, edges: vor.edges.length,
+    levels: levels(g.cells), stair: nodes.filter((p) => p.stair).length, why: g.why, floors: g.floors, parts: g.parts, rawCells: g.rawCells, floor0: base.floor0, eye: base.eye, ms: g.ms, timeout: g.timeout, capped: g.capped };
+  await drawGraph(g.cells, nodes, vor.edges, path.join(rdir, 'map.png'), { start: pose });
+  fs.writeFileSync(path.join(rdir, 'graph-probe.json'), JSON.stringify({ ...r.graph, nodes: nodes.map(({ cell, ...p }) => p), edges: vor.edges }));
+  if (PROBE) return null;
+  const set = crypto.randomBytes(3).toString('hex');
+  const shots = {};
+  const tc = Date.now();
+  for (const p of nodes) {
+    const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':', 250);
+    shots[p.id] = faces;
+    await strip(faces, p.id, path.join(rdir, p.id + '.jpg'));
+  }
+  r.graph.captureSec = Math.round((Date.now() - tc) / 1000);
+  // AI の監視: 壊れた地点だけ外す（多くても 35%。外しても升の割り当て直しで残りはつながったまま）
+  let ai = null;
+  if (AI) { ai = reviewNodes(rdir, nodes.map((p) => p.id), { engine: AI_ENGINE, model: AI_MODEL }); fs.writeFileSync(path.join(rdir, 'ai.json'), JSON.stringify(ai, null, 1)); }
+  const badList = ai && !ai.error ? ai.bad : [];
+  const badIds = new Set(badList.slice(0, Math.floor(nodes.length * 0.35)).map((b) => b.id));
+  const keepN = nodes.filter((p) => !badIds.has(p.id)), dropped = nodes.filter((p) => badIds.has(p.id));
+  vor = voronoi(g.cells, g.adj, keepN.map((p) => p.cell));
+  // 見通し（8m 以内、つながりは別に持つ）
+  const ek = new Set(vor.edges.map(([a, b]) => a + ',' + b)), pairs = [];
+  for (let i = 0; i < keepN.length; i++) for (let j = i + 1; j < keepN.length; j++) {
+    const a = keepN[i].pos, b = keepN[j].pos;
+    if (!ek.has(i + ',' + j) && Math.hypot(a.x - b.x, a.z - b.z) <= 8 && Math.abs(a.y - b.y) < 3) pairs.push([i, j]);
+  }
+  const see = pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: keepN.map((p) => p.pos) }) : [];
+  // 監視の数字（tour-audit.mjs が基準と比べる）
+  const fin = Array.from(vor.dist).filter(Number.isFinite);
+  const parent = keepN.map((_, i) => i), root = (i) => (parent[i] === i ? i : (parent[i] = root(parent[i])));
+  for (const [a, b] of vor.edges) parent[root(a)] = root(b);
+  const audit = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: keepN.length, dropped: dropped.length, edges: vor.edges.length, see: see.length,
+    maxGap: +Math.max(0, ...fin).toFixed(2), coverage: +(fin.filter((d) => d <= built.S * 1.25).length / Math.max(1, g.cells.length)).toFixed(3),
+    components: new Set(keepN.map((_, i) => root(i))).size, levels: levels(g.cells), stairNodes: keepN.filter((p) => p.stair).length,
+    timeout: !!g.timeout, capped: !!g.capped, ai: ai ? (ai.error ? 'error' : 'ok') : 'off' };
+  Object.assign(r.graph, { kept: keepN.length, dropped: dropped.length, see: see.length, maxGap: audit.maxGap, coverage: audit.coverage, ai: audit.ai });
+  await drawGraph(g.cells, keepN, vor.edges, path.join(rdir, 'map-final.png'), { start: pose, dropped });
+  const shas = {};
+  for (const p of keepN) {
+    shas[p.id] = {};
+    for (const [k, b] of Object.entries(shots[p.id])) {
+      const small = await sharp(b).resize(GRAPH_SMALL, GRAPH_SMALL, { kernel: 'lanczos3' }).jpeg({ quality: 74, mozjpeg: true }).toBuffer();
+      uploads.push([`pano/${key}-g${set}-${p.id}-${k}.jpg`, b], [`pano/${key}-g${set}-${p.id}-${k}.s.jpg`, small]);
+      if (LOCAL) { fs.writeFileSync(path.join(rdir, `${p.id}-${k}.jpg`), b); fs.writeFileSync(path.join(rdir, `${p.id}-${k}.s.jpg`), small); }
+      shas[p.id][k] = sha(b).slice(0, 16);
+    }
+  }
+  const at = new Date().toISOString();
+  const body = { v: 2, set, eye: g.eye, S: audit.S, size: SIZE, small: GRAPH_SMALL, bakedAt: at, scene: r.scene,
+    start: { x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw },
+    nodes: keepN.map((p) => ({ id: p.id, pos: { x: +p.pos.x.toFixed(3), y: +p.pos.y.toFixed(3), z: +p.pos.z.toFixed(3) }, floorY: +p.floorY.toFixed(3), yaw: +p.yaw.toFixed(4), ...(p.stair ? { stair: true } : {}) })),
+    edges: vor.edges, see, audit, faces: shas,
+    review: ai ? (ai.error ? { error: String(ai.error).slice(0, 300), at } : { by: ai.by, at, bad: badList, dropped: dropped.map((p) => p.id), missing: ai.missing, summary: ai.summary }) : null };
+  const buf = Buffer.from(JSON.stringify(body));
+  fs.writeFileSync(path.join(rdir, 'graph.json'), buf);
+  return buf;
 }
 
 // 撮り直し（--reshoot、2026-11-21 本人「360°画像、荒いところあるかも」→「作り直して」）:
@@ -254,7 +345,8 @@ async function bake(browser, s) {
     const hasStart = !LOCAL && !!await r2Head(`pano/${key}.json`);
     const oldPoints = POINTS && !LOCAL && await r2Head(`pano/${key}.points.json`) ? await r2Json(`pano/${key}.points.json`) : null;
     // AI の判定が無い地点（2026-11-20 より前に作ったもの）は作り直す対象
-    const hasPoints = !POINTS || (!!oldPoints && !REDO && (!AI || !!oldPoints.review));
+    const oldGraph = GRAPH && !LOCAL && await r2Head(`pano/${key}.graph.json`) ? await r2Json(`pano/${key}.graph.json`) : null;
+    const hasPoints = GRAPH ? (!!oldGraph && !REDO) : !POINTS || (!!oldPoints && !REDO && (!AI || !!oldPoints.review));
     if (hasStart && hasPoints) { r.status = 'ok'; if (oldPoints?.review) r.review = { complete: oldPoints.review.complete, summary: oldPoints.review.summary }; return r; }
     r.status = !hasStart ? 'missing' : oldPoints && !oldPoints.review && AI ? 'missing-review' : oldPoints ? 'redo-points' : 'missing-points';
     if (!FIX) return r;
@@ -274,7 +366,7 @@ async function bake(browser, s) {
     const dir = path.join(OUT, key.slice(0, 16)); fs.mkdirSync(dir, { recursive: true });
     const uploads = []; let metaBody = null, pointsBody = null;
     let startCaptured = null;
-    if (!hasStart) {
+    if (!hasStart && !PROBE) {
       const faces = startCaptured = await capture(page, pose, pose.yaw, 0, r, '');
       for (const [k, b] of Object.entries(faces)) { fs.writeFileSync(path.join(dir, `${k}.jpg`), b); uploads.push([`pano/${key}-${k}.jpg`, b]); }
       const meta = { v: 1, pos: { x: pose.x, y: pose.y, z: pose.z }, yaw: pose.yaw, pitch: pose.pitch, size: SIZE, bakedAt: r.at, scene: s.scene,
@@ -282,7 +374,11 @@ async function bake(browser, s) {
       metaBody = Buffer.from(JSON.stringify(meta));
       fs.writeFileSync(path.join(dir, 'meta.json'), metaBody);
     }
-    if (!hasPoints) {
+    let graphBody = null;
+    if (!hasPoints && GRAPH) {
+      graphBody = await graphPoints(page, pose, key, dir, r, uploads);
+      if (PROBE) { r.status = 'probe'; r.dir = dir; return r; }
+    } else if (!hasPoints) {
       // 床の当たり判定ができるまで待つ（事前に作った判定があればすぐ）
       const t2 = Date.now(); while (Date.now() - t2 < 180000 && !(await page.evaluate(() => window.__pb.walk()).catch(() => false))) await page.waitForTimeout(1000);
       // 開始位置の写りのはっきりさ（AI が使えない時の地点の良し悪しの基準）
@@ -371,6 +467,10 @@ async function bake(browser, s) {
     if (LOCAL) { r.status = 'local'; r.dir = dir; return r; }
     for (const [k, b] of uploads) if (!await r2Head(k)) await r2PutNew(k, b, 'image/jpeg');
     if (metaBody) await r2PutNew(`pano/${key}.json`, metaBody, 'application/json');   // 最後に置く（これがあれば使われる）
+    if (graphBody) {
+      if (oldGraph) await r2PutNew(`pano/${key}.graph.bak-${Date.now()}.json`, Buffer.from(JSON.stringify(oldGraph)), 'application/json');
+      await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `pano/${key}.graph.json`, Body: graphBody, ContentType: 'application/json', Metadata: { sha256: sha(graphBody) } }));
+    }
     if (pointsBody && pointsBody.length) {
       if (oldPoints) {
         // 置き換え: 今の points.json は控えとして残す（/api/pano は出さない名前）。ビューアーは points.json を no-cache で取るので、すぐ新しい方になる

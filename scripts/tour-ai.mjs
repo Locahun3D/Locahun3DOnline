@@ -187,10 +187,10 @@ function runClaude(dir, prompt, model) {
   if (o?.is_error || r.status !== 0) return { error: String(o?.result || r.stderr || r.stdout || 'failed').slice(0, 200) };
   return { text: o ? String(o.result ?? '') : r.stdout, model: m };
 }
-function runCodex(dir, ids, prompt, model) {
+function runCodex(dir, ids, prompt, model, files = null) {
   const m = model && !/^(fable|opus|sonnet|haiku)/.test(model) ? model : 'gpt-6-astra';   // ChatGPT アカウントで動くもの（gpt-5.5 等は拒否される）
   const out = path.join(dir, `codex-last-${Date.now()}.txt`);
-  const imgs = ['map.png', 'S.jpg', ...ids.map((i) => i + '.jpg')].flatMap((f) => ['-i', path.join(dir, f)]);
+  const imgs = (files || ['map.png', 'S.jpg', ...ids.map((i) => i + '.jpg')]).flatMap((f) => ['-i', path.join(dir, f)]);
   const r = spawnSync(process.platform === 'win32' ? 'codex.cmd' : 'codex', ['exec', '--skip-git-repo-check', '-m', m, '-s', 'read-only', '-o', out, ...imgs, '-'],
     { input: prompt, encoding: 'utf8', timeout: 20 * 60 * 1000, shell: process.platform === 'win32', maxBuffer: 32 << 20, cwd: dir });
   if (r.error) return { error: String(r.error.message).slice(0, 200) };
@@ -207,6 +207,50 @@ function parseVerdict(text) {
     if (!Array.isArray(j.points)) return { error: 'points が無い' };
     return j;
   } catch (e) { return { error: 'JSON が読めない: ' + String(e.message).slice(0, 100) }; }
+}
+
+// ── 動線グラフの監視（2026-11-21）: 地点は動線から敷き詰める（tour-graph.mjs）。AI は選ばず、壊れた地点だけを見つける ──
+// 移動のために 2m おきに置いているので、似た画・地味な画は外さない。外すのは「そこに立つと何も分からない・おかしい」所だけ。
+// あわせて、写真に写っているのに地点が無い（動線が途切れた）場所を missing として残す（自動では直せないので監視の記録に出す）。
+const NODE_PROMPT = (dir, ids, total) => `あなたはロケハンサイト Locahun 3D の 360° 写真ツアーの監視担当です。
+3DGS（3D スキャン）の空間に、見る人が歩くように移動できるよう、歩ける床の上へ約 2m おきに地点を自動で置き、各地点の 360° 写真を撮りました（全 ${total} 地点のうち今回 ${ids.length} 地点）。
+地点の数や位置は動線から機械的に決めています。あなたの役目は「壊れた地点」を見つけることだけです。
+
+ファイル（${dir} にある。添付の順番は map.png, ${ids.map((i) => i + '.jpg').join(', ')}）:
+- map.png: 上から見た図。色の付いた升＝歩ける床（色は床の高さ。青＝低い→黄〜赤＝高い）、青い点と赤い番号＝地点、オレンジの点＝階段・段差の上の地点、線＝移動できるつながり、オレンジの輪＝開始位置。
+- 各 <番号>.jpg: その地点の 360° 帯（左から L・F・R・B の 4 方向、目の高さ）。
+
+外す（ok:false）のは次のどれかがはっきりしている地点だけ:
+- 壁・家具・物の中に入っている（画面の大半が物の内側・色の塊）
+- 撮影範囲の外・端で、画面の大半が黒・空白・ちぎれた点でつぶれている
+- 崩れがひどく、そこがどんな場所か分からない
+似た画が続く・地味・通路の途中・少しのにじみは外さない（移動の途中の地点として必要）。迷ったら ok:true。
+
+あわせて、写真に「歩いて行けそうな場所（階段・通路・ドアの先・別の部屋）」がはっきり写っているのに、図で近くに地点も歩ける床も無い所があれば missing に書く（最大 5 件）。
+
+答えは JSON だけ:
+{"nodes":[{"id":"n1","ok":true,"reason":"外す時だけ短く"}],"missing":[{"near":"n12","dir":"L/F/R/B","why":"短く"}],"summary":"日本語で 1 文"}
+nodes には今回の全地点を入れる。`;
+export function reviewNodes(dir, ids, { engine = 'auto', model = '', batch = 20 } = {}) {
+  const out = { bad: [], missing: [], summary: [], by: '', errors: [] };
+  const tries = engine === 'auto' ? ['claude', 'codex'] : [engine];
+  for (let i = 0; i < ids.length; i += batch) {
+    const part = ids.slice(i, i + batch), prompt = NODE_PROMPT(dir.split(path.sep).join('/'), part, ids.length);
+    let done = false;
+    for (const e of tries) {
+      const t = e === 'codex' ? runCodex(dir, part, prompt, model, ['map.png', ...part.map((x) => x + '.jpg')]) : runClaude(dir, prompt, model);
+      if (t.error) { out.errors.push(e + ': ' + t.error); continue; }
+      const m = /\{[\s\S]*\}/.exec(t.text || '');
+      let j = null; try { j = m && JSON.parse(m[0]); } catch { j = null; }
+      if (!j || !Array.isArray(j.nodes)) { out.errors.push(e + ': JSON が読めない'); continue; }
+      for (const n of j.nodes) if (n && n.ok === false && part.includes(String(n.id))) out.bad.push({ id: String(n.id), reason: String(n.reason || '').slice(0, 80) });
+      for (const g of (j.missing || []).slice(0, 5)) out.missing.push({ near: String(g.near || ''), dir: String(g.dir || ''), why: String(g.why || '').slice(0, 80) });
+      if (j.summary) out.summary.push(String(j.summary).slice(0, 120));
+      out.by = e + ':' + (t.model || 'default'); done = true; break;
+    }
+    if (!done) return { error: out.errors.join(' / ').slice(0, 400), partial: out };
+  }
+  return { ...out, summary: out.summary.join(' ').slice(0, 300) };
 }
 
 // 足りない場所 → 歩ける升（近くの升、既存の地点から 1.5m 以上離す）

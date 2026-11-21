@@ -1,0 +1,233 @@
+// 360° 写真ツアーの「動線グラフ」（2026-11-21 本人「360画像がみれる地点、歩ける所が少なすぎて移動できない、階段に弱い、
+// 動線で欲しいところがなく移動にはとてもストレスがある」「動線を割り出す仕組みやAI監視を仕組みにする必要がある」）。
+//
+// 以前（tour-ai.mjs の PAGE_CANDS）は開始位置と同じ高さ（±0.3m）の床だけから、AI が「見どころ」を 4〜24 か所選んでいた。
+// そのため階段・別の階・段差の先には地点が無く、地点どうしも離れていて歩くように移れなかった。
+// ここでは:
+//  1. 歩ける床をたどる（PAGE_GRAPH、ビューアーの中で動く）: 開始位置の床から 0.5m 升で塗り広げる。
+//     隣の升へは「段差 0.42m 以下・体（ひざ〜目の高さ）が入る・間に壁が無い」なら行ける。階段は 1 段ずつ上れるので別の階までつながる。
+//  2. 地点を敷き詰める（buildGraph、Node）: 歩いた距離（升をたどった距離）で一番遠い所に次の地点を置くのを、
+//     どこからでも S（約 2m、広い所は広げる）以内に地点がある状態になるまで繰り返す。置く場所は近くで一番壁から離れた升（通路の真ん中）。
+//  3. つなぐ: 各升を一番近い地点に割り当て、隣り合う升が別の地点なら、その 2 地点をつなぐ（歩ける床の上の隣どうし。壁越しにはつながらない）。
+//     地点を外しても割り当て直すだけで、残りは必ずつながったまま。
+//  4. 見通し（PAGE_LOS）: 8m 以内で目の高さどうしが見える組。ビューアーは「つながった地点＋見える地点」に床の丸を出す。
+// AI はこの後、各地点の写りだけを見て、壊れた地点（物の中・撮影範囲の外・崩れ）を外す（tour-ai.mjs reviewNodes）。
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const sharp = require('sharp');
+
+export const CELL = 0.5;
+
+export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
+  const core = typeof walkSetup !== 'undefined' && walkSetup.core;
+  if(!core) return { error: 'no collision' };
+  const W = walkSetup.wholeIndex, C = ${CELL}, STEP = o.step || 0.42, R = o.radius || 70, MAX = o.maxCells || 80000, B = 8;
+  const eye = o.eye || 1.5, s = o.pos, t0 = performance.now(), TL = o.timeMs || 240000;
+  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const DOWN = { x: 0, y: -1, z: 0 };
+  let covKey = null, covN = 0;
+  const cov = (bx, bz, by) => { const k = bx + ',' + bz + ',' + by; if(k === covKey || !W) return; covKey = k; covN++;
+    try { core.setTileCoverage(W, { min: [bx * B - 2, by * 4 - 4, bz * B - 2], max: [bx * B + B + 2, by * 4 + 8, bz * B + B + 2] }); } catch(e) {} };
+  // 床: 今の床（yRef）の 0.6m 上から下へ。段を上る・下る（0.9m まで）床を拾う
+  const floorAt = (x, z, yRef) => { const top = yRef + STEP + 0.03, h = hit({ x, y: top, z }, DOWN, STEP + 0.95); return h === null ? null : top - h; };
+  // 体が入る: ひざ（段の上）から目の高さ＋0.1m まで、半径 0.2m
+  const bodyOk = (x, z, f) => { try { return core.isCapsuleClear({ x, y: f + 0.35, z }, eye - 0.25, 0.2); } catch(e) { return false; } };
+  // 間に壁が無い: ひざ・胸の高さで升の中心どうしを水平に結ぶ
+  const passOk = (a, x, z, f) => { const dx = x - a.x, dz = z - a.z, L = Math.hypot(dx, dz), d = { x: dx / L, y: 0, z: dz / L }, base = Math.max(a.f, f);
+    return hit({ x: a.x, y: base + 0.5, z: a.z }, d, L) === null && hit({ x: a.x, y: base + 1.2, z: a.z }, d, L) === null; };
+  const cells = [], adj = [], byXZ = new Map(), bad = new Set(), q = new Map();
+  const find = (ix, iz, f) => { const L = byXZ.get(ix + ',' + iz); if(!L) return -1; for(const i of L) if(Math.abs(cells[i].f - f) < 0.3) return i; return -1; };
+  const bkey = (c) => Math.floor(c.x / B) + ',' + Math.floor(c.z / B) + ',' + Math.floor(c.f / 4);
+  const push = (i) => { const k = bkey(cells[i]); let L = q.get(k); if(!L) q.set(k, L = []); L.push(i); };
+  const add = (ix, iz, f) => { const i = cells.length; cells.push({ ix, iz, x: ix * C, z: iz * C, f }); adj.push([]);
+    const k = ix + ',' + iz; let L = byXZ.get(k); if(!L) byXZ.set(k, L = []); L.push(i); return i; };
+  // 始まりの升: 開始位置の真下（o.floor0）と、周りで一番低く広い床の高さ（卓・ベンチの多い店で o.floor0 が座面の高さになった:
+  // 新中野の居酒屋で 10㎡ しか広がらなかった。2026-11-21）。それぞれの高さで、開始位置の近くの体が入る升から塗り広げる。
+  // 別々の塊になったら Node 側（largestComponent）で一番大きい塊を使う
+  const ix0 = Math.round(s.x / C), iz0 = Math.round(s.z / C);
+  const floors = [o.floor0];
+  {
+    cov(Math.floor(s.x / B), Math.floor(s.z / B), Math.floor((o.floor0 - 2) / 4));
+    try { if(W) core.setTileCoverage(W, { min: [s.x - 9, Math.min(o.floor0, s.y) - 4, s.z - 9], max: [s.x + 9, s.y + 1, s.z + 9] }); covKey = null; } catch(e) {}
+    const bins = new Map(), top = s.y + 0.3;
+    for(let i = -8; i <= 8; i++) for(let j = -8; j <= 8; j++){ const h = hit({ x: s.x + i, y: top, z: s.z + j }, DOWN, 6); if(h !== null){ const b = Math.round((top - h) * 10); bins.set(b, (bins.get(b) || 0) + 1); } }
+    const near = (b) => (bins.get(b - 1) || 0) + (bins.get(b) || 0) + (bins.get(b + 1) || 0);
+    let mx = 0; for(const b of bins.keys()) mx = Math.max(mx, near(b));
+    const low = [...bins.keys()].filter(b => near(b) >= Math.max(5, mx * 0.25)).sort((a, b) => a - b)[0];
+    if(low !== undefined && Math.abs(low / 10 - o.floor0) > 0.25) floors.push(low / 10);
+  }
+  const seeds = [];
+  for(const fl of floors){
+    let seed = -1;
+    cov(Math.floor(s.x / B), Math.floor(s.z / B), Math.floor(fl / 4)); covKey = null;
+    try { if(W) core.setTileCoverage(W, { min: [s.x - 9, fl - 2, s.z - 9], max: [s.x + 9, fl + 3, s.z + 9] }); } catch(e) {}
+    for(let r = 0; r <= 16 && seed < 0; r++) for(let i = -r; i <= r && seed < 0; i++) for(let j = -r; j <= r && seed < 0; j++){
+      if(Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+      const x = (ix0 + i) * C, z = (iz0 + j) * C, f = floorAt(x, z, fl);
+      if(f !== null && Math.abs(f - fl) < 0.5 && bodyOk(x, z, f)){ seed = find(ix0 + i, iz0 + j, f); if(seed < 0){ seed = add(ix0 + i, iz0 + j, f); push(seed); } }
+    }
+    if(seed >= 0) seeds.push(seed);
+  }
+  if(!seeds.length) return { error: 'no walkable cell at start', floors };
+  const seed = seeds[0];
+  const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  let timeout = false; const why = { nofloor: 0, step: 0, body: 0, pass: 0 };
+  while(q.size && cells.length < MAX){
+    if(performance.now() - t0 > TL){ timeout = true; break; }
+    const [k, list] = q.entries().next().value; q.delete(k);
+    const [bx, bz, by] = k.split(',').map(Number); cov(bx, bz, by);
+    while(list.length){
+      const i = list.pop(), c = cells[i];
+      for(const [dx, dz] of N4){
+        const jx = c.ix + dx, jz = c.iz + dz, x = jx * C, z = jz * C;
+        if(Math.hypot(x - s.x, z - s.z) > R) continue;
+        const f = floorAt(x, z, c.f);
+        if(f === null){ why.nofloor++; continue; }
+        if(Math.abs(f - c.f) > STEP){ why.step++; continue; }
+        let j = find(jx, jz, f);
+        if(j < 0){
+          const bk = jx + ',' + jz + ',' + Math.round(f * 10);
+          if(bad.has(bk)) continue;
+          if(!bodyOk(x, z, f)){ bad.add(bk); why.body++; continue; }
+          if(!passOk(c, x, z, f)){ why.pass++; continue; }
+          j = add(jx, jz, f);
+          if(bkey(cells[j]) === k) list.push(j); else push(j);
+        } else if(adj[i].includes(j) || !passOk(c, x, z, f)) continue;
+        adj[i].push(j); adj[j].push(i);
+      }
+    }
+  }
+  return { cells: cells.map(c => [+c.x.toFixed(2), +c.z.toFixed(2), +c.f.toFixed(3)]), adj, seed, eye, timeout, capped: cells.length >= MAX,
+    ms: Math.round(performance.now() - t0), covN, whole: !!W, why, seeds, floors };
+};
+;window.__pbDiag=(o)=>{ const core = walkSetup.core, W = walkSetup.wholeIndex; try { if(W) core.setTileCoverage(W, { min: [o.x - 7, o.y - 5, o.z - 7], max: [o.x + 7, o.y + 1, o.z + 7] }); } catch(e) {}
+  const rows = []; for(let j = -12; j <= 12; j++){ let row = ''; for(let i = -12; i <= 12; i++){ const h = core.raycast({ x: o.x + i * 0.5, y: o.y + 0.3, z: o.z + j * 0.5 }, { x: 0, y: -1, z: 0 }, 5);
+    row += h === null || !Number.isFinite(h) ? '  .' : String(Math.round((o.y + 0.3 - h) * 10)).padStart(4); } rows.push(row); } return rows.join(String.fromCharCode(10)); };
+;window.__pbLos=(o)=>{
+  const core = walkSetup.core, W = walkSetup.wholeIndex;
+  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const out = [];
+  for(const [i, j] of o.pairs){
+    const a = o.pts[i], b = o.pts[j], dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz);
+    if(W){ try { core.setTileCoverage(W, { min: [Math.min(a.x, b.x) - 1, Math.min(a.y, b.y) - 2, Math.min(a.z, b.z) - 1], max: [Math.max(a.x, b.x) + 1, Math.max(a.y, b.y) + 1, Math.max(a.z, b.z) + 1] }); } catch(e) {} }
+    if(hit(a, { x: dx / L, y: dy / L, z: dz / L }, L - 0.05) === null) out.push([i, j]);
+  }
+  return out;
+};`;
+
+// ── Node 側 ──
+// 小さな二分ヒープ（Dijkstra 用）
+class Heap {
+  constructor() { this.k = []; this.v = []; }
+  get size() { return this.k.length; }
+  push(key, val) { const k = this.k, v = this.v; let i = k.length; k.push(key); v.push(val);
+    while (i > 0) { const p = (i - 1) >> 1; if (k[p] <= key) break; k[i] = k[p]; v[i] = v[p]; i = p; } k[i] = key; v[i] = val; }
+  pop() { const k = this.k, v = this.v, top = v[0], lk = k.pop(), lv = v.pop(); const n = k.length;
+    if (n) { let i = 0; for (;;) { let c = 2 * i + 1; if (c >= n) break; if (c + 1 < n && k[c + 1] < k[c]) c++; if (k[c] >= lk) break; k[i] = k[c]; v[i] = v[c]; i = c; } k[i] = lk; v[i] = lv; }
+    return top; }
+}
+
+// 升 i → j の歩く距離（段差も足す）
+const wlen = (cells, i, j) => Math.hypot(cells[i][0] - cells[j][0], cells[i][1] - cells[j][1], cells[i][2] - cells[j][2]);
+
+// 一番大きい塊だけ残す（別々の高さから塗った塊・孤立した升を落とす）。seed = 残した塊で開始位置に一番近い升
+export function largestComponent(cells, adj, start) {
+  const comp = new Int32Array(cells.length).fill(-1), sizes = [];
+  for (let i = 0; i < cells.length; i++) { if (comp[i] >= 0) continue; const c = sizes.length, qq = [i]; comp[i] = c;
+    for (let h = 0; h < qq.length; h++) for (const j of adj[qq[h]]) if (comp[j] < 0) { comp[j] = c; qq.push(j); } sizes.push(qq.length); }
+  const big = sizes.indexOf(Math.max(...sizes));
+  const map = new Int32Array(cells.length).fill(-1), nc = [];
+  for (let i = 0; i < cells.length; i++) if (comp[i] === big) { map[i] = nc.length; nc.push(cells[i]); }
+  const na = nc.map(() => []);
+  for (let i = 0; i < cells.length; i++) if (map[i] >= 0) for (const j of adj[i]) if (map[j] >= 0) na[map[i]].push(map[j]);
+  let seed = 0, bd = Infinity;
+  nc.forEach((c, i) => { const d = Math.hypot(c[0] - start.x, c[1] - start.z) + Math.abs(c[2] - (start.floor ?? c[2])) * 0.5; if (d < bd) { bd = d; seed = i; } });
+  return { cells: nc, adj: na, seed, parts: sizes.length, dropped: cells.length - nc.length };
+}
+
+// 壁（行けない所）までの距離 m: 4 方向の隣が 4 つそろっていない升を 0 として升をたどる
+export function clearance(cells, adj) {
+  const d = new Float32Array(cells.length).fill(Infinity), qq = [];
+  for (let i = 0; i < cells.length; i++) if (adj[i].length < 4) { d[i] = 0; qq.push(i); }
+  for (let h = 0; h < qq.length; h++) { const i = qq[h]; for (const j of adj[i]) if (d[j] > d[i] + CELL) { d[j] = d[i] + CELL; qq.push(j); } }
+  return d;
+}
+
+// 各升を一番近い（歩く距離で）地点に割り当てる → 隣り合う升が別の地点なら、その地点どうしをつなぐ
+export function voronoi(cells, adj, nodeCells) {
+  const dist = new Float64Array(cells.length).fill(Infinity), lab = new Int32Array(cells.length).fill(-1), h = new Heap();
+  nodeCells.forEach((c, n) => { dist[c] = 0; lab[c] = n; h.push(0, c); });
+  while (h.size) { const i = h.pop(); for (const j of adj[i]) { const nd = dist[i] + wlen(cells, i, j); if (nd < dist[j]) { dist[j] = nd; lab[j] = lab[i]; h.push(nd, j); } } }
+  const es = new Set();
+  for (let i = 0; i < cells.length; i++) for (const j of adj[i]) if (lab[i] >= 0 && lab[j] >= 0 && lab[i] !== lab[j]) es.add(Math.min(lab[i], lab[j]) + ',' + Math.max(lab[i], lab[j]));
+  return { dist, lab, edges: [...es].map((e) => e.split(',').map(Number)) };
+}
+
+// 歩ける床（cells = [[x,z,floorY]], adj）から地点を敷き詰める
+// opts: seed（開始位置の升）, eye, spacing（無ければ広さから）, maxNodes
+export function buildGraph(cells, adj, { seed = 0, eye = 1.5, spacing = 0, maxNodes = 240 } = {}) {
+  const n = cells.length, area = n * CELL * CELL;
+  // 間隔: 2.4m が基本（部屋の中を歩く感覚。2m だと 285㎡ で 94 か所になり撮るのに時間がかかる）。広い屋外などは最大の数に収まるよう広げる（最大 5m）
+  const S = spacing || Math.max(2.4, Math.min(5, Math.sqrt(area / (maxNodes * 0.55))));
+  const clr = clearance(cells, adj);
+  const dist = new Float64Array(n).fill(Infinity), h = new Heap();
+  const relax = (c) => { dist[c] = 0; h.push(0, c); while (h.size) { const i = h.pop(); for (const j of adj[i]) { const nd = dist[i] + wlen(cells, i, j); if (nd < dist[j]) { dist[j] = nd; h.push(nd, j); } } } };
+  // 置く場所: 選んだ升から歩いて 0.8m 以内で、一番壁から離れた升（通路・部屋の真ん中へ寄せる）
+  const snap = (c) => {
+    const seen = new Map([[c, 0]]), qq = [c]; let best = c, bv = clr[c];
+    for (let k = 0; k < qq.length; k++) { const i = qq[k]; for (const j of adj[i]) { const d = seen.get(i) + wlen(cells, i, j); if (d > 0.8 || seen.has(j)) continue; seen.set(j, d); qq.push(j); if (clr[j] > bv + 1e-6) { bv = clr[j]; best = j; } } }
+    return best;
+  };
+  const nodeCells = [seed];
+  relax(seed);
+  while (nodeCells.length < maxNodes) {
+    let best = -1, bv = 0;
+    for (let i = 0; i < n; i++) { if (dist[i] === Infinity) continue; const v = dist[i] * (0.7 + 0.3 * Math.min(clr[i], 1) / 1); if (v > bv) { bv = v; best = i; } }
+    if (best < 0) break;
+    if (dist[best] < S) break;   // どこからでも S 以内に地点がある
+    const c = snap(best);
+    if (dist[c] < S * 0.5) { dist[best] = 0; continue; }   // 寄せたら既存の地点に近すぎた: その升は満たされた扱い
+    nodeCells.push(c); relax(c);
+  }
+  const maxGap = Math.max(...Array.from(dist).filter(Number.isFinite));
+  return { S, area, clr, nodeCells, maxGap, eye };
+}
+
+// 地点の情報（位置・床・向き・段差）。向き = 開始位置から離れる向き（写真は 360° なので見た目には影響しない。AI に見せる帯の正面）
+export function nodeInfo(cells, adj, nodeCells, eye, clr) {
+  const s = cells[nodeCells[0]];
+  return nodeCells.map((c) => {
+    const [x, z, f] = cells[c];
+    let slope = 0; for (const j of adj[c]) slope = Math.max(slope, Math.abs(cells[j][2] - f));
+    const dx = x - s[0], dz = z - s[1];
+    return { cell: c, pos: { x, y: f + eye, z }, floorY: f, yaw: Math.hypot(dx, dz) > 0.5 ? Math.atan2(dx, dz) : 0, clr: +clr[c].toFixed(2), stair: slope > 0.2 };
+  });
+}
+
+// 床の高さの段（階）を数える（0.25m 刻みで 2m 以上離れた高さの塊）
+export function levels(cells) {
+  const fs_ = [...new Set(cells.map((c) => Math.round(c[2] * 4) / 4))].sort((a, b) => a - b);
+  let n = fs_.length ? 1 : 0; for (let i = 1; i < fs_.length; i++) if (fs_[i] - fs_[i - 1] > 0.6) n++;
+  const lo = fs_[0] ?? 0, hi = fs_[fs_.length - 1] ?? 0;
+  return { span: +(hi - lo).toFixed(2), groups: n };
+}
+
+// 上から見た配置図: 升を床の高さで色分け、地点（番号）と線（つながり）、外した地点は赤い×
+export async function drawGraph(cells, nodes, edges, file, { dropped = [], start = null } = {}) {
+  const xs = cells.map((c) => c[0]), zs = cells.map((c) => c[1]);
+  const x0 = Math.min(...xs) - 1, x1 = Math.max(...xs) + 1, z0 = Math.min(...zs) - 1, z1 = Math.max(...zs) + 1;
+  const S = Math.min(1100 / (x1 - x0), 1100 / (z1 - z0)), W = Math.ceil((x1 - x0) * S), H = Math.ceil((z1 - z0) * S);
+  const X = (x) => ((x - x0) * S).toFixed(1), Z = (z) => ((z - z0) * S).toFixed(1);
+  const fl = cells.map((c) => c[2]), lo = Math.min(...fl), hi = Math.max(...fl), cs = Math.max(1.5, CELL * S).toFixed(1);
+  const col = (f) => { const t = hi - lo < 0.3 ? 0 : (f - lo) / (hi - lo); return `hsl(${(220 - 200 * t).toFixed(0)},45%,${(78 - 18 * t).toFixed(0)}%)`; };
+  let g = cells.map((c) => `<rect x="${X(c[0] - CELL / 2)}" y="${Z(c[1] - CELL / 2)}" width="${cs}" height="${cs}" fill="${col(c[2])}"/>`).join('');
+  for (const [a, b] of edges) g += `<line x1="${X(nodes[a].pos.x)}" y1="${Z(nodes[a].pos.z)}" x2="${X(nodes[b].pos.x)}" y2="${Z(nodes[b].pos.z)}" stroke="#036" stroke-width="2"/>`;
+  for (const p of nodes) g += `<circle cx="${X(p.pos.x)}" cy="${Z(p.pos.z)}" r="${p.stair ? 7 : 5}" fill="${p.stair ? '#e60' : '#06c'}"/><text x="${(+X(p.pos.x) + 7).toFixed(1)}" y="${(+Z(p.pos.z) - 5).toFixed(1)}" font-family="Arial" font-size="13" font-weight="bold" fill="#900">${p.id}</text>`;
+  for (const p of dropped) g += `<text x="${(+X(p.pos.x) - 6).toFixed(1)}" y="${(+Z(p.pos.z) + 6).toFixed(1)}" font-family="Arial" font-size="18" font-weight="bold" fill="#f00">×</text>`;
+  if (start) g += `<circle cx="${X(start.x)}" cy="${Z(start.z)}" r="9" fill="none" stroke="#e80" stroke-width="4"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="100%" height="100%" fill="#fff"/>${g}</svg>`;
+  await sharp(Buffer.from(svg)).png().toFile(file);
+}
+
+export { fs };
