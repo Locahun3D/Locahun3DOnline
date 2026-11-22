@@ -253,7 +253,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   const shoot = async (p) => { const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':', 250); shots[p.id] = faces; await strip(faces, p.id, path.join(rdir, p.id + '.jpg'), { down: true }); };
   for (const p of nodes) await shoot(p);
   // AI の監視: 空中・めり込み・崩れ・人が立てない地点を外す。外した地点は近くの良い升へ移して撮り直し、もう一度だけ判定する
-  let ai = null, ai2 = null; const badList = [], replaced = [];
+  let ai = null, ai2 = null, ai3 = null; const badList = [], replaced = [], rejected = [];
   if (AI) {
     ai = reviewNodes(rdir, nodes.map((p) => p.id), { engine: AI_ENGINE, model: AI_MODEL });
     if (!ai.error) {
@@ -270,19 +270,49 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
       if (retry.length) {
         ai2 = reviewNodes(rdir, retry.map((q) => q.id), { engine: AI_ENGINE, model: AI_MODEL });
         const bad2 = new Set(ai2.error ? retry.map((q) => q.id) : ai2.bad.map((b) => b.id));
-        for (const q of retry) if (!bad2.has(q.id)) replaced.push(q);
+        for (const q of retry) if (!bad2.has(q.id)) replaced.push(q); else rejected.push(q);
         if (!ai2.error) badList.push(...ai2.bad);
       }
     }
-    fs.writeFileSync(path.join(rdir, 'ai.json'), JSON.stringify({ round1: ai, round2: ai2 }, null, 1));
   }
   // AI が外すと言った地点は全部外す（上限を付けると壊れた地点が残った: 4F Studio の屋上。2026-11-21）。
   // 外した割合が多いシーンは tour-audit.mjs が「スキャンの質」として出す
   const badIds = new Set((ai && !ai.error ? ai.bad : []).map((b) => b.id));
   const repl = new Map(replaced.filter((q) => badIds.has(q.was)).map((q) => [q.was, q]));
   const dropped = nodes.filter((p) => badIds.has(p.id) && !repl.has(p.id));
-  const keepN = nodes.flatMap((p) => !badIds.has(p.id) ? [p] : repl.has(p.id) ? [repl.get(p.id)] : []);
+  let keepN = nodes.flatMap((p) => !badIds.has(p.id) ? [p] : repl.has(p.id) ? [repl.get(p.id)] : []);
   r.graph.aiReplaced = repl.size;
+  // 間が空いた所を埋める（2026-11-22 TK MainHD: 通路の地点が外れて 11m 空いた → 本人「移動したくても次の点がない」）。
+  // 一番遠い床の升の近くに置き直して撮り、AI がもう一度見て良いものだけ足す。外された場所（0.6m 以内）には置かない
+  const filled = [], unstand = [...nodes.filter((p) => badIds.has(p.id)), ...rejected].map((p) => p.pos);   // AI が立てないと言った場所
+  if (AI && ai && !ai.error) {
+    const bad = [...nodes.filter((p) => badIds.has(p.id)), ...rejected].map((p) => p.pos), cand = [], tried = [];
+    let nextId = Math.max(0, ...[...nodes, ...replaced, ...rejected].map((p) => Number(p.id.slice(1)) || 0));
+    for (let k = 0; k < 6; k++) {
+      const v = voronoi(g.cells, g.adj, [...keepN, ...cand].map((p) => p.cell));
+      let far = -1, fd = built.S * 2;
+      for (let i = 0; i < g.cells.length; i++) if (v.dist[i] > fd && Number.isFinite(v.dist[i]) && !tried.some((t) => Math.hypot(t[0] - g.cells[i][0], t[1] - g.cells[i][1]) < 1.5)
+        && !bad.some((q) => Math.hypot(q.x - g.cells[i][0], q.z - g.cells[i][1]) < 1.2)) { fd = v.dist[i]; far = i; }
+      if (far < 0) break;
+      tried.push(g.cells[far]);
+      const taken = [...keepN, ...cand].map((q) => ({ x: q.pos.x, y: q.floorY, z: q.pos.z }));
+      const alts = nodeInfo(g.cells, g.adj, [far, ...alternatives(g.cells, g.adj, built.clr, far, taken, { min: 0, max: 1.5 })].slice(0, 12), g.eye, built.clr);
+      const ch = await check(alts);
+      const j = alts.findIndex((a, i) => shapeOk(ch[i]) && bad.every((b) => Math.hypot(b.x - a.pos.x, b.z - a.pos.z) >= 0.6)
+        && !taken.some((t) => Math.hypot(t.x - a.pos.x, t.z - a.pos.z) < 1.2));
+      if (j < 0) continue;
+      const q = { ...alts[j], check: ch[j], id: 'n' + (++nextId), fill: true };
+      await shoot(q); cand.push(q);
+    }
+    if (cand.length) {
+      ai3 = reviewNodes(rdir, cand.map((q) => q.id), { engine: AI_ENGINE, model: AI_MODEL });
+      const bad3 = new Set(ai3.error ? cand.map((q) => q.id) : ai3.bad.map((b) => b.id));
+      for (const q of cand) if (!bad3.has(q.id)) filled.push(q); else unstand.push(q.pos);
+      if (!ai3.error) badList.push(...ai3.bad);
+      keepN = [...keepN, ...filled];
+    }
+  }
+  if (AI) fs.writeFileSync(path.join(rdir, 'ai.json'), JSON.stringify({ round1: ai, round2: ai2, round3: ai3 }, null, 1));
   vor = voronoi(g.cells, g.adj, keepN.map((p) => p.cell));
   // 見通し（8m 以内、つながりは別に持つ）
   const ek = new Set(vor.edges.map(([a, b]) => a + ',' + b)), pairs = [];
@@ -292,13 +322,15 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   }
   const see = pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: keepN.map((p) => p.pos) }) : [];
   // 監視の数字（tour-audit.mjs が基準と比べる）
-  const fin = Array.from(vor.dist).filter(Number.isFinite);
+  // 空き・届く割合は、AI が立てないと言った場所（家具の上など）の 1.2m 以内の床を除いて数える（TK MainHD のボックス席の段上）
+  const standable = g.cells.map((c) => !unstand.some((b) => Math.hypot(b.x - c[0], b.z - c[1]) < 1.2));
+  const fin = Array.from(vor.dist).filter((d, i) => standable[i] && Number.isFinite(d));
   const parent = keepN.map((_, i) => i), root = (i) => (parent[i] === i ? i : (parent[i] = root(parent[i])));
   for (const [a, b] of vor.edges) parent[root(a)] = root(b);
   const audit = { cells: g.cells.length, area: Math.round(built.area), S: +built.S.toFixed(2), nodes: keepN.length, dropped: dropped.length, edges: vor.edges.length, see: see.length,
-    maxGap: +Math.max(0, ...fin).toFixed(2), coverage: +(fin.filter((d) => d <= built.S * 1.25).length / Math.max(1, g.cells.length)).toFixed(3),
+    maxGap: +Math.max(0, ...fin).toFixed(2), coverage: +(fin.filter((d) => d <= built.S * 1.25).length / Math.max(1, standable.filter(Boolean).length)).toFixed(3), unstandable: standable.filter((x) => !x).length,
     components: new Set(keepN.map((_, i) => root(i))).size, levels: levels(g.cells), stairNodes: keepN.filter((p) => p.stair).length,
-    timeout: !!g.timeout, capped: !!g.capped, ai: ai ? (ai.error ? 'error' : 'ok') : 'off', geoMoved: geo.moved.length, geoRemoved: geo.removed.length, aiReplaced: repl.size };
+    timeout: !!g.timeout, capped: !!g.capped, ai: ai ? (ai.error ? 'error' : 'ok') : 'off', geoMoved: geo.moved.length, geoRemoved: geo.removed.length, aiReplaced: repl.size, filled: filled.length };
   Object.assign(r.graph, { kept: keepN.length, dropped: dropped.length, see: see.length, maxGap: audit.maxGap, coverage: audit.coverage, ai: audit.ai });
   await drawGraph(g.cells, keepN, vor.edges, path.join(rdir, 'map-final.png'), { start: pose, dropped });
   // 動線シート（人が見て確かめる用）: 残した地点の帯（L F R B D）を 24 か所ずつ 1 枚に
@@ -323,7 +355,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     start: { x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw },
     nodes: keepN.map((p) => ({ id: p.id, pos: { x: +p.pos.x.toFixed(3), y: +p.pos.y.toFixed(3), z: +p.pos.z.toFixed(3) }, floorY: +p.floorY.toFixed(3), yaw: +p.yaw.toFixed(4), ...(p.stair ? { stair: true } : {}) })),
     edges: vor.edges, see, audit, faces: shas,
-    review: ai ? (ai.error ? { error: String(ai.error).slice(0, 300), at } : { by: ai.by, at, bad: badList, dropped: dropped.map((p) => p.id), replaced: [...repl.keys()], missing: ai.missing, summary: ai.summary }) : null };
+    review: ai ? (ai.error ? { error: String(ai.error).slice(0, 300), at } : { by: ai.by, at, bad: badList, dropped: dropped.map((p) => p.id), replaced: [...repl.keys()], filled: filled.map((q) => q.id), missing: ai.missing, summary: ai.summary }) : null };
   const buf = Buffer.from(JSON.stringify(body));
   fs.writeFileSync(path.join(rdir, 'graph.json'), buf);
   return buf;

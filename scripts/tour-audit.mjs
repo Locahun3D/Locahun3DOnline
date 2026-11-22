@@ -23,7 +23,7 @@ fs.mkdirSync(OUT, { recursive: true });
 // 基準（どれかに当たったら「問題あり」）
 export const RULES = [
   ['graph', (a) => !a.graph, '動線グラフが無い（bake-pano --graph で作る）'],
-  ['area', (a) => a.graph && a.audit.area < 15, '歩ける床が狭すぎる（当たり判定が細切れの疑い）'],
+  ['area', (a) => a.graph && a.audit.area < 15 && a.audit.nodes < 2, '歩ける床が狭すぎる（当たり判定が細切れの疑い）'],   // 小部屋（TK 楽屋 9㎡・地点3）は正常なので地点が取れない時だけ
   ['coverage', (a) => a.graph && a.audit.coverage < 0.9, '地点から遠い床が 1 割を超える'],
   ['components', (a) => a.graph && a.audit.components > 1, 'つながりが途切れている'],
   ['gap', (a) => a.graph && a.audit.maxGap > a.audit.S * 2 + 0.5, '地点の間が空きすぎる所がある'],
