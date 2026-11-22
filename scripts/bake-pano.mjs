@@ -90,7 +90,13 @@ async function r2Json(k) {
 }
 async function r2PutNew(k, body, type) {
   // 追加のみ: If-None-Match: * で既存キーへの上書きを R2 側でも拒否させる。
-  await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: body, ContentType: type, Metadata: { sha256: sha(body) }, IfNoneMatch: '*' }));
+  try { await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: body, ContentType: type, Metadata: { sha256: sha(body) }, IfNoneMatch: '*' })); }
+  catch (e) {
+    // 送れていたのに応答が遅れて SDK が送り直すと 412 になる（2026-11-22 TK MainHD・zigsaw）。中身が同じなら成功
+    if (e?.$metadata?.httpStatusCode !== 412) throw e;
+    const h = await r2Head(k);
+    if (h?.Metadata?.sha256 !== sha(body)) throw new Error(`既にある別の中身: ${k}`);
+  }
 }
 
 // ── 対象シーン（collision-check.mjs と同じ拾い方） ──
