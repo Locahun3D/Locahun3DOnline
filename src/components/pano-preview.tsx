@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
  * - 描画は WebGL の 1 枚の板に、画素ごとの視線の向きから 6 面の画像の色を拾う（ビューアーの <head> の最初の画像と同じ計算・面の向き）。6 枚で計 0.4MB 前後。
  *   2026-11-23: 以前の CSS の 3D 変形の立方体は Chrome でも正面の 1 面が小さく出て周りが白くなり、回りもしなかった（本人「プレビューが機能していない」「360回転は？」）。
  *   WebGL が使えない端末では onMissing（従来のプレビュー動画）に戻す。
- * - 自動でゆっくり回り、ドラッグで見回せる（ドラッグした後のクリックはビューアーを開かない）。動きを減らす設定の端末では回さない。
+ * - 自動でゆっくり回り、ドラッグで見回せる（ドラッグした後のクリックはビューアーを開かない）。
  * - 画像が無い・確かめられないときは onMissing を呼ぶ（呼び出し側が従来のプレビュー動画に戻す）。
  */
 
@@ -161,7 +161,7 @@ export function PanoPreview({ streamUrl, onMissing }: { streamUrl: string; onMis
     });
     const uRes = gl.getUniformLocation(prog, "res"), uFp = gl.getUniformLocation(prog, "fp");
     const uYaw = gl.getUniformLocation(prog, "yaw"), uPitch = gl.getUniformLocation(prog, "pitch");
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    // 「動きを減らす」設定でも回す（2026-11-23 本人「360回転は？」。本人の PC がこの設定で、止まって見えていた）。ゆっくり（40 秒で 1 周）なので酔う動きではない
     let yaw = 0, pitch = 0, last = performance.now(), raf = 0, idleUntil = 0, onScreen = true;
     let drag: { x: number; y: number; yaw: number; pitch: number; moved: boolean } | null = null;
     let suppressClick = false;
@@ -178,7 +178,7 @@ export function PanoPreview({ streamUrl, onMissing }: { streamUrl: string; onMis
     };
     const tick = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000); last = now;
-      if (!drag && !reduce && now > idleUntil) yaw += AUTO_DEG_PER_SEC * dt;
+      if (!drag && now > idleUntil) yaw += AUTO_DEG_PER_SEC * dt;
       if (onScreen) draw();
       raf = requestAnimationFrame(tick);
     };
