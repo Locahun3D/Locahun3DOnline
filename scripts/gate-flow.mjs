@@ -57,7 +57,7 @@ for (const zip of zips) {
     if (st && st.poster && poster === null) { poster = t; await p.screenshot({ path: `${OUT}/${zip.slice(0, 10)}_a_poster.jpg`, quality: 55 }); }
     if (st && st.state === 'shown' && shown === null) shown = t;
     if (st && (st.state === 'none' || st.state === 'error')) break;
-    if (shown !== null && st.cur) break;
+    if (shown !== null && st.cur && (st.n > 0 || t - shown > 4)) break;   // ツアーの地点（graph.json）は開始画像の少しあとに届く
     await p.waitForTimeout(250);
   }
   await p.waitForTimeout(800);
