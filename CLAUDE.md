@@ -207,8 +207,12 @@ web.locahun3d.com    → Worker `locahun3d-online`（2026-09-04 切替済み。w
 
 ## 検証ハーネス（UIを触ったら必ず実行）
 
+**絶対ルール（2026-11-23 本人）: 機能は利用者が実際にたどる経路（物件ページ→ビューアー等）で、実ブラウザで動かしてから完成と言う。** 監視スクリプトや近道URLが OK でも、本人が見る画面で見ていなければ完成扱いしない。本番に出したら、本人より先に本番の物件ページから開いて確認する。
+
 | スクリプト | 役割 |
 |---|---|
+| `node scripts/gate-flow.mjs` | **ビューアーを物件ページと同じ開き方**（署名付き autoload＋streamref）で実Chrome/WebKit/スマホ幅で開き、最初の画像・360°開始・ツアー移動を確認。`--local` で push 前、無しで本番。⚠ tour-audit は近道URLなのでこれの代わりにならない（2026-11-23） |
+| `node scripts/pano-preview-check.mjs <key>` | 物件ページの360°プレビューの描画を本番の画像で 0/45/90/180/270°・上下で撮る（`--webkit` も） |
 | `node scripts/header-matrix.mjs` | **実Chrome(headed)**で全ページ×10端末×縦横=500計測。ページ差・端末差・向き差・サイト差を1枚で潰す。⚠ヘッドレスではスクロールバー由来のズレが再現しない。`--local`で手元、`--webkit`でSafari相当 |
 | `node scripts/header-signedin.mjs` | **サインイン状態**のヘッダー検査（7ページ×24幅）。右側が重くなる状態でしか出ない重なりを拾う。⚠`next dev -p 3001`に対して回す（`next start`は本番Clerk鍵を読むのでlocalhostでは認証UIが出ない） |
 | `node scripts/header-live.mjs` | **本番**の両サイトでブランド中心=50vw・両サイト差0・ヘッダー内重なり0を26幅で検査 |
