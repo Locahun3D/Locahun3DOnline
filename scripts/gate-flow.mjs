@@ -72,11 +72,29 @@ for (const zip of zips) {
       try { await T.go(nb); } catch (e) { return 'err ' + e; } await new Promise((r) => setTimeout(r, 1500)); return T.cur !== b ? 'ok' : 'stuck'; }).catch((e) => 'err ' + String(e).slice(0, 60));
     await p.screenshot({ path: `${OUT}/${zip.slice(0, 10)}_c_moved.jpg`, quality: 55 });
   }
+  // キー操作（2026-11-23 本人「2Dモードでwasd押した時おかしい」）: 写真ツアー中に W を押し続けると地点を次々に進み、A/S/D でもガタつかずに移る。
+  // 押した直後の途中のコマも残す（歩くような切り替わりか目で見る）
+  let keys = null;
+  if (st && st.n > 0 && st.state === 'shown') {
+    const cur = () => p.evaluate(() => { const T = window.__startPano.tour; return { cur: T.cur, pre: T.pre, lite: T.lite }; });
+    const c0 = await cur(); if (!(c0.pre || c0.lite)) keys = 'skip(3D)'; else {
+      await p.mouse.move(640, 360);
+      const seen = new Set([c0.cur]);
+      await p.keyboard.down('w');
+      for (const ms of [120, 280, 450]) { await p.waitForTimeout(ms === 120 ? 120 : ms - (ms === 280 ? 120 : 280)); await p.screenshot({ path: `${OUT}/${zip.slice(0, 10)}_d_w${ms}.jpg`, quality: 55 }); }
+      for (let i = 0; i < 12; i++) { await p.waitForTimeout(200); seen.add((await cur()).cur); }
+      await p.keyboard.up('w');
+      const wN = seen.size - 1;
+      const res = {};
+      for (const k of ['s', 'a', 'd']) { const b = (await cur()).cur; await p.keyboard.press(k); await p.waitForTimeout(900); res[k] = (await cur()).cur !== b; }
+      keys = { w: wN, ...res };
+    }
+  }
   const first = [poster, shown].filter((v) => v !== null).sort((a, b) => a - b)[0] ?? null;   // 3D 側の画像が先に出れば 2D の下絵は作られない（それでよい）
-  const ok = first !== null && first <= 8 && shown !== null && (st.n === 0 || moved === 'ok') && overlap.overlap === 0 && !errs.length;
-  const r = { zip, ok, first, poster, shown, state: st && st.state, why: st && st.why, graph: st && st.graph, points: st && st.n, moved, ...overlap, errs };
+  const ok = first !== null && first <= 8 && shown !== null && (st.n === 0 || moved === 'ok') && (!keys || typeof keys === 'string' || keys.w >= 2) && overlap.overlap === 0 && !errs.length;
+  const r = { zip, ok, first, poster, shown, state: st && st.state, why: st && st.why, graph: st && st.graph, points: st && st.n, moved, keys, ...overlap, errs };
   results.push(r);
-  console.log((ok ? '[OK] ' : '[NG] ') + zip + ` 最初の画像=${first ?? '-'}s(2D下絵 ${poster ?? '-'} / 360 ${shown ?? '-'}) state=${r.state}${r.why ? '(' + r.why + ')' : ''} 地点=${r.points} 移動=${moved ?? '-'} 矢印=${overlap.arrows}(重なり${overlap.overlap})` + (errs.length ? ' errs=' + errs.join(' / ') : ''));
+  console.log((ok ? '[OK] ' : '[NG] ') + zip + ` 最初の画像=${first ?? '-'}s(2D下絵 ${poster ?? '-'} / 360 ${shown ?? '-'}) state=${r.state}${r.why ? '(' + r.why + ')' : ''} 地点=${r.points} キー=${JSON.stringify(keys)} 移動=${moved ?? '-'} 矢印=${overlap.arrows}(重なり${overlap.overlap})` + (errs.length ? ' errs=' + errs.join(' / ') : ''));
   await ctx.close();
 }
 await browser.close();
