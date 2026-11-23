@@ -150,9 +150,9 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
   const core = walkSetup.core, W = walkSetup.wholeIndex;
   const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   return o.pts.map(p => {
-    if(W){ try { core.setTileCoverage(W, { min: [p.x - 2, p.y - 4, p.z - 2], max: [p.x + 2, p.y + 1, p.z + 2] }); } catch(e) {} }
+    if(W){ try { core.setTileCoverage(W, { min: [p.x - 2, p.y - (o.L || 4), p.z - 2], max: [p.x + 2, p.y + 1, p.z + 2] }); } catch(e) {} }
     let lo = null, n = 0;
-    for(let k = -1; k < 8; k++){ const a = k * Math.PI / 4, r = k < 0 ? 0 : 0.7; const h = hit({ x: p.x + r * Math.sin(a), y: p.y, z: p.z + r * Math.cos(a) }, { x: 0, y: -1, z: 0 }, 4);
+    for(let k = -1; k < 8; k++){ const a = k * Math.PI / 4, r = k < 0 ? 0 : 0.7; const h = hit({ x: p.x + r * Math.sin(a), y: p.y, z: p.z + r * Math.cos(a) }, { x: 0, y: -1, z: 0 }, o.L || 4);
       if(h !== null){ n++; const f = p.y - h; lo = lo === null ? f : Math.min(lo, f); } }
     return n >= 5 ? +lo.toFixed(3) : null;
   });

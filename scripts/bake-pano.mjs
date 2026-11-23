@@ -219,6 +219,12 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     if (await page.evaluate(() => window.__pb.walk()).catch(() => false)) base = await page.evaluate((o) => window.__pbCands(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, radius: t < 30 ? 3 : 6, max: 1 });
     if (!(base && base.floor0 != null)) await page.waitForTimeout(1000);
   }
+  // 予備（2026-11-23 秋葉原 Fusion: 床の候補探しが 0 件）: 開始位置の真下を直接探す。高さの違う 3 つの所から下へ
+  if (DENSE && !(base && base.floor0 != null)) for (const up of [0.5, 2, 6]) {
+    const f = (await page.evaluate((o) => window.__pbFloorProbe(o), { L: 40, pts: [{ x: pose.x, y: pose.y + up, z: pose.z }] }).catch(() => [null]))[0];
+    console.log('start floor probe', up, f, JSON.stringify(pose));
+    if (f !== null && pose.y - f > 0.3 && pose.y - f < 30) { base = { floor0: f, eye: Math.min(1.7, Math.max(1.1, pose.y - f)) }; break; }
+  }
   if (!base || base.floor0 == null) { r.status = 'error'; r.why = '動線: 開始位置の床が見つからない ' + String(base?.error || ''); return null; }
   const g = await page.evaluate((o) => window.__pbGraph(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, floor0: base.floor0, eye: base.eye });
   if (g.error) { r.status = 'error'; r.why = '動線: ' + g.error; return null; }
