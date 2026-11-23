@@ -86,17 +86,30 @@ loadUserEnv();
 const BUCKET = process.env.R2_BUCKET;
 const s3 = new S3Client({ region: 'auto', endpoint: process.env.R2_ENDPOINT,
   credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY } });
-async function r2Head(k) {
+// 送受信の一時的な失敗（SSL の bad record mac・接続切れ・5xx）は待って送り直す。320 地点を撮り終えた後の
+// 送信 1 回の失敗で 3 時間分が消えた（2026-11-23 秋葉原）
+async function r2Retry(fn) {
+  for (let i = 0; ; i++) {
+    try { return await fn(); }
+    catch (e) {
+      const st = e?.$metadata?.httpStatusCode;
+      const transient = !st || st >= 500 || /ssl|ECONNRESET|ETIMEDOUT|EPIPE|socket|network|bad record mac/i.test(String(e?.message || e));
+      if (!transient || i >= 6) throw e;
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
+    }
+  }
+}
+async function r2Head(k) { return r2Retry(() => r2Head0(k)); }
+async function r2Head0(k) {
   try { return await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: k })); }
   catch (e) { if (e?.$metadata?.httpStatusCode === 404 || e?.name === 'NotFound') return null; throw e; }
 }
 async function r2Json(k) {
-  const o = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: k }));
-  return JSON.parse(await o.Body.transformToString());
+  return r2Retry(async () => { const o = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: k })); return JSON.parse(await o.Body.transformToString()); });
 }
 async function r2PutNew(k, body, type) {
   // 追加のみ: If-None-Match: * で既存キーへの上書きを R2 側でも拒否させる。
-  try { await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: body, ContentType: type, Metadata: { sha256: sha(body) }, IfNoneMatch: '*' })); }
+  try { await r2Retry(() => s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: body, ContentType: type, Metadata: { sha256: sha(body) }, IfNoneMatch: '*' }))); }
   catch (e) {
     // 送れていたのに応答が遅れて SDK が送り直すと 412 になる（2026-11-22 TK MainHD・zigsaw）。中身が同じなら成功
     if (e?.$metadata?.httpStatusCode !== 412) throw e;
@@ -519,7 +532,7 @@ async function reshoot(page, s, key, oldPoints, r) {
   const swap = async (k, old, body) => {
     await r2PutNew(k.replace(/\.json$/, `.bak-${Date.now()}.json`), Buffer.from(JSON.stringify(old)), 'application/json');
     const buf = Buffer.from(JSON.stringify(body));
-    await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: buf, ContentType: 'application/json', Metadata: { sha256: sha(buf) } }));
+    await r2Retry(() => s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: k, Body: buf, ContentType: 'application/json', Metadata: { sha256: sha(buf) } })));
   };
   if (newMeta) await swap(`pano/${key}.json`, meta, newMeta);
   if (newPts) await swap(`pano/${key}.points.json`, oldPoints, newPts);
@@ -676,13 +689,13 @@ async function bake(browser, s) {
     if (metaBody) await r2PutNew(`pano/${key}.json`, metaBody, 'application/json');   // 最後に置く（これがあれば使われる）
     if (graphBody) {
       if (oldGraph) await r2PutNew(`pano/${key}.graph.bak-${Date.now()}.json`, Buffer.from(JSON.stringify(oldGraph)), 'application/json');
-      await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `pano/${key}.graph.json`, Body: graphBody, ContentType: 'application/json', Metadata: { sha256: sha(graphBody) } }));
+      await r2Retry(() => s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `pano/${key}.graph.json`, Body: graphBody, ContentType: 'application/json', Metadata: { sha256: sha(graphBody) } })));
     }
     if (pointsBody && pointsBody.length) {
       if (oldPoints) {
         // 置き換え: 今の points.json は控えとして残す（/api/pano は出さない名前）。ビューアーは points.json を no-cache で取るので、すぐ新しい方になる
         await r2PutNew(`pano/${key}.points.bak-${Date.now()}.json`, Buffer.from(JSON.stringify(oldPoints)), 'application/json');
-        await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `pano/${key}.points.json`, Body: pointsBody, ContentType: 'application/json', Metadata: { sha256: sha(pointsBody) } }));
+        await r2Retry(() => s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `pano/${key}.points.json`, Body: pointsBody, ContentType: 'application/json', Metadata: { sha256: sha(pointsBody) } })));
       } else await r2PutNew(`pano/${key}.points.json`, pointsBody, 'application/json');
     }
     r.bytes = uploads.reduce((a, [, b]) => a + b.length, 0) + (metaBody?.length || 0) + (pointsBody?.length || 0);
