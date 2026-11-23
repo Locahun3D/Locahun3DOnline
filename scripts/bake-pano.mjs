@@ -245,21 +245,32 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     // 床の塗り広げが届かない見どころ（舞台・段上の席・ブース・DJ ブース前など）: 地点の範囲の 1.4m 方眼で、真下に面があり、
     // 床の高さが近くの地点の -1〜+1.5m、目の高さから近くの地点（6m 以内）が見通せる所に置く（壁の外・空中のごみには置かない）
     let extra = 0;
-    { const rx = pts.map((q) => q.x), rz = pts.map((q) => q.z), M = 3, step = Math.max(1.4, S);
-      const nf = (x, z) => { let bi = 0, bd = Infinity; built.nodeCells.forEach((c, i) => { const d = Math.hypot(g.cells[c][0] - x, g.cells[c][1] - z); if (d < bd) { bd = d; bi = c; } }); return { c: g.cells[bi], d: bd }; };
-      const cand = [];
-      for (let x = Math.min(...rx) - M; x <= Math.max(...rx) + M; x += step) for (let z = Math.min(...rz) - M; z <= Math.max(...rz) + M; z += step) {
-        if (pts.some((q) => Math.hypot(q.x - x, q.z - z) < step * 0.8)) continue;
-        const n = nf(x, z); if (n.d > 8) continue;
-        cand.push({ x, z, y0: n.c[2] + 2.6, ref: n.c });
+    // 波のように広げる（2026-11-23: 床の塗り広げが 1〜4 升しか届かないシーンで地点が 3 か所になった）: 今ある点から 6m 以内の方眼の点を調べ、
+    // 受け入れた点から次の波を調べる。最大 14 波・合計 320 か所まで
+    { const step = Math.max(1.4, S), acc = built.nodeCells.map((c) => ({ x: g.cells[c][0], z: g.cells[c][1], f: g.cells[c][2] }));
+      for (const q of pts) if (!acc.some((a) => Math.hypot(a.x - q.x, a.z - q.z) < 0.1)) { const n = acc.reduce((b, a) => Math.hypot(a.x - q.x, a.z - q.z) < Math.hypot(b.x - q.x, b.z - q.z) ? a : b); acc.push({ x: q.x, z: q.z, f: n.f }); }
+      const gx = (v) => Math.round(v / step) * step, tried = new Set();
+      for (let wave = 0; wave < 14 && pts.length < 320; wave++) {
+        const cand = [];
+        for (const a of acc) for (let dx = -6; dx <= 6; dx += step) for (let dz = -6; dz <= 6; dz += step) {
+          const x = +gx(a.x + dx).toFixed(2), z = +gx(a.z + dz).toFixed(2), k = x + ',' + z;
+          if (tried.has(k)) continue; tried.add(k);
+          if (pts.some((q) => Math.hypot(q.x - x, q.z - z) < step * 0.8)) continue;
+          const ref = acc.reduce((b, c) => Math.hypot(c.x - x, c.z - z) < Math.hypot(b.x - x, b.z - z) ? c : b);
+          if (Math.hypot(ref.x - x, ref.z - z) > 6) continue;
+          cand.push({ x, z, y0: ref.f + 2.6, ref });
+        }
+        if (!cand.length) break;
+        const fl = await page.evaluate((o) => window.__pbFloorProbe(o), { pts: cand.map((c) => ({ x: c.x, y: c.y0, z: c.z })) });
+        const ok = cand.map((c, i) => ({ ...c, f: fl[i] })).filter((c) => c.f !== null && c.f - c.ref.f > -1 && c.f - c.ref.f < 1.5);
+        if (!ok.length) break;
+        const P = [...acc.map((c) => ({ x: c.x, y: c.f + 1.4, z: c.z })), ...ok.map((c) => ({ x: c.x, y: c.f + 1.4, z: c.z }))], N0 = acc.length, pairs = [];
+        ok.forEach((c, i) => { acc.map((q, j) => [Math.hypot(q.x - c.x, q.z - c.z), j]).filter(([d]) => d <= 6).sort((u, v) => u[0] - v[0]).slice(0, 3).forEach(([, j]) => pairs.push([N0 + i, j])); });
+        const seen = new Set((pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: P }) : []).map(([i]) => i - N0));
+        let add = 0;
+        for (const [i, c] of ok.entries()) if (seen.has(i) && pts.length < 320 && pts.every((q) => Math.hypot(q.x - c.x, q.z - c.z) >= step * 0.8)) { pts.push({ x: c.x, z: c.z, floorY: c.f, view: true }); acc.push({ x: c.x, z: c.z, f: c.f }); extra++; add++; }
+        if (!add) break;
       }
-      const fl = cand.length ? await page.evaluate((o) => window.__pbFloorProbe(o), { pts: cand.map((c) => ({ x: c.x, y: c.y0, z: c.z })) }) : [];
-      const ok = cand.map((c, i) => ({ ...c, f: fl[i] })).filter((c) => c.f !== null && c.f - c.ref[2] > -1 && c.f - c.ref[2] < 1.5);
-      // 見通し: 候補の目の高さ（床＋1.4m）から近い地点 3 つのどれかへ
-      const P = [...built.nodeCells.map((c) => ({ x: g.cells[c][0], y: g.cells[c][2] + 1.4, z: g.cells[c][1] })), ...ok.map((c) => ({ x: c.x, y: c.f + 1.4, z: c.z }))], N0 = built.nodeCells.length, pairs = [];
-      ok.forEach((c, i) => { P.slice(0, N0).map((q, j) => [Math.hypot(q.x - c.x, q.z - c.z), j]).filter(([d]) => d <= 6).sort((a, b) => a[0] - b[0]).slice(0, 3).forEach(([, j]) => pairs.push([N0 + i, j])); });
-      const seen = new Set((pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: P }) : []).map(([i]) => i - N0));
-      for (const [i, c] of ok.entries()) if (seen.has(i) && pts.every((q) => Math.hypot(q.x - c.x, q.z - c.z) >= step * 0.8)) { pts.push({ x: c.x, z: c.z, floorY: c.f, view: true }); extra++; }
     }
     MANUAL = pts.map((q, i) => ({ id: (q.seat ? 's' : q.view ? 'v' : 'r') + (i + 1), x: +q.x.toFixed(2), z: +q.z.toFixed(2), ...(q.floorY != null ? { floorY: q.floorY } : {}) }));
     r.dense = { S: +S.toFixed(2), route: built.nodeCells.length, seats, extra };
