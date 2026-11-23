@@ -48,7 +48,10 @@ const AI = !flag('--no-ai');   // 地点を AI に判定させる（scripts/tour
 const REDO = flag('--redo-points');
 // 本人が置いた地点（2026-11-23 本人「理想はこれ」「歩く導線と、座席や見たい箇所からみれるように」）: tour-marks-read.py の <name>_marks.json。
 // 位置はそのまま使い（形の検査・AI で外さない）、床の高さはその場の 0.7m 以内のいちばん低い面（座席の点はそばの床、段上の席は段の面）
-const MANUAL = arg('--manual') ? JSON.parse(fs.readFileSync(arg('--manual'), 'utf8')).points : null;   // 地点を選び直す（今の points.json は R2 に控えを残して置き換える）
+let MANUAL = arg('--manual') ? JSON.parse(fs.readFileSync(arg('--manual'), 'utf8')).points : null;   // 地点を選び直す（今の points.json は R2 に控えを残して置き換える）
+// 詰めた自動配置（2026-11-23 本人 A 案: TK の理想＝歩く導線に 1.2〜1.5m おき＋座席・カウンター・見たい所）: 床に 1.4m おき（広い所は最大 300 か所に収まるよう広げる）
+// ＋外した家具の塊（座面・テーブル・カウンター）にも 1.4m おきに置き、本人の点と同じ流れ（すき間探し・AI で控えへ）で撮る。控えでも直らない点は外す
+const DENSE = flag('--dense');
 const AI_MODEL = arg('--ai-model', '');   // 空なら Claude は fable、Codex は gpt-6-astra
 const AI_ENGINE = arg('--ai-engine', 'auto');   // auto = Claude Code → だめなら Codex
 const RESHOOT = flag('--reshoot');   // 画像だけ今の画質で撮り直す（地点・判定はそのまま。reshoot() 参照）
@@ -226,14 +229,47 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   }
   if (PROBE) { fs.mkdirSync(path.join(dir, "graph"), { recursive: true }); fs.writeFileSync(path.join(dir, "raw-cells.json"), JSON.stringify({ cells: g.cells, adj: g.adj })); }
   const rawCells = g.cells;
-  { const fu = removeFurniture(g.cells, g.adj); g.furniture = fu.removed; g.cells = fu.cells; g.adj = fu.adj;   // 家具の上（座面・テーブル）を外してから
+  { const fu = removeFurniture(g.cells, g.adj); g.furniture = fu.removed; g.furnitureGroups = fu.groups; g.cells = fu.cells; g.adj = fu.adj;   // 家具の上（座面・テーブル）を外してから
     const lc = largestComponent(g.cells, g.adj, { x: pose.x, z: pose.z, floor: base.floor0 }); g.rawCells = g.cells.length; g.parts = lc.parts; g.cells = lc.cells; g.adj = lc.adj; g.seed = lc.seed; }
-  const built = buildGraph(g.cells, g.adj, { seed: g.seed, eye: g.eye });
+  const built = buildGraph(g.cells, g.adj, DENSE ? { seed: g.seed, eye: g.eye, spacing: Math.max(1.4, Math.min(4, Math.sqrt(g.cells.length * 0.25 / (300 * 0.55)))), maxNodes: 320 } : { seed: g.seed, eye: g.eye });
+  if (DENSE) {
+    const pts = built.nodeCells.map((c) => ({ x: g.cells[c][0], z: g.cells[c][1] }));
+    const S = built.S; let seats = 0;
+    for (const grp of g.furnitureGroups || []) {
+      const area = grp.length * 0.25, ups = grp.map((c) => c[3]).sort((a, b) => a - b), mu = ups[ups.length >> 1];
+      if (area < 0.5 || mu < 0.3 || mu > 1.3) continue;   // 小さすぎる物・棚より高い物は外す（座面 0.4・テーブル 0.7・カウンター 1.0 前後）
+      const cx = grp.reduce((a, c) => a + c[0], 0) / grp.length, cz = grp.reduce((a, c) => a + c[1], 0) / grp.length;
+      const order = grp.slice().sort((a, b) => Math.hypot(a[0] - cx, a[1] - cz) - Math.hypot(b[0] - cx, b[1] - cz));
+      for (const c of order) if (pts.every((q) => Math.hypot(q.x - c[0], q.z - c[1]) >= Math.min(S, 1.4) * 0.8)) { pts.push({ x: c[0], z: c[1], seat: true }); seats++; }
+    }
+    // 床の塗り広げが届かない見どころ（舞台・段上の席・ブース・DJ ブース前など）: 地点の範囲の 1.4m 方眼で、真下に面があり、
+    // 床の高さが近くの地点の -1〜+1.5m、目の高さから近くの地点（6m 以内）が見通せる所に置く（壁の外・空中のごみには置かない）
+    let extra = 0;
+    { const rx = pts.map((q) => q.x), rz = pts.map((q) => q.z), M = 3, step = Math.max(1.4, S);
+      const nf = (x, z) => { let bi = 0, bd = Infinity; built.nodeCells.forEach((c, i) => { const d = Math.hypot(g.cells[c][0] - x, g.cells[c][1] - z); if (d < bd) { bd = d; bi = c; } }); return { c: g.cells[bi], d: bd }; };
+      const cand = [];
+      for (let x = Math.min(...rx) - M; x <= Math.max(...rx) + M; x += step) for (let z = Math.min(...rz) - M; z <= Math.max(...rz) + M; z += step) {
+        if (pts.some((q) => Math.hypot(q.x - x, q.z - z) < step * 0.8)) continue;
+        const n = nf(x, z); if (n.d > 8) continue;
+        cand.push({ x, z, y0: n.c[2] + 2.6, ref: n.c });
+      }
+      const fl = cand.length ? await page.evaluate((o) => window.__pbFloorProbe(o), { pts: cand.map((c) => ({ x: c.x, y: c.y0, z: c.z })) }) : [];
+      const ok = cand.map((c, i) => ({ ...c, f: fl[i] })).filter((c) => c.f !== null && c.f - c.ref[2] > -1 && c.f - c.ref[2] < 1.5);
+      // 見通し: 候補の目の高さ（床＋1.4m）から近い地点 3 つのどれかへ
+      const P = [...built.nodeCells.map((c) => ({ x: g.cells[c][0], y: g.cells[c][2] + 1.4, z: g.cells[c][1] })), ...ok.map((c) => ({ x: c.x, y: c.f + 1.4, z: c.z }))], N0 = built.nodeCells.length, pairs = [];
+      ok.forEach((c, i) => { P.slice(0, N0).map((q, j) => [Math.hypot(q.x - c.x, q.z - c.z), j]).filter(([d]) => d <= 6).sort((a, b) => a[0] - b[0]).slice(0, 3).forEach(([, j]) => pairs.push([N0 + i, j])); });
+      const seen = new Set((pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: P }) : []).map(([i]) => i - N0));
+      for (const [i, c] of ok.entries()) if (seen.has(i) && pts.every((q) => Math.hypot(q.x - c.x, q.z - c.z) >= step * 0.8)) { pts.push({ x: c.x, z: c.z, floorY: c.f, view: true }); extra++; }
+    }
+    MANUAL = pts.map((q, i) => ({ id: (q.seat ? 's' : q.view ? 'v' : 'r') + (i + 1), x: +q.x.toFixed(2), z: +q.z.toFixed(2), ...(q.floorY != null ? { floorY: q.floorY } : {}) }));
+    r.dense = { S: +S.toFixed(2), route: built.nodeCells.length, seats, extra };
+    console.log('dense', JSON.stringify(r.dense));
+  }
   let nodes = nodeInfo(g.cells, g.adj, built.nodeCells, g.eye, built.clr);
   if (MANUAL) nodes = MANUAL.map((m) => {
     let bi = 0, bd = Infinity; g.cells.forEach((c, i) => { const d = Math.hypot(c[0] - m.x, c[1] - m.z); if (d < bd) { bd = d; bi = i; } });
     const near = rawCells.filter((c) => Math.hypot(c[0] - m.x, c[1] - m.z) <= 0.7).map((c) => c[2]);
-    const f = near.length ? Math.min(...near) : g.cells[bi][2];
+    const f = Number.isFinite(m.floorY) ? m.floorY : near.length ? Math.min(...near) : g.cells[bi][2];
     const info = nodeInfo(g.cells, g.adj, [built.nodeCells[0], bi], g.eye, built.clr)[1];
     return { ...info, pos: { x: m.x, y: f + g.eye, z: m.z }, floorY: f, manual: m.id, snap: +bd.toFixed(2) };
   });
@@ -257,6 +293,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     }
     r.manualClear = { ok: nodes.filter((p) => p.clear.ok).length, moved: nodes.filter((p) => p.clear.moved > 0).length, total: nodes.length, bad: nodes.filter((p) => !p.clear.ok).map((p) => p.id) };
     console.log('manual clear', JSON.stringify(r.manualClear));
+    if (DENSE) { nodes = nodes.filter((p) => p.clear.ok); nodes.forEach((p, i) => { p.id = 'n' + (i + 1); }); }   // 自動の点: すき間が無い所には置かない
   }
   const rdir = path.join(dir, 'graph'); fs.rmSync(rdir, { recursive: true, force: true }); fs.mkdirSync(rdir, { recursive: true });
   // 形の検査（撮る前。2026-11-21 本人「空中やめり込んでるところを除外」）: めり込み（目の高さの周りが塞がる）・空中（斜め下に地面が見えない）
@@ -307,6 +344,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
       (ok ? r.manualAi.fixed : r.manualAi.still).push(p.id);
     }
     console.log('manual ai', JSON.stringify(r.manualAi));
+    if (DENSE && Array.isArray(r.manualAi.still)) { const st = new Set(r.manualAi.still); nodes = nodes.filter((p) => !st.has(p.id)); }   // 自動の点: 控えでも直らない点は外す
   }
   // AI の監視: 空中・めり込み・崩れ・人が立てない地点を外す。外した地点は近くの良い升へ移して撮り直し、もう一度だけ判定する
   let ai = null, ai2 = null, ai3 = null; const badList = [], replaced = [], rejected = [];
@@ -412,7 +450,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     start: { x: pose.x, y: pose.y, z: pose.z, yaw: pose.yaw },
     nodes: keepN.map((p) => ({ id: p.id, pos: { x: +p.pos.x.toFixed(3), y: +p.pos.y.toFixed(3), z: +p.pos.z.toFixed(3) }, floorY: +p.floorY.toFixed(3), yaw: +p.yaw.toFixed(4), ...(p.stair ? { stair: true } : {}) })),
     edges: vor.edges, see, audit, faces: shas,
-    ...(MANUAL ? { placedBy: 'owner' } : {}),
+    ...(DENSE ? { placedBy: 'dense' } : MANUAL ? { placedBy: 'owner' } : {}),
     review: ai ? (ai.error ? { error: String(ai.error).slice(0, 300), at } : { by: ai.by, at, bad: badList, dropped: dropped.map((p) => p.id), replaced: [...repl.keys()], filled: filled.map((q) => q.id), missing: ai.missing, summary: ai.summary }) : null };
   const buf = Buffer.from(JSON.stringify(body));
   fs.writeFileSync(path.join(rdir, 'graph.json'), buf);

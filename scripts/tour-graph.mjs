@@ -145,6 +145,18 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
     return { minC: +minC.toFixed(2), down: dn === null ? 9 : +dn.toFixed(2), up: up === null ? 9 : +up.toFixed(2) };
   });
 };
+;window.__pbFloorProbe=(o)=>{
+  // --dense の見どころ探し（2026-11-23）: 各点の真下の面を中心と周り 0.7m の 8 方向で探し、いちばん低い面（座席・卓のそばの床、舞台の上は舞台の面）を返す
+  const core = walkSetup.core, W = walkSetup.wholeIndex;
+  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  return o.pts.map(p => {
+    if(W){ try { core.setTileCoverage(W, { min: [p.x - 2, p.y - 4, p.z - 2], max: [p.x + 2, p.y + 1, p.z + 2] }); } catch(e) {} }
+    let lo = null, n = 0;
+    for(let k = -1; k < 8; k++){ const a = k * Math.PI / 4, r = k < 0 ? 0 : 0.7; const h = hit({ x: p.x + r * Math.sin(a), y: p.y, z: p.z + r * Math.cos(a) }, { x: 0, y: -1, z: 0 }, 4);
+      if(h !== null){ n++; const f = p.y - h; lo = lo === null ? f : Math.min(lo, f); } }
+    return n >= 5 ? +lo.toFixed(3) : null;
+  });
+};
 ;window.__pbLos=(o)=>{
   const core = walkSetup.core, W = walkSetup.wholeIndex;
   const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
@@ -206,18 +218,18 @@ export function removeFurniture(cells, adj) {
     for (let h = 0; h < g.length; h++) for (const j of adj[g[h]]) if (pl[j] < 0 && Math.abs(cells[j][2] - cells[g[h]][2]) <= 0.12) { pl[j] = psize.length; g.push(j); }
     psize.push(g.length); }
   const BIG = Math.ceil(4 / (CELL * CELL)), up = lowFloor(cells);
-  const drop = new Uint8Array(n), seen = new Uint8Array(n); let removed = 0;
+  const drop = new Uint8Array(n), seen = new Uint8Array(n), groups = []; let removed = 0;   // groups: 外した家具の塊（座席・テーブル・カウンター。--dense で視点を置く）
   for (let i = 0; i < n; i++) { if (up[i] < 0.3 || seen[i]) continue; const g = [i]; seen[i] = 1; let big = psize[pl[i]] > BIG;
     for (let h = 0; h < g.length; h++) for (const j of adj[g[h]]) {
       if (up[j] >= 0.3) { if (!seen[j]) { seen[j] = 1; g.push(j); if (psize[pl[j]] > BIG) big = true; } }
       else if (cells[j][2] > cells[g[h]][2] - 0.2) big = true; }   // 外に同じ高さ以上の床が続く＝別の階・段の上へ行ける
-    if (!big) { for (const k of g) drop[k] = 1; removed += g.length; } }
-  if (!removed) return { cells, adj, removed: 0 };
+    if (!big) { for (const k of g) drop[k] = 1; removed += g.length; groups.push(g.map((k) => [cells[k][0], cells[k][1], cells[k][2], +up[k].toFixed(2)])); } }
+  if (!removed) return { cells, adj, removed: 0, groups };
   const map = new Int32Array(n).fill(-1), nc = [];
   for (let i = 0; i < n; i++) if (!drop[i]) { map[i] = nc.length; nc.push(cells[i]); }
   const na = nc.map(() => []);
   for (let i = 0; i < n; i++) if (map[i] >= 0) for (const j of adj[i]) if (map[j] >= 0) na[map[i]].push(map[j]);
-  return { cells: nc, adj: na, removed };
+  return { cells: nc, adj: na, removed, groups };
 }
 
 // 壁（行けない所）までの距離 m: 4 方向の隣が 4 つそろっていない升を 0 として升をたどる
