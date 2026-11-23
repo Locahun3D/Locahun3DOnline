@@ -33,6 +33,8 @@ const WATCH = () => {
         m.onBeforeRender = function (r, sc2, cam, ...rest) { orig && orig.call(this, r, sc2, cam, ...rest); if (!(T.pre || T.lite) || S.state !== 'shown') return;
           const d = o.position.distanceTo(cam.position); w.maxOff = Math.max(w.maxOff, d); if (d > 0.62) w.offFrames++; }; }
     }
+    // 写真の間に地点が変わった回数（間引いた記録では長押し中の連続移動を数え落とす）
+    if ((T.pre || T.lite) && S.state === 'shown' && T.cur !== w.lastCur) { if (w.lastCur !== undefined) w.curMoves = (w.curMoves || 0) + 1; w.lastCur = T.cur; }
     if (c) { const p = c.position; if (w.lastCam && Math.hypot(p.x - w.lastCam[0], p.z - w.lastCam[1]) > 1e-3) w.camMoves++; w.lastCam = [p.x, p.z]; }
     const now = performance.now();
     if (T.busy) { w.busySince ||= now; w.busyMax = Math.max(w.busyMax, now - w.busySince); } else w.busySince = 0;
@@ -144,7 +146,7 @@ for (const zip of zips) {
     await log('3D W/S', walk3d); await shot('4in3d');
   }
   const w = (await state(p))?.w || {};
-  const moves = steps.filter((s) => s.from !== undefined && s.cur !== s.from).length;
+  const moves = Math.max(steps.filter((s) => s.from !== undefined && s.cur !== s.from).length, w.curMoves || 0);
   const kept = steps.some((s) => s.keptMoving);
   const ok = !errs.length && (w.offFrames || 0) === 0 && (w.busyMax || 0) < 8000 && !kept && (MOBILE && !IPAD ? moves >= 1 : moves >= 3) && (!walk3d || walk3d.fw > 0.2 || walk3d.back > 0.2);
   const r = { zip, ok, moves, maxOff: +(w.maxOff || 0).toFixed(2), offFrames: w.offFrames, busyMax: Math.round(w.busyMax || 0), kept, walk3d, errs, steps };
