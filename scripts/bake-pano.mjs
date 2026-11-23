@@ -148,6 +148,9 @@ async function getViewerHtml() {
 async function openScene(browser, scene) {
   const ctx = await browser.newContext({ viewport: { width: SIZE, height: SIZE }, deviceScaleFactor: SS });
   const page = await ctx.newPage();
+  // 広い屋外（秋葉原 Fusion など、事前作成の当たり判定を配れないシーン）は、ブラウザ用の上限（200万升）で開始位置の床まで作れない。
+  // 撮るときは collision-check と同じく 2,000万升まで作らせる（PC の GPU・メモリで作る。2026-11-23）
+  if (DENSE) await page.addInitScript(() => { window.__l3dBakeMaxCells = 20000000; });
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
   const html = await getViewerHtml();
