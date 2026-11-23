@@ -134,6 +134,17 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
     return { tight, near, air, minC: +minC.toFixed(2) };
   });
 };
+;window.__pbClear=(o)=>{
+  // 本人が置いた地点（座席など）のカメラの置き場所の検査（2026-11-23）: 目の高さの 16 方向で一番近い物までの距離 minC と、真下の面までの距離 down
+  const core = walkSetup.core, W = walkSetup.wholeIndex;
+  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  return o.pts.map(p => {
+    if(W){ try { core.setTileCoverage(W, { min: [p.x - 3, p.y - 3, p.z - 3], max: [p.x + 3, p.y + 2, p.z + 3] }); } catch(e) {} }
+    let minC = 9; for(let k = 0; k < 16; k++){ const a = k * Math.PI / 8; const h = hit(p, { x: Math.sin(a), y: 0, z: Math.cos(a) }, 1); minC = Math.min(minC, h === null ? 1 : h); }
+    const dn = hit(p, { x: 0, y: -1, z: 0 }, 3), up = hit(p, { x: 0, y: 1, z: 0 }, 3);
+    return { minC: +minC.toFixed(2), down: dn === null ? 9 : +dn.toFixed(2), up: up === null ? 9 : +up.toFixed(2) };
+  });
+};
 ;window.__pbLos=(o)=>{
   const core = walkSetup.core, W = walkSetup.wholeIndex;
   const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
@@ -304,3 +315,21 @@ export async function drawGraph(cells, nodes, edges, file, { dropped = [], start
 }
 
 export { fs };
+
+// 本人が置いた地点（--manual）のつながり（2026-11-23 TK MainHD）: 座席の点は歩ける床の外なので、床の区画（voronoi）ではつながらない。
+// 見通せることが分かっている組（edges ∪ see）のうち、maxD m 以内をつながりにし、残りの塊は見通せる組の一番近いもの（無ければ一番近い組）で結ぶ。
+export function relinkByDistance(pos, edges, see, maxD = 3) {
+  const key = (a, b) => (a < b ? a + ',' + b : b + ',' + a), d = (a, b) => Math.hypot(pos[a].x - pos[b].x, pos[a].z - pos[b].z);
+  const los = new Map(); for (const [a, b] of [...edges, ...see]) los.set(key(a, b), [Math.min(a, b), Math.max(a, b)]);
+  const E = new Map(); for (const [k, [a, b]] of los) if (d(a, b) <= maxD) E.set(k, [a, b]);
+  const n = pos.length, par = [...Array(n).keys()], root = (i) => (par[i] === i ? i : (par[i] = root(par[i])));
+  for (const [a, b] of E.values()) par[root(a)] = root(b);
+  for (;;) {
+    const comps = new Set([...Array(n).keys()].map(root)); if (comps.size <= 1) break;
+    let best = null;
+    for (const [k, [a, b]] of los) if (root(a) !== root(b) && (!best || d(a, b) < best.d)) best = { k, a, b, d: d(a, b) };
+    if (!best) for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) if (root(a) !== root(b) && (!best || d(a, b) < best.d)) best = { k: key(a, b), a, b, d: d(a, b) };
+    E.set(best.k, [best.a, best.b]); par[root(best.a)] = root(best.b);
+  }
+  return { edges: [...E.values()], see: [...los].filter(([k]) => !E.has(k)).map(([, v]) => v) };
+}

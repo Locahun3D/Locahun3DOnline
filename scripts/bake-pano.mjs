@@ -30,7 +30,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
-import { PAGE_GRAPH, largestComponent, removeFurniture, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives } from './tour-graph.mjs';
+import { PAGE_GRAPH, largestComponent, removeFurniture, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives, relinkByDistance } from './tour-graph.mjs';
 import { PAGE_CANDS, strip, map as drawMap, review as aiReview, reviewNodes, gapPositions, limits } from './tour-ai.mjs';
 
 const require = createRequire(import.meta.url);
@@ -238,6 +238,26 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     return { ...info, pos: { x: m.x, y: f + g.eye, z: m.z }, floorY: f, manual: m.id, snap: +bd.toFixed(2) };
   });
   nodes.forEach((p, i) => { p.id = 'n' + (i + 1); });
+  // 本人が置いた地点: カメラがテーブル・背もたれ・仕切りにめり込まない場所を、その場から少しずつずらして探す（2026-11-23 TK MainHD の座席で n29/n30/n38 がめり込んだ）。
+  // 条件: 目の高さの周り 0.3m に物が無い・真下の面から 0.55m 以上（テーブルの真上に目を置かない）・頭の上 0.15m 以上。近い順・低い順で最初に満たすもの
+  if (MANUAL) {
+    const offs = [[0, 0]]; for (const r of [0.25, 0.5, 0.75]) for (let k = 0; k < 8; k++) offs.push([r * Math.sin(k * Math.PI / 4), r * Math.cos(k * Math.PI / 4)]);
+    const hs = [1.15, 1.3, 1.45, 1.6, 1.75];
+    for (const p of nodes) {
+      const cand = []; for (const [dx, dz] of offs) for (const h of hs) cand.push({ x: p.pos.x + dx, y: p.floorY + h, z: p.pos.z + dz, floorY: p.floorY });
+      const res = await page.evaluate((o) => window.__pbClear(o), { pts: cand });
+      const j = res.findIndex((c) => c.minC >= 0.3 && c.down >= 0.55 && c.down < 2.5 && c.up >= 0.15);
+      const k = j >= 0 ? j : res.reduce((b, c, i) => (c.minC > res[b].minC ? i : b), 0);
+      const q = cand[k]; p.clear = { ...res[k], moved: +Math.hypot(q.x - p.pos.x, q.z - p.pos.z).toFixed(2), ok: j >= 0 };
+      // 写りが悪かったときの控え: 条件を満たす別の場所（0.3m 以上離れたもの、場所ごとに一番低い高さ）
+      const seen = new Set(); p.alts = [];
+      res.forEach((c, i) => { const a = cand[i], kk = a.x.toFixed(2) + ',' + a.z.toFixed(2);
+        if (c.minC >= 0.3 && c.down >= 0.55 && c.down < 2.5 && c.up >= 0.15 && !seen.has(kk) && Math.hypot(a.x - q.x, a.z - q.z) >= 0.3) { seen.add(kk); p.alts.push({ pos: { x: a.x, y: a.y, z: a.z }, floorY: a.y - Math.min(c.down, 2) }); } });
+      p.pos = { x: q.x, y: q.y, z: q.z }; p.floorY = q.y - Math.min(res[k].down, 2);
+    }
+    r.manualClear = { ok: nodes.filter((p) => p.clear.ok).length, moved: nodes.filter((p) => p.clear.moved > 0).length, total: nodes.length, bad: nodes.filter((p) => !p.clear.ok).map((p) => p.id) };
+    console.log('manual clear', JSON.stringify(r.manualClear));
+  }
   const rdir = path.join(dir, 'graph'); fs.rmSync(rdir, { recursive: true, force: true }); fs.mkdirSync(rdir, { recursive: true });
   // 形の検査（撮る前。2026-11-21 本人「空中やめり込んでるところを除外」）: めり込み（目の高さの周りが塞がる）・空中（斜め下に地面が見えない）
   // の地点は、近くの良い升へ移す。移せなければ置かない（升の割り当て直しで残りはつながったまま）
@@ -269,6 +289,25 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   const tc = Date.now();
   const shoot = async (p) => { const faces = await capture(page, p.pos, p.yaw, 0, r, p.id + ':', 250); shots[p.id] = faces; await strip(faces, p.id, path.join(rdir, p.id + '.jpg'), { down: true }); };
   for (const p of nodes) await shoot(p);
+  // 本人が置いた地点: 写りの悪いもの（めり込み・崩れ・壁が近すぎる）を AI に選ばせ、その地点だけ 0.75m 以内の控えの場所で撮り直す（最大 3 か所）。
+  // 良くなったものだけ差し替える（地点そのものは外さない。2026-11-23 TK MainHD の n5/n13/n55/n57-59/n63）
+  if (MANUAL && AI) {
+    const ai0 = reviewNodes(rdir, nodes.map((p) => p.id), { engine: AI_ENGINE, model: AI_MODEL, manual: true });
+    r.manualAi = { first: ai0.error ? 'error' : ai0.bad.map((b) => b.id), fixed: [], still: [] };
+    if (!ai0.error) for (const b of ai0.bad) {
+      const p = nodes.find((q) => q.id === b.id); if (!p) continue;
+      let ok = false;
+      for (const a of (p.alts || []).slice(0, 3)) {
+        const t = { ...p, id: p.id + 'x', pos: a.pos, floorY: a.floorY };
+        await shoot(t);
+        const rv = reviewNodes(rdir, [t.id], { engine: AI_ENGINE, model: AI_MODEL, manual: true });
+        if (!rv.error && !rv.bad.length) { p.pos = a.pos; p.floorY = a.floorY; shots[p.id] = shots[t.id];
+          fs.copyFileSync(path.join(rdir, t.id + '.jpg'), path.join(rdir, p.id + '.jpg')); ok = true; break; }
+      }
+      (ok ? r.manualAi.fixed : r.manualAi.still).push(p.id);
+    }
+    console.log('manual ai', JSON.stringify(r.manualAi));
+  }
   // AI の監視: 空中・めり込み・崩れ・人が立てない地点を外す。外した地点は近くの良い升へ移して撮り直し、もう一度だけ判定する
   let ai = null, ai2 = null, ai3 = null; const badList = [], replaced = [], rejected = [];
   if (AI && !MANUAL) {
@@ -337,7 +376,8 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     const a = keepN[i].pos, b = keepN[j].pos;
     if (!ek.has(i + ',' + j) && Math.hypot(a.x - b.x, a.z - b.z) <= 8 && Math.abs(a.y - b.y) < 3) pairs.push([i, j]);
   }
-  const see = pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: keepN.map((p) => p.pos) }) : [];
+  let see = pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: keepN.map((p) => p.pos) }) : [];
+  if (MANUAL) { const rl = relinkByDistance(keepN.map((p) => p.pos), vor.edges, see, 3); vor = { ...vor, edges: rl.edges }; see = rl.see; }   // 座席の点は床の区画の外なので、見通せる近い点どうしでつなぐ
   // 監視の数字（tour-audit.mjs が基準と比べる）
   // 空き・届く割合は、AI が立てないと言った場所（家具の上など）の 1.2m 以内の床を除いて数える（TK MainHD のボックス席の段上）
   const standable = g.cells.map((c) => !unstand.some((b) => Math.hypot(b.x - c[0], b.z - c[1]) < 1.2));

@@ -233,14 +233,24 @@ const NODE_PROMPT = (dir, ids, total) => `あなたはロケハンサイト Loca
 答えは JSON だけ:
 {"nodes":[{"id":"n1","ok":true,"reason":"外す時だけ短く"}],"missing":[{"near":"n12","dir":"L/F/R/B","why":"短く"}],"summary":"日本語で 1 文"}
 nodes には今回の全地点を入れる。`;
-export function reviewNodes(dir, ids, { engine = 'auto', model = '', batch = 20 } = {}) {
+// 本人が置いた地点（--manual、2026-11-23）用: 座席・ソファ・カウンターに座った目線の地点はわざと置いてあるので外さない。写りが壊れた地点だけを選ぶ
+const MANUAL_PROMPT = (dir, ids, total) => `あなたはロケハンサイト Locahun 3D の 360° 写真ツアーの監視担当です。
+地点はすべて人が「歩く導線」と「座席や見たい箇所から見える目線」として選んで置いたものです（全 ${total} 地点のうち今回 ${ids.length} 地点）。ソファ・ボックス席・カウンター・段の上の席にいる地点は正しいので外さない。
+各 <番号>.jpg（${dir}）は、その地点の 360° 帯（左から L・F・R・B、目の高さ）と右端の D＝真下。
+写りが壊れている地点だけを ok:false にする:
+- めり込み: 壁・仕切り・背もたれ・柱・植物・テーブルの中や至近（0.3m ほど）にいて、L/F/R/B のどれかの画面の 4 割以上がぼやけた色の塊・物の内側・壁の大写しで塞がれている
+- 崩れ: 画面の大半がちぎれた点・にじんだ色の塊で、そこがどんな場所か分からない
+- 撮影範囲の外・端で、画面の大半が黒・空白
+座った目線でテーブルや背もたれが手前に写るのは正常（塞がれていなければ外さない）。迷ったら外さない（ok:true）。
+答えは JSON だけ: {"nodes":[{"id":"n1","ok":true,"reason":"外す時だけ短く"}],"summary":"日本語で 1 文"} nodes には今回の全地点を入れる。`;
+export function reviewNodes(dir, ids, { engine = 'auto', model = '', batch = 20, manual = false } = {}) {
   const out = { bad: [], missing: [], summary: [], by: '', errors: [] };
   const tries = engine === 'auto' ? ['claude', 'codex'] : [engine];
   for (let i = 0; i < ids.length; i += batch) {
-    const part = ids.slice(i, i + batch), prompt = NODE_PROMPT(dir.split(path.sep).join('/'), part, ids.length);
+    const part = ids.slice(i, i + batch), prompt = (manual ? MANUAL_PROMPT : NODE_PROMPT)(dir.split(path.sep).join('/'), part, ids.length);
     let done = false;
     for (const e of tries) {
-      const t = e === 'codex' ? runCodex(dir, part, prompt, model, ['map.png', ...part.map((x) => x + '.jpg')]) : runClaude(dir, prompt, model);
+      const t = e === 'codex' ? runCodex(dir, part, prompt, model, manual ? part.map((x) => x + '.jpg') : ['map.png', ...part.map((x) => x + '.jpg')]) : runClaude(dir, prompt, model);
       if (t.error) { out.errors.push(e + ': ' + t.error); continue; }
       const m = /\{[\s\S]*\}/.exec(t.text || '');
       let j = null; try { j = m && JSON.parse(m[0]); } catch { j = null; }
