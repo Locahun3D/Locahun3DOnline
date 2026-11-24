@@ -131,6 +131,10 @@ for (const zip of zips) {
     if (MOBILE) for (let k = 0; k < 3; k++) { const b = (await state(p)).cur; await p.touchscreen.tap(cx + (k - 1) * 60, cy + 120); await p.waitForTimeout(1300); await log('tap floor ' + k, { from: b }); }
     if (MOBILE) { await p.touchscreen.tap(cx, cy); await p.waitForTimeout(80); await p.touchscreen.tap(cx, cy); await p.waitForTimeout(1200); await log('double tap'); await swipe(cx, cy + 100, cx, cy - 100); await p.waitForTimeout(600); await log('swipe up'); }
     await shot('3tap');
+    // 7b. 画面下の進む矢印（内見版と同じ #sp-go。2026-11-24）を 3 回押す
+    for (let k = 0; k < 3 && await inPhoto(); k++) { const g = await p.evaluate(() => { const e = document.getElementById('sp-go'); if (!e || e.style.display === 'none') return null; const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      if (!g) { steps.push({ name: 'go arrow missing' }); break; } const b = (await state(p)).cur; if (MOBILE) await p.touchscreen.tap(g[0], g[1]); else await p.mouse.click(g[0], g[1]); await p.waitForTimeout(1500); await log('go arrow ' + k, { from: b }); }
+    await shot('3go');
   }
   // 9. 3D に切り替わるまで待つ（最大 90 秒）→ WASD で歩けるか
   const t3 = Date.now(); let s3 = await state(p);
@@ -144,11 +148,14 @@ for (const zip of zips) {
     const c = (await state(p)).cam;
     walk3d = { fw: a && b ? +Math.hypot(b[0] - a[0], b[2] - a[2]).toFixed(2) : null, back: b && c ? +Math.hypot(c[0] - b[0], c[2] - b[2]).toFixed(2) : null };
     await log('3D W/S', walk3d); await shot('4in3d');
+    { const g = await p.evaluate(() => { const e = document.getElementById('sp-go'); if (!e || e.style.display === 'none') return null; const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      if (g) { const a0 = (await state(p)).cam; await p.mouse.click(g[0], g[1]); await p.waitForTimeout(2500); const b0 = (await state(p)).cam; walk3d.goArrow = a0 && b0 ? +Math.hypot(b0[0] - a0[0], b0[2] - a0[2]).toFixed(2) : null; } else walk3d.goArrow = 'missing'; await log('3D go arrow', { goArrow: walk3d.goArrow }); }
   }
   const w = (await state(p))?.w || {};
   const moves = Math.max(steps.filter((s) => s.from !== undefined && s.cur !== s.from).length, w.curMoves || 0);
   const kept = steps.some((s) => s.keptMoving);
-  const ok = !errs.length && (w.offFrames || 0) === 0 && (w.busyMax || 0) < 8000 && !kept && (MOBILE && !IPAD ? moves >= 1 : moves >= 3) && (!walk3d || walk3d.fw > 0.2 || walk3d.back > 0.2);
+  const goMissing = steps.some((s) => s.name === 'go arrow missing') || (walk3d && walk3d.goArrow === 'missing');
+  const ok = !goMissing && !errs.length && (w.offFrames || 0) === 0 && (w.busyMax || 0) < 8000 && !kept && (MOBILE && !IPAD ? moves >= 1 : moves >= 3) && (!walk3d || walk3d.fw > 0.2 || walk3d.back > 0.2);
   const r = { zip, ok, moves, maxOff: +(w.maxOff || 0).toFixed(2), offFrames: w.offFrames, busyMax: Math.round(w.busyMax || 0), kept, walk3d, errs, steps };
   results.push(r);
   console.log((ok ? '[OK] ' : '[NG] ') + zip + ` 移動${moves}回 箱の外${w.offFrames || 0}コマ(最大${r.maxOff}) 移動中最長${r.busyMax}ms 離した後も動く=${kept} 3D歩行=${JSON.stringify(walk3d)} エラー${errs.length}` + (errs[0] ? ' ' + errs[0] : ''));

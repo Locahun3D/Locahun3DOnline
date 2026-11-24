@@ -877,6 +877,16 @@ body.cam-active #view-tl-btns{
   border:3px solid rgba(255,255,255,.92);background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 2px 10px rgba(0,0,0,.35);
   z-index:40;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%}
 .sp-spot:hover{background:rgba(255,255,255,.32)}
+/* 進む矢印（内見版 naiken の #nk-go と同じ見た目・動き。2026-11-24 本人「2D画面からうごけなくない？ ヒルトンのページと一致するまで」）。
+   押すと矢印の少し先の床へ移る（2D は向きの先の地点へ、3D は床へ歩く）。下のボタン列の上に置く（bottom は JS で合わせる） */
+#sp-go{position:fixed;left:50%;bottom:76px;z-index:60;width:clamp(84px,9vw,128px);height:clamp(56px,6vw,84px);margin-left:calc(clamp(84px,9vw,128px) / -2);padding:0;
+  border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transform:perspective(160px) rotateX(38deg);animation:sp-go 1.8s ease-in-out infinite}
+#sp-go svg{width:100%;height:100%;fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
+#sp-go:hover svg,#sp-go:focus-visible svg{stroke-width:7}
+#sp-go:focus,#sp-go:focus-visible{outline:none!important;box-shadow:none!important}
+#sp-go.busy{opacity:.35;animation:none}
+@keyframes sp-go{0%,100%{translate:0 0;opacity:.75}50%{translate:0 -8px;opacity:1}}
+@media (prefers-reduced-motion:reduce){#sp-go{animation:none;opacity:.9}}
 /* 動線グラフの行き先の矢印（画面の下の輪。つながった地点の方向。行き先が背中側で床の丸が見えない時も迷わない。2026-11-21） */
 .sp-arrow{position:fixed;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,.92);
   background:rgba(12,12,13,.62);color:#fafaf6;z-index:41;cursor:pointer;display:flex;align-items:center;justify-content:center;font:600 15px/1 sans-serif;
@@ -3159,7 +3169,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7228944,"fatSha256":"bb939b1deaf04f91901cd6063c1e257ab5c0d9edde9df862c668c0ee0fa8fcca","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7234949,"fatSha256":"9587ab125a9cb18f1d572f93f601ea249be39c099ff935df627b423fb11c6d90","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -3394,7 +3404,7 @@ let joyDX = 0, joyDY = 0;
 // fly-camera compositor adds them like keyboard Q/E.
 let touchUpHeld = false, touchDnHeld = false;
 let _jvUpPtrId = -1, _jvDnPtrId = -1;
-let dragOn = false, dragX = 0, dragY = 0;
+let dragOn = false, dragX = 0, dragY = 0, _dragDead = -1;
 let _clickStartX = 0, _clickStartY = 0;
 
 // ── Click-to-select: raycast against all layer meshes ──
@@ -21638,6 +21648,56 @@ function updateLightHalos(){
       });
       requestAnimationFrame(placeSpots);
     }
+    // 進む矢印（内見版と同じ。画面下・ボタン列の上）。押すと矢印のすぐ上の床から順に、行ける所が見つかるまで少しずつ先を試す
+    function makeGo(){
+      if(document.getElementById('sp-go')) return;
+      const en = typeof _lang !== 'undefined' && _lang === 'en';
+      const b = document.createElement('button'); b.type = 'button'; b.id = 'sp-go'; b.setAttribute('aria-label', en ? 'Move forward' : '前へ進む');
+      b.innerHTML = '<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M10 24 L32 6 L54 24"/><path d="M10 38 L32 20 L54 38" opacity=".55"/></svg>';
+      const stop = e => e.stopPropagation();
+      for(const ev of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, stop, { passive: true });
+      // 移動中に押されたら、終わってから 1 回だけ進む（押しても何も起きないと「動けない」に見える）
+      let queued = false;
+      const forward = () => {
+        const r = b.getBoundingClientRect(), x = r.left + r.width / 2;
+        if(T.pre || T.lite || T.bridge){
+          // 写真ツアー: 向きの先の地点 → 無ければ前側 120° で一番近いつながった地点 → それも無ければ一番近いつながった地点（壁に向いていても止まらない）
+          if(tapAt(x, innerHeight * 0.72)) return;
+          camera.updateMatrixWorld();
+          const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), ang = Math.atan2(f.x, f.z);
+          const list = (st.graph ? cands().filter(q => q.id !== 'start' && (byId(T.cur)?.nb || []).includes(q.id)) : near(camPos, 8));
+          let best = null, bs = Infinity, any = null, as = Infinity;
+          for(const q of list){ const dx = q.pos.x - camPos.x, dz = q.pos.z - camPos.z, d = Math.hypot(dx, dz); if(d < 0.3) continue;
+            let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
+            if(da <= 60 * Math.PI / 180 && da * 2 + d * 0.2 < bs){ bs = da * 2 + d * 0.2; best = q; }
+            if(d + da < as){ as = d + da; any = q; } }
+          const t = best || any || farther(ang, 180); if(t) go(t.id);
+          return;
+        }
+        // 3D で当たり判定がまだ無いときは 1 回だけ頼む（何度も呼ぶと最後の 1 回だけが準備後に実行される）
+        if(!walkReady()){ _clickNavigateAt(x, innerHeight * 0.72); return; }
+        // 部屋の中は手前の床だと近すぎて動かないことがあるので、少し先から試す
+        for(const fy of [0.66, 0.6, 0.72, 0.55, 0.78, 0.5, 0.84]) if(_clickNavigateAt(x, innerHeight * fy)) break;
+      };
+      b.addEventListener('click', e => {
+        e.stopPropagation(); e.preventDefault();
+        if(typeof _clickNavigateAt !== 'function') return;
+        if(!T.busy){ forward(); return; }
+        if(queued) return; queued = true;
+        const t0 = performance.now(), wait = () => { if(!T.busy){ queued = false; forward(); } else if(performance.now() - t0 < 4000) setTimeout(wait, 50); else queued = false; };
+        wait();
+      });
+      document.body.append(b);
+      // 下のボタン列（.cbar）の上に置く・移動中は薄く・AR や回転プレビュー中は隠す
+      const fit = () => {
+        const bar = document.querySelector('.cbar'), br = bar && bar.offsetParent ? bar.getBoundingClientRect() : null;
+        b.style.bottom = (br && br.height ? Math.round(innerHeight - br.top + 12) : 28) + 'px';
+        b.classList.toggle('busy', !!T.busy);
+        const hide = (typeof arMode !== 'undefined' && arMode.active) || document.body.classList.contains('orbit-preview');
+        b.style.display = hide ? 'none' : '';
+      };
+      fit(); setInterval(fit, 300); addEventListener('resize', fit);
+    }
     const v = new THREE.Vector3(), vc = new THREE.Vector3();
     function placeSpots(){
       const on = T.pre || T.lite || T.bridge;
@@ -21757,7 +21817,7 @@ function updateLightHalos(){
         const Ly = layers[i];
         if(Ly && Ly.type === 'splat'){ try { scene.remove(Ly.mesh); Ly.mesh.dispose?.(); } catch(_){} layers.splice(i, 1); }
       }
-      hookNav(false); makeSpots();
+      hookNav(false); makeSpots(); makeGo();
       prefetch(near(at, 5));   // 全地点を先に読まない（320 か所で約 73MB になる）
       // 案内と「3D で見る」（?lite=0 で開き直す）
       const en = typeof _lang !== 'undefined' && _lang === 'en';
@@ -21776,7 +21836,7 @@ function updateLightHalos(){
       // 2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」: 標準にした（?pre=0 で以前の動き）。地点が無いシーンも開始位置の画像で待つ
       if(T.lite || T.pre || gone || !group || /[?&]pre=0/.test(qs)) return;
       T.pre = true; document.documentElement.classList.add('sp-pre');
-      hookNav(false); makeSpots();
+      hookNav(false); makeSpots(); makeGo();
       prefetch(near(at, 5));
     }
     // 読み込みが落ち着いたら、今いる地点のまま 3D に切り替える
@@ -21793,7 +21853,7 @@ function updateLightHalos(){
           clearInterval(t); T.bridge = false; unhookNav();
         }, 300);
       }
-      markDirty(4);
+      makeGo(); markDirty(4);
       console.log('[start-pano] 3D ready at', T.cur, walkReady() ? '' : '(walk pending)');
       // 読み終わったので画像を外して 3D に（今いる地点の位置のまま。外すときは 0.35 秒で薄くなる）
       remove('loaded');
@@ -27338,7 +27398,7 @@ function _applyI18nGaps(){
   window.addEventListener('mouseup',e=>{
     if(e.__l3dSynthetic||!tap||e.button!==2){ if(e.button===2)tap=null; return; }
     const t=tap;tap=null;
-    if(t.m>=5||performance.now()-t.t>500)return;
+    if(t.m>=(globalThis.__clickSlopPx?globalThis.__clickSlopPx*1.3:5)||performance.now()-t.t>(globalThis.__clickTapMs||500))return;   // 許容量は内見版と同じ（__clickSlopPx。2026-11-24）
     setTimeout(()=>{
       // 測定中は右クリック（旧左）が点置きなので、合成せずに移動だけ呼ぶ。
       if(typeof msr!=='undefined'&&msr.active){ if(typeof _clickNavigateAt==='function')_clickNavigateAt(t.x,t.y); return; }
@@ -27573,7 +27633,7 @@ canvas.addEventListener('mousedown',e=>{
   if(e.button===2){
     // RIGHT button = view-rotation drag (in any mode).
     e.preventDefault();
-    dragOn = true; dragX = e.clientX; dragY = e.clientY;
+    dragOn = true; dragX = e.clientX; dragY = e.clientY; _dragDead = 0;
     // Lock the pointer to the canvas so the cursor can't escape the viewport
     // while the user is sweeping a 360° look-around. Falls back to the legacy
     // clientX/Y delta path on browsers/contexts where lock is unavailable.
@@ -27687,7 +27747,7 @@ window.addEventListener('mouseup',e=>{
     } else if(!msr.active){
       // Click-to-select: mouse barely moved → it's a single click
       const dx=e.clientX-_clickStartX, dy=e.clientY-_clickStartY;
-      if(!lpv.dragging && (navigationTap?.held||Math.hypot(dx,dy)<5)){
+      if(!lpv.dragging && (navigationTap?.held||Math.hypot(dx,dy)<(globalThis.__clickSlopPx||5))){
         if(typeof _clickPointerTake!=='function'||navigationTap){
           // 長押しで行き先を探ったとき・カメラツール中は移動が目的なので選択を挟まない（2026-09-27。カメラツール中は
           // 選択が先にクリックを取ってしまい移動しなかった）。
@@ -27739,6 +27799,12 @@ window.addEventListener('mousemove',e=>{
   const _locked = (document.pointerLockElement === canvas);
   const _dx = _locked ? (e.movementX || 0) : (e.clientX - dragX);
   const _dy = _locked ? (e.movementY || 0) : (e.clientY - dragY);
+  // 遊び（内見版と同じ。__clickSlopPx）: 押してから少し動いただけでは回さない。回り始めるとクリック位置と画面がずれて移動しなかった（naiken 2026-11-11）
+  if(globalThis.__clickSlopPx && _dragDead >= 0){
+    _dragDead = _locked ? _dragDead + Math.abs(_dx) + Math.abs(_dy) : Math.abs(_dx) + Math.abs(_dy);
+    if(_dragDead < globalThis.__clickSlopPx * 1.3) return;
+    _dragDead = -1;
+  }
   _yawTarget   -= _dx * 0.003;
   _pitchTarget  = Math.max(-1.55, Math.min(1.55, _pitchTarget - _dy * 0.003));
   // CSS reprojection: instant visual response between rAF ticks (mostly a
@@ -29002,7 +29068,9 @@ function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeig
     return true;
   }catch(_error){if(!preview)_cancelClickNavigation();return false;}
 }
-const _clickGestures={mouse:LocahunClickNavigation.createGesture(),touch:LocahunClickNavigation.createGesture(12)};
+// クリック・タップの判定を内見版と同じに緩める（マウス 14px・タッチ 24px まではタップとして移動。2026-11-24 本人「ヒルトンのページと一致するまで」）
+globalThis.__clickSlopPx=14; globalThis.__clickTapMs=600;
+const _clickGestures={mouse:LocahunClickNavigation.createGesture(14),touch:LocahunClickNavigation.createGesture(24)};
 let _clickSuppressMouseUntil=0;
 function _clickPointerStart(kind,e){
   if(typeof _navigationHoldReset==='function')_navigationHoldReset();
