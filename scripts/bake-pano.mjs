@@ -235,8 +235,10 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     if (await page.evaluate(() => window.__pb.walk()).catch(() => false)) base = await page.evaluate((o) => window.__pbCands(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, radius: t < 30 ? 3 : 6, max: 1 });
     if (!(base && base.floor0 != null)) await page.waitForTimeout(1000);
   }
+  // 床は目より下（2026-11-25 有明の会議室: 候補探しが目より 1.1m 上の天井の上面を床にし、天井の上を塗り広げて地点が 2 つになった）
+  if (base && base.floor0 != null && !(pose.y - base.floor0 > 0.3)) { console.log('start floor above eye, retry', base.floor0, pose.y.toFixed(2)); base = null; }
   // 予備（2026-11-23 秋葉原 Fusion: 床の候補探しが 0 件）: 開始位置の真下を直接探す。高さの違う 3 つの所から下へ
-  if (DENSE && !(base && base.floor0 != null)) for (const up of [0.5, 2, 6]) {
+  if (!(base && base.floor0 != null)) for (const up of [0.5, 2, 6]) {
     const f = (await page.evaluate((o) => window.__pbFloorProbe(o), { L: 40, pts: [{ x: pose.x, y: pose.y + up, z: pose.z }] }).catch(() => [null]))[0];
     console.log('start floor probe', up, f, JSON.stringify(pose));
     if (f !== null && pose.y - f > 0.3 && pose.y - f < 30) { base = { floor0: f, eye: Math.min(1.7, Math.max(1.1, pose.y - f)) }; break; }
@@ -280,7 +282,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
           if (pts.some((q) => Math.hypot(q.x - x, q.z - z) < step * 0.8)) continue;
           const ref = acc.reduce((b, c) => Math.hypot(c.x - x, c.z - z) < Math.hypot(b.x - x, b.z - z) ? c : b);
           if (Math.hypot(ref.x - x, ref.z - z) > 6) continue;
-          cand.push({ x, z, y0: ref.f + 2.6, ref });
+          cand.push({ x, z, y0: ref.f + 2.2, ref });   // 2.6m だと天井の低い部屋（有明の会議室 2.58m）で天井の上面を拾った（2026-11-25）
         }
         if (!cand.length) break;
         const fl = await page.evaluate((o) => window.__pbFloorProbe(o), { pts: cand.map((c) => ({ x: c.x, y: c.y0, z: c.z })) });
