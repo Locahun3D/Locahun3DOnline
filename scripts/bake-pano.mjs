@@ -286,7 +286,11 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
         }
         if (!cand.length) break;
         const fl = await page.evaluate((o) => window.__pbFloorProbe(o), { pts: cand.map((c) => ({ x: c.x, y: c.y0, z: c.z })) });
-        const ok = cand.map((c, i) => ({ ...c, f: fl[i] })).filter((c) => c.f !== null && c.f - c.ref.f > -1 && c.f - c.ref.f < 1.5);
+        const good = (f, c) => f !== null && f - c.ref.f > -1 && f - c.ref.f < 1.5;
+        // 天井がもっと低い部屋（下新明の和室など 2.1m 前後）: 2.2m から探して天井の上面を拾ったら、目の高さ（床から 1.3m）から探し直す（2026-11-25）
+        const redo = cand.map((c, i) => (good(fl[i], c) ? -1 : i)).filter((i) => i >= 0);
+        if (redo.length) { const f2 = await page.evaluate((o) => window.__pbFloorProbe(o), { pts: redo.map((i) => ({ x: cand[i].x, y: cand[i].ref.f + 1.3, z: cand[i].z })) }); redo.forEach((i, k) => { if (good(f2[k], cand[i])) fl[i] = f2[k]; }); }
+        const ok = cand.map((c, i) => ({ ...c, f: fl[i] })).filter((c) => good(c.f, c));
         if (!ok.length) break;
         const P = [...acc.map((c) => ({ x: c.x, y: c.f + 1.4, z: c.z })), ...ok.map((c) => ({ x: c.x, y: c.f + 1.4, z: c.z }))], N0 = acc.length, pairs = [];
         ok.forEach((c, i) => { acc.map((q, j) => [Math.hypot(q.x - c.x, q.z - c.z), j]).filter(([d]) => d <= 6).sort((u, v) => u[0] - v[0]).slice(0, 3).forEach(([, j]) => pairs.push([N0 + i, j])); });
