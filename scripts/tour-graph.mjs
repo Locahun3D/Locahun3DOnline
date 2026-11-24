@@ -24,7 +24,7 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
   if(!core) return { error: 'no collision' };
   const W = walkSetup.wholeIndex, C = ${CELL}, STEP = o.step || 0.42, R = o.radius || 70, MAX = o.maxCells || 80000, B = 8;
   const eye = o.eye || 1.5, s = o.pos, t0 = performance.now(), TL = o.timeMs || 240000;
-  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const hit = (q, d, L) => { let h = null; try { h = core.raycast(q, d, L); } catch(e) {} return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   const DOWN = { x: 0, y: -1, z: 0 };
   let covKey = null, covN = 0;
   const cov = (bx, bz, by) => { const k = bx + ',' + bz + ',' + by; if(k === covKey || !W) return; covKey = k; covN++;
@@ -124,7 +124,7 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
   //  tight = 目の高さの 16 方向で 0.35m 以内に当たる方向の数（崩れた点の塊・壁にめり込み）
   //  air = 目から斜め下 30° の 8 方向で、目の高さの 3 倍以内に何も当たらない方向の数（空中・スキャンの端・崩れの上）
   const core = walkSetup.core, W = walkSetup.wholeIndex;
-  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const hit = (q, d, L) => { let h = null; try { h = core.raycast(q, d, L); } catch(e) {} return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   return o.pts.map(p => {
     if(W){ try { core.setTileCoverage(W, { min: [p.x - 6, p.floorY - 6, p.z - 6], max: [p.x + 6, p.y + 2, p.z + 6] }); } catch(e) {} }
     const eye = p.y - p.floorY; let tight = 0, near = 0, air = 0, minC = 9;
@@ -137,7 +137,7 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
 ;window.__pbClear=(o)=>{
   // 本人が置いた地点（座席など）のカメラの置き場所の検査（2026-11-23）: 目の高さの 16 方向で一番近い物までの距離 minC と、真下の面までの距離 down
   const core = walkSetup.core, W = walkSetup.wholeIndex;
-  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const hit = (q, d, L) => { let h = null; try { h = core.raycast(q, d, L); } catch(e) {} return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   return o.pts.map(p => {
     if(W){ try { core.setTileCoverage(W, { min: [p.x - 3, p.y - 3, p.z - 3], max: [p.x + 3, p.y + 2, p.z + 3] }); } catch(e) {} }
     let minC = 9; for(let k = 0; k < 16; k++){ const a = k * Math.PI / 8; const h = hit(p, { x: Math.sin(a), y: 0, z: Math.cos(a) }, 1); minC = Math.min(minC, h === null ? 1 : h); }
@@ -148,7 +148,7 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
 ;window.__pbFloorProbe=(o)=>{
   // --dense の見どころ探し（2026-11-23）: 各点の真下の面を中心と周り 0.7m の 8 方向で探し、いちばん低い面（座席・卓のそばの床、舞台の上は舞台の面）を返す
   const core = walkSetup.core, W = walkSetup.wholeIndex;
-  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const hit = (q, d, L) => { let h = null; try { h = core.raycast(q, d, L); } catch(e) {} return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   return o.pts.map(p => {
     if(W){ try { core.setTileCoverage(W, { min: [p.x - 2, p.y - (o.L || 4), p.z - 2], max: [p.x + 2, p.y + 1, p.z + 2] }); } catch(e) {} }
     let lo = null, n = 0;
@@ -159,7 +159,7 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
 };
 ;window.__pbLos=(o)=>{
   const core = walkSetup.core, W = walkSetup.wholeIndex;
-  const hit = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const hit = (q, d, L) => { let h = null; try { h = core.raycast(q, d, L); } catch(e) {} return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   const out = [];
   for(const [i, j] of o.pairs){
     const a = o.pts[i], b = o.pts[j], dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz);

@@ -22,7 +22,7 @@ export const PAGE_CANDS = `;window.__pbCands=(o)=>{
   if(!core) return { error: 'no collision' };
   const s = o.pos, R = o.radius || 40, cell = 0.5, gap = o.gap || 2.5, reach = o.reach || 10, RAY = 6, ND = 16, B = 8;
   const DOWN = { x: 0, y: -1, z: 0 }, UP = { x: 0, y: 1, z: 0 };
-  const hitAt = (q, d, L) => { const h = core.raycast(q, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
+  const hitAt = (q, d, L) => { let h = null; try { h = core.raycast(q, d, L); } catch(e) {} return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
   // 当たり判定は全体（walkSetup.wholeIndex）から「いま調べる範囲の升」だけを読み込んで使う（読み込んだ範囲の外は何も無い扱いになる）。
   // そこで 8m 四方ずつ、周り（光線の長さ分）も含めて読み込んでから調べる。全体が無い（事前作成の判定が無い）時は今ある範囲だけ
   const W = walkSetup.wholeIndex;
