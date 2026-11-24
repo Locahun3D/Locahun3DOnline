@@ -884,6 +884,8 @@ body.cam-active #view-tl-btns{
 #sp-go svg{width:100%;height:100%;fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
 #sp-go:hover svg,#sp-go:focus-visible svg{stroke-width:7}
 #sp-go:focus,#sp-go:focus-visible{outline:none!important;box-shadow:none!important}
+#sp-noway{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;padding:8px 16px;border-radius:999px;background:rgba(0,0,0,.72);color:#fff;font-size:13px;line-height:1.5;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:calc(100vw - 32px)}
+#sp-noway.on{opacity:1}
 #sp-go.busy{opacity:.35;animation:none}
 @keyframes sp-go{0%,100%{translate:0 0;opacity:.75}50%{translate:0 -8px;opacity:1}}
 @media (prefers-reduced-motion:reduce){#sp-go{animation:none;opacity:.9}}
@@ -3169,7 +3171,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7234949,"fatSha256":"9587ab125a9cb18f1d572f93f601ea249be39c099ff935df627b423fb11c6d90","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7236988,"fatSha256":"1128e0ec2ce440358ed6b3b7f235861be880bb4a7929c369d38e031a7ad7f404","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -21599,7 +21601,20 @@ function updateLightHalos(){
       const orig = T.navOrig;
       _clickNavigateAt = withFallback
         ? (x, y, preview, ...r) => preview ? orig(x, y, preview, ...r) : (tapAt(x, y) || orig(x, y, preview, ...r))
-        : (x, y, preview) => preview ? false : tapAt(x, y);
+        : (x, y, preview) => preview ? false : (tapAt(x, y) || noWay(x, y));
+    }
+    // 2D で行ける地点が無い（動線グラフ未作成・その向きに地点なし）とき、黙って何もしないと「動けない」に見える（2026-11-25 本人
+    //   「２Dイメージから進めないが？？」シェアキッチンは動線グラフが無かった）。案内を出し、3D に切り替わった直後にその向きへ 1 回進む
+    function noWay(x, y){
+      if(!(T.pre || T.lite)) return false;
+      const en = typeof _lang !== 'undefined' && _lang === 'en';
+      T.pendingFwd = { x, y, at: performance.now() };
+      let c = document.getElementById('sp-noway');
+      if(!c){ c = document.createElement('div'); c.id = 'sp-noway'; document.body.append(c); }
+      c.textContent = T.lite ? (en ? 'No more points this way. Drag to look around.' : 'この向きには進めません。ドラッグで見回せます')
+                             : (en ? 'Loading 3D… you will move as soon as it is ready' : '3D を読み込み中です。読み込めたらすぐ進みます');
+      c.classList.add('on'); clearTimeout(T.nowayT); T.nowayT = setTimeout(() => c.classList.remove('on'), 2600);
+      return true;
     }
     function unhookNav(){ if(T.navOrig){ _clickNavigateAt = T.navOrig; T.navOrig = null; } }
     // 押して離したとき（pointerup）に移る。タッチではビューアーの入力処理が click を出さないことがある。click は二重にならないよう 0.5 秒は無視
@@ -21671,7 +21686,7 @@ function updateLightHalos(){
             let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
             if(da <= 60 * Math.PI / 180 && da * 2 + d * 0.2 < bs){ bs = da * 2 + d * 0.2; best = q; }
             if(d + da < as){ as = d + da; any = q; } }
-          const t = best || any || farther(ang, 180); if(t) go(t.id);
+          const t = best || any || farther(ang, 180); if(t) go(t.id); else noWay(x, innerHeight * 0.66);
           return;
         }
         // 3D で当たり判定がまだ無いときは 1 回だけ頼む（何度も呼ぶと最後の 1 回だけが準備後に実行される）
@@ -21854,6 +21869,12 @@ function updateLightHalos(){
         }, 300);
       }
       makeGo(); markDirty(4);
+      document.getElementById('sp-noway')?.classList.remove('on');
+      if(T.pendingFwd && performance.now() - T.pendingFwd.at < 60000){
+        const pf = T.pendingFwd; T.pendingFwd = null;
+        const tryGo = (n) => { if(walkReady()){ for(const fy of [0.66, 0.6, 0.72, 0.55, 0.78]) if(T.navOrig ? T.navOrig(pf.x, innerHeight * fy) : _clickNavigateAt(pf.x, innerHeight * fy)) break; } else if(n > 0) setTimeout(() => tryGo(n - 1), 300); };
+        setTimeout(() => tryGo(100), 450);
+      }
       console.log('[start-pano] 3D ready at', T.cur, walkReady() ? '' : '(walk pending)');
       // 読み終わったので画像を外して 3D に（今いる地点の位置のまま。外すときは 0.35 秒で薄くなる）
       remove('loaded');

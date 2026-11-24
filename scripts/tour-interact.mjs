@@ -11,6 +11,8 @@ const LOCAL = args.includes('--local'), WK = args.includes('--webkit'), IPAD = a
 let zips = args.filter((a) => !a.startsWith('--'));
 // --prop=slug1,slug2: 物件ページを開き、そこにあるビューアーのリンクをそのまま開く（利用者と同じ経路。2026-11-23）
 const PROPS = (args.find((a) => a.startsWith('--prop=')) || '').slice(7).split(',').filter(Boolean);
+// --hold3d=秒: 3D データ（シーンの ZIP の GET）をその秒数だけ遅らせ、遅い回線と同じく 2D 写真の時間を長くする（2026-11-25 本人「２Dイメージから進めない」）
+const HOLD3D = Number((args.find((a) => a.startsWith('--hold3d=')) || '').slice(9)) || 0;
 const LINKS = new Map();
 const ROOT = 'F:/Codex/viewerfix/public', SIGNED = 'https://signed-r2.invalid/';
 const OUT = 'F:/Codex/viewerfix/artifacts/tour-interact/' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + (WK ? '-webkit' : '') + (IPAD ? '-ipad' : MOBILE ? '-mobile' : '') + (LOCAL ? '-local' : '-prod');
@@ -74,11 +76,15 @@ for (const zip of zips) {
     const res = await r.fetch({ url: 'https://locahun3d.com/api/viewer-stream/' + key, headers: h });
     return r.fulfill({ response: res, headers: { ...res.headers(), 'access-control-allow-origin': '*', 'access-control-expose-headers': 'etag, content-length, content-range' } });
   });
+  if (HOLD3D) await ctx.route((u) => /\/api\/viewer-stream\/assets\/splat\//.test(u.href) || u.href.startsWith(SIGNED), async (r) => {
+    if (r.request().method() === 'GET') await new Promise((ok) => setTimeout(ok, HOLD3D * 1000));
+    return r.fallback();
+  });
   const key = 'assets/splat/' + zip;
   if (LINKS.has(zip)) await p.goto(LINKS.get(zip), { timeout: 120000, waitUntil: 'commit' }); else
   await p.goto('https://locahun3d.com/viewer/offline-viewer?autoload=' + encodeURIComponent(SIGNED + key) + '&protected=1&streamref=' + encodeURIComponent('/api/viewer-stream/' + key + '?ref=stream'), { timeout: 120000, waitUntil: 'commit' });
   let st = null;
-  for (let i = 0; i < 160; i++) { st = await state(p); if (st && st.state === 'shown' && st.n > 0) break; if (st && /none|error/.test(st.state || '')) break; await p.waitForTimeout(250); }
+  for (let i = 0; i < 160; i++) { st = await state(p); if (st && st.state === 'shown' && (st.n > 0 || i > 24)) break; if (st && /none|error/.test(st.state || '')) break; await p.waitForTimeout(250); }
   const steps = []; const shot = async (tag) => p.screenshot({ path: `${OUT}/${zip.slice(0, 10)}_${tag}.jpg`, quality: 50 });
   const log = async (name, extra = {}) => { const s = await state(p); steps.push({ name, ...extra, off: s?.w?.offFrames, maxOff: s?.w ? +s.w.maxOff.toFixed(2) : null, cur: s?.cur, pre: s?.pre, lite: s?.lite, liteWhy: s?.liteWhy, ts: s?.tstate, busy: s?.busy, cam: s?.cam, state: s?.state }); return s; };
   if (!(st && st.state === 'shown')) { results.push({ zip, ok: false, why: 'no 2D ' + JSON.stringify(st), errs }); console.log('[NG] ' + zip + ' 2D が出ない ' + JSON.stringify(st)); await ctx.close(); continue; }
@@ -133,7 +139,7 @@ for (const zip of zips) {
     await shot('3tap');
     // 7b. 画面下の進む矢印（内見版と同じ #sp-go。2026-11-24）を 3 回押す
     for (let k = 0; k < 3 && await inPhoto(); k++) { const g = await p.evaluate(() => { const e = document.getElementById('sp-go'); if (!e || e.style.display === 'none') return null; const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
-      if (!g) { steps.push({ name: 'go arrow missing' }); break; } const b = (await state(p)).cur; if (MOBILE) await p.touchscreen.tap(g[0], g[1]); else await p.mouse.click(g[0], g[1]); await p.waitForTimeout(1500); await log('go arrow ' + k, { from: b }); }
+      if (!g) { steps.push({ name: 'go arrow missing' }); break; } const b = (await state(p)).cur; if (MOBILE) await p.touchscreen.tap(g[0], g[1]); else await p.mouse.click(g[0], g[1]); await p.waitForTimeout(350); const nw = await p.evaluate(() => !!document.querySelector('#sp-noway.on')); await p.waitForTimeout(1150); const sg = await log('go arrow ' + k, { from: b, noway: nw }); if (sg && sg.cur === b && !nw && sg.pre) steps.at(-1).silent = true; }
     await shot('3go');
   }
   // 9. 3D に切り替わるまで待つ（最大 90 秒）→ WASD で歩けるか
@@ -154,11 +160,12 @@ for (const zip of zips) {
   const w = (await state(p))?.w || {};
   const moves = Math.max(steps.filter((s) => s.from !== undefined && s.cur !== s.from).length, w.curMoves || 0);
   const kept = steps.some((s) => s.keptMoving);
+  const silent = steps.some((s) => s.silent), noPoints = st.n === 0;
   const goMissing = steps.some((s) => s.name === 'go arrow missing') || (walk3d && walk3d.goArrow === 'missing');
-  const ok = !goMissing && !errs.length && (w.offFrames || 0) === 0 && (w.busyMax || 0) < 8000 && !kept && (MOBILE && !IPAD ? moves >= 1 : moves >= 3) && (!walk3d || walk3d.fw > 0.2 || walk3d.back > 0.2);
-  const r = { zip, ok, moves, maxOff: +(w.maxOff || 0).toFixed(2), offFrames: w.offFrames, busyMax: Math.round(w.busyMax || 0), kept, walk3d, errs, steps };
+  const ok = !goMissing && !silent && !noPoints && !errs.length && (w.offFrames || 0) === 0 && (w.busyMax || 0) < 8000 && !kept && (MOBILE && !IPAD ? moves >= 1 : moves >= 3) && (!walk3d || walk3d.fw > 0.2 || walk3d.back > 0.2);
+  const r = { zip, ok, noPoints, silent, moves, maxOff: +(w.maxOff || 0).toFixed(2), offFrames: w.offFrames, busyMax: Math.round(w.busyMax || 0), kept, walk3d, errs, steps };
   results.push(r);
-  console.log((ok ? '[OK] ' : '[NG] ') + zip + ` 移動${moves}回 箱の外${w.offFrames || 0}コマ(最大${r.maxOff}) 移動中最長${r.busyMax}ms 離した後も動く=${kept} 3D歩行=${JSON.stringify(walk3d)} エラー${errs.length}` + (errs[0] ? ' ' + errs[0] : ''));
+  console.log((ok ? '[OK] ' : '[NG] ') + zip + (noPoints ? ' 2Dの地点なし(動線グラフ未作成)' : '') + (silent ? ' 矢印を押しても無反応' : '') + ` 移動${moves}回 箱の外${w.offFrames || 0}コマ(最大${r.maxOff}) 移動中最長${r.busyMax}ms 離した後も動く=${kept} 3D歩行=${JSON.stringify(walk3d)} エラー${errs.length}` + (errs[0] ? ' ' + errs[0] : ''));
   await ctx.close();
 }
 await browser.close();
