@@ -548,7 +548,7 @@ async function bake(browser, s) {
     // キー（ビューアーが計算したもの）
     let key = null; const t0 = Date.now();
     while (Date.now() - t0 < 60000 && !key) { await page.waitForTimeout(300); key = await page.evaluate(() => window.__startPano?.key || null).catch(() => null);
-      const st = await page.evaluate(() => window.__startPano?.state).catch(() => null); if (st === 'none' && !key) break; }
+      const st = await page.evaluate(() => window.__startPano?.state).catch(() => null); if (st === 'none' && !key) { key = await page.evaluate(() => window.__startPano?.key || null).catch(() => null); break; } }   // key は state='none' より先に入る。同じ周回で読み直す（2026-11-24: 未撮影 7 シーンが「キーが出ない」で落ちた）
     if (!key) { r.status = 'error'; r.why = 'キーが出ない: ' + JSON.stringify(await page.evaluate(async (u) => { const res = await fetch(u, { method: 'HEAD', cache: 'no-cache' }); return { sp: window.__startPano, s: res.status, e: res.headers.get('etag'), l: res.headers.get('content-length'), href: location.href.slice(0, 60) }; }, s.scene).catch((e) => String(e))) + (errors[0] ? ' ' + errors[0] : ''); return r; }
     r.key = key;
     if (RESHOOT) {
