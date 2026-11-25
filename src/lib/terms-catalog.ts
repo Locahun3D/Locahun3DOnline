@@ -29,12 +29,12 @@ export interface TermsDoc {
 export const TERMS_DOCS: readonly TermsDoc[] = [
   {
     path: "/terms/listing",
-    title: "施設掲載規約",
-    titleEn: "Facility Listing Terms",
+    title: "スキャン・掲載規約",
+    titleEn: "Scan and Listing Terms",
     audience: "スタジオ",
-    note: "掲載の条件・写真の扱い・掲載の停止",
+    note: "申込み・スキャン・掲載・データ販売と分配・停止と解約（弁護士レビュー版 v2）",
     effective: "2026-09-26",
-    updated: "2026-10-08",
+    updated: "2026-11-25",
     inStudioMail: true,
   },
   {
@@ -44,7 +44,7 @@ export const TERMS_DOCS: readonly TermsDoc[] = [
     audience: "スタジオ",
     note: "販売時の分配（20%）と精算",
     effective: "2026-08-02",
-    updated: "2026-10-08",
+    updated: "2026-11-25",
     inStudioMail: true,
   },
   {

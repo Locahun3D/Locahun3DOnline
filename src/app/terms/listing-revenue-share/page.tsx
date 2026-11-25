@@ -86,7 +86,7 @@ export default async function ListingRevenueSharePage() {
         <section>
           <h2 className="ui-section-title mb-4">第6条（本サービス利用規約との関係）</h2>
           <p className="opacity-80">
-            本規約に定めのない事項については、<Link href={localizedHref("/terms/service", locale)} className="text-accent hover:underline">利用規約</Link>の定めによります。本規約と利用規約の内容が異なる場合、対象物件のデータ販売分配に関する事項については本規約が優先します。
+            本規約に定めのない事項については、<Link href={localizedHref("/terms/service", locale)} className="text-accent hover:underline">利用規約</Link>の定めによります。本規約と利用規約の内容が異なる場合、対象物件のデータ販売分配に関する事項については本規約が優先します。ただし、当社と<Link href={localizedHref("/terms/listing", locale)} className="text-accent hover:underline">ロケハン3D スキャン・掲載規約</Link>に基づく契約を締結した掲載者については、同規約（第10条・第11条を含みます）が本規約に優先します。
           </p>
         </section>
 
@@ -109,6 +109,7 @@ export default async function ListingRevenueSharePage() {
             制定日: 2026年8月2日<br />
             改定日: 2026年8月4日（第7条の規約変更手続きを事前周知方式に変更）<br />
             改定日: 2026年10月8日（第2条の分配額を税抜販売価格の20%とし、決済手数料を控除しない旨と消費税相当額の加算を明記／第3条から廃止したホスティング商品の利用料の記載を削除／第4条の精算を半期ごと（6月末・12月末締め、翌月末払い）に変更し、繰越の2年の期限を廃止して掲載終了時の全額精算を追加、源泉徴収を法令上必要な場合に限る旨に改定／運営者の商号を正式名称で表記）<br />
+            改定日: 2026年11月25日（第6条に、スキャン・掲載規約に基づく契約を締結した掲載者には同規約が優先する旨を追加）<br />
             ロケハン3D（運営：Kawaii World Industries株式会社（KWI株式会社））
           </p>
         </div>
@@ -204,7 +205,11 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
             <Link href={localizedHref("/terms/service", locale)} className="text-accent hover:underline">
               Terms of Service
             </Link>
-            . Where these terms and the Terms of Service conflict on a matter relating to revenue sharing for Target Properties, these terms prevail.
+            . Where these terms and the Terms of Service conflict on a matter relating to revenue sharing for Target Properties, these terms prevail. For a Lister that has entered into an agreement with us under the{" "}
+            <Link href={localizedHref("/terms/listing", locale)} className="text-accent hover:underline">
+              Scan and Listing Terms
+            </Link>
+            , those terms (including Articles 10 and 11) prevail over these terms.
           </p>
         </section>
 
@@ -227,6 +232,7 @@ function ListingRevenueShareEN({ locale }: { locale: "ja" | "en" }) {
             Established: August 2, 2026<br />
             Revised: August 4, 2026 (changed Article 7 to an advance-notice amendment procedure)<br />
             Revised: October 8, 2026 (Article 2: the share is 20% of the sale price excluding consumption tax, with no deduction of payment processing fees and with consumption tax added; Article 3: removed the discontinued Hosting Product fee; Article 4: semi-annual settlement (closing 30 June and 31 December, paid by the end of the following month), removed the 2-year carryover limit and added full settlement when the listing ends, and limited withholding to cases required by law; operator shown by its registered name)<br />
+            Revised: November 25, 2026 (Article 6: the Scan and Listing Terms prevail for Listers who have entered into an agreement under them)<br />
             Locahun 3D (operated by Kawaii World Industries Inc. (KWI Inc.))
           </p>
         </div>

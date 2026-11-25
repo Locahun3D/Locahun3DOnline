@@ -65,7 +65,7 @@ export function buildStudioReconfirmMail(input: StudioReconfirmMailInput): MailT
     修正のご希望がある場合も、このメールへの返信でお知らせください。</p>
     <div style="background:#f7f7f5;border:1px solid #eee;padding:14px 18px;margin:0 0 16px;">
       <p style="font-size:14px;line-height:1.9;margin:0;">
-        このメールから<strong>${DEEMED_PUBLISH_AFTER_DAYS}日以内</strong>${publishOn ? `（${esc(publishOn)}まで）` : ""}にご回答がない場合は、ご承認いただいたものとして掲載ページを公開いたします（施設掲載規約 第4条）。<br>
+        このメールから<strong>${DEEMED_PUBLISH_AFTER_DAYS}日以内</strong>${publishOn ? `（${esc(publishOn)}まで）` : ""}にご回答がない場合は、ご承認いただいたものとして掲載ページを公開いたします（スキャン・掲載規約 第9条第2項）。<br>
         公開後も、内容の修正や掲載の停止・削除はいつでもお申し付けいただけます。
       </p>
     </div>
@@ -104,7 +104,7 @@ export function buildDeemedApprovalAdminMail(input: {
     return {
       subject: `【ロケハン3D】みなし承認で公開しました（${input.title || input.propertyId}）`,
       heading: "みなし承認で公開しました",
-      bodyHtml: `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">「${name}」は、確認メールと再確認メールのどちらにも回答が無かったため、施設掲載規約 第4条3項に基づき、承認されたものとみなして公開しました。<br>
+      bodyHtml: `<p style="font-size:14px;line-height:1.9;margin:0 0 16px;">「${name}」は、確認メールと再確認メールのどちらにも回答が無かったため、スキャン・掲載規約 第9条第2項に基づき、承認されたものとみなして公開しました。<br>
         物件編集の記録に「みなし承認」として残っています。</p>
         <p style="margin:0 0 16px;"><a href="${pub}">公開ページを開く</a> ／ <a href="${edit}">物件編集を開く</a></p>
         ${input.event.splitNote ? `<p style="font-size:12px;line-height:1.8;color:#666;margin:0 0 8px;">${esc(input.event.splitNote)}</p>` : ""}
