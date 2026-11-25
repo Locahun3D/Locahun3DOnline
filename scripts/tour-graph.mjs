@@ -257,6 +257,10 @@ export function buildGraph(cells, adj, { seed = 0, eye = 1.5, spacing = 0, maxNo
   // 間隔: 2.4m が基本（部屋の中を歩く感覚。2m だと 285㎡ で 94 か所になり撮るのに時間がかかる）。広い屋外などは最大の数に収まるよう広げる（最大 5m）
   const S = spacing || Math.max(2.4, Math.min(5, Math.sqrt(area / (maxNodes * 0.55))));
   const clr = clearance(cells, adj), up = lowFloor(cells);
+  // 場所ごとの間隔（2026-11-25 Matterport の基準 docs/tour-point-placement-matterport-2026-11-25.md）:
+  //   階段（上る升と下る升の両方が隣にある升）は 3 段ごと ≒ 1.0m、狭い所（ドア・幅 1.25m 以下の通路）は 1.5m まで詰める。
+  //   ドアは「枠の上でなく外と内に 1 点ずつ」: 狭い所の升は置き場所に選ばない（snap が広い側へ寄せる）
+  const Sat = localSpacing(cells, adj, S);
   const dist = new Float64Array(n).fill(Infinity), h = new Heap();
   const relax = (c) => { dist[c] = 0; h.push(0, c); while (h.size) { const i = h.pop(); for (const j of adj[i]) { const nd = dist[i] + wlen(cells, i, j); if (nd < dist[j]) { dist[j] = nd; h.push(nd, j); } } } };
   // 置く場所: 選んだ升から歩いて 0.8m 以内で、一番壁から離れた升（通路・部屋の真ん中へ寄せる）
@@ -269,15 +273,39 @@ export function buildGraph(cells, adj, { seed = 0, eye = 1.5, spacing = 0, maxNo
   relax(seed);
   while (nodeCells.length < maxNodes) {
     let best = -1, bv = 0;
-    for (let i = 0; i < n; i++) { if (dist[i] === Infinity) continue; const v = dist[i] * (0.7 + 0.3 * Math.min(clr[i], 1) / 1); if (v > bv) { bv = v; best = i; } }
+    for (let i = 0; i < n; i++) { if (dist[i] === Infinity) continue; const v = dist[i] / Sat[i] * (0.7 + 0.3 * Math.min(clr[i], 1) / 1); if (v > bv) { bv = v; best = i; } }
     if (best < 0) break;
-    if (dist[best] < S) break;   // どこからでも S 以内に地点がある
+    if (dist[best] < Sat[best]) break;   // どこからでもその場所の間隔以内に地点がある
     const c = snap(best);
-    if (dist[c] < S * 0.5) { dist[best] = 0; continue; }   // 寄せたら既存の地点に近すぎた: その升は満たされた扱い
+    if (dist[c] < Sat[best] * 0.5) { dist[best] = 0; continue; }   // 寄せたら既存の地点に近すぎた: その升は満たされた扱い
     nodeCells.push(c); relax(c);
   }
   const maxGap = Math.max(...Array.from(dist).filter(Number.isFinite));
   return { S, area, clr, nodeCells, maxGap, eye };
+}
+
+// 升ごとの地点の間隔: 基本 S、階段の途中 min(S, 1.0)、狭い所（その升を通る x・z 方向の床の幅の短い方が 1.25m 以下）min(S, 1.5)
+export function localSpacing(cells, adj, S) {
+  const key = (x, z) => Math.round(x / CELL) + ',' + Math.round(z / CELL), at = new Map(cells.map((c, i) => [key(c[0], c[1]), i]));
+  const run = (i, dx, dz) => { let k = 0; for (let s = 1; s <= 6; s++) { if (!at.has(key(cells[i][0] + dx * s * CELL, cells[i][1] + dz * s * CELL))) break; k++; } return k; };
+  return cells.map((c, i) => {
+    // 階段の途中: 片側に 0.1〜0.35m 高い升、反対側に 0.1〜0.35m 低い升がある（台の縁・床のでこぼこは片側だけなので数えない）
+    let upN = 0, dnN = 0; for (const j of adj[i]) { const d = cells[j][2] - c[2]; if (d >= 0.1 && d <= 0.35) upN++; else if (-d >= 0.1 && -d <= 0.35) dnN++; }
+    if (upN && dnN) return Math.min(S, 1.0);
+    const w = Math.min(1 + run(i, 1, 0) + run(i, -1, 0), 1 + run(i, 0, 1) + run(i, 0, -1)) * CELL;
+    return w <= 1.25 ? Math.min(S, 1.5) : S;
+  });
+}
+
+// つながりは 5m 以下（Matterport3D / R2R の基準）。ただし外すと離れ離れになる線は残す
+export function capEdges(pos, edges, maxD = 5) {
+  const d = ([a, b]) => Math.hypot(pos[a].x - pos[b].x, pos[a].z - pos[b].z);
+  const n = pos.length, par = [...Array(n).keys()], root = (i) => (par[i] === i ? i : (par[i] = root(par[i])));
+  const short = edges.filter((e) => d(e) <= maxD), long = edges.filter((e) => d(e) > maxD).sort((x, y) => d(x) - d(y));
+  for (const [a, b] of short) par[root(a)] = root(b);
+  const keep = [...short]; let cut = 0;
+  for (const e of long) { if (root(e[0]) !== root(e[1])) { keep.push(e); par[root(e[0])] = root(e[1]); } else cut++; }
+  return { edges: keep, cut };
 }
 
 // 置き換え先の候補: 元の升から歩いて min〜max m、ほかの地点から 1.2m 以上離れた升を、壁から離れている順に

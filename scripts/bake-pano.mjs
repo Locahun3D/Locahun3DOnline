@@ -30,7 +30,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
-import { PAGE_GRAPH, largestComponent, removeFurniture, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives, relinkByDistance } from './tour-graph.mjs';
+import { PAGE_GRAPH, largestComponent, removeFurniture, buildGraph, voronoi, nodeInfo, levels, drawGraph, alternatives, relinkByDistance, capEdges } from './tour-graph.mjs';
 import { PAGE_CANDS, strip, map as drawMap, review as aiReview, reviewNodes, gapPositions, limits } from './tour-ai.mjs';
 
 const require = createRequire(import.meta.url);
@@ -455,6 +455,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   }
   let see = pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: keepN.map((p) => p.pos) }) : [];
   if (MANUAL) { const rl = relinkByDistance(keepN.map((p) => p.pos), vor.edges, see, 3); vor = { ...vor, edges: rl.edges }; see = rl.see; }   // 座席の点は床の区画の外なので、見通せる近い点どうしでつなぐ
+  { const ce = capEdges(keepN.map((p) => p.pos), vor.edges, 5); if (ce.cut) console.log('edges over 5m cut', ce.cut); vor = { ...vor, edges: ce.edges }; }   // つながりは 5m 以下（Matterport 基準 2026-11-25）
   // 監視の数字（tour-audit.mjs が基準と比べる）
   // 空き・届く割合は、AI が立てないと言った場所（家具の上など）の 1.2m 以内の床を除いて数える（TK MainHD のボックス席の段上）
   const standable = g.cells.map((c) => !unstand.some((b) => Math.hypot(b.x - c[0], b.z - c[1]) < 1.2));
