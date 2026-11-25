@@ -21471,7 +21471,7 @@ function updateLightHalos(){
 //
 //  2026-11-19 本人「この360画像と3DGSの移行の仕組みをロケハン3Dでも同じ仕組みで」→ 内見版の次の 3 つも入れた:
 //   ① 最初の静止画: src/head/start_pano_early.js が <head> で同じ画像から開始位置の見え方を canvas に先に描く。ここで 3D の上に画像を出したら外す。
-//   ② 3D を読み終わるまでは 360° 写真ツアー（2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」で標準。?pre=0 で使わない）。
+//   ② 3D を読み終わるまでは 360° 写真ツアー（2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」で標準）。
 //      ツアー: 動線グラフ（<key>.graph.json、scripts/tour-graph.mjs）の地点の画像の間を、
 //      床の丸・画面のタップ・↑キーで移って見て回れる。読み込みが落ち着いたら、今いる地点のまま 3D に切り替える。
 //      床の当たり判定ができるまでは、丸とタップで地点へ（3D のまま）移る。できたら普通の「床をタップして移動」に戻す。
@@ -21484,13 +21484,12 @@ function updateLightHalos(){
 //  key = sha256('l3d-pano-v1:' + 中身の識別子)。中身の識別子は autoload の配信応答の ETag と長さ
 //  （?ref=stream の RAD は "l3d-content-…" → 'content:<id>:<長さ>'、ZIP は R2 の ETag → 'etag:<etag>:<長さ>'）。シーン（ZIP）を作り直すと ETag が変わるので、古い画像は使われない。
 //  画像はオンライン版の scripts/bake-pano.mjs が公開シーンを実ブラウザで開いて作る（このファイルの __startPano.key を使う）。
-//  ?nopano=1 で使わない（撮影時・比較用）。?pre=0 で読み込み中の写真ツアーを使わない。?lite=1 / ?lite=0 で軽量表示を固定。
+//  ?nopano=1 で使わない（撮影時・比較用）。?lite=1 / ?lite=0 で軽量表示を固定。
 (function(){
   const qs = location.search;
   const st = { key: null, state: 'off', why: '', points: [], tour: null };
   window.__startPano = st;
-  // ?posterhold=1: 最初の静止画を外さない（3D の上の画像と重なり具合を見比べる試験用）
-  const posterOff = (fade) => { if(/[?&]posterhold=1/.test(qs)) return; window.__startPanoPosterOff = true; if(window.__startPanoPoster) window.__startPanoPoster.remove(fade); };
+  const posterOff = (fade) => { window.__startPanoPosterOff = true; if(window.__startPanoPoster) window.__startPanoPoster.remove(fade); };
   const m = /[?&]autoload=([^&]+)/.exec(qs);
   if(!m || /[?&]nopano=1/.test(qs)){ posterOff(false); return; }
   let url = decodeURIComponent(m[1]);
@@ -21851,8 +21850,8 @@ function updateLightHalos(){
       console.log('[start-pano] light mode:', why);
     }
     function startPre(){
-      // 2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」: 標準にした（?pre=0 で以前の動き）。地点が無いシーンも開始位置の画像で待つ
-      if(T.lite || T.pre || gone || !group || /[?&]pre=0/.test(qs)) return;
+      // 2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」: 標準にした。地点が無いシーンも開始位置の画像で待つ
+      if(T.lite || T.pre || gone || !group) return;
       T.pre = true; document.documentElement.classList.add('sp-pre');
       hookNav(false); makeSpots(); makeGo();
       prefetch(near(at, 5));
@@ -21901,7 +21900,7 @@ function updateLightHalos(){
     // 回線: 3D データの届き方を最初の取得から 8〜30 秒の間に見る。毎秒 150KB（約 1.2Mbps）に届かなければ写真ツアーのままにする
     const streamPath = new URL(url, location.href).pathname;
     T.net = setInterval(() => {
-      if(gone || T.lite || /[?&](lite|pre)=0/.test(qs)){ clearInterval(T.net); return; }
+      if(gone || T.lite || /[?&]lite=0/.test(qs)){ clearInterval(T.net); return; }
       if(document.hidden) return;
       if(!T.pre) return;   // 写真ツアーが始まってから判定する
       const all = performance.getEntriesByType('resource');
@@ -22013,8 +22012,8 @@ function updateLightHalos(){
       const meta = st.meta = res.meta;
       st.state = 'faces';
       // ツアーの地点（無ければ開始位置の 1 枚だけ）
-      // 動線グラフ（?graph=0 で使わない＝開始位置の 1 枚だけ）
-      const grP = /[?&]graph=0/.test(qs) ? Promise.resolve(null) : fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
+      // 動線グラフ（無ければ開始位置の 1 枚だけ）
+      const grP = fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
       tex = await loadFaces(st.key + (meta.r > 1 ? '-r' + meta.r : ''));   // 撮り直した画像は <key>-r<N>-{面}.jpg
       if(gone) return;
       at = new THREE.Vector3(meta.pos.x, meta.pos.y, meta.pos.z);
