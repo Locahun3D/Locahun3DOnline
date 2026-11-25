@@ -21477,20 +21477,20 @@ function updateLightHalos(){
 //
 //  2026-11-19 本人「この360画像と3DGSの移行の仕組みをロケハン3Dでも同じ仕組みで」→ 内見版の次の 3 つも入れた:
 //   ① 最初の静止画: src/head/start_pano_early.js が <head> で同じ画像から開始位置の見え方を canvas に先に描く。ここで 3D の上に画像を出したら外す。
-//   ② （?pre=1 のときだけ）3D を読み終わるまでは 360° 写真ツアー。2026-11-20 本人「ヒルトンの仕組みとは違う。読み込み時はレンダリング絵で、
-//      読み込むまでマターポートのように静止画で動く仕組みではない」→ 標準では使わない（内見版と同じ: 静止画 → その場で見回す 360° → 歩くと 3D）。
-//      ツアー: シーンの周りで自動で選んで撮った地点（<key>.points.json）の画像の間を、
-//      床の丸・画面のタップで移って見て回れる。読み込みが落ち着いたら、今いる地点のまま 3D に切り替える。
+//   ② 3D を読み終わるまでは 360° 写真ツアー（2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」で標準。?pre=0 で使わない）。
+//      ツアー: 動線グラフ（<key>.graph.json、scripts/tour-graph.mjs）の地点の画像の間を、
+//      床の丸・画面のタップ・↑キーで移って見て回れる。読み込みが落ち着いたら、今いる地点のまま 3D に切り替える。
 //      床の当たり判定ができるまでは、丸とタップで地点へ（3D のまま）移る。できたら普通の「床をタップして移動」に戻す。
 //   ③ 軽量表示: GPU の無い・弱い端末（先読み判定、または画面の動きが毎秒 12 コマ未満）、遅い回線（3D の届き方が毎秒 150KB 未満）では
 //      3D を捨てて写真ツアーを続ける。画面下の「3D で見る」で 3D に戻せる（?lite=0 で開き直す）。
 //
-//  画像はサイトの /api/pano/<key>.json・<key>-{f,r,b,l,u,d}.jpg（開始位置）、<key>.points.json・<key>-<地点>-{面}.jpg（ツアーの地点）。
-//  無ければ 404 で何もしない（地点が無いシーンは開始位置の 1 枚だけ。今までどおり）。
+//  画像はサイトの /api/pano/<key>.json・<key>-{f,r,b,l,u,d}.jpg（開始位置）、<key>.graph.json・<key>-g<set>-n<N>-{面}.jpg（ツアーの地点）。
+//  無ければ 404 で何もしない（graph.json が無いシーンは開始位置の 1 枚だけ）。
+//  2026-11-25 整理: 以前の地点の一覧（<key>.points.json、最大 24 地点）と、それを選ぶ pickPoints() は消した（本番 99 シーンすべて graph.json）。
 //  key = sha256('l3d-pano-v1:' + 中身の識別子)。中身の識別子は autoload の配信応答の ETag と長さ
 //  （?ref=stream の RAD は "l3d-content-…" → 'content:<id>:<長さ>'、ZIP は R2 の ETag → 'etag:<etag>:<長さ>'）。シーン（ZIP）を作り直すと ETag が変わるので、古い画像は使われない。
-//  画像はオンライン版の scripts/bake-pano.mjs が公開シーンを実ブラウザで開いて作る（このファイルの __startPano.key と pickPoints() を使う）。
-//  ?nopano=1 で使わない（撮影時・比較用）。?pre=1 で読み込み中の写真ツアーを使う（標準は使わない）。?lite=1 / ?lite=0 で軽量表示を固定。
+//  画像はオンライン版の scripts/bake-pano.mjs が公開シーンを実ブラウザで開いて作る（このファイルの __startPano.key を使う）。
+//  ?nopano=1 で使わない（撮影時・比較用）。?pre=0 で読み込み中の写真ツアーを使わない。?lite=1 / ?lite=0 で軽量表示を固定。
 (function(){
   const qs = location.search;
   const st = { key: null, state: 'off', why: '', points: [], tour: null };
@@ -21588,15 +21588,15 @@ function updateLightHalos(){
     // 先読みは小さい画像だけ、移った先は小さい画像ですぐ出して通常の画像に差し替える（2026-11-23 本人「画像だけでとても重いのでは」）
     const facesOf = (p, small = !!(p.img && T.lite)) => { const sm = !!(p.img && small); return T.cache[p.id + (sm ? 's' : '')] ||= loadFaces(p.img || (st.key + '-' + p.id), sm); };
     const prefetch = (list) => { for(const q of list.slice(0, 8)) facesOf(q, true).catch(() => {}); };
-    // 移れる先: 動線グラフ（<key>.graph.json、2026-11-21）なら今の地点とつながった地点＋見える地点。以前の地点（points.json）は近くの全部
+    // 移れる先: 動線グラフ（<key>.graph.json、2026-11-21）の、今の地点とつながった地点＋見える地点
     const byId = (id) => id === 'start' ? st.startNode : pts().find(q => q.id === id);
     const cands = () => {
-      if(!st.graph) return pts().filter(q => q.id !== T.cur);
+      if(!st.graph) return [];
       const c = byId(T.cur); if(!c) return [];
       const ids = new Set([...(c.nb || []), ...(c.see || [])]);
       return [...pts(), st.startNode].filter(q => q && q.id !== T.cur && ids.has(q.id));
     };
-    const near = (pos, r) => st.graph ? cands().filter(q => q.id !== 'start' && (byId(T.cur)?.nb || []).includes(q.id)) : pts().filter(q => q.id !== T.cur && Math.hypot(q.pos.x - pos.x, q.pos.z - pos.z) < r);
+    const near = () => cands().filter(q => q.id !== 'start' && (byId(T.cur)?.nb || []).includes(q.id));
     function hookNav(withFallback){
       if(typeof _clickNavigateAt !== 'function') return;
       T.navOrig ||= _clickNavigateAt;
@@ -21682,7 +21682,7 @@ function updateLightHalos(){
           if(tapAt(x, innerHeight * 0.72)) return;
           camera.updateMatrixWorld();
           const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), ang = Math.atan2(f.x, f.z);
-          const list = (st.graph ? cands().filter(q => q.id !== 'start' && (byId(T.cur)?.nb || []).includes(q.id)) : near(camPos, 8));
+          const list = near();
           let best = null, bs = Infinity, any = null, as = Infinity;
           for(const q of list){ const dx = q.pos.x - camPos.x, dz = q.pos.z - camPos.z, d = Math.hypot(dx, dz); if(d < 0.3) continue;
             let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
@@ -21734,18 +21734,18 @@ function updateLightHalos(){
       if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeArrows(false); placeCursor(null); return; }
       camera.updateMatrixWorld();
       placeArrows(true);
-      const allow = st.graph ? new Set(cands().map(q => q.id)) : null;
+      const allow = new Set(cands().map(q => q.id));
       // Google マップ方式（2026-11-25 本人「点が多すぎて見づらい。近くの点だけ表示するようにして googlemap 形式にして」）:
       //   床の丸は近くの地点だけ（5m 以内・つながった地点を優先して最大 NEAR_MAX 個）。遠くの地点はその向きを押せば移れる（pickAt）。
       //   マウスでは、置いた所を押したら行く地点の丸を明るくし、ポインターの所に床の輪（カーソル）を出す
       const NEAR_M = 5, NEAR_MAX = 5;   // 5m は Matterport3D / R2R のつながりの上限（docs/tour-point-placement-matterport-2026-11-25.md）
-      const nbSet = st.graph ? new Set(byId(T.cur)?.nb || []) : null;
+      const nbSet = new Set(byId(T.cur)?.nb || []);
       const near5 = T.spots.map(s => ({ s, d: Math.hypot(s.p.pos.x - camPos.x, s.p.pos.z - camPos.z) }))
-        .filter(o => o.s.p.id !== T.cur && o.d >= 0.3 && o.d <= NEAR_M && (!allow || allow.has(o.s.p.id)))
-        .sort((a, b) => (a.d - (nbSet && nbSet.has(a.s.p.id) ? 1.5 : 0)) - (b.d - (nbSet && nbSet.has(b.s.p.id) ? 1.5 : 0)))
+        .filter(o => o.s.p.id !== T.cur && o.d >= 0.3 && o.d <= NEAR_M && allow.has(o.s.p.id))
+        .sort((a, b) => (a.d - (nbSet.has(a.s.p.id) ? 1.5 : 0)) - (b.d - (nbSet.has(b.s.p.id) ? 1.5 : 0)))
         .slice(0, NEAR_MAX).map(o => o.s.p.id);
       const shown = new Set(near5);
-      if(shown.size < 2 && nbSet) for(const id of nbSet){ const q = byId(id); if(q && Math.hypot(q.pos.x - camPos.x, q.pos.z - camPos.z) <= 9) shown.add(id); }   // 近くに無いときは、つながった地点（広い所）
+      if(shown.size < 2) for(const id of nbSet){ const q = byId(id); if(q && Math.hypot(q.pos.x - camPos.x, q.pos.z - camPos.z) <= 9) shown.add(id); }   // 近くに無いときは、つながった地点（広い所）
       const hov = T.hover && !T.busy && performance.now() - T.hover.at < 4000 ? pickAt(T.hover.x, T.hover.y) : null;
       if(hov) shown.add(hov.id);
       placeCursor(hov);
@@ -21833,15 +21833,15 @@ function updateLightHalos(){
       const dir = new THREE.Vector3((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1, 0.5).unproject(camera).sub(camera.position);
       const ang = Math.atan2(dir.x, dir.z);
       let best = null, bestScore = Infinity;
-      const all = st.graph ? cands() : [...pts(), { id: 'start', pos: st.meta.pos }];
-      const nb = st.graph ? new Set(byId(T.cur)?.nb || []) : null;
+      const all = cands();
+      const nb = new Set(byId(T.cur)?.nb || []);
       for(const p of all){
         if(p.id === T.cur) continue;
         const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z, d = Math.hypot(dx, dz);
-        if(d < 0.3 || d > (st.graph ? 12 : 8)) continue;
+        if(d < 0.3 || d > 12) continue;
         let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
-        if(da > (st.graph ? 35 : 30) * Math.PI / 180) continue;
-        const score = da * 3 + d * 0.15 - (nb && nb.has(p.id) ? 0.3 : 0);
+        if(da > 35 * Math.PI / 180) continue;
+        const score = da * 3 + d * 0.15 - (nb.has(p.id) ? 0.3 : 0);
         if(score < bestScore){ bestScore = score; best = p; }
       }
       if(!best && st.graph) best = farther(ang, 90);   // つながった地点が無い向きでも、その向きの近い地点へ（2026-11-22 本人「移動したくても次の点がない」）
@@ -21995,7 +21995,7 @@ function updateLightHalos(){
       const fw = new THREE.Vector3(); camera.getWorldDirection(fw); const ang = Math.atan2(fw.x, fw.z) + KEY_ANG[code];
       const nb = new Set(byId(T.cur)?.nb || []);
       let best = null, bs = Infinity;
-      for(const p of (st.graph ? cands() : pts().filter(q => q.id !== T.cur))){
+      for(const p of cands()){
         const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z; if(Math.hypot(dx, dz) < 0.3) continue;
         let da = Math.abs(Math.atan2(dx, dz) - ang); while(da > Math.PI) da = Math.abs(da - 2 * Math.PI);
         const sc = da + Math.hypot(dx, dz) * 0.04 - (nb.has(p.id) ? 0.15 : 0);
@@ -22024,74 +22024,6 @@ function updateLightHalos(){
     return T;
   })();
 
-  // ── 写真ツアーの地点を自動で選ぶ（bake-pano.mjs が撮る前に呼ぶ。2026-11-19 本人「自動で選ぶ」）──
-  // 3DGS から作った床の当たり判定は細かい穴・凹凸が多く、隣のマスへ順に広げる方法では 1 歩も進めなかった（会議室で開始位置の真下も穴）。
-  // そこで: 開始位置の周り R 以内を 0.5m 刻みで調べ、開始位置と同じ高さ（±30cm）の床があり、目の高さの周りが空いている
-  // （上下・8 方向に 0.5m）マスを候補にする。その中から、すでに選んだ地点のどれかから 8m 以内・目の高さで見通せて、
-  // 選んだ地点から一番遠いマスを gap 以上離れている限り順に選ぶ（最大 max か所）。見通せる＝写真ツアーでタップして移れる。
-  // 目の高さは開始位置と床の差（1.0〜2.0m）。向きは開始位置と同じ。床の当たり判定（walkSetup.core）が要る。
-  st.pickPoints = (opts = {}) => {
-    const core = typeof walkSetup !== 'undefined' && walkSetup.core;
-    if(!core) return { error: 'no collision' };
-    const max = opts.max ?? 8, gap = opts.gap ?? 2.5, R = opts.radius ?? 14, cell = 0.5, reach = opts.reach ?? 8;
-    const s = opts.pos || { x: camPos.x, y: camPos.y, z: camPos.z }, yaw0 = opts.yaw ?? yaw;
-    const exclude = Array.isArray(opts.exclude) ? opts.exclude : [];   // 撮ってみて写りが悪かった所（bake-pano.mjs が渡す。[x, z]）
-    const DOWN = { x: 0, y: -1, z: 0 }, UP = { x: 0, y: 1, z: 0 };
-    const hitAt = (o, d, L) => { const h = core.raycast(o, d, L); return h !== null && Number.isFinite(h) && h >= 0 && h < L ? h : null; };
-    const covered = (p) => !walkSetup.wholeIndex || typeof _walkWholeCoverage !== 'function' || _walkWholeCoverage(p, p, { drop: 22 }) !== false;
-    // 開始位置の床: 真下が穴のこともあるので、周り 1m の床の高さの中央値
-    const fl = [];
-    for(let i = -2; i <= 2; i++) for(let j = -2; j <= 2; j++){ const h = hitAt({ x: s.x + i * cell, y: s.y, z: s.z + j * cell }, DOWN, 4); if(h !== null) fl.push(s.y - h); }
-    if(fl.length < 3) return { error: 'no floor near start', n: fl.length };
-    fl.sort((a, b) => a - b);
-    const floor0 = fl[fl.length >> 1], eye = Math.min(2, Math.max(1, s.y - floor0));
-    const see = (a, b) => {   // 目の高さで a から b が見通せるか
-      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, L = Math.hypot(dx, dy, dz);
-      if(L < 1e-3) return true;
-      return hitAt(a, { x: dx / L, y: dy / L, z: dz / L }, L - 0.05) === null;
-    };
-    const why = { cover: 0, nofloor: 0, level: 0, tight: 0 };
-    const cand = [];
-    const n = Math.ceil(R / cell);
-    for(let i = -n; i <= n; i++) for(let j = -n; j <= n; j++){
-      const x = s.x + i * cell, z = s.z + j * cell, r = Math.hypot(x - s.x, z - s.z);
-      if(r > R || r < gap) continue;
-      const top = { x, y: floor0 + eye + 0.3, z };
-      if(!covered(top)){ why.cover++; continue; }
-      const h = hitAt(top, DOWN, eye + 1);
-      if(h === null){ why.nofloor++; continue; }
-      const f = top.y - h;
-      if(Math.abs(f - floor0) > 0.3){ why.level++; continue; }
-      const o = { x, y: f + eye, z };
-      let ok = hitAt({ x, y: f + 0.3, z }, UP, eye - 0.1) === null && hitAt(o, UP, 0.4) === null;
-      for(let a = 0; ok && a < 8; a++) if(hitAt(o, { x: Math.sin(a * Math.PI / 4), y: 0, z: Math.cos(a * Math.PI / 4) }, 0.5) !== null) ok = false;
-      if(!ok){ why.tight++; continue; }
-      if(exclude.some(([ex, ez]) => Math.hypot(ex - x, ez - z) < 0.3)) continue;
-      cand.push({ x, z, f, o });
-    }
-    const chosen = [{ x: s.x, z: s.z, o: { x: s.x, y: floor0 + eye, z: s.z } }], out = [];
-    const dmin = (c) => Math.min(...chosen.map(q => Math.hypot(c.x - q.x, c.z - q.z)));
-    const blocked = new Set();
-    while(out.length < max){
-      let best = null, bd = -1;
-      for(const c of cand){ if(blocked.has(c)) continue; const dd = dmin(c); if(dd > bd){ bd = dd; best = c; } }
-      if(!best || bd < gap) break;
-      // すでに選んだ地点のどれかから見通せること（見通せない所は、今は選ばず次へ。後で別の地点から見えれば選べる）
-      if(!chosen.some(q => Math.hypot(best.x - q.x, best.z - q.z) <= reach && see(q.o, best.o))){
-        blocked.add(best);
-        // 後から選んだ地点で見えるようになることがあるので、選べたら blocked を空にして続ける
-        if(blocked.size > cand.length) break;
-        continue;
-      }
-      chosen.push(best); blocked.clear();
-      out.push({ id: 'p' + (out.length + 1), pos: { x: best.x, y: best.f + eye, z: best.z }, yaw: yaw0, floorY: best.f });
-    }
-    // 地点どうしの見通し（[開始位置, 地点…] の組ごとに reach 以内で見通せるか）。bake-pano.mjs が、撮ってみて写りの悪い地点を外したあと、
-    // 開始位置から見通しをたどって行ける地点だけを残すのに使う（撮影中は当たり判定の読み込み範囲が動くので、ここで先に計算しておく）
-    const nodes = chosen.map(q => q.o), vis = nodes.map((a, i) => nodes.map((b, j) => i !== j && Math.hypot(a.x - b.x, a.z - b.z) <= reach && see(a, b)));
-    return { points: out, vis, cand: cand.length, eye, floor0, why };
-  };
-
   (async () => {
     try {
       st.state = 'identity';
@@ -22113,8 +22045,7 @@ function updateLightHalos(){
       const meta = st.meta = res.meta;
       st.state = 'faces';
       // ツアーの地点（無ければ開始位置の 1 枚だけ）
-      const ptsP = fetch('/api/pano/' + st.key + '.points.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
-      // 動線グラフ（あれば points.json より優先。?graph=0 で使わない）
+      // 動線グラフ（?graph=0 で使わない＝開始位置の 1 枚だけ）
       const grP = /[?&]graph=0/.test(qs) ? Promise.resolve(null) : fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
       tex = await loadFaces(st.key + (meta.r > 1 ? '-r' + meta.r : ''));   // 撮り直した画像は <key>-r<N>-{面}.jpg
       if(gone) return;
@@ -22127,9 +22058,9 @@ function updateLightHalos(){
       if(typeof markDirty === 'function') markDirty(10);
       // 3D の上に同じ画像が出たので、最初の静止画（CSS）を一瞬で外す（フェードさせると 2 枚が重なって光ったように見える）
       requestAnimationFrame(() => requestAnimationFrame(() => posterOff(false)));
-      const pj = await ptsP, gj = await grP;
+      const gj = await grP;
       const fin = (p) => p && p.pos && [p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite);
-      if(gj && gj.v === 2 && /^[0-9a-f]{6}$/.test(gj.set) && Array.isArray(gj.nodes) && gj.nodes.length >= 3){   // 地点が 3 未満（床が取れない・ほぼ全部が壊れていた）なら以前の points.json に戻す（作り直す前より悪くしない）
+      if(gj && gj.v === 2 && /^[0-9a-f]{6}$/.test(gj.set) && Array.isArray(gj.nodes) && gj.nodes.length >= 3){   // 地点が 3 未満（床が取れない・ほぼ全部が壊れていた）なら地点を使わない（開始位置の 1 枚で見回すだけ）
         // 動線グラフ: つながり（edges）と見通し（see）は nodes の並び順の番号
         const list = gj.nodes.map(p => fin(p) && /^n\d{1,3}$/.test(p.id) ? { ...p, img: st.key + '-g' + gj.set + '-' + p.id, nb: [], see: [] } : null);
         const pair = (arr, f) => { for(const e of Array.isArray(arr) ? arr : []){ const a = list[e && e[0]], b = list[e && e[1]]; if(a && b && a !== b){ f(a).push(b.id); f(b).push(a.id); } } };
@@ -22142,8 +22073,6 @@ function updateLightHalos(){
           see: [...new Set(nb0.flatMap(p => p.nb))].filter(id => { const q = st.points.find(x => x.id === id); return q && Math.hypot(q.pos.x - sp.x, q.pos.z - sp.z) < 8; }) };
         if(by[0]) by[0][0].nb.push('start');
         st.graph = { set: gj.set, n: st.points.length, edges: (gj.edges || []).length };
-      } else if(pj && pj.v === 1 && Array.isArray(pj.points)){
-        st.points = pj.points.filter(p => p && /^p\d{1,2}$/.test(p.id) && p.pos && [p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite)).slice(0, 24);
       }
       if(window.__l3dLite) tour.startLite(window.__l3dLite);
       else tour.startPre();   // 地点が無いシーンも、読み終わるまで開始位置の画像で待つ（2026-11-21）
