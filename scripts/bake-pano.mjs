@@ -205,15 +205,36 @@ async function sharpness(faces) {
 }
 const SHARP_MIN = Number(arg('--sharp-min', 0.45));   // 開始位置の何割未満の地点を外すか（会議室の試しで、見てぼやけていた 4 か所が 0.14〜0.34、良い所が 0.59〜0.86）
 
-// 1 か所の 6 方向（各 90°）を撮る
+// 6 面が同じ絵になっていないか（2026-11-25 本人「バグったぞ」: TK メインフロア・see you tomorrow 2F で、
+// 地点の 6 面がすべて同じ 1 方向の絵になっていた。向きを変えても画面が描き直されないまま撮っていた）。
+// 64px の白黒にして、正面と右・正面と上の平均の差を見る。普通は 20〜60、壊れていると 0〜3
+async function facesDiffer(faces) {
+  const g = async (b) => sharp(b).greyscale().resize(64, 64).raw().toBuffer();
+  const f = await g(faces.f), rr = await g(faces.r), u = await g(faces.u);
+  const d = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length; };
+  return Math.min(d(f, rr), d(f, u));
+}
+const SAME_FACE_MAX = 6;
+
+// 1 か所の 6 方向（各 90°）を撮る。6 面が同じ絵なら待ち時間を長くして撮り直し、それでも同じなら止める（壊れた画像を上げない）
 async function capture(page, pos, yaw0, pitch0, r, tag, iv = 700) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const faces = await captureOnce(page, pos, yaw0, pitch0, r, tag, attempt ? 700 : iv, attempt * 1200);
+    const diff = await facesDiffer(faces);
+    if (diff > SAME_FACE_MAX) return faces;
+    console.log(`same faces ${tag} diff=${diff.toFixed(1)} retry ${attempt + 1}`);
+    r.sameFaces = (r.sameFaces || 0) + 1;
+  }
+  throw new Error('6 面が同じ絵のまま（向きを変えても描き直されない） ' + tag);
+}
+async function captureOnce(page, pos, yaw0, pitch0, r, tag, iv, extraWait) {
   const faces = {};
   for (const [k, [dy, p]] of Object.entries(FACES)) {
     await page.evaluate(([pos, yw, pt]) => window.__pb.aim(pos, yw, pt), [pos, yaw0 + dy, p + (k === 'u' || k === 'd' ? 0 : pitch0)]);
     const t0 = Date.now();
     const ok = await settle(page, 90000, iv);
     if (!ok) r.slow = (r.slow || '') + tag + k + ' ';
-    await page.waitForTimeout(iv < 700 ? 150 : 400);
+    await page.waitForTimeout((iv < 700 ? 150 : 400) + extraWait);
     const t1 = Date.now();
     // 2 倍で描いた画面は PNG だと取り込みが遅い（3072px で 1 枚 1 秒以上）。高画質の JPEG で取り込んでから縮める（縮めるので差は見えない）
     if (SS > 1) { const png = await page.locator('canvas').first().screenshot(iv < 700 ? { type: 'jpeg', quality: 95 } : { type: 'png' }); faces[k] = await sharp(png).resize(SIZE, SIZE, { kernel: 'lanczos3' }).jpeg({ quality: QUALITY, mozjpeg: true }).toBuffer(); }
