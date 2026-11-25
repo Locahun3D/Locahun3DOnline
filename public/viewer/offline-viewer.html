@@ -876,7 +876,9 @@ body.cam-active #view-tl-btns{
 .sp-spot{display:none;position:fixed;left:0;top:0;width:64px;height:64px;margin:-32px 0 0 -32px;padding:0;border-radius:50%;
   border:3px solid rgba(255,255,255,.92);background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 2px 10px rgba(0,0,0,.35);
   z-index:40;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%}
-.sp-spot:hover{background:rgba(255,255,255,.32)}
+.sp-spot:hover,.sp-spot.hot{background:rgba(255,255,255,.42);border-color:#fff}
+#sp-cursor{display:none;position:fixed;left:0;top:0;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;pointer-events:none;z-index:39;
+  border:2px solid rgba(255,255,255,.85);background:rgba(255,255,255,.12);box-shadow:0 0 0 1px rgba(0,0,0,.25);transform:scaleY(.45)}
 /* 進む矢印（内見版 naiken の #nk-go と同じ見た目・動き。2026-11-24 本人「2D画面からうごけなくない？ ヒルトンのページと一致するまで」）。
    押すと矢印の少し先の床へ移る（2D は向きの先の地点へ、3D は床へ歩く）。下のボタン列の上に置く（bottom は JS で合わせる） */
 #sp-go{position:fixed;left:50%;bottom:76px;z-index:60;width:clamp(84px,9vw,128px);height:clamp(56px,6vw,84px);margin-left:calc(clamp(84px,9vw,128px) / -2);padding:0;
@@ -21714,16 +21716,44 @@ function updateLightHalos(){
       fit(); setInterval(fit, 300); addEventListener('resize', fit);
     }
     const v = new THREE.Vector3(), vc = new THREE.Vector3();
+    // マウスの位置（タッチは押した時に移るので使わない）。ボタンの上では出さない
+    if(!T.hoverHooked){ T.hoverHooked = true;
+      addEventListener('pointermove', e => { if(e.pointerType !== 'mouse') return;
+        const over = e.target && e.target.closest && e.target.closest('button,a,input,.cbar,#sp-go');
+        T.hover = over ? null : { x: e.clientX, y: e.clientY, at: performance.now() }; }, { passive: true });
+      document.addEventListener('mouseleave', () => { T.hover = null; }); }
+    // 床の輪（ストリートビューのカーソル）: ポインターの所に、行き先があるときだけ出す
+    function placeCursor(target){
+      let c = document.getElementById('sp-cursor');
+      if(!target || !T.hover || !(T.pre || T.lite || T.bridge)){ if(c) c.style.display = 'none'; return; }
+      if(!c){ c = document.createElement('div'); c.id = 'sp-cursor'; document.body.append(c); }
+      c.style.display = 'block'; c.style.left = T.hover.x + 'px'; c.style.top = T.hover.y + 'px';
+    }
     function placeSpots(){
       const on = T.pre || T.lite || T.bridge;
-      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeArrows(false); return; }
+      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeArrows(false); placeCursor(null); return; }
       camera.updateMatrixWorld();
       placeArrows(true);
       const allow = st.graph ? new Set(cands().map(q => q.id)) : null;
+      // Google マップ方式（2026-11-25 本人「点が多すぎて見づらい。近くの点だけ表示するようにして googlemap 形式にして」）:
+      //   床の丸は近くの地点だけ（5m 以内・つながった地点を優先して最大 NEAR_MAX 個）。遠くの地点はその向きを押せば移れる（pickAt）。
+      //   マウスでは、置いた所を押したら行く地点の丸を明るくし、ポインターの所に床の輪（カーソル）を出す
+      const NEAR_M = 5, NEAR_MAX = 5;   // 5m は Matterport3D / R2R のつながりの上限（docs/tour-point-placement-matterport-2026-11-25.md）
+      const nbSet = st.graph ? new Set(byId(T.cur)?.nb || []) : null;
+      const near5 = T.spots.map(s => ({ s, d: Math.hypot(s.p.pos.x - camPos.x, s.p.pos.z - camPos.z) }))
+        .filter(o => o.s.p.id !== T.cur && o.d >= 0.3 && o.d <= NEAR_M && (!allow || allow.has(o.s.p.id)))
+        .sort((a, b) => (a.d - (nbSet && nbSet.has(a.s.p.id) ? 1.5 : 0)) - (b.d - (nbSet && nbSet.has(b.s.p.id) ? 1.5 : 0)))
+        .slice(0, NEAR_MAX).map(o => o.s.p.id);
+      const shown = new Set(near5);
+      if(shown.size < 2 && nbSet) for(const id of nbSet){ const q = byId(id); if(q && Math.hypot(q.pos.x - camPos.x, q.pos.z - camPos.z) <= 9) shown.add(id); }   // 近くに無いときは、つながった地点（広い所）
+      const hov = T.hover && !T.busy && performance.now() - T.hover.at < 4000 ? pickAt(T.hover.x, T.hover.y) : null;
+      if(hov) shown.add(hov.id);
+      placeCursor(hov);
       for(const s of T.spots){
         const p = s.p, floor = Number.isFinite(p.floorY) ? p.floorY : p.pos.y - 1.5;
         const d = Math.hypot(p.pos.x - camPos.x, p.pos.z - camPos.z);
-        if(p.id === T.cur || d > (allow ? 12 : 8) || d < 0.3 || (allow && !allow.has(p.id))){ s.el.style.display = 'none'; s.el.dataset.why = 'far'; continue; }
+        s.el.classList.toggle('hot', !!hov && hov.id === p.id);
+        if(p.id === T.cur || !shown.has(p.id)){ s.el.style.display = 'none'; s.el.dataset.why = 'far'; continue; }
         v.set(p.pos.x, floor, p.pos.z);
         vc.copy(v).applyMatrix4(camera.matrixWorldInverse);
         if(vc.z > -0.4){ s.el.style.display = 'none'; s.el.dataset.why = 'behind'; continue; }
@@ -21793,6 +21823,12 @@ function updateLightHalos(){
     }
     // 画面のタップ: 指した向き（水平の角度）に一番近い地点へ。30° 以内に無ければ動かない
     function tapAt(x, y){
+      const best = pickAt(x, y);
+      if(!best) return false;
+      go(best.id); return true;
+    }
+    // 画面の (x, y) を押したら移る地点（移らずに返すだけ。マウスを置いた所の行き先表示にも使う）
+    function pickAt(x, y){
       camera.updateMatrixWorld();
       const dir = new THREE.Vector3((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1, 0.5).unproject(camera).sub(camera.position);
       const ang = Math.atan2(dir.x, dir.z);
@@ -21809,8 +21845,7 @@ function updateLightHalos(){
         if(score < bestScore){ bestScore = score; best = p; }
       }
       if(!best && st.graph) best = farther(ang, 90);   // つながった地点が無い向きでも、その向きの近い地点へ（2026-11-22 本人「移動したくても次の点がない」）
-      if(!best) return false;
-      go(best.id); return true;
+      return best || null;
     }
     // つながりに無い地点も含めて、向き ang から maxDeg 以内・10m 以内で一番それらしい地点
     function farther(ang, maxDeg){

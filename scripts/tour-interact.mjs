@@ -90,6 +90,13 @@ for (const zip of zips) {
   if (!(st && st.state === 'shown')) { results.push({ zip, ok: false, why: 'no 2D ' + JSON.stringify(st), errs }); console.log('[NG] ' + zip + ' 2D が出ない ' + JSON.stringify(st)); await ctx.close(); continue; }
   await p.evaluate(WATCH);
   await p.waitForTimeout(600); await shot('0start');
+  // 床の丸は近くだけ（Google マップ方式 2026-11-25）・マウスを置くと床の輪と行き先の丸が出るか
+  { const cnt = () => p.evaluate(() => ({ spots: [...document.querySelectorAll('.sp-spot')].filter((e) => e.style.display === 'block').length,
+      hot: !!document.querySelector('.sp-spot.hot'), cursor: (document.getElementById('sp-cursor') || {}).style?.display === 'block' }));
+    const s0 = await cnt(); let s1 = null;
+    if (!MOBILE) { const vp0 = p.viewportSize(); await p.mouse.move(Math.round(vp0.width / 2), Math.round(vp0.height * 0.7)); await p.waitForTimeout(400); s1 = await cnt(); await shot('0hover'); await p.mouse.move(5, 60); }
+    steps.push({ name: 'spots', start: s0, hover: s1 });
+    if (s0.spots > 6) { results.push({ zip, ok: false, why: 'too many spots ' + s0.spots }); console.log('[NG] ' + zip + ' 床の丸が多すぎる ' + s0.spots); } }
   const vp = p.viewportSize(), cx = Math.round(vp.width / 2), cy = Math.round(vp.height / 2);
   const inPhoto = async () => { const s = await state(p); return s && (s.pre || s.lite) && s.state === 'shown'; };
   // 1. ドラッグで見回す
