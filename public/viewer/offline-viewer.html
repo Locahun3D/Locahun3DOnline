@@ -891,12 +891,6 @@ body.cam-active #view-tl-btns{
 #sp-go.busy{opacity:.35;animation:none}
 @keyframes sp-go{0%,100%{translate:0 0;opacity:.75}50%{translate:0 -8px;opacity:1}}
 @media (prefers-reduced-motion:reduce){#sp-go{animation:none;opacity:.9}}
-/* 動線グラフの行き先の矢印（画面の下の輪。つながった地点の方向。行き先が背中側で床の丸が見えない時も迷わない。2026-11-21） */
-.sp-arrow{position:fixed;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,.92);
-  background:rgba(12,12,13,.62);color:#fafaf6;z-index:41;cursor:pointer;display:flex;align-items:center;justify-content:center;font:600 15px/1 sans-serif;
-  box-shadow:0 2px 8px rgba(0,0,0,.45);-webkit-tap-highlight-color:transparent}
-.sp-arrow:hover{background:#ffb454;color:#000;border-color:#ffb454}
-.sp-arrow span{display:block;line-height:1;pointer-events:none}
 .sp-lite-chip{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;gap:10px;align-items:center;
   padding:6px 6px 6px 14px;border-radius:999px;background:rgba(12,12,13,.82);color:#fafaf6;font:500 13px/1.4 "Noto Sans JP",sans-serif;letter-spacing:.04em;white-space:nowrap;
   box-shadow:0 2px 12px rgba(0,0,0,.4)}
@@ -21628,31 +21622,6 @@ function updateLightHalos(){
       for(const ev of ['mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, e => e.stopPropagation(), { passive: true });
       b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); fire(); });
     }
-    // 行き先の矢印（動線グラフのとき）: 今の地点とつながった地点の方向を、画面の下の輪の上に出す
-    function placeArrows(on){
-      T.arrows ||= new Map();
-      // 2026-11-23 本人「この表示削除 いらない たくさん地点あると煩雑になる」→ 矢印は出さない（床の丸・床タップ・↑キーで移る）。戻すときは ARROWS_OFF を false に
-      const ARROWS_OFF = true;
-      const c = on && st.graph && !ARROWS_OFF ? byId(T.cur) : null, ids = new Set(c?.nb || []);
-      if(c) for(const id of c.see || []){   // 見える地点も、つながった地点と向きが 25° 以上違えば矢印を出す（行ける向きを増やす）
-        const p = byId(id); if(!p || ids.has(id)) continue; const a = Math.atan2(p.pos.x - c.pos.x, p.pos.z - c.pos.z);
-        if([...ids].every(j => { const q = byId(j); if(!q) return true; let d = Math.abs(Math.atan2(q.pos.x - c.pos.x, q.pos.z - c.pos.z) - a); if(d > Math.PI) d = 2 * Math.PI - d; return d > 25 * Math.PI / 180; })) ids.add(id); }
-      for(const [id, el] of T.arrows) if(!ids.has(id)){ el.remove(); T.arrows.delete(id); }
-      if(!c) return;
-      const en = typeof _lang !== 'undefined' && _lang === 'en';
-      const cx = innerWidth / 2, cy = innerHeight - (T.chip ? 118 : 84), R = Math.min(52, innerWidth * 0.12);
-      for(const id of ids){
-        const p = byId(id); if(!p) continue;
-        let el = T.arrows.get(id);
-        if(!el){ el = document.createElement('button'); el.type = 'button'; el.className = 'sp-arrow'; el.setAttribute('aria-label', en ? 'Move this way' : 'この方向へ移動');
-          el.innerHTML = '<span>&#9650;</span>'; tapButton(el, id); document.body.append(el); T.arrows.set(id, el); }
-        v.set(p.pos.x - camPos.x, 0, p.pos.z - camPos.z).transformDirection(camera.matrixWorldInverse);
-        const L = Math.hypot(v.x, v.z); if(L < 1e-4){ el.style.display = 'none'; continue; }
-        const nx = v.x / L, nz = v.z / L;
-        el.style.display = 'flex'; el.style.left = (cx + R * nx).toFixed(1) + 'px'; el.style.top = (cy + R * nz).toFixed(1) + 'px';
-        el.firstChild.style.transform = 'rotate(' + Math.atan2(nx, -nz).toFixed(3) + 'rad)';
-      }
-    }
     // 床の丸（HTML。画面に映る位置へ毎フレーム置く）
     function makeSpots(){
       if(T.spots.length) return;
@@ -21731,9 +21700,8 @@ function updateLightHalos(){
     }
     function placeSpots(){
       const on = T.pre || T.lite || T.bridge;
-      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeArrows(false); placeCursor(null); return; }
+      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeCursor(null); return; }
       camera.updateMatrixWorld();
-      placeArrows(true);
       const allow = new Set(cands().map(q => q.id));
       // Google マップ方式（2026-11-25 本人「点が多すぎて見づらい。近くの点だけ表示するようにして googlemap 形式にして」）:
       //   床の丸は近くの地点だけ（5m 以内・つながった地点を優先して最大 NEAR_MAX 個）。遠くの地点はその向きを押せば移れる（pickAt）。
