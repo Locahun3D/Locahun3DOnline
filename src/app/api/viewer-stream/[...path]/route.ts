@@ -270,6 +270,8 @@ export async function GET(
         "Accept-Ranges": "bytes",
         "Cache-Control": STREAM_CACHE,
         "Content-Length": String(rangeHeader ? window.length : entry.size),
+        // Next 16.4.6 から HEAD の Content-Length が消える（2026-11-25 本番で写真ツアーの鍵が作れず 2D が全物件で出なくなった）。同じ値を別名でも付ける
+        "X-Content-Length": String(rangeHeader ? window.length : entry.size),
         "X-Stream-Name": entry.name,
       });
       if (objectEtag) headers.set("ETag", streamContentEtag(objectEtag, entry.offset));
@@ -310,6 +312,7 @@ export async function GET(
       const headers = new Headers();
       headers.set("Content-Type", "application/octet-stream");
       headers.set("Content-Length", String(length));
+      headers.set("X-Content-Length", String(length));
       headers.set("Content-Range", `bytes ${offset}-${end}/${total}`);
       headers.set("Accept-Ranges", "bytes");
       headers.set("Cache-Control", STREAM_CACHE);
@@ -325,6 +328,7 @@ export async function GET(
     const headers = new Headers();
     headers.set("Content-Type", "application/octet-stream");
     headers.set("Content-Length", String(obj.size));
+    headers.set("X-Content-Length", String(obj.size));   // HEAD で Content-Length が消える対策（上と同じ）
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", STREAM_CACHE);
     headers.set("ETag", wantsStream ? streamContentEtag(obj.httpEtag, 0) : obj.httpEtag);

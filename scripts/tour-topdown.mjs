@@ -19,7 +19,7 @@ const name = decodeURIComponent(scene.split('/').pop()).replace(/\.zip$/, '').re
 
 // 今の写真ツアー（本番の graph.json）
 const head = await fetch(ORIGIN + scene, { method: 'HEAD' });
-const etag = (head.headers.get('etag') || '').replace(/"/g, ''), len = head.headers.get('content-length');
+const etag = (head.headers.get('etag') || '').replace(/"/g, ''), len = head.headers.get('content-length') || head.headers.get('x-content-length');
 const key = crypto.createHash('sha256').update(`l3d-pano-v1:etag:${etag}:${len}`).digest('hex');
 const graph = await (await fetch(`${ORIGIN}/api/pano/${key}.graph.json`)).json().catch(() => null);
 const meta = await (await fetch(`${ORIGIN}/api/pano/${key}.json`)).json().catch(() => null);

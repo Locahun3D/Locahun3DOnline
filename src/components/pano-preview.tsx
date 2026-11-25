@@ -36,7 +36,7 @@ function findPano(streamUrl: string): Promise<string | null> {
       const res = await fetch(streamUrl, { method: "HEAD", credentials: "same-origin", cache: "no-cache" });
       if (!res.ok) return null;
       const etag = res.headers.get("etag") || "";
-      const len = res.headers.get("content-length") || "";
+      const len = res.headers.get("content-length") || res.headers.get("x-content-length") || "";   // Next 16.4.6 で HEAD の Content-Length が消える
       if (!/^\d+$/.test(len)) return null;
       const content = /^"l3d-content-([A-Za-z0-9_-]{8,200})"$/.exec(etag);
       const r2 = /^"([A-Za-z0-9_-]{8,200})"$/.exec(etag);

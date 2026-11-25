@@ -13,7 +13,7 @@ async function one(slug) {
   const scenes = [...new Set([...ph.matchAll(/offline-viewer\.html\?autoload=([^"&]+)/g)].map((m) => new URLSearchParams('a=' + m[1]).get('a')))].filter((s) => s.startsWith('/api/viewer-stream/'));
   for (const scene of scenes) {
     const h = await fetch(ORIGIN + encodeURI(scene), { method: 'HEAD' });
-    const etag = (h.headers.get('etag') || '').replace(/"/g, ''), len = h.headers.get('content-length');
+    const etag = (h.headers.get('etag') || '').replace(/"/g, ''), len = h.headers.get('content-length') || h.headers.get('x-content-length');
     const key = crypto.createHash('sha256').update(`l3d-pano-v1:etag:${etag}:${len}`).digest('hex');
     const meta = await fetch(`${ORIGIN}/api/pano/${key}.json`).then((r) => r.ok ? r.json() : null).catch(() => null);
     const g = await fetch(`${ORIGIN}/api/pano/${key}.graph.json`).then((r) => r.ok ? r.json() : null).catch(() => null);
