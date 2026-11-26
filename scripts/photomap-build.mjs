@@ -104,6 +104,14 @@ for (const spec of MAPS) {
     label, labelEn,
     image: { src, width: W, height: H },
     photoBase: `/api/pano/${td.key}-g${g.set}-`,
+    metersWide: Math.round((cw / td.ppm) * 100) / 100,   // 図の横幅（m）。画面の縮尺バーに使う
+    // 線の形（photomap-vector.py）: 図の画素座標に直して渡す。画面は SVG で描く
+    ...(td.geom ? { plan: (() => {
+      const X = (v) => Math.round((v - x0) * (W / cw) * 10) / 10, Y = (v) => Math.round((v - y0) * (H / ch) * 10) / 10;
+      const xy = (a) => a.map((v, j) => (j % 2 ? Y(v) : X(v)));
+      return { outer: td.geom.outer.map(xy), dashed: td.geom.dashed.map(xy), walls: td.geom.walls.map(xy), furn: td.geom.furn.map(xy), flines: (td.geom.flines || []).map(xy), labels: (td.geom.labels || []).map(([x, y, t, te, k = 1]) => [X(x), Y(y), t, te, k]),
+        cols: td.geom.cols.map(([a, b, w, h]) => [X(a), Y(b), Math.round(w * (W / cw) * 10) / 10, Math.round(h * (H / ch) * 10) / 10]) };
+    })() } : {}),
     // yaw: 地点の向き（ビューアーの yaw。正面は図の上で (sin yaw, cos yaw)）→ 図の上を 0 とした時計回りの度 = 180 - yaw°
     //   （TK n1 で確かめた: 正面が北の壁、右が東の丸いバー）
     points: nodes.map((n, i) => ({ id: n.id, x: r3((P[i][0] - x0) / cw), y: r3((P[i][1] - y0) / ch), yaw: mapYaw(n.yaw || 0) })),

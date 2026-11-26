@@ -24,65 +24,153 @@ const PINK = "#f08a8a";
 export default function PhotoMap({ maps, en }: { maps: PhotoMapData[]; en: boolean }) {
   const usable = maps.filter((m) => m.points.length > 0);
   const [open, setOpen] = useState<{ m: number; i: number } | null>(null);
+  const [sel, setSel] = useState<number[]>([]);   // 各カードで選ばれている地点（右の眺め・図の濃い印）
   if (!usable.length) return null;
   const cur = open && usable[open.m];
+  const pick = (m: number, i: number, show = true) => { setSel((s) => { const n = [...s]; n[m] = i; return n; }); if (show) setOpen({ m, i }); };
   return (
     <div data-photo-map className="space-y-6">
       {usable.map((m, mi) => (
-        <OneMap key={m.image.src} map={m} en={en} onPick={(i) => setOpen({ m: mi, i })} />
+        <OneMap key={m.image.src} map={m} en={en} sel={sel[mi] ?? 0} onPick={(i) => pick(mi, i)} />
       ))}
       {cur && open && (
-        <Lightbox map={cur} index={open.i} en={en} onIndex={(i) => setOpen({ m: open.m, i })} onClose={() => setOpen(null)} />
+        <Lightbox map={cur} index={open.i} en={en} onIndex={(i) => pick(open.m, i)} onClose={() => setOpen(null)} />
       )}
     </div>
   );
 }
 
-function OneMap({ map, en, onPick }: { map: PhotoMapData; en: boolean; onPick: (i: number) => void }) {
+/** 図の印: ピンクの丸＋向きの矢じり（画面上の大きさは図の縮尺に関係なく一定）。選ばれている地点は濃い色＋輪 */
+function Marker({ yaw, active, size = 26 }: { yaw: number; active?: boolean; size?: number }) {
+  return (
+    <svg viewBox="-13 -13 26 26" width={size} height={size} aria-hidden className="block overflow-visible">
+      {active && <circle r={9} fill="none" stroke="#1a1a1a" strokeWidth={1.6} />}
+      <path d="M -6.2 -4.2 L 0 -13 L 6.2 -4.2 Z" transform={`rotate(${yaw})`} fill={active ? "#d9534f" : PINK} stroke="#fff" strokeWidth={1} strokeLinejoin="round" />
+      <circle r={4.8} fill={active ? "#d9534f" : PINK} stroke="#fff" strokeWidth={1.4} />
+    </svg>
+  );
+}
+
+/** 縮尺バー（図の横幅の実寸から。1・2・5・10m のうち図の幅の 1/5〜1/3 に収まるもの） */
+function ScaleBar({ metersWide, maxWidth }: { metersWide: number; maxWidth: string }) {
+  const m = [1, 2, 5, 10, 20].find((v) => v / metersWide >= 0.15) ?? 20;
+  return (
+    <div className="mx-auto mt-2" style={{ maxWidth }}>
+      <div className="flex items-center gap-2 text-[11px] text-ink/70 mono">
+        <div className="relative h-2" style={{ width: `${(m / metersWide) * 100}%` }}>
+          <div className="absolute inset-x-0 bottom-0 h-[2px] bg-ink" />
+          <div className="absolute left-0 bottom-0 w-[2px] h-2 bg-ink" />
+          <div className="absolute right-0 bottom-0 w-[2px] h-2 bg-ink" />
+        </div>
+        <span>{m}m</span>
+      </div>
+    </div>
+  );
+}
+
+/** 平面図（線・名前・印）。カードの中と、スマホの「拡大」画面で同じものを描く */
+function Plan({ map, en, sel, onPick, style, full }: { map: PhotoMapData; en: boolean; sel: number; onPick: (i: number) => void; style: React.CSSProperties; full?: boolean }) {
   const W = map.image.width, H = map.image.height;
-  const r = Math.max(W, H) * 0.0085; // 点の丸（図の長い辺の 0.85%。参考ページくらいの小ささ）
   const name = (en ? map.labelEn || map.label : map.label) || "";
   return (
-    <div className="bg-white border border-line p-4 sm:p-6">
-      <div className="grid gap-5 md:grid-cols-2 items-start">
-        <div className="relative pt-7 sm:pt-0">
-          {name && (
-            <div className="absolute right-0 top-0 text-right font-bold text-[16px] sm:text-[19px] leading-tight pointer-events-none">{name}</div>
-          )}
-          <svg viewBox={`0 0 ${W} ${H}`} className="block w-full h-auto mx-auto" style={{ maxWidth: `max(320px, ${Math.round(W / 2)}px)` }} role="group" aria-label={en ? `${name} floor plan` : `${name}の平面図`}>
-            <image href={map.image.src} x={0} y={0} width={W} height={H} />
-            {map.points.map((q, i) => (
-              <g
-                key={q.id}
-                transform={`translate(${q.x * W} ${q.y * H})`}
-                onClick={() => onPick(i)}
-                role="button"
-                tabIndex={0}
-                aria-label={en ? `View from position ${i + 1}` : `地点 ${i + 1} からの眺め`}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(i); } }}
-                className="cursor-pointer outline-none [&:hover>.dot]:opacity-75 [&:focus-visible>.ring]:opacity-100"
-              >
-                <circle r={r * 3.6} fill="transparent" />
-                <circle className="ring" r={r * 2.4} fill="none" stroke="#000" strokeWidth={r * 0.3} opacity={0} />
-                <circle className="dot" r={r} fill={PINK} />
-                {/* 向き: 丸の外側に小さな矢じり */}
-                <path d={`M ${-r * 0.9} ${-r * 1.5} L 0 ${-r * 2.5} L ${r * 0.9} ${-r * 1.5} Z`} transform={`rotate(${q.yaw})`} fill={PINK} />
-              </g>
-            ))}
-          </svg>
-        </div>
-        <button type="button" onClick={() => onPick(0)} className="block w-full" aria-label={en ? "Open the view" : "眺めを大きく見る"}>
-          <PanoView base={map.photoBase} pt={map.points[0]} className="aspect-[4/3] w-full bg-[#111]" />
-        </button>
+    <div
+    className="relative mx-auto"
+    style={{ ...style, aspectRatio: `${W} / ${H}` }}
+    role="group"
+    aria-label={en ? `${name} floor plan` : `${name}の平面図`}
+  >
+    {map.plan ? (
+      // 線の形がある図は SVG で描く（線の太さが画面の大きさによらず一定。外壁 2.5px・間仕切り 1.25px）
+      <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" aria-hidden>
+        {/* 造り付けの大きな家具（灰の細線）→ 壁が沿っていない外形（破線）→ 間仕切り → 外壁 → 柱 */}
+        {map.plan.furn.map((a, i) => (
+          <polygon key={`f${i}`} points={a.join(" ")} fill="#f1f1ef" stroke="#8c8c8c" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        ))}
+        {map.plan.flines.map(([x1, y1, x2, y2], i) => (
+          <line key={`fl${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#9a9a9a" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        ))}
+        {map.plan.dashed.map(([x1, y1, x2, y2], i) => (
+          <line key={`d${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#141414" strokeWidth={1} strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+        ))}
+        {map.plan.walls.map(([x1, y1, x2, y2], i) => (
+          <line key={`w${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#141414" strokeWidth={1.25} strokeLinecap="square" vectorEffect="non-scaling-stroke" />
+        ))}
+        {map.plan.outer.map(([x1, y1, x2, y2], i) => (
+          <line key={`o${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#141414" strokeWidth={2.5} strokeLinecap="square" vectorEffect="non-scaling-stroke" />
+        ))}
+        {map.plan.cols.map(([x, y, w, h], i) => (h < 0 ? <circle key={`c${i}`} cx={x + w / 2} cy={y + w / 2} r={w / 2} fill="#141414" /> : <rect key={`c${i}`} x={x} y={y} width={w} height={h} fill="#141414" />))}
+      </svg>
+    ) : null}
+    {map.plan ? (
+      // 部屋・設備の名前（文字は画面 px で一定の大きさ。HTML で重ねる）
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        {/* スマホ（640px 未満）は部屋の名前だけ・3 つまで（印に隠れないように）。5 番目 = 1 が部屋、0 が設備 */}
+        {map.plan.labels.map(([x, y, t, te, k = 1], i, all) => (
+          <span key={i} className={`${full || (k === 1 && all.slice(0, i).filter((l) => (l[4] ?? 1) === 1).length < 3) ? "" : "max-sm:hidden "}absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[11px] sm:text-[12px] font-bold tracking-[0.04em] text-ink/85 [text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_3px_#fff,0_0_4px_#fff]`} style={{ left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%` }}>
+            {en ? te || t : t}
+          </span>
+        ))}
       </div>
-      <p className="mt-4 text-[13px] text-ink/75 flex items-start gap-2">
-        <svg viewBox="-10 -14 20 24" className="w-3.5 h-4 shrink-0 mt-[3px]" aria-hidden>
-          <circle r={5} fill={PINK} />
-          <path d="M -4.5 -7.5 L 0 -12.5 L 4.5 -7.5 Z" fill={PINK} />
-        </svg>
-        <span>{en ? "Click an arrow on the plan to see the view from that position." : <TitleText text="平面図の矢印を押すと、その位置からの眺めが表示されます。" />}</span>
-      </p>
-      <p className="mt-1 text-[12px] text-muted">{en ? "* Views are rendered from the 3D scan." : <TitleText text="※ 画像は3Dスキャンから作ったものです。" />}</p>
+    ) : null}
+    {!map.plan ? (
+      <img src={map.image.src} alt="" width={W} height={H} className="absolute inset-0 w-full h-full" />
+    ) : null}
+
+    {map.points.map((q, i) => (
+      <button
+        key={q.id}
+        type="button"
+        onClick={() => onPick(i)}
+        aria-label={en ? `View from position ${i + 1}` : `地点 ${i + 1} からの眺め`}
+        className={`absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-full outline-none ${full ? "" : "max-sm:scale-[0.78]"} hover:scale-110 focus-visible:ring-2 focus-visible:ring-black transition-transform`}
+        style={{ left: `${q.x * 100}%`, top: `${q.y * 100}%`, zIndex: i === sel ? 2 : 1 }}
+      >
+        <Marker yaw={q.yaw} active={i === sel} size={30} />
+      </button>
+    ))}
+  </div>
+  );
+}
+
+function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel: number; onPick: (i: number) => void }) {
+  const [zoom, setZoom] = useState(false);
+  useEffect(() => { if (!zoom) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") setZoom(false); }; window.addEventListener("keydown", k); const o = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { window.removeEventListener("keydown", k); document.body.style.overflow = o; }; }, [zoom]);
+  const W = map.image.width, H = map.image.height;
+  const name = (en ? map.labelEn || map.label : map.label) || "";
+  const p0 = map.points[Math.min(sel, map.points.length - 1)];
+  return (
+    <div className="bg-white border border-line p-4 sm:p-6">
+      {name && <div className="font-bold text-[16px] sm:text-[19px] leading-tight mb-4">{name}</div>}
+      <div className="grid gap-5 md:grid-cols-2 items-start">
+        <div>
+          <Plan map={map} en={en} sel={sel} onPick={onPick} style={{ maxWidth: `min(100%, max(300px, ${Math.round(W / 2)}px))` }} />
+          {/* スマホは図が小さく印が混むので、全画面で 2 倍に広げて見られるように（横にスクロール） */}
+          <button type="button" onClick={() => setZoom(true)} className="sm:hidden mt-2 mx-auto block text-[12.5px] border border-line px-3 py-1.5 bg-white">{en ? "Enlarge plan" : "図面を拡大"}</button>
+          {zoom && (
+            <div className="fixed inset-0 z-50 bg-white overflow-auto" role="dialog" aria-label={en ? `${name} floor plan` : `${name}の平面図`}>
+              <div className="sticky top-0 left-0 z-10 flex items-center justify-between px-4 py-2 bg-white/95 border-b border-line text-[13px]">
+                <span className="font-bold">{name}</span>
+                <button type="button" onClick={() => setZoom(false)} className="w-9 h-9 grid place-items-center text-[20px]" aria-label={en ? "Close" : "閉じる"}>×</button>
+              </div>
+              <div className="p-4" style={{ width: "max(200vw, 700px)" }}>
+                <Plan map={map} en={en} sel={sel} onPick={(i) => { setZoom(false); onPick(i); }} style={{ width: "100%" }} full />
+              </div>
+            </div>
+          )}
+          {map.metersWide ? <ScaleBar metersWide={map.metersWide} maxWidth={`min(100%, max(300px, ${Math.round(W / 2)}px))`} /> : null}
+        </div>
+        {/* 右の列: 眺め＋説明（PC では説明を写真の下に置き、図面の横の空きを埋める） */}
+        <div className="md:sticky md:top-20">
+          <button type="button" onClick={() => onPick(sel)} className="block w-full" aria-label={en ? "Open the view" : "眺めを大きく見る"}>
+            <PanoView key={p0.id} base={map.photoBase} pt={p0} className="aspect-[4/3] w-full bg-[#111]" />
+          </button>
+          <p className="mt-4 text-[13px] text-ink/75 flex items-start gap-2">
+            <span className="shrink-0 -mt-[2px]"><Marker yaw={0} size={20} /></span>
+            <span>{en ? "Click an arrow on the plan to see the view from that position." : <TitleText text="平面図の矢印を押すと、その位置からの眺めが表示されます。" />}</span>
+          </p>
+          <p className="mt-1 text-[12px] text-muted">{en ? "* Plan and views are generated from the 3D scan. Actual conditions take precedence." : <TitleText text="※ 図面と画像は3Dスキャンから作ったものです。現況と違う場合は現況が優先されます。" />}</p>
+        </div>
+      </div>
     </div>
   );
 }

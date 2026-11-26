@@ -40,7 +40,7 @@ else:
     tf = t0 + np.radians(np.arange(-1, 1.01, .1)); rot = float(tf[int(np.argmax([score(t) for t in tf]))])
     if abs(np.degrees(rot)) < 1.5: rot = 0.0
 Q = rotq(Q, rot)
-x0, z0 = np.percentile(Q, 0.2, axis=0) - 0.8; x1, z1 = np.percentile(Q, 99.8, axis=0) + 0.8
+x0, z0 = np.percentile(Q, 0.05, axis=0) - 1.5; x1, z1 = np.percentile(Q, 99.95, axis=0) + 1.5   # 外形が図の縁に接しないよう余白を広く
 W, H = int((x1 - x0) * ppm), int((z1 - z0) * ppm)
 u = ((Q[:, 0] - x0) * ppm).astype(int); v = ((Q[:, 1] - z0) * ppm).astype(int); ok = (u >= 0) & (u < W) & (v >= 0) & (v < H)
 D = np.zeros((H, W), np.float32); np.add.at(D, (v[ok], u[ok]), 1)

@@ -602,7 +602,7 @@ export const propertySchema = z.object({
     label: z.string().max(60).default(""),
     labelEn: z.string().max(120).default(""),
     image: z.object({ src: z.string().max(2000), width: z.number().int().positive(), height: z.number().int().positive() }),
-    photoBase: z.string().max(400),
+    photoBase: z.string().max(400), metersWide: z.number().positive().max(2000).optional(), plan: z.object({ outer: z.array(z.array(z.number()).length(4)).max(1500).default([]), dashed: z.array(z.array(z.number()).length(4)).max(1500).default([]), walls: z.array(z.array(z.number()).length(4)).max(800).default([]), cols: z.array(z.array(z.number()).length(4)).max(400).default([]), furn: z.array(z.array(z.number()).max(64)).max(300).default([]), flines: z.array(z.array(z.number()).length(4)).max(800).default([]), labels: z.array(z.tuple([z.number(), z.number(), z.string().max(40), z.string().max(60)]).rest(z.number())).max(60).default([]) }).optional(),
     points: z.array(z.object({
       id: z.string().max(20),
       x: z.number().min(0).max(1),
