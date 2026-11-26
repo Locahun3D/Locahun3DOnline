@@ -591,6 +591,26 @@ export const propertySchema = z.object({
     urlEnFor: z.string().max(2000).default(""),
   })).max(10).default([]),
 
+  /**
+   * 位置から見る写真（2026-11-26 本人「2D表示、3Dビューアーと併用するのやめよう。代わりに物件ページに建物ごとに
+   * 平面図に点を打った画像をのせよう」。参考は図面の矢印を押すとその位置からの写真が出るスタジオ紹介ページ）。
+   * 1 件 = 1 つの場所（シーン・階）。図は 3DGS を真上から見た図、点はツアーの地点（scripts/photomap-build.mjs が作る）。
+   * - x, y は図の左上からの割合（0〜1）。yaw は図の上を 0 とした時計回りの角度（度）で、写真の正面の向き。
+   * - 写真は `${photoBase}${点の id}-{f,r,b,l}.jpg`（6 方向の画像のうち横の 4 枚。.s.jpg は軽い版）。f が yaw の向き、r が右 90°。
+   */
+  photoMaps: z.array(z.object({
+    label: z.string().max(60).default(""),
+    labelEn: z.string().max(120).default(""),
+    image: z.object({ src: z.string().max(2000), width: z.number().int().positive(), height: z.number().int().positive() }),
+    photoBase: z.string().max(400),
+    points: z.array(z.object({
+      id: z.string().max(20),
+      x: z.number().min(0).max(1),
+      y: z.number().min(0).max(1),
+      yaw: z.number(),
+    })).max(300).default([]),
+  })).max(12).default([]),
+
   // 3. Description
   description: z.string().max(4000).default(""),
   descriptionEn: z.string().max(8000).default(""),

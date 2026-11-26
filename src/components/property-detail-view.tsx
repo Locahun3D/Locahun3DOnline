@@ -28,6 +28,7 @@ import { Fragment } from "react";
 import GalleryLightbox from "@/components/gallery-lightbox";
 import PriceEstimator from "@/components/price-estimator";
 import FloorPlanViewer from "@/components/floor-plan-viewer";
+import PhotoMap from "@/components/photo-map";
 import PropertyAmenities from "@/components/property-amenities";
 import { googleMapsEmbedUrl, googleMapsUrl, publicPropertyEmail, propertyTitleLines, propertyTitleSegments } from "@/lib/property-presentation";
 
@@ -806,6 +807,16 @@ export default function PropertyDetailView({
             <Eyebrow en="CONTACT SHEET" jp={en ? "Gallery" : "ギャラリー"} />
             <GalleryLightbox photos={galleryPhotos} en={en} />
           </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+       *  位置から見る — 平面図の点を押すとその位置からの画像（2026-11-26。3D ビューアーの中の 2D 表示の代わり）
+       * ══════════════════════════════════════════════════ */}
+      {(property.photoMaps ?? []).some((m) => m.points.length > 0) && (
+        <section className="frame pt-14" id="photo-map">
+          <Eyebrow en="POSITION VIEWS" jp={en ? "Views by position" : "位置から見る"} />
+          <PhotoMap maps={property.photoMaps} en={en} />
         </section>
       )}
 
