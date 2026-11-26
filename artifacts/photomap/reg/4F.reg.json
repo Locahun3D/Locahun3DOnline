@@ -19,5 +19,7 @@
   ]
  ],
  "metersWide": 30.7,
- "dropOutside": true
+ "dropOutside": true,
+ "views": "../views/4F.json",
+ "select": "../rooms/4F.json"
 }

@@ -37,5 +37,7 @@
    "zmax": -1.0,
    "dz": 0.6
   }
- ]
+ ],
+ "views": "../views/6F_MainHallExterior.json",
+ "select": "../rooms/6F_MainHallExterior.json"
 }

@@ -610,6 +610,8 @@ export const propertySchema = z.object({
       yaw: z.number(),
       /** 別のシーンの地点を同じ図面に載せるとき、その地点の写真の photoBase（2026-11-26。公式図面 1 枚に 2 シーン）。 */
       base: z.string().max(400).optional(),
+      /** 最初に見せる向き: 正面(f)から時計回りの度（photomap-bestview.py が見通しと画の情報量で選ぶ）。矢印もこの向き。 */
+      o: z.number().min(-180).max(180).optional(),
     })).max(300).default([]),
   })).max(12).default([]),
 

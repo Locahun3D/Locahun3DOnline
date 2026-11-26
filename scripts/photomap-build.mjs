@@ -130,17 +130,20 @@ for (const spec of MAPS) {
   });
   console.log(label, 'points', nodes.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
 }
-async function graphNodes(td) {
+async function graphNodes(td, noGap = false) {
   const g = await (await fetch(`${ORIGIN}/api/pano/${td.key}.graph.json`)).json();
   const linked = new Set(g.edges.flat());
   let nodes = g.nodes.filter((n, i) => g.nodes.length < 3 || linked.has(i));
-  if (GAP > 0 && nodes.length > 12) { const keep = []; for (const n of nodes) if (!keep.some((k) => Math.hypot(k.pos.x - n.pos.x, k.pos.z - n.pos.z) < GAP)) keep.push(n); nodes = keep; }
+  if (!noGap && GAP > 0 && nodes.length > 12) { const keep = []; for (const n of nodes) if (!keep.some((k) => Math.hypot(k.pos.x - n.pos.x, k.pos.z - n.pos.z) < GAP)) keep.push(n); nodes = keep; }
   if (g.start) { const d = (n) => Math.hypot(n.pos.x - g.start.x, n.pos.z - g.start.z); const i0 = nodes.reduce((b, n, i) => (d(n) < d(nodes[b]) ? i : b), 0); nodes = [nodes[i0], ...nodes.filter((_, i) => i !== i0)]; }
   return { g, nodes };
 }
 
 async function fromBlueprint(label, labelEn, td, reg, dir) {
-  const { g, nodes } = await graphNodes(td);
+  // select: 図に出す地点（photomap-rooms.py が部屋ごとの真ん中に選んだもの）。あれば間引き（--gap）はしない
+  const select = reg.select ? new Set(JSON.parse(fs.readFileSync(path.resolve(dir, reg.select), 'utf8')).select) : null;
+  const { g, nodes: all } = await graphNodes(td, !!select);
+  const nodes = select ? all.filter((n) => select.has(n.id)) : all;
   const T = reg.H
     ? (x, z) => { const h = reg.H, w = h[2][0] * x + h[2][1] * z + h[2][2]; return [(h[0][0] * x + h[0][1] * z + h[0][2]) / w, (h[1][0] * x + h[1][1] * z + h[1][2]) / w]; }
     : (x, z) => { const m = reg.world2img; return [m[0][0] * x + m[0][1] * z + m[0][2], m[1][0] * x + m[1][1] * z + m[1][2]]; };
@@ -169,14 +172,17 @@ async function fromBlueprint(label, labelEn, td, reg, dir) {
   if (UPLOAD) { const { PutObjectCommand } = require('@aws-sdk/client-s3'); await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `assets/image/${file}`, Body: img, ContentType: 'image/webp', CacheControl: 'public, max-age=31536000, immutable' })); }
   const r3 = (v) => Math.round(v * 10000) / 10000;
   // 向き: 正面 (sin yaw, cos yaw) を図面の上に写した向き（図の上 = 0、時計回り）
-  const yawOf = (n, p) => { const e = 0.3, [ax, az] = at(n), q = T(ax + e * Math.sin(n.yaw || 0), az + e * Math.cos(n.yaw || 0)); const a = (Math.atan2(q[0] - p[0], -(q[1] - p[1])) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
+  // views: 最初に見せる向き（photomap-bestview.py の出力。正面から時計回りの度）。矢印もその向きにする
+  const views = reg.views ? JSON.parse(fs.readFileSync(path.resolve(dir, reg.views), 'utf8')) : {};
+  const dirOf = (n) => { const fx = Math.sin(n.yaw || 0), fz = Math.cos(n.yaw || 0), t = ((views[n.id] || 0) * Math.PI) / 180; return [Math.cos(t) * fx - Math.sin(t) * fz, Math.cos(t) * fz + Math.sin(t) * fx]; };
+  const yawOf = (n, p) => { const e = 0.3, [ax, az] = at(n), [vx, vz] = dirOf(n), q = T(ax + e * vx, az + e * vz); const a = (Math.atan2(q[0] - p[0], -(q[1] - p[1])) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
   console.log(label, 'blueprint points', keep.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
   return {
     label, labelEn,
     image: { src: `/api/r2/assets/image/${file}`, width: W, height: H },
     photoBase: `/api/pano/${td.key}-g${g.set}-`,
     ...(reg.metersWide ? { metersWide: reg.metersWide } : {}),
-    points: keep.map(({ n, p }) => ({ id: n.id, x: r3((p[0] - x0) / cw), y: r3((p[1] - y0) / ch), yaw: yawOf(n, p) })),
+    points: keep.map(({ n, p }) => ({ id: n.id, x: r3((p[0] - x0) / cw), y: r3((p[1] - y0) / ch), yaw: yawOf(n, p), ...(views[n.id] ? { o: views[n.id] } : {}) })),
   };
 }
 

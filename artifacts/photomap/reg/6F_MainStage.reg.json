@@ -27,5 +27,7 @@
    672,
    650
   ]
- ]
+ ],
+ "views": "../views/6F_MainStage.json",
+ "select": "../rooms/6F_MainStage.json"
 }

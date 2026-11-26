@@ -161,12 +161,11 @@ function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel:
         </div>
         {/* 右の列: 眺め＋説明（PC では説明を写真の下に置き、図面の横の空きを埋める） */}
         <div className="md:sticky md:top-20">
-          <button type="button" onClick={() => onPick(sel)} className="block w-full" aria-label={en ? "Open the view" : "眺めを大きく見る"}>
-            <PanoView key={(p0.base ?? "") + p0.id} base={p0.base ?? map.photoBase} pt={p0} className="aspect-[4/3] w-full bg-[#111]" />
-          </button>
+          {/* 横にドラッグ（長押ししたまま動かす）で見回せる。動かさずに押したら大きく見る */}
+          <PanoView key={(p0.base ?? "") + p0.id} base={p0.base ?? map.photoBase} pt={p0} interactive="h" onTap={() => onPick(sel)} label={en ? "Open the view" : "眺めを大きく見る"} className="aspect-[4/3] w-full bg-[#111]" />
           <p className="mt-4 text-[13px] text-ink/75 flex items-start gap-2">
             <span className="shrink-0 -mt-[2px]"><Marker yaw={0} size={20} /></span>
-            <span>{en ? "Click an arrow on the plan to see the view from that position." : <TitleText text="平面図の矢印を押すと、その位置からの眺めが表示されます。" />}</span>
+            <span>{en ? "Click an arrow on the plan to see the view from that position. Drag the view to look around." : <TitleText text="平面図の矢印を押すと、その位置からの眺めが表示されます。写真は横にドラッグすると見回せます。" />}</span>
           </p>
           <p className="mt-1 text-[12px] text-muted">{map.plan
             ? (en ? "* Plan and views are generated from the 3D scan. Actual conditions take precedence." : <TitleText text="※ 図面と画像は3Dスキャンから作ったものです。現況と違う場合は現況が優先されます。" />)
@@ -209,7 +208,9 @@ function Lightbox({ map, index, en, onIndex, onClose }: { map: PhotoMapData; ind
 }
 
 /** 地点の 6 方向の画像から、正面（地点の向き）を 4:3 で描く。interactive ならドラッグで見回せる。WebGL が無ければ正面の 1 枚。 */
-function PanoView({ base, pt, interactive = false, className = "" }: { base: string; pt: Pt; interactive?: boolean; className?: string }) {
+function PanoView({ base, pt, interactive = false, onTap, label, className = "" }: { base: string; pt: Pt; interactive?: boolean | "h"; onTap?: () => void; label?: string; className?: string }) {
+  const tapRef = useRef(onTap);
+  useEffect(() => { tapRef.current = onTap; }, [onTap]);
   const rootRef = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
@@ -219,7 +220,7 @@ function PanoView({ base, pt, interactive = false, className = "" }: { base: str
   useEffect(() => {
     const root = rootRef.current, cv = cvRef.current;
     if (!root || !cv) return;
-    let alive = true, raf = 0, yaw = 0, pitch = 0, dirty = true;
+    let alive = true, raf = 0, yaw = pt.o ?? 0, pitch = 0, dirty = true;
     const gl = cv.getContext("webgl", { antialias: false, premultipliedAlpha: false });
     if (!gl) { setNoGl(true); return; }
     const sh = (type: number, s: string) => { const o = gl.createShader(type)!; gl.shaderSource(o, s); gl.compileShader(o); return o; };
@@ -273,16 +274,19 @@ function PanoView({ base, pt, interactive = false, className = "" }: { base: str
     raf = requestAnimationFrame(tick);
     const ro = new ResizeObserver(() => { dirty = true; });
     ro.observe(root);
-    let drag: { x: number; y: number; yaw: number; pitch: number } | null = null;
-    const down = (e: PointerEvent) => { if (!interactive || e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, yaw, pitch }; root.setPointerCapture(e.pointerId); };
+    // interactive="h": カードの中。横だけ回す（縦のスワイプはページのスクロールに残す）。動かさずに離したら onTap
+    let drag: { x: number; y: number; yaw: number; pitch: number; moved: boolean } | null = null;
+    const down = (e: PointerEvent) => { if ((!interactive && !tapRef.current) || e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false }; root.setPointerCapture(e.pointerId); };
     const move = (e: PointerEvent) => {
       if (!drag) return;
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) drag.moved = true;
+      if (!interactive || !drag.moved) return;
       const k = HFOV / (root.clientWidth || 1);
       yaw = drag.yaw - (e.clientX - drag.x) * k;
-      pitch = Math.max(-70, Math.min(70, drag.pitch + (e.clientY - drag.y) * k));
+      if (interactive !== "h") pitch = Math.max(-70, Math.min(70, drag.pitch + (e.clientY - drag.y) * k));
       dirty = true;
     };
-    const up = () => { drag = null; };
+    const up = () => { if (drag && !drag.moved) tapRef.current?.(); drag = null; };
     root.addEventListener("pointerdown", down);
     root.addEventListener("pointermove", move);
     root.addEventListener("pointerup", up);
@@ -292,10 +296,14 @@ function PanoView({ base, pt, interactive = false, className = "" }: { base: str
       root.removeEventListener("pointerdown", down); root.removeEventListener("pointermove", move);
       root.removeEventListener("pointerup", up); root.removeEventListener("pointercancel", up);
     };
-  }, [src, interactive]);
+  }, [src, interactive, pt.o]);
 
   return (
-    <div ref={rootRef} className={`relative overflow-hidden select-none ${interactive ? "cursor-grab active:cursor-grabbing touch-none" : ""} ${className}`}>
+    <div
+      ref={rootRef}
+      className={`relative overflow-hidden select-none ${interactive ? `cursor-grab active:cursor-grabbing ${interactive === "h" ? "touch-pan-y" : "touch-none"}` : ""} ${className}`}
+      {...(onTap ? { role: "button", tabIndex: 0, "aria-label": label, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTap(); } } } : {})}
+    >
       {noGl ? (
         <img src={src("f")} alt="" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
