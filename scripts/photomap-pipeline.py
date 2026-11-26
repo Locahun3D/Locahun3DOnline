@@ -2,6 +2,7 @@
 #   本人「作業自動化できるようにしておいてね」「スキャンは部屋ごとだけど別々にする必要ないよね」→ 同じ図面・同じ階のシーンは 1 枚の図にまとめる。
 #
 #   python scripts/photomap-pipeline.py <物件id ...> [--steps=fetch,regcand,rooms,build] [--upload] [--d1]
+#     inv     : 本番 D1 の平面図を inventory.json と bp/ に取り込む（図面を足したあと）
 #     fetch   : シーンごとにスキャン → 点（pts.npz）→ 真上の図（scan.png）→ 部屋の点 → 最初の向き（作業場の stageA.py）
 #     regcand : 位置合わせが済んでいない作業 dir に、自動の候補（重なり率の上位 3 案の重ね図）を作る。
 #               ★ 候補から正しいものを選ぶ・合わなければ壁の角で合わせる、は目で見る工程（REG_BRIEF.md を担当に渡す）。
@@ -17,7 +18,7 @@ import numpy as np, cv2
 WS = 'F:/Codex/pvgen/tour/photomap'; HERE = os.path.dirname(os.path.abspath(__file__)); REPO = os.path.dirname(HERE)
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 opt = lambda k, d=None: next((a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith(f'--{k}=')), d)
-STEPS = opt('steps', 'fetch,regcand,rooms,build').split(',')
+STEPS = opt('steps', 'inv,fetch,regcand,rooms,build').split(',')
 UPLOAD, D1 = '--upload' in sys.argv, '--d1' in sys.argv
 if D1 and not UPLOAD: sys.exit('--d1 は --upload と一緒に（図の画像が R2 に無いと本番で表示できない）')
 inv = {p['id']: p for p in json.load(open(f'{WS}/inventory.json', encoding='utf-8'))}
@@ -31,8 +32,33 @@ def units(pid):
 def scene_of(d, pid):
     rel = d.split(f'/all/{pid}/')[1].split('/'); return int(rel[0])
 
+def refresh_blueprints(pid):
+    # 本番 D1 の平面図（blueprints）を inventory.json に写し、bp/<k>.img に落とす（l3d floorplans --apply で増えた図面を拾う）
+    import urllib.request
+    r = subprocess.run('npx wrangler d1 execute locahun3d-db --remote --json --command "select json_extract(data,\'$.blueprints\') b from properties where id=\'%s\'"' % pid,
+                       shell=True, capture_output=True, cwd=REPO, env=dict(os.environ, MSYS_NO_PATHCONV='1'))
+    bps = json.loads(json.loads(r.stdout)[0]['results'][0]['b'] or '[]')
+    allinv = json.load(open(f'{WS}/inventory.json', encoding='utf-8'))
+    for p in allinv:
+        if p['id'] == pid: p['blueprints'] = [{'label': b.get('label', ''), 'url': b['url']} for b in bps if b.get('url')]
+    json.dump(allinv, open(f'{WS}/inventory.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    inv[pid] = next(p for p in allinv if p['id'] == pid)
+    d = f'{WS}/all/{pid}/bp'; os.makedirs(d, exist_ok=True)
+    for k, b in enumerate(inv[pid]['blueprints']):
+        f = f'{d}/{k}.img'
+        if os.path.exists(f) and os.path.getsize(f) > 0: continue
+        u = 'https://locahun3d.com' + b['url'] if b['url'].startswith('/') else b['url']
+        open(f, 'wb').write(urllib.request.urlopen(urllib.request.Request(urllib.parse.quote(u, safe='/:?=&%~'), headers={'User-Agent': 'Mozilla/5.0 (photomap)'})).read())
+    for f in glob.glob(f'{d}/*.img'):   # 本番から消えた図面・0 バイトの残骸は捨てる
+        k = os.path.basename(f).split('.')[0]
+        if not k.isdigit() or int(k) >= len(inv[pid]['blueprints']) or os.path.getsize(f) == 0: os.remove(f)
+    print('  blueprints', len(inv[pid]['blueprints']))
+
+import urllib.parse
 for pid in args:
     print('==', pid)
+    if 'inv' in STEPS:
+        refresh_blueprints(pid)
     if 'fetch' in STEPS:
         run([py, f'{WS}/stageA.py', pid], cwd=WS)
     if 'regcand' in STEPS:
