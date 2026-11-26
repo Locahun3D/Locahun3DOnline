@@ -166,6 +166,9 @@ async function openScene(browser, scene) {
   if (DENSE) await page.addInitScript(() => { window.__l3dBakeMaxCells = 20000000; });
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
+  // GPU が混むと WebGL の描画の土台が落ちる（2026-11-26: 他の GPU 作業 91% と 2 並列で 12 シーン）。落ちるとビューアーは描画を止め（6 面が同じ絵）、
+  // 戻ると自動で読み込み直す（白い画面＋壊れた画像の印）。どちらも撮り続けても直らないので、印を付けてシーンごと開き直す
+  page.on('console', (m) => { if (/WebGL context lost/.test(m.text())) page.__ctxLost = (page.__ctxLost || 0) + 1; });
   const html = await getViewerHtml();
   await page.route((u) => u.host === 'locahun3d.com' && ['/viewer/offline-viewer.html', '/viewer/rad-chunk-cache.js'].includes(u.pathname), (route) => {
     const p = new URL(route.request().url()).pathname;
@@ -220,10 +223,12 @@ const SAME_FACE_MAX = 6;
 async function capture(page, pos, yaw0, pitch0, r, tag, iv = 700) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const faces = await captureOnce(page, pos, yaw0, pitch0, r, tag, attempt ? 700 : iv, attempt * 1200);
+    if (page.__ctxLost) throw new Error('GPU_LOST 描画の土台が落ちた（WebGL context lost・GPU が混んでいる） ' + tag);
     const diff = await facesDiffer(faces);
     if (diff > SAME_FACE_MAX) return faces;
     console.log(`same faces ${tag} diff=${diff.toFixed(1)} retry ${attempt + 1}`);
     r.sameFaces = (r.sameFaces || 0) + 1;
+    { const d = path.join(OUT, '_samefaces'); fs.mkdirSync(d, { recursive: true }); for (const [k, b] of Object.entries(faces)) fs.writeFileSync(path.join(d, `${String(tag).replace(/[^\w-]/g, '_')}-a${attempt}-${k}.jpg`), b); }   // 原因調べ用に残す
   }
   throw new Error('6 面が同じ絵のまま（向きを変えても描き直されない） ' + tag);
 }
@@ -739,7 +744,9 @@ const browser = await chromium.launch({ channel: 'chrome', headless: false,
   args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
 const results = [];
 for (const s of scenes) {
-  const r = await bake(browser, s);
+  let r = await bake(browser, s);
+  // GPU_LOST はその場の混み具合のせい。少し待ってシーンごと開き直す（最大 2 回）
+  for (let i = 0; i < 2 && /^GPU_LOST/.test(r.why || ''); i++) { console.log(C.yellow(`GPU lost, retry ${i + 1} ${s.scene.split('/').pop()}`)); await new Promise((ok) => setTimeout(ok, 60000)); r = await bake(browser, s); }
   results.push(r);
   fs.appendFileSync(path.join(OUT, 'runs.jsonl'), JSON.stringify(r) + '\n');
   const color = ['ok', 'fixed', 'local'].includes(r.status) ? C.green : r.status.startsWith('missing') ? C.yellow : C.red;
