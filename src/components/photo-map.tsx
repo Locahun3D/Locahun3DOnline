@@ -135,7 +135,7 @@ function Plan({ map, en, sel, onPick, style, full }: { map: PhotoMapData; en: bo
 function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel: number; onPick: (i: number) => void }) {
   const [zoom, setZoom] = useState(false);
   useEffect(() => { if (!zoom) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") setZoom(false); }; window.addEventListener("keydown", k); const o = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { window.removeEventListener("keydown", k); document.body.style.overflow = o; }; }, [zoom]);
-  const W = map.image.width, H = map.image.height;
+  const W = map.image.width;
   const name = (en ? map.labelEn || map.label : map.label) || "";
   const p0 = map.points[Math.min(sel, map.points.length - 1)];
   return (
