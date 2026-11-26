@@ -71,9 +71,47 @@ def axis_pieces(M, horiz):
         if horiz and w >= r(.5) and hh <= r(.45): out.append((cen_[i][1], x, x + w))
         if not horiz and hh >= r(.5) and w <= r(.45): out.append((cen_[i][0], y, y + hh))
     return out, O
-HP, HO = axis_pieces(WALL, True); VP, VO = axis_pieces(WALL, False)
-RES = WALL & (cv2.dilate(HO | VO, ell(.15)) == 0)
-DG = []
+# 長い斜めの壁（縦横から 8°以上傾いた 3m 以上の直線）を先に取る。縦横の太い帯として拾われると段々になるため（渋谷 6F 外観の斜めの廊下）
+DG = []; DM = np.zeros((S, S), np.uint8)
+for (x0, y0), (x1, y1) in probabilistic_hough_line(skeletonize(WALL > 0), threshold=10, line_length=r(3.0), line_gap=r(.6), rng=0):
+    ang = np.degrees(np.arctan2(y1 - y0, x1 - x0)) % 180
+    if min(ang, 180 - ang) > 8 and abs(ang - 90) > 8:
+        # 同じ線の重複（角度 3°以内・距離 0.3m 以内）はまとめる
+        dup = False
+        for k_, ((a0, b0), (a1, b1)) in enumerate(DG):
+            ang2 = np.degrees(np.arctan2(b1 - b0, a1 - a0)) % 180
+            if min(abs(ang - ang2), 180 - abs(ang - ang2)) < 3 and LineString([(a0, b0), (a1, b1)]).distance(Point((x0 + x1) / 2, (y0 + y1) / 2)) < r(.3):
+                if np.hypot(x1 - x0, y1 - y0) > np.hypot(a1 - a0, b1 - b0): DG[k_] = ((x0, y0), (x1, y1))
+                dup = True; break
+        if not dup: DG.append(((x0, y0), (x1, y1)))
+# 手すりの柱の列（0.6m 未満の小さな塊が 5 本以上・間隔 3m 以内で一直線）→ 1 本の線として外周に使う（屋外テラス）
+RAIL = np.zeros((S, S), np.uint8)
+nq, labq, stq, cenq = cv2.connectedComponentsWithStats(WALL, connectivity=8)
+PO = np.array([cenq[i] for i in range(1, nq) if max(stq[i, 2], stq[i, 3]) < r(1.0) and stq[i, cv2.CC_STAT_AREA] >= r(.08) ** 2], float).reshape(-1, 2)
+rngp = np.random.default_rng(1)
+for _round in range(4):
+    if len(PO) < 5: break
+    best = None
+    for _ in range(600):
+        a_, b_ = PO[rngp.choice(len(PO), 2, replace=False)]; d_ = b_ - a_; Ln = np.linalg.norm(d_)
+        if Ln < r(1.0): continue
+        d_ /= Ln; nrm = np.array([-d_[1], d_[0]]); dist = np.abs((PO - a_) @ nrm); inl = dist < r(.25)
+        if best is None or inl.sum() > best[0]: best = (inl.sum(), a_, d_, inl)
+    if best is None or best[0] < 5: break
+    _, a_, d_, inl = best; t_ = np.sort((PO[inl] - a_) @ d_)
+    # 3m より開いた所で切って、5 本以上続く区間だけ
+    cuts = np.split(t_, np.where(np.diff(t_) > r(3.0))[0] + 1)
+    for c_ in cuts:
+        if len(c_) >= 5:
+            p0, p1 = a_ + d_ * c_[0], a_ + d_ * c_[-1]
+            DG.append((tuple(p0), tuple(p1))); cv2.line(RAIL, tuple(int(v) for v in p0), tuple(int(v) for v in p1), 1, max(2, r(.1)))
+            print('rail', len(c_), 'posts', round((c_[-1] - c_[0]) / ppm, 1), 'm')
+    PO = PO[~inl]
+for (x0, y0), (x1, y1) in DG: cv2.line(DM, (int(x0), int(y0)), (int(x1), int(y1)), 1, r(.45))
+WALLA = (WALL & (DM == 0)).astype(np.uint8)
+if "--dbgdg" in sys.argv: print("DG", [(tuple(int(v) for v in a_), tuple(int(v) for v in b_)) for a_, b_ in DG])
+HP, HO = axis_pieces(WALLA, True); VP, VO = axis_pieces(WALLA, False)
+RES = WALLA & (cv2.dilate(HO | VO, ell(.15)) == 0)
 if RES.sum() > 0:
     for (x0, y0), (x1, y1) in probabilistic_hough_line(skeletonize(RES > 0), threshold=10, line_length=r(1.0), line_gap=r(.2), rng=0):
         ang = np.degrees(np.arctan2(y1 - y0, x1 - x0)) % 180
@@ -96,7 +134,7 @@ for i in range(1, n_):
             ux = ((x1 ** 2 + y1 ** 2) * (y2 - y3) + (x2 ** 2 + y2 ** 2) * (y3 - y1) + (x3 ** 2 + y3 ** 2) * (y1 - y2)) / dd
             uy = ((x1 ** 2 + y1 ** 2) * (x3 - x2) + (x2 ** 2 + y2 ** 2) * (x1 - x3) + (x3 ** 2 + y3 ** 2) * (x2 - x1)) / dd
             R_ = np.hypot(x1 - ux, y1 - uy)
-            if not (r(1) < R_ < r(12)): continue
+            if not (r(1) < R_ < r(40)): continue   # 大きな弧（ホールの外周）も
             inl = np.abs(np.hypot(PTS[:, 0] - ux, PTS[:, 1] - uy) - R_) < r(.05)
             if best is None or inl.sum() > best[0]: best = (inl.sum(), ux, uy, R_, inl)
         if best is None or best[0] < r(1.5): break
@@ -106,7 +144,8 @@ for i in range(1, n_):
         if a1_ < a0_: a1_ += 2 * np.pi
         span = a1_ - a0_
         # 弧として連続しているか（点の数 ≒ 弧長）・直線で説明できないか（開き 35°以上）
-        if np.degrees(span) >= 35 and inl.sum() >= 0.6 * span * R_:
+        if '--dbgdg' in sys.argv: print('arc?', round(R_ / ppm, 1), round(float(np.degrees(span))), int(inl.sum()), round(0.6 * span * R_))
+        if (np.degrees(span) >= 35 or (span * R_ >= r(6) and np.degrees(span) >= 12)) and inl.sum() >= 0.6 * span * R_:   # 大きな弧は長さ 6m 以上で
             ARCS.append((ux, uy, R_, a0_, a1_))
         PTS = PTS[~inl]
 print('arcs', [(round(R_ / ppm, 2), round(float(np.degrees(a1_ - a0_)))) for _, _, R_, a0_, a1_ in ARCS])
@@ -128,7 +167,7 @@ HY, VX = cluster(HP), cluster(VP)
 D = raster(ok & (A > 0.2) & (((h > -0.15) & (h < 0.15)) | ((h > 2.3) & (h < 4.0))), 3)
 FC = cv2.morphologyEx((D > np.percentile(D[D > 0], 50) * 0.3).astype(np.uint8), cv2.MORPH_OPEN, ell(.5))
 # 撮影位置から見通せる床（壁で止まる。家具は通す）。壁の隙間から漏れた分は、床か天井に点がある所だけ残す
-WD = cv2.dilate(WALL, ell(.08)) > 0
+WD = cv2.dilate(WALL | RAIL, ell(.08)) > 0   # 手すりの線も見通しを止める
 VIS = np.zeros((S, S), np.uint8); ANG = np.linspace(0, 2 * np.pi, 1440, endpoint=False); RR = np.arange(0, 8 * ppm)
 for x, y in NP:
     X = (x + np.cos(ANG)[:, None] * RR[None]).astype(int); Y = (y + np.sin(ANG)[:, None] * RR[None]).astype(int)
@@ -267,7 +306,7 @@ def tidy(poly):
     return max(g_.geoms, key=lambda q: q.area) if g_.geom_type == 'MultiPolygon' else g_
 polys = [tidy(g) for g in polys]
 # ---- 4. 辺ごとの根拠（物が沿っているか）→ 実線と破線
-SUP = cv2.dilate(OB | WALL, ell(.4))
+SUP = cv2.dilate(OB | WALL | RAIL, ell(.4))   # 手すりの線は壁と同じく実線の根拠
 outer, dashed = [], []
 def runs(a_, b_):
     a_, b_ = np.array(a_, float), np.array(b_, float); Ln = np.linalg.norm(b_ - a_); n_ = max(2, int(Ln / 2)); t_ = np.linspace(0, 1, n_)
