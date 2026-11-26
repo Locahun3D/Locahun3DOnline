@@ -11,6 +11,7 @@ args = [a for a in sys.argv[1:] if not a.startswith('--')]
 opt = lambda k, d=None: next((a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith(f'--{k}=')), d)
 tdp, npz, outp = args
 dbg = opt('debug')
+ONLY = set(json.load(open(opt('only'), encoding='utf-8'))['select']) if opt('only') else None   # rooms.json: 選んだ地点だけ
 td = json.load(open(tdp, encoding='utf-8'))
 ORIGIN = 'https://locahun3d.com'
 g = json.load(openurl(f"{ORIGIN}/api/pano/{td['key']}.graph.json"))
@@ -20,13 +21,16 @@ d = np.load(npz); P, A, L = d['p'], d['a'], d['leaf']
 fy = float(td['floorY'])
 m = L & (A > 0.3) & (P[:, 1] > fy + 0.4) & (P[:, 1] < fy + 1.9)
 Q = P[m][:, [0, 2]]
+if len(Q) < 10:   # 腰から頭の高さに点が無い（屋外・点が薄い）→ 見通しは使わない
+    Q = np.array([[n['pos']['x'], n['pos']['z']] for n in g['nodes']]); NOOCC = True
+else: NOOCC = False
 RES = 0.1
 x0, z0 = Q.min(0) - 1
 W, H = (np.ceil((Q.max(0) + 1 - [x0, z0]) / RES)).astype(int)
 occ = np.zeros((H, W), np.uint16)
 ix = ((Q[:, 0] - x0) / RES).astype(int); iz = ((Q[:, 1] - z0) / RES).astype(int)
 np.add.at(occ, (iz, ix), 1)
-OCC = occ >= 3   # 3 点以上で物がある
+OCC = (occ >= 3) & (not NOOCC)   # 3 点以上で物がある
 
 def ray(x, z, ang_dir, cap=20.0):
     dx, dz = ang_dir
@@ -82,6 +86,7 @@ CANDS = list(range(-180, 180, 15))
 res = {}
 if dbg: os.makedirs(dbg, exist_ok=True)
 for n in g['nodes']:
+    if ONLY is not None and n['id'] not in ONLY: continue
     x, z, y0 = n['pos']['x'], n['pos']['z'], n.get('yaw', 0)
     f = np.array([np.sin(y0), np.cos(y0)]); rgt = np.array([-f[1], f[0]])   # 右 = 図の上で時計回り 90°
     faces = {k: get(f"{base}{n['id']}-{k}.s.jpg") for k in FACES}

@@ -25,6 +25,9 @@ def to_px(x, z):
 h = P[:, 1] - fy
 u, v = to_px(P[:, 0], P[:, 2]); u = u.astype(int); v = v.astype(int); ok = (u >= 0) & (u < S) & (v >= 0) & (v < S) & L
 NP = np.array([to_px(n['x'], n['z']) for n in td['nodes']])
+# 図に出す印（--select=rooms.json のときはその地点だけ）。部屋の名前は印から離して置く
+_sel = set(json.load(open(opt('select', None), encoding='utf-8'))['select']) if opt('select', None) else None
+MP = np.array([to_px(n['x'], n['z']) for n in td['nodes'] if _sel is None or n['id'] in _sel]) if (_sel is None or _sel) else NP
 def raster(k, blur):
     D = np.zeros((S, S), np.float32); np.add.at(D, (v[k], u[k]), 1); return cv2.GaussianBlur(D, (0, 0), blur)
 def node_comp(M):
@@ -484,9 +487,9 @@ if os.path.exists(lp):
                     lx, ly = float(_best[0]), float(_best[1])
         if lb.get('kind') == 'furn' and not any(Polygon(np.array(fp).reshape(-1, 2)).distance(Point(lx, ly)) < r(2.0) for fp in furn): continue
         # 印（撮影位置）から 0.9m 以内なら、近くの空いた所へずらす（上下 0.6〜1.2m・左右 1.0〜2.0m の候補から最寄り）
-        if lb.get('kind', 'room') == 'room' and len(NP) and np.hypot(NP[:, 0] - lx, NP[:, 1] - ly).min() < r(1.3):   # 設備の名前は形のそばから動かさない
+        if lb.get('kind', 'room') == 'room' and len(MP) and np.hypot(MP[:, 0] - lx, MP[:, 1] - ly).min() < r(1.3):   # 設備の名前は形のそばから動かさない
             _cs = [(lx + dx_ * ppm, ly + dy_ * ppm) for dx_, dy_ in ((0, -.6), (0, .6), (0, -1.2), (0, 1.2), (-1, 0), (1, 0), (-2, 0), (2, 0), (-1, -.6), (1, -.6), (-1, .6), (1, .6))]
-            _cs = [q for q in _cs if UP.buffer(-r(.3)).contains(Point(*q)) and np.hypot(NP[:, 0] - q[0], NP[:, 1] - q[1]).min() >= r(1.3)]
+            _cs = [q for q in _cs if UP.buffer(-r(.3)).contains(Point(*q)) and np.hypot(MP[:, 0] - q[0], MP[:, 1] - q[1]).min() >= r(1.3)]
             if _cs: lx, ly = _cs[0]
         labels.append((lx, ly, lb['text'], lb.get('textEn', ''), 1 if lb.get('kind', 'room') == 'room' else 0))
     inner = [(a_, b_) for a_, b_ in inner if not any(LineString([a_, b_]).distance(Point(l_[0], l_[1])) < r(.6) for l_ in labels)]

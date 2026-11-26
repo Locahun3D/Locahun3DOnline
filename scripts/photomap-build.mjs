@@ -74,7 +74,12 @@ for (const spec of MAPS) {
   // 写真ツアーで行ける地点だけ（つながりの無い地点は外す）
   const linked = new Set(g.edges.flat());
   let nodes = g.nodes.filter((n, i) => g.nodes.length < 3 || linked.has(i));
-  if (GAP > 0 && nodes.length > 12) {   // 小さい部屋（12 地点以下）は全部残す
+  // extra の select=<rooms.json>（部屋ごとの真ん中の地点）と views=<views.json>（最初に見せる向き）。生成した図でも公式図面と同じ
+  const xo = (k) => (extra.split(',').find((kv) => kv.startsWith(k + '=')) || '').slice(k.length + 1);
+  const selG = xo('select') ? new Set(JSON.parse(fs.readFileSync(xo('select'), 'utf8')).select) : null;
+  const viewsG = xo('views') ? JSON.parse(fs.readFileSync(xo('views'), 'utf8')) : {};
+  if (selG) nodes = nodes.filter((n) => selG.has(n.id));
+  else if (GAP > 0 && nodes.length > 12) {   // 小さい部屋（12 地点以下）は全部残す
     const keep = [];
     for (const n of nodes) if (!keep.some((k) => Math.hypot(k.pos.x - n.pos.x, k.pos.z - n.pos.z) < GAP)) keep.push(n);
     nodes = keep;
@@ -126,7 +131,7 @@ for (const spec of MAPS) {
     })() } : {}),
     // yaw: 地点の向き（ビューアーの yaw。正面は図の上で (sin yaw, cos yaw)）→ 図の上を 0 とした時計回りの度 = 180 - yaw°
     //   （TK n1 で確かめた: 正面が北の壁、右が東の丸いバー）
-    points: nodes.map((n, i) => ({ id: n.id, x: r3((P[i][0] - x0) / cw), y: r3((P[i][1] - y0) / ch), yaw: mapYaw(n.yaw || 0) })),
+    points: nodes.map((n, i) => ({ id: n.id, x: r3((P[i][0] - x0) / cw), y: r3((P[i][1] - y0) / ch), yaw: (((mapYaw(n.yaw || 0) + (viewsG[n.id] || 0)) % 360) + 540) % 360 - 180, ...(viewsG[n.id] ? { o: viewsG[n.id] } : {}) })),
   });
   console.log(label, 'points', nodes.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
 }

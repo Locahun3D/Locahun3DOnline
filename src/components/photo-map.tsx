@@ -143,7 +143,7 @@ function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel:
       {name && <div className="font-bold text-[16px] sm:text-[19px] leading-tight mb-4">{name}</div>}
       <div className="grid gap-5 md:grid-cols-2 items-start">
         <div>
-          <Plan map={map} en={en} sel={sel} onPick={onPick} style={{ maxWidth: map.plan ? `min(100%, max(300px, ${Math.round(W / 2)}px))` : "100%" }} />
+          <Plan map={map} en={en} sel={sel} onPick={onPick} style={{ maxWidth: map.plan ? `min(100%, ${Math.round((520 * W) / map.image.height)}px)` : `min(100%, ${Math.round((680 * W) / map.image.height)}px)` }} />
           {/* スマホは図が小さく印が混むので、全画面で 2 倍に広げて見られるように（横にスクロール） */}
           <button type="button" onClick={() => setZoom(true)} className="sm:hidden mt-2 mx-auto block text-[12.5px] border border-line px-3 py-1.5 bg-white">{en ? "Enlarge plan" : "図面を拡大"}</button>
           {zoom && (
@@ -157,7 +157,7 @@ function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel:
               </div>
             </div>
           )}
-          {map.metersWide ? <ScaleBar metersWide={map.metersWide} maxWidth={`min(100%, max(300px, ${Math.round(W / 2)}px))`} /> : null}
+          {map.metersWide ? <ScaleBar metersWide={map.metersWide} maxWidth={`min(100%, ${Math.round((520 * W) / map.image.height)}px)`} /> : null}
         </div>
         {/* 右の列: 眺め＋説明（PC では説明を写真の下に置き、図面の横の空きを埋める） */}
         <div className="md:sticky md:top-20">
