@@ -75,7 +75,8 @@ for (const spec of MAPS) {
   if (w0 > 2 * h0) { const d = (w0 / 2 - h0) / 2; y0 = Math.max(0, y0 - d); y1 = Math.min(td.px, y1 + d); }
   if (h0 > 2 * w0) { const d = (h0 / 2 - w0) / 2; x0 = Math.max(0, x0 - d); x1 = Math.min(td.px, x1 + d); }
   const cw = Math.round(x1 - x0), ch = Math.round(y1 - y0);
-  const s = LONG / Math.max(cw, ch);
+  // 縮尺をそろえる: 1m = 45px を目安（小さい部屋を引き伸ばして線が太くならないように）。長い辺は 560〜LONG px
+  const s = Math.min(LONG, Math.max(560, (Math.max(cw, ch) / td.ppm) * 45)) / Math.max(cw, ch);
   const W = Math.round(cw * s), H = Math.round(ch * s);
   const img = await sharp(raw).extract({ left: Math.round(x0), top: Math.round(y0), width: cw, height: ch }).resize(W, H).webp({ quality: 82 }).toBuffer();
   const hash = crypto.createHash('sha256').update(img).digest('hex').slice(0, 10);

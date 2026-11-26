@@ -54,8 +54,8 @@ function findPano(streamUrl: string): Promise<string | null> {
 }
 
 // 面の向き（見る人の右 = +x、上 = +y、正面 = +z）: f +z / r +x / l -x / b -z / u +y / d -y（ビューアーの FACE_AXES と同じ）
-const VS = "attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }";
-const FS = `precision highp float;
+export const PANO_VS = "attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }";
+export const PANO_FS = `precision highp float;
 uniform sampler2D tf, tr, tb, tl, tu, td;
 uniform vec2 res; uniform float fp, yaw, pitch;
 void main(){
@@ -136,8 +136,8 @@ export function PanoPreview({ streamUrl, onMissing }: { streamUrl: string; onMis
     if (!gl) { missingRef.current(); return; }
     const sh = (type: number, src: string) => { const o = gl.createShader(type)!; gl.shaderSource(o, src); gl.compileShader(o); return o; };
     const prog = gl.createProgram()!;
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, PANO_VS));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, PANO_FS));
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { missingRef.current(); return; }
     gl.useProgram(prog);

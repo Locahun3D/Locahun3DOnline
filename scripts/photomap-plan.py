@@ -94,13 +94,17 @@ outer, holes = [], []
 for c, h in zip(cnts, hier[0]):
     if cv2.contourArea(c) < (0.25 * ppm) ** 2: continue
     (holes if h[3] >= 0 else outer).append(straighten(c, px(.28)))
-img[:] = 236
+img[:] = 255
 cv2.fillPoly(img, outer, (255, 255, 255))
-cv2.fillPoly(img, holes, (236, 236, 236))
+cv2.fillPoly(img, holes, (255, 255, 255))
 lines_mask = cv2.dilate(ed, np.ones((2, 2), np.uint8)) > 0
 fill = np.zeros((H, W), np.uint8); cv2.fillPoly(fill, outer, 255); cv2.fillPoly(fill, holes, 0)
-img[lines_mask & (cv2.erode(fill, np.ones((5, 5), np.uint8)) > 0)] = (175, 175, 175)
-cv2.polylines(img, outer + holes, True, (30, 30, 30), px(.15), lineType=cv2.LINE_AA)
+img[lines_mask & (cv2.erode(fill, np.ones((5, 5), np.uint8)) > 0)] = (185, 185, 185)
+cv2.polylines(img, outer, True, (20, 20, 20), max(3, px(.09)), lineType=cv2.LINE_AA)
+# 中の塊（柱・家具の島）は黒く塗る（参考の図面の柱のように）。大きいものは線だけ
+for h in holes:
+    if cv2.contourArea(h) < (1.2 * ppm) ** 2: cv2.fillPoly(img, [h], (20, 20, 20))
+    else: cv2.polylines(img, [h], True, (20, 20, 20), max(2, px(.06)), lineType=cv2.LINE_AA)
 cv2.imwrite(out, img)
 ys, xs = np.nonzero(fill)
 json.dump({'bbox': [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1] if len(xs) else None, 'th': TH, 'angle': ROT}, open(out + '.json', 'w'))
