@@ -3,6 +3,7 @@
 //   図の座標の対応（中心・1m あたりの画素）を <名前>.json に残す。
 //   天井は、真上のカメラの近い側の切り取り面（near）で床から CUT m より上を落として消す。
 //   node scripts/tour-topdown.mjs <scene autoload> [--cut=2.0] [--px=1600] [--out=dir]
+//   2 階建て（2026-11-26 Tasuki）: --floor=<床の高さ> --tag=1F で階ごとの図。--side=<z> は z の位置で縦に切った横からの図（階の高さを読む用、±0.6m の厚み）
 import { chromium } from 'file:///F:/Htlml/3DGS/locahun3d_online/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +16,7 @@ const CUT = Number(opt('cut', '2.0')), PX = Number(opt('px', '1600'));
 const OUT = opt('out', 'F:/Codex/viewerfix/artifacts/topdown');
 fs.mkdirSync(OUT, { recursive: true });
 const ORIGIN = 'https://locahun3d.com';
-const name = decodeURIComponent(scene.split('/').pop()).replace(/\.zip$/, '').replace(/^[A-Za-z0-9_-]{10}-/, '');
+const name = decodeURIComponent(scene.split('/').pop()).replace(/\.zip$/, '').replace(/^[A-Za-z0-9_-]{10}-/, '') + (process.argv.find((a) => a.startsWith('--tag=')) ? '_' + process.argv.find((a) => a.startsWith('--tag=')).slice(6) : '');
 
 // 今の写真ツアー（本番の graph.json）
 const head = await fetch(ORIGIN + scene, { method: 'HEAD' });
@@ -26,7 +27,8 @@ const meta = await (await fetch(`${ORIGIN}/api/pano/${key}.json`)).json().catch(
 const nodes = graph?.nodes || [];
 const start = graph?.start || meta?.pos;
 const floors = nodes.map((n) => n.floorY).filter(Number.isFinite).sort((a, b) => a - b);
-const floorY = floors.length ? floors[Math.floor(floors.length / 2)] : (start.y - 1.5);
+const floorY = opt('floor') != null ? Number(opt('floor')) : floors.length ? floors[Math.floor(floors.length / 2)] : (start.y - 1.5);
+const TAG = opt('tag', ''), SIDE = opt('side') != null ? Number(opt('side')) : null;
 const xs = [start.x, ...nodes.map((n) => n.pos.x)], zs = [start.z, ...nodes.map((n) => n.pos.z)];
 const M = 5;   // 地点の外側の余白（m）
 const minX = Math.min(...xs) - M, maxX = Math.max(...xs) + M, minZ = Math.min(...zs) - M, maxZ = Math.max(...zs) + M;
@@ -41,7 +43,7 @@ const HOOK = `;window.__td={
  busy:()=>{try{return sparkRenderer&&sparkRenderer.pager?sparkRenderer.pager.fetchers.filter(f=>f.chunk>=0).length:0;}catch(_){return 0;}},
  budget:(n)=>{try{window._gpuWatchdog=window._gpuWatchdog||{};window._gpuWatchdog.manualOverride=true;sparkRenderer.lodSplatCount=n;return n;}catch(_){return -1;}},
  aim:(o)=>{const T=window.__dbg.THREE;if(!window.__tdCam){window.__tdCam=new T.PerspectiveCamera(o.fov,1,o.near,o.far);const R=renderer,orig=R.render.bind(R);R.render=(sc,cam)=>orig(sc,cam===camera?window.__tdCam:cam);}
-   const c=window.__tdCam;c.fov=o.fov;c.near=o.near;c.far=o.far;c.aspect=1;c.updateProjectionMatrix();c.position.set(o.x,o.y,o.z);c.up.set(0,0,-1);c.lookAt(o.x,o.y-1,o.z);c.updateMatrixWorld(true);
+   const c=window.__tdCam;c.fov=o.fov;c.near=o.near;c.far=o.far;c.aspect=1;c.updateProjectionMatrix();c.position.set(o.x,o.y,o.z);if(o.side){c.up.set(0,1,0);c.lookAt(o.x,o.y,o.z-1);}else{c.up.set(0,0,-1);c.lookAt(o.x,o.y-1,o.z);}c.updateMatrixWorld(true);
    try{camPos.set(o.x,o.fy+1.5,o.z);}catch(_){}markDirty(60);},
 };`;
 let html = await (await fetch(`${ORIGIN}/viewer/offline-viewer.html`)).text();
@@ -58,7 +60,8 @@ const t0 = Date.now(); while (Date.now() - t0 < 120000 && (await p.evaluate(() =
 await p.evaluate(() => window.__td.budget(12000000));
 // UI を消す
 await p.addStyleTag({ content: 'body > *:not(canvas):not(#canvas-container):not(.canvas-wrap){visibility:hidden !important} canvas{visibility:visible !important}' }).catch(() => {});
-const aim = { x: cx, y: floorY + D, z: cz, fy: floorY, fov: FOV, near: Math.max(0.1, D - CUT), far: D + 4 };
+const aim = SIDE != null ? { side: true, x: cx, y: floorY + 1, z: SIDE + D, fy: floorY, fov: FOV, near: D - 0.6, far: D + 0.6 }
+  : { x: cx, y: floorY + D, z: cz, fy: floorY, fov: FOV, near: Math.max(0.1, D - CUT), far: D + 4 };
 await p.evaluate((o) => window.__td.aim(o), aim);
 // 読み込みが落ち着くまで
 let last = -1, same = 0; const t1 = Date.now();

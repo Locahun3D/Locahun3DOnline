@@ -481,6 +481,8 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
   }
   let see = pairs.length ? await page.evaluate((o) => window.__pbLos(o), { pairs, pts: keepN.map((p) => p.pos) }) : [];
   if (MANUAL) { const rl = relinkByDistance(keepN.map((p) => p.pos), vor.edges, see, 3); vor = { ...vor, edges: rl.edges }; see = rl.see; }   // 座席の点は床の区画の外なので、見通せる近い点どうしでつなぐ
+  // 階をまたぐ見通し（2026-11-26 Tasuki 3 段: 1F の点と 2F・3F の点が床を突き抜けてつながった）。目の高さが 1.4m 以上違う 2 点はつながない（階段の点は 1 段ずつ置く）
+  { const far = ([a, b]) => Math.abs(keepN[a].pos.y - keepN[b].pos.y) > 1.4; vor = { ...vor, edges: vor.edges.filter((e) => !far(e)) }; see = see.filter((e) => !far(e)); }
   { const ce = capEdges(keepN.map((p) => p.pos), vor.edges, 5); if (ce.cut) console.log('edges over 5m cut', ce.cut); vor = { ...vor, edges: ce.edges }; }   // つながりは 5m 以下（Matterport 基準 2026-11-25）
   // 監視の数字（tour-audit.mjs が基準と比べる）
   // 空き・届く割合は、AI が立てないと言った場所（家具の上など）の 1.2m 以内の床を除いて数える（TK MainHD のボックス席の段上）
