@@ -72,7 +72,8 @@ for i in np.unique(room[room > 0]):
         cand = sorted(inside, key=lambda j: np.hypot(*(N[j] - c)))
         j = next((j for j in cand if nodes[j]['id'] not in ids), None)
         if j is not None and np.hypot(*(N[j] - c)) < max(3.0, np.sqrt(area / k)): ids.append(nodes[j]['id'])
-    sel += ids; rooms.append({'area': round(area, 1), 'ids': ids})
+    m = (room == i).astype(np.uint8); dtm = cv2.distanceTransform(m, cv2.DIST_L2, 5); cy, cx = np.unravel_index(np.argmax(dtm), dtm.shape)
+    sel += ids; rooms.append({'area': round(area, 1), 'ids': ids, 'center': [round(float(x0 + cx * R), 2), round(float(z0 + cy * R), 2)]})
 json.dump({'select': sel, 'rooms': rooms}, open(outp, 'w'), indent=1)
 print('rooms', len(rooms), 'points', len(sel), '/', len(nodes), [r['area'] for r in rooms])
 if dbg:
