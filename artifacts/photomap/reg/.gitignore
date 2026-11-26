@@ -1,0 +1,3 @@
+*.png
+*.webp
+# 公式図面は R2 の /api/r2/assets/document/<名前> から取る（reg.json の blueprint）

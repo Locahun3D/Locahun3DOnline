@@ -43,6 +43,18 @@ const out = [];
 for (const spec of MAPS) {
   const [label, labelEn, tdPath, extra = ''] = spec.split('|');   // extra: 図面の調整 "th=20,close=1.6"（photomap-plan.py の --th= 等）
   const td = JSON.parse(fs.readFileSync(tdPath, 'utf8'));
+  // 公式の図面がある場所はそれを使う（2026-11-26 本人「元々図面があるところはそれを使ってくれ。ないところは作る」）
+  //   extra に reg=<位置合わせ json> を書くと、図 = 公式図面（json の blueprint）、点 = 世界座標を json の変換で図面の画素へ。
+  //   json: { blueprint: 画像, world2img: 2x3 アフィン（平面図）| H: 3x3 射影（斜めから見た立体図の床面）, crop: [x0,y0,x1,y1], dropOutside: 白地の点を外す }
+  const regPath = (extra.split(',').find((kv) => kv.startsWith('reg=')) || '').slice(4);
+  if (regPath) {
+    const m = await fromBlueprint(label, labelEn, td, JSON.parse(fs.readFileSync(regPath, 'utf8')), path.dirname(regPath));
+    // 同じ名前・同じ図面が続いたら 1 枚にまとめる（地点ごとに写真の場所 base を持たせる）
+    const prev = out[out.length - 1];
+    if (prev && prev.label === m.label && prev.image.src === m.image.src) prev.points.push(...m.points.map((q) => ({ ...q, base: m.photoBase })));
+    else out.push(m);
+    continue;
+  }
   // 図: 既定は白地の簡易図面（scripts/photomap-plan.py。2026-11-26 本人「簡易図面にして 参考webのような」）。--photo で真上からの写真のまま
   let raw = tdPath.replace(/\.json$/, '_raw.png'), planBox = null;
   if (!argv.includes('--photo')) {
@@ -118,5 +130,51 @@ for (const spec of MAPS) {
   });
   console.log(label, 'points', nodes.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
 }
+async function graphNodes(td) {
+  const g = await (await fetch(`${ORIGIN}/api/pano/${td.key}.graph.json`)).json();
+  const linked = new Set(g.edges.flat());
+  let nodes = g.nodes.filter((n, i) => g.nodes.length < 3 || linked.has(i));
+  if (GAP > 0 && nodes.length > 12) { const keep = []; for (const n of nodes) if (!keep.some((k) => Math.hypot(k.pos.x - n.pos.x, k.pos.z - n.pos.z) < GAP)) keep.push(n); nodes = keep; }
+  if (g.start) { const d = (n) => Math.hypot(n.pos.x - g.start.x, n.pos.z - g.start.z); const i0 = nodes.reduce((b, n, i) => (d(n) < d(nodes[b]) ? i : b), 0); nodes = [nodes[i0], ...nodes.filter((_, i) => i !== i0)]; }
+  return { g, nodes };
+}
+
+async function fromBlueprint(label, labelEn, td, reg, dir) {
+  const { g, nodes } = await graphNodes(td);
+  const T = reg.H
+    ? (x, z) => { const h = reg.H, w = h[2][0] * x + h[2][1] * z + h[2][2]; return [(h[0][0] * x + h[0][1] * z + h[0][2]) / w, (h[1][0] * x + h[1][1] * z + h[1][2]) / w]; }
+    : (x, z) => { const m = reg.world2img; return [m[0][0] * x + m[0][1] * z + m[0][2], m[1][0] * x + m[1][1] * z + m[1][2]]; };
+  const bpFile = path.resolve(dir, reg.blueprint);
+  const meta = await sharp(bpFile).metadata();
+  const [x0, y0, x1, y1] = reg.crop || [0, 0, meta.width, meta.height];
+  const cw = x1 - x0, ch = y1 - y0;
+  let keep = nodes.map((n) => ({ n, p: T(n.pos.x, n.pos.z) })).filter(({ p }) => p[0] >= x0 && p[0] < x1 && p[1] >= y0 && p[1] < y1);
+  if (reg.dropOutside) {   // 図面の建物の外（白地）に落ちた点は出さない
+    const { data, info } = await sharp(bpFile).greyscale().raw().toBuffer({ resolveWithObject: true });
+    const white = (u, v) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const q = data[Math.min(info.height - 1, Math.max(0, Math.round(v) + dy)) * info.width + Math.min(info.width - 1, Math.max(0, Math.round(u) + dx))]; if (q < 245) return false; } return true; };
+    const before = keep.length; keep = keep.filter(({ p }) => !white(p[0], p[1])); if (keep.length < before) console.log(label, 'dropped outside the plan', before - keep.length);
+  }
+  const W = Math.min(LONG, cw), H = Math.round(ch * (W / cw));
+  // whiteout: 図面の外の文字（物件情報の欄のはみ出し等）を白で消す [x0,y0,x1,y1]（元の図面の画素）
+  const wo = (reg.whiteout || []).map(([a, b, c, d]) => ({ input: { create: { width: c - a, height: d - b, channels: 3, background: '#ffffff' } }, left: a, top: b }));
+  const base0 = wo.length ? await sharp(bpFile).composite(wo).png().toBuffer() : bpFile;
+  const img = await sharp(base0).extract({ left: x0, top: y0, width: cw, height: ch }).resize(W, H).webp({ quality: 88 }).toBuffer();
+  const hash = crypto.createHash('sha256').update(img).digest('hex').slice(0, 10);
+  const file = `photomap-${PROP}-${hash}.webp`;
+  fs.writeFileSync(path.join(ART, file), img);
+  if (UPLOAD) { const { PutObjectCommand } = require('@aws-sdk/client-s3'); await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `assets/image/${file}`, Body: img, ContentType: 'image/webp', CacheControl: 'public, max-age=31536000, immutable' })); }
+  const r3 = (v) => Math.round(v * 10000) / 10000;
+  // 向き: 正面 (sin yaw, cos yaw) を図面の上に写した向き（図の上 = 0、時計回り）
+  const yawOf = (n, p) => { const e = 0.3, q = T(n.pos.x + e * Math.sin(n.yaw || 0), n.pos.z + e * Math.cos(n.yaw || 0)); const a = (Math.atan2(q[0] - p[0], -(q[1] - p[1])) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
+  console.log(label, 'blueprint points', keep.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
+  return {
+    label, labelEn,
+    image: { src: `/api/r2/assets/image/${file}`, width: W, height: H },
+    photoBase: `/api/pano/${td.key}-g${g.set}-`,
+    ...(reg.metersWide ? { metersWide: reg.metersWide } : {}),
+    points: keep.map(({ n, p }) => ({ id: n.id, x: r3((p[0] - x0) / cw), y: r3((p[1] - y0) / ch), yaw: yawOf(n, p) })),
+  };
+}
+
 fs.writeFileSync(OUT, JSON.stringify(out, null, 1));
 console.log('wrote', OUT);

@@ -143,7 +143,7 @@ function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel:
       {name && <div className="font-bold text-[16px] sm:text-[19px] leading-tight mb-4">{name}</div>}
       <div className="grid gap-5 md:grid-cols-2 items-start">
         <div>
-          <Plan map={map} en={en} sel={sel} onPick={onPick} style={{ maxWidth: `min(100%, max(300px, ${Math.round(W / 2)}px))` }} />
+          <Plan map={map} en={en} sel={sel} onPick={onPick} style={{ maxWidth: map.plan ? `min(100%, max(300px, ${Math.round(W / 2)}px))` : "100%" }} />
           {/* スマホは図が小さく印が混むので、全画面で 2 倍に広げて見られるように（横にスクロール） */}
           <button type="button" onClick={() => setZoom(true)} className="sm:hidden mt-2 mx-auto block text-[12.5px] border border-line px-3 py-1.5 bg-white">{en ? "Enlarge plan" : "図面を拡大"}</button>
           {zoom && (
@@ -162,13 +162,15 @@ function OneMap({ map, en, sel, onPick }: { map: PhotoMapData; en: boolean; sel:
         {/* 右の列: 眺め＋説明（PC では説明を写真の下に置き、図面の横の空きを埋める） */}
         <div className="md:sticky md:top-20">
           <button type="button" onClick={() => onPick(sel)} className="block w-full" aria-label={en ? "Open the view" : "眺めを大きく見る"}>
-            <PanoView key={p0.id} base={map.photoBase} pt={p0} className="aspect-[4/3] w-full bg-[#111]" />
+            <PanoView key={(p0.base ?? "") + p0.id} base={p0.base ?? map.photoBase} pt={p0} className="aspect-[4/3] w-full bg-[#111]" />
           </button>
           <p className="mt-4 text-[13px] text-ink/75 flex items-start gap-2">
             <span className="shrink-0 -mt-[2px]"><Marker yaw={0} size={20} /></span>
             <span>{en ? "Click an arrow on the plan to see the view from that position." : <TitleText text="平面図の矢印を押すと、その位置からの眺めが表示されます。" />}</span>
           </p>
-          <p className="mt-1 text-[12px] text-muted">{en ? "* Plan and views are generated from the 3D scan. Actual conditions take precedence." : <TitleText text="※ 図面と画像は3Dスキャンから作ったものです。現況と違う場合は現況が優先されます。" />}</p>
+          <p className="mt-1 text-[12px] text-muted">{map.plan
+            ? (en ? "* Plan and views are generated from the 3D scan. Actual conditions take precedence." : <TitleText text="※ 図面と画像は3Dスキャンから作ったものです。現況と違う場合は現況が優先されます。" />)
+            : (en ? "* Floor plan from the venue; views from the 3D scan. Actual conditions take precedence." : <TitleText text="※ 図面は施設の資料、画像は3Dスキャンから作ったものです。現況と違う場合は現況が優先されます。" />)}</p>
         </div>
       </div>
     </div>
@@ -193,7 +195,7 @@ function Lightbox({ map, index, en, onIndex, onClose }: { map: PhotoMapData; ind
   return (
     <div data-photo-map-box className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-5 sm:p-10" onClick={onClose} role="dialog" aria-modal aria-label={en ? "View from position" : "位置からの眺め"}>
       <div className="relative bg-white p-2 sm:p-2.5 w-full max-w-[min(1100px,calc((100vh-120px)*4/3))] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <PanoView key={p.id} base={map.photoBase} pt={p} interactive className="aspect-[4/3] w-full bg-[#111]" />
+        <PanoView key={(p.base ?? "") + p.id} base={p.base ?? map.photoBase} pt={p} interactive className="aspect-[4/3] w-full bg-[#111]" />
         <div className="flex items-center justify-between gap-3 pt-2 px-1 text-[12.5px] text-ink/70">
           <span className="mono tracking-[0.12em]">{String(index + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}</span>
           <span>{en ? "Drag to look around" : "ドラッグで見回せます"}</span>

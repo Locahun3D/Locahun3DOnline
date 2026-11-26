@@ -608,6 +608,8 @@ export const propertySchema = z.object({
       x: z.number().min(0).max(1),
       y: z.number().min(0).max(1),
       yaw: z.number(),
+      /** 別のシーンの地点を同じ図面に載せるとき、その地点の写真の photoBase（2026-11-26。公式図面 1 枚に 2 シーン）。 */
+      base: z.string().max(400).optional(),
     })).max(300).default([]),
   })).max(12).default([]),
 
