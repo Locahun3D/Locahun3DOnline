@@ -45,11 +45,11 @@ function OneMap({ map, en, onPick }: { map: PhotoMapData; en: boolean; onPick: (
   return (
     <div className="bg-white border border-line p-4 sm:p-6">
       <div className="grid gap-5 md:grid-cols-2 items-start">
-        <div className="relative">
+        <div className="relative pt-7 sm:pt-0">
           {name && (
             <div className="absolute right-0 top-0 text-right font-bold text-[16px] sm:text-[19px] leading-tight pointer-events-none">{name}</div>
           )}
-          <svg viewBox={`0 0 ${W} ${H}`} className="block w-full h-auto" role="group" aria-label={en ? `${name} floor plan` : `${name}の平面図`}>
+          <svg viewBox={`0 0 ${W} ${H}`} className="block w-full h-auto mx-auto" style={{ maxWidth: `max(320px, ${Math.round(W / 2)}px)` }} role="group" aria-label={en ? `${name} floor plan` : `${name}の平面図`}>
             <image href={map.image.src} x={0} y={0} width={W} height={H} />
             {map.points.map((q, i) => (
               <g

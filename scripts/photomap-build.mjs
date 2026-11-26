@@ -51,6 +51,13 @@ for (const spec of MAPS) {
     if (r.status !== 0) throw new Error('photomap-plan failed: ' + r.stderr);
     raw = planPng; planBox = JSON.parse(fs.readFileSync(planPng + '.json', 'utf8')).bbox;
   }
+  // 断面の図面（photomap-section.py の _sec.json）は描いてある範囲の全体を入れる
+  if (td.section) {
+    const { data, info } = await sharp(raw).greyscale().raw().toBuffer({ resolveWithObject: true });
+    let a = info.width, b = info.height, c = 0, d = 0;
+    for (let y = 0; y < info.height; y++) for (let x = 0; x < info.width; x++) if (data[y * info.width + x] < 200) { if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; }
+    planBox = [a, b, c, d];
+  }
   const g = await (await fetch(`${ORIGIN}/api/pano/${td.key}.graph.json`)).json();
   // 写真ツアーで行ける地点だけ（つながりの無い地点は外す）
   const linked = new Set(g.edges.flat());
@@ -63,7 +70,12 @@ for (const spec of MAPS) {
   // 最初に出す地点 = ツアーの開始位置にいちばん近い地点（先頭に置く）
   if (g.start) { const d = (n) => Math.hypot(n.pos.x - g.start.x, n.pos.z - g.start.z); const i0 = nodes.reduce((b, n, i) => (d(n) < d(nodes[b]) ? i : b), 0); nodes = [nodes[i0], ...nodes.filter((_, i) => i !== i0)]; }
   // 世界 → 元の図の画素
-  const toPx = (x, z) => [td.px / 2 + (x - td.center.x) * td.ppm, td.px / 2 + (z - td.center.z) * td.ppm];
+  // photomap-section.py が図を回したとき（td.rot、壁を縦横にそろえる）は地点も同じだけ回す
+  const rc = Math.cos(td.rot || 0), rs = Math.sin(td.rot || 0), ro = td.rotOrigin || { x: 0, z: 0 };
+  const rotP = (x, z) => [ro.x + rc * (x - ro.x) - rs * (z - ro.z), ro.z + rs * (x - ro.x) + rc * (z - ro.z)];
+  const toPx = (x0, z0) => { const [x, z] = rotP(x0, z0); return [td.px / 2 + (x - td.center.x) * td.ppm, td.px / 2 + (z - td.center.z) * td.ppm]; };
+  // 図の上を 0 とした時計回りの度（正面 (sin yaw, cos yaw) を同じだけ回す。回さないときは 180 - yaw° と同じ）
+  const mapYaw = (y) => { const fx = Math.sin(y), fz = Math.cos(y); const a = (Math.atan2(rc * fx - rs * fz, -(rs * fx + rc * fz)) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
   const P = nodes.map((n) => toPx(n.pos.x, n.pos.z));
   const m = MARGIN * td.ppm;
   let x0 = Math.max(0, Math.min(...P.map((p) => p[0])) - m), x1 = Math.min(td.px, Math.max(...P.map((p) => p[0])) + m);
@@ -94,7 +106,7 @@ for (const spec of MAPS) {
     photoBase: `/api/pano/${td.key}-g${g.set}-`,
     // yaw: 地点の向き（ビューアーの yaw。正面は図の上で (sin yaw, cos yaw)）→ 図の上を 0 とした時計回りの度 = 180 - yaw°
     //   （TK n1 で確かめた: 正面が北の壁、右が東の丸いバー）
-    points: nodes.map((n, i) => ({ id: n.id, x: r3((P[i][0] - x0) / cw), y: r3((P[i][1] - y0) / ch), yaw: ((Math.round(180 - ((n.yaw || 0) * 180) / Math.PI) % 360) + 540) % 360 - 180 })),
+    points: nodes.map((n, i) => ({ id: n.id, x: r3((P[i][0] - x0) / cw), y: r3((P[i][1] - y0) / ch), yaw: mapYaw(n.yaw || 0) })),
   });
   console.log(label, 'points', nodes.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
 }
