@@ -148,7 +148,11 @@ async function fromBlueprint(label, labelEn, td, reg, dir) {
   const meta = await sharp(bpFile).metadata();
   const [x0, y0, x1, y1] = reg.crop || [0, 0, meta.width, meta.height];
   const cw = x1 - x0, ch = y1 - y0;
-  let keep = nodes.map((n) => ({ n, p: T(n.pos.x, n.pos.z) })).filter(({ p }) => p[0] >= x0 && p[0] < x1 && p[1] >= y0 && p[1] < y1);
+  // shifts: スキャン同士のずれを場所ごとに直す [{ zmax?, zmin?, xmin?, xmax?, dx, dz }]（世界 m。図面の廊下に合わせる）
+  const at = (n) => { let x = n.pos.x, z = n.pos.z; for (const sh of reg.shifts || []) if ((sh.zmax == null || n.pos.z < sh.zmax) && (sh.zmin == null || n.pos.z >= sh.zmin) && (sh.xmin == null || n.pos.x >= sh.xmin) && (sh.xmax == null || n.pos.x < sh.xmax)) { x += sh.dx || 0; z += sh.dz || 0; } return [x, z]; };
+  let keep = nodes.map((n) => ({ n, p: T(...at(n)) })).filter(({ p }) => p[0] >= x0 && p[0] < x1 && p[1] >= y0 && p[1] < y1);
+  // dropBoxes: 図面で人が入らない所（階段・設備室）に落ちた点を外す [x0,y0,x1,y1]（元の図面の画素）
+  for (const [a, b, c, d] of reg.dropBoxes || []) keep = keep.filter(({ p }) => !(p[0] >= a && p[0] < c && p[1] >= b && p[1] < d));
   if (reg.dropOutside) {   // 図面の建物の外（白地）に落ちた点は出さない
     const { data, info } = await sharp(bpFile).greyscale().raw().toBuffer({ resolveWithObject: true });
     const white = (u, v) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const q = data[Math.min(info.height - 1, Math.max(0, Math.round(v) + dy)) * info.width + Math.min(info.width - 1, Math.max(0, Math.round(u) + dx))]; if (q < 245) return false; } return true; };
@@ -165,7 +169,7 @@ async function fromBlueprint(label, labelEn, td, reg, dir) {
   if (UPLOAD) { const { PutObjectCommand } = require('@aws-sdk/client-s3'); await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: `assets/image/${file}`, Body: img, ContentType: 'image/webp', CacheControl: 'public, max-age=31536000, immutable' })); }
   const r3 = (v) => Math.round(v * 10000) / 10000;
   // 向き: 正面 (sin yaw, cos yaw) を図面の上に写した向き（図の上 = 0、時計回り）
-  const yawOf = (n, p) => { const e = 0.3, q = T(n.pos.x + e * Math.sin(n.yaw || 0), n.pos.z + e * Math.cos(n.yaw || 0)); const a = (Math.atan2(q[0] - p[0], -(q[1] - p[1])) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
+  const yawOf = (n, p) => { const e = 0.3, [ax, az] = at(n), q = T(ax + e * Math.sin(n.yaw || 0), az + e * Math.cos(n.yaw || 0)); const a = (Math.atan2(q[0] - p[0], -(q[1] - p[1])) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
   console.log(label, 'blueprint points', keep.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
   return {
     label, labelEn,

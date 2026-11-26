@@ -43,9 +43,9 @@ export default function PhotoMap({ maps, en }: { maps: PhotoMapData[]; en: boole
 /** 図の印: ピンクの丸＋向きの矢じり（画面上の大きさは図の縮尺に関係なく一定）。選ばれている地点は濃い色＋輪 */
 function Marker({ yaw, active, size = 26 }: { yaw: number; active?: boolean; size?: number }) {
   return (
-    <svg viewBox="-13 -13 26 26" width={size} height={size} aria-hidden className="block overflow-visible">
-      {active && <circle r={9} fill="none" stroke="#1a1a1a" strokeWidth={1.6} />}
-      <path d="M -6.2 -4.2 L 0 -13 L 6.2 -4.2 Z" transform={`rotate(${yaw})`} fill={active ? "#d9534f" : PINK} stroke="#fff" strokeWidth={1} strokeLinejoin="round" />
+    <svg viewBox="-16 -16 32 32" width={size} height={size} aria-hidden className="block overflow-visible">
+      {active && <><circle r={10} fill="none" stroke="#fff" strokeWidth={3.4} /><circle r={10} fill="none" stroke="#1a1a1a" strokeWidth={1.5} /></>}
+      <path d="M -7.2 -3.4 L 0 -15.5 L 7.2 -3.4 Z" transform={`rotate(${yaw})`} fill={active ? "#d9534f" : PINK} stroke="#fff" strokeWidth={1} strokeLinejoin="round" />
       <circle r={4.8} fill={active ? "#d9534f" : PINK} stroke="#fff" strokeWidth={1.4} />
     </svg>
   );
@@ -118,7 +118,7 @@ function Plan({ map, en, sel, onPick, style, full }: { map: PhotoMapData; en: bo
 
     {map.points.map((q, i) => (
       <button
-        key={q.id}
+        key={(q.base ?? "") + q.id}
         type="button"
         onClick={() => onPick(i)}
         aria-label={en ? `View from position ${i + 1}` : `地点 ${i + 1} からの眺め`}
