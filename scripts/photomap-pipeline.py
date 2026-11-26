@@ -40,7 +40,7 @@ def refresh_blueprints(pid):
     bps = json.loads(json.loads(r.stdout)[0]['results'][0]['b'] or '[]')
     allinv = json.load(open(f'{WS}/inventory.json', encoding='utf-8'))
     for p in allinv:
-        if p['id'] == pid: p['blueprints'] = [{'label': b.get('label', ''), 'url': b['url']} for b in bps if b.get('url')]
+        if p['id'] == pid and bps: p['blueprints'] = [{'label': b.get('label', ''), 'url': b['url']} for b in bps if b.get('url')]
     json.dump(allinv, open(f'{WS}/inventory.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     inv[pid] = next(p for p in allinv if p['id'] == pid)
     d = f'{WS}/all/{pid}/bp'; os.makedirs(d, exist_ok=True)
@@ -49,9 +49,8 @@ def refresh_blueprints(pid):
         if os.path.exists(f) and os.path.getsize(f) > 0: continue
         u = 'https://locahun3d.com' + b['url'] if b['url'].startswith('/') else b['url']
         open(f, 'wb').write(urllib.request.urlopen(urllib.request.Request(urllib.parse.quote(u, safe='/:?=&%~'), headers={'User-Agent': 'Mozilla/5.0 (photomap)'})).read())
-    for f in glob.glob(f'{d}/*.img'):   # 本番から消えた図面・0 バイトの残骸は捨てる
-        k = os.path.basename(f).split('.')[0]
-        if not k.isdigit() or int(k) >= len(inv[pid]['blueprints']) or os.path.getsize(f) == 0: os.remove(f)
+    for f in glob.glob(f'{d}/*.img'):   # 0 バイトの残骸は捨てる
+        if os.path.getsize(f) == 0: os.remove(f)   # 本番に無い図面でも手で置いた公式図面（公開中の物件）は消さない
     print('  blueprints', len(inv[pid]['blueprints']))
 
 import urllib.parse
