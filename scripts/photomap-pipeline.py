@@ -7,7 +7,8 @@
 #     regcand : 位置合わせが済んでいない作業 dir に、自動の候補（重なり率の上位 3 案の重ね図）を作る。
 #               ★ 候補から正しいものを選ぶ・合わなければ壁の角で合わせる、は目で見る工程（REG_BRIEF.md を担当に渡す）。
 #               reg.json か reg_none.txt ができるまで、その dir は図に出ない
-#     rooms   : 位置合わせ済みの dir で、部屋の点を選び直す（図面の建物の中・全部の空間に 1 点・36㎡ ごとに +1・最初の向き）
+#     rooms   : 位置合わせ済みの dir で、公式図面の部屋ごとの真ん中に点を置く（photomap-centre.py: 部屋分け → 真ん中 → 近くに地点が無ければその位置で 360° を撮る
+#               → 1 点ずつ AI 点検 → だめなら控えの位置で撮り直し）。--oldrooms で以前の選び方（photomap-rooms.py）
 #     build   : 同じ図面・同じ階（reg.json の floor、無ければ crop が重なるもの）をまとめ、crop を合わせて 1 枚の図にし、
 #               photomap-build.mjs で all/<id>/pm.json と確認図 pm_preview.jpg を作る
 #     --upload: 図の画像を R2 に置く（build のとき）。--d1: pm.json を本番 D1 の photoMaps に書く（--upload と一緒に使う）
@@ -69,14 +70,24 @@ for pid in args:
                 subprocess.run([py, f'{HERE}/photomap-regiou.py', d, bp, f'{d}/auto{k}'], capture_output=True)
             print('  要確認（位置合わせ）', d, '→ 候補 auto*_cand*.png。REG_BRIEF.md の手順で reg.json か reg_none.txt を作る')
     regdirs = [d for d in units(pid) if os.path.exists(f'{d}/reg.json')]
+    def is_area(d):   # 周辺地図（photomap-osm.py の OSM 図）: 建物が「部屋」になるので部屋の真ん中方式は使わず、以前の選び方（roomsArgs）
+        r = json.load(open(f'{d}/reg.json', encoding='utf-8'))
+        return r.get('floor') == '周辺地図' or os.path.exists(os.path.join(os.path.dirname(os.path.normpath(os.path.join(d, r['blueprint']))), '0_meta.json'))
+    OLDROOMS = '--oldrooms' in sys.argv   # 以前の点の選び方（スキャンの部屋分け・photomap-rooms.py）
     if 'rooms' in STEPS and regdirs:
-        run([py, f'{WS}/rerooms.py', *regdirs], cwd=WS)
+        olddirs = [d for d in regdirs if OLDROOMS or is_area(d)]; cdirs = [d for d in regdirs if d not in olddirs]
+        if olddirs: run([py, f'{WS}/rerooms.py', *olddirs], cwd=WS)
+        if cdirs: run([py, f'{HERE}/photomap-centre.py', *cdirs, *[a for a in sys.argv[1:] if a in ('--replan', '--no-ai') or a.startswith('--rounds=') or a.startswith('--jobs=')]], cwd=REPO)
     if 'build' in STEPS and regdirs:
         p = inv.get(pid, {}); bplab = {f'{WS}/all/{pid}/bp/{k}.img': (b.get('label') or '') for k, b in enumerate(p.get('blueprints', []))}
         groups = []   # [{bp, floor, crop, dirs}]
         for d in sorted(regdirs, key=lambda d: scene_of(d, pid)):
             r = json.load(open(f'{d}/reg.json', encoding='utf-8'))
-            if not json.load(open(f'{d}/{r.get("select", "rooms.json")}')).get('select'): continue   # 図面の中に点が無いシーン
+            use_centre = not OLDROOMS and not is_area(d) and os.path.exists(f'{d}/centre.json')
+            if use_centre:
+                if not json.load(open(f'{d}/centre.json', encoding='utf-8')).get('points'): continue
+            elif not json.load(open(f'{d}/{r.get("select", "rooms.json")}')).get('select'): continue   # 図面の中に点が無いシーン
+            if use_centre: r = dict(r, centre='centre.json')
             bp = os.path.normpath(os.path.join(d, r['blueprint'])).replace('\\', '/')
             c = r.get('crop') or [0, 0, *cv2.imread(bp).shape[1::-1]]
             def same(gr):
@@ -100,17 +111,38 @@ for pid in args:
                 specs += ['--map', f'{lab}|{labEn}|{d}/td.json|reg={d}/reg_merged.json']
         if not specs: print('  図に出す点なし'); continue
         out = f'{WS}/all/{pid}/pm.json'
+        if UPLOAD and not OLDROOMS:   # 部屋の真ん中で新しく撮った 360° を先に R2 へ（図が参照する）
+            for g in groups:
+                for d, r in g['dirs']:
+                    if not is_area(d) and os.path.exists(f'{d}/centre/at.json'): run(['node', 'scripts/bake-pano.mjs', '--upload-at', f'{d}/centre'], cwd=REPO)
         run(['node', 'scripts/photomap-build.mjs', '--property', pid, *specs, '--out', out, *(['--upload'] if UPLOAD else [])], cwd=REPO)
         # 確認図: 図ごとに点と向き
         pm = json.load(open(out, encoding='utf-8')); tiles = []
-        for mp in pm:
+        # 撮影待ち（窓を出せない間）: 代わりの既存の地点は橙、代わりも無い部屋の真ん中は橙の輪
+        pend = []
+        for g in groups:
+            ids, rings = set(), []
+            for d, r in g['dirs']:
+                cj = f'{d}/centre.json'
+                if OLDROOMS or is_area(d) or not os.path.exists(cj): continue
+                c = json.load(open(cj, encoding='utf-8')); m = json.load(open(f'{d}/reg_merged.json', encoding='utf-8'))
+                ids |= {q['id'] for q in c['points'] if q.get('pending')}
+                for q in c.get('pending', []):
+                    M_ = m['world2img']; rings.append((M_[0][0] * q['x'] + M_[0][1] * q['z'] + M_[0][2], M_[1][0] * q['x'] + M_[1][1] * q['z'] + M_[1][2], m['crop']))
+            pend.append((ids, rings))
+        for gi, mp in enumerate(pm):
+            pids, rings = pend[gi] if len(pend) == len(pm) else (set(), [])
             im = cv2.imread(f'{REPO}/artifacts/photomap/{os.path.basename(mp["image"]["src"])}')
             if im is None: continue
             H, W = im.shape[:2]
             for q in mp['points']:
                 x, y = int(q['x'] * W), int(q['y'] * H); a = np.radians(q['yaw']); r_ = max(7, W // 90)
-                cv2.circle(im, (x, y), r_, (60, 60, 230), -1); cv2.arrowedLine(im, (x, y), (int(x + np.sin(a) * r_ * 3), int(y - np.cos(a) * r_ * 3)), (60, 60, 230), max(2, r_ // 3), tipLength=0.4)
-            cv2.putText(im, f'{mp["labelEn"]} ({len(mp["points"])})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (200, 0, 0), 2)
+                col = (0, 150, 255) if q['id'] in pids else (60, 60, 230)
+                cv2.circle(im, (x, y), r_, col, -1); cv2.arrowedLine(im, (x, y), (int(x + np.sin(a) * r_ * 3), int(y - np.cos(a) * r_ * 3)), col, max(2, r_ // 3), tipLength=0.4)
+            for u, v, cr in rings:
+                cv2.circle(im, (int((u - cr[0]) / (cr[2] - cr[0]) * W), int((v - cr[1]) / (cr[3] - cr[1]) * H)), max(7, W // 90), (0, 150, 255), 2)
+            npend = sum(1 for q in mp['points'] if q['id'] in pids) + len(rings)
+            cv2.putText(im, f'{mp["labelEn"]} ({len(mp["points"])})' + (f' pending {npend}' if npend else ''), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (200, 0, 0), 2)
             s = 700 / max(H, W); tiles.append(cv2.resize(im, (int(W * s), int(H * s))))
         if tiles:
             h = max(t.shape[0] for t in tiles); cv2.imwrite(f'{WS}/all/{pid}/pm_preview.jpg', np.hstack([cv2.copyMakeBorder(t, 0, h - t.shape[0], 0, 4, cv2.BORDER_CONSTANT, value=(255, 255, 255)) for t in tiles]))

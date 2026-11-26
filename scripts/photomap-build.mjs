@@ -51,7 +51,7 @@ for (const spec of MAPS) {
     const m = await fromBlueprint(label, labelEn, td, JSON.parse(fs.readFileSync(regPath, 'utf8')), path.dirname(regPath));
     // 同じ名前・同じ図面が続いたら 1 枚にまとめる（地点ごとに写真の場所 base を持たせる）
     const prev = out[out.length - 1];
-    if (prev && prev.label === m.label && prev.image.src === m.image.src) prev.points.push(...m.points.map((q) => ({ ...q, base: m.photoBase })));
+    if (prev && prev.label === m.label && prev.image.src === m.image.src) prev.points.push(...m.points.map((q) => ({ ...q, base: q.base ?? m.photoBase })));
     else out.push(m);
     continue;
   }
@@ -146,9 +146,14 @@ async function graphNodes(td, noGap = false) {
 
 async function fromBlueprint(label, labelEn, td, reg, dir) {
   // select: 図に出す地点（photomap-rooms.py が部屋ごとの真ん中に選んだもの）。あれば間引き（--gap）はしない
-  const select = reg.select ? new Set(JSON.parse(fs.readFileSync(path.resolve(dir, reg.select), 'utf8')).select) : null;
-  const { g, nodes: all } = await graphNodes(td, !!select);
-  const nodes = select ? all.filter((n) => select.has(n.id)) : all;
+  // centre: photomap-centre.py の部屋の真ん中の点（既存の地点 kind=node か、その位置で新しく撮った点 kind=new・base 付き）。select より優先
+  const centre = reg.centre && fs.existsSync(path.resolve(dir, reg.centre)) ? JSON.parse(fs.readFileSync(path.resolve(dir, reg.centre), 'utf8')) : null;
+  const select = !centre && reg.select ? new Set(JSON.parse(fs.readFileSync(path.resolve(dir, reg.select), 'utf8')).select) : null;
+  const { g, nodes: all } = await graphNodes(td, !!(select || centre));
+  const byId = Object.fromEntries(g.nodes.map((n) => [n.id, n]));
+  const nodes = centre
+    ? centre.points.map((q) => (q.kind === 'node' && byId[q.id] ? { ...byId[q.id], o: q.o } : { id: q.id, pos: { x: q.x, z: q.z }, yaw: q.yaw, base: q.base, o: q.o }))
+    : select ? all.filter((n) => select.has(n.id)) : all;
   const T = reg.H
     ? (x, z) => { const h = reg.H, w = h[2][0] * x + h[2][1] * z + h[2][2]; return [(h[0][0] * x + h[0][1] * z + h[0][2]) / w, (h[1][0] * x + h[1][1] * z + h[1][2]) / w]; }
     : (x, z) => { const m = reg.world2img; return [m[0][0] * x + m[0][1] * z + m[0][2], m[1][0] * x + m[1][1] * z + m[1][2]]; };
@@ -178,7 +183,7 @@ async function fromBlueprint(label, labelEn, td, reg, dir) {
   const r3 = (v) => Math.round(v * 10000) / 10000;
   // 向き: 正面 (sin yaw, cos yaw) を図面の上に写した向き（図の上 = 0、時計回り）
   // views: 最初に見せる向き（photomap-bestview.py の出力。正面から時計回りの度）。矢印もその向きにする
-  const views = reg.views ? JSON.parse(fs.readFileSync(path.resolve(dir, reg.views), 'utf8')) : {};
+  const views = centre ? Object.fromEntries(nodes.map((n) => [n.id, n.o || 0])) : reg.views ? JSON.parse(fs.readFileSync(path.resolve(dir, reg.views), 'utf8')) : {};
   const dirOf = (n) => { const fx = Math.sin(n.yaw || 0), fz = Math.cos(n.yaw || 0), t = ((views[n.id] || 0) * Math.PI) / 180; return [Math.cos(t) * fx - Math.sin(t) * fz, Math.cos(t) * fz + Math.sin(t) * fx]; };
   const yawOf = (n, p) => { const e = 0.3, [ax, az] = at(n), [vx, vz] = dirOf(n), q = T(ax + e * vx, az + e * vz); const a = (Math.atan2(q[0] - p[0], -(q[1] - p[1])) * 180) / Math.PI; return ((Math.round(a) % 360) + 540) % 360 - 180; };
   console.log(label, 'blueprint points', keep.length, '/', g.nodes.length, 'image', `${W}x${H}`, UPLOAD ? 'uploaded' : 'local', file);
@@ -187,7 +192,7 @@ async function fromBlueprint(label, labelEn, td, reg, dir) {
     image: { src: `/api/r2/assets/image/${file}`, width: W, height: H },
     photoBase: `/api/pano/${td.key}-g${g.set}-`,
     ...(reg.metersWide ? { metersWide: reg.metersWide } : {}),
-    points: keep.map(({ n, p }) => ({ id: n.id, x: r3((p[0] - x0) / cw), y: r3((p[1] - y0) / ch), yaw: yawOf(n, p), ...(views[n.id] ? { o: views[n.id] } : {}) })),
+    points: keep.map(({ n, p }) => ({ id: n.id, x: r3((p[0] - x0) / cw), y: r3((p[1] - y0) / ch), yaw: yawOf(n, p), ...(views[n.id] ? { o: views[n.id] } : {}), ...(n.base ? { base: n.base } : {}) })),
   };
 }
 

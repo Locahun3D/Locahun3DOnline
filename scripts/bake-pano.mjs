@@ -740,6 +740,75 @@ async function bake(browser, s) {
   finally { await ctx.close(); }
 }
 
+// ── 図面の部屋の真ん中など、指定した位置で撮る（--at、2026-11-27 本人「出来るだけ部屋の中央でとること」「写真がない部屋はないように」）──
+//   node scripts/bake-pano.mjs --at <at.json> --out <dir>          撮るだけ（R2 には書かない）。<dir>/<id>-{f,r,b,l,u,d}.jpg と .s.jpg、AI 用の帯 <id>.jpg、結果 <dir>/at.json
+//   node scripts/bake-pano.mjs --upload-at <dir>                    撮った画像を R2 に追加（pano/<key>-g<set>-<id>-<面>[.s].jpg。既存は上書きしない）
+//   at.json: { "scene": "/api/viewer-stream/...", "key": "<64桁・確認用>", "set": "<6桁・無ければ作る>", "points": [{ "id": "n901", "x": 0, "y": 1.2, "z": 0, "yaw": 0 }] }
+//   y は目の高さ（世界座標）。set は撮るたびに新しくする（画像は 1 年キャッシュ）ので、同じ set に足すときは at.json の set を渡す
+if (arg('--at') || arg('--upload-at')) {
+  if (arg('--upload-at')) {
+    const dir = path.resolve(arg('--upload-at'));
+    const at = JSON.parse(fs.readFileSync(path.join(dir, 'at.json'), 'utf8'));
+    let n = 0;
+    for (const p of at.points.filter((q) => q.ok !== false)) for (const k of Object.keys(FACES)) for (const sfx of ['', '.s']) {
+      const file = path.join(dir, `${p.id}-${k}${sfx}.jpg`);
+      if (!fs.existsSync(file)) continue;
+      const key = `pano/${at.key}-g${at.set}-${p.id}-${k}${sfx}.jpg`;
+      if (!await r2Head(key)) { await r2PutNew(key, fs.readFileSync(file), 'image/jpeg'); n++; }
+    }
+    console.log('uploaded', n, 'files', at.key.slice(0, 12), 'g' + at.set);
+    process.exit(0);
+  }
+  // 本人の作業中は窓を出さない（2026-11-27「新しいwindow出る作業だけ止めて」）: 止め札があれば撮らずに終わる
+  const STOP = 'F:/Codex/pvgen/tour/photomap/_log/NO_WINDOW';
+  if (fs.existsSync(STOP)) { console.log('NO_WINDOW: skip', arg('--at')); process.exit(3); }
+  const atFile = path.resolve(arg('--at'));
+  const at = JSON.parse(fs.readFileSync(atFile, 'utf8'));
+  const dir = path.resolve(arg('--out', path.dirname(atFile)));
+  fs.mkdirSync(dir, { recursive: true });
+  at.set = at.set || crypto.randomBytes(3).toString('hex');
+  const browser = await chromium.launch({ channel: 'chrome', headless: false,
+    args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
+  let code = 0;
+  try {
+    for (let tryN = 0; tryN < 3; tryN++) {
+      const r = {};
+      const { ctx, page } = await openScene(browser, at.scene);
+      try {
+        let key = null; const t0 = Date.now();
+        while (Date.now() - t0 < 90000 && !key) { await page.waitForTimeout(300); key = await page.evaluate(() => window.__startPano?.key || null).catch(() => null); }
+        if (!key) throw new Error('キーが出ない');
+        if (at.key && at.key !== key) throw new Error(`キーが違う（シーンが差し替わった？） ${key.slice(0, 12)} != ${at.key.slice(0, 12)}`);
+        at.key = key;
+        const t1 = Date.now(); while (Date.now() - t1 < 120000 && (await page.evaluate(() => window.__pb.n()).catch(() => -1)) <= 0) await page.waitForTimeout(500);
+        await page.waitForTimeout(3000);
+        await page.evaluate(() => window.__pb.budget(8000000));
+        await page.addStyleTag({ content: 'body>*:not(canvas){visibility:hidden!important} canvas{visibility:visible!important}' });
+        for (const p of at.points) {
+          if (p.done && fs.existsSync(path.join(dir, `${p.id}-f.jpg`))) continue;
+          const faces = await capture(page, { x: p.x, y: p.y, z: p.z }, p.yaw || 0, 0, r, p.id + ':');
+          for (const [k, b] of Object.entries(faces)) {
+            fs.writeFileSync(path.join(dir, `${p.id}-${k}.jpg`), b);
+            fs.writeFileSync(path.join(dir, `${p.id}-${k}.s.jpg`), await sharp(b).resize(GRAPH_SMALL, GRAPH_SMALL, { kernel: 'lanczos3' }).jpeg({ quality: 74, mozjpeg: true }).toBuffer());
+          }
+          await strip(faces, p.id, path.join(dir, `${p.id}.jpg`), { down: true });
+          p.sharp = +(await sharpness(faces)).toFixed(1);
+          p.done = true;
+          fs.writeFileSync(path.join(dir, 'at.json'), JSON.stringify(at, null, 1));
+          console.log('shot', p.id, 'sharp', p.sharp);
+        }
+        break;
+      } catch (e) {
+        console.log(C.yellow('at: ' + String(e?.message || e).slice(0, 200)));
+        if (tryN === 2 || !/GPU_LOST|6 面|Target closed|crash/i.test(String(e?.message || e))) { code = 1; break; }
+        await new Promise((ok) => setTimeout(ok, 30000));
+      } finally { await ctx.close().catch(() => {}); }
+    }
+  } finally { await browser.close(); }
+  fs.writeFileSync(path.join(dir, 'at.json'), JSON.stringify(at, null, 1));
+  process.exit(code);
+}
+
 const scenes = (await listScenes()).slice(0, LIMIT);
 console.log(`対象 ${scenes.length} シーン${FIX ? '（無いものを作る）' : '（一覧のみ）'}`);
 const browser = await chromium.launch({ channel: 'chrome', headless: false,
