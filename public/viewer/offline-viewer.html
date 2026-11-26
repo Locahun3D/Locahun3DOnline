@@ -22012,7 +22012,10 @@ function updateLightHalos(){
       st.state = 'faces';
       // ツアーの地点（無ければ開始位置の 1 枚だけ）
       // 動線グラフ（無ければ開始位置の 1 枚だけ）
-      const grP = fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
+      // 2026-11-26 本人「2D表示、3Dビューアーと併用するのやめよう。3Dは3Dにしよう」: 地点の間を 2D で移る写真ツアーはビューアーでは使わない
+      // （物件ページの「位置から見る」に移した。src/components/photo-map.tsx）。開始位置の 1 枚（読み込み中に見回す画像）は残す。戻すときは TOUR_2D を true に。
+      const TOUR_2D = false;
+      const grP = !TOUR_2D ? Promise.resolve(null) : fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
       tex = await loadFaces(st.key + (meta.r > 1 ? '-r' + meta.r : ''));   // 撮り直した画像は <key>-r<N>-{面}.jpg
       if(gone) return;
       at = new THREE.Vector3(meta.pos.x, meta.pos.y, meta.pos.z);
