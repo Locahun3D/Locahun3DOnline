@@ -52,12 +52,28 @@ for k, mp in enumerate(pm):
     if im is None: continue
     s = 1400 / max(im.shape[:2]); im = cv2.resize(im, None, fx=s, fy=s, interpolation=cv2.INTER_AREA) if s < 1 else im
     H, W = im.shape[:2]; r_ = max(8, W // 90)
+    # 第4回の審査（ariake）: 番号が密集して読めない → 点と矢印を先に全部描き、番号は点・矢印・他の番号と重ならない位置へ（遠いときは引出線）
+    P = [(int(q['x'] * W), int(q['y'] * H), math.radians(q['yaw'])) for q in mp['points']]
+    occ = [(x - r_, y - r_, x + r_, y + r_) for x, y, _ in P] + [(min(x, int(x + math.sin(a) * r_ * 3)) - 3, min(y, int(y - math.cos(a) * r_ * 3)) - 3, max(x, int(x + math.sin(a) * r_ * 3)) + 3, max(y, int(y - math.cos(a) * r_ * 3)) + 3) for x, y, a in P]
+    def place(x, y, txt):
+        (tw, th), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+        for rr in (1, 2, 3, 4, 6):
+            for ang in range(-45, 315, 45):
+                cx = int(x + math.cos(math.radians(ang)) * r_ * 1.6 * rr); cy = int(y - math.sin(math.radians(ang)) * r_ * 1.6 * rr)
+                bx = (cx - tw // 2 - 2, cy - th // 2 - 2, cx + tw // 2 + 2, cy + th // 2 + 2)
+                if bx[0] < 0 or bx[1] < 0 or bx[2] >= W or bx[3] >= H: continue
+                if any(not (bx[2] < o[0] or bx[0] > o[2] or bx[3] < o[1] or bx[1] > o[3]) for o in occ): continue
+                occ.append(bx); return (bx[0] + 2, bx[3] - 2), rr > 2
+        return (x + r_, y - r_), False
+    for x, y, a in P:
+        cv2.circle(im, (x, y), r_, (60, 60, 230), -1)
+        cv2.arrowedLine(im, (x, y), (int(x + math.sin(a) * r_ * 3), int(y - math.cos(a) * r_ * 3)), (60, 60, 230), max(2, r_ // 3), tipLength=0.4)
     for q in mp['points']:
         num += 1; numbers[num] = {'map': mp['label'], 'id': q['id']}
         x, y = int(q['x'] * W), int(q['y'] * H); a = math.radians(q['yaw'])
-        cv2.circle(im, (x, y), r_, (60, 60, 230), -1)
-        cv2.arrowedLine(im, (x, y), (int(x + math.sin(a) * r_ * 3), int(y - math.cos(a) * r_ * 3)), (60, 60, 230), max(2, r_ // 3), tipLength=0.4)
-        cv2.putText(im, str(num), (x + r_, y - r_), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 5); cv2.putText(im, str(num), (x + r_, y - r_), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 0, 0), 2)
+        org, lead = place(x, y, str(num))
+        if lead: cv2.line(im, (x, y), (org[0], org[1] - 8), (200, 0, 0), 1)
+        cv2.putText(im, str(num), org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 5); cv2.putText(im, str(num), org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 0, 0), 2)
         t = face_img(q.get('base') or mp['photoBase'], q)
         t = t if t is not None else np.full((400, 300, 3), 200, np.uint8)
         cv2.rectangle(t, (0, 0), (150, 34), (0, 0, 0), -1); cv2.putText(t, f'{num} {mp["labelEn"][:6]}', (5, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
