@@ -141,7 +141,9 @@ def pick_face(room, c, ai_o, M, cyan=None, sh=None):
         mx = max(sh.values()); lens = {o: L * (1 if sh.get(o, mx) >= 0.4 * mx else 0.2) for o, L in lens.items()}
     if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
     best = max(lens, key=lens.get)
-    return ai_o if lens.get(ai_o, 0) >= 0.85 * lens[best] else best
+    # 第5回の審査: 見通しだけで選ぶと「隣室への開口」「壁面中心で設備が見えない」と言われる → 写真を見た AI の bestFace を重く（6 割以上見通せれば AI、9㎡ 未満の小部屋は設備が見える AI の向きを常に）
+    if (room.get('area') or 0) < 9 and lens.get(ai_o, 0) >= 0.3 * lens[best]: return ai_o   # にじみ・立ち入り禁止で下げた向きは除く
+    return ai_o if lens.get(ai_o, 0) >= 0.6 * lens[best] else best
 
 def deep_yaw(room, u, v, M):
     # 部屋の範囲の中で一番遠くまで見通せる向き（図面の画素で 32 方向に線を伸ばす）→ 世界の yaw
@@ -362,7 +364,7 @@ def run_dir(d):
         lines = set(open(q, encoding='utf-8').read().split()) if os.path.exists(q) else set()
         if at_path not in lines: open(q, 'a', encoding='utf-8').write(at_path + chr(10))
     json.dump({'v': 1, 'key': at['key'], 'set': at.get('set'), 'points': keep, 'pending': pend_only}, open(f'{d}/centre.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'noWall': pr.get('noWall', []), 'voids': pr.get('voids', []),
+    log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'noWall': pr.get('noWall', []), 'hatched': pr.get('hatched', []), 'voids': pr.get('voids', []),
            'points': len(keep), 'new': sum(1 for e in keep if e['kind'] == 'new'),
            'pending': sum(1 for s in slots if s.get('pending')), 'pendingNoStandIn': len(pend_only),
            'blurRooms': [{'room': s['room']['id'], 'area': s['room']['area'], 'tries': len(s['verdicts']), 'blurTries': s.get('blurTries', 0), 'reason': str(s['verdicts'][-1].get('reason', ''))[:80] if s['verdicts'] else ''}

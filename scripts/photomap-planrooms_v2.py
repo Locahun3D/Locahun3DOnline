@@ -99,6 +99,23 @@ scan_d = cv2.distanceTransform((~scan_obj).astype(np.uint8), cv2.DIST_L2, 5)
 # ── 1. 壁 ──
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.int16)
 sat = img.max(2).astype(np.int16) - img.min(2).astype(np.int16)
+# 第5回（fc-space）: 図の斜線（ハッチ）＝「利用禁止」「プライベートゾーン」の範囲に点が落ちていた → 斜め 45° の細い線が密な所（1.5㎡ 以上のまとまり）をハッチとみなす
+def _hatch():
+    g_ = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    L_ = (cv2.morphologyEx(g_, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))) > 12).astype(np.uint8)
+    n_ = max(12, int(m2(0.5))); k1 = np.eye(n_, dtype=np.uint8)
+    d1 = cv2.morphologyEx(L_, cv2.MORPH_OPEN, k1); d2 = cv2.morphologyEx(L_, cv2.MORPH_OPEN, np.ascontiguousarray(np.fliplr(k1)))
+    H_ = (cv2.blur((d1 | d2).astype(np.float32), (max(3, int(m2(1.0))),) * 2) > 0.03).astype(np.uint8)
+    nn, ll, st, _ = cv2.connectedComponentsWithStats(H_, 8)
+    keep = np.zeros_like(H_, bool)
+    for j in range(1, nn):
+        if st[j, 4] * px2m2 < 1.5: continue
+        # 斜線は片方の向きだけが 6 本以上並ぶ（fuchu の階段・玄関の赤い網掛けは両方向が同じくらい → 対象外）
+        c1 = cv2.connectedComponents((d1 & (ll == j)).astype(np.uint8), connectivity=8)[0] - 1
+        c2 = cv2.connectedComponents((d2 & (ll == j)).astype(np.uint8), connectivity=8)[0] - 1
+        if max(c1, c2) >= 6 and min(c1, c2) <= 0.3 * max(c1, c2): keep |= ll == j
+    return keep
+HATCH = _hatch() if not reg.get('noHatch') else np.zeros(img.shape[:2], bool)
 dark = ((gray < 150) & (sat < 70)) | (gray < 70)
 n, lab, st, _ = cv2.connectedComponentsWithStats(dark.astype(np.uint8), 8)
 big_side = m2(0.9)
@@ -282,6 +299,11 @@ while _todo and _seen < 60:   # 割れた区画もさらに割る（第2回: end
         n_, l_, s_, _ = cv2.connectedComponentsWithStats(Ci, 8)
         di = min(np.linalg.norm((best[i] - best[j]) * np.array([0.3, 1.0, 1.0], np.float32)) for j in range(len(best)) if j != i)
         comps += [(l_ == j) for j in range(1, n_) if s_[j, 4] * px2m2 >= (1.2 if di >= 18 else 2.5)]   # 他の色とはっきり違う（ΔE 18 以上）色の塊は 1.2㎡ の浴室・トイレでも割る
+    # 第5回（eight-cafe 05・08）: 色付きの机（緑・灰・紫）が部屋として割れていた → 塊の中が腰の高さ（0.5〜1.2m）の点で 8.5 割以上埋まっていれば家具（eight-cafe の机 0.98〜1.0、studio-meal の小部屋 0.61〜0.63 は残す）とみなして使わない
+    _lo = cv2.dilate((band_lo > 0).astype(np.uint8), np.ones((max(3, int(m2(0.1))),) * 2, np.uint8)).astype(bool)
+    _fr = [float((C & _lo).sum() / max(1, C.sum())) for C in comps]
+    if '--dbg' in sys.argv: print('colorsplit furn', [round(f, 2) for f in _fr])
+    comps = [C for C, f in zip(comps, _fr) if f < 0.85 or C.sum() * px2m2 >= 6]   # 6㎡ 以上の塊は家具でなく床（机と椅子で埋まったカフェの床も腰の高さの点が多い）
     if '--dbg' in sys.argv: print('colorsplit', r, round(R.sum()*px2m2,1), round(bestd,1), [round(c.sum()*px2m2,1) for c in comps])
     if len(comps) < 2: continue
     mk = np.zeros_like(regions)
@@ -480,6 +502,7 @@ def do_room(R, r, force=False):
         # 立てる所: 図面のどの線（家具・階段・カウンター）からも 0.35m 以上離れ、家具の輪郭の中でない所。その中で区画の縁から一番遠い所
         okp = (obs_d >= m2(0.35)) & ~furn & (S > 0)
         if not okp.any(): okp = (obs_d >= m2(0.2)) & ~furn & (S > 0)
+        if (okp & ~HATCH).any(): okp = okp & ~HATCH   # 斜線（利用禁止）の範囲には置かない
         # スキャンの物から 0.55m 離れた所が区画の 15% 以上あり、真ん中らしさ（縁からの距離）を半分以上保てるときだけ使う（スキャンがにじむ区画は物だらけに見えるので使わない）
         okc = okp & (scan_d >= m2(0.55))
         if okc.sum() >= 0.15 * max(1, okp.sum()) and okc.any() and ds[okc].max() >= 0.5 * ds[okp].max(): okp = okc
@@ -512,7 +535,7 @@ def do_room(R, r, force=False):
                       'node': best[0] if best else None, 'nodeDist': round(best[1], 2) if best else None})
     # 控えの位置（AI が「物の中・壊れ」と言ったとき用）: 立てる所を、真ん中に近い順に 0.7m 以上離して最大 8 か所
     Rd = cv2.distanceTransform(R.astype(np.uint8), cv2.DIST_L2, 5)
-    okR = R & (obs_d >= m2(0.3)) & ~furn
+    okR = R & (obs_d >= m2(0.3)) & ~furn & ~HATCH
     okc = okR & (scan_d >= m2(0.5))
     if okc.sum() >= 0.15 * max(1, okR.sum()): okR = okc
     alts = []
@@ -529,11 +552,12 @@ def do_room(R, r, force=False):
             alts.append([int(vx) + x0, int(vy) + y0, round(x, 3), round(z, 3), round(fy, 3)])
             if len(alts) >= 8: break
     nodes_in = [nid for nid, nu, nv in npx if 0 <= int(nv) < h and 0 <= int(nu) < w and R[int(nv), int(nu)]]
+    hatched = float((R & HATCH).sum() / max(1, R.sum())) >= 0.5
     nowall = a < 20 and wallfrac < 0.3 and band.sum() > 0 and len(nodes_in) < 3   # 地点が 3 つ以上ある部屋は実際に歩いた部屋（casablanca r3: 地点 7・壁 0.15）
     void = is_void(c0)
     in_foot = any(foot0[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t) or (frac >= 0.15 and any(foot[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t))
     rooms.append({'id': f'r{len(rooms) + 1}', 'area': round(a, 1), 'long': round(long_m, 2), 'short': round(short_m, 2), 'cover': round(frac, 2), 'wallFrac': round(wallfrac, 2),
-                  'scanned': not void and not nowall and (force or in_foot or frac >= 0.5 or len(nodes_in) > 0), 'noWall': bool(nowall), 'void': bool(void), 'inFoot': bool(in_foot), 'poly': [[int(p[0]) + x0, int(p[1]) + y0] for p in poly], 'targets': out_t, 'alts': alts, 'nodesIn': nodes_in, 'label': int(r)})
+                  'scanned': not void and not nowall and not hatched and (force or in_foot or frac >= 0.5 or len(nodes_in) > 0), 'noWall': bool(nowall), 'hatched': bool(hatched), 'void': bool(void), 'inFoot': bool(in_foot), 'poly': [[int(p[0]) + x0, int(p[1]) + y0] for p in poly], 'targets': out_t, 'alts': alts, 'nodesIn': nodes_in, 'label': int(r)})
 # 細切れ（ariake など）: 太い壁の図面で、3㎡ 未満・番号の丸なしの区画が細い線（文字・寸法・家具）だけで隣と分かれていれば隣にまとめる
 if walls.sum() and thick.sum() / walls.sum() >= 0.3:
     thickD = cv2.dilate(thick.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
@@ -555,7 +579,7 @@ if isinstance(ins, list) and not any(rr['scanned'] for rr in rooms):
     do_room(regions == lab_force, lab_force, force=True)
 
 out = {'v': 1, 'reg': regname, 'blueprint': reg['blueprint'], 'crop': [x0, y0, x1, y1], 'ppm': round(ppm, 3), 'floor0': floor0, 'key': td.get('key'), 'scene': td.get('scene'),
-       'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void') and not r.get('noWall')], 'noWall': [r['id'] for r in rooms if r.get('noWall') and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
+       'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void') and not r.get('noWall') and not r.get('hatched')], 'noWall': [r['id'] for r in rooms if r.get('noWall') and not r.get('void')], 'hatched': [r['id'] for r in rooms if r.get('hatched') and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
 OUTN = opt('out', 'planrooms')
 json.dump(out, open(f'{d}/{OUTN}.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=lambda o: o.item() if hasattr(o, 'item') else str(o))
 
