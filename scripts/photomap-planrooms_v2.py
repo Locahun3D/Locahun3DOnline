@@ -207,14 +207,23 @@ def split_all(regions):
                 break
     return regions
 regions = split_all(regions)
+if opt('probe'):
+    _pu, _pv = [int(v) for v in opt('probe').split(',')]
+    _sl = (slice(_pv - 25, _pv + 25), slice(_pu - 45, _pu + 45))
+    print('probe free', round(float(free_r[_sl].mean()), 2), 'inside', round(float(inside[_sl].mean()), 2), 'regions', np.unique(regions[_sl], return_counts=True), 'cover', round(float((cover[_sl] > 0).mean()), 2), 'walls', round(float(walls[_sl].mean()), 2))
+_wallsplit = set()   # 3D の壁・床で裏づけた小区画（トイレ・浴室など小さくても部屋として残す）
 # 芯が取れない狭い部屋（幅 0.9m 未満の個室が並ぶトイレなど）: どの区画にも入らなかった床のうち、図の端に触れない 1.2㎡ 以上のまとまりも部屋にする
 _left = (regions == 0) & free_r & inside
 _n, _l, _s, _ = cv2.connectedComponentsWithStats(cv2.morphologyEx(_left.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)), 4)
 for _i in range(1, _n):
     _x, _y, _bw, _bh, _a = _s[_i]
-    if _a * px2m2 < 1.2 or _x <= 1 or _y <= 1 or _x + _bw >= w - 1 or _y + _bh >= h - 1: continue
+    if _x <= 1 or _y <= 1 or _x + _bw >= w - 1 or _y + _bh >= h - 1: continue
     if min(_bw, _bh) < m2(0.5): continue
+    # 11/27: 0.7〜1.2㎡ でも 3D の床が写っている（床の点がある）まとまりは部屋（endurehome のユニットバス）
+    _flo = float(((cover > 0) & (_l == _i)).sum() / max(1, _a))
+    if _a * px2m2 < 1.2 and not (_a * px2m2 >= 0.7 and _flo >= 0.3): continue
     regions[_l == _i] = regions.max() + 1
+    if _a * px2m2 < 1.2: _wallsplit.add(int(regions.max()))
 # 目印（部屋番号の丸）で割る: 1 つの区画に目印が 2 つ以上 → 目印から塗り直す（扉の無い続き間・ゾーン分けの部屋）
 if markers:
     nxt = regions.max() + 1
@@ -267,6 +276,65 @@ while _todo and _seen < 60:   # 割れた区画もさらに割る（第2回: end
     _todo.append(r)
     for j in range(2, len(comps) + 1): regions[sub == j] = nxt; _todo.append(nxt); nxt += 1
 
+# 細い間仕切りで割る（司令塔 11/27「全ての部屋で」: ingleneuk の洗面室＋トイレ、endurehome の部屋＋浴室が 1 区画になっていた）。
+# 15㎡ 未満の区画の中を端から端まで横切る細い直線（扉の開口 0.9m までは途切れてよい）があり、両側が 0.9㎡ 以上なら、その線で割る
+_g8 = np.clip(gray, 0, 255).astype(np.uint8)
+_bh = cv2.morphologyEx(_g8, cv2.MORPH_BLACKHAT, np.ones((max(5, int(m2(0.12)) | 1),) * 2, np.uint8))
+_l0 = (((_bh > 40) | (gray < 90)) & (sat < 60)).astype(np.uint8)   # 細い濃い線（塗りの濃淡ではなく線）。黒い壁も含める
+_todo2 = [int(r) for r in range(1, regions.max() + 1)]; _n2 = 0
+while _todo2 and _n2 < 200 and '--nolinesplit' not in sys.argv:
+    r = _todo2.pop(0); _n2 += 1
+    R = regions == r; a_ = R.sum() * px2m2
+    if a_ < 2.0 or a_ >= 15: continue
+    ys_, xs_ = np.nonzero(R); x0_, x1_, y0_, y1_ = xs_.min(), xs_.max(), ys_.min(), ys_.max()
+    Ri = cv2.erode(R.astype(np.uint8), np.ones((3, 3), np.uint8))
+    Lr = (_l0 & cv2.dilate(Ri, np.ones((3, 3), np.uint8)) & (1 - cv2.erode(Ri, np.ones((5, 5), np.uint8), iterations=1) * 0)).astype(np.uint8) * 255
+    Lr[~cv2.dilate(R.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)] = 0   # 壁として区画の外に出ている間仕切り（扉の開口で区画がつながっている）も拾う
+    span = min(x1_ - x0_, y1_ - y0_)
+    ls_ = cv2.HoughLinesP(Lr, 1, np.pi / 180, threshold=max(8, int(span * 0.3)), minLineLength=max(6, int(span * 0.35)), maxLineGap=int(m2(0.9)))
+    if '--dbg' in sys.argv and ls_ is not None: print(' hough', r, round(a_, 1), [tuple(int(v) for v in q) for q in ls_[:, 0]][:12])
+    if ls_ is None: continue
+    done_ = False
+    # タイル・畳・格子の模様（同じ向きの線が等間隔に 3 本以上）の区画では割らない
+    hv = [('h' if math.degrees(math.atan2(abs(q[3] - q[1]), abs(q[2] - q[0]))) <= 8 else 'v' if math.degrees(math.atan2(abs(q[3] - q[1]), abs(q[2] - q[0]))) >= 82 else 'd', (q[1] + q[3]) / 2 if math.degrees(math.atan2(abs(q[3] - q[1]), abs(q[2] - q[0]))) <= 8 else (q[0] + q[2]) / 2) for q in ls_[:, 0]]
+    def grid_(o):   # 0.25m 以内の線は 1 本にまとめ、4 本以上が等間隔（間隔のばらつき 3 割未満）なら模様
+        ps = sorted(p for k, p in hv if k == o); cl = []
+        for p_ in ps:
+            if not cl or p_ - cl[-1] > m2(0.25): cl.append(p_)
+        if len(cl) < 4: return False
+        df = np.diff(cl); return float(df.std() / max(1e-6, df.mean())) < 0.3
+    for x1, y1, x2, y2 in sorted(ls_[:, 0], key=lambda q: -math.hypot(q[2] - q[0], q[3] - q[1])):
+        ang = math.degrees(math.atan2(abs(y2 - y1), abs(x2 - x1)))
+        if 8 < ang < 82: continue                      # 縦・横の線だけ
+        if grid_('h' if ang <= 8 else 'v'): continue
+        # 線を区画の外まで延ばして切る
+        if ang <= 8: yy = int(round((y1 + y2) / 2)); cut = np.zeros((h, w), np.uint8); cv2.line(cut, (int(x0_) - 2, yy), (int(x1_) + 2, yy), 1, 2)
+        else: xx = int(round((x1 + x2) / 2)); cut = np.zeros((h, w), np.uint8); cv2.line(cut, (xx, int(y0_) - 2), (xx, int(y1_) + 2), 1, 2)
+        # 線は区画の幅の 6 割以上を実際に覆っていること（家具の縁の短い線では割らない）
+        on = (cut.astype(bool) & cv2.dilate(R.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)); cov_ = (on & cv2.dilate(_l0, np.ones((3, 3), np.uint8)).astype(bool)).sum() / max(1, on.sum())
+        if cov_ < 0.75: continue
+        _lp = on & cv2.dilate(_l0, np.ones((3, 3), np.uint8)).astype(bool) & (_l0 > 0)
+        dark_ = float(np.percentile(gray[_lp], 30)) if _lp.any() else 255
+        _bd = cv2.dilate((band > 0).astype(np.uint8), np.ones((max(3, int(m2(0.15))),) * 2, np.uint8)).astype(bool)
+        wall3d = float((on & _bd).sum() / max(1, on.sum()))   # 3D の目の高さの点（本物の壁）がその線の上にどれだけあるか
+        if '--dbg' in sys.argv: print('  cand', r, ang, 'cov', round(cov_, 2), 'wall3d', round(wall3d, 2))
+        if wall3d < 0.5: continue   # 図の線の上に 3D の壁（目の高さの点）が無い＝浴槽・家具の縁。割らない
+        parts = R & ~cut.astype(bool)
+        n_, l_, st_, _ = cv2.connectedComponentsWithStats(parts.astype(np.uint8), 4)
+        big = [j for j in range(1, n_) if st_[j, 4] * px2m2 >= 0.8]
+        if '--dbg' in sys.argv: print('   parts', [(round(st_[j, 4] * px2m2, 2), round(min(st_[j, 2], st_[j, 3]) / ppm, 2)) for j in range(1, n_)])
+        if len(big) < 2: continue
+        # 両側とも細すぎない（短辺 0.6m 以上）
+        if any(min(st_[j, 2], st_[j, 3]) < m2(0.6) for j in big): continue
+        for j in big[1:]: regions[l_ == j] = nxt; _todo2.append(int(nxt)); _wallsplit.add(int(nxt)); nxt += 1
+        _wallsplit.add(int(r))
+        _todo2.append(r); done_ = True
+        if '--dbg' in sys.argv: print('linesplit', r, round(a_, 1), [round(st_[j, 4] * px2m2, 1) for j in big], 'cov', round(cov_, 2))
+        break
+
+if opt('probe'):
+    _pu, _pv = [int(v) for v in opt('probe').split(',')]
+    _r = regions[_pv, _pu]; print('probe2 region', _r, 'area', round(float((regions == _r).sum() * px2m2), 2), 'ws', int(_r) in _wallsplit, [ (int(k), round(float((regions == k).sum() * px2m2), 1)) for k in np.unique(regions) if k])
 # 図面の線（家具・階段の線も含む）からの距離。番号の丸・文字は除く
 obs_d = cv2.distanceTransform((~(walls & ~blob)).astype(np.uint8), cv2.DIST_L2, 5)
 # 建物の絵の範囲（図面の線の凸包）。壁で閉じていない広い所はこの中だけ
@@ -313,11 +381,12 @@ def is_void(cnt):
 def do_room(R, r, force=False):
     pass
     a = R.sum() * px2m2
-    if '--dbg' in sys.argv:
+    if '--dbg' in sys.argv and R.any():
         _ys,_xs=np.nonzero(R); print('room?', r, round(a,2), int(_xs.mean())+x0, int(_ys.mean())+y0, 'border', int((R & border).sum()), 'sat', round(float(sat[R].mean()),1))
     has_mk = any(0 <= y < h and 0 <= x < w and R[y, x] for x, y in markers)
     tinted = float(sat[R].mean()) > 25   # 第2回: endurehome の 1.4㎡ のユニットバス（水色で塗った小部屋）が落ちていた
-    if a < (0.9 if has_mk else 1.0 if tinted else 1.5): return
+    ws_ = int(r) in _wallsplit
+    if a < (0.8 if ws_ else 0.9 if has_mk else 1.0 if tinted else 1.5): return
     if not force and not isinstance(ins, list) and (R & border).sum() > m2(0.5):   # inside に多角形があれば、その多角形が建物の範囲（端の判定はしない）
         # 図の端につながる区画は建物の外。ただし図面で塗ってある所（テラス・デッキの灰色など）は図に描かれた空間なので残す
         tint = ((gray[R] < 245) | (sat[R] > 20)).mean()
@@ -348,7 +417,7 @@ def do_room(R, r, force=False):
     mean = pts2.mean(0); cov = np.cov((pts2 - mean).T); ev, evec = np.linalg.eigh(cov); ax = evec[:, 1]
     proj = (pts2 - mean) @ ax; proj2 = (pts2 - mean) @ evec[:, 0]
     long_m, short_m = (proj.max() - proj.min()) / ppm, (proj2.max() - proj2.min()) / ppm
-    if short_m < (0.55 if has_mk else 0.65 if tinted else 0.8): return     # 寸法線などで切れた細い帯（番号の丸がある小部屋＝トイレ等は 0.55m まで）
+    if short_m < (0.5 if ws_ else 0.55 if has_mk else 0.65 if tinted else 0.8): return     # 寸法線などで切れた細い帯（番号の丸がある小部屋＝トイレ等は 0.55m まで）
     k = 1 if a <= BIG else min(6, int(math.ceil(a / BIG)))
     targets = []
     qs = np.quantile(proj, np.linspace(0, 1, k + 1))
@@ -436,7 +505,7 @@ if isinstance(ins, list) and not any(rr['scanned'] for rr in rooms):
 out = {'v': 1, 'reg': regname, 'blueprint': reg['blueprint'], 'crop': [x0, y0, x1, y1], 'ppm': round(ppm, 3), 'floor0': floor0, 'key': td.get('key'), 'scene': td.get('scene'),
        'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
 OUTN = opt('out', 'planrooms')
-json.dump(out, open(f'{d}/{OUTN}.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+json.dump(out, open(f'{d}/{OUTN}.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=lambda o: o.item() if hasattr(o, 'item') else str(o))
 
 # ── 確認図 ──
 vis = img.copy()
