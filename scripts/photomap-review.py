@@ -98,6 +98,7 @@ for j, (d, logs) in enumerate(sorted(ai.items())):
             fn = f'rooms{len(plans) + 1}.jpg'; cv2.imwrite(f'{OUT}/{fn}', im, [cv2.IMWRITE_JPEG_QUALITY, 85]); plans.append((fn, sc))
         for v in lg.get('voids', []): rooms_txt.append(f'- {sc} {v}: 吹き抜け（図に × ）なので点なし')
         for v in lg.get('unscanned', []): rooms_txt.append(f'- {sc} {v}: 3D スキャンの範囲の外なので点なし')
+        for v in lg.get('noWall', []): rooms_txt.append(f'- {sc} {v}: 図のこの部屋の壁が 3D スキャンにほとんど無い（壁の 3 割未満）＝部屋の中を撮っていないので点なし')
         for sl in lg['slots']:
             if not sl['final']:
                 rs = [x.get('reason') or x.get('error') or '' for x in sl['verdicts']][-3:]

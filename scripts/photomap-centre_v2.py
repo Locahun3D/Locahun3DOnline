@@ -150,11 +150,15 @@ def pick_face(room, c, ai_o, M, cyan=None, sh=None):
 def deep_yaw(room, u, v, M):
     # 部屋の範囲の中で一番遠くまで見通せる向き（図面の画素で 32 方向に線を伸ばす）→ 世界の yaw
     poly = np.array(room['poly'], np.float32)
-    best = (0, 0.0)
-    for k in range(32):
-        t = 2 * math.pi * k / 32; du, dv = math.cos(t), math.sin(t); L = 0
+    def depth(t):
+        du, dv = math.cos(t), math.sin(t); L = 0
         while cv2.pointPolygonTest(poly, (float(u + du * L), float(v + dv * L)), False) >= 0 and L < 5000: L += 2
-        if L > best[1]: best = (t, L)
+        return L
+    # 第5回の審査: 一番遠い 1 本は対角＝部屋の隅に向きやすい（「窓と扉のある隅」「窓際の隅」）→ 部屋の軸（minAreaRect）の 4 方向から、画角 ±30° の見通しの平均が一番長い方向
+    (_, _), (_, _), ang = cv2.minAreaRect(poly)
+    axes = [math.radians(ang) + k * math.pi / 2 for k in range(4)]
+    sc = [(float(np.mean([depth(t + math.radians(e)) for e in (-30, -15, 0, 15, 30)])), t) for t in axes]
+    best = (max(sc)[1], 0)
     du, dv = math.cos(best[0]), math.sin(best[0])
     Ai = np.linalg.inv(np.array(M, float)[:, :2])
     dx, dz = Ai @ np.array([du, dv])
@@ -362,7 +366,7 @@ def run_dir(d):
         lines = set(open(q, encoding='utf-8').read().split()) if os.path.exists(q) else set()
         if at_path not in lines: open(q, 'a', encoding='utf-8').write(at_path + chr(10))
     json.dump({'v': 1, 'key': at['key'], 'set': at.get('set'), 'points': keep, 'pending': pend_only}, open(f'{d}/centre.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'voids': pr.get('voids', []),
+    log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'noWall': pr.get('noWall', []), 'voids': pr.get('voids', []),
            'points': len(keep), 'new': sum(1 for e in keep if e['kind'] == 'new'),
            'pending': sum(1 for s in slots if s.get('pending')), 'pendingNoStandIn': len(pend_only),
            'blurRooms': [{'room': s['room']['id'], 'area': s['room']['area'], 'tries': len(s['verdicts']), 'blurTries': s.get('blurTries', 0), 'reason': str(s['verdicts'][-1].get('reason', ''))[:80] if s['verdicts'] else ''}

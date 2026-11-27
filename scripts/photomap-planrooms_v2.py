@@ -74,6 +74,7 @@ def density(sel):
     return D
 cover = density((rel > -0.25) & (rel < 0.25))     # この階の床の点（窓越しに見えただけの部屋は床がほとんど写らない）
 band = density((rel > 1.3) & (rel < 1.9))         # 目の高さの帯 = 壁・背の高い物
+_wall3 = cv2.dilate((band > 0).astype(np.uint8), np.ones((max(3, int(m2(0.6))),) * 2, np.uint8)).astype(bool)
 # v2（本人「全ての部屋で」）: スキャンの範囲 = この階の高さの点がある所を 0.6m で閉じて穴を埋め、1m 広げる。
 # 部屋の真ん中がこの中なら撮ってみる（写るかどうかは 1 点ずつの AI が決める）。床の点の多さでは決めない
 def ell(mm): k = max(3, int(round(m2(mm))) | 1); return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
@@ -407,6 +408,11 @@ def do_room(R, r, force=False):
     Re = cv2.erode(R.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
     cv_ = cv2.dilate((cover > 0).astype(np.uint8), np.ones((max(3, int(m2(0.3))),) * 2, np.uint8)).astype(bool)
     frac = float((Re & cv_).sum() / max(1, Re.sum()))
+    # 第5回: 図の部屋の壁（輪郭）のうち、スキャンの目の高さの点（壁）が 0.3m 以内にある割合。閉じた小部屋の中を撮っていないと低い
+    _bdr = R & ~cv2.erode(R.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+    wallfrac = float((_bdr & _wall3).sum() / max(1, _bdr.sum()))
+    # 20㎡ 未満で壁の 3 割未満しかスキャンに無い部屋は、中を撮っていない（閉じた部屋を外から・鏡の偽の部屋が重なっただけ）→ 点を作らない
+    # 実測（第5回）: 撮れている小部屋 0.4〜1.0、審査で「別の部屋に見える」が続いた部屋 0.0〜0.27（zigsaw r3/r12・grass 2F r2/r6・qapla 2F r5/r6）
     # 壁で閉じていない広い所（中庭・柱だけのピロティ・図の外とつながった区画）: スキャンの床が写っている部分だけを 1 つの空間にする
     if not force and frac < 0.5 and a > 100:
         R2 = R & hull_mask & walked                     # 写真ツアーの地点が歩いた所（地点から 1.5m）だけ。床の点は屋外の地面にも広がるので使わない
@@ -488,10 +494,11 @@ def do_room(R, r, force=False):
             alts.append([int(vx) + x0, int(vy) + y0, round(x, 3), round(z, 3), round(fy, 3)])
             if len(alts) >= 8: break
     nodes_in = [nid for nid, nu, nv in npx if 0 <= int(nv) < h and 0 <= int(nu) < w and R[int(nv), int(nu)]]
+    nowall = a < 20 and wallfrac < 0.3 and band.sum() > 0 and len(nodes_in) < 3   # 地点が 3 つ以上ある部屋は実際に歩いた部屋（casablanca r3: 地点 7・壁 0.15）
     void = is_void(c0)
     in_foot = any(foot0[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t) or (frac >= 0.15 and any(foot[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t))
-    rooms.append({'id': f'r{len(rooms) + 1}', 'area': round(a, 1), 'long': round(long_m, 2), 'short': round(short_m, 2), 'cover': round(frac, 2),
-                  'scanned': not void and (force or in_foot or frac >= 0.5 or len(nodes_in) > 0), 'void': bool(void), 'inFoot': bool(in_foot), 'poly': [[int(p[0]) + x0, int(p[1]) + y0] for p in poly], 'targets': out_t, 'alts': alts, 'nodesIn': nodes_in, 'label': int(r)})
+    rooms.append({'id': f'r{len(rooms) + 1}', 'area': round(a, 1), 'long': round(long_m, 2), 'short': round(short_m, 2), 'cover': round(frac, 2), 'wallFrac': round(wallfrac, 2),
+                  'scanned': not void and not nowall and (force or in_foot or frac >= 0.5 or len(nodes_in) > 0), 'noWall': bool(nowall), 'void': bool(void), 'inFoot': bool(in_foot), 'poly': [[int(p[0]) + x0, int(p[1]) + y0] for p in poly], 'targets': out_t, 'alts': alts, 'nodesIn': nodes_in, 'label': int(r)})
 # 細切れ（ariake など）: 太い壁の図面で、3㎡ 未満・番号の丸なしの区画が細い線（文字・寸法・家具）だけで隣と分かれていれば隣にまとめる
 if walls.sum() and thick.sum() / walls.sum() >= 0.3:
     thickD = cv2.dilate(thick.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
@@ -513,7 +520,7 @@ if isinstance(ins, list) and not any(rr['scanned'] for rr in rooms):
     do_room(regions == lab_force, lab_force, force=True)
 
 out = {'v': 1, 'reg': regname, 'blueprint': reg['blueprint'], 'crop': [x0, y0, x1, y1], 'ppm': round(ppm, 3), 'floor0': floor0, 'key': td.get('key'), 'scene': td.get('scene'),
-       'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
+       'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void') and not r.get('noWall')], 'noWall': [r['id'] for r in rooms if r.get('noWall') and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
 OUTN = opt('out', 'planrooms')
 json.dump(out, open(f'{d}/{OUTN}.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=lambda o: o.item() if hasattr(o, 'item') else str(o))
 
