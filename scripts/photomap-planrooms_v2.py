@@ -56,6 +56,13 @@ fl = [n.get('floorY') for n in nodes if n.get('floorY') is not None]
 floor0 = float(np.median(fl)) if fl else float(td.get('floorY', 0))
 npz = f'{d}/pts.npz' if os.path.exists(f'{d}/pts.npz') else f'{os.path.dirname(d)}/pts.npz'
 P = np.load(npz)['p']
+# 鏡張りの部屋（ariake 108 ダンス演習室）: 鏡の向こうに映った「偽の部屋」の点が隣の小部屋に重なる → reg.json の scanClip（世界 x,z の多角形）の外の点と地点は使わない
+if reg.get('scanClip'):
+    _cp = np.array(reg['scanClip'], np.float32).reshape(-1, 1, 2)
+    from matplotlib.path import Path as _Path
+    _in = _Path(np.array(reg['scanClip'], float)).contains_points(P[:, [0, 2]])
+    P = P[_in]
+    nodes = [n for n in nodes if cv2.pointPolygonTest(_cp, (float(n['x']), float(n['z'])), False) >= 0]
 rel = P[:, 1] - floor0
 u_ = M[0, 0] * P[:, 0] + M[0, 1] * P[:, 2] + M[0, 2] - x0
 v_ = M[1, 0] * P[:, 0] + M[1, 1] * P[:, 2] + M[1, 2] - y0
@@ -73,7 +80,10 @@ def ell(mm): k = max(3, int(round(m2(mm))) | 1); return cv2.getStructuringElemen
 foot = density((rel > -0.6) & (rel < 2.6)) > 0
 foot = cv2.morphologyEx(foot.astype(np.uint8), cv2.MORPH_CLOSE, ell(0.6))
 foot = ndi.binary_fill_holes(foot).astype(np.uint8)
+foot0 = foot.astype(bool)
 foot = cv2.dilate(foot, ell(2.0)).astype(bool)
+# 11/27 第4回（ariake 1F）: 1m 広げた範囲だけだと、壁 1 枚向こうの床がほとんど写っていない小部屋（床 0〜13%）までスキャン済みになり、写らない点を撮っていた
+# → 広げた範囲に入るだけの部屋は床の写りが 15% 以上のときだけ（ingle の玄関・トイレは 19〜22% で残る）
 # 第2回の審査（eight-cafe の 51㎡ のカフェ）: 図面に描いていない机・椅子・カウンターの中や脇に点が落ち、7 候補すべて「家具に近すぎ」で落ちた。
 # スキャンの腰の高さ（床から 0.3〜1.4m）の点が濃い所を物とみなし、そこからの距離 scan_d を候補選びに使う
 _ob = cv2.blur(density((rel > 0.3) & (rel < 1.4)), (max(3, int(m2(0.15))),) * 2)
@@ -479,7 +489,7 @@ def do_room(R, r, force=False):
             if len(alts) >= 8: break
     nodes_in = [nid for nid, nu, nv in npx if 0 <= int(nv) < h and 0 <= int(nu) < w and R[int(nv), int(nu)]]
     void = is_void(c0)
-    in_foot = any(foot[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t)
+    in_foot = any(foot0[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t) or (frac >= 0.15 and any(foot[min(h - 1, max(0, int(t['v'] - y0))), min(w - 1, max(0, int(t['u'] - x0)))] for t in out_t))
     rooms.append({'id': f'r{len(rooms) + 1}', 'area': round(a, 1), 'long': round(long_m, 2), 'short': round(short_m, 2), 'cover': round(frac, 2),
                   'scanned': not void and (force or in_foot or frac >= 0.5 or len(nodes_in) > 0), 'void': bool(void), 'inFoot': bool(in_foot), 'poly': [[int(p[0]) + x0, int(p[1]) + y0] for p in poly], 'targets': out_t, 'alts': alts, 'nodesIn': nodes_in, 'label': int(r)})
 # 細切れ（ariake など）: 太い壁の図面で、3㎡ 未満・番号の丸なしの区画が細い線（文字・寸法・家具）だけで隣と分かれていれば隣にまとめる
