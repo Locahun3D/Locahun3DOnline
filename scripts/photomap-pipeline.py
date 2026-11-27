@@ -102,6 +102,15 @@ for pid in args:
         nbp = len({g['bp'] for g in groups})
         dup = len(groups) > 1 and not all(g['floor'] for g in groups)
         for g in groups:
+            # 点が図の端で切れないよう、crop を点＋余白まで広げる（元画像の範囲内）
+            bh, bw = cv2.imread(g['bp']).shape[:2]; cr = g['crop']; mg = max(30, int(0.05 * max(cr[2] - cr[0], cr[3] - cr[1])))
+            for d, r in g['dirs']:
+                if r.get('centre') != 'centre.json': continue
+                M_ = r['world2img']
+                for q in json.load(open(f'{d}/centre.json', encoding='utf-8')).get('points', []):
+                    u = M_[0][0] * q['x'] + M_[0][1] * q['z'] + M_[0][2]; v = M_[1][0] * q['x'] + M_[1][1] * q['z'] + M_[1][2]
+                    cr = [min(cr[0], u - mg), min(cr[1], v - mg), max(cr[2], u + mg), max(cr[3], v + mg)]
+            g['crop'] = [max(0, cr[0]), max(0, cr[1]), min(bw, cr[2]), min(bh, cr[3])]
             lab = g['floor'] or (bplab.get(g['bp']) if nbp > 1 else '') or '平面図'
             labEn = g['floorEn'] or g['floor'] or 'Floor plan'
             if dup and not g['floor']:   # 階の名前が無い図が 2 枚以上 → シーン名で見分ける（reg.json に floor を書くのが本筋）

@@ -139,7 +139,8 @@ def pick_face(room, c, ai_o, M, cyan=None, sh=None):
                 if 0 <= py < im.shape[0] and 0 <= px < im.shape[1] and im[py, px] < 60 and m > 0.25:
                     L = min(L, m * scale); break
         return L
-    lens = {o: ray(o) for o in (0, 90, 180, -90)}
+    # 第4回の審査: 中心の1本だけだと、扉の隙間から奥が見える向きが勝ち、画面の大半は家具・壁の大写しになる → 画角内の5本の平均
+    lens = {o: float(np.mean([ray(o + k) for k in (-30, -15, 0, 15, 30)])) for o in (0, 90, 180, -90)}
     if sh and max(sh.values()) > 0:   # くっきり度が一番の方向の 4 割未満の方向（にじみ）は選びにくく
         mx = max(sh.values()); lens = {o: L * (1 if sh.get(o, mx) >= 0.4 * mx else 0.2) for o, L in lens.items()}
     if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
@@ -254,6 +255,11 @@ def run_dir(d):
     # 本人ルール「写真がない部屋はないように」(11/27): にじみで落ちた部屋は、部屋の中の別の位置（真ん中から 0.5〜1.5m）・目線の高さ違いを最低 3 つ試す。全部にじむときだけ点なしにする
     Mi = cv2.invertAffineTransform(np.array(M, np.float64))
     def is_blur(v): return v.get('broken') is True or any(w in str(v.get('reason', '')) for w in ('にじ', 'ぼけ', 'ボケ', 'ぼや', '判別でき', '分からな', 'わからな', 'broken', 'blur'))
+    def scan_free(x, z, r=0.3):   # scan.png で半径 r の中に壁・物（黒）が無い
+        if SCAN.get('img') is None: return True
+        sm, im = SCAN['meta'], SCAN['img']; px, py = int((x - sm['x0']) * sm['ppm']), int((z - sm['z0']) * sm['ppm']); k = max(1, int(r * sm['ppm']))
+        w = im[max(0, py - k):py + k + 1, max(0, px - k):px + k + 1]
+        return w.size > 0 and (w < 60).mean() < 0.05
     def blur_queue(s):
         room, t = s['room'], s['target']; ppm = pr['ppm']; q = []
         poly = np.array(room['poly'], np.float32).reshape(-1, 1, 2)
@@ -268,6 +274,7 @@ def run_dir(d):
                 if cv2.pointPolygonTest(poly, (float(u), float(v)), True) < mw * ppm: continue
                 if any(math.hypot(u - b[0], v - b[1]) < min(0.6, r) * ppm for b in q): continue
                 x = Mi[0, 0] * u + Mi[0, 1] * v + Mi[0, 2]; z = Mi[1, 0] * u + Mi[1, 1] * v + Mi[1, 2]
+                if mw > 0 and not scan_free(x, z): continue   # 第4回の審査（makinoshita 浴室）: 浴槽・家具の上の候補は外す（最後の段だけは許す）
                 q.append((u, v, round(x, 3), round(z, 3), fy, 0.0))
         q = q[:3]
         q += [(t['u'], t['v'], t['x'], t['z'], fy, -0.35), (t['u'], t['v'], t['x'], t['z'], fy, 0.35)]   # 目線の高さ違い
@@ -326,6 +333,10 @@ def run_dir(d):
                 a = alts[0]; yaw = deep_yaw(room, a[0], a[1], M)
                 p = new_point(a[2], a[3], a[4], yaw)
                 s['cand'] = {'kind': 'new', 'id': p['id'], 'x': a[2], 'z': a[3], 'u': a[0], 'v': a[1], 'yaw': yaw}
+            elif 'blurQ' not in s and not NOREND and s.update(blurQ=blur_queue(s)) is None and s['blurQ']:   # 第4回の審査: にじみ以外で落ちた部屋も、控えが尽きたら別位置・高さ違いを 3 つ以上試す
+                u, v, x, z, fy, dy = s['blurQ'].pop(0); yaw = deep_yaw(room, u, v, M)
+                p = new_point(x, z, fy, yaw, dy); s['blurTries'] = s.get('blurTries', 0) + 1
+                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': x, 'z': z, 'u': u, 'v': v, 'yaw': yaw, 'dy': dy}
             else:
                 s['cand'] = pick_node(s)
     json.dump(at, open(at_path, 'w', encoding='utf-8'), indent=1)
@@ -356,6 +367,7 @@ def run_dir(d):
            'pending': sum(1 for s in slots if s.get('pending')), 'pendingNoStandIn': len(pend_only),
            'blurRooms': [{'room': s['room']['id'], 'area': s['room']['area'], 'tries': len(s['verdicts']), 'blurTries': s.get('blurTries', 0), 'reason': str(s['verdicts'][-1].get('reason', ''))[:80] if s['verdicts'] else ''}
                          for s in slots if not s['final'] and s['verdicts'] and sum(map(is_blur, s['verdicts'])) >= max(1, len(s['verdicts']) - 1) and s.get('blurTries', 0) >= 3],
+           'failRooms': [{'room': s['room']['id'], 'area': s['room']['area'], 'tries': len(s['verdicts']), 'retries': s.get('blurTries', 0), 'reasons': [str(v.get('reason', ''))[:60] for v in s['verdicts']][-4:]} for s in slots if not s['final']],
            'slots': [{'room': s['room']['id'], 'area': s['room']['area'], 'final': s['final'] and s['final']['id'], 'blurTries': s.get('blurTries', 0), 'verdicts': s['verdicts']} for s in slots]}
     print(f"centre {d}: rooms {log['rooms']} scanned {log['scanned']} points {log['points']} new {log['new']} pending {log['pending']} (代替なし {log['pendingNoStandIn']}) dropped {sum(1 for s in slots if not s['final'])}")
     return pid, log
