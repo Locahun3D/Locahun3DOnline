@@ -64,21 +64,17 @@ bestFace: その部屋が一番よく分かる（奥行きがあり、床と家�
 def ai_check(work, pid, extra=''):
     prompt = PROMPT.format(dir=work.replace('\\', '/'), pid=pid) + extra
     errs = []
-    r = subprocess.run(['claude.cmd' if os.name == 'nt' else 'claude', '-p', '--model', 'fable', '--output-format', 'json', '--allowedTools', 'Read', '--add-dir', work],
-                       input=prompt, capture_output=True, text=True, encoding='utf-8', timeout=900, shell=os.name == 'nt')
-    txt = None
-    try:
-        o = json.loads(r.stdout); txt = o.get('result') if not o.get('is_error') else None
-        if txt is None: errs.append('claude: ' + str(o.get('result'))[:120])
-    except Exception as e: errs.append('claude: ' + (r.stderr or r.stdout or str(e))[:120])
-    by = 'claude:fable'
-    if txt is None:
+    # 本人決定 11/27: 審査は codex gpt-6-astra のみ（claude CLI は 401 のため呼ばない）。codex の時間切れで物件ごと落ちていた（babel・modello）→ 2 回まで試し、だめなら判定なしで続ける
+    txt = None; by = 'codex:gpt-6-astra'
+    for attempt in range(2):
         out = os.path.join(work, f'codex-{pid}.txt')
-        r = subprocess.run(['codex.cmd' if os.name == 'nt' else 'codex', 'exec', '--skip-git-repo-check', '-m', 'gpt-6-astra', '-s', 'read-only', '-o', out,
-                            '-i', os.path.join(work, f'{pid}.jpg'), '-i', os.path.join(work, f'{pid}_plan.jpg'), '-'],
-                           input=prompt, capture_output=True, text=True, encoding='utf-8', timeout=1200, shell=os.name == 'nt', cwd=work)
-        if os.path.exists(out): txt = open(out, encoding='utf-8').read(); os.remove(out); by = 'codex:gpt-6-astra'
-        else: errs.append('codex: ' + (r.stderr or '')[-120:])
+        try:
+            r = subprocess.run(['codex.cmd' if os.name == 'nt' else 'codex', 'exec', '--skip-git-repo-check', '-m', 'gpt-6-astra', '-s', 'read-only', '-o', out,
+                                '-i', os.path.join(work, f'{pid}.jpg'), '-i', os.path.join(work, f'{pid}_plan.jpg'), '-'],
+                               input=prompt, capture_output=True, text=True, encoding='utf-8', timeout=600, shell=os.name == 'nt', cwd=work)
+        except subprocess.TimeoutExpired: errs.append(f'codex: 時間切れ（{attempt + 1} 回目）'); continue
+        if os.path.exists(out): txt = open(out, encoding='utf-8').read(); os.remove(out); break
+        errs.append('codex: ' + (r.stderr or '')[-120:])
     m = re.search(r'\{[\s\S]*\}', txt or '')
     if not m: return {'ok': None, 'error': ' / '.join(errs) or 'JSON なし', 'by': by}
     try: j = json.loads(m.group(0))

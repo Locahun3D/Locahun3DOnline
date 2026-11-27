@@ -136,11 +136,14 @@ def run_claude():
 def run_codex():
     out = f'{OUT}/codex.txt'
     imgs = sum([['-i', f'{OUT}/{f}'] for f in maps + sheets + [a for a, _ in plans]], [])
-    subprocess.run(['codex.cmd' if os.name == 'nt' else 'codex', 'exec', '--skip-git-repo-check', '-m', 'gpt-6-astra', '-s', 'read-only', '-o', out, *imgs, '-'],
-                   input=PROMPT, capture_output=True, text=True, encoding='utf-8', timeout=1800, shell=os.name == 'nt', cwd=OUT)
+    for _ in range(2):   # 時間切れは 1 回だけ試し直す
+        try:
+            subprocess.run(['codex.cmd' if os.name == 'nt' else 'codex', 'exec', '--skip-git-repo-check', '-m', 'gpt-6-astra', '-s', 'read-only', '-o', out, *imgs, '-'],
+                           input=PROMPT, capture_output=True, text=True, encoding='utf-8', timeout=1800, shell=os.name == 'nt', cwd=OUT)
+            break
+        except subprocess.TimeoutExpired: pass
     return (open(out, encoding='utf-8').read() if os.path.exists(out) else None), 'codex:gpt-6-astra'
-txt, by = run_claude()
-if not txt: txt, by = run_codex()
+txt, by = run_codex()   # 本人決定 11/27: 審査は codex gpt-6-astra のみ
 m = re.search(r'\{[\s\S]*\}', txt or '')
 try: res = json.loads(m.group(0)) if m else {'pass': None, 'error': 'JSON なし', 'raw': (txt or '')[:500]}
 except Exception as e: res = {'pass': None, 'error': str(e)[:80], 'raw': (txt or '')[:500]}
