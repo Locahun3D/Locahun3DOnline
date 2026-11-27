@@ -388,7 +388,8 @@ def claim_targets(dirs):
             if not room['scanned']: continue
             for t in room['targets']:
                 sc = room['cover'] + (0.15 if t['node'] else 0)
-                hit = next((c for c in lst if math.hypot(c['u'] - t['u'], c['v'] - t['v']) < pr['ppm'] * 1.0), None)
+                # 第4回の審査（babel ウッドデッキ）: 同じシーンの隣り合う別の部屋の真ん中（0.69m）まで 1 つにまとめて部屋が消えていた → まとめるのは別のシーンどうしだけ
+                hit = next((c for c in lst if c['who'][0] != d and math.hypot(c['u'] - t['u'], c['v'] - t['v']) < pr['ppm'] * 1.0), None)
                 if hit is None: lst.append({'u': t['u'], 'v': t['v'], 'sc': sc, 'who': (d, t['u'], t['v'])})
                 elif sc > hit['sc']: hit.update(sc=sc, who=(d, t['u'], t['v']))
     return {c['who'] for lst in claims.values() for c in lst}
