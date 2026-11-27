@@ -170,6 +170,9 @@ def run_dir(d):
     def node_strip(n_id):
         if os.path.exists(f'{work}/{n_id}.jpg'): return
         files = {k: get(f'{ORIGIN}/api/pano/{td["key"]}-g{g["set"]}-{n_id}-{k}.s.jpg', True) for k in 'lfrbd'}
+        # 11/27: 本番の焼き込みが壊れて全地点・全方向が同じ 1 枚のシーンがある（phome 1F・grass 1F ほか）→ その地点は使わない
+        sm = {k: cv2.resize(cv2.imdecode(np.frombuffer(files[k], np.uint8), 0), (64, 64)).astype(float) for k in 'lfrb'}
+        if np.mean([np.abs(sm['f'] - sm[k]).mean() for k in 'lrb']) < 3: raise RuntimeError('本番の 360° 画像が壊れている（全方向が同じ画）')
         strip_from(files, f'{work}/{n_id}.jpg', n_id)
     def pick_node(s):   # 部屋の中の既存の地点のうち、真ん中に一番近いもの（まだ試していないもの）
         tried_ids = {t['id'] for t in s['tried']}
