@@ -202,6 +202,12 @@ if walls.sum() and thick.sum() / walls.sum() >= 0.3:
     near = cv2.dilate(thick.astype(np.uint8), np.ones((max(5, int(m2(0.15)) | 1),) * 2, np.uint8)).astype(bool)
     touch = np.zeros(nt, bool); touch[np.unique(lt[near & thin])] = True; touch[0] = True
     walls_r = walls_r & touch[lt]
+# 11/28 第8回の審査（makinoshita 北側和室・東側和室1）: 襖・障子の細い二重線が壁として残らず、廊下・台所の一角と和室が 1 部屋になって
+# 真ん中が廊下側・入口の隅に落ちた → reg.json の walls（図面の画素で [u1,v1,u2,v2] の線分）を部屋分けの壁として足す（図の部屋の線をなぞるだけ）
+for _sg in reg.get('walls') or []:
+    _wm = np.zeros((h, w), np.uint8)
+    cv2.line(_wm, (int(_sg[0] - x0), int(_sg[1] - y0)), (int(_sg[2] - x0), int(_sg[3] - y0)), 1, max(3, int(m2(0.08))))
+    walls_r = walls_r | _wm.astype(bool); walls = walls | _wm.astype(bool)
 free_r = ~walls_r
 
 if '--debug' in sys.argv:
@@ -511,7 +517,19 @@ def do_room(R, r, force=False):
         dc = np.hypot(*np.meshgrid(np.arange(w) - cx_, np.arange(h) - cy_)[::-1])
         score = np.where(okp, ds - 0.35 * dc, -1e9) if okp.any() else ds - 0.35 * dc
         vy, vx = np.unravel_index(np.argmax(score), score.shape)
+        # 11/28 第8回の審査（makinoshita 台所: 真ん中がダイニングテーブル・椅子の上で 8 候補すべて「家具の上」）:
+        # 選んだ所がスキャンの物（腰の高さ）の上なら、物から 0.45m 以上離れた床のうち同じ点数で一番良い所へ
+        if scan_d[vy, vx] < m2(0.3):
+            okc2 = okp & (scan_d >= m2(0.45))
+            if okc2.any():
+                score = np.where(okc2, ds - 0.35 * dc, -1e9); vy, vx = np.unravel_index(np.argmax(score), score.shape)
         targets.append((int(vx), int(vy), float(ds[vy, vx] / ppm)))
+    # 11/28 第8回の審査（eight-cafe 08 会議室: 机で埋まった部屋で真ん中が入口脇の壁際になった）: reg.json の pins（図面の画素 [u,v]）が
+    # この区画の中にあれば、そこを真ん中にする（人が図を見て「机・椅子を除いた床で部屋の中心線上」を指す。区画ごとの手当て）
+    _pins = [(int(pu - x0), int(pv - y0)) for pu, pv in (reg.get('pins') or []) if 0 <= pv - y0 < h and 0 <= pu - x0 < w and R[int(pv - y0), int(pu - x0)]]
+    if _pins:
+        _dsR = cv2.distanceTransform(R.astype(np.uint8), cv2.DIST_L2, 5)
+        targets = [(pu, pv, float(_dsR[pv, pu])) for pu, pv in _pins]
     # 3m 以上離す（近すぎる真ん中は捨てる）
     tt = []
     for t in targets:
@@ -537,10 +555,14 @@ def do_room(R, r, force=False):
     Rd = cv2.distanceTransform(R.astype(np.uint8), cv2.DIST_L2, 5)
     okR = R & (obs_d >= m2(0.3)) & ~furn & ~HATCH
     okc = okR & (scan_d >= m2(0.5))
+    okc45 = okR & (scan_d >= m2(0.45))
     if okc.sum() >= 0.15 * max(1, okR.sum()): okR = okc
     alts = []
-    if okR.any():
-        cand = np.argwhere(okR); sc = Rd[okR]
+    # 11/28 第8回（makinoshita 台所）: 物から離れた床が少ない部屋でも、まずその床（物から 0.45m 以上）を控えにする（家具の上の控えばかりにならない）
+    _pool = [okc45, okR] if okc45.any() and not (okR == okc).all() else [okR]
+    for _ok in _pool:
+        if not _ok.any() or len(alts) >= 8: continue
+        cand = np.argwhere(_ok); sc = Rd[_ok]
         order = np.argsort(-sc)
         for idx in order[:: max(1, len(order) // 4000)]:
             vy, vx = cand[idx]

@@ -131,6 +131,10 @@ def pick_face(room, c, ai_o, M, cyan=None, sh=None):
     def ray(o):
         a = c['yaw'] - math.radians(o); d = A2 @ np.array([math.sin(a), math.cos(a)]); d = d / (np.linalg.norm(d) or 1); L = 0
         while cv2.pointPolygonTest(poly, (float(c['u'] + d[0] * L), float(c['v'] + d[1] * L)), False) >= 0 and L < 5000: L += 2
+        # 11/28 第8回の審査（fc-space 点4）: 最初の向きがプライベートゾーン（図の斜線の部屋）の札・荷物だった → 部屋を出た先がすぐ斜線の部屋なら、その向きは見通しを 1 割に
+        ppm_ = float(np.linalg.norm(A2[:, 0]))
+        if L < 8 * ppm_ and any(cv2.pointPolygonTest(hp, (float(c['u'] + d[0] * (L + 0.4 * ppm_)), float(c['v'] + d[1] * (L + 0.4 * ppm_))), False) >= 0 for hp in SCAN.get('hatchP', [])):
+            HIT.add(o)
         if SCAN.get('img') is not None:   # 第3回の審査: 図面では奥まで空いていても、実際は壁・棚が目の前のことがある → スキャンの壁・物（scan.png の黒）までの距離でも切る
             sm, im = SCAN['meta'], SCAN['img']; scale = np.linalg.norm(A2 @ np.array([math.sin(a), math.cos(a)]))
             for k in range(1, int(L / max(scale, 1e-6) * sm['ppm']) + 1):
@@ -140,7 +144,10 @@ def pick_face(room, c, ai_o, M, cyan=None, sh=None):
                     L = min(L, m * scale); break
         return L
     # 第4回の審査: 中心の1本だけだと、扉の隙間から奥が見える向きが勝ち、画面の大半は家具・壁の大写しになる → 画角内の5本の平均
+    HIT = set()
     lens = {o: float(np.mean([ray(o + k) for k in (-30, -15, 0, 15, 30)])) for o in (0, 90, 180, -90)}
+    hit = {o for o in lens if any(o + k in HIT for k in (-15, 0, 15))}
+    if hit and len(hit) < 4: lens = {o: L * (0.1 if o in hit else 1) for o, L in lens.items()}
     if sh and max(sh.values()) > 0:   # くっきり度が一番の方向の 4 割未満の方向（にじみ）は選びにくく
         mx = max(sh.values()); lens = {o: L * (1 if sh.get(o, mx) >= 0.4 * mx else 0.2) for o, L in lens.items()}
     if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
@@ -183,6 +190,7 @@ def run_dir(d):
     M = reg['world2img']
     SCAN['img'] = cv2.imread(f'{d}/scan.png', 0) if os.path.exists(f'{d}/scan.png') else None
     SCAN['meta'] = json.load(open(f'{d}/scan.json')) if os.path.exists(f'{d}/scan.json') else None
+    SCAN['hatchP'] = [np.array(r['poly'], np.float32) for r in pr['rooms'] if r.get('hatched') and r.get('poly')]
     work = f'{d}/centre'; os.makedirs(work, exist_ok=True)
     at_path = f'{work}/at.json'
     at = json.load(open(at_path, encoding='utf-8')) if os.path.exists(at_path) else {'scene': td['scene'], 'key': td['key'], 'points': []}
@@ -191,6 +199,7 @@ def run_dir(d):
     def new_point(x, z, fy, yaw, dy=0.0):
         y = round(fy + EYE + dy, 3)
         for q in at['points']:   # やり直しのときは同じ位置の撮影済みを使う
+        # 11/28 第8回の審査（zigsaw 点5）: 同じ位置の撮影済みを使い回すとき、写真は前に撮った向き（q['yaw']）で撮れている → 呼び出し側は p['yaw'] を使う（新しく計算した yaw を使うと矢印が 180° 逆になった）
             if abs(q['x'] - x) < 0.05 and abs(q['z'] - z) < 0.05 and abs(q.get('y', y) - y) < 0.05: return q
         nid[0] += 1; p = {'id': f'n{nid[0]}', 'x': x, 'y': y, 'z': z, 'yaw': round(yaw, 4)}
         at['points'].append(p); have[p['id']] = p; return p
@@ -236,7 +245,7 @@ def run_dir(d):
             else:
                 yaw = deep_yaw(room, t['u'], t['v'], M)
                 p = new_point(t['x'], t['z'], t['floorY'], yaw)
-                cand = {'kind': 'new', 'id': p['id'], 'x': t['x'], 'z': t['z'], 'u': t['u'], 'v': t['v'], 'yaw': yaw}
+                cand = {'kind': 'new', 'id': p['id'], 'x': t['x'], 'z': t['z'], 'u': t['u'], 'v': t['v'], 'yaw': p['yaw']}
             slots.append({'room': room, 'target': t, 'cand': cand, 'tried': [], 'verdicts': [], 'altIdx': 0, 'final': None})
     # 図面から部屋が取れなかったシーン: 以前の選び方（rooms.json の select）の地点を AI 確認つきで使う
     if not slots and not any(r['scanned'] for r in pr['rooms']) and os.path.exists(f'{d}/{reg.get("select", "rooms.json")}'):
@@ -339,16 +348,16 @@ def run_dir(d):
             if s.get('blurQ'):
                 u, v, x, z, fy, dy = s['blurQ'].pop(0); yaw = deep_yaw(room, u, v, M)
                 p = new_point(x, z, fy, yaw, dy); s['blurTries'] = s.get('blurTries', 0) + 1
-                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': x, 'z': z, 'u': u, 'v': v, 'yaw': yaw, 'dy': dy}; continue
+                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': x, 'z': z, 'u': u, 'v': v, 'yaw': p['yaw'], 'dy': dy}; continue
             alts = [a for a in room.get('alts', []) if all(math.hypot(a[0] - t['u'], a[1] - t['v']) > 0.6 * pr['ppm'] for t in s['tried'])]
             if rnd < ROUNDS and alts and not (NOREND and s.get('pending')):
                 a = alts[0]; yaw = deep_yaw(room, a[0], a[1], M)
                 p = new_point(a[2], a[3], a[4], yaw)
-                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': a[2], 'z': a[3], 'u': a[0], 'v': a[1], 'yaw': yaw}
+                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': a[2], 'z': a[3], 'u': a[0], 'v': a[1], 'yaw': p['yaw']}
             elif 'blurQ' not in s and not NOREND and s.update(blurQ=blur_queue(s)) is None and s['blurQ']:   # 第4回の審査: にじみ以外で落ちた部屋も、控えが尽きたら別位置・高さ違いを 3 つ以上試す
                 u, v, x, z, fy, dy = s['blurQ'].pop(0); yaw = deep_yaw(room, u, v, M)
                 p = new_point(x, z, fy, yaw, dy); s['blurTries'] = s.get('blurTries', 0) + 1
-                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': x, 'z': z, 'u': u, 'v': v, 'yaw': yaw, 'dy': dy}
+                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': x, 'z': z, 'u': u, 'v': v, 'yaw': p['yaw'], 'dy': dy}
             else:
                 s['cand'] = pick_node(s)
     json.dump(at, open(at_path, 'w', encoding='utf-8'), indent=1)
