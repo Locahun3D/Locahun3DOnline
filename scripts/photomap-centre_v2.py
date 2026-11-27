@@ -118,6 +118,7 @@ def cyan_frac(work, pid):   # 第2回の審査（fc-space）: 施設が指定し
         out[o] = float(((t[..., 0] >= 85) & (t[..., 0] <= 100) & (t[..., 1] > 150) & (t[..., 2] > 170)).mean())
     return out
 
+SCAN = {}
 def pick_face(room, c, ai_o, M, cyan=None):
     # 第1回の審査: 最初の向きが壁・扉・窓の大写しになる点が多かった → 図面の部屋の中で、4 方向のうち一番遠くまで見通せる向き。
     # AI の bestFace がその 85% 以上見通せるなら AI を優先（設備が見える向きを選んでいることがある）
@@ -125,6 +126,13 @@ def pick_face(room, c, ai_o, M, cyan=None):
     def ray(o):
         a = c['yaw'] - math.radians(o); d = A2 @ np.array([math.sin(a), math.cos(a)]); d = d / (np.linalg.norm(d) or 1); L = 0
         while cv2.pointPolygonTest(poly, (float(c['u'] + d[0] * L), float(c['v'] + d[1] * L)), False) >= 0 and L < 5000: L += 2
+        if SCAN.get('img') is not None:   # 第3回の審査: 図面では奥まで空いていても、実際は壁・棚が目の前のことがある → スキャンの壁・物（scan.png の黒）までの距離でも切る
+            sm, im = SCAN['meta'], SCAN['img']; scale = np.linalg.norm(A2 @ np.array([math.sin(a), math.cos(a)]))
+            for k in range(1, int(L / max(scale, 1e-6) * sm['ppm']) + 1):
+                m = k / sm['ppm']; x = c['x'] + math.sin(a) * m; z = c['z'] + math.cos(a) * m
+                px, py = int((x - sm['x0']) * sm['ppm']), int((z - sm['z0']) * sm['ppm'])
+                if 0 <= py < im.shape[0] and 0 <= px < im.shape[1] and im[py, px] < 60 and m > 0.25:
+                    L = min(L, m * scale); break
         return L
     lens = {o: ray(o) for o in (0, 90, 180, -90)}
     if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
@@ -158,6 +166,8 @@ def run_dir(d):
     EYE = float(np.median(offs)) if offs else 1.15
     bp = cv2.imdecode(np.fromfile(os.path.normpath(os.path.join(d, reg['blueprint'])), np.uint8), cv2.IMREAD_COLOR)
     M = reg['world2img']
+    SCAN['img'] = cv2.imread(f'{d}/scan.png', 0) if os.path.exists(f'{d}/scan.png') else None
+    SCAN['meta'] = json.load(open(f'{d}/scan.json')) if os.path.exists(f'{d}/scan.json') else None
     work = f'{d}/centre'; os.makedirs(work, exist_ok=True)
     at_path = f'{work}/at.json'
     at = json.load(open(at_path, encoding='utf-8')) if os.path.exists(at_path) else {'scene': td['scene'], 'key': td['key'], 'points': []}
@@ -244,12 +254,12 @@ def run_dir(d):
         for a in sorted(room.get('alts', []), key=lambda a: math.hypot(a[0] - t['u'], a[1] - t['v'])):
             dd = math.hypot(a[0] - t['u'], a[1] - t['v']) / ppm
             if 0.5 <= dd <= 1.5: q.append((a[0], a[1], a[2], a[3], a[4], 0.0))
-        for r in (0.8, 1.2, 0.5, 1.5):
+        for r, mw in ((0.8, 0.4), (1.2, 0.4), (0.5, 0.4), (1.5, 0.4), (0.5, 0.2), (0.35, 0.1), (0.3, 0.0)):   # 小部屋でも 3 つ取れるよう、壁からの余裕と距離を段々ゆるめる
             for k in range(8):
                 if len(q) >= 3: break
                 u = t['u'] + r * ppm * math.cos(k * math.pi / 4); v = t['v'] + r * ppm * math.sin(k * math.pi / 4)
-                if cv2.pointPolygonTest(poly, (float(u), float(v)), True) < 0.4 * ppm: continue
-                if any(math.hypot(u - b[0], v - b[1]) < 0.6 * ppm for b in q): continue
+                if cv2.pointPolygonTest(poly, (float(u), float(v)), True) < mw * ppm: continue
+                if any(math.hypot(u - b[0], v - b[1]) < min(0.6, r) * ppm for b in q): continue
                 x = Mi[0, 0] * u + Mi[0, 1] * v + Mi[0, 2]; z = Mi[1, 0] * u + Mi[1, 1] * v + Mi[1, 2]
                 q.append((u, v, round(x, 3), round(z, 3), fy, 0.0))
         q = q[:3]
