@@ -101,6 +101,7 @@ for j, (d, logs) in enumerate(sorted(ai.items())):
         for v in lg.get('voids', []): rooms_txt.append(f'- {sc} {v}: 吹き抜け（図に × ）なので点なし')
         for v in lg.get('unscanned', []): rooms_txt.append(f'- {sc} {v}: 3D スキャンの範囲の外なので点なし')
         for v in lg.get('hatched', []): rooms_txt.append(f'- {sc} {v}: 図で斜線（利用禁止・プライベートゾーン）の範囲なので点なし')
+        for v in lg.get('notWalked', []): rooms_txt.append(f'- {sc} {v}: 屋外・床の高さが一定でないシーンで、写真ツアーの撮影者がこの部屋の中を歩いていない（地点から 1.5m 以内が部屋の 15% 未満＝ガラス・開口越しに見えただけ）ので点なし')
         for v in lg.get('thinFloor', []): rooms_txt.append(f'- {sc} {v}: 3D スキャンの床の点が、よく撮れた部屋の 5% 未満（窓・開口越しに床が少し見えただけで、部屋の中は撮っていない）なので点なし')
         for v in lg.get('noWall', []): rooms_txt.append(f'- {sc} {v}: 図のこの部屋の壁が 3D スキャンにほとんど無い（壁の 3 割未満）＝部屋の中を撮っていないので点なし')
         for sl in lg['slots']:
