@@ -303,6 +303,13 @@ def run_dir(d):
                 s['verdicts'].append(v)
                 cf_ = cyan_frac(work, s['cand']['id'])
                 if v.get('ok') is True and cf_ and np.mean(list(cf_.values())) > 0.4: v = dict(v, ok=False, reason='立ち入り禁止の水色の範囲の中・すぐ脇（4 方向平均 %.0f%%）' % (100 * np.mean(list(cf_.values())))); s['verdicts'][-1] = v
+                # 司令塔 11/27: 点そのものがにじんでいるのに AI 点検を通る → くっきり度のしきい値で機械的にも落とす
+                # （実測: にじみで落ちた点は 4 方向の最大 150〜380、通った普通の点は 2 方向以上が 300 超。白壁の小部屋は低いので 9㎡ 未満は最大 200 未満だけ）
+                sh_ = sharp(work, s['cand']['id'])
+                if v.get('ok') is True and sh_:
+                    small_ = (s['room'].get('area') or 0) < 9
+                    blurry = max(sh_.values()) < 200 if small_ else sum(1 for x in sh_.values() if x >= 280) < 2
+                    if blurry: v = dict(v, ok=False, reason='写真がにじんでいる（くっきり度 ' + '/'.join(str(int(x)) for x in sh_.values()) + '）'); s['verdicts'][-1] = v
                 if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M, cyan_frac(work, s['cand']['id']), sharp(work, s['cand']['id'])))
                 else: s['tried'].append(s['cand']); s['cand'] = None
         # 次の候補: 控えの位置（撮り直し）→ 最後は部屋の中の既存の地点
