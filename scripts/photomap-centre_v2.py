@@ -153,10 +153,11 @@ def run_dir(d):
     at = json.load(open(at_path, encoding='utf-8')) if os.path.exists(at_path) else {'scene': td['scene'], 'key': td['key'], 'points': []}
     have = {p['id']: p for p in at['points']}
     nid = [800 + len(at['points'])]
-    def new_point(x, z, fy, yaw):
+    def new_point(x, z, fy, yaw, dy=0.0):
+        y = round(fy + EYE + dy, 3)
         for q in at['points']:   # やり直しのときは同じ位置の撮影済みを使う
-            if abs(q['x'] - x) < 0.05 and abs(q['z'] - z) < 0.05: return q
-        nid[0] += 1; p = {'id': f'n{nid[0]}', 'x': x, 'y': round(fy + EYE, 3), 'z': z, 'yaw': round(yaw, 4)}
+            if abs(q['x'] - x) < 0.05 and abs(q['z'] - z) < 0.05 and abs(q.get('y', y) - y) < 0.05: return q
+        nid[0] += 1; p = {'id': f'n{nid[0]}', 'x': x, 'y': y, 'z': z, 'yaw': round(yaw, 4)}
         at['points'].append(p); have[p['id']] = p; return p
     def render():
         if NOREND: return
@@ -220,7 +221,28 @@ def run_dir(d):
         if any(w in FLOOR for w in ('屋上', 'ルーフ', 'テラス', 'バルコニー')):
             t += '屋外の区画なので、空・周りの建物が写るのは正常。床が屋根材・デッキでも可。'
         return t
-    for rnd in range(1, ROUNDS + 2):
+    # 本人ルール「写真がない部屋はないように」(11/27): にじみで落ちた部屋は、部屋の中の別の位置（真ん中から 0.5〜1.5m）・目線の高さ違いを最低 3 つ試す。全部にじむときだけ点なしにする
+    Mi = cv2.invertAffineTransform(np.array(M, np.float64))
+    def is_blur(v): return v.get('broken') is True or any(w in str(v.get('reason', '')) for w in ('にじ', 'ぼけ', 'ボケ', 'ぼや', '判別でき', '分からな', 'わからな', 'broken', 'blur'))
+    def blur_queue(s):
+        room, t = s['room'], s['target']; ppm = pr['ppm']; q = []
+        poly = np.array(room['poly'], np.float32).reshape(-1, 1, 2)
+        fy = t.get('floorY', room.get('alts', [[0, 0, 0, 0, 0]])[0][4] if room.get('alts') else 0)
+        for a in sorted(room.get('alts', []), key=lambda a: math.hypot(a[0] - t['u'], a[1] - t['v'])):
+            dd = math.hypot(a[0] - t['u'], a[1] - t['v']) / ppm
+            if 0.5 <= dd <= 1.5: q.append((a[0], a[1], a[2], a[3], a[4], 0.0))
+        for r in (0.8, 1.2, 0.5, 1.5):
+            for k in range(8):
+                if len(q) >= 3: break
+                u = t['u'] + r * ppm * math.cos(k * math.pi / 4); v = t['v'] + r * ppm * math.sin(k * math.pi / 4)
+                if cv2.pointPolygonTest(poly, (float(u), float(v)), True) < 0.4 * ppm: continue
+                if any(math.hypot(u - b[0], v - b[1]) < 0.6 * ppm for b in q): continue
+                x = Mi[0, 0] * u + Mi[0, 1] * v + Mi[0, 2]; z = Mi[1, 0] * u + Mi[1, 1] * v + Mi[1, 2]
+                q.append((u, v, round(x, 3), round(z, 3), fy, 0.0))
+        q = q[:3]
+        q += [(t['u'], t['v'], t['x'], t['z'], fy, -0.35), (t['u'], t['v'], t['x'], t['z'], fy, 0.35)]   # 目線の高さ違い
+        return q
+    for rnd in range(1, ROUNDS + 6):
         pend = [s for s in slots if s['final'] is None and s['cand']]
         if not pend: break
         render()
@@ -255,6 +277,11 @@ def run_dir(d):
         for s in slots:
             if s['final'] is not None or s['cand']: continue
             room = s['room']
+            if s['verdicts'] and is_blur(s['verdicts'][-1]) and 'blurQ' not in s and not NOREND: s['blurQ'] = blur_queue(s)
+            if s.get('blurQ'):
+                u, v, x, z, fy, dy = s['blurQ'].pop(0); yaw = deep_yaw(room, u, v, M)
+                p = new_point(x, z, fy, yaw, dy); s['blurTries'] = s.get('blurTries', 0) + 1
+                s['cand'] = {'kind': 'new', 'id': p['id'], 'x': x, 'z': z, 'u': u, 'v': v, 'yaw': yaw, 'dy': dy}; continue
             alts = [a for a in room.get('alts', []) if all(math.hypot(a[0] - t['u'], a[1] - t['v']) > 0.6 * pr['ppm'] for t in s['tried'])]
             if rnd < ROUNDS and alts and not (NOREND and s.get('pending')):
                 a = alts[0]; yaw = deep_yaw(room, a[0], a[1], M)
@@ -287,7 +314,9 @@ def run_dir(d):
     log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'voids': pr.get('voids', []),
            'points': len(keep), 'new': sum(1 for e in keep if e['kind'] == 'new'),
            'pending': sum(1 for s in slots if s.get('pending')), 'pendingNoStandIn': len(pend_only),
-           'slots': [{'room': s['room']['id'], 'area': s['room']['area'], 'final': s['final'] and s['final']['id'], 'verdicts': s['verdicts']} for s in slots]}
+           'blurRooms': [{'room': s['room']['id'], 'area': s['room']['area'], 'tries': len(s['verdicts']), 'blurTries': s.get('blurTries', 0), 'reason': str(s['verdicts'][-1].get('reason', ''))[:80] if s['verdicts'] else ''}
+                         for s in slots if not s['final'] and s['verdicts'] and sum(map(is_blur, s['verdicts'])) >= max(1, len(s['verdicts']) - 1) and s.get('blurTries', 0) >= 3],
+           'slots': [{'room': s['room']['id'], 'area': s['room']['area'], 'final': s['final'] and s['final']['id'], 'blurTries': s.get('blurTries', 0), 'verdicts': s['verdicts']} for s in slots]}
     print(f"centre {d}: rooms {log['rooms']} scanned {log['scanned']} points {log['points']} new {log['new']} pending {log['pending']} (代替なし {log['pendingNoStandIn']}) dropped {sum(1 for s in slots if not s['final'])}")
     return pid, log
 
