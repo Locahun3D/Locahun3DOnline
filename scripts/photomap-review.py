@@ -53,8 +53,8 @@ for k, mp in enumerate(pm):
     s = 1400 / max(im.shape[:2]); im = cv2.resize(im, None, fx=s, fy=s, interpolation=cv2.INTER_AREA) if s < 1 else im
     H, W = im.shape[:2]; r_ = max(8, W // 90)
     # 第4回の審査（ariake）: 番号が密集して読めない → 点と矢印を先に全部描き、番号は点・矢印・他の番号と重ならない位置へ（遠いときは引出線）
-    P = [(int(q['x'] * W), int(q['y'] * H), math.radians(q['yaw'])) for q in mp['points']]
-    occ = [(x - r_, y - r_, x + r_, y + r_) for x, y, _ in P] + [(min(x, int(x + math.sin(a) * r_ * 3)) - 3, min(y, int(y - math.cos(a) * r_ * 3)) - 3, max(x, int(x + math.sin(a) * r_ * 3)) + 3, max(y, int(y - math.cos(a) * r_ * 3)) + 3) for x, y, a in P]
+    PT = [(int(q['x'] * W), int(q['y'] * H), math.radians(q['yaw'])) for q in mp['points']]
+    occ = [(x - r_, y - r_, x + r_, y + r_) for x, y, _ in PT] + [(min(x, int(x + math.sin(a) * r_ * 3)) - 3, min(y, int(y - math.cos(a) * r_ * 3)) - 3, max(x, int(x + math.sin(a) * r_ * 3)) + 3, max(y, int(y - math.cos(a) * r_ * 3)) + 3) for x, y, a in PT]
     def place(x, y, txt):
         (tw, th), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
         for rr in (1, 2, 3, 4, 6):
@@ -65,7 +65,7 @@ for k, mp in enumerate(pm):
                 if any(not (bx[2] < o[0] or bx[0] > o[2] or bx[3] < o[1] or bx[1] > o[3]) for o in occ): continue
                 occ.append(bx); return (bx[0] + 2, bx[3] - 2), rr > 2
         return (x + r_, y - r_), False
-    for x, y, a in P:
+    for x, y, a in PT:
         cv2.circle(im, (x, y), r_, (60, 60, 230), -1)
         cv2.arrowedLine(im, (x, y), (int(x + math.sin(a) * r_ * 3), int(y - math.cos(a) * r_ * 3)), (60, 60, 230), max(2, r_ // 3), tipLength=0.4)
     for q in mp['points']:
