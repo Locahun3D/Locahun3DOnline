@@ -176,7 +176,11 @@ def run_dir(d):
         if not ns: return None
         tu, tv = s['target']['u'], s['target']['v']; Mx = np.array(M, float)
         def uv(n): return Mx[0, 0] * n['pos']['x'] + Mx[0, 1] * n['pos']['z'] + Mx[0, 2], Mx[1, 0] * n['pos']['x'] + Mx[1, 1] * n['pos']['z'] + Mx[1, 2]
-        n = min(ns, key=lambda n: math.hypot(uv(n)[0] - tu, uv(n)[1] - tv)); u, v = uv(n)
+        # 第2回の審査: 部屋の端・隅の既存地点を拾うと「壁際」「隅」で落ちる → 壁から 0.5m 以上の地点を優先、無ければ一番壁から離れた地点
+        poly = np.array(s['room']['poly'], np.float32).reshape(-1, 1, 2)
+        def edge(n): return cv2.pointPolygonTest(poly, tuple(float(q) for q in uv(n)), True) / pr['ppm']
+        far = [n for n in ns if edge(n) >= 0.5]
+        n = min(far, key=lambda n: math.hypot(uv(n)[0] - tu, uv(n)[1] - tv)) if far else max(ns, key=edge); u, v = uv(n)
         return {'kind': 'node', 'id': n['id'], 'x': n['pos']['x'], 'z': n['pos']['z'], 'u': u, 'v': v, 'yaw': n.get('yaw', 0)}
     # ── 1 回目の点 ──
     slots = []   # {room, target, cand: {kind, id, x, z, u, v, yaw}, tried: [...], verdicts: []}
@@ -208,8 +212,11 @@ def run_dir(d):
         if s['cand']['kind'] == 'node':
             t += 'この点は写真ツアーの撮影者が実際に立った既存の地点（立てる床の上）。「空中」「屋根の上で部屋でない」は理由にしない（屋上・屋根の上を歩ける施設がある）。'
         ar = s['room'].get('area') or 0
-        if 0 < ar < 9:   # 第1回の審査: トイレ・納戸など小部屋は「壁に近すぎ」で全候補が落ちていた
-            t += f'この部屋は約 {ar}㎡ の小部屋（トイレ・洗面・納戸・廊下など）。壁や扉が近くに大きく写るのは当然なので「壁の大写し」「壁に近い」では不合格にしない。物の中にいる・机や便器の上に浮いている・全体がにじんで何の部屋か分からない・別の部屋に見える ときだけ不合格。bestFace は部屋の設備（便器・洗面台・棚など）が一番見える方向。'
+        short = 99
+        if s['room'].get('poly'):
+            (_, _), (rw, rh), _ = cv2.minAreaRect(np.array(s['room']['poly'], np.float32)); short = min(rw, rh) / pr['ppm']
+        if 0 < ar < 9 or (0 < ar < 20 and short < 3.2):   # 第2回: 15㎡ でも幅 3m 未満の細い部屋は同じ扱い（zigsaw r1）   # 第1回の審査: トイレ・納戸など小部屋は「壁に近すぎ」で全候補が落ちていた
+            t += f'この部屋は約 {ar}㎡・幅約 {short:.1f}m の小さい・細い部屋（トイレ・洗面・納戸・廊下など）。壁や扉が近くに大きく写るのは当然なので「壁の大写し」「壁に近い」では不合格にしない。物の中にいる・机や便器の上に浮いている・全体がにじんで何の部屋か分からない・別の部屋に見える ときだけ不合格。bestFace は部屋の設備（便器・洗面台・棚など）が一番見える方向。'
         if any(w in FLOOR for w in ('屋上', 'ルーフ', 'テラス', 'バルコニー')):
             t += '屋外の区画なので、空・周りの建物が写るのは正常。床が屋根材・デッキでも可。'
         return t
