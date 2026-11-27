@@ -580,12 +580,20 @@ for r in range(1, regions.max() + 1):
     do_room(regions == r, r)
 # 第6回の審査（meal 倉庫・r1）: 外壁の向こうの小部屋が、窓越しに見えた床の点だけで「スキャンあり」になり、候補の写真が屋外・にじみ → 床の点の密度（1㎡あたり）が
 # 一番よく撮れている部屋の 5% 未満の部屋は中を撮っていない（実測 meal: 撮れている部屋 6,800〜12,000、倉庫 99・r2 141）
-_Ds = cv2.blur(cover, (max(3, int(m2(0.5))),) * 2) * ppm * ppm
+# 第7回: 床の高さが部屋ごとに違う家（makinoshita: 和室は廊下より高い）で、全体の床帯 ±0.25m だと撮れている部屋まで薄くなり 14 部屋が消えた
+# → 部屋ごとに「その部屋の床の高さ」（-1.0〜+0.6m の点の高さの最頻値）を求め、その ±0.25m の点の数 / 面積 を密度にする（窓越しに見えた床はどの高さでも疎）
+_lab = np.zeros((h, w), np.int32)
+for k, rr in enumerate(rooms, 1):
+    cv2.fillPoly(_lab, [np.array([[q[0] - x0, q[1] - y0] for q in rr['poly']], np.int32)], k)
+_sel = inb & (rel > -1.0) & (rel < 0.6)
+_pl = np.zeros(len(P), np.int32); _pl[_sel] = _lab[v_[_sel].astype(int), u_[_sel].astype(int)]
 _den = {}
-for rr in rooms:
-    _m = np.zeros((h, w), np.uint8); cv2.fillPoly(_m, [np.array([[q[0] - x0, q[1] - y0] for q in rr['poly']], np.int32)], 1)
-    if _m.any(): _den[rr['id']] = float(np.median(_Ds[_m.astype(bool)]))
-_ref = max(_den.values()) if _den else 0
+for k, rr in enumerate(rooms, 1):
+    rh = rel[_pl == k]; am = max(1e-6, float((_lab == k).sum()) * px2m2)
+    if len(rh) < 20: _den[rr['id']] = 0.0; continue
+    hist, edges = np.histogram(rh, bins=16, range=(-1.0, 0.6)); f_ = edges[hist.argmax()] + 0.05
+    _den[rr['id']] = float(((rh > f_ - 0.25) & (rh < f_ + 0.25)).sum() / am)
+_ref = max([_den[rr['id']] for rr in rooms if rr['area'] >= 4 and rr['id'] in _den] or [0])   # 小部屋の飛び抜けた値（makinoshita r16 3.6㎡ 42,000）を基準にしない
 # 第7回の審査（ariake 階段広場）: 床の高さがばらつく屋外のシーンは床の帯が拾えず（最良の部屋でも 1,000/㎡ 未満）、ガラス越しに見えた屋内の部屋が全部「スキャンあり」→ 候補が屋外・にじみ。
 # そのときは写真ツアーの地点から 1.5m 以内（歩いた所）が部屋の 15% 未満の部屋は中を撮っていないとみなす
 _wk = {}
@@ -598,7 +606,7 @@ for rr in rooms:
         rr['scanned'] = False; rr['notWalked'] = True
 for rr in rooms:
     rr['floorDen'] = round(_den.get(rr['id'], 0))
-    if _ref > 1000 and rr['scanned'] and not rr['nodesIn'] and _den.get(rr['id'], 0) < 0.05 * _ref:
+    if _ref > 1000 and rr['scanned'] and not rr['nodesIn'] and _den.get(rr['id'], 0) < 0.08 * _ref:   # 実測（部屋ごとの床）: meal 倉庫 660（基準 9,942）・qapla 2F 廊下 425（6,442）／撮れている最小 makinoshita r22 2,056（15,490）・modello r4 1,732（15,903）
         rr['scanned'] = False; rr['thinFloor'] = True
 # inside に多角形を書いたシーン（屋外の広場など、図面で部屋に閉じていない所）で部屋が 1 つも取れないとき: 多角形の中の床を 1 つの部屋にする
 if isinstance(ins, list) and not any(rr['scanned'] for rr in rooms):
