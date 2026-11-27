@@ -35,6 +35,9 @@ ppm = math.hypot(M[0, 0], M[0, 1])
 x0, y0, x1, y1 = [int(v) for v in (reg.get('crop') or [0, 0, W0, H0])]
 x0, y0, x1, y1 = max(0, x0), max(0, y0), min(W0, x1), min(H0, y1)
 img = bp[y0:y1, x0:x1]
+if reg.get('darkBg'):   # 11/28 第10回（studio-please-green: 黒地に緑の線の図面で、黒い床がまるごと壁になり部屋が階段だけになった）: 色の付いた線を黒、暗い地を白に描き直す
+    _sat = img.max(2).astype(np.int16) - img.min(2).astype(np.int16)
+    img = np.where(((_sat > 40) | (img.max(2) > 110))[..., None], 0, 255).astype(np.uint8).repeat(3, 2) if img.ndim == 3 else img
 h, w = img.shape[:2]
 m2 = lambda v: v * ppm            # m → px
 px2m2 = 1.0 / (ppm * ppm)         # px² → m²
