@@ -199,7 +199,9 @@ def run_dir(d):
         todo = [p for p in at['points'] if not p.get('done')]
         if not todo: return
         json.dump(at, open(at_path, 'w', encoding='utf-8'), indent=1)
-        r = subprocess.run(['node', 'scripts/bake-pano.mjs', '--at', at_path, '--out', work], cwd=REPO, capture_output=True, text=True, encoding='utf-8')
+        # 11/27: 本番ビューアーを開始 360° 画像の前に巻き戻した（3f5d869）ため public の viewer には __startPano（360° のキー計算）が無い → 撮影は巻き戻し前の viewer の写し（_viewer/、61385cb）で
+        vw = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(d))) if '/all/' not in d else d.split('/all/')[0], '_viewer', 'offline-viewer-startpano.html')
+        r = subprocess.run(['node', 'scripts/bake-pano.mjs', '--at', at_path, '--out', work] + (['--viewer', vw] if os.path.exists(vw) else []), cwd=REPO, capture_output=True, text=True, encoding='utf-8')
         open(f'{work}/render.log', 'a', encoding='utf-8').write(r.stdout + r.stderr)
         at.update(json.load(open(at_path, encoding='utf-8'))); have.update({p['id']: p for p in at['points']})
     def node_strip(n_id):
