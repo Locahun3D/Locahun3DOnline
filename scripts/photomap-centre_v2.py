@@ -244,6 +244,16 @@ def run_dir(d):
         far = [n for n in ns if edge(n) >= 0.5]
         n = min(far, key=lambda n: math.hypot(uv(n)[0] - tu, uv(n)[1] - tv)) if far else max(ns, key=edge); u, v = uv(n)
         return {'kind': 'node', 'id': n['id'], 'x': n['pos']['x'], 'z': n['pos']['z'], 'u': u, 'v': v, 'yaw': n.get('yaw', 0)}
+    # 11/28 第10回の審査（makinoshita 東側和室1・南側洋室: 最初の向きが障子・鏡の壁）: 審査で向きを指摘された点は reg.json の faceFix [[u, v, 図の向き°(0=上, 90=右)]]
+    # （図面の画素で点から 1m 以内）に一番近い 4 方向を使う
+    def face_fix(c, o):
+        A2 = np.array(M, float)[:, :2]; ppm_ = float(np.linalg.norm(A2[:, 0]))
+        for fu, fv, deg in reg.get('faceFix') or []:
+            if math.hypot(fu - c['u'], fv - c['v']) > 1.0 * ppm_: continue
+            def pdeg(o_):
+                a = c['yaw'] - math.radians(o_); d = A2 @ np.array([math.sin(a), math.cos(a)]); return math.degrees(math.atan2(d[0], -d[1]))
+            return min((0, 90, 180, -90), key=lambda o_: abs((pdeg(o_) - deg + 180) % 360 - 180))
+        return o
     # ── 1 回目の点 ──
     slots = []   # {room, target, cand: {kind, id, x, z, u, v, yaw}, tried: [...], verdicts: []}
     for room in pr['rooms']:
@@ -349,7 +359,7 @@ def run_dir(d):
                     small_ = (s['room'].get('area') or 0) < 9
                     blurry = max(sh_.values()) < 200 if small_ else sum(1 for x in sh_.values() if x >= 280) < 2
                     if blurry: v = dict(v, ok=False, reason='写真がにじんでいる（くっきり度 ' + '/'.join(str(int(x)) for x in sh_.values()) + '）'); s['verdicts'][-1] = v
-                if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M, cyan_frac(work, s['cand']['id']), sharp(work, s['cand']['id'])))
+                if v.get('ok') is True: s['final'] = dict(s['cand'], o=face_fix(s['cand'], pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M, cyan_frac(work, s['cand']['id']), sharp(work, s['cand']['id']))))
                 else: s['tried'].append(s['cand']); s['cand'] = None
         # 次の候補: 控えの位置（撮り直し）→ 最後は部屋の中の既存の地点
         for s in slots:

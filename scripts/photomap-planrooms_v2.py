@@ -529,7 +529,7 @@ def do_room(R, r, force=False):
     _pins = [(int(pu - x0), int(pv - y0)) for pu, pv in (reg.get('pins') or []) if 0 <= pv - y0 < h and 0 <= pu - x0 < w and R[int(pv - y0), int(pu - x0)]]
     if _pins:
         _dsR = cv2.distanceTransform(R.astype(np.uint8), cv2.DIST_L2, 5)
-        targets = [(pu, pv, float(_dsR[pv, pu])) for pu, pv in _pins]
+        targets = [(pu, pv, float(_dsR[pv, pu] / ppm)) for pu, pv in _pins]
     # 3m 以上離す（近すぎる真ん中は捨てる）
     tt = []
     for t in targets:
