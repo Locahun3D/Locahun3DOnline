@@ -299,7 +299,7 @@ _todo2 = [int(r) for r in range(1, regions.max() + 1)]; _n2 = 0
 while _todo2 and _n2 < 200 and '--nolinesplit' not in sys.argv:
     r = _todo2.pop(0); _n2 += 1
     R = regions == r; a_ = R.sum() * px2m2
-    if a_ < 2.0 or a_ >= 15: continue
+    if a_ < 3.0 or a_ >= 15: continue   # 第5回（modello 浴室 2.6㎡ が浴槽の線で 1.2+1.2 に割れた）: 3㎡ 未満はもう割らない（トイレ 1.1〜1.4㎡ は 3.6〜6.3㎡ の区画から切り出される）
     ys_, xs_ = np.nonzero(R); x0_, x1_, y0_, y1_ = xs_.min(), xs_.max(), ys_.min(), ys_.max()
     Ri = cv2.erode(R.astype(np.uint8), np.ones((3, 3), np.uint8))
     Lr = (_l0 & cv2.dilate(Ri, np.ones((3, 3), np.uint8)) & (1 - cv2.erode(Ri, np.ones((5, 5), np.uint8), iterations=1) * 0)).astype(np.uint8) * 255
@@ -316,7 +316,9 @@ while _todo2 and _n2 < 200 and '--nolinesplit' not in sys.argv:
         for p_ in ps:
             if not cl or p_ - cl[-1] > m2(0.25): cl.append(p_)
         if len(cl) < 4: return False
-        df = np.diff(cl); return float(df.std() / max(1e-6, df.mean())) < 0.3
+        df = np.diff(cl)
+        # 第5回（makinoshita 便所）: 和室の 909mm 割の壁・押入の線も等間隔に並ぶ → 模様とみなすのは間隔 0.75m 未満（タイル）か 6 本以上のときだけ
+        return float(df.std() / max(1e-6, df.mean())) < 0.3 and (df.mean() < m2(0.75) or len(cl) >= 6)
     for x1, y1, x2, y2 in sorted(ls_[:, 0], key=lambda q: -math.hypot(q[2] - q[0], q[3] - q[1])):
         ang = math.degrees(math.atan2(abs(y2 - y1), abs(x2 - x1)))
         if 8 < ang < 82: continue                      # 縦・横の線だけ
