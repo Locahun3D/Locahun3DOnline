@@ -55,7 +55,7 @@ PROMPT = """あなたはロケハンサイト Locahun 3D の「位置から見�
 - inRoom=false: 写真が図面の緑の範囲の部屋に見えない（明らかに別の部屋・屋外・階段の途中・天井裏や床下）
 - onStairs: 階段の段の途中（踊り場・上端・下端は可）
 - 空中: D に床がはっきり写らない（吹き抜けの上など）
-似た眺め・地味・家具が手前に写るのは外さない。
+似た眺め・地味・家具が手前に写るのは外さない。水色の半透明の塗り（「立ち入り禁止」の札つき）は施設が指定した立ち入り禁止範囲の表示で、壊れではない。点がその塗りの中なら inRoom=false。bestFace は塗りが少ない方向。
 bestFace: その部屋が一番よく分かる（奥行きがあり、床と家具・部屋の特徴が広く見える）方向を L/F/R/B から 1 つ。窓や壁の大写し・隅向き・にじんだ方向は選ばない。
 
 答えは JSON だけ:
@@ -109,7 +109,16 @@ def plan_crop(pr, reg, room, u, v, yaw, out, bp):
     if s < 1: crop = cv2.resize(crop, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
     cv2.imwrite(out, crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
-def pick_face(room, c, ai_o, M):
+def cyan_frac(work, pid):   # 第2回の審査（fc-space）: 施設が指定した「立ち入り禁止」の水色の塗りが最初の向きの大半を占めた → 方向ごとの水色の割合
+    im = cv2.imread(f'{work}/{pid}.jpg')
+    if im is None: return {}
+    hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV); out = {}
+    for k, o in enumerate((-90, 0, 90, 180)):
+        t = hsv[:, k * 320:(k + 1) * 320]
+        out[o] = float(((t[..., 0] >= 85) & (t[..., 0] <= 100) & (t[..., 1] > 150) & (t[..., 2] > 170)).mean())
+    return out
+
+def pick_face(room, c, ai_o, M, cyan=None):
     # 第1回の審査: 最初の向きが壁・扉・窓の大写しになる点が多かった → 図面の部屋の中で、4 方向のうち一番遠くまで見通せる向き。
     # AI の bestFace がその 85% 以上見通せるなら AI を優先（設備が見える向きを選んでいることがある）
     poly = np.array(room['poly'], np.float32); A2 = np.array(M, float)[:, :2]
@@ -118,6 +127,7 @@ def pick_face(room, c, ai_o, M):
         while cv2.pointPolygonTest(poly, (float(c['u'] + d[0] * L), float(c['v'] + d[1] * L)), False) >= 0 and L < 5000: L += 2
         return L
     lens = {o: ray(o) for o in (0, 90, 180, -90)}
+    if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
     best = max(lens, key=lens.get)
     return ai_o if lens.get(ai_o, 0) >= 0.85 * lens[best] else best
 
@@ -274,7 +284,9 @@ def run_dir(d):
             for s, v in zip(jobs, res):
                 v = dict(v, id=s['cand']['id'], kind=s['cand']['kind'], round=rnd)
                 s['verdicts'].append(v)
-                if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M))
+                cf_ = cyan_frac(work, s['cand']['id'])
+                if v.get('ok') is True and cf_ and np.mean(list(cf_.values())) > 0.4: v = dict(v, ok=False, reason='立ち入り禁止の水色の範囲の中・すぐ脇（4 方向平均 %.0f%%）' % (100 * np.mean(list(cf_.values())))); s['verdicts'][-1] = v
+                if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M, cyan_frac(work, s['cand']['id'])))
                 else: s['tried'].append(s['cand']); s['cand'] = None
         # 次の候補: 控えの位置（撮り直し）→ 最後は部屋の中の既存の地点
         for s in slots:
