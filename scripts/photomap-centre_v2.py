@@ -109,6 +109,18 @@ def plan_crop(pr, reg, room, u, v, yaw, out, bp):
     if s < 1: crop = cv2.resize(crop, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
     cv2.imwrite(out, crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
+def pick_face(room, c, ai_o, M):
+    # 第1回の審査: 最初の向きが壁・扉・窓の大写しになる点が多かった → 図面の部屋の中で、4 方向のうち一番遠くまで見通せる向き。
+    # AI の bestFace がその 85% 以上見通せるなら AI を優先（設備が見える向きを選んでいることがある）
+    poly = np.array(room['poly'], np.float32); A2 = np.array(M, float)[:, :2]
+    def ray(o):
+        a = c['yaw'] - math.radians(o); d = A2 @ np.array([math.sin(a), math.cos(a)]); d = d / (np.linalg.norm(d) or 1); L = 0
+        while cv2.pointPolygonTest(poly, (float(c['u'] + d[0] * L), float(c['v'] + d[1] * L)), False) >= 0 and L < 5000: L += 2
+        return L
+    lens = {o: ray(o) for o in (0, 90, 180, -90)}
+    best = max(lens, key=lens.get)
+    return ai_o if lens.get(ai_o, 0) >= 0.85 * lens[best] else best
+
 def deep_yaw(room, u, v, M):
     # 部屋の範囲の中で一番遠くまで見通せる向き（図面の画素で 32 方向に線を伸ばす）→ 世界の yaw
     poly = np.array(room['poly'], np.float32)
@@ -195,6 +207,9 @@ def run_dir(d):
         t = chr(10) * 2 + '補足: この図は「' + (FLOOR or '平面図') + '」。'
         if s['cand']['kind'] == 'node':
             t += 'この点は写真ツアーの撮影者が実際に立った既存の地点（立てる床の上）。「空中」「屋根の上で部屋でない」は理由にしない（屋上・屋根の上を歩ける施設がある）。'
+        ar = s['room'].get('area') or 0
+        if 0 < ar < 9:   # 第1回の審査: トイレ・納戸など小部屋は「壁に近すぎ」で全候補が落ちていた
+            t += f'この部屋は約 {ar}㎡ の小部屋（トイレ・洗面・納戸・廊下など）。壁や扉が近くに大きく写るのは当然なので「壁の大写し」「壁に近い」では不合格にしない。物の中にいる・机や便器の上に浮いている・全体がにじんで何の部屋か分からない・別の部屋に見える ときだけ不合格。bestFace は部屋の設備（便器・洗面台・棚など）が一番見える方向。'
         if any(w in FLOOR for w in ('屋上', 'ルーフ', 'テラス', 'バルコニー')):
             t += '屋外の区画なので、空・周りの建物が写るのは正常。床が屋根材・デッキでも可。'
         return t
@@ -227,7 +242,7 @@ def run_dir(d):
             for s, v in zip(jobs, res):
                 v = dict(v, id=s['cand']['id'], kind=s['cand']['kind'], round=rnd)
                 s['verdicts'].append(v)
-                if v.get('ok') is True: s['final'] = dict(s['cand'], o=FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0))
+                if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M))
                 else: s['tried'].append(s['cand']); s['cand'] = None
         # 次の候補: 控えの位置（撮り直し）→ 最後は部屋の中の既存の地点
         for s in slots:
@@ -294,6 +309,42 @@ def is_area(d):   # 周辺地図（photomap-osm.py の OSM 図）は対象外（
     r = json.load(open(f'{d}/reg.json', encoding='utf-8'))
     return r.get('floor') == '周辺地図' or os.path.exists(os.path.join(os.path.dirname(os.path.normpath(os.path.join(d, r['blueprint']))), '0_meta.json'))
 
+def dedupe_rooms(dirs, by_pid):
+    # 第1回の審査: 同じ図面・同じ階を複数のシーンが受け持つと、部屋分けが少しずつ違うため 1 部屋に 2 点入ることがあった（modello LDK・residence 洋室・makinoshita 廊下）。
+    # 図の上で、ある点の部屋（45㎡ 以下）の中に別の点が入っていたら、その部屋の真ん中に近い方だけ残す
+    groups = {}
+    for d in dirs:
+        rn = 'reg_merged.json' if os.path.exists(f'{d}/reg_merged.json') else 'reg.json'
+        reg = json.load(open(f'{d}/{rn}', encoding='utf-8'))
+        if not os.path.exists(f'{d}/centre.json'): continue
+        gk = (os.path.normpath(os.path.join(d, reg['blueprint'])).lower(), reg.get('floor') or '')
+        groups.setdefault(gk, []).append((d, reg, json.load(open(f'{d}/centre.json', encoding='utf-8')), json.load(open(f'{d}/planrooms.json', encoding='utf-8'))))
+    for items in groups.values():
+        pts = []
+        for d, reg, c, pr in items:
+            Mx = reg['world2img']; rooms = {r['id']: r for r in pr['rooms']}
+            for e in c['points']:
+                u = Mx[0][0] * e['x'] + Mx[0][1] * e['z'] + Mx[0][2]; v = Mx[1][0] * e['x'] + Mx[1][1] * e['z'] + Mx[1][2]
+                pts.append({'d': d, 'e': e, 'u': u, 'v': v, 'room': rooms.get(e['room'])})
+        drop = set()
+        for i, a in enumerate(pts):
+            R = a['room']
+            if not R or R['area'] > 45 or not R.get('targets'): continue
+            poly = np.array(R['poly'], np.float32); t = R['targets'][0]
+            for j, b in enumerate(pts):
+                if i == j or (a['d'], a['e']['id']) in drop or (b['d'], b['e']['id']) in drop: continue
+                if a['d'] == b['d'] and a['e']['room'] == b['e']['room']: continue   # 同じシーンの同じ部屋の複数点（広い部屋）は planrooms が決めたもの
+                if cv2.pointPolygonTest(poly, (float(b['u']), float(b['v'])), False) < 0: continue
+                da, db = math.hypot(a['u'] - t['u'], a['v'] - t['v']), math.hypot(b['u'] - t['u'], b['v'] - t['v'])
+                drop.add((b['d'], b['e']['id']) if db >= da else (a['d'], a['e']['id']))
+        for d, reg, c, pr in items:
+            keep = [e for e in c['points'] if (d, e['id']) not in drop]
+            if len(keep) < len(c['points']):
+                print(f'dedupe {d}: 同じ部屋の重複 {len(c["points"]) - len(keep)} 点を外した')
+                c['points'] = keep; json.dump(c, open(f'{d}/centre.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+                for lg in by_pid.get(d.split('/all/')[1].split('/')[0], []):
+                    if lg['dir'] == d: lg['dedupe'] = sorted(i for dd, i in drop if dd == d); lg['points'] = len(keep)
+
 if __name__ == '__main__':
     skip = [d for d in dirs if is_area(d)]
     if skip: print('周辺地図は対象外:', *skip)
@@ -303,6 +354,7 @@ if __name__ == '__main__':
     for d in dirs:
         pid, log = run_dir(d)
         by_pid.setdefault(pid, []).append(log)
+    dedupe_rooms(dirs, by_pid)
     for pid, logs in by_pid.items():
         f = f'{dirs[0].split("/all/")[0]}/all/{pid}/ai_points.json'
         old = json.load(open(f, encoding='utf-8')) if os.path.exists(f) else {}

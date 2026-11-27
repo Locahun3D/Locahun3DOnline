@@ -29,8 +29,15 @@ for at in glob.glob(f'{P}/**/centre/at.json', recursive=True):
     if a.get('set'): local[f'/api/pano/{a["key"]}-g{a["set"]}-'] = os.path.dirname(at)
 
 def face_img(base, pt):
+    # 第1回: 正面 1 枚だけだと広い部屋の点どうしが同じ写真に見えた → 最初の向き（大）＋ 残り 3 方向（小）
     o = int(round((pt.get('o') or 0) / 90.0)) * 90
-    fc = FACE.get(o, 'f')
+    order = [FACE.get(((o + k * 90 + 180) % 360) - 180, 'f') for k in range(4)]
+    ims = [face_one(base, pt, f) for f in order]
+    if ims[0] is None: return None
+    big = cv2.resize(ims[0], (300, 300)); row = [cv2.resize(i, (100, 100)) if i is not None else np.full((100, 100, 3), 200, np.uint8) for i in ims[1:]]
+    return np.vstack([big, np.hstack(row)])
+
+def face_one(base, pt, fc):
     if base in local:
         f = f'{local[base]}/{pt["id"]}-{fc}.s.jpg'
         return cv2.imread(f) if os.path.exists(f) else None
@@ -52,7 +59,7 @@ for k, mp in enumerate(pm):
         cv2.arrowedLine(im, (x, y), (int(x + math.sin(a) * r_ * 3), int(y - math.cos(a) * r_ * 3)), (60, 60, 230), max(2, r_ // 3), tipLength=0.4)
         cv2.putText(im, str(num), (x + r_, y - r_), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 5); cv2.putText(im, str(num), (x + r_, y - r_), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 0, 0), 2)
         t = face_img(q.get('base') or mp['photoBase'], q)
-        t = cv2.resize(t, (300, 300)) if t is not None else np.full((300, 300, 3), 200, np.uint8)
+        t = t if t is not None else np.full((400, 300, 3), 200, np.uint8)
         cv2.rectangle(t, (0, 0), (150, 34), (0, 0, 0), -1); cv2.putText(t, f'{num} {mp["labelEn"][:6]}', (5, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
         thumbs.append(t)
     cv2.putText(im, mp['labelEn'], (10, 34), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (200, 0, 0), 2)
@@ -60,7 +67,7 @@ for k, mp in enumerate(pm):
 sheets = []
 for i in range(0, len(thumbs), 20):
     T = thumbs[i:i + 20]
-    while len(T) % 5: T.append(np.full((300, 300, 3), 255, np.uint8))
+    while len(T) % 5: T.append(np.full((400, 300, 3), 255, np.uint8))
     g = np.vstack([np.hstack(T[j:j + 5]) for j in range(0, len(T), 5)])
     fn = f'photos{i // 20 + 1}.jpg'; cv2.imwrite(f'{OUT}/{fn}', g, [cv2.IMWRITE_JPEG_QUALITY, 82]); sheets.append(fn)
 # 部屋の一覧（点が無い部屋と、その理由）
@@ -85,14 +92,14 @@ PROMPT = f"""あなたはロケハンサイト Locahun 3D の物件ページ「�
 
 ファイル（{OUT}）:
 - {', '.join(maps)}: 物件ページに出す図（赤い丸＝点、矢印＝最初に見える向き、赤い数字＝点の番号）
-- {', '.join(sheets) or '（なし）'}: 各点の最初に見える写真（左上に番号）
+- {', '.join(sheets) or '（なし）'}: 各点の写真。上の大きい 1 枚＝最初に見える向き、下の小さい 3 枚＝右・後ろ・左（左上に番号）
 - {', '.join(f'{a}（{b}）' for a, b in plans) or '（なし）'}: 部屋分けの確認図（緑＝スキャンのある部屋、灰＝範囲外、赤っぽい＝吹き抜け、r番号＝部屋）
 
 点が無い部屋とその理由:
 {chr(10).join(rooms_txt) or '- なし'}
 
 本人のルール（全部満たせば合格）:
-1. 図面の全ての部屋（トイレ・廊下・玄関などの小部屋も含む。吹き抜け・階段室・3D の範囲外は除く）に点がある。点が無い部屋は、上の理由が妥当か確かめる
+1. 図面の全ての部屋（トイレ・廊下・玄関などの小部屋も含む。吹き抜け・階段室・3D の範囲外は除く）に点がある。点が無い部屋は、上の理由が妥当か確かめる（「壁に近すぎ」「壁の大写し」だけが理由で点が無い小部屋は妥当でない＝不合格。「全体がにじんで判別できない」「別の部屋に見える」は 3D の撮影品質の限界として妥当）
 2. 点は部屋のできるだけ真ん中（壁際・隅・扉の上は不可）。45㎡ を超える広い部屋は複数可、それ以外は 1 部屋 1 点（重複は不可）
 3. 写真が家具・壁・階段の中や上でなく、ぼやけて分からない写真でない。その部屋の写真に見える
 4. 矢印（最初の向き）は部屋が一番よく分かる方向（壁の大写し・隅向きは不可）
