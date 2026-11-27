@@ -74,6 +74,13 @@ foot = density((rel > -0.6) & (rel < 2.6)) > 0
 foot = cv2.morphologyEx(foot.astype(np.uint8), cv2.MORPH_CLOSE, ell(0.6))
 foot = ndi.binary_fill_holes(foot).astype(np.uint8)
 foot = cv2.dilate(foot, ell(2.0)).astype(bool)
+# 第2回の審査（eight-cafe の 51㎡ のカフェ）: 図面に描いていない机・椅子・カウンターの中や脇に点が落ち、7 候補すべて「家具に近すぎ」で落ちた。
+# スキャンの腰の高さ（床から 0.3〜1.4m）の点が濃い所を物とみなし、そこからの距離 scan_d を候補選びに使う
+_ob = cv2.blur(density((rel > 0.3) & (rel < 1.4)), (max(3, int(m2(0.15))),) * 2)
+_thr = max(1.0, 0.12 * float(np.percentile(_ob[_ob > 0], 95))) if (_ob > 0).any() else 1e9
+scan_obj = _ob > _thr
+cv2.imwrite(d+'/dbg_scanobj.png', (scan_obj*255).astype('uint8')) if '--dbg' in sys.argv else None
+scan_d = cv2.distanceTransform((~scan_obj).astype(np.uint8), cv2.DIST_L2, 5)
 
 # ── 1. 壁 ──
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.int16)
@@ -342,7 +349,13 @@ def do_room(R, r, force=False):
         # 立てる所: 図面のどの線（家具・階段・カウンター）からも 0.35m 以上離れ、家具の輪郭の中でない所。その中で区画の縁から一番遠い所
         okp = (obs_d >= m2(0.35)) & ~furn & (S > 0)
         if not okp.any(): okp = (obs_d >= m2(0.2)) & ~furn & (S > 0)
-        score = np.where(okp, ds, -1) if okp.any() else ds
+        # スキャンの物から 0.55m 離れた所が区画の 15% 以上あり、真ん中らしさ（縁からの距離）を半分以上保てるときだけ使う（スキャンがにじむ区画は物だらけに見えるので使わない）
+        okc = okp & (scan_d >= m2(0.55))
+        if okc.sum() >= 0.15 * max(1, okp.sum()) and okc.any() and ds[okc].max() >= 0.5 * ds[okp].max(): okp = okc
+        # 第2回の審査: 机で埋まった会議室（eight-cafe 08）で、縁から一番遠い所が扉脇の隅になった → 区画の重心に近い方を少し優先
+        sy_, sx_ = np.nonzero(S); cy_, cx_ = sy_.mean(), sx_.mean()
+        dc = np.hypot(*np.meshgrid(np.arange(w) - cx_, np.arange(h) - cy_)[::-1])
+        score = np.where(okp, ds - 0.35 * dc, -1e9) if okp.any() else ds - 0.35 * dc
         vy, vx = np.unravel_index(np.argmax(score), score.shape)
         targets.append((int(vx), int(vy), float(ds[vy, vx] / ppm)))
     # 3m 以上離す（近すぎる真ん中は捨てる）
@@ -369,6 +382,8 @@ def do_room(R, r, force=False):
     # 控えの位置（AI が「物の中・壊れ」と言ったとき用）: 立てる所を、真ん中に近い順に 0.7m 以上離して最大 8 か所
     Rd = cv2.distanceTransform(R.astype(np.uint8), cv2.DIST_L2, 5)
     okR = R & (obs_d >= m2(0.3)) & ~furn
+    okc = okR & (scan_d >= m2(0.5))
+    if okc.sum() >= 0.15 * max(1, okR.sum()): okR = okc
     alts = []
     if okR.any():
         cand = np.argwhere(okR); sc = Rd[okR]
