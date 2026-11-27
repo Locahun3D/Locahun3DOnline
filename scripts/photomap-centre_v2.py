@@ -150,7 +150,18 @@ def pick_face(room, c, ai_o, M, cyan=None, sh=None):
     if hit and len(hit) < 4: lens = {o: L * (0.1 if o in hit else 1) for o, L in lens.items()}
     if sh and max(sh.values()) > 0:   # くっきり度が一番の方向の 4 割未満の方向（にじみ）は選びにくく
         mx = max(sh.values()); lens = {o: L * (1 if sh.get(o, mx) >= 0.4 * mx else 0.2) for o, L in lens.items()}
-    if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
+    big = (room.get('area') or 0) >= 45
+    ct = 0.06 if big else 0.15   # 11/28 第9回の審査（fc-space 点6）: 広いホールで立ち入り禁止の塗りが 1 割前後でも「大きく捉え」と言われた
+    if cyan and any(cyan.get(o, 0) < ct for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < ct else 0.05) for o, L in lens.items()}
+    if big:   # 11/28 第9回の審査（fc-space 点4・6: 251㎡ のホールの端の点が、シャッター・荷物・禁止範囲を向いた）: 広い部屋は区画の真ん中の方を向く
+        cu, cv_ = poly.mean(0); vu, vv = cu - c['u'], cv_ - c['v']; nv_ = math.hypot(vu, vv)
+        if nv_ > 1.5 * float(np.linalg.norm(A2[:, 0])):
+            def toward(o):
+                a = c['yaw'] - math.radians(o); d = A2 @ np.array([math.sin(a), math.cos(a)]); d = d / (np.linalg.norm(d) or 1)
+                return 0.25 + 0.75 * max(0.0, (d[0] * vu + d[1] * vv) / nv_)
+            lens = {o: L * toward(o) for o, L in lens.items()}
+        best = max(lens, key=lens.get)
+        return ai_o if lens.get(ai_o, 0) >= 0.8 * lens[best] else best
     best = max(lens, key=lens.get)
     # 第5回の審査: 見通しだけで選ぶと「隣室への開口」「壁面中心で設備が見えない」と言われる → 写真を見た AI の bestFace を重く（6 割以上見通せれば AI、9㎡ 未満の小部屋は設備が見える AI の向きを常に）
     if (room.get('area') or 0) < 9 and lens.get(ai_o, 0) >= 0.3 * lens[best]: return ai_o   # にじみ・立ち入り禁止で下げた向きは除く
