@@ -74,6 +74,9 @@ def density(sel):
     return D
 cover = density((rel > -0.25) & (rel < 0.25))     # この階の床の点（窓越しに見えただけの部屋は床がほとんど写らない）
 band = density((rel > 1.3) & (rel < 1.9))         # 目の高さの帯 = 壁・背の高い物
+LINCON = float(next((a.split('=')[1] for a in sys.argv if a.startswith('--lincon=')), 0.25))
+band_lo = density((rel > 0.5) & (rel < 1.2))
+band_hi = density((rel > 1.9) & (rel < 2.3))      # 家具より高い帯 = 壁・建具の上
 _wall3 = cv2.dilate((band > 0).astype(np.uint8), np.ones((max(3, int(m2(0.6))),) * 2, np.uint8)).astype(bool)
 # v2（本人「全ての部屋で」）: スキャンの範囲 = この階の高さの点がある所を 0.6m で閉じて穴を埋め、1m 広げる。
 # 部屋の真ん中がこの中なら撮ってみる（写るかどうかは 1 点ずつの AI が決める）。床の点の多さでは決めない
@@ -328,8 +331,28 @@ while _todo2 and _n2 < 200 and '--nolinesplit' not in sys.argv:
         dark_ = float(np.percentile(gray[_lp], 30)) if _lp.any() else 255
         _bd = cv2.dilate((band > 0).astype(np.uint8), np.ones((max(3, int(m2(0.15))),) * 2, np.uint8)).astype(bool)
         wall3d = float((on & _bd).sum() / max(1, on.sum()))   # 3D の目の高さの点（本物の壁）がその線の上にどれだけあるか
-        if '--dbg' in sys.argv: print('  cand', r, ang, 'cov', round(cov_, 2), 'wall3d', round(wall3d, 2))
+        _bh = cv2.dilate((band_hi > 0).astype(np.uint8), np.ones((max(3, int(m2(0.15))),) * 2, np.uint8)).astype(bool)
+        wallhi = float((on & _bh).sum() / max(1, on.sum()))   # 家具より高い所（床から 1.9〜2.3m）の点が線の上にどれだけあるか
+        _inn = R & ~cv2.dilate(cut, np.ones((max(3, int(m2(0.8))),) * 2, np.uint8)).astype(bool)
+        bg3d = float((_inn & _bd).sum() / max(1, _inn.sum()))   # 線から離れた区画の中の、目の高さの点の割合（物・吊り物が多い部屋は全体に高い）
+        if '--dbg' in sys.argv: print('  cand', r, ang, 'cov', round(cov_, 2), 'wall3d', round(wall3d, 2), 'bg3d', round(bg3d, 2), 'hi', round(wallhi, 2))
         if wall3d < 0.5: continue   # 図の線の上に 3D の壁（目の高さの点）が無い＝浴槽・家具の縁。割らない
+        # 司令塔 11/27（carnival 和室）: 畳の線は目の高さに物（吊り物・家具）があると wall3d が 0.5〜0.7 になる。
+        # 本物の壁は家具より高い所（1.9〜2.3m）まで続く → 区画の外周の壁はその高さまであるのに、この線の上に無い（3 割未満）なら割らない
+        _ring = cv2.dilate(R.astype(np.uint8), np.ones((max(3, int(m2(0.4))),) * 2, np.uint8)).astype(bool) & ~R
+        ringhi = float((_ring & _bh).sum() / max(1, _ring.sum()))
+        # 線の上と、線から 0.4m ずらした平行線の上で、目の高さの点（細めに 0.08m）の割合を比べる（壁＝線の上だけ高い／散らかり＝どこも同じ）
+        _bn = cv2.dilate((band > 0).astype(np.uint8), np.ones((max(3, int(m2(0.08))),) * 2, np.uint8)).astype(bool)
+        _sh = max(2, int(m2(0.4))); _Rd = R.astype(bool)
+        def _frac_at(k):
+            M_ = np.float32([[1, 0, 0], [0, 1, k]]) if ang <= 8 else np.float32([[1, 0, k], [0, 1, 0]])
+            c_ = cv2.warpAffine(cut, M_, (w, h)).astype(bool) & _Rd
+            return float((c_ & _bn).sum() / max(1, c_.sum())) if c_.sum() > 5 else None
+        _offs = [f for f in (_frac_at(_sh), _frac_at(-_sh)) if f is not None]
+        lincon = float((on & _bn).sum() / max(1, on.sum())) - (float(np.mean(_offs)) if _offs else 0.0)
+        _bl = cv2.dilate((band_lo > 0).astype(np.uint8), np.ones((max(3, int(m2(0.08))),) * 2, np.uint8)).astype(bool)
+        walllo = float((on & _bl).sum() / max(1, on.sum()))   # 腰の高さ（0.5〜1.2m）。鴨居・梁は上だけ、壁は下まで続く
+        if '--dbg' in sys.argv: print('   ringhi', round(ringhi, 2), 'lincon', round(lincon, 2), 'lo', round(walllo, 2))
         parts = R & ~cut.astype(bool)
         n_, l_, st_, _ = cv2.connectedComponentsWithStats(parts.astype(np.uint8), 4)
         big = [j for j in range(1, n_) if st_[j, 4] * px2m2 >= 0.8]
@@ -337,6 +360,16 @@ while _todo2 and _n2 < 200 and '--nolinesplit' not in sys.argv:
         if len(big) < 2: continue
         # 両側とも細すぎない（短辺 0.6m 以上）
         if any(min(st_[j, 2], st_[j, 3]) < m2(0.6) for j in big): continue
+        # 司令塔 11/27（carnival 和室）: 撮影機材・衝立で目の高さに線状の点がある部屋は 3D だけでは壁と見分けられない。
+        # 上（1.9〜2.3m）に壁が無い（3 割未満）か、合わせて 9㎡ 未満（吊り布・衝立で仕切っただけの和室）で、両側が図で同じ色に塗られた同じ部屋（色付き・Lab 差 12 未満。carnival 和室は文字・畳の縁で 9.7）なら割らない
+        if wallhi < 0.3 or sum(st_[j, 4] for j in big) * px2m2 < 9:
+            _lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(float); _hsv_s = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)[:, :, 1]
+            _pm = [(_lab[(l_ == j) & (_l0 == 0)].mean(0), float(_hsv_s[(l_ == j) & (_l0 == 0)].mean())) for j in big]
+            if '--dbg' in sys.argv: print('   colour', [(np.round(q, 0).tolist(), round(sv)) for q, sv in _pm])
+            _glob = np.median(_lab[_l0 == 0].reshape(-1, 3)[::17], 0)   # 図全体の地の色（please-green のように全面同じ色の CAD 図は対象外）
+            if all(sv > 25 for _, sv in _pm) and np.linalg.norm(_pm[0][0] - _glob) > 12 and max(np.linalg.norm(_pm[0][0] - q) for q, _ in _pm[1:]) < 12:
+                if '--dbg' in sys.argv: print('   same-colour room, no high wall -> keep whole'); 
+                continue
         for j in big[1:]: regions[l_ == j] = nxt; _todo2.append(int(nxt)); _wallsplit.add(int(nxt)); nxt += 1
         _wallsplit.add(int(r))
         _todo2.append(r); done_ = True
