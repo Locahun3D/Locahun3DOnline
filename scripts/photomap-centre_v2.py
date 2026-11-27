@@ -468,6 +468,21 @@ def dedupe_rooms(dirs, by_pid):
                 if cv2.pointPolygonTest(poly, (float(b['u']), float(b['v'])), False) < 0: continue
                 da, db = math.hypot(a['u'] - t['u'], a['v'] - t['v']), math.hypot(b['u'] - t['u'], b['v'] - t['v'])
                 drop.add((b['d'], b['e']['id']) if db >= da else (a['d'], a['e']['id']))
+        # 11/28 第10回の審査（ariake 学生ラウンジ 14/15・中庭 2/6・図書館 38/39）: 図に出すと丸と矢印が重なる近さの点（図の幅の 3% 未満）は、
+        # その部屋に他の点が残るときだけ、部屋の真ん中から遠い方を外す（部屋の唯一の点は外さない）
+        cw = max((it[1].get('crop') or [0, 0, 2000, 0])[2] - (it[1].get('crop') or [0, 0, 2000, 0])[0] for it in items)
+        cnt = {}
+        for a in pts: cnt[(a['d'], a['e']['room'])] = cnt.get((a['d'], a['e']['room']), 0) + 1
+        for i, a in enumerate(pts):
+            for j, b in enumerate(pts):
+                if j <= i or (a['d'], a['e']['id']) in drop or (b['d'], b['e']['id']) in drop: continue
+                if math.hypot(a['u'] - b['u'], a['v'] - b['v']) >= 0.03 * cw: continue
+                def far(x):
+                    R = x['room']; t = (R or {}).get('targets') or [{'u': x['u'], 'v': x['v']}]
+                    return min(math.hypot(x['u'] - q['u'], x['v'] - q['v']) for q in t)
+                for x in sorted((a, b), key=far, reverse=True):
+                    k = (x['d'], x['e']['room'])
+                    if cnt.get(k, 0) > 1: drop.add((x['d'], x['e']['id'])); cnt[k] -= 1; break
         for d, reg, c, pr in items:
             keep = [e for e in c['points'] if (d, e['id']) not in drop]
             if len(keep) < len(c['points']):

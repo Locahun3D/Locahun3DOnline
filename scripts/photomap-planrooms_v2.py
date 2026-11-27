@@ -545,6 +545,8 @@ def do_room(R, r, force=False):
             if 0 <= int(nv) < h and 0 <= int(nu) < w and R[int(nv), int(nu)]:
                 # 11/28 第9回の審査（eight-cafe 02 カフェ 点4）: 真ん中の近くの既存地点が図面ではテーブルの天板の上 → 家具の線の中・線から 0.2m 未満の地点は使わない（真ん中に新しく撮る）
                 if furn[int(nv), int(nu)] or obs_d[int(nv), int(nu)] < m2(0.2): continue
+                # 第10回の審査（ariake 中庭・グラウンド: 既存地点が柱・木の幹の至近で正面が塞がれた）: スキャンの物（腰の高さ）から 0.6m 未満の地点も使わない
+                if scan_d[int(nv), int(nu)] < m2(0.6): continue
                 dd = math.hypot(nu - u, nv - v) / ppm
                 if dd <= tol and (best is None or dd < best[1]): best = (nid, dd)
         x, z = c2w(u, v)
