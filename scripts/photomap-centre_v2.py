@@ -324,9 +324,10 @@ def run_dir(d):
         if s.get('pending'): e['pending'] = {k: s['pending'][k] for k in ('id', 'x', 'z', 'yaw')}   # 撮れたらこの点に置き換える
         pts.append(e)
     # 確定した点どうしが近すぎる（別の部屋の点が 1.2m 以内）なら、後の方を外す
-    keep = []
+    keep = []; AREA = {r['id']: r.get('area') or 0 for r in pr['rooms']}
     for e in pts:
-        if all(math.hypot(e['x'] - k['x'], e['z'] - k['z']) >= 1.2 for k in keep): keep.append(e)
+        # 第2回（higashiazabu）: 1.6㎡ の小部屋が隣り合うと 1.2m 以内になり、片方の部屋の点が消えていた → 両方 9㎡ 以上の時だけ 1.2m、小部屋が絡むと 0.6m
+        if all(math.hypot(e['x'] - k['x'], e['z'] - k['z']) >= (1.2 if min(AREA.get(e['room'], 0), AREA.get(k['room'], 0)) >= 9 else 0.6) for k in keep): keep.append(e)
     used = {e['id'] for e in keep if e['kind'] == 'new'}
     for p in at['points']: p['ok'] = p['id'] in used   # R2 に上げるのは使う点だけ
     json.dump(at, open(at_path, 'w', encoding='utf-8'), indent=1)
