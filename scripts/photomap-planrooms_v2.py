@@ -571,15 +571,32 @@ if walls.sum() and thick.sum() / walls.sum() >= 0.3:
         sep = ring & walls
         if sep.sum() and (sep & thickD).sum() >= 0.3 * sep.sum(): continue
         regions[R] = np.bincount(nb).argmax()
+# 手で確かめた「1 部屋なのに割れた」区画（qapla 2F: Bスタジオの中の緑のホリゾントの塗りで 3 つに割れた）: reg.json の merge = [[[u,v],[u,v],...], ...]（図面の画素）ごとに 1 部屋へ
+for grp in reg.get('merge') or []:
+    labs = [int(regions[int(v) - y0, int(u) - x0]) for u, v in grp if 0 <= int(v) - y0 < h and 0 <= int(u) - x0 < w]
+    labs = [l for l in labs if l > 0]
+    for l in labs[1:]: regions[regions == l] = labs[0]
 for r in range(1, regions.max() + 1):
     do_room(regions == r, r)
+# 第6回の審査（meal 倉庫・r1）: 外壁の向こうの小部屋が、窓越しに見えた床の点だけで「スキャンあり」になり、候補の写真が屋外・にじみ → 床の点の密度（1㎡あたり）が
+# 一番よく撮れている部屋の 5% 未満の部屋は中を撮っていない（実測 meal: 撮れている部屋 6,800〜12,000、倉庫 99・r2 141）
+_Ds = cv2.blur(cover, (max(3, int(m2(0.5))),) * 2) * ppm * ppm
+_den = {}
+for rr in rooms:
+    _m = np.zeros((h, w), np.uint8); cv2.fillPoly(_m, [np.array([[q[0] - x0, q[1] - y0] for q in rr['poly']], np.int32)], 1)
+    if _m.any(): _den[rr['id']] = float(np.median(_Ds[_m.astype(bool)]))
+_ref = max(_den.values()) if _den else 0
+for rr in rooms:
+    rr['floorDen'] = round(_den.get(rr['id'], 0))
+    if _ref > 1000 and rr['scanned'] and not rr['nodesIn'] and _den.get(rr['id'], 0) < 0.05 * _ref:
+        rr['scanned'] = False; rr['thinFloor'] = True
 # inside に多角形を書いたシーン（屋外の広場など、図面で部屋に閉じていない所）で部屋が 1 つも取れないとき: 多角形の中の床を 1 つの部屋にする
 if isinstance(ins, list) and not any(rr['scanned'] for rr in rooms):
     lab_force = int(regions.max()) + 1; regions[inside & free_r] = lab_force
     do_room(regions == lab_force, lab_force, force=True)
 
 out = {'v': 1, 'reg': regname, 'blueprint': reg['blueprint'], 'crop': [x0, y0, x1, y1], 'ppm': round(ppm, 3), 'floor0': floor0, 'key': td.get('key'), 'scene': td.get('scene'),
-       'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void') and not r.get('noWall') and not r.get('hatched')], 'noWall': [r['id'] for r in rooms if r.get('noWall') and not r.get('void')], 'hatched': [r['id'] for r in rooms if r.get('hatched') and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
+       'eye': None, 'rooms': rooms, 'unscanned': [r['id'] for r in rooms if not r['scanned'] and not r.get('void') and not r.get('noWall') and not r.get('hatched') and not r.get('thinFloor')], 'thinFloor': [r['id'] for r in rooms if r.get('thinFloor')], 'noWall': [r['id'] for r in rooms if r.get('noWall') and not r.get('void')], 'hatched': [r['id'] for r in rooms if r.get('hatched') and not r.get('void')], 'voids': [r['id'] for r in rooms if r.get('void')], 'markers': [[x + x0, y + y0] for x, y in markers]}
 OUTN = opt('out', 'planrooms')
 json.dump(out, open(f'{d}/{OUTN}.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1, default=lambda o: o.item() if hasattr(o, 'item') else str(o))
 

@@ -4,152 +4,6 @@
 <head>
 <meta charset="UTF-8">
 <script src="/viewer/rad-chunk-cache.js"></script><!-- 3Dデータを端末に保存（2026-10-17）。戻すときはこの行を消す -->
-<script>
-// ══════════════════════════════════════════════════
-//  START PANO — 最初の静止画（<head> で一番先に動く小さな script。2026-11-19）
-//  本人「この360画像と3DGSの移行の仕組みをロケハン3Dでも」（内見版 naiken の ?poster= と同じ考え方）。
-//  ビューアーの HTML と JS は大きく、スマホでは読み終えて動き出すまで数秒かかる。その間に、シーンの開始位置の 360° 画像
-//  （292b と同じ /api/pano/<key>-{f,r,b,l,u,d}.jpg）から、開始位置の見え方を 2D の canvas に描いて全面に出しておく。画角はビューアーの標準と同じ。
-//  292b が同じ画像を 3D の上にかぶせた時点で、これを一瞬で外す（同じ絵なので切り替わりは見えない）。
-//  キーの計算（中身の識別子 → sha256）は 292b と同じ。結果を window.__startPanoEarly に渡し、292b はもう一度計算しない。
-//  弱い端末・遅い回線の見分け（軽量表示）もここで先に行う（window.__l3dLite。3D を読み始める前に分かるもの）。
-//  ?nopano=1 で使わない。?lite=1 で必ず軽量表示、?lite=0 で使わない。
-// ══════════════════════════════════════════════════
-(function(){
-  var q = location.search, d = document.documentElement;
-  var m = /[?&]autoload=([^&]+)/.exec(q);
-  if(!m || /[?&]nopano=1/.test(q)) return;
-  // ── 軽量表示の先読み判定: ソフトウェア描画（GPU なし）・データセーバー・2G 表示 ──
-  var lite = null;
-  if(/[?&]lite=1/.test(q)) lite = 'url';
-  else if(!/[?&]lite=0/.test(q)){
-    try {
-      var gc = document.createElement('canvas').getContext('webgl');
-      if(!gc) lite = 'gpu';
-      else {
-        var ge = gc.getExtension('WEBGL_debug_renderer_info'), gr = ge ? String(gc.getParameter(ge.UNMASKED_RENDERER_WEBGL)) : '';
-        if(/swiftshader|llvmpipe|softpipe|basic render|software/i.test(gr)) lite = 'gpu';
-        var lc = gc.getExtension('WEBGL_lose_context'); if(lc) lc.loseContext();
-      }
-    } catch(e){}
-    if(!lite){ var cn = navigator.connection; if(cn && (cn.saveData || /2g/.test(cn.effectiveType || ''))) lite = 'net'; }
-  }
-  if(lite) window.__l3dLite = lite;
-
-  var url = decodeURIComponent(m[1]);
-  // 292 の autoload と同じ読み替え（オンライン版の ?protected=1 では /api/viewer-stream/ を通す）
-  if(/[?&]protected=1/.test(q) && !/^https?:\/\//.test(url) && url.indexOf('blob:') !== 0)
-    url = '/api/viewer-stream/' + url.replace(/^\/+/, '').replace(/^api\/(r2|viewer-stream)\//, '');
-  if(url.indexOf('blob:') === 0) return;
-  // 物件ページ・共有・埋め込みは autoload に署名付きの R2 の URL（別オリジン）を渡す。中身の識別子は同じ ZIP のサイト内 URL（?streamref= の ?ref= を外したもの）で取る（2026-11-23）
-  if(/^https?:\/\//.test(url) && new URL(url).origin !== location.origin){ var sr = /[?&]streamref=([^&]+)/.exec(q); if(sr){ var su = decodeURIComponent(sr[1]).replace(/\?.*$/, ''); if(/^\/api\/viewer-stream\//.test(su)) url = su; } }
-  // ?streamref= が無い（シーンに配信用 URL が無い。秋葉原など）ときは、署名付き URL の R2 のキー（/<バケット>/assets/...）からサイト内の URL を作る。
-  // ログイン中に物件ページから開くとこの形になり、2D が出なかった（2026-11-23 本人のPC）
-  if(/^https?:\/\//.test(url)){ try { var ru = new URL(url); if(ru.origin !== location.origin && /\.r2\.cloudflarestorage\.com$/.test(ru.hostname)){ var rk = ru.pathname.split('/').slice(2).join('/'); if(/^assets\//.test(decodeURIComponent(rk))) url = '/api/viewer-stream/' + rk; } } catch(e){} }
-
-  function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  async function identity(){
-    var res = await fetch(url, { method: 'HEAD', credentials: 'same-origin', cache: 'no-cache' });
-    var etag = res.headers.get('etag') || '', len = res.headers.get('content-length') || res.headers.get('x-content-length') || '';
-    if(!res.ok) return null;
-    var asset = new URL(url, location.href);
-    if(asset.origin !== location.origin || !/^\d+$/.test(len)) return null;
-    var mm = /^"l3d-content-([A-Za-z0-9_-]{8,200})"$/.exec(etag);
-    if(mm) return 'content:' + mm[1] + ':' + len;
-    var r2 = /^"([A-Za-z0-9_-]{8,200})"$/.exec(etag);
-    return r2 ? 'etag:' + r2[1] + ':' + len : null;
-  }
-  async function sha256hex(s){
-    var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-    return Array.prototype.map.call(new Uint8Array(b), function(n){ return n.toString(16).padStart(2, '0'); }).join('');
-  }
-  var FACES = ['f', 'r', 'b', 'l', 'u', 'd'];
-
-  // 結果: { key, meta } または null（画像が無い・確かめられない）
-  window.__startPanoEarly = (async function(){
-    var id = null;
-    // 開いた直後の 1 回目はサイトの認証の受け渡しなどで中身の応答にならないことがあるので、少し待って 3 回まで試す（292b と同じ）
-    for(var i = 0; i < 3 && !id; i++){ if(i) await wait(700 * i); try { id = await identity(); } catch(e){ id = null; } }
-    if(!id) return null;
-    var key = await sha256hex('l3d-pano-v1:' + id);
-    var r = await fetch('/api/pano/' + key + '.json', { cache: 'no-cache' });
-    if(!r.ok) return { key: key, meta: null };
-    var meta = await r.json();
-    if(!meta || meta.v !== 1 || !meta.pos || ![meta.pos.x, meta.pos.y, meta.pos.z, meta.yaw].every(Number.isFinite)) return { key: key, meta: null };
-    return { key: key, meta: meta };
-  })().catch(function(){ return null; });
-
-  // ── 最初の静止画（6 枚から開始位置の見え方を 2D の canvas に描く）──
-  // CSS の 3D（立方体）は WebKit で面の裏表・奥行きが崩れた（iPhone 相当で裏返しの面が小さく映った。2026-11-19）ので、
-  // 画面の画素ごとに視線の向きを求めて 6 面の画像から色を拾う。カメラの向きは開始位置と同じ（正面 = f の面、上下は meta.pitch）。
-  // 面の向き（見る人の右 = +x、上 = +y、正面 = +z として）: f +z / r +x / l -x / b -z / u +y / d -y（292b の build と同じ並び）。
-  var FACE_AXES = {   // [正面, 右, 上]
-    f: [[0, 0, 1], [1, 0, 0], [0, 1, 0]],   r: [[1, 0, 0], [0, 0, -1], [0, 1, 0]],
-    l: [[-1, 0, 0], [0, 0, 1], [0, 1, 0]],  b: [[0, 0, -1], [-1, 0, 0], [0, 1, 0]],
-    u: [[0, 1, 0], [1, 0, 0], [0, 0, -1]],  d: [[0, -1, 0], [1, 0, 0], [0, 0, 1]]
-  };
-  window.__startPanoEarly.then(function(res){
-    if(!res || !res.meta) return;
-    var imgs = {}, left = FACES.length, failed = false;
-    FACES.forEach(function(f){
-      var img = new Image();
-      img.onload = function(){ imgs[f] = img; if(--left === 0 && !failed) show(res, imgs); };
-      img.onerror = function(){ failed = true; };
-      img.src = '/api/pano/' + res.key + (res.meta.r > 1 ? '-r' + res.meta.r : '') + '-' + f + '.jpg';   // 撮り直した画像は名前が -r<N>（1 年キャッシュのため。2026-11-21）
-    });
-  });
-  function show(res, imgs){
-    if(window.__startPanoPosterOff) return;   // 292b がもう 3D の上に画像を出した・やめた
-    var go = function(){
-      if(window.__startPanoPosterOff || document.getElementById('sp-poster')) return;
-      var S = 512, px = {};
-      try {
-        var tc = document.createElement('canvas'); tc.width = tc.height = S; var tx = tc.getContext('2d', { willReadFrequently: true });
-        FACES.forEach(function(f){ tx.drawImage(imgs[f], 0, 0, S, S); px[f] = tx.getImageData(0, 0, S, S).data; });
-      } catch(e){ return; }
-      var pitch = Number.isFinite(res.meta.pitch) ? res.meta.pitch : 0, cp = Math.cos(pitch), sp = Math.sin(pitch);
-      var root = document.createElement('canvas'); root.id = 'sp-poster'; root.setAttribute('aria-hidden', 'true');
-      function draw(){
-        var W = innerWidth, H = innerHeight, dpr = Math.min(1.5, window.devicePixelRatio || 1);
-        var cw = Math.max(1, Math.round(W * dpr)), ch = Math.max(1, Math.round(H * dpr));
-        root.width = cw; root.height = ch;
-        // ビューアーの標準の画角（020 の _autoFovFor と同じ。縦 90〜110°）
-        var v = Math.round(Math.min(110, Math.max(90, 2 * Math.atan(1 / Math.max(.2, W / Math.max(1, H))) * 180 / Math.PI)));
-        var fp = ch / 2 / Math.tan(v * Math.PI / 360);
-        var ctx = root.getContext('2d'), out = ctx.createImageData(cw, ch), o = out.data, k = 0;
-        for(var y = 0; y < ch; y++){
-          var cy = -(y + 0.5 - ch / 2) / fp;
-          for(var x = 0; x < cw; x++, k += 4){
-            var cx = (x + 0.5 - cw / 2) / fp;
-            // 上下の向き（pitch）だけ回す: 正面 (0, sin p, cos p)
-            var dx = cx, dy = cy * cp + sp, dz = -cy * sp + cp;
-            var ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy, az = dz < 0 ? -dz : dz, f;
-            if(ax >= ay && ax >= az) f = dx > 0 ? 'r' : 'l'; else if(ay >= az) f = dy > 0 ? 'u' : 'd'; else f = dz > 0 ? 'f' : 'b';
-            var A = FACE_AXES[f], fw = dx * A[0][0] + dy * A[0][1] + dz * A[0][2];
-            var u = (dx * A[1][0] + dy * A[1][1] + dz * A[1][2]) / fw, w = (dx * A[2][0] + dy * A[2][1] + dz * A[2][2]) / fw;
-            var ix = Math.min(S - 1, Math.max(0, ((u + 1) / 2 * S) | 0)), iy = Math.min(S - 1, Math.max(0, ((1 - w) / 2 * S) | 0));
-            var q = (iy * S + ix) * 4, P = px[f];
-            o[k] = P[q]; o[k + 1] = P[q + 1]; o[k + 2] = P[q + 2]; o[k + 3] = 255;
-          }
-        }
-        ctx.putImageData(out, 0, 0);
-      }
-      draw();
-      var rt = null; function onResize(){ clearTimeout(rt); rt = setTimeout(draw, 120); }
-      addEventListener('resize', onResize);
-      document.body.appendChild(root);
-      d.classList.add('sp-poster');
-      window.__startPanoPoster = { remove: function(fade){
-        removeEventListener('resize', onResize); d.classList.remove('sp-poster');
-        if(!fade){ root.remove(); return; }
-        root.style.transition = 'opacity .35s'; root.style.opacity = '0'; setTimeout(function(){ root.remove(); }, 400);
-      } };
-    };
-    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go);
-  }
-})();
-</script>
-<style>#sp-poster{position:fixed;inset:0;width:100vw;height:100vh;z-index:1;pointer-events:none;background:#000}html.sp-poster #ld,html.sp-poster #dz{display:none!important}</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ロケハン3D</title>
 <!-- Favicon / SEO: 実ファイル参照（Google検索はdata-URIを無視するため /favicon.* を配信） -->
@@ -641,8 +495,6 @@ body.demo-mode #em-save-zip { display:none !important; }
   background:rgba(22,22,24,.98);z-index:200;
 }
 #ld.hidden{display:none;}
-/* 開始位置の 360° 画像（292b）を出している間は読み込み画面を出さない（画像の裏で 3D を読む） */
-body.start-pano #ld,body.start-pano #dropzone,body.start-pano #dz{display:none!important;}
 #ld .lt{font-size:1.05em;color:#C0C0C0;letter-spacing:.04em;font-weight:300;}
 #ld .lt.ld-guide{display:grid;gap:7px;width:min(420px,calc(100vw - 48px));font-size:.92em;margin-bottom:6px;}
 #ld .lt.ld-guide>div{display:grid;grid-template-columns:7.5em 1fr;gap:12px;align-items:baseline;text-align:left;}
@@ -872,29 +724,6 @@ body.cam-active #view-tl-btns{
 #dz .dz-guide .k{color:#ffb454;font-size:.74em;letter-spacing:.08em;white-space:nowrap;}
 #dz .dz-guide .v{color:#d8d8d8;font-size:.86em;line-height:1.5;}
 @media (max-width:600px){#dz .dz-guide{padding:10px 12px;} #dz .dz-guide>div{grid-template-columns:5.5em 1fr;}}
-/* 360° 写真ツアー（292b。3D を読み終わるまで・軽量表示）: 床の丸と軽量表示の案内（内見版 naiken と同じ見た目） */
-.sp-spot{display:none;position:fixed;left:0;top:0;width:64px;height:64px;margin:-32px 0 0 -32px;padding:0;border-radius:50%;
-  border:3px solid rgba(255,255,255,.92);background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(0,0,0,.25),0 2px 10px rgba(0,0,0,.35);
-  z-index:40;cursor:pointer;-webkit-tap-highlight-color:transparent;transform-origin:50% 50%}
-.sp-spot:hover,.sp-spot.hot{background:rgba(255,255,255,.42);border-color:#fff}
-#sp-cursor{display:none;position:fixed;left:0;top:0;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;pointer-events:none;z-index:39;
-  border:2px solid rgba(255,255,255,.85);background:rgba(255,255,255,.12);box-shadow:0 0 0 1px rgba(0,0,0,.25);transform:scaleY(.45)}
-/* 進む矢印（内見版 naiken の #nk-go と同じ見た目・動き。2026-11-24 本人「2D画面からうごけなくない？ ヒルトンのページと一致するまで」）。
-   押すと矢印の少し先の床へ移る（2D は向きの先の地点へ、3D は床へ歩く）。下のボタン列の上に置く（bottom は JS で合わせる） */
-#sp-go{position:fixed;left:50%;bottom:76px;z-index:60;width:clamp(84px,9vw,128px);height:clamp(56px,6vw,84px);margin-left:calc(clamp(84px,9vw,128px) / -2);padding:0;
-  border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transform:perspective(160px) rotateX(38deg);animation:sp-go 1.8s ease-in-out infinite}
-#sp-go svg{width:100%;height:100%;fill:none;stroke:#fff;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
-#sp-go:hover svg,#sp-go:focus-visible svg{stroke-width:7}
-#sp-go:focus,#sp-go:focus-visible{outline:none!important;box-shadow:none!important}
-#sp-noway{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;padding:8px 16px;border-radius:999px;background:rgba(0,0,0,.72);color:#fff;font-size:13px;line-height:1.5;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:calc(100vw - 32px)}
-#sp-noway.on{opacity:1}
-#sp-go.busy{opacity:.35;animation:none}
-@keyframes sp-go{0%,100%{translate:0 0;opacity:.75}50%{translate:0 -8px;opacity:1}}
-@media (prefers-reduced-motion:reduce){#sp-go{animation:none;opacity:.9}}
-.sp-lite-chip{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;gap:10px;align-items:center;
-  padding:6px 6px 6px 14px;border-radius:999px;background:rgba(12,12,13,.82);color:#fafaf6;font:500 13px/1.4 "Noto Sans JP",sans-serif;letter-spacing:.04em;white-space:nowrap;
-  box-shadow:0 2px 12px rgba(0,0,0,.4)}
-.sp-lite-chip button{border:0;border-radius:999px;padding:6px 12px;background:#ffb454;color:#000;font:600 13px/1.2 "Noto Sans JP",sans-serif;cursor:pointer}
 /* ══════ LAYER PANEL ══════ */
 #layer-panel{
   position:fixed;left:0;top:var(--v1-header-bottom,45px);bottom:0;width:285px;
@@ -3167,7 +2996,7 @@ html.vv-shell #c{height:100%!important;width:100%!important;}
 globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs","bytes":2857590,"sha256":"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0"});
 </script>
 <script>window.MIXAMO_GLB_ASSET={"version":1,"url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","bytes":344884};</script>
-<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7236988,"fatSha256":"1128e0ec2ce440358ed6b3b7f235861be880bb4a7929c369d38e031a7ad7f404","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
+<script id="locahun-slim-assets">window.__locahunSlimAssets={"version":1,"fatBytes":7165223,"fatSha256":"eb4eaa3327865919e525bb3e22d814b0e4c4ddad815a25c9a7dd886c44287ff4","entries":[{"id":"rapier","url":"/viewer/figures/rapier-embedded-v1-2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2.mjs","bytes":2857555,"sha256":"2100163191766c48f8dac314df5a067ae0141094ba16e4361b0b7945271a2eb2","encoding":"base64","before":"window.WALK_RAPIER_B64 = \"","after":"\";","slim":"globalThis.WALK_RAPIER_ASSET = Object.freeze({\"url\":\"/vendor/rapier-0.20.0-09a000bee2ad8276.mjs\",\"bytes\":2857590,\"sha256\":\"09a000bee2ad827608780cf8821258cadc243aaeb8881ab3e769de73f945eee0\"});"},{"id":"equipment","url":"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json","bytes":1083844,"sha256":"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3","encoding":"text","before":"\u003cscript type=\"application/json\" id=\"equipment-assets\">","after":"\u003c/script>","slim":"\u003cscript type=\"application/json\" id=\"equipment-assets\">{\"version\":1,\"url\":\"/viewer/figures/equipment-models-v1-a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3.json\",\"sha256\":\"a8de344c5503b5d79f7b0d06f6f00c53bb366993f95428426b04a955d3bacad3\",\"bytes\":1083844}\u003c/script>"},{"id":"mixamo","url":"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb","bytes":344884,"sha256":"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6","encoding":"base64","before":"\u003cscript>window.MIXAMO_GLB_B64=\"","after":"\";\u003c/script>","slim":"\u003cscript>window.MIXAMO_GLB_ASSET={\"version\":1,\"url\":\"/viewer/figures/mixamo-model-v1-0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6.glb\",\"sha256\":\"0a557402f6f9411c708d49b428f2e22f443861be8602b53d650b4aba6d2c03d6\",\"bytes\":344884};\u003c/script>"}]}</script>
 <!-- MIXAMO_GLB_END -->
 <script type="importmap">
 {
@@ -3201,7 +3030,7 @@ globalThis.WALK_RAPIER_ASSET = Object.freeze({"url":"/vendor/rapier-0.20.0-09a00
      the HTML. -->
 
 <script>
-window.__locahunBuildRelease="098ef2b5f7a83cc58e60f6ce694c3398cc4f85f5601df53927f91a7e6a31e0fd";
+window.__locahunBuildRelease="c701ba264d84ede99fac2bac229d0cd2f8619ad26d676de4ab137ab869c42bb1";
 (function(root) {
   'use strict';
   const ORIGIN='https://viewer.locahun3d.com';
@@ -3402,7 +3231,7 @@ let joyDX = 0, joyDY = 0;
 // fly-camera compositor adds them like keyboard Q/E.
 let touchUpHeld = false, touchDnHeld = false;
 let _jvUpPtrId = -1, _jvDnPtrId = -1;
-let dragOn = false, dragX = 0, dragY = 0, _dragDead = -1;
+let dragOn = false, dragX = 0, dragY = 0;
 let _clickStartX = 0, _clickStartY = 0;
 
 // ── Click-to-select: raycast against all layer meshes ──
@@ -11675,7 +11504,8 @@ function _acToast(msg, level){
   }, 4200);
 }
 
-// 🎯 ボタン(画質パネル最下部)の入口。結果（信頼度・要確認）は Promise で返す
+// 🎯 ボタン(画質パネル最下部)の入口。UI からは戻り値を使わないが、?autoinit=1 のバッチ経路は
+// 結果（信頼度・要確認）を必要とするので Promise で返す。
 window.autoPlaceInitialView = async function(){
   const en = window._lang === 'en';
   if(typeof layers === 'undefined' || !layers.some(L=>L && L.type==='splat' && L.mesh)){
@@ -14500,7 +14330,7 @@ async function _wholeSourceIdentity(layer,job){
     }
     _walkCheckJob(job);
     if(response?.status===401||response?.status===403)throw new Error(_walkL('判定用データの閲覧権限を確認できません。','Could not verify access to the collision source data.'));
-    const etag=response?.headers.get('etag'),length=response?.headers.get('content-length')||response?.headers.get('x-content-length');
+    const etag=response?.headers.get('etag'),length=response?.headers.get('content-length');
     if(response?.ok&&etag&&!etag.startsWith('W/')&&/^\d+$/.test(length||''))identity=_wholeContentIdentity(url,etag,length,globalThis.location?.href)||_wholeLocalDigestIdentity(url,etag)||'etag:'+await _wholeHash(new TextEncoder().encode(_wholeCanonicalSourceUrl(url)))+':'+etag+':'+length;
     else{
       if(_wholeCacheOnly(job))throw _wholeDeferred();
@@ -20607,12 +20437,6 @@ setTimeout(async ()=>{
     // blob: URL is auto-loaded (no extension to sniff), this supplies a
     // filename so format detection still works.
     const an = location.search.match(/[?&]autoname=([^&]+)/);
-    // 軽量表示（GPU なし・遅い回線と先に分かった端末。src/head/start_pano_early.js）で 360° 画像があるシーンは、
-    // 3D を読まずに写真ツアーだけにする（292b。2026-11-19 本人「弱い端末は写真ツアーのまま」）。画像が無ければ今までどおり 3D を読む。
-    if(window.__l3dLite && window.__startPanoEarly){
-      const pr = await Promise.race([window.__startPanoEarly, new Promise(r => setTimeout(() => r(null), 8000))]);
-      if(pr && pr.meta){ if(typeof hideDZ === 'function') hideDZ(); window.__l3dLiteSkipped3D = true; return; }
-    }
     await loadFromURL(autoUrl, an ? decodeURIComponent(an[1]) : undefined);
     }
   } else if(dm && DEMO_SCENE_URL){
@@ -21461,607 +21285,6 @@ function updateLightHalos(){
       return;
     }
   }, 100);
-})();
-// ══════════════════════════════════════════════════
-//  START PANO — 開始位置の 360° 画像と、3D を読み終わるまでの 360° 写真ツアー
-//  オンライン版の物件シーンを開いた直後、開始位置から撮った 360° 画像（6 方向・各 90°）を 3D の上にかぶせる。
-//  その場で見回している間は画像のまま（裏で 3D を読み続ける）、位置が動いたら（歩く・移動・ツアー・AR など）
-//  画像を消して 3D に切り替える（2026-11-10 本人「この静止画を最初に挟むの、locahunでも採用」。内見版 naiken.js と同じ考え方）。
-//
-//  2026-11-19 本人「この360画像と3DGSの移行の仕組みをロケハン3Dでも同じ仕組みで」→ 内見版の次の 3 つも入れた:
-//   ① 最初の静止画: src/head/start_pano_early.js が <head> で同じ画像から開始位置の見え方を canvas に先に描く。ここで 3D の上に画像を出したら外す。
-//   ② 3D を読み終わるまでは 360° 写真ツアー（2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」で標準）。
-//      ツアー: 動線グラフ（<key>.graph.json、scripts/tour-graph.mjs）の地点の画像の間を、
-//      床の丸・画面のタップ・↑キーで移って見て回れる。読み込みが落ち着いたら、今いる地点のまま 3D に切り替える。
-//      床の当たり判定ができるまでは、丸とタップで地点へ（3D のまま）移る。できたら普通の「床をタップして移動」に戻す。
-//   ③ 軽量表示: GPU の無い・弱い端末（先読み判定、または画面の動きが毎秒 12 コマ未満）、遅い回線（3D の届き方が毎秒 150KB 未満）では
-//      3D を捨てて写真ツアーを続ける。画面下の「3D で見る」で 3D に戻せる（?lite=0 で開き直す）。
-//
-//  画像はサイトの /api/pano/<key>.json・<key>-{f,r,b,l,u,d}.jpg（開始位置）、<key>.graph.json・<key>-g<set>-n<N>-{面}.jpg（ツアーの地点）。
-//  無ければ 404 で何もしない（graph.json が無いシーンは開始位置の 1 枚だけ）。
-//  2026-11-25 整理: 以前の地点の一覧（<key>.points.json、最大 24 地点）と、それを選ぶ pickPoints() は消した（本番 99 シーンすべて graph.json）。
-//  key = sha256('l3d-pano-v1:' + 中身の識別子)。中身の識別子は autoload の配信応答の ETag と長さ
-//  （?ref=stream の RAD は "l3d-content-…" → 'content:<id>:<長さ>'、ZIP は R2 の ETag → 'etag:<etag>:<長さ>'）。シーン（ZIP）を作り直すと ETag が変わるので、古い画像は使われない。
-//  画像はオンライン版の scripts/bake-pano.mjs が公開シーンを実ブラウザで開いて作る（このファイルの __startPano.key を使う）。
-//  ?nopano=1 で使わない（撮影時・比較用）。?lite=1 / ?lite=0 で軽量表示を固定。
-(function(){
-  const qs = location.search;
-  const st = { key: null, state: 'off', why: '', points: [], tour: null };
-  window.__startPano = st;
-  const posterOff = (fade) => { window.__startPanoPosterOff = true; if(window.__startPanoPoster) window.__startPanoPoster.remove(fade); };
-  const m = /[?&]autoload=([^&]+)/.exec(qs);
-  if(!m || /[?&]nopano=1/.test(qs)){ posterOff(false); return; }
-  let url = decodeURIComponent(m[1]);
-  // 292 の autoload と同じ読み替え（オンライン版の ?protected=1 では /api/viewer-stream/ を通す）
-  if(typeof _protected !== 'undefined' && _protected && !/^https?:\/\//.test(url) && !url.startsWith('blob:')){
-    url = '/api/viewer-stream/' + url.replace(/^\/+/, '').replace(/^api\/(r2|viewer-stream)\//, '');
-  }
-  if(url.startsWith('blob:')){ posterOff(false); return; }
-  // 物件ページ・共有・埋め込みは autoload に署名付きの R2 の URL（別オリジン）を渡すので、中身の識別子は ?streamref= のサイト内 URL（?ref= を外す）で取る（<head> の先読みと同じ。2026-11-23）
-  if(/^https?:\/\//.test(url) && new URL(url).origin !== location.origin){ const sr = /[?&]streamref=([^&]+)/.exec(qs); if(sr){ const su = decodeURIComponent(sr[1]).replace(/\?.*$/, ''); if(/^\/api\/viewer-stream\//.test(su)) url = su; } }
-  // ?streamref= が無いときは署名付き URL の R2 のキーからサイト内の URL を作る（<head> の先読みと同じ。2026-11-23）
-  if(/^https?:\/\//.test(url)){ try { const ru = new URL(url); if(ru.origin !== location.origin && /\.r2\.cloudflarestorage\.com$/.test(ru.hostname)){ const rk = ru.pathname.split('/').slice(2).join('/'); if(/^assets\//.test(decodeURIComponent(rk))) url = '/api/viewer-stream/' + rk; } } catch(e){} }
-  const FACES = { f: [0, 0], r: [-Math.PI / 2, 0], b: [Math.PI, 0], l: [Math.PI / 2, 0], u: [0, Math.PI / 2], d: [0, -Math.PI / 2] };
-  let group = null, at = null, tex = [], gone = false, sceneSeen = false;
-
-  async function identity(){
-    const res = await fetch(url, { method: 'HEAD', credentials: 'same-origin', cache: 'no-cache' });
-    const etag = res.headers.get('etag') || '', len = res.headers.get('content-length') || res.headers.get('x-content-length') || '';
-    st.head = { url, status: res.status, etag, len };   // 診断用（キーが出ないときに見る）
-    if(!res.ok) return null;
-    const page = new URL(location.href), asset = new URL(url, page);
-    if(asset.origin !== page.origin || !/^\d+$/.test(len)) return null;
-    // ?ref=stream の RAD は中身の ETag、ZIP そのもの（物件ページの autoload）は R2 の強い ETag（サイトは同じ値をサーバー側でも計算できる）
-    const mm = /^"l3d-content-([A-Za-z0-9_-]{8,200})"$/.exec(etag);
-    if(mm) return 'content:' + mm[1] + ':' + len;
-    const r2 = /^"([A-Za-z0-9_-]{8,200})"$/.exec(etag);
-    return r2 ? 'etag:' + r2[1] + ':' + len : null;
-  }
-  async function sha256hex(s){
-    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-    return [...new Uint8Array(b)].map(n => n.toString(16).padStart(2, '0')).join('');
-  }
-  function loadTex(src){
-    return new Promise((ok, ng) => new THREE.TextureLoader().load(src, t => { t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; ok(t); }, undefined, ng));
-  }
-  // small = 動線グラフの地点の小さい画像（640px、<面>.s.jpg）。軽量表示（遅い回線・弱い端末）で使う
-  const loadFaces = (prefix, small) => Promise.all(Object.keys(FACES).map(k => loadTex('/api/pano/' + prefix + '-' + k + (small ? '.s.jpg' : '.jpg'))));
-  function build(pos, yaw0, maps){
-    const g = new THREE.Group(); g.position.set(pos.x, pos.y, pos.z);
-    // 画像の箱は描く直前に必ずカメラの位置へ合わせる（off = カメラからのずれ。移る途中の動きだけに使う）。
-    // 読み込み側がカメラを置き直した 1 コマや、カメラがなめらかに追う間に、箱の外（灰色）が見えた（2026-11-23 iPad で開いた直後に 1 コマ）。
-    // three.js は onBeforeRender のあとで位置の行列を使うので、ここで合わせればその回の描画に間に合う
-    g.userData.off = new THREE.Vector3();
-    const follow = (r, sc, cam) => { if(!cam || !cam.isCamera) return; g.position.copy(cam.position).add(g.userData.off); g.updateMatrixWorld(true); };
-    Object.keys(FACES).forEach((k, i) => {
-      const [dy, p] = FACES[k];
-      const pivot = new THREE.Object3D(); pivot.rotation.set(p, yaw0 + dy + Math.PI, 0, 'YXZ');
-      const mat = new THREE.MeshBasicMaterial({ map: maps[i], depthTest: false, depthWrite: false, transparent: true, toneMapped: false, side: THREE.DoubleSide });
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.004, 2.004), mat);
-      mesh.position.set(0, 0, -1); mesh.renderOrder = 1e6; mesh.frustumCulled = false; mesh.onBeforeRender = follow;
-      pivot.add(mesh); g.add(pivot);
-    });
-    return g;
-  }
-  const disposeGroup = (g) => { scene.remove(g); g.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); }); };
-  function remove(why){
-    if(gone) return; gone = true; st.state = 'removed'; st.why = why;
-    document.body.classList.remove('start-pano');
-    posterOff(true);
-    tour.stop();
-    if(!group) return;
-    const g = group, t0 = performance.now();
-    const step = () => {
-      const a = Math.max(0, 1 - (performance.now() - t0) / 350);
-      g.traverse(o => { if(o.material) o.material.opacity = a; });
-      if(typeof markDirty === 'function') markDirty(4);
-      if(a > 0) return requestAnimationFrame(step);
-      disposeGroup(g); tex.forEach(t => t.dispose()); group = null;
-      for(const p of Object.values(tour.cache)) p.then(ts => ts.forEach(t => t.dispose())).catch(() => {});
-    };
-    requestAnimationFrame(step);
-  }
-  const moved = () => {
-    if(typeof walkMode !== 'undefined' && walkMode.active) return 'walk';
-    if(typeof arMode !== 'undefined' && arMode.active) return 'ar';
-    if(document.body.classList.contains('orbit-preview')) return 'orbit';
-    if(camPos.distanceTo(at) > 0.03) return 'move';
-    return '';
-  };
-  const walkReady = () => typeof walkSetup !== 'undefined' && !!(walkSetup.core && !walkSetup.importPending);
-  const has3d = () => typeof layers !== 'undefined' && layers.some(L => L && L.type === 'splat' && L.mesh);
-
-  // ── 写真ツアー（3D を読み終わるまで・軽量表示）──
-  const tour = (() => {
-    const T = { pre: false, lite: false, bridge: false, why: '', cur: 'start', busy: false, spots: [], navOrig: null, cache: {}, chip: null };
-    st.tour = T;
-    const pts = () => st.points;
-    // 画像は 1 地点で 通常 約 970KB（1536px×6）/ 小 約 230KB（640px×6）。地点を詰めた（1.4m おき・最大 320 か所）ので、
-    // 先読みは小さい画像だけ、移った先は小さい画像ですぐ出して通常の画像に差し替える（2026-11-23 本人「画像だけでとても重いのでは」）
-    const facesOf = (p, small = !!(p.img && T.lite)) => { const sm = !!(p.img && small); return T.cache[p.id + (sm ? 's' : '')] ||= loadFaces(p.img || (st.key + '-' + p.id), sm); };
-    const prefetch = (list) => { for(const q of list.slice(0, 8)) facesOf(q, true).catch(() => {}); };
-    // 移れる先: 動線グラフ（<key>.graph.json、2026-11-21）の、今の地点とつながった地点＋見える地点
-    const byId = (id) => id === 'start' ? st.startNode : pts().find(q => q.id === id);
-    const cands = () => {
-      if(!st.graph) return [];
-      const c = byId(T.cur); if(!c) return [];
-      const ids = new Set([...(c.nb || []), ...(c.see || [])]);
-      return [...pts(), st.startNode].filter(q => q && q.id !== T.cur && ids.has(q.id));
-    };
-    const near = () => cands().filter(q => q.id !== 'start' && (byId(T.cur)?.nb || []).includes(q.id));
-    function hookNav(withFallback){
-      if(typeof _clickNavigateAt !== 'function') return;
-      T.navOrig ||= _clickNavigateAt;
-      const orig = T.navOrig;
-      _clickNavigateAt = withFallback
-        ? (x, y, preview, ...r) => preview ? orig(x, y, preview, ...r) : (tapAt(x, y) || orig(x, y, preview, ...r))
-        : (x, y, preview) => preview ? false : (tapAt(x, y) || noWay(x, y));
-    }
-    // 2D で行ける地点が無い（動線グラフ未作成・その向きに地点なし）とき、黙って何もしないと「動けない」に見える（2026-11-25 本人
-    //   「２Dイメージから進めないが？？」シェアキッチンは動線グラフが無かった）。案内を出し、3D に切り替わった直後にその向きへ 1 回進む
-    function noWay(x, y){
-      if(!(T.pre || T.lite)) return false;
-      const en = typeof _lang !== 'undefined' && _lang === 'en';
-      T.pendingFwd = { x, y, at: performance.now() };
-      let c = document.getElementById('sp-noway');
-      if(!c){ c = document.createElement('div'); c.id = 'sp-noway'; document.body.append(c); }
-      c.textContent = T.lite ? (en ? 'No more points this way. Drag to look around.' : 'この向きには進めません。ドラッグで見回せます')
-                             : (en ? 'Loading 3D… you will move as soon as it is ready' : '3D を読み込み中です。読み込めたらすぐ進みます');
-      c.classList.add('on'); clearTimeout(T.nowayT); T.nowayT = setTimeout(() => c.classList.remove('on'), 2600);
-      return true;
-    }
-    function unhookNav(){ if(T.navOrig){ _clickNavigateAt = T.navOrig; T.navOrig = null; } }
-    // 押して離したとき（pointerup）に移る。タッチではビューアーの入力処理が click を出さないことがある。click は二重にならないよう 0.5 秒は無視
-    function tapButton(b, id){
-      let downAt = 0, firedAt = 0;
-      const fire = () => { const now = performance.now(); if(now - firedAt < 500) return; firedAt = now; go(id); };
-      b.addEventListener('pointerdown', e => { e.stopPropagation(); downAt = performance.now(); });
-      b.addEventListener('pointerup', e => { e.stopPropagation(); if(performance.now() - downAt < 800) fire(); });
-      for(const ev of ['mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, e => e.stopPropagation(), { passive: true });
-      b.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); fire(); });
-    }
-    // 床の丸（HTML。画面に映る位置へ毎フレーム置く）
-    function makeSpots(){
-      if(T.spots.length) return;
-      T.spots = pts().map(p => {
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-spot';
-        b.setAttribute('aria-label', typeof _lang !== 'undefined' && _lang === 'en' ? 'Move here' : 'ここへ移動');
-        tapButton(b, p.id);
-        document.body.append(b);
-        return { p, el: b };
-      });
-      requestAnimationFrame(placeSpots);
-    }
-    // 進む矢印（内見版と同じ。画面下・ボタン列の上）。押すと矢印のすぐ上の床から順に、行ける所が見つかるまで少しずつ先を試す
-    function makeGo(){
-      if(document.getElementById('sp-go')) return;
-      const en = typeof _lang !== 'undefined' && _lang === 'en';
-      const b = document.createElement('button'); b.type = 'button'; b.id = 'sp-go'; b.setAttribute('aria-label', en ? 'Move forward' : '前へ進む');
-      b.innerHTML = '<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M10 24 L32 6 L54 24"/><path d="M10 38 L32 20 L54 38" opacity=".55"/></svg>';
-      const stop = e => e.stopPropagation();
-      for(const ev of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend']) b.addEventListener(ev, stop, { passive: true });
-      // 移動中に押されたら、終わってから 1 回だけ進む（押しても何も起きないと「動けない」に見える）
-      let queued = false;
-      const forward = () => {
-        const r = b.getBoundingClientRect(), x = r.left + r.width / 2;
-        if(T.pre || T.lite || T.bridge){
-          // 写真ツアー: 向きの先の地点 → 無ければ前側 120° で一番近いつながった地点 → それも無ければ一番近いつながった地点（壁に向いていても止まらない）
-          if(tapAt(x, innerHeight * 0.72)) return;
-          camera.updateMatrixWorld();
-          const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), ang = Math.atan2(f.x, f.z);
-          const list = near();
-          let best = null, bs = Infinity, any = null, as = Infinity;
-          for(const q of list){ const dx = q.pos.x - camPos.x, dz = q.pos.z - camPos.z, d = Math.hypot(dx, dz); if(d < 0.3) continue;
-            let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
-            if(da <= 60 * Math.PI / 180 && da * 2 + d * 0.2 < bs){ bs = da * 2 + d * 0.2; best = q; }
-            if(d + da < as){ as = d + da; any = q; } }
-          const t = best || any || farther(ang, 180); if(t) go(t.id); else noWay(x, innerHeight * 0.66);
-          return;
-        }
-        // 3D で当たり判定がまだ無いときは 1 回だけ頼む（何度も呼ぶと最後の 1 回だけが準備後に実行される）
-        if(!walkReady()){ _clickNavigateAt(x, innerHeight * 0.72); return; }
-        // 部屋の中は手前の床だと近すぎて動かないことがあるので、少し先から試す
-        for(const fy of [0.66, 0.6, 0.72, 0.55, 0.78, 0.5, 0.84]) if(_clickNavigateAt(x, innerHeight * fy)) break;
-      };
-      b.addEventListener('click', e => {
-        e.stopPropagation(); e.preventDefault();
-        if(typeof _clickNavigateAt !== 'function') return;
-        if(!T.busy){ forward(); return; }
-        if(queued) return; queued = true;
-        const t0 = performance.now(), wait = () => { if(!T.busy){ queued = false; forward(); } else if(performance.now() - t0 < 4000) setTimeout(wait, 50); else queued = false; };
-        wait();
-      });
-      document.body.append(b);
-      // 下のボタン列（.cbar）の上に置く・移動中は薄く・AR や回転プレビュー中は隠す
-      const fit = () => {
-        const bar = document.querySelector('.cbar'), br = bar && bar.offsetParent ? bar.getBoundingClientRect() : null;
-        b.style.bottom = (br && br.height ? Math.round(innerHeight - br.top + 12) : 28) + 'px';
-        b.classList.toggle('busy', !!T.busy);
-        const hide = (typeof arMode !== 'undefined' && arMode.active) || document.body.classList.contains('orbit-preview');
-        b.style.display = hide ? 'none' : '';
-      };
-      fit(); setInterval(fit, 300); addEventListener('resize', fit);
-    }
-    const v = new THREE.Vector3(), vc = new THREE.Vector3();
-    // マウスの位置（タッチは押した時に移るので使わない）。ボタンの上では出さない
-    if(!T.hoverHooked){ T.hoverHooked = true;
-      addEventListener('pointermove', e => { if(e.pointerType !== 'mouse') return;
-        const over = e.target && e.target.closest && e.target.closest('button,a,input,.cbar,#sp-go');
-        T.hover = over ? null : { x: e.clientX, y: e.clientY, at: performance.now() }; }, { passive: true });
-      document.addEventListener('mouseleave', () => { T.hover = null; }); }
-    // 床の輪（ストリートビューのカーソル）: ポインターの所に、行き先があるときだけ出す
-    function placeCursor(target){
-      let c = document.getElementById('sp-cursor');
-      if(!target || !T.hover || !(T.pre || T.lite || T.bridge)){ if(c) c.style.display = 'none'; return; }
-      if(!c){ c = document.createElement('div'); c.id = 'sp-cursor'; document.body.append(c); }
-      c.style.display = 'block'; c.style.left = T.hover.x + 'px'; c.style.top = T.hover.y + 'px';
-    }
-    function placeSpots(){
-      const on = T.pre || T.lite || T.bridge;
-      if(!on){ for(const s of T.spots) s.el.remove(); T.spots = []; placeCursor(null); return; }
-      camera.updateMatrixWorld();
-      const allow = new Set(cands().map(q => q.id));
-      // Google マップ方式（2026-11-25 本人「点が多すぎて見づらい。近くの点だけ表示するようにして googlemap 形式にして」）:
-      //   床の丸は近くの地点だけ（5m 以内・つながった地点を優先して最大 NEAR_MAX 個）。遠くの地点はその向きを押せば移れる（pickAt）。
-      //   マウスでは、置いた所を押したら行く地点の丸を明るくし、ポインターの所に床の輪（カーソル）を出す
-      const NEAR_M = 5, NEAR_MAX = 5;   // 5m は Matterport3D / R2R のつながりの上限（docs/tour-point-placement-matterport-2026-11-25.md）
-      const nbSet = new Set(byId(T.cur)?.nb || []);
-      const near5 = T.spots.map(s => ({ s, d: Math.hypot(s.p.pos.x - camPos.x, s.p.pos.z - camPos.z) }))
-        .filter(o => o.s.p.id !== T.cur && o.d >= 0.3 && o.d <= NEAR_M && allow.has(o.s.p.id))
-        .sort((a, b) => (a.d - (nbSet.has(a.s.p.id) ? 1.5 : 0)) - (b.d - (nbSet.has(b.s.p.id) ? 1.5 : 0)))
-        .slice(0, NEAR_MAX).map(o => o.s.p.id);
-      const shown = new Set(near5);
-      if(shown.size < 2) for(const id of nbSet){ const q = byId(id); if(q && Math.hypot(q.pos.x - camPos.x, q.pos.z - camPos.z) <= 9) shown.add(id); }   // 近くに無いときは、つながった地点（広い所）
-      const hov = T.hover && !T.busy && performance.now() - T.hover.at < 4000 ? pickAt(T.hover.x, T.hover.y) : null;
-      if(hov) shown.add(hov.id);
-      placeCursor(hov);
-      for(const s of T.spots){
-        const p = s.p, floor = Number.isFinite(p.floorY) ? p.floorY : p.pos.y - 1.5;
-        const d = Math.hypot(p.pos.x - camPos.x, p.pos.z - camPos.z);
-        s.el.classList.toggle('hot', !!hov && hov.id === p.id);
-        if(p.id === T.cur || !shown.has(p.id)){ s.el.style.display = 'none'; s.el.dataset.why = 'far'; continue; }
-        v.set(p.pos.x, floor, p.pos.z);
-        vc.copy(v).applyMatrix4(camera.matrixWorldInverse);
-        if(vc.z > -0.4){ s.el.style.display = 'none'; s.el.dataset.why = 'behind'; continue; }
-        v.project(camera);
-        const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight;
-        if(x < -40 || x > innerWidth + 40 || y < -40 || y > innerHeight + 40){ s.el.style.display = 'none'; s.el.dataset.why = 'off ' + Math.round(x) + ',' + Math.round(y); continue; }
-        const sc = Math.max(0.45, Math.min(1.6, 2.2 / Math.max(0.5, -vc.z)));
-        s.el.style.display = 'block'; s.el.style.left = x + 'px'; s.el.style.top = y + 'px';
-        s.el.style.transform = 'scale(' + sc.toFixed(3) + ') scaleY(.55)';
-      }
-      requestAnimationFrame(placeSpots);
-    }
-    // 次の地点へ: 画像がそろったら、新しい画像を古い画像の上に 0.3 秒で重ねてから古い方を消す（2 枚とも見る人の位置に置くので歪まない）
-    async function go(id){
-      const p = id === 'start' ? (st.startNode || { id: 'start', pos: st.meta.pos, yaw: st.meta.yaw }) : pts().find(q => q.id === id);
-      if(!p || T.busy || id === T.cur) return false;
-      if(T.bridge || !group){
-        // 3D 表示中で床の当たり判定がまだ無いとき: 写真ではなく 3D のまま、その地点へ 0.6 秒で移る
-        T.busy = true; T.cur = id;
-        const a = camPos.clone(), b = new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z), t0 = performance.now();
-        await new Promise(done => { const step = () => {
-          const k = Math.min(1, (performance.now() - t0) / 600), e = k * k * (3 - 2 * k);
-          camPos.lerpVectors(a, b, e); markDirty(2);
-          if(k < 1) requestAnimationFrame(step); else done();
-        }; requestAnimationFrame(step); });
-        T.busy = false; return true;
-      }
-      T.busy = true;
-      try {
-        const haveFull = !!T.cache[p.id], upgrade = id !== 'start' && !!p.img && !T.lite && !haveFull;
-        const maps = id === 'start' ? tex : await facesOf(p, upgrade || undefined);
-        if(gone || !group){ T.busy = false; return false; }
-        const old = group, pos = new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z);
-        const g = build(pos, Number(p.yaw) || 0, maps);
-        g.traverse(o => { if(o.material){ o.material.opacity = 0; o.renderOrder = 1e6 + 1; } });
-        scene.add(g);
-        // 歩いて進むように見せる（2026-11-23 本人「ヒルトンのデモみたいなスムーズな切り替わり」）: 進む向きに、古い画像は後ろへ流し、
-        // 新しい画像は少し手前から寄せながら重ねる（0.55 秒、なめらかに加速・減速）。距離が近いほど流す量を小さく
-        const from = camPos.clone(), u = new THREE.Vector3(pos.x - from.x, 0, pos.z - from.z), dist = u.length();
-        if(dist > 1e-3) u.multiplyScalar(1 / dist);
-        const amt = Math.min(0.5, 0.18 + dist * 0.06), DUR = dist > 1e-3 ? 550 : 300;
-        // カメラは地点へすぐ置く（カメラが遅れて追うと、その間 1 コマ画像の箱の外が見えた）。進む感じは画像の動きで出す
-        camPos.copy(pos); camera.position.copy(pos); camera.updateMatrixWorld(); old.userData.off.set(0, 0, 0); g.userData.off.copy(u).multiplyScalar(amt * 0.6); group = g; at = pos.clone(); T.cur = id;
-        const t0 = performance.now(); T.anim = true;
-        await new Promise(done => { const step = () => {
-          const k = Math.min(1, (performance.now() - t0) / DUR), e = k * k * (3 - 2 * k);
-          // カメラは地点の間をなめらかに動く（位置は camPos を少し遅れて追う）。画像はカメラの今の位置に付けて動かす（地点の位置に置くと、
-          // 動いている途中でカメラが画像の箱の外へ出て、灰色の背景が見えた。2026-11-23）
-          old.userData.off.copy(u).multiplyScalar(-amt * e);
-          g.userData.off.copy(u).multiplyScalar(amt * 0.6 * (1 - e));
-          const a = Math.min(1, k * 1.25);
-          g.traverse(o => { if(o.material) o.material.opacity = a * a * (3 - 2 * a); }); markDirty(2);
-          if(k < 1) requestAnimationFrame(step); else { g.userData.off.set(0, 0, 0); T.anim = false; done(); }
-        }; requestAnimationFrame(step); });
-        scene.remove(old); old.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });   // 画像（テクスチャ）は使い回すので消さない
-        g.traverse(o => { if(o.material) o.renderOrder = 1e6; });
-        // 近くの地点の画像は先に読んでおく（次の移動を待たせない）
-        if(upgrade) facesOf(p, false).then(ts => {
-          if(group !== g || T.cur !== id) return;
-          g.children.forEach((pv, i) => { const m = pv.children[0] && pv.children[0].material; if(m && ts[i]){ m.map = ts[i]; m.needsUpdate = true; } });
-          markDirty(2);
-        }).catch(() => {});
-        prefetch(near(pos, 5));
-      } catch(e){ console.warn('[start-pano] point', id, e); }
-      T.busy = false; markDirty(4);
-      return true;
-    }
-    // 画面のタップ: 指した向き（水平の角度）に一番近い地点へ。30° 以内に無ければ動かない
-    function tapAt(x, y){
-      const best = pickAt(x, y);
-      if(!best) return false;
-      go(best.id); return true;
-    }
-    // 画面の (x, y) を押したら移る地点（移らずに返すだけ。マウスを置いた所の行き先表示にも使う）
-    function pickAt(x, y){
-      camera.updateMatrixWorld();
-      const dir = new THREE.Vector3((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1, 0.5).unproject(camera).sub(camera.position);
-      const ang = Math.atan2(dir.x, dir.z);
-      let best = null, bestScore = Infinity;
-      const all = cands();
-      const nb = new Set(byId(T.cur)?.nb || []);
-      for(const p of all){
-        if(p.id === T.cur) continue;
-        const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z, d = Math.hypot(dx, dz);
-        if(d < 0.3 || d > 12) continue;
-        let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
-        if(da > 35 * Math.PI / 180) continue;
-        const score = da * 3 + d * 0.15 - (nb.has(p.id) ? 0.3 : 0);
-        if(score < bestScore){ bestScore = score; best = p; }
-      }
-      if(!best && st.graph) best = farther(ang, 90);   // つながった地点が無い向きでも、その向きの近い地点へ（2026-11-22 本人「移動したくても次の点がない」）
-      return best || null;
-    }
-    // つながりに無い地点も含めて、向き ang から maxDeg 以内・10m 以内で一番それらしい地点
-    function farther(ang, maxDeg){
-      let best = null, bs = Infinity;
-      for(const p of [...pts(), st.startNode]){ if(!p || p.id === T.cur) continue;
-        const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z, d = Math.hypot(dx, dz);
-        if(d < 0.5 || d > 10 || Math.abs(p.pos.y - camPos.y) > 2.5) continue;
-        let da = Math.abs(Math.atan2(dx, dz) - ang); if(da > Math.PI) da = 2 * Math.PI - da;
-        if(da > maxDeg * Math.PI / 180) continue;
-        const sc = da * 3 + d * 0.2; if(sc < bs){ bs = sc; best = p; } }
-      return best;
-    }
-    // 軽量表示: 3D を捨て、写真ツアー（地点が無ければ開始位置の見回しだけ）を続ける
-    function startLite(why){
-      if(T.lite || gone || !group) return;
-      T.lite = true; T.pre = false; T.why = why; st.lite = why;
-      document.documentElement.classList.add('sp-lite'); document.documentElement.classList.remove('sp-pre');
-      for(let i = layers.length - 1; i >= 0; i--){
-        const Ly = layers[i];
-        if(Ly && Ly.type === 'splat'){ try { scene.remove(Ly.mesh); Ly.mesh.dispose?.(); } catch(_){} layers.splice(i, 1); }
-      }
-      hookNav(false); makeSpots(); makeGo();
-      prefetch(near(at, 5));   // 全地点を先に読まない（320 か所で約 73MB になる）
-      // 案内と「3D で見る」（?lite=0 で開き直す）
-      const en = typeof _lang !== 'undefined' && _lang === 'en';
-      const chip = document.createElement('div'); chip.className = 'sp-lite-chip';
-      chip.innerHTML = '<span></span><button type="button"></button>';
-      chip.firstChild.textContent = en ? 'Light mode (360° photos)' : '軽量表示（360°写真）';
-      chip.lastChild.textContent = en ? 'View in 3D' : '3D で見る';
-      chip.lastChild.addEventListener('click', () => { const u = new URL(location.href); u.searchParams.set('lite', '0'); location.replace(u.href); });
-      // 遅い・弱い端末と判定したとき（url 指定以外）は「3D で見る」を出さない（押しても見られないため。2026-11-21 本人）
-      if(why !== 'url') chip.lastChild.remove();
-      document.body.append(chip); T.chip = chip;
-      if(typeof markDirty === 'function') markDirty(10);
-      console.log('[start-pano] light mode:', why);
-    }
-    function startPre(){
-      // 2026-11-21 本人「3DGSが完全に読み込めるまで2Dで表示して、終わったら3D表示」: 標準にした。地点が無いシーンも開始位置の画像で待つ
-      if(T.lite || T.pre || gone || !group) return;
-      T.pre = true; document.documentElement.classList.add('sp-pre');
-      hookNav(false); makeSpots(); makeGo();
-      prefetch(near(at, 5));
-    }
-    // 読み込みが落ち着いたら、今いる地点のまま 3D に切り替える
-    function endPre(){
-      if(!T.pre) return;
-      T.pre = false; document.documentElement.classList.remove('sp-pre');
-      if(walkReady()) unhookNav();
-      else {
-        // 床の当たり判定は端末によって数十秒かかる。それを待たずに 3D にし、できるまでは地点の丸とタップで地点へ移る
-        T.bridge = true; hookNav(true);
-        const t = setInterval(() => {
-          if(T.lite){ clearInterval(t); return; }
-          if(!walkReady() || T.busy) return;
-          clearInterval(t); T.bridge = false; unhookNav();
-        }, 300);
-      }
-      makeGo(); markDirty(4);
-      document.getElementById('sp-noway')?.classList.remove('on');
-      if(T.pendingFwd && performance.now() - T.pendingFwd.at < 60000){
-        const pf = T.pendingFwd; T.pendingFwd = null;
-        const tryGo = (n) => { if(walkReady()){ for(const fy of [0.66, 0.6, 0.72, 0.55, 0.78]) if(T.navOrig ? T.navOrig(pf.x, innerHeight * fy) : _clickNavigateAt(pf.x, innerHeight * fy)) break; } else if(n > 0) setTimeout(() => tryGo(n - 1), 300); };
-        setTimeout(() => tryGo(100), 450);
-      }
-      console.log('[start-pano] 3D ready at', T.cur, walkReady() ? '' : '(walk pending)');
-      // 読み終わったので画像を外して 3D に（今いる地点の位置のまま。外すときは 0.35 秒で薄くなる）
-      remove('loaded');
-    }
-    // 画面の動き（毎秒のコマ数）
-    let frames = 0, lastT = performance.now();
-    (function tick(){ frames++; if(!gone && !T.lite) requestAnimationFrame(tick); })();
-    let low = 0, since = 0, since3d = 0, quiet = 0;
-    T.mon = setInterval(() => {
-      const now = performance.now(), fps = frames * 1000 / (now - lastT); frames = 0; lastT = now;
-      if(gone || T.lite){ clearInterval(T.mon); return; }
-      if(document.hidden || !group){ low = 0; return; }
-      T.fps = fps;
-      if(T.pre || /[?&]lite=0/.test(qs) || !has3d()) return;   // 写真ツアー中は、3D に切り替える時点で判定する
-      since ||= now;
-      if(now - since < 2000) return;
-      if(now - since > 60000){ clearInterval(T.mon); return; }
-      low = fps < 12 ? low + 1 : 0;
-      if(low >= 3) startLite('fps ' + fps.toFixed(1));
-    }, 1000);
-    // 回線: 3D データの届き方を最初の取得から 8〜30 秒の間に見る。毎秒 150KB（約 1.2Mbps）に届かなければ写真ツアーのままにする
-    const streamPath = new URL(url, location.href).pathname;
-    T.net = setInterval(() => {
-      if(gone || T.lite || /[?&]lite=0/.test(qs)){ clearInterval(T.net); return; }
-      if(document.hidden) return;
-      if(!T.pre) return;   // 写真ツアーが始まってから判定する
-      const all = performance.getEntriesByType('resource');
-      const rs = all.filter(e => { try { return new URL(e.name).pathname === streamPath; } catch(_){ return false; } });
-      const size = (e) => Math.max(e.transferSize || 0, e.encodedBodySize || 0);
-      let sized = rs.filter(e => size(e) > 0);
-      const t0 = rs.length ? Math.min(...rs.map(e => e.startTime)) : (T.preT0 ||= performance.now()), el = performance.now() - t0;
-      if(el < 8000) return;
-      const last = el > 30000; if(last) clearInterval(T.net);
-      // 3D の取得が大きな塊で、まだ 1 つも受け終わっていない（遅い回線ほどそうなる）ときは、受け終わった同じサイトの大きいファイル
-      // （ビューアー本体・開始位置の画像など）で測る（80KB/s の再現で、3D の取得が数えられず 111 秒たって軽量表示になった。2026-11-21）
-      if(sized.length < 3) sized = [...performance.getEntriesByType('navigation'), ...all].filter(e => { try { return new URL(e.name).origin === location.origin && size(e) > 50000; } catch(_){ return false; } });
-      if(sized.length < 3) return;   // 大きさが取れないブラウザでは判定しない
-      // 通信していた時間（各取得の 開始〜受信完了 を重ね合わせた長さ）だけで割る。ZIP を解く間など取得が止まっている時間を数えると、
-      // 速い回線でも遅く見える（iPhone 相当で 85KB/s と誤判定した。2026-11-19）
-      const iv = sized.map(e => [e.startTime, e.responseEnd || performance.now()]).sort((a, b) => a[0] - b[0]);
-      let busy = 0, cs = -1, ce = -1;
-      for(const [a0, a1] of iv){ if(a0 > ce){ if(ce > cs) busy += ce - cs; cs = a0; ce = a1; } else ce = Math.max(ce, a1); }
-      if(ce > cs) busy += ce - cs;
-      const span = Math.max(1000, busy);
-      const bytes = sized.reduce((a, e) => a + size(e), 0);
-      T.kbps = Math.round(bytes / span);
-      if(T.kbps < 150) startLite('net ' + T.kbps + 'KB/s');
-    }, 1000);
-    // 写真ツアーから 3D へ切り替える条件: 点が十分出て読み込みが 1.5 秒止まった / 点が予算の 95% に届いた（3D が出て 60 秒たっても終わらなければ軽量表示）
-    // そのうえで画面の動きが毎秒 12 コマ未満なら、3D は重すぎるので写真ツアーのままにする
-    T.preMon = setInterval(() => {
-      if(gone || T.lite){ clearInterval(T.preMon); return; }
-      if(!T.pre || T.busy) return;
-      const now = performance.now();
-      // 読み込めない: 3D が 45 秒たっても出ない → 軽量表示（写真のまま）
-      T.preAt ||= now;
-      if(!has3d()){ quiet = 0; if(now - T.preAt > 45000 && !/[?&]lite=0/.test(qs)) { clearInterval(T.preMon); startLite('no3d'); } return; }
-      since3d ||= now;
-      const streaming = typeof _pagedStreamActive !== 'function' || _pagedStreamActive(now);
-      if(streaming) quiet = 0; else quiet ||= now;
-      const budget = (typeof sparkRenderer !== 'undefined' && sparkRenderer && sparkRenderer.lodSplatCount) || 1500000;
-      // 細切れで読む 3D（RAD）は今出ている点の数。一度に読む形式（paged でない）は、出た時点で読み終わっているので予算いっぱいとみなす
-      let n = typeof window.__nSplat === 'function' ? window.__nSplat() : -1;
-      if(n < 0){ const L0 = layers.find(Ly => Ly && Ly.type === 'splat' && Ly.mesh); n = L0 && !L0.mesh.paged ? budget : 0; }
-      // 点がほとんど出ていないうちは切り替えない（iPhone 相当で、20 秒たっても点 0 のまま 3D にしかけた。2026-11-19）
-      const enough = n >= Math.min(200000, budget * 0.3) || (n > 0 && quiet && now - quiet > 3000);   // 点の少ないシーンは、読み込みが 3 秒止まれば読み終わり
-      // 読み終わり＝点が十分出て、読み込みが 1.5 秒止まった（または予算の 95%）。3D が出てから 60 秒たっても終わらない回線・端末は軽量表示のまま
-      const loaded = enough && ((quiet && now - quiet > 1500) || n >= budget * 0.95);
-      if(!loaded && now - since3d > 60000 && !/[?&]lite=0/.test(qs)){ clearInterval(T.preMon); startLite('slow ' + n); return; }
-      T.state = { n, budget, walk: walkReady(), quiet: quiet ? Math.round(now - quiet) : 0, t3d: Math.round(now - since3d), fps: T.fps, kbps: T.kbps };
-      if(!loaded) return;
-      clearInterval(T.preMon);
-      if(Number.isFinite(T.fps) && T.fps < 12 && !/[?&]lite=0/.test(qs)){ startLite('fps ' + T.fps.toFixed(1)); return; }
-      endPre();
-    }, 250);
-    T.stop = () => { T.pre = false; if(!T.bridge) unhookNav(); document.documentElement.classList.remove('sp-pre'); };
-    // キーボード（2026-11-23 本人「2Dモードでwasd押した時おかしい」「ヒルトンのデモみたいなスムーズな切り替わり」）:
-    // 写真ツアー中は WASD・矢印を 3D のカメラに渡さない（渡すと 3D が動こうとして 0.05 秒ごとに地点へ戻され、ガタついた）。
-    // W↑ = 見ている向き、S↓ = 後ろ、A← = 左、D→ = 右 の、つながった地点へ歩くように移る。押し続けると次々に進む
-    const held = new Set();
-    const KEY_ANG = { KeyW: 0, ArrowUp: 0, KeyS: Math.PI, ArrowDown: Math.PI, KeyA: Math.PI / 2, ArrowLeft: Math.PI / 2, KeyD: -Math.PI / 2, ArrowRight: -Math.PI / 2 };
-    function stepKey(code){
-      const fw = new THREE.Vector3(); camera.getWorldDirection(fw); const ang = Math.atan2(fw.x, fw.z) + KEY_ANG[code];
-      const nb = new Set(byId(T.cur)?.nb || []);
-      let best = null, bs = Infinity;
-      for(const p of cands()){
-        const dx = p.pos.x - camPos.x, dz = p.pos.z - camPos.z; if(Math.hypot(dx, dz) < 0.3) continue;
-        let da = Math.abs(Math.atan2(dx, dz) - ang); while(da > Math.PI) da = Math.abs(da - 2 * Math.PI);
-        const sc = da + Math.hypot(dx, dz) * 0.04 - (nb.has(p.id) ? 0.15 : 0);
-        if(da < 70 * Math.PI / 180 && sc < bs){ bs = sc; best = p; } }
-      if(!best) best = farther(ang, 70);
-      return best ? go(best.id) : Promise.resolve(false);
-    }
-    async function keyLoop(code){
-      if(T.keyBusy) return; T.keyBusy = true;
-      try { while(held.has(code) && (T.pre || T.lite) && !gone){
-        // 移動中（ドラッグやタップで移っている途中）に押したら、終わるのを待ってから進む。以前は 1 回目が空振りして、押し続けても動かなかった（2026-11-23 本番テスト）
-        if(T.busy){ await new Promise(r => setTimeout(r, 50)); continue; }
-        const ok = await stepKey(code); if(!ok) break; } }
-      finally { T.keyBusy = false; }
-    }
-    addEventListener('keydown', e => {
-      if(!(T.pre || T.lite) || gone || e.altKey || e.ctrlKey || e.metaKey || !(e.code in KEY_ANG)) return;
-      const t = e.target; if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      e.preventDefault(); e.stopPropagation();
-      if(!pts().length) return;   // 地点が無いシーン: 動かない（見回しだけ）
-      held.add(e.code); keyLoop(e.code);
-    }, true);
-    addEventListener('keyup', e => { if(held.delete(e.code) && (T.pre || T.lite)){ e.preventDefault(); e.stopPropagation(); } }, true);
-    addEventListener('blur', () => held.clear());
-    T.go = go; T.tapAt = tapAt; T.startLite = startLite; T.startPre = startPre; T.endPre = endPre;
-    return T;
-  })();
-
-  (async () => {
-    try {
-      st.state = 'identity';
-      let res = window.__startPanoEarly ? await window.__startPanoEarly : undefined;
-      if(res === undefined){
-        // 先読み（<head>）が無いとき: ここで計算する
-        let id = null;
-        for(let i = 0; i < 3 && !id; i++){ if(i) await new Promise(r => setTimeout(r, 700 * i)); id = await identity().catch(() => null); }
-        if(id){
-          const key = await sha256hex('l3d-pano-v1:' + id);
-          const r = await fetch('/api/pano/' + key + '.json', { cache: 'no-cache' });
-          const meta = r.ok ? await r.json().catch(() => null) : null;
-          res = { key, meta: meta && meta.v === 1 && meta.pos && [meta.pos.x, meta.pos.y, meta.pos.z, meta.yaw].every(Number.isFinite) ? meta : null };
-        } else res = null;
-      }
-      if(!res){ st.state = 'none'; st.why = 'no content id'; posterOff(true); return; }
-      st.key = res.key;
-      if(!res.meta){ st.state = 'none'; st.why = 'no pano'; posterOff(true); return; }
-      const meta = st.meta = res.meta;
-      st.state = 'faces';
-      // ツアーの地点（無ければ開始位置の 1 枚だけ）
-      // 動線グラフ（無ければ開始位置の 1 枚だけ）
-      // 2026-11-26 本人「2D表示、3Dビューアーと併用するのやめよう。3Dは3Dにしよう」: 地点の間を 2D で移る写真ツアーはビューアーでは使わない
-      // （物件ページの「位置から見る」に移した。src/components/photo-map.tsx）。開始位置の 1 枚（読み込み中に見回す画像）は残す。戻すときは TOUR_2D を true に。
-      const TOUR_2D = false;
-      const grP = !TOUR_2D ? Promise.resolve(null) : fetch('/api/pano/' + st.key + '.graph.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
-      tex = await loadFaces(st.key + (meta.r > 1 ? '-r' + meta.r : ''));   // 撮り直した画像は <key>-r<N>-{面}.jpg
-      if(gone) return;
-      at = new THREE.Vector3(meta.pos.x, meta.pos.y, meta.pos.z);
-      // 開始位置・向きを画像と同じにしてから重ねる（シーンの読み込みも同じ開始位置を置く）
-      camPos.copy(at); setCamRotImmediate(meta.yaw, Number.isFinite(meta.pitch) ? meta.pitch : 0);
-      group = build(meta.pos, meta.yaw, tex); scene.add(group);
-      document.body.classList.add('start-pano');
-      st.state = 'shown';
-      if(typeof markDirty === 'function') markDirty(10);
-      // 3D の上に同じ画像が出たので、最初の静止画（CSS）を一瞬で外す（フェードさせると 2 枚が重なって光ったように見える）
-      requestAnimationFrame(() => requestAnimationFrame(() => posterOff(false)));
-      const gj = await grP;
-      const fin = (p) => p && p.pos && [p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite);
-      if(gj && gj.v === 2 && /^[0-9a-f]{6}$/.test(gj.set) && Array.isArray(gj.nodes) && gj.nodes.length >= 3){   // 地点が 3 未満（床が取れない・ほぼ全部が壊れていた）なら地点を使わない（開始位置の 1 枚で見回すだけ）
-        // 動線グラフ: つながり（edges）と見通し（see）は nodes の並び順の番号
-        const list = gj.nodes.map(p => fin(p) && /^n\d{1,3}$/.test(p.id) ? { ...p, img: st.key + '-g' + gj.set + '-' + p.id, nb: [], see: [] } : null);
-        const pair = (arr, f) => { for(const e of Array.isArray(arr) ? arr : []){ const a = list[e && e[0]], b = list[e && e[1]]; if(a && b && a !== b){ f(a).push(b.id); f(b).push(a.id); } } };
-        pair(gj.edges, p => p.nb); pair(gj.see, p => p.see);
-        st.points = list.filter(Boolean).slice(0, 400);
-        // 開始位置（高い所から見下ろすこともある）: 近い地点 3 つとつなぐ。一番近い地点からは開始位置へ戻れる
-        const sp = meta.pos, by = st.points.map(p => [p, Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z) + Math.abs(p.pos.y - sp.y) * 0.5]).sort((a, b) => a[1] - b[1]);
-        const nb0 = by.slice(0, 3).map(x => x[0]);
-        st.startNode = { id: 'start', pos: meta.pos, yaw: meta.yaw, floorY: by[0] ? by[0][0].floorY : undefined, nb: nb0.map(p => p.id),
-          see: [...new Set(nb0.flatMap(p => p.nb))].filter(id => { const q = st.points.find(x => x.id === id); return q && Math.hypot(q.pos.x - sp.x, q.pos.z - sp.z) < 8; }) };
-        if(by[0]) by[0][0].nb.push('start');
-        st.graph = { set: gj.set, n: st.points.length, edges: (gj.edges || []).length };
-      }
-      if(window.__l3dLite) tour.startLite(window.__l3dLite);
-      else tour.startPre();   // 地点が無いシーンも、読み終わるまで開始位置の画像で待つ（2026-11-21）
-      const timer = setInterval(() => {
-        if(gone){ clearInterval(timer); return; }
-        if(tour.lite || tour.pre){
-          // 写真ツアー中は位置を今の地点に留める（読み込み側がカメラを置き直しても画像とずれない。向きは見る人が回したまま）
-          if(!tour.busy && camPos.distanceTo(at) > 1e-4){ camPos.copy(at); markDirty(2); }
-          // 歩行・AR・回り込み表示に入ったら写真ツアーをやめて 3D に
-          if(tour.pre && (moved() === 'walk' || moved() === 'ar' || moved() === 'orbit')) remove(moved());
-          return;
-        }
-        // シーンの読み込みが開始位置を置き直す（同じ位置）まで動き判定はしない。読み込み前に歩かれたら消す
-        // （読み込み直後はビューアーが一度カメラを置き直すことがあるので 1.5 秒待ち、そこで開始位置が違えば消す）
-        if(!sceneSeen){ if(has3d()) sceneSeen = performance.now(); return; }
-        if(performance.now() - sceneSeen < 1500) return;
-        const why = moved(); if(why) remove(why);
-      }, 50);
-    } catch(e){ st.state = 'error'; st.why = String(e && e.message || e); posterOff(true); }
-  })();
 })();
 // ══════════════════════════════════════════════════
 //  ?showcase=1 — 機能ツアー（自動おさらい再生）
@@ -23696,6 +22919,131 @@ if(/[?&]capture=1/.test(location.search)){
   })();
 }
 // ══════════════════════════════════════════════════
+//  ?autoinit=1 — カメラ初期位置を自動決定して ZIP を親へ返すバッチ入口
+//
+//  設計書 §3。298 の ?capture=1 と同じ設計（URLで明示されない限り完全に無効・
+//  postMessage で親へ返す・親が居なければ自動ダウンロードへフォールバック）。
+//
+//  フロー:
+//    ?autoload=<url>&autoinit=1
+//      → シーン読込を待つ → splat のストリームが収束するまで待つ
+//      → 自動配置（175）→ cameraInit を確定 → ZIP 生成
+//      → postMessage('autoinit-done', {blob, confidence, needsReview, …})
+//
+//  返すペイロードには必ず confidence / needsReview / failed / position / yaw /
+//  pitch を含める（信頼度の低い案件だけを人が開く運用のため）。
+// ══════════════════════════════════════════════════
+if(/[?&]autoinit=1/.test(location.search)){
+  (function(){
+    const params = new URLSearchParams(location.search);
+    // 収束待ちの上限（秒）。巨大な RAD ほどストリームに時間がかかる。
+    const MAX_WAIT_S = Math.min(900, Math.max(30, parseInt(params.get('autoinitWaitSec')||'180', 10) || 180));
+    const target = window.opener || (parent !== window ? parent : null);
+    const msg = (type, extra)=>{ try { if(target) target.postMessage(Object.assign({type}, extra||{}), '*'); } catch(_){} };
+
+    const hasScene = ()=> (typeof layers!=='undefined' && layers.some(L=>L&&L.mesh&&L.type!=='camera'));
+    const nSplat = ()=> typeof window.__nSplat==='function' ? window.__nSplat() : -1;
+    // 298 と同じ「RAD でも baked でも同じ数え方」。RAD は __nSplat()、baked は
+    // layers[].mesh.packedSplats.numSplats を合算する。
+    const anySplatCount = ()=>{
+      const rad = nSplat();
+      if(rad > 0) return rad;
+      try {
+        if(typeof layers==='undefined' || !layers) return rad;
+        let n = 0;
+        for(const L of layers){
+          if(!L || !L.mesh || L.type==='camera') continue;
+          const ps = L.mesh.packedSplats;
+          if(ps && ps.numSplats) n += ps.numSplats;
+          else if(typeof L.mesh.numSplats === 'number') n += L.mesh.numSplats;
+        }
+        return n > 0 ? n : rad;
+      } catch(_){ return rad; }
+    };
+
+    async function run(){
+      const t0 = performance.now();
+      try {
+        // Phase 1: レンダー可能なシーンになるまで（ZIP/大きい RAD は数分かかる）
+        msg('autoinit-progress',{phase:'loading', text:'3DGS 読み込み中…'});
+        const sceneReady = ()=> hasScene() || anySplatCount() > 0;
+        for(let i=0; i<MAX_WAIT_S*2 && !sceneReady(); i++) await new Promise(r=>setTimeout(r,500));
+        if(!sceneReady()){
+          msg('autoinit-error',{error:'no-scene'});
+          return;
+        }
+
+        // Phase 2: splat 数が増えなくなるまで待つ。幾何を測るので、まばらな
+        // 途中経過で判定すると床も壁も見つからない。
+        {
+          let last = -1, stableStart = -1;
+          const STABLE_MS = 3000, POLL_MS = 500, MAX_MS = MAX_WAIT_S*1000;
+          const start = performance.now();
+          while(performance.now() - start < MAX_MS){
+            await new Promise(r=>setTimeout(r, POLL_MS));
+            if(typeof markDirty==='function') markDirty(20); // ストリーミングを止めない
+            const elapsed = performance.now() - start;
+            const c = anySplatCount();
+            if(c > 0 && c === last){
+              if(stableStart < 0) stableStart = elapsed;
+              if(elapsed - stableStart >= STABLE_MS) break;
+            } else { stableStart = -1; last = c; }
+            msg('autoinit-progress',{phase:'loading',
+              text:'読み込み中… ' + (c>0 ? c.toLocaleString()+' splats' : '待機中'), splats:c});
+          }
+        }
+
+        // Phase 3: 自動配置
+        msg('autoinit-progress',{phase:'placing', text:'初期位置を計算中…'});
+        const r = await window.autoPlaceInitialView();
+        const result = r || { failed:true, needsReview:true, confidence:0, reason:'no-result' };
+
+        // Phase 4: ZIP 生成（失敗しても既定の初期位置のまま ZIP は作る＝設計書
+        // §2-6「failed は従来の既定位置のまま出力し、必ず人が見る」）
+        msg('autoinit-progress',{phase:'zip', text:'ZIP を作成中…'});
+        const blob = await window.saveProjectZip(false, { returnBlob:true });
+        if(!blob){ msg('autoinit-error',{error:'zip-failed', confidence:result.confidence}); return; }
+
+        const payload = {
+          blob, mimeType:'application/zip', ext:'zip',
+          projectName: (typeof _projectName!=='undefined' && _projectName) || '',
+          failed: !!result.failed,
+          reason: result.reason || null,
+          confidence: result.confidence,
+          needsReview: !!result.needsReview,
+          flags: result.flags || [],
+          position: result.position || null,
+          yaw: result.yaw, pitch: result.pitch,
+          yawDeg: result.yaw != null ? (result.yaw*180/Math.PI) : null,
+          pitchDeg: result.pitch != null ? (result.pitch*180/Math.PI) : null,
+          splats: anySplatCount(),
+          diagnostics: result.diagnostics || null,
+          elapsedMs: Math.round(performance.now() - t0),
+        };
+        if(target){
+          msg('autoinit-done', payload);
+        } else {
+          // 親が居ない（単体で開いた）ときはダウンロードへフォールバック。
+          console.info('[autoinit] postMessage 送信先が無いためダウンロードします', payload);
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = ((payload.projectName||'scene_project')
+            .replace(/[^a-zA-Z0-9_\-぀-ゟ゠-ヿ一-鿿]/g,'_')) + '.zip';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(()=>URL.revokeObjectURL(a.href), 10000);
+        }
+        // Playwright 等が DOM から結果を読めるようにも置いておく（blob は除く）。
+        window.__autoInitResult = Object.assign({}, payload, { blob:undefined });
+      } catch(e){
+        console.error('[autoinit]', e);
+        msg('autoinit-error',{error:'exception: ' + ((e && e.message) || e)});
+        window.__autoInitResult = { failed:true, needsReview:true, confidence:0, reason:'exception: '+((e&&e.message)||e) };
+      }
+    }
+    setTimeout(run, 300);
+  })();
+}
+// ══════════════════════════════════════════════════
 //  EXPORT / SAVE / LOAD
 // ══════════════════════════════════════════════════
 window.openExportModal  = function(){ document.getElementById('export-modal').classList.add('show'); };
@@ -24022,7 +23370,8 @@ let _zipSaving = false;
 // path can prompt the user to re-select the original 3DGS file (see
 // _promptFilesForReattach in 311_zip_load_core.js).
 // opts.returnBlob: ダウンロード(Aタグclick)と完了トーストを行わず、生成した
-// ZIP の Blob をそのまま返す（アカウントへの保存・オンラインのシーン保存が使う）。通常のUI呼び出し(引数なし)の挙動は不変。
+// ZIP の Blob をそのまま返す。?autoinit=1 のバッチ経路（299）が親ウィンドウへ
+// postMessage で渡すために使う。通常のUI呼び出し(引数なし)の挙動は不変。
 window.saveProjectZip = async function(forceLite, opts){
   opts = opts || {};
   if(opts.strictOnline){
@@ -27226,7 +26575,7 @@ function _applyI18nGaps(){
   window.addEventListener('mouseup',e=>{
     if(e.__l3dSynthetic||!tap||e.button!==2){ if(e.button===2)tap=null; return; }
     const t=tap;tap=null;
-    if(t.m>=(globalThis.__clickSlopPx?globalThis.__clickSlopPx*1.3:5)||performance.now()-t.t>(globalThis.__clickTapMs||500))return;   // 許容量は内見版と同じ（__clickSlopPx。2026-11-24）
+    if(t.m>=5||performance.now()-t.t>500)return;
     setTimeout(()=>{
       // 測定中は右クリック（旧左）が点置きなので、合成せずに移動だけ呼ぶ。
       if(typeof msr!=='undefined'&&msr.active){ if(typeof _clickNavigateAt==='function')_clickNavigateAt(t.x,t.y); return; }
@@ -27461,7 +26810,7 @@ canvas.addEventListener('mousedown',e=>{
   if(e.button===2){
     // RIGHT button = view-rotation drag (in any mode).
     e.preventDefault();
-    dragOn = true; dragX = e.clientX; dragY = e.clientY; _dragDead = 0;
+    dragOn = true; dragX = e.clientX; dragY = e.clientY;
     // Lock the pointer to the canvas so the cursor can't escape the viewport
     // while the user is sweeping a 360° look-around. Falls back to the legacy
     // clientX/Y delta path on browsers/contexts where lock is unavailable.
@@ -27575,7 +26924,7 @@ window.addEventListener('mouseup',e=>{
     } else if(!msr.active){
       // Click-to-select: mouse barely moved → it's a single click
       const dx=e.clientX-_clickStartX, dy=e.clientY-_clickStartY;
-      if(!lpv.dragging && (navigationTap?.held||Math.hypot(dx,dy)<(globalThis.__clickSlopPx||5))){
+      if(!lpv.dragging && (navigationTap?.held||Math.hypot(dx,dy)<5)){
         if(typeof _clickPointerTake!=='function'||navigationTap){
           // 長押しで行き先を探ったとき・カメラツール中は移動が目的なので選択を挟まない（2026-09-27。カメラツール中は
           // 選択が先にクリックを取ってしまい移動しなかった）。
@@ -27627,12 +26976,6 @@ window.addEventListener('mousemove',e=>{
   const _locked = (document.pointerLockElement === canvas);
   const _dx = _locked ? (e.movementX || 0) : (e.clientX - dragX);
   const _dy = _locked ? (e.movementY || 0) : (e.clientY - dragY);
-  // 遊び（内見版と同じ。__clickSlopPx）: 押してから少し動いただけでは回さない。回り始めるとクリック位置と画面がずれて移動しなかった（naiken 2026-11-11）
-  if(globalThis.__clickSlopPx && _dragDead >= 0){
-    _dragDead = _locked ? _dragDead + Math.abs(_dx) + Math.abs(_dy) : Math.abs(_dx) + Math.abs(_dy);
-    if(_dragDead < globalThis.__clickSlopPx * 1.3) return;
-    _dragDead = -1;
-  }
   _yawTarget   -= _dx * 0.003;
   _pitchTarget  = Math.max(-1.55, Math.min(1.55, _pitchTarget - _dy * 0.003));
   // CSS reprojection: instant visual response between rAF ticks (mostly a
@@ -28896,9 +28239,7 @@ function _clickNavigateAt(clientX,clientY,preview=false,preparedHit=null,eyeHeig
     return true;
   }catch(_error){if(!preview)_cancelClickNavigation();return false;}
 }
-// クリック・タップの判定を内見版と同じに緩める（マウス 14px・タッチ 24px まではタップとして移動。2026-11-24 本人「ヒルトンのページと一致するまで」）
-globalThis.__clickSlopPx=14; globalThis.__clickTapMs=600;
-const _clickGestures={mouse:LocahunClickNavigation.createGesture(14),touch:LocahunClickNavigation.createGesture(24)};
+const _clickGestures={mouse:LocahunClickNavigation.createGesture(),touch:LocahunClickNavigation.createGesture(12)};
 let _clickSuppressMouseUntil=0;
 function _clickPointerStart(kind,e){
   if(typeof _navigationHoldReset==='function')_navigationHoldReset();

@@ -96,9 +96,12 @@ for j, (d, logs) in enumerate(sorted(ai.items())):
             im = cv2.imread(f'{lg["dir"]}/planrooms.png'); s = 1400 / max(im.shape[:2])
             if s < 1: im = cv2.resize(im, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
             fn = f'rooms{len(plans) + 1}.jpg'; cv2.imwrite(f'{OUT}/{fn}', im, [cv2.IMWRITE_JPEG_QUALITY, 85]); plans.append((fn, sc))
+        _rg = json.load(open(f'{lg["dir"]}/reg.json', encoding='utf-8')) if os.path.exists(f'{lg["dir"]}/reg.json') else {}
+        if _rg.get('planDiffers'): rooms_txt.append(f'- {sc} 全体: 現況の間仕切りが図と違う（{_rg.get("planDiffersNote", "")}）。位置合わせは地点の写真で確認済み。この図の部屋は「図の部屋の範囲内に点がある＋写真がその場所（現況の開けた空間で可）」で判定する')
         for v in lg.get('voids', []): rooms_txt.append(f'- {sc} {v}: 吹き抜け（図に × ）なので点なし')
         for v in lg.get('unscanned', []): rooms_txt.append(f'- {sc} {v}: 3D スキャンの範囲の外なので点なし')
         for v in lg.get('hatched', []): rooms_txt.append(f'- {sc} {v}: 図で斜線（利用禁止・プライベートゾーン）の範囲なので点なし')
+        for v in lg.get('thinFloor', []): rooms_txt.append(f'- {sc} {v}: 3D スキャンの床の点が、よく撮れた部屋の 5% 未満（窓・開口越しに床が少し見えただけで、部屋の中は撮っていない）なので点なし')
         for v in lg.get('noWall', []): rooms_txt.append(f'- {sc} {v}: 図のこの部屋の壁が 3D スキャンにほとんど無い（壁の 3 割未満）＝部屋の中を撮っていないので点なし')
         for sl in lg['slots']:
             if not sl['final']:

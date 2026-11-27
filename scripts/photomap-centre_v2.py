@@ -52,14 +52,15 @@ PROMPT = """あなたはロケハンサイト Locahun 3D の「位置から見�
 点検（どれかに当たれば ok:false）:
 - insideObject: 壁・柱・家具・棚・カウンター・ベッド・植物などの中や 0.3m 以内にいて、L/F/R/B のどれかの 3 割以上が物の内側・ぼやけた塊・壁の大写しで塞がれている。机や台の上に浮いている（D の真ん中が天板・座面）
 - broken: 画面の大半がちぎれた点・にじんだ色・黒・空白で、どんな場所か分からない（3D の撮影範囲の外）。L/F/R/B の半分以上が全体ににじんで、家具や部屋の形が判別できない場合も broken
+- blurDirs: L/F/R/B のうち、画面の広い範囲（3 割以上）に強いにじみ・溶けた色があって床や家具の輪郭が崩れている方向の数（0〜4）。2 以上なら ok:false（第6回の審査: 2 方向のにじみで落ちた）
 - inRoom=false: 写真が図面の緑の範囲の部屋に見えない（明らかに別の部屋・屋外・階段の途中・天井裏や床下）
 - onStairs: 階段の段の途中（踊り場・上端・下端は可）
 - 空中: D に床がはっきり写らない（吹き抜けの上など）
 似た眺め・地味・家具が手前に写るのは外さない。水色の半透明の塗り（「立ち入り禁止」の札つき）は施設が指定した立ち入り禁止範囲の表示で、壊れではない。点がその塗りの中なら inRoom=false。bestFace は塗りが少ない方向。
-bestFace: その部屋が一番よく分かる（奥行きがあり、床と家具・部屋の特徴が広く見える）方向を L/F/R/B から 1 つ。窓や壁の大写し・隅向き・にじんだ方向は選ばない。
+bestFace: その部屋が一番よく分かる（奥行きがあり、床と家具・部屋の特徴が広く見える）方向を L/F/R/B から 1 つ。窓や壁の大写し・隅向き・にじんだ方向・札や覆い（シート・足場・カーテン）が画面の大半を占める方向は選ばない。
 
 答えは JSON だけ:
-{{"ok":true,"reason":"だめな時だけ短く日本語で","inRoom":true,"insideObject":false,"broken":false,"onStairs":false,"bestFace":"F","room":"写真から分かる部屋の種類（例: 会議室・キッチン・トイレ）"}}"""
+{{"ok":true,"reason":"だめな時だけ短く日本語で","inRoom":true,"insideObject":false,"broken":false,"onStairs":false,"blurDirs":0,"bestFace":"F","room":"写真から分かる部屋の種類（例: 会議室・キッチン・トイレ）"}}"""
 
 def ai_check(work, pid, extra=''):
     prompt = PROMPT.format(dir=work.replace('\\', '/'), pid=pid) + extra
@@ -82,6 +83,9 @@ def ai_check(work, pid, extra=''):
     j['by'] = by
     # 項目どうしの食い違いは厳しい方に
     if j.get('insideObject') or j.get('broken') or j.get('onStairs') or j.get('inRoom') is False: j['ok'] = False
+    try:
+        if int(j.get('blurDirs') or 0) >= 2: j['ok'] = False; j['reason'] = j.get('reason') or '2 方向以上がにじんでいる'
+    except (TypeError, ValueError): pass
     return j
 
 def plan_crop(pr, reg, room, u, v, yaw, out, bp):
@@ -205,6 +209,7 @@ def run_dir(d):
         if np.mean([np.abs(sm['f'] - sm[k]).mean() for k in 'lrb']) < 3: raise RuntimeError('本番の 360° 画像が壊れている（全方向が同じ画）')
         strip_from(files, f'{work}/{n_id}.jpg', n_id)
     def pick_node(s):   # 部屋の中の既存の地点のうち、真ん中に一番近いもの（まだ試していないもの）
+        if reg.get('brokenPano'): return None   # 本番の 360° 画像が壊れたシーン（全方向が同じ画など）: 既存地点を使わない
         tried_ids = {t['id'] for t in s['tried']}
         ns = [gn[i] for i in s['room'].get('nodesIn', []) if i in gn and i not in tried_ids]
         if not ns: return None
@@ -222,7 +227,7 @@ def run_dir(d):
         if not room['scanned']: continue
         for t in room['targets']:
             if CLAIM is not None and (d, t['u'], t['v']) not in CLAIM: continue   # 同じ図の別のシーンが受け持つ部屋
-            if t['node'] and t['node'] in gn:
+            if t['node'] and t['node'] in gn and not reg.get('brokenPano'):
                 n = gn[t['node']]; u, v = t['u'], t['v']
                 cand = {'kind': 'node', 'id': n['id'], 'x': n['pos']['x'], 'z': n['pos']['z'], 'u': u, 'v': v, 'yaw': n.get('yaw', 0)}
             else:
@@ -251,6 +256,8 @@ def run_dir(d):
             (_, _), (rw, rh), _ = cv2.minAreaRect(np.array(s['room']['poly'], np.float32)); short = min(rw, rh) / pr['ppm']
         if 0 < ar < 9 or (0 < ar < 20 and short < 3.2):   # 第2回: 15㎡ でも幅 3m 未満の細い部屋は同じ扱い（zigsaw r1）   # 第1回の審査: トイレ・納戸など小部屋は「壁に近すぎ」で全候補が落ちていた
             t += f'この部屋は約 {ar}㎡・幅約 {short:.1f}m の小さい・細い部屋（トイレ・洗面・納戸・廊下など）。壁や扉が近くに大きく写るのは当然なので「壁の大写し」「壁に近い」では不合格にしない。物の中にいる・机や便器の上に浮いている・全体がにじんで何の部屋か分からない・別の部屋に見える ときだけ不合格。bestFace は部屋の設備（便器・洗面台・棚など）が一番見える方向。'
+        if reg.get('planDiffers'):   # 司令塔 11/27: 間仕切りが現況と違っても、スキャン済みなら図の部屋の範囲内に点・写真を付ける（位置合わせは地点の写真で確認済みのシーンだけ reg に書く）
+            t += '注意: この図は公式図面だが、現況の間仕切りが図と違う箇所がある（' + str(reg.get('planDiffersNote', '')) + '）。位置合わせは写真ツアーの地点の写真で確認済み。写真が「図の閉じた小部屋」ではなく開けた空間・隣の部屋とつながった空間に見えるのは現況どおりなので、それだけでは inRoom=false にしない（屋外・別の階・天井裏に見えるときは inRoom=false）。'
         if any(w in FLOOR for w in ('屋上', 'ルーフ', 'テラス', 'バルコニー')):
             t += '屋外の区画なので、空・周りの建物が写るのは正常。床が屋根材・デッキでも可。'
         return t
@@ -364,7 +371,7 @@ def run_dir(d):
         lines = set(open(q, encoding='utf-8').read().split()) if os.path.exists(q) else set()
         if at_path not in lines: open(q, 'a', encoding='utf-8').write(at_path + chr(10))
     json.dump({'v': 1, 'key': at['key'], 'set': at.get('set'), 'points': keep, 'pending': pend_only}, open(f'{d}/centre.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'noWall': pr.get('noWall', []), 'hatched': pr.get('hatched', []), 'voids': pr.get('voids', []),
+    log = {'dir': d, 'rooms': len(pr['rooms']), 'scanned': sum(r['scanned'] for r in pr['rooms']), 'unscanned': pr['unscanned'], 'noWall': pr.get('noWall', []), 'hatched': pr.get('hatched', []), 'thinFloor': pr.get('thinFloor', []), 'voids': pr.get('voids', []),
            'points': len(keep), 'new': sum(1 for e in keep if e['kind'] == 'new'),
            'pending': sum(1 for s in slots if s.get('pending')), 'pendingNoStandIn': len(pend_only),
            'blurRooms': [{'room': s['room']['id'], 'area': s['room']['area'], 'tries': len(s['verdicts']), 'blurTries': s.get('blurTries', 0), 'reason': str(s['verdicts'][-1].get('reason', ''))[:80] if s['verdicts'] else ''}
