@@ -232,32 +232,40 @@ if markers:
 # 細かい模様（木目・タイル）はぼかして消し、4㎡ 以上の色の塊が 2 つ以上ある区画だけ割る（色の差 ΔE 14 以上）
 lab_img = cv2.cvtColor(cv2.medianBlur(cv2.GaussianBlur(img, (0, 0), max(1.0, m2(0.06))), 7), cv2.COLOR_BGR2LAB).astype(np.float32)
 nxt = regions.max() + 1
-for r in (range(1, regions.max() + 1) if '--nocolor' not in sys.argv and not reg.get('noColorSplit') else []):
+_todo = list(range(1, regions.max() + 1)) if '--nocolor' not in sys.argv and not reg.get('noColorSplit') else []
+_seen = 0
+while _todo and _seen < 60:   # 割れた区画もさらに割る（第2回: endurehome の灰の部屋＋青い浴室が 2 段目でしか分かれない）
+    r = _todo.pop(0); _seen += 1
     R = regions == r
-    if R.sum() * px2m2 < 12: continue
+    if R.sum() * px2m2 < 6: continue   # 第2回: endurehome の 8.4㎡（灰の床の部屋＋青い浴室）が割れなかった
     Rf = R & ~cv2.dilate(walls.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
     X = lab_img[Rf]
     if len(X) < 500: continue
     Xs = X[np.random.default_rng(0).choice(len(X), min(6000, len(X)), replace=False)]
-    best = None
+    best, bestd = None, 0
     for k in (2, 3, 4):
         _, lbl, cen = cv2.kmeans(Xs, k, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.5), 3, cv2.KMEANS_PP_CENTERS)
         wv = np.array([0.3, 1.0, 1.0], np.float32)   # 明るさだけの差（紙の濃淡・網掛け）では割らない。色味（a,b）の差で割る
         dmin = min(np.linalg.norm((cen[i] - cen[j]) * wv) for i in range(k) for j in range(i + 1, k))
-        if dmin >= 10: best = cen
-    if best is None: continue
+        if dmin >= 10: best, bestd = cen, dmin
+    if best is None:
+        if '--dbg' in sys.argv: print('colorsplit none', r, round(R.sum()*px2m2,1))
+        continue
     lab_all = np.argmin(((lab_img[R][:, None, :] - best[None]) ** 2).sum(2), 1)
     Lm = np.full((h, w), -1, np.int32); Lm[R] = lab_all
     comps = []
     for i in range(len(best)):
         Ci = cv2.morphologyEx((Lm == i).astype(np.uint8), cv2.MORPH_OPEN, ell(0.3))
         n_, l_, s_, _ = cv2.connectedComponentsWithStats(Ci, 8)
-        comps += [(l_ == j) for j in range(1, n_) if s_[j, 4] * px2m2 >= 2.5]
+        di = min(np.linalg.norm((best[i] - best[j]) * np.array([0.3, 1.0, 1.0], np.float32)) for j in range(len(best)) if j != i)
+        comps += [(l_ == j) for j in range(1, n_) if s_[j, 4] * px2m2 >= (1.2 if di >= 18 else 2.5)]   # 他の色とはっきり違う（ΔE 18 以上）色の塊は 1.2㎡ の浴室・トイレでも割る
+    if '--dbg' in sys.argv: print('colorsplit', r, round(R.sum()*px2m2,1), round(bestd,1), [round(c.sum()*px2m2,1) for c in comps])
     if len(comps) < 2: continue
     mk = np.zeros_like(regions)
     for j, C in enumerate(comps): mk[C] = j + 1
     sub = watershed(-dist, mk, mask=R)
-    for j in range(2, len(comps) + 1): regions[sub == j] = nxt; nxt += 1
+    _todo.append(r)
+    for j in range(2, len(comps) + 1): regions[sub == j] = nxt; _todo.append(nxt); nxt += 1
 
 # 図面の線（家具・階段の線も含む）からの距離。番号の丸・文字は除く
 obs_d = cv2.distanceTransform((~(walls & ~blob)).astype(np.uint8), cv2.DIST_L2, 5)
@@ -305,8 +313,11 @@ def is_void(cnt):
 def do_room(R, r, force=False):
     pass
     a = R.sum() * px2m2
+    if '--dbg' in sys.argv:
+        _ys,_xs=np.nonzero(R); print('room?', r, round(a,2), int(_xs.mean())+x0, int(_ys.mean())+y0, 'border', int((R & border).sum()), 'sat', round(float(sat[R].mean()),1))
     has_mk = any(0 <= y < h and 0 <= x < w and R[y, x] for x, y in markers)
-    if a < (0.9 if has_mk else 1.5): return
+    tinted = float(sat[R].mean()) > 25   # 第2回: endurehome の 1.4㎡ のユニットバス（水色で塗った小部屋）が落ちていた
+    if a < (0.9 if has_mk else 1.0 if tinted else 1.5): return
     if not force and not isinstance(ins, list) and (R & border).sum() > m2(0.5):   # inside に多角形があれば、その多角形が建物の範囲（端の判定はしない）
         # 図の端につながる区画は建物の外。ただし図面で塗ってある所（テラス・デッキの灰色など）は図に描かれた空間なので残す
         tint = ((gray[R] < 245) | (sat[R] > 20)).mean()
@@ -337,7 +348,7 @@ def do_room(R, r, force=False):
     mean = pts2.mean(0); cov = np.cov((pts2 - mean).T); ev, evec = np.linalg.eigh(cov); ax = evec[:, 1]
     proj = (pts2 - mean) @ ax; proj2 = (pts2 - mean) @ evec[:, 0]
     long_m, short_m = (proj.max() - proj.min()) / ppm, (proj2.max() - proj2.min()) / ppm
-    if short_m < (0.55 if has_mk else 0.8): return     # 寸法線などで切れた細い帯（番号の丸がある小部屋＝トイレ等は 0.55m まで）
+    if short_m < (0.55 if has_mk else 0.65 if tinted else 0.8): return     # 寸法線などで切れた細い帯（番号の丸がある小部屋＝トイレ等は 0.55m まで）
     k = 1 if a <= BIG else min(6, int(math.ceil(a / BIG)))
     targets = []
     qs = np.quantile(proj, np.linspace(0, 1, k + 1))
