@@ -119,7 +119,12 @@ def cyan_frac(work, pid):   # 第2回の審査（fc-space）: 施設が指定し
     return out
 
 SCAN = {}
-def pick_face(room, c, ai_o, M, cyan=None):
+def sharp(work, pid):   # 第2回の審査（ingleneuk 点1）: 最初の向きが全面にじんだ方向だった → 方向ごとのくっきり度（ラプラシアンの分散）
+    im = cv2.imread(f'{work}/{pid}.jpg', 0)
+    if im is None: return {}
+    return {o: float(cv2.Laplacian(im[30:, k * 320:(k + 1) * 320], cv2.CV_64F).var()) for k, o in enumerate((-90, 0, 90, 180))}
+
+def pick_face(room, c, ai_o, M, cyan=None, sh=None):
     # 第1回の審査: 最初の向きが壁・扉・窓の大写しになる点が多かった → 図面の部屋の中で、4 方向のうち一番遠くまで見通せる向き。
     # AI の bestFace がその 85% 以上見通せるなら AI を優先（設備が見える向きを選んでいることがある）
     poly = np.array(room['poly'], np.float32); A2 = np.array(M, float)[:, :2]
@@ -135,6 +140,8 @@ def pick_face(room, c, ai_o, M, cyan=None):
                     L = min(L, m * scale); break
         return L
     lens = {o: ray(o) for o in (0, 90, 180, -90)}
+    if sh and max(sh.values()) > 0:   # くっきり度が一番の方向の 4 割未満の方向（にじみ）は選びにくく
+        mx = max(sh.values()); lens = {o: L * (1 if sh.get(o, mx) >= 0.4 * mx else 0.2) for o, L in lens.items()}
     if cyan and any(cyan.get(o, 0) < 0.15 for o in lens): lens = {o: L * (1 if cyan.get(o, 0) < 0.15 else 0.05) for o, L in lens.items()}
     best = max(lens, key=lens.get)
     return ai_o if lens.get(ai_o, 0) >= 0.85 * lens[best] else best
@@ -296,7 +303,7 @@ def run_dir(d):
                 s['verdicts'].append(v)
                 cf_ = cyan_frac(work, s['cand']['id'])
                 if v.get('ok') is True and cf_ and np.mean(list(cf_.values())) > 0.4: v = dict(v, ok=False, reason='立ち入り禁止の水色の範囲の中・すぐ脇（4 方向平均 %.0f%%）' % (100 * np.mean(list(cf_.values())))); s['verdicts'][-1] = v
-                if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M, cyan_frac(work, s['cand']['id'])))
+                if v.get('ok') is True: s['final'] = dict(s['cand'], o=pick_face(s['room'], s['cand'], FACE_O.get(str(v.get('bestFace', 'F')).upper()[:1], 0), M, cyan_frac(work, s['cand']['id']), sharp(work, s['cand']['id'])))
                 else: s['tried'].append(s['cand']); s['cand'] = None
         # 次の候補: 控えの位置（撮り直し）→ 最後は部屋の中の既存の地点
         for s in slots:
