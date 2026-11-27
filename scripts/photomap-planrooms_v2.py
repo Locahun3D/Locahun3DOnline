@@ -411,6 +411,9 @@ if opt('probe'):
     _r = regions[_pv, _pu]; print('probe2 region', _r, 'area', round(float((regions == _r).sum() * px2m2), 2), 'ws', int(_r) in _wallsplit, [ (int(k), round(float((regions == k).sum() * px2m2), 1)) for k in np.unique(regions) if k])
 # 図面の線（家具・階段の線も含む）からの距離。番号の丸・文字は除く
 obs_d = cv2.distanceTransform((~(walls & ~blob)).astype(np.uint8), cv2.DIST_L2, 5)
+AVOID = np.zeros((h, w), np.uint8)
+for _au, _av, _ar in reg.get('avoid') or []: cv2.circle(AVOID, (int(_au - x0), int(_av - y0)), int(m2(_ar)), 1, -1)
+AVOID = AVOID.astype(bool)
 # 建物の絵の範囲（図面の線の凸包）。壁で閉じていない広い所はこの中だけ
 hull_mask = np.zeros((h, w), np.uint8)
 _ys, _xs = np.nonzero(walls)
@@ -509,6 +512,7 @@ def do_room(R, r, force=False):
         okp = (obs_d >= m2(0.35)) & ~furn & (S > 0)
         if not okp.any(): okp = (obs_d >= m2(0.2)) & ~furn & (S > 0)
         if (okp & ~HATCH).any(): okp = okp & ~HATCH   # 斜線（利用禁止）の範囲には置かない
+        if (okp & ~AVOID).any(): okp = okp & ~AVOID   # 11/28 第10回（grass メインスタジオ: 点が足場の中）: reg.json の avoid [[u,v,半径m]] の範囲には置かない
         # スキャンの物から 0.55m 離れた所が区画の 15% 以上あり、真ん中らしさ（縁からの距離）を半分以上保てるときだけ使う（スキャンがにじむ区画は物だらけに見えるので使わない）
         okc = okp & (scan_d >= m2(0.55))
         if okc.sum() >= 0.15 * max(1, okp.sum()) and okc.any() and ds[okc].max() >= 0.5 * ds[okp].max(): okp = okc
@@ -557,7 +561,7 @@ def do_room(R, r, force=False):
                       'node': best[0] if best else None, 'nodeDist': round(best[1], 2) if best else None})
     # 控えの位置（AI が「物の中・壊れ」と言ったとき用）: 立てる所を、真ん中に近い順に 0.7m 以上離して最大 8 か所
     Rd = cv2.distanceTransform(R.astype(np.uint8), cv2.DIST_L2, 5)
-    okR = R & (obs_d >= m2(0.3)) & ~furn & ~HATCH
+    okR = R & (obs_d >= m2(0.3)) & ~furn & ~HATCH & ~AVOID
     okc = okR & (scan_d >= m2(0.5))
     okc45 = okR & (scan_d >= m2(0.45))
     if okc.sum() >= 0.15 * max(1, okR.sum()): okR = okc
