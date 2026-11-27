@@ -270,8 +270,16 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     if (f !== null && pose.y - f > 0.3 && pose.y - f < 30) { base = { floor0: f, eye: Math.min(1.7, Math.max(1.1, pose.y - f)) }; break; }
   }
   if (!base || base.floor0 == null) { r.status = 'error'; r.why = '動線: 開始位置の床が見つからない ' + String(base?.error || ''); return null; }
-  const g = await page.evaluate((o) => window.__pbGraph(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, floor0: base.floor0, eye: base.eye });
+  let g = await page.evaluate((o) => window.__pbGraph(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, floor0: base.floor0, eye: base.eye });
   if (g.error) { r.status = 'error'; r.why = '動線: ' + g.error; return null; }
+  // 狭い部屋（2026-11-27 SEE YOU TOMORROW オプションルーム: ベッド・照明・戸口の間が狭く、12.5cm 升の当たり判定で
+  // 半径 0.2m の体が 0.5m おきの升に入らず 3 升＝1地点で止まった）: 塗り広げが 4㎡ 未満の時だけ体の半径 0.12m で塗り直し、広い方を使う。
+  // ほかのシーン（4㎡ 以上）は今までどおり
+  if (g.cells.length * 0.25 < 4) {
+    const g2 = await page.evaluate((o) => window.__pbGraph(o), { pos: { x: pose.x, y: pose.y, z: pose.z }, floor0: base.floor0, eye: base.eye, bodyR: 0.12 });
+    console.log('narrow retry (body r 0.12)', g.cells.length, '->', g2.error ? g2.error : g2.cells.length, 'cells');
+    if (!g2.error && g2.cells.length > g.cells.length) { g = g2; r.bodyR = 0.12; }
+  }
   if (flag('--diag')) {
     const d = await page.evaluate((o) => window.__pbDiag(o), { x: pose.x, y: pose.y, z: pose.z });
     console.log('normals', JSON.stringify(await page.evaluate((o) => window.__pbNormals(o), { x: pose.x, y: pose.y, z: pose.z })));

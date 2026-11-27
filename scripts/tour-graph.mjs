@@ -40,8 +40,8 @@ export const PAGE_GRAPH = `;window.__pbGraph=(o)=>{
     for(const [dx, dz] of [[0.12, 0], [-0.12, 0], [0, 0.12], [0, -0.12]]){ const hh = hit({ x: x + dx, y: top, z: z + dz }, DOWN, L); if(hh === null || Math.abs(top - hh - f) > 0.25) off++; }
     if(off >= 2){ steep++; return null; }
     return f; };
-  // 体が入る: ひざ（段の上）から目の高さ＋0.1m まで、半径 0.2m
-  const bodyOk = (x, z, f) => { try { return core.isCapsuleClear({ x, y: f + 0.35, z }, eye - 0.25, 0.2); } catch(e) { return false; } };
+  // 体が入る: ひざ（段の上）から目の高さ＋0.1m まで、半径 0.2m（o.bodyR: 狭い部屋の再試行だけ 0.12。bake-pano 参照）
+  const bodyOk = (x, z, f) => { try { return core.isCapsuleClear({ x, y: f + 0.35, z }, eye - 0.25, o.bodyR || 0.2); } catch(e) { return false; } };
   // 間に壁が無い: ひざ・胸の高さで升の中心どうしを水平に結ぶ
   const passOk = (a, x, z, f) => { const dx = x - a.x, dz = z - a.z, L = Math.hypot(dx, dz), d = { x: dx / L, y: 0, z: dz / L }, base = Math.max(a.f, f);
     return hit({ x: a.x, y: base + 0.5, z: a.z }, d, L) === null && hit({ x: a.x, y: base + 1.2, z: a.z }, d, L) === null; };
