@@ -257,7 +257,10 @@ if (RESUME_H) scenes = scenes.filter((s) => { const p = state[s.scene]; return !
 scenes = scenes.slice(0, LIMIT);
 console.log(`scenes ${scenes.length} / endpoint ${endpoint} / viewer ${VIEWER === 'prod' ? 'prod' : path.relative(ROOT, VIEWER)} / ${FIX ? 'fix' : 'check only'}`);
 
-const browser = await chromium.launch({ channel: 'chrome', headless: false, args: ['--window-size=1300,860', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ channel: 'chrome', headless: false, args: ['--window-size=1300,860', '--ignore-gpu-blocklist',
+  // 画面の外で開く（2026-11-28。新しいウィンドウを出さない・隠れても描画が止まらないように）
+  '--window-position=-32000,-32000', '--disable-features=CalculateNativeWinOcclusion',
+  '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
 const results = [];
 for (const s of scenes) {
   const r = { property: s.property, scene: s.scene, at: new Date().toISOString() };

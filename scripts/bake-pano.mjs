@@ -334,7 +334,12 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
         if (!add) break;
       }
     }
-    MANUAL = pts.map((q, i) => ({ id: (q.seat ? 's' : q.view ? 'v' : 'r') + (i + 1), x: +q.x.toFixed(2), z: +q.z.toFixed(2), ...(q.floorY != null ? { floorY: q.floorY } : {}) }));
+    // --dense と --manual を一緒に渡したら、本人/手動の点も足す（2026-11-28 see-you-tomorrow/1 の玄関 n11 は自動では選ばれない）
+    // 手動の点を優先し、そのそば（0.7m 以内）の自動の点は外す
+    const extraManual = MANUAL || [];
+    const autoPts = pts.filter((q) => extraManual.every((m) => Math.hypot(q.x - m.x, q.z - m.z) >= Math.max(1.4, S) * 0.5));
+    MANUAL = [...autoPts.map((q, i) => ({ id: (q.seat ? 's' : q.view ? 'v' : 'r') + (i + 1), x: +q.x.toFixed(2), z: +q.z.toFixed(2), ...(q.floorY != null ? { floorY: q.floorY } : {}) })),
+      ...extraManual.map((m, i) => ({ id: 'm' + (i + 1), x: +m.x, z: +m.z, ...(Number.isFinite(m.floorY) ? { floorY: m.floorY } : {}) }))];
     r.dense = { S: +S.toFixed(2), route: built.nodeCells.length, seats, extra };
     console.log('dense', JSON.stringify(r.dense));
   }
@@ -366,7 +371,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
     }
     r.manualClear = { ok: nodes.filter((p) => p.clear.ok).length, moved: nodes.filter((p) => p.clear.moved > 0).length, total: nodes.length, bad: nodes.filter((p) => !p.clear.ok).map((p) => p.id) };
     console.log('manual clear', JSON.stringify(r.manualClear));
-    if (DENSE) { nodes = nodes.filter((p) => p.clear.ok); nodes.forEach((p, i) => { p.id = 'n' + (i + 1); }); }   // 自動の点: すき間が無い所には置かない
+    if (DENSE) { nodes = nodes.filter((p) => p.clear.ok || /^m\d/.test(p.manual || '')); nodes.forEach((p, i) => { p.id = 'n' + (i + 1); }); }   // 自動の点: すき間が無い所には置かない
   }
   const rdir = path.join(dir, 'graph'); fs.rmSync(rdir, { recursive: true, force: true }); fs.mkdirSync(rdir, { recursive: true });
   // 形の検査（撮る前。2026-11-21 本人「空中やめり込んでるところを除外」）: めり込み（目の高さの周りが塞がる）・空中（斜め下に地面が見えない）
@@ -417,7 +422,7 @@ async function graphPoints(page, pose, key, dir, r, uploads) {
       (ok ? r.manualAi.fixed : r.manualAi.still).push(p.id);
     }
     console.log('manual ai', JSON.stringify(r.manualAi));
-    if (DENSE && Array.isArray(r.manualAi.still)) { const st = new Set(r.manualAi.still); nodes = nodes.filter((p) => !st.has(p.id)); }   // 自動の点: 控えでも直らない点は外す
+    if (DENSE && Array.isArray(r.manualAi.still)) { const st = new Set(r.manualAi.still); nodes = nodes.filter((p) => !st.has(p.id) || /^m\d/.test(p.manual || '')); }   // 自動の点: 控えでも直らない点は外す（--manual で足した点は残す）
   }
   // AI の監視: 空中・めり込み・崩れ・人が立てない地点を外す。外した地点は近くの良い升へ移して撮り直し、もう一度だけ判定する
   let ai = null, ai2 = null, ai3 = null; const badList = [], replaced = [], rejected = [];
@@ -776,7 +781,7 @@ if (arg('--at') || arg('--upload-at')) {
   fs.mkdirSync(dir, { recursive: true });
   at.set = at.set || crypto.randomBytes(3).toString('hex');
   const browser = await chromium.launch({ channel: 'chrome', headless: false,
-    args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
+    args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--window-position=-32000,-32000', '--disable-features=CalculateNativeWinOcclusion'] });
   let code = 0;
   try {
     for (let tryN = 0; tryN < 3; tryN++) {
@@ -820,7 +825,7 @@ if (arg('--at') || arg('--upload-at')) {
 const scenes = (await listScenes()).slice(0, LIMIT);
 console.log(`対象 ${scenes.length} シーン${FIX ? '（無いものを作る）' : '（一覧のみ）'}`);
 const browser = await chromium.launch({ channel: 'chrome', headless: false,
-  args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
+  args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--window-position=-32000,-32000', '--disable-features=CalculateNativeWinOcclusion'] });
 const results = [];
 for (const s of scenes) {
   let r = await bake(browser, s);
