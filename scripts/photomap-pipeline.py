@@ -156,6 +156,16 @@ for pid in args:
         if tiles:
             h = max(t.shape[0] for t in tiles); cv2.imwrite(f'{WS}/all/{pid}/pm_preview.jpg', np.hstack([cv2.copyMakeBorder(t, 0, h - t.shape[0], 0, 4, cv2.BORDER_CONSTANT, value=(255, 255, 255)) for t in tiles]))
         print('  maps', [(m['label'], len(m['points'])) for m in pm], '→', out)
+        # 審査（本人「点決めた後fableにFBもらって 合格するまで回して」）: photomap-review.py が pass のときだけ ready。D1 に書くのは ready のときだけ
+        ready = False
+        if '--no-review' not in sys.argv and not OLDROOMS and not any(is_area(d) for g in groups for d, _ in g['dirs']):
+            run([py, f'{HERE}/photomap-review.py', pid], cwd=REPO)
+            rv = json.load(open(f'{WS}/all/{pid}/review.json', encoding='utf-8')) if os.path.exists(f'{WS}/all/{pid}/review.json') else {}
+            ready = rv.get('pass') is True
+            json.dump({'ready': ready, 'issues': len(rv.get('issues') or [])}, open(f'{WS}/all/{pid}/ready.json', 'w', encoding='utf-8'))
+            print('  review', 'PASS' if ready else 'FAIL', len(rv.get('issues') or []), 'issues')
+        else: ready = True
+        if D1 and not ready: print('  審査が不合格なので D1 には書かない（all/<id>/review.json）'); continue
         if D1:
             sql = f'{WS}/_log/pm_{pid}.sql'; js = json.dumps(pm, ensure_ascii=False).replace("'", "''")
             open(sql, 'w', encoding='utf-8').write(f"update properties set data=json_set(data,'$.photoMaps',json('{js}')) where id='{pid}';\n")
