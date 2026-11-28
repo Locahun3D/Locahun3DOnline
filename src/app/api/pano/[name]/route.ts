@@ -20,7 +20,7 @@ type AnyBucket = any;
  * - 動線グラフ（--graph、2026-11-21）: `<key>.graph.json` と `<key>-g<set>-n<番号>-<面>.jpg`（1536px）・`<面>.s.jpg`（640px）。
  * - 撮り直し（--reshoot、2026-11-21）の開始位置は `<key>-r<N>-<面>.jpg`（meta.json の r = N）。
  */
-const NAME_RE = /^([a-f0-9]{64})(\.json|\.points\.json|\.graph\.json|(?:-[pr]\d{1,2})?-[frbldu]\.jpg|-g[0-9a-f]{6}-n\d{1,3}-[frbldu](?:\.s)?\.jpg)$/;
+const NAME_RE = /^([a-f0-9]{64})(\.json|\.points\.json|\.graph\.json|(?:-[pr]\d{1,2})?-[frbldu]\.jpg|-g[0-9a-f]{6}-n\d{1,6}-[frbldu](?:\.s)?\.jpg)$/;
 const MAX_BYTES = 4_000_000;
 
 async function getBucket(): Promise<AnyBucket> {
