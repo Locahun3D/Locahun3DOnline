@@ -554,6 +554,7 @@ def do_room(R, r, force=False):
                 if furn[int(nv), int(nu)] or obs_d[int(nv), int(nu)] < m2(0.2): continue
                 # 第10回の審査（ariake 中庭・グラウンド: 既存地点が柱・木の幹の至近で正面が塞がれた）: スキャンの物（腰の高さ）から 0.6m 未満の地点も使わない
                 if scan_d[int(nv), int(nu)] < m2(0.6): continue
+                if AVOID[int(nv), int(nu)]: continue   # 第15回（ariake 中庭 n129: 柱の真横の既存地点が繰り返し選ばれた）: reg avoid の範囲の既存地点も使わない
                 dd = math.hypot(nu - u, nv - v) / ppm
                 if dd <= tol and (best is None or dd < best[1]): best = (nid, dd)
         x, z = c2w(u, v)
